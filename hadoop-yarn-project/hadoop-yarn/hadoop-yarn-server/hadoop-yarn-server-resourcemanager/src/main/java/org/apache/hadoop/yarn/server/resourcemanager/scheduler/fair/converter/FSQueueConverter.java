@@ -17,12 +17,15 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_LIMIT_FACTOR;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.ConfigurableResource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
@@ -79,6 +82,7 @@ public class FSQueueConverter {
     emitMaxParallelApps(queueName, queue);
     emitMaxAllocations(queueName, queue);
     emitPreemptionDisabled(queueName, queue);
+    emitDefaultUserLimitFactor(queueName, children);
 
     emitChildCapacity(queue);
     emitMaximumCapacity(queueName, queue);
@@ -212,6 +216,15 @@ public class FSQueueConverter {
     if (preemptionEnabled && !queue.isPreemptable()) {
       capacitySchedulerConfig.set(PREFIX + queueName + ".disable_preemption",
           "true");
+    }
+  }
+
+  public void emitDefaultUserLimitFactor(String queueName, List<FSQueue> children) {
+    if (children.isEmpty()) {
+      capacitySchedulerConfig.setFloat(
+              CapacitySchedulerConfiguration.
+                      PREFIX + queueName + DOT + USER_LIMIT_FACTOR,
+              -1.0f);
     }
   }
 

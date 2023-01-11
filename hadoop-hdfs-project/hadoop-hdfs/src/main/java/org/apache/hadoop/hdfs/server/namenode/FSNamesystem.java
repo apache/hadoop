@@ -1389,7 +1389,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         // During startup, we're already open for write during initialization.
         editLog.initJournalsForWrite();
         // May need to recover
-        editLog.recoverUnclosedStreams();
+        editLog.recoverUnclosedStreams(true);
         
         LOG.info("Catching up to latest edits from old active before " +
             "taking over writer role in edits logs");
@@ -3044,12 +3044,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     LocatedBlock[] onRetryBlock = new LocatedBlock[1];
     FSDirWriteFileOp.ValidateAddBlockResult r;
-    checkOperation(OperationCategory.READ);
+    checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
     readLock();
     try {
-      checkOperation(OperationCategory.READ);
+      checkOperation(OperationCategory.WRITE);
       r = FSDirWriteFileOp.validateAddBlock(this, pc, src, fileId, clientName,
                                             previous, onRetryBlock);
     } finally {
@@ -3095,12 +3095,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final byte storagePolicyID;
     final List<DatanodeStorageInfo> chosen;
     final BlockType blockType;
-    checkOperation(OperationCategory.READ);
+    checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(null);
     readLock();
     try {
-      checkOperation(OperationCategory.READ);
+      // Changing this operation category to WRITE instead of making getAdditionalDatanode as a
+      // read method is aim to let Active NameNode to handle this RPC, because Active NameNode
+      // contains a more complete DN selection context than Observer NameNode.
+      checkOperation(OperationCategory.WRITE);
       //check safe mode
       checkNameNodeSafeMode("Cannot add datanode; src=" + src + ", blk=" + blk);
       final INodesInPath iip = dir.resolvePath(pc, src, fileId);
@@ -3621,10 +3624,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = getQuotaCommand(nsQuota, ssQuota);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
+    if(!allowOwnerSetQuota) {
+      checkSuperuserPrivilege(operationName, src);
+    }
     try {
-      if(!allowOwnerSetQuota) {
-        checkSuperuserPrivilege(operationName, src);
-      }
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -7761,8 +7764,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     String poolInfoStr = null;
     String poolName = req == null ? null : req.getPoolName();
+    checkSuperuserPrivilege(operationName, poolName);
     try {
-      checkSuperuserPrivilege(operationName, poolName);
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -7788,8 +7791,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     String poolNameStr = "{poolName: " +
         (req == null ? null : req.getPoolName()) + "}";
+    checkSuperuserPrivilege(operationName, poolNameStr);
     try {
-      checkSuperuserPrivilege(operationName, poolNameStr);
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -7815,8 +7818,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = "removeCachePool";
     checkOperation(OperationCategory.WRITE);
     String poolNameStr = "{poolName: " + cachePoolName + "}";
+    checkSuperuserPrivilege(operationName, poolNameStr);
     try {
-      checkSuperuserPrivilege(operationName, poolNameStr);
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -8017,11 +8020,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           SafeModeException, AccessControlException {
     final String operationName = "createEncryptionZone";
     FileStatus resultingStat = null;
+    checkSuperuserPrivilege(operationName, src);
     try {
       Metadata metadata = FSDirEncryptionZoneOp.ensureKeyIsInitialized(dir,
           keyName, src);
       final FSPermissionChecker pc = getPermissionChecker();
-      checkSuperuserPrivilege(operationName, src);
       checkOperation(OperationCategory.WRITE);
       writeLock();
       try {
@@ -8100,11 +8103,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       final boolean logRetryCache) throws IOException {
     final String operationName = "reencryptEncryptionZone";
     boolean success = false;
+    checkSuperuserPrivilege(operationName, zone);
     try {
       Preconditions.checkNotNull(zone, "zone is null.");
       checkOperation(OperationCategory.WRITE);
       final FSPermissionChecker pc = dir.getPermissionChecker();
-      checkSuperuserPrivilege(operationName, zone);
       checkNameNodeSafeMode("NameNode in safemode, cannot " + action
           + " re-encryption on zone " + zone);
       reencryptEncryptionZoneInt(pc, zone, action, logRetryCache);

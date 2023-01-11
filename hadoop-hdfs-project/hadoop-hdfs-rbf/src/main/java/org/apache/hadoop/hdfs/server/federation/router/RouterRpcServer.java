@@ -53,6 +53,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HAUtil;
@@ -203,6 +204,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   /** Router using this RPC server. */
   private final Router router;
 
+  /** Alignment context storing state IDs for all namespaces this router serves. */
+  private final RouterStateIdContext routerStateIdContext;
+
   /** The RPC server that listens to requests from clients. */
   private final Server rpcServer;
   /** The address for this RPC server. */
@@ -321,7 +325,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
     // Create security manager
     this.securityManager = new RouterSecurityManager(this.conf);
-    RouterStateIdContext routerStateIdContext = new RouterStateIdContext(conf);
+    routerStateIdContext = new RouterStateIdContext(conf);
 
     this.rpcServer = new RPC.Builder(this.conf)
         .setProtocol(ClientNamenodeProtocolPB.class)
@@ -410,7 +414,36 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
                 .forEach(this.dnCache::refresh),
             0,
             dnCacheExpire, TimeUnit.MILLISECONDS);
+
+    Executors
+        .newSingleThreadScheduledExecutor()
+        .scheduleWithFixedDelay(this::clearStaleNamespacesInRouterStateIdContext,
+            0,
+            conf.getLong(RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS,
+                RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS_DEFAULT),
+            TimeUnit.MILLISECONDS);
+
     initRouterFedRename();
+  }
+
+  /**
+   * Clear expired namespace in the shared RouterStateIdContext.
+   */
+  private void clearStaleNamespacesInRouterStateIdContext() {
+    try {
+      final Set<String> resolvedNamespaces = namenodeResolver.getNamespaces()
+          .stream()
+          .map(FederationNamespaceInfo::getNameserviceId)
+          .collect(Collectors.toSet());
+
+      routerStateIdContext.getNamespaces().forEach(namespace -> {
+        if (!resolvedNamespaces.contains(namespace)) {
+          routerStateIdContext.removeNamespaceStateId(namespace);
+        }
+      });
+    } catch (IOException e) {
+      LOG.warn("Could not fetch current list of namespaces.", e);
+    }
   }
 
   /**
@@ -508,6 +541,15 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
   BalanceProcedureScheduler getFedRenameScheduler() {
     return this.fedRenameScheduler;
+  }
+
+  /**
+   * Get the routerStateIdContext used by this server.
+   * @return routerStateIdContext
+   */
+  @VisibleForTesting
+  protected RouterStateIdContext getRouterStateIdContext() {
+    return routerStateIdContext;
   }
 
   /**

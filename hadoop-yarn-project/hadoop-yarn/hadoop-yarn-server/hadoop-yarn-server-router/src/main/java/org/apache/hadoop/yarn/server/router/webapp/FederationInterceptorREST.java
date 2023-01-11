@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.router.webapp;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.security.Principal;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -46,19 +47,31 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.RouterPolicyFacade;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
@@ -101,11 +114,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
+import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
+import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
@@ -120,6 +137,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.extractToken;
+import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.getKerberosUserGroupInformation;
 
 /**
  * Extends the {@code AbstractRESTRequestInterceptor} class and provides an
@@ -140,6 +160,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   private boolean returnPartialReport;
   private boolean appInfosCacheEnabled;
   private int appInfosCacheCount;
+  private boolean allowPartialResult;
   private long submitIntervalTime;
 
   private Map<SubClusterId, DefaultRequestInterceptorREST> interceptors;
@@ -193,6 +214,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           YarnConfiguration.DEFAULT_ROUTER_APPSINFO_CACHED_COUNT);
       appInfosCaches = new LRUCacheHashMap<>(appInfosCacheCount, true);
     }
+
+    allowPartialResult = conf.getBoolean(
+        YarnConfiguration.ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED,
+        YarnConfiguration.DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED);
 
     submitIntervalTime = conf.getTimeDuration(
         YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_INTERVAL_TIME,
@@ -975,10 +1000,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       });
     } catch (NotFoundException e) {
       LOG.error("get all active sub cluster(s) error.", e);
+      throw e;
     } catch (YarnException e) {
       LOG.error("getNodes by states = {} error.", states, e);
+      throw new YarnRuntimeException(e);
     } catch (IOException e) {
       LOG.error("getNodes by states = {} error with io error.", states, e);
+      throw new YarnRuntimeException(e);
     }
 
     // Delete duplicate from all the node reports got from all the available
@@ -1556,52 +1584,447 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     throw new RuntimeException("updateAppQueue Failed.");
   }
 
+  /**
+   * This method posts a delegation token from the client.
+   *
+   * @param tokenData the token to delegate. It is a content param.
+   * @param hsr the servlet request.
+   * @return Response containing the status code.
+   * @throws AuthorizationException if Kerberos auth failed.
+   * @throws IOException if the delegation failed.
+   * @throws InterruptedException if interrupted.
+   * @throws Exception in case of bad request.
+   */
   @Override
-  public Response postDelegationToken(DelegationToken tokenData,
-      HttpServletRequest hsr) throws AuthorizationException, IOException,
-      InterruptedException, Exception {
-    throw new NotImplementedException("Code is not implemented");
+  public Response postDelegationToken(DelegationToken tokenData, HttpServletRequest hsr)
+      throws AuthorizationException, IOException, InterruptedException, Exception {
+
+    if (tokenData == null || hsr == null) {
+      throw new IllegalArgumentException("Parameter error, the tokenData or hsr is null.");
+    }
+
+    try {
+      // get Caller UserGroupInformation
+      Configuration conf = federationFacade.getConf();
+      UserGroupInformation callerUGI = getKerberosUserGroupInformation(conf, hsr);
+
+      // create a delegation token
+      return createDelegationToken(tokenData, callerUGI);
+    } catch (YarnException e) {
+      LOG.error("Create delegation token request failed.", e);
+      return Response.status(Status.FORBIDDEN).entity(e.getMessage()).build();
+    }
   }
 
+  /**
+   * Create DelegationToken.
+   *
+   * @param dtoken DelegationToken Data.
+   * @param callerUGI UserGroupInformation.
+   * @return Response.
+   * @throws Exception An exception occurred when creating a delegationToken.
+   */
+  private Response createDelegationToken(DelegationToken dtoken, UserGroupInformation callerUGI)
+      throws IOException, InterruptedException {
+
+    String renewer = dtoken.getRenewer();
+
+    GetDelegationTokenResponse resp = callerUGI.doAs(
+        (PrivilegedExceptionAction<GetDelegationTokenResponse>) () -> {
+        GetDelegationTokenRequest createReq = GetDelegationTokenRequest.newInstance(renewer);
+        return this.getRouterClientRMService().getDelegationToken(createReq);
+      });
+
+    DelegationToken respToken = getDelegationToken(renewer, resp);
+    return Response.status(Status.OK).entity(respToken).build();
+  }
+
+  /**
+   * Get DelegationToken.
+   *
+   * @param renewer renewer.
+   * @param resp GetDelegationTokenResponse.
+   * @return DelegationToken.
+   * @throws IOException if there are I/O errors.
+   */
+  private DelegationToken getDelegationToken(String renewer, GetDelegationTokenResponse resp)
+      throws IOException {
+    // Step1. Parse token from GetDelegationTokenResponse.
+    Token<RMDelegationTokenIdentifier> tk = getToken(resp);
+    String tokenKind = tk.getKind().toString();
+    RMDelegationTokenIdentifier tokenIdentifier = tk.decodeIdentifier();
+    String owner = tokenIdentifier.getOwner().toString();
+    long maxDate = tokenIdentifier.getMaxDate();
+
+    // Step2. Call the interface to get the expiration time of Token.
+    RouterClientRMService clientRMService = this.getRouterClientRMService();
+    RouterDelegationTokenSecretManager tokenSecretManager =
+        clientRMService.getRouterDTSecretManager();
+    long currentExpiration = tokenSecretManager.getRenewDate(tokenIdentifier);
+
+    // Step3. Generate Delegation token.
+    DelegationToken delegationToken = new DelegationToken(tk.encodeToUrlString(),
+        renewer, owner, tokenKind, currentExpiration, maxDate);
+
+    return delegationToken;
+  }
+
+  /**
+   * GetToken.
+   * We convert RMDelegationToken in GetDelegationTokenResponse to Token.
+   *
+   * @param resp GetDelegationTokenResponse.
+   * @return Token.
+   */
+  private static Token<RMDelegationTokenIdentifier> getToken(GetDelegationTokenResponse resp) {
+    org.apache.hadoop.yarn.api.records.Token token = resp.getRMDelegationToken();
+    byte[] identifier = token.getIdentifier().array();
+    byte[] password = token.getPassword().array();
+    Text kind = new Text(token.getKind());
+    Text service = new Text(token.getService());
+    Token<RMDelegationTokenIdentifier> tk = new Token<>(identifier, password, kind, service);
+    return tk;
+  }
+
+  /**
+   * This method updates the expiration for a delegation token from the client.
+   *
+   * @param hsr the servlet request
+   * @return Response containing the status code.
+   * @throws AuthorizationException if Kerberos auth failed.
+   * @throws IOException if the delegation failed.
+   * @throws InterruptedException  if interrupted.
+   * @throws Exception in case of bad request.
+   */
   @Override
   public Response postDelegationTokenExpiration(HttpServletRequest hsr)
-      throws AuthorizationException, IOException, InterruptedException,
-      Exception {
-    throw new NotImplementedException("Code is not implemented");
+      throws AuthorizationException, IOException, InterruptedException, Exception {
+
+    if (hsr == null) {
+      throw new IllegalArgumentException("Parameter error, the hsr is null.");
+    }
+
+    try {
+      // get Caller UserGroupInformation
+      Configuration conf = federationFacade.getConf();
+      UserGroupInformation callerUGI = getKerberosUserGroupInformation(conf, hsr);
+      return renewDelegationToken(hsr, callerUGI);
+    } catch (YarnException e) {
+      LOG.error("Renew delegation token request failed.", e);
+      return Response.status(Status.FORBIDDEN).entity(e.getMessage()).build();
+    }
   }
 
+  /**
+   * Renew DelegationToken.
+   *
+   * @param hsr HttpServletRequest.
+   * @param callerUGI UserGroupInformation.
+   * @return Response
+   * @throws IOException if there are I/O errors.
+   * @throws InterruptedException if any thread has interrupted.
+   */
+  private Response renewDelegationToken(HttpServletRequest hsr, UserGroupInformation callerUGI)
+      throws IOException, InterruptedException {
+
+    // renew Delegation Token
+    DelegationToken tokenData = new DelegationToken();
+    String encodeToken = extractToken(hsr).encodeToUrlString();
+    tokenData.setToken(encodeToken);
+
+    // Parse token data
+    Token<RMDelegationTokenIdentifier> token = extractToken(tokenData.getToken());
+    org.apache.hadoop.yarn.api.records.Token dToken =
+        BuilderUtils.newDelegationToken(token.getIdentifier(), token.getKind().toString(),
+        token.getPassword(), token.getService().toString());
+
+    // Renew token
+    RenewDelegationTokenResponse resp = callerUGI.doAs(
+        (PrivilegedExceptionAction<RenewDelegationTokenResponse>) () -> {
+        RenewDelegationTokenRequest req = RenewDelegationTokenRequest.newInstance(dToken);
+        return this.getRouterClientRMService().renewDelegationToken(req);
+      });
+
+    // return DelegationToken
+    long renewTime = resp.getNextExpirationTime();
+    DelegationToken respToken = new DelegationToken();
+    respToken.setNextExpirationTime(renewTime);
+    return Response.status(Status.OK).entity(respToken).build();
+  }
+
+  /**
+   * Cancel DelegationToken.
+   *
+   * @param hsr the servlet request
+   * @return  Response containing the status code.
+   * @throws AuthorizationException if Kerberos auth failed.
+   * @throws IOException if the delegation failed.
+   * @throws InterruptedException if interrupted.
+   * @throws Exception in case of bad request.
+   */
   @Override
   public Response cancelDelegationToken(HttpServletRequest hsr)
-      throws AuthorizationException, IOException, InterruptedException,
-      Exception {
-    throw new NotImplementedException("Code is not implemented");
+      throws AuthorizationException, IOException, InterruptedException, Exception {
+    try {
+      // get Caller UserGroupInformation
+      Configuration conf = federationFacade.getConf();
+      UserGroupInformation callerUGI = getKerberosUserGroupInformation(conf, hsr);
+
+      // parse Token Data
+      Token<RMDelegationTokenIdentifier> token = extractToken(hsr);
+      org.apache.hadoop.yarn.api.records.Token dToken = BuilderUtils
+          .newDelegationToken(token.getIdentifier(), token.getKind().toString(),
+          token.getPassword(), token.getService().toString());
+
+      // cancelDelegationToken
+      callerUGI.doAs((PrivilegedExceptionAction<CancelDelegationTokenResponse>) () -> {
+        CancelDelegationTokenRequest req = CancelDelegationTokenRequest.newInstance(dToken);
+        return this.getRouterClientRMService().cancelDelegationToken(req);
+      });
+
+      return Response.status(Status.OK).build();
+    } catch (YarnException e) {
+      LOG.error("Cancel delegation token request failed.", e);
+      return Response.status(Status.FORBIDDEN).entity(e.getMessage()).build();
+    }
   }
 
   @Override
   public Response createNewReservation(HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    throw new NotImplementedException("Code is not implemented");
+    long startTime = clock.getTime();
+    try {
+      Map<SubClusterId, SubClusterInfo> subClustersActive =
+          federationFacade.getSubClusters(true);
+      // We declare blackList and retries.
+      List<SubClusterId> blackList = new ArrayList<>();
+      int actualRetryNums = federationFacade.getRetryNumbers(numSubmitRetries);
+      Response response = ((FederationActionRetry<Response>) (retryCount) ->
+          invokeCreateNewReservation(subClustersActive, blackList, hsr, retryCount)).
+          runWithRetries(actualRetryNums, submitIntervalTime);
+      // If the response is not empty and the status is SC_OK,
+      // this request can be returned directly.
+      if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetNewReservationRetrieved(stopTime - startTime);
+        return response;
+      }
+    } catch (FederationPolicyException e) {
+      // If a FederationPolicyException is thrown, the service is unavailable.
+      routerMetrics.incrGetNewReservationFailedRetrieved();
+      return Response.status(Status.SERVICE_UNAVAILABLE).entity(e.getLocalizedMessage()).build();
+    } catch (Exception e) {
+      routerMetrics.incrGetNewReservationFailedRetrieved();
+      return Response.status(Status.INTERNAL_SERVER_ERROR).entity(e.getLocalizedMessage()).build();
+    }
+
+    // return error message directly.
+    String errMsg = "Fail to create a new reservation.";
+    LOG.error(errMsg);
+    routerMetrics.incrGetNewReservationFailedRetrieved();
+    return Response.status(Status.INTERNAL_SERVER_ERROR).entity(errMsg).build();
+  }
+
+  private Response invokeCreateNewReservation(Map<SubClusterId, SubClusterInfo> subClustersActive,
+      List<SubClusterId> blackList, HttpServletRequest hsr, int retryCount)
+      throws YarnException, IOException, InterruptedException {
+    SubClusterId subClusterId =
+        federationFacade.getRandomActiveSubCluster(subClustersActive, blackList);
+    LOG.info("createNewReservation try #{} on SubCluster {}.", retryCount, subClusterId);
+    SubClusterInfo subClusterInfo = subClustersActive.get(subClusterId);
+    DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+        subClusterId, subClusterInfo.getRMWebServiceAddress());
+    try {
+      Response response = interceptor.createNewReservation(hsr);
+      if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
+        return response;
+      }
+    } catch (Exception e) {
+      blackList.add(subClusterId);
+      RouterServerUtil.logAndThrowException(e.getMessage(), e);
+    }
+    // We need to throw the exception directly.
+    String msg = String.format("Unable to create a new ReservationId in SubCluster %s.",
+        subClusterId.getId());
+    throw new YarnException(msg);
   }
 
   @Override
   public Response submitReservation(ReservationSubmissionRequestInfo resContext,
-      HttpServletRequest hsr)
-      throws AuthorizationException, IOException, InterruptedException {
-    throw new NotImplementedException("Code is not implemented");
+      HttpServletRequest hsr) throws AuthorizationException, IOException, InterruptedException {
+    long startTime = clock.getTime();
+    if (resContext == null || resContext.getReservationId() == null
+        || resContext.getReservationDefinition() == null || resContext.getQueue() == null) {
+      routerMetrics.incrSubmitReservationFailedRetrieved();
+      String errMsg = "Missing submitReservation resContext or reservationId " +
+          "or reservation definition or queue.";
+      return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
+    }
+
+    // Check that the resId format is accurate
+    String resId = resContext.getReservationId();
+    try {
+      RouterServerUtil.validateReservationId(resId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrSubmitReservationFailedRetrieved();
+      throw e;
+    }
+
+    List<SubClusterId> blackList = new ArrayList<>();
+    try {
+      int activeSubClustersCount = federationFacade.getActiveSubClustersCount();
+      int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries);
+      Response response = ((FederationActionRetry<Response>) (retryCount) ->
+          invokeSubmitReservation(resContext, blackList, hsr, retryCount)).
+          runWithRetries(actualRetryNums, submitIntervalTime);
+      if (response != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededSubmitReservationRetrieved(stopTime - startTime);
+        return response;
+      }
+    } catch (Exception e) {
+      routerMetrics.incrSubmitReservationFailedRetrieved();
+      return Response.status(Status.SERVICE_UNAVAILABLE).entity(e.getLocalizedMessage()).build();
+    }
+
+    routerMetrics.incrSubmitReservationFailedRetrieved();
+    String msg = String.format("Reservation %s failed to be submitted.", resId);
+    return Response.status(Status.SERVICE_UNAVAILABLE).entity(msg).build();
+  }
+
+  private Response invokeSubmitReservation(ReservationSubmissionRequestInfo requestContext,
+      List<SubClusterId> blackList, HttpServletRequest hsr, int retryCount)
+      throws YarnException, IOException, InterruptedException {
+    String resId = requestContext.getReservationId();
+    ReservationId reservationId = ReservationId.parseReservationId(resId);
+    ReservationDefinitionInfo definitionInfo = requestContext.getReservationDefinition();
+    ReservationDefinition definition =
+         RouterServerUtil.convertReservationDefinition(definitionInfo);
+
+    // First, Get SubClusterId according to specific strategy.
+    ReservationSubmissionRequest request = ReservationSubmissionRequest.newInstance(
+        definition, requestContext.getQueue(), reservationId);
+    SubClusterId subClusterId = null;
+
+    try {
+      // Get subClusterId from policy.
+      subClusterId = policyFacade.getReservationHomeSubCluster(request);
+
+      // Print the log of submitting the submitApplication.
+      LOG.info("submitReservation ReservationId {} try #{} on SubCluster {}.", reservationId,
+          retryCount, subClusterId);
+
+      // Step2. We Store the mapping relationship
+      // between Application and HomeSubCluster in stateStore.
+      federationFacade.addOrUpdateReservationHomeSubCluster(reservationId,
+          subClusterId, retryCount);
+
+      // Step3. We get subClusterInfo based on subClusterId.
+      SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
+
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      HttpServletRequest hsrCopy = clone(hsr);
+      Response response = interceptor.submitReservation(requestContext, hsrCopy);
+      if (response != null && response.getStatus() == HttpServletResponse.SC_ACCEPTED) {
+        LOG.info("Reservation {} submitted on subCluster {}.", reservationId, subClusterId);
+        return response;
+      }
+      String msg = String.format("application %s failed to be submitted.", resId);
+      throw new YarnException(msg);
+    } catch (Exception e) {
+      LOG.warn("Unable to submit the reservation {} to SubCluster {}.", resId,
+          subClusterId, e);
+      if (subClusterId != null) {
+        blackList.add(subClusterId);
+      }
+      throw e;
+    }
   }
 
   @Override
   public Response updateReservation(ReservationUpdateRequestInfo resContext,
-      HttpServletRequest hsr)
-      throws AuthorizationException, IOException, InterruptedException {
-    throw new NotImplementedException("Code is not implemented");
+      HttpServletRequest hsr) throws AuthorizationException, IOException, InterruptedException {
+
+    // parameter verification
+    if (resContext == null || resContext.getReservationId() == null
+        || resContext.getReservationDefinition() == null) {
+      routerMetrics.incrUpdateReservationFailedRetrieved();
+      String errMsg = "Missing updateReservation resContext or reservationId " +
+          "or reservation definition.";
+      return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
+    }
+
+    // get reservationId
+    String reservationId = resContext.getReservationId();
+
+    // Check that the reservationId format is accurate
+    try {
+      RouterServerUtil.validateReservationId(reservationId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrUpdateReservationFailedRetrieved();
+      throw e;
+    }
+
+    try {
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByReservationId(reservationId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      HttpServletRequest hsrCopy = clone(hsr);
+      Response response = interceptor.updateReservation(resContext, hsrCopy);
+      if (response != null) {
+        return response;
+      }
+    } catch (Exception e) {
+      routerMetrics.incrUpdateReservationFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("updateReservation Failed.", e);
+    }
+
+    // throw an exception
+    routerMetrics.incrUpdateReservationFailedRetrieved();
+    throw new YarnRuntimeException("updateReservation Failed, reservationId = " + reservationId);
   }
 
   @Override
   public Response deleteReservation(ReservationDeleteRequestInfo resContext,
       HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    throw new NotImplementedException("Code is not implemented");
+
+    // parameter verification
+    if (resContext == null || resContext.getReservationId() == null) {
+      routerMetrics.incrDeleteReservationFailedRetrieved();
+      String errMsg = "Missing deleteReservation request or reservationId.";
+      return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
+    }
+
+    // get ReservationId
+    String reservationId = resContext.getReservationId();
+
+    // Check that the reservationId format is accurate
+    try {
+      RouterServerUtil.validateReservationId(reservationId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrDeleteReservationFailedRetrieved();
+      throw e;
+    }
+
+    try {
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByReservationId(reservationId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      HttpServletRequest hsrCopy = clone(hsr);
+      Response response = interceptor.deleteReservation(resContext, hsrCopy);
+      if (response != null) {
+        return response;
+      }
+    } catch (Exception e) {
+      routerMetrics.incrDeleteReservationFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("deleteReservation Failed.", e);
+    }
+
+    // throw an exception
+    routerMetrics.incrDeleteReservationFailedRetrieved();
+    throw new YarnRuntimeException("deleteReservation Failed, reservationId = " + reservationId);
   }
 
   @Override
@@ -1619,9 +2042,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throw new IllegalArgumentException("Parameter error, the reservationId is empty or null.");
     }
 
-    // Check that the appId format is accurate
+    // Check that the reservationId format is accurate
     try {
-      ReservationId.parseReservationId(reservationId);
+      RouterServerUtil.validateReservationId(reservationId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrListReservationFailedRetrieved();
       throw e;
@@ -2070,9 +2493,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     Map<SubClusterInfo, R> results = new HashMap<>();
 
-    // Send the requests in parallel
-    CompletionService<Pair<R, Exception>> compSvc =
-        new ExecutorCompletionService<>(this.threadpool);
+    // If there is a sub-cluster access error,
+    // we should choose whether to throw exception information according to user configuration.
+    // Send the requests in parallel.
+    CompletionService<Pair<R, Exception>> compSvc = new ExecutorCompletionService<>(threadpool);
 
     // This part of the code should be able to expose the accessed Exception information.
     // We use Pair to store related information. The left value of the Pair is the response,
@@ -2105,9 +2529,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         if (response != null) {
           results.put(clusterId, response);
         }
-
-        Exception exception = pair.getRight();
-        if (exception != null) {
+        Exception exception = pair.getValue();
+        // If allowPartialResult=false, it means that if an exception occurs in a subCluster,
+        // an exception will be thrown directly.
+        if (!allowPartialResult && exception != null) {
           throw exception;
         }
       } catch (Throwable e) {
@@ -2177,5 +2602,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @VisibleForTesting
   public LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> getAppInfosCaches() {
     return appInfosCaches;
+  }
+
+  @VisibleForTesting
+  public Map<SubClusterId, DefaultRequestInterceptorREST> getInterceptors() {
+    return interceptors;
+  }
+
+  public void setAllowPartialResult(boolean allowPartialResult) {
+    this.allowPartialResult = allowPartialResult;
   }
 }
