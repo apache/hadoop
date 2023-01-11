@@ -304,8 +304,7 @@ public abstract class CachingBlockManager extends BlockManager {
     synchronized (data) {
       try {
         readBlock(data, false, BufferData.State.BLANK);
-      }
-      catch(Exception e){
+      } catch(Exception e) {
         String message = String.format("error reading block %s", data.getBlockNumber());
         LOG.error(message, e);
         throw e;
@@ -317,7 +316,6 @@ public abstract class CachingBlockManager extends BlockManager {
     synchronized (data) {
       prefetchingStatistics.executorAcquired(
           Duration.between(taskQueuedStartTime, Instant.now()));
-
       readBlock(
           data,
           true,
@@ -411,9 +409,8 @@ public abstract class CachingBlockManager extends BlockManager {
       try {
         blockManager.prefetch(data, taskQueuedStartTime);
       } catch (Exception e) {
-        String message = String.format("error prefetching block %s", data.getBlockNumber());
-        LOG.info(message, e.getMessage());
-        LOG.debug(message, e);
+        LOG.info("error prefetching block {}. {}", data.getBlockNumber(), e.getMessage());
+        LOG.debug("error prefetching block {}", data.getBlockNumber(), e);
       }
       return null;
     }
@@ -531,9 +528,8 @@ public abstract class CachingBlockManager extends BlockManager {
         data.setDone();
       } catch (Exception e) {
         numCachingErrors.incrementAndGet();
-        String message = String.format("error adding block to cache after wait: %s", data);
-        LOG.info(message, e.getMessage());
-        LOG.debug(message, e);
+        LOG.info("error adding block to cache after wait: {}. {}", data, e.getMessage());
+        LOG.debug("error adding block to cache after wait: {}", data, e);
         data.setDone();
       }
 
