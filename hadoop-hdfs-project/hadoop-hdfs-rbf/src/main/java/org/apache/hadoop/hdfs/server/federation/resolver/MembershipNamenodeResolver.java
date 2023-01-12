@@ -193,13 +193,53 @@ public class MembershipNamenodeResolver
     }
   }
 
+  /**
+   * Try to shuffle the multiple observer namenodes if listObserversFirst is true.
+   * @param inputNameNodes the input FederationNamenodeContext list. If listObserversFirst is true,
+   *                       all observers will be placed at the front of the collection.
+   * @param listObserversFirst true if we need to shuffle the multiple front observer namenodes.
+   * @return a list of FederationNamenodeContext.
+   * @param <T> a subclass of FederationNamenodeContext.
+   */
+  private <T extends FederationNamenodeContext> List<T> shuffleObserverNN(
+      List<T> inputNameNodes, boolean listObserversFirst) {
+    if (!listObserversFirst) {
+      return inputNameNodes;
+    }
+    // Get Observers first.
+    List<T> observerList = new ArrayList<>();
+    for (T t : inputNameNodes) {
+      if (t.getState() == OBSERVER) {
+        observerList.add(t);
+      } else {
+        // The inputNameNodes are already sorted, so it can break
+        // when the first non-observer is encountered.
+        break;
+      }
+    }
+    // Returns the inputNameNodes if no shuffle is required
+    if (observerList.size() <= 1) {
+      return inputNameNodes;
+    }
+
+    // Shuffle multiple Observers
+    Collections.shuffle(observerList);
+
+    List<T> ret = new ArrayList<>(inputNameNodes.size());
+    ret.addAll(observerList);
+    for (int i = observerList.size(); i < inputNameNodes.size(); i++) {
+      ret.add(inputNameNodes.get(i));
+    }
+    return Collections.unmodifiableList(ret);
+  }
+
   @Override
   public List<? extends FederationNamenodeContext> getNamenodesForNameserviceId(
       final String nsId, boolean listObserversFirst) throws IOException {
 
     List<? extends FederationNamenodeContext> ret = cacheNS.get(Pair.of(nsId, listObserversFirst));
     if (ret != null) {
-      return ret;
+      return shuffleObserverNN(ret, listObserversFirst);
     }
 
     // Not cached, generate the value
