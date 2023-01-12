@@ -33,13 +33,11 @@ public class QiniuKodoBlockReader implements IBlockReader {
             );
         }
 
-        if (memoryCache.enable) {
-            // 添加内存缓存层
-            reader = new MemoryCacheBlockReader(
-                    reader,
-                    memoryCache.blocks
-            );
-        }
+        // 必须添加内存缓存层，否则单字节读取可能将不断读取文件块
+        reader = new MemoryCacheBlockReader(
+                reader,
+                memoryCache.blocks
+        );
         this.reader = reader;
     }
 

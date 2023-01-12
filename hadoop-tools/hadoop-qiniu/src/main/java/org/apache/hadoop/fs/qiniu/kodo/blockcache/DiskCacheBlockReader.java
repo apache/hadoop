@@ -42,7 +42,10 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
     }
     private void writeFile(Path path, byte[] data) throws IOException {
         LOG.debug("write file: {}", path);
-
+        Path parentPath = path.getParent();
+        if(parentPath.toFile().mkdirs()) {
+            LOG.debug("mkdirs: {}", parentPath);
+        }
         int bs = getBlockSize();
         if (data.length > bs) throw new IOException("Cache block size error!!!");
         try(OutputStream f = new BufferedOutputStream(Files.newOutputStream(path))) {
@@ -52,9 +55,7 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
 
     @Override
     public int getBlockSize() {
-        int blkSize = source.getBlockSize();
-        LOG.debug("blockSize: {}", blkSize);
-        return blkSize;
+        return source.getBlockSize();
     }
 
     @Override

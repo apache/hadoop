@@ -7,12 +7,15 @@ import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem;
 import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
 
 public class QiniuKodoFileSystemTest {
+    private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoFileSystemTest.class);
     private FileSystem fs;
 
     @Before
@@ -60,12 +63,15 @@ public class QiniuKodoFileSystemTest {
     }
 
     @Test
-    public void testOpen() throws IOException {
-        FSDataInputStream is = fs.open(new Path("/user/zzq123.txt"));
+    public void testOpen() throws IOException, InterruptedException {
+        FSDataInputStream is = fs.open(new Path("/vscode2.zip"));
         int ch;
+        int cnt = 0;
         while((ch = is.read()) != -1) {
-            System.out.print(ch + " ");
+//            System.out.print(ch + " ");
+            cnt++;
         }
+        LOG.info("cnt: {}", cnt);
         is.close();
     }
 

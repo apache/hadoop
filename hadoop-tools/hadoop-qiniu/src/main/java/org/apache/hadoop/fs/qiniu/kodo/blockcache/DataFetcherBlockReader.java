@@ -21,15 +21,13 @@ public class DataFetcherBlockReader implements IBlockReader, IDataFetcher{
 
     @Override
     public byte[] readBlock(String key, int blockId) {
-        long from = (long) blockId * getBlockSize();
-        long to = from + getBlockSize() - 1;
-        return fetch(key, from, to);
+        return fetch(key, (long) blockId * getBlockSize(), getBlockSize());
     }
 
     @Override
-    public byte[] fetch(String key, long from, long to) {
+    public byte[] fetch(String key, long offset, int size) {
         if (dataFetcher != null) {
-            return dataFetcher.fetch(key, from, to);
+            return dataFetcher.fetch(key, offset, size);
         }
         return new byte[0];
     }

@@ -18,16 +18,21 @@ public class QiniuKodoSourceDataFetcher extends DataFetcherBlockReader {
     }
 
     @Override
-    public byte[] fetch(String key, long begin, long size) {
-        try(InputStream is = new BufferedInputStream(client.fetch(key, begin, size))) {
-            byte[] blockData = new byte[getBlockSize()];
-            int sz = is.read(blockData);
+    public byte[] fetch(String key, long offset, int size) {
+        try(InputStream is = new BufferedInputStream(client.fetch(key, offset, size))) {
+            byte[] blockData = new byte[(int) size];
+
+            int pos = 0;
+            int b;
+            while((b = is.read()) != -1) {
+                blockData[pos++] = (byte) b;
+            }
 
             // 读取到整块数据
-            if (sz == getBlockSize()) return blockData;
+            if (pos == getBlockSize()) return blockData;
 
             // 读取到的数据比整块数据少
-            return Arrays.copyOf(blockData, sz);
+            return Arrays.copyOf(blockData, pos);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

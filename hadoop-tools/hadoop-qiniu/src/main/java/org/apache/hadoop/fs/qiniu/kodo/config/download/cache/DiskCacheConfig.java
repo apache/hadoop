@@ -21,14 +21,14 @@ public class DiskCacheConfig extends AConfigBase {
      * 是否启用磁盘缓存
      */
     private boolean enable() {
-        return conf.getBoolean(namespace + ".enable", false);
+        return conf.getBoolean(namespace + ".enable", true);
     }
 
     /**
      * 读取文件时磁盘LRU缓冲区的最大块数量
      */
     private int blocks() {
-        return conf.getInt(namespace + ".blocks", 100);
+        return conf.getInt(namespace + ".blocks", 120);
     }
 
     /**

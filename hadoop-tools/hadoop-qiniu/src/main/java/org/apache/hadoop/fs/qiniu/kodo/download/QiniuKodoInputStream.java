@@ -41,12 +41,13 @@ public class QiniuKodoInputStream extends FSInputStream {
         int blockId = (int)(position / (long) blkSz);
         byte[] blockData = reader.readBlock(this.key, blockId);
         int offset = (int)(position % (long) blkSz);
-        if (offset >= blockData.length) {
+        if (blockData.length < blkSz && offset >= blockData.length) {
+            LOG.debug("read position: {} eof", position);
             return -1;
         }
-        LOG.debug("read position: {}", position);
         position++;
-        return blockData[offset];
+
+        return Byte.toUnsignedInt(blockData[offset]);
     }
 
     @Override
