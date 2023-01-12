@@ -1,7 +1,8 @@
-package org.apache.hadoop.fs.qiniu.kodo;
+package org.apache.hadoop.fs.qiniu.kodo.upload;
 
 import com.qiniu.common.QiniuException;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

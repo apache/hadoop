@@ -5,6 +5,9 @@ import com.qiniu.util.Auth;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoBlockReader;
+import org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoInputStream;
+import org.apache.hadoop.fs.qiniu.kodo.upload.QiniuKodoOutputStream;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.Progressable;
@@ -18,7 +21,6 @@ import java.net.URI;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class QiniuKodoFileSystem extends FileSystem {
 
@@ -30,21 +32,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     private QiniuKodoClient kodoClient;
 
-    private ExecutorService boundedThreadPool;
-
-    private ExecutorService boundedCopyThreadPool;
-
     private QiniuKodoFsConfig fsConfig;
-
-    @Override
-    public void close() throws IOException {
-        try {
-            boundedThreadPool.shutdown();
-            boundedCopyThreadPool.shutdown();
-        } finally {
-            super.close();
-        }
-    }
 
     @Override
     public void initialize(URI name, Configuration conf) throws IOException {
@@ -64,14 +52,6 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         workingDir = new Path("/user", username).makeQualified(uri, null);
         LOG.debug("== workingDir:" + workingDir);
-
-        this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
-                10, 128, 60, TimeUnit.SECONDS,
-                "kodo-transfer-shared");
-
-        this.boundedCopyThreadPool = BlockingThreadPoolExecutorService.newInstance(
-                25, 10485760, 60L,
-                TimeUnit.SECONDS, "kodo-copy-unbounded");
 
         Auth auth = fsConfig.createAuth();
         kodoClient = new QiniuKodoClient(auth, bucket, fsConfig);
@@ -101,14 +81,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         LOG.debug("== open, key:" + key);
 
-        return new FSDataInputStream(
-                new QiniuKodoInputStream(
-                        fsConfig,
-                        new SemaphoredDelegatingExecutor(boundedThreadPool, 4, true),
-                        4, kodoClient,
-                        key,
-                        fileStatus.getLen(),
-                        statistics));
+        return new FSDataInputStream(new QiniuKodoInputStream(key, new QiniuKodoBlockReader(fsConfig, kodoClient)));
     }
 
     /**
