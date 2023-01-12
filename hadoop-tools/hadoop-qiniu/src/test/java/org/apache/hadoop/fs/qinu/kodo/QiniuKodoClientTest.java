@@ -1,11 +1,9 @@
 package org.apache.hadoop.fs.qinu.kodo;
 
 import com.qiniu.common.QiniuException;
-import com.qiniu.storage.Region;
-import com.qiniu.util.Auth;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoClient;
-import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFsConfig;
+import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,7 +20,7 @@ public class QiniuKodoClientTest {
 
         QiniuKodoFsConfig fsConfig = new QiniuKodoFsConfig(conf);
         String bucket = URI.create(conf.get("fs.contract.test.fs.qiniu")).getHost();
-        client = new QiniuKodoClient(fsConfig.createAuth(), bucket, fsConfig);
+        client = new QiniuKodoClient(bucket, fsConfig);
     }
 
     @Test

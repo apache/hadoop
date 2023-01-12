@@ -5,11 +5,13 @@ import com.qiniu.common.QiniuException;
 import com.qiniu.http.Client;
 import com.qiniu.http.Response;
 import com.qiniu.storage.*;
-import com.qiniu.storage.model.BucketInfo;
 import com.qiniu.storage.model.FileInfo;
 import com.qiniu.storage.model.FileListing;
 import com.qiniu.util.Auth;
 import com.qiniu.util.StringMap;
+import com.qiniu.util.StringUtils;
+import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
+import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,18 +40,18 @@ public class QiniuKodoClient {
 
     private String downloadDomain;
 
-    public QiniuKodoClient(Auth auth, String bucket, QiniuKodoFsConfig fsConfig) throws QiniuException {
+    public QiniuKodoClient(String bucket, QiniuKodoFsConfig fsConfig) throws QiniuException, AuthorizationException {
         this.bucket = bucket;
-        this.auth = auth;
+        this.auth = getAuth(fsConfig);
 
         Configuration configuration = new Configuration();
 
         // 如果找不到区域配置，那就auto
-        String regionIdConfig = fsConfig.getRegionId();
+        String regionIdConfig = fsConfig.regionId;
         if (regionIdConfig != null) region = QiniuKodoRegionManager.getRegionById(regionIdConfig);
-
         configuration.region = region == null ? Region.autoRegion() : region.getRegion();
-        this.useHttps = fsConfig.useHttps();
+
+        this.useHttps = fsConfig.useHttps;
         configuration.useHttpsDomains = this.useHttps;
 
         this.client = new Client(configuration);
@@ -60,7 +62,25 @@ public class QiniuKodoClient {
         if (region == null) region = QiniuKodoRegionManager.getRegionById(bucketManager.getBucketInfo(bucket).getRegion());
 
         // 设置下载域名，若未配置，则走源站
-        if ((downloadDomain = fsConfig.getDownloadDomain()) == null) downloadDomain = bucket + "." + region.getRegionEndpoint();
+        if ((downloadDomain = fsConfig.download.domain) == null) downloadDomain = bucket + "." + region.getRegionEndpoint();
+    }
+
+    private static Auth getAuth(QiniuKodoFsConfig fsConfig) throws AuthorizationException {
+        String ak = fsConfig.auth.accessKey;
+        String sk = fsConfig.auth.secretKey;
+        if (StringUtils.isNullOrEmpty(ak)) {
+            throw new AuthorizationException(String.format(
+                    "Qiniu access key can't empty, you should set it with %s in core-site.xml",
+                    fsConfig.auth.ACCESS_KEY
+            ));
+        }
+        if (StringUtils.isNullOrEmpty(sk)) {
+            throw new AuthorizationException(String.format(
+                    "Qiniu secret key can't empty, you should set it with %s in core-site.xml",
+                    fsConfig.auth.SECRET_KEY
+            ));
+        }
+        return Auth.create(ak, sk);
     }
 
     /**

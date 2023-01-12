@@ -1,7 +1,7 @@
 package org.apache.hadoop.fs.qiniu.kodo.download;
 
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoClient;
-import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFsConfig;
+import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.MemoryCacheBlockReader;
