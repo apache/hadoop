@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -66,6 +67,9 @@ public class TracingContext {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
   public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
+
+  //x-ms-client-request-id can have maximum 1KB string
+  private static final Integer MAX_CLIENT_REQUEST_ID = 1024;
 
   /**
    * Initialize TracingContext
@@ -152,8 +156,10 @@ public class TracingContext {
    * X_MS_CLIENT_REQUEST_ID header of the http operation
    * @param httpOperation AbfsHttpOperation instance to set header into
    *                      connection
+   * @param previousFailures List of failures seen before this API trigger on
+   * same operation from AbfsClient.
    */
-  public void constructHeader(AbfsHttpOperation httpOperation) {
+  public void constructHeader(AbfsHttpOperation httpOperation, List<String> previousFailures) {
     clientRequestId = UUID.randomUUID().toString();
     switch (format) {
     case ALL_ID_FORMAT: // Optional IDs (e.g. streamId) may be empty
@@ -161,6 +167,7 @@ public class TracingContext {
           clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID + ":"
               + primaryRequestId + ":" + streamID + ":" + opType + ":"
               + retryCount;
+      header = addFailureReasons(header, previousFailures);
       break;
     case TWO_ID_FORMAT:
       header = clientCorrelationID + ":" + clientRequestId;
@@ -172,6 +179,19 @@ public class TracingContext {
       listener.callTracingHeaderValidator(header, format);
     }
     httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
+  }
+
+  private String addFailureReasons(final String header,
+      final List<String> previousFailures) {
+    String headerResult = header;
+    for(int iter = previousFailures.size() -1; iter >=0; iter--) {
+      headerResult += previousFailures.get(iter);
+      if(headerResult.length() > MAX_CLIENT_REQUEST_ID) {
+        headerResult = headerResult.substring(0, MAX_CLIENT_REQUEST_ID);
+        break;
+      }
+    }
+    return headerResult;
   }
 
   /**
