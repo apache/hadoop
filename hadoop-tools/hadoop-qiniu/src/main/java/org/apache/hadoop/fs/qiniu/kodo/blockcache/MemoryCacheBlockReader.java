@@ -2,12 +2,13 @@ package org.apache.hadoop.fs.qiniu.kodo.blockcache;
 
 public class MemoryCacheBlockReader implements IBlockReader{
     private final IBlockReader source;
-    private final LRUCache<Integer, byte[]> lruCache;
+    private final LRUCache<KeyBlockIdCacheKey, byte[]> lruCache;
 
     public MemoryCacheBlockReader(IBlockReader source, int maxCacheBlocks) {
         this.source = source;
         this.lruCache = new LRUCache<>(maxCacheBlocks);
     }
+
 
     @Override
     public int getBlockSize() {
@@ -15,10 +16,11 @@ public class MemoryCacheBlockReader implements IBlockReader{
     }
 
     @Override
-    public byte[] readBlockById(int blockId) {
-        if (lruCache.containsKey(blockId)) return lruCache.get(blockId);
-        byte[] blockData = source.readBlockById(blockId);
-        lruCache.put(blockId, blockData);
+    public byte[] readBlock(String key, int blockId) {
+        KeyBlockIdCacheKey kbck = KeyBlockIdCacheKey.get(key, blockId);
+        if (lruCache.containsKey(kbck)) return lruCache.get(kbck);
+        byte[] blockData = source.readBlock(key, blockId);
+        lruCache.put(kbck, blockData);
         return blockData;
     }
 }

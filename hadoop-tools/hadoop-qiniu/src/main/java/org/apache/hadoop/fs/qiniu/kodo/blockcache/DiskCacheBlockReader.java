@@ -9,10 +9,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 
-public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListener<Integer, Path> {
+public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListener<KeyBlockIdCacheKey, Path> {
     private static final Logger LOG = LoggerFactory.getLogger(DiskCacheBlockReader.class);
     private final IBlockReader source;
-    private final LRUCache<Integer, Path> lruCache;
+    private final LRUCache<KeyBlockIdCacheKey, Path> lruCache;
     private final Path bufferDir;
 
     public DiskCacheBlockReader(IBlockReader source, int maxCacheBlocks, Path bufferDir) throws IOException {
@@ -27,18 +27,16 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
     private byte[] readFile(Path path) throws IOException {
         LOG.debug("read file: {}", path);
 
-        File file = path.toFile();
-
         int bs = getBlockSize();
-        try(InputStream f = new BufferedInputStream(new FileInputStream(file))) {
-            int fileLength = (int) file.length();
+        try(InputStream f = new BufferedInputStream(Files.newInputStream(path))) {
+            int fileLength = (int) path.toFile().length();
             byte[] result;
             if (fileLength < bs) {
                 result = new byte[fileLength];
             } else {
                 result = new byte[bs];
             }
-            if(f.read(result) != -1) throw new IOException("Cache file " + file + "error!!!");
+            if(f.read(result) != -1) throw new IOException("Cache file " + path + "error!!!");
             return result;
         }
     }
@@ -47,11 +45,11 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
 
         int bs = getBlockSize();
         if (data.length > bs) throw new IOException("Cache block size error!!!");
-        File file = path.toFile();
-        try(OutputStream f = new BufferedOutputStream(new FileOutputStream(file))) {
+        try(OutputStream f = new BufferedOutputStream(Files.newOutputStream(path))) {
             f.write(data);
         }
     }
+
     @Override
     public int getBlockSize() {
         int blkSize = source.getBlockSize();
@@ -60,18 +58,20 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
     }
 
     @Override
-    public byte[] readBlockById(int blockId) {
+    public byte[] readBlock(String key, int blockId) {
         LOG.debug("readBlockId: {}", blockId);
+        KeyBlockIdCacheKey kbck = KeyBlockIdCacheKey.get(key, blockId);
+
         try {
-            if (lruCache.containsKey(blockId)) {
-                Path blockFile = lruCache.get(blockId);
+            if (lruCache.containsKey(kbck)) {
+                Path blockFile = lruCache.get(kbck);
                 return readFile(blockFile);
             }
 
-            Path cachedBlockFile = Paths.get(bufferDir.toString(), String.format("%d.blk", blockId));
-            byte[] blockData = source.readBlockById(blockId);
+            Path cachedBlockFile = Paths.get(bufferDir.toString(), key, String.format("%d.blk", blockId));
+            byte[] blockData = source.readBlock(key, blockId);
             writeFile(cachedBlockFile, blockData);
-            lruCache.put(blockId, cachedBlockFile);
+            lruCache.put(kbck, cachedBlockFile);
             return blockData;
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -79,7 +79,7 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
     }
 
     @Override
-    public void onRemove(Map.Entry<Integer, Path> entry) {
+    public void onRemove(Map.Entry<KeyBlockIdCacheKey, Path> entry) {
         LOG.debug("delete file: {}", entry.getValue());
         boolean success = entry.getValue().toFile().delete();
         if (success) {

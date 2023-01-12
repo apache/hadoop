@@ -5,7 +5,6 @@ package org.apache.hadoop.fs.qiniu.kodo.blockcache;
 public class DataFetcherBlockReader implements IBlockReader, IDataFetcher{
     private final int blockSize;
     private final IDataFetcher dataFetcher;
-
     public DataFetcherBlockReader(int blockSize, IDataFetcher dataFetcher) {
         this.blockSize = blockSize;
         this.dataFetcher = dataFetcher;
@@ -21,16 +20,16 @@ public class DataFetcherBlockReader implements IBlockReader, IDataFetcher{
     }
 
     @Override
-    public byte[] readBlockById(int blockId) {
+    public byte[] readBlock(String key, int blockId) {
         long from = (long) blockId * getBlockSize();
         long to = from + getBlockSize();
-        return fetch(from, to);
+        return fetch(key, from, to);
     }
 
     @Override
-    public byte[] fetch(long from, long to) {
+    public byte[] fetch(String key, long from, long to) {
         if (dataFetcher != null) {
-            return dataFetcher.fetch(from, to);
+            return dataFetcher.fetch(key, from, to);
         }
         return new byte[0];
     }

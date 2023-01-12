@@ -6,6 +6,9 @@ import com.qiniu.util.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 
 public class QiniuKodoFsConfig {
@@ -80,14 +83,47 @@ public class QiniuKodoFsConfig {
      * 默认为4M
      */
     public int getDownloadBlockSize() {
-        return conf.getInt("fs.qiniu.download.block.size", 4 * 1024 * 1024);
+        return conf.getInt("fs.qiniu.block.size", 4 * 1024 * 1024);
     }
 
-    private String bufferDir;
 
-    public String getBufferDir() {
-        if (bufferDir != null) return bufferDir;
-        bufferDir = conf.get(QINIU_PARAMETER_BUFFER_DIR_KEY);
-        return bufferDir;
+    /**
+     * 是否启用内存缓存
+     */
+    public boolean getMemoryCacheEnable() {
+        return conf.getBoolean("fs.qiniu.cache.memory.enable", false);
+    }
+
+
+    /**
+     * 读取文件时内存LRU缓冲区的最大块数量
+     */
+    public int getMemoryCacheBlocks() {
+        return conf.getInt("fs.qiniu.cache.memory.blocks", 10);
+    }
+
+    /**
+     * 是否启用磁盘缓存
+     */
+    public boolean getDiskCacheEnable() {
+        return conf.getBoolean("fs.qiniu.cache.disk.enable", false);
+    }
+
+    /**
+     * 读取文件时磁盘LRU缓冲区的最大块数量
+     */
+    public int getDiskCacheBlocks() {
+        return conf.getInt("fs.qiniu.cache.disk.blocks", 100);
+    }
+
+    /**
+     * 读取下载缓冲区的文件夹路径
+     */
+    public Path getDiskCacheDir() {
+        String dir = conf.get("fs.qiniu.cache.disk.dir");
+        if (dir != null) return Paths.get(dir);
+
+        String hadoopTmpDir = conf.get("hadoop.tmp.dir");
+        return Paths.get(hadoopTmpDir, "qiniu");
     }
 }
