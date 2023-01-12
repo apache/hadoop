@@ -156,7 +156,7 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
   /**
    * Create the cluster binding.
    * The configuration will be patched by propagating down options
-   * from the maven build (S3Guard binding etc) and turning off unwanted
+   * from the maven build and turning off unwanted
    * YARN features.
    *
    * If an HDFS cluster is requested,

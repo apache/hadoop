@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -228,7 +228,11 @@ public class CSMappingPlacementRule extends PlacementRule {
       ApplicationSubmissionContext asc, String user) {
     VariableContext vctx = new VariableContext();
 
-    vctx.put("%user", cleanName(user));
+    String cleanedName = cleanName(user);
+    if (!user.equals(cleanedName)) {
+      vctx.putOriginal("%user", user);
+    }
+    vctx.put("%user", cleanedName);
     //If the specified matches the default it means NO queue have been specified
     //as per ClientRMService#submitApplication which sets the queue to default
     //when no queue is provided.
@@ -239,7 +243,7 @@ public class CSMappingPlacementRule extends PlacementRule {
       //Adding specified as empty will prevent it to be undefined and it won't
       //try to place the application to a queue named '%specified', queue path
       //validation will reject the empty path or the path with empty parts,
-      //so we sill still hit the fallback action of this rule if no queue
+      //so we still hit the fallback action of this rule if no queue
       //is specified
       vctx.put("%specified", "");
     }
@@ -277,7 +281,7 @@ public class CSMappingPlacementRule extends PlacementRule {
     }
 
     CSQueue queue = queueManager.getQueueByFullName(normalizedName);
-    if (queue != null && !(queue instanceof LeafQueue)) {
+    if (queue != null && !(queue instanceof AbstractLeafQueue)) {
       throw new YarnException("Mapping rule returned a non-leaf queue '" +
           normalizedName + "', cannot place application in it.");
     }

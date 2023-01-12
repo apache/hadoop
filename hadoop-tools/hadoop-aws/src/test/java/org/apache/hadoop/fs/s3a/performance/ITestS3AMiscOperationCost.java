@@ -30,18 +30,22 @@ import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_SPAN_CREATION;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_GET_CONTENT_SUMMARY;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_METADATA_REQUESTS;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILESTATUS_DIR_PROBE_L;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILE_STATUS_FILE_PROBE;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.LIST_OPERATION;
+import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
 
 /**
  * Use metrics to assert about the cost of misc operations.
@@ -54,19 +58,47 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
       LoggerFactory.getLogger(ITestS3AMiscOperationCost.class);
 
   /**
+   * Parameter: should auditing be enabled?
+   */
+  private final boolean auditing;
+
+  /**
    * Parameterization.
    */
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {"keep-markers", true},
-        {"delete-markers", false}
+        {"keep-markers-auditing", true, true},
+        {"delete-markers-unaudited", false, false}
     });
   }
 
   public ITestS3AMiscOperationCost(final String name,
-      final boolean keepMarkers) {
-    super(false, keepMarkers, false);
+      final boolean keepMarkers,
+      final boolean auditing) {
+    super(keepMarkers);
+    this.auditing = auditing;
+  }
+
+  @Override
+  public Configuration createConfiguration() {
+    final Configuration conf = super.createConfiguration();
+    removeBaseAndBucketOverrides(conf, AUDIT_ENABLED);
+    conf.setBoolean(AUDIT_ENABLED, auditing);
+    return conf;
+  }
+
+  /**
+   * Expected audit count when auditing is enabled; expect 0
+   * when disabled.
+   * @param expected expected value.
+   * @return the probe.
+   */
+  protected OperationCostValidator.ExpectedProbe withAuditCount(
+      final int expected) {
+    return probe(AUDIT_SPAN_CREATION,
+        auditing ? expected : 0);
+
   }
 
   /**
@@ -81,7 +113,7 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
 
     // create the child; only assert on HEAD/GET IO
     verifyMetrics(() -> fs.mkdirs(baseDir),
-        with(AUDIT_SPAN_CREATION, 1),
+        withAuditCount(1),
         // full probe on dest plus list only on parent.
         with(OBJECT_METADATA_REQUESTS, 0),
         with(OBJECT_LIST_REQUEST, FILESTATUS_DIR_PROBE_L));
@@ -105,13 +137,15 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
     Path childDir = new Path(baseDir, "subdir/child");
     touch(fs, childDir);
 
+    // look at path to see if it is a file
+    // it is not: so LIST
     final ContentSummary summary = verifyMetrics(
         () -> getContentSummary(baseDir),
         with(INVOCATION_GET_CONTENT_SUMMARY, 1),
-        with(AUDIT_SPAN_CREATION, 1),
-        whenRaw(FILE_STATUS_FILE_PROBE    // look at path to see if it is a file
-            .plus(LIST_OPERATION)         // it is not: so LIST
-            .plus(LIST_OPERATION)));       // and a LIST on the child dir
+        withAuditCount(1),
+        always(FILE_STATUS_FILE_PROBE    // look at path to see if it is a file
+            .plus(LIST_OPERATION)));         // it is not: so LIST
+
     Assertions.assertThat(summary.getDirectoryCount())
         .as("Summary " + summary)
         .isEqualTo(2);
@@ -127,8 +161,8 @@ public class ITestS3AMiscOperationCost extends AbstractS3ACostTest {
     verifyMetricsIntercepting(FileNotFoundException.class,
         "", () -> getContentSummary(baseDir),
         with(INVOCATION_GET_CONTENT_SUMMARY, 1),
-        with(AUDIT_SPAN_CREATION, 1),
-        whenRaw(FILE_STATUS_FILE_PROBE
+        withAuditCount(1),
+        always(FILE_STATUS_FILE_PROBE
             .plus(FILE_STATUS_FILE_PROBE)
             .plus(LIST_OPERATION)
             .plus(LIST_OPERATION)));

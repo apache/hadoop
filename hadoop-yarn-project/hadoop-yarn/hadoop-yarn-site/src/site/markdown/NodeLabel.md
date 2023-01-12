@@ -170,6 +170,14 @@ Applications can use following Java APIs to specify node label to request
 * `ResourceRequest.setNodeLabelExpression(..)` to set node label expression for individual resource requests. This can overwrite node label expression set in ApplicationSubmissionContext
 * Specify `setAMContainerResourceRequest.setNodeLabelExpression` in `ApplicationSubmissionContext` to indicate expected node label for application master container.
 
+__Default AM node-label Configuration__
+
+Property  | Value
+----- | ------
+yarn.resourcemanager.node-labels.am.default-node-label-expression | Overwrites default-node-label-expression only for the ApplicationMaster container. It is disabled by default.
+
+
+
 Monitoring
 ----------
 

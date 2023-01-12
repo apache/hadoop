@@ -74,8 +74,9 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
       // verify its format
       String errorMessage = ex.getLocalizedMessage();
       String[] errorFields = errorMessage.split(",");
-
-      Assert.assertEquals(6, errorFields.length);
+      Assertions.assertThat(errorFields)
+          .describedAs("fields in exception of %s", ex)
+          .hasSize(6);
       // Check status message, status code, HTTP Request Type and URL.
       Assert.assertEquals("Operation failed: \"The specified path does not exist.\"", errorFields[0].trim());
       Assert.assertEquals("404", errorFields[1].trim());
@@ -111,7 +112,10 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
     final AzureBlobFileSystem fs1 =
         (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(),
         config);
-    RetryTestTokenProvider.ResetStatusToFirstTokenFetch();
+    RetryTestTokenProvider retryTestTokenProvider
+        = RetryTestTokenProvider.getCurrentRetryTestProviderInstance(
+        getAccessTokenProvider(fs1));
+    retryTestTokenProvider.resetStatusToFirstTokenFetch();
 
     intercept(Exception.class,
         ()-> {
@@ -119,10 +123,10 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
         });
 
     // Number of retries done should be as configured
-    Assert.assertTrue(
-        "Number of token fetch retries (" + RetryTestTokenProvider.reTryCount
-            + ") done, does not match with fs.azure.custom.token.fetch.retry.count configured (" + numOfRetries
-            + ")", RetryTestTokenProvider.reTryCount == numOfRetries);
+    Assert.assertEquals(
+        "Number of token fetch retries done does not match with fs.azure"
+            + ".custom.token.fetch.retry.count configured", numOfRetries,
+        retryTestTokenProvider.getRetryCount());
   }
 
   @Test

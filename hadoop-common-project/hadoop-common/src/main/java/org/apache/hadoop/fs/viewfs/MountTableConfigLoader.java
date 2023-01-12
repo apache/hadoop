@@ -38,6 +38,7 @@ public interface MountTableConfigLoader {
    *          a directory in the case of multiple versions of mount-table
    *          files(Recommended option).
    * @param conf - Configuration object to add mount table.
+   * @throws IOException raised on errors performing I/O.
    */
   void load(String mountTableConfigPath, Configuration conf)
       throws IOException;

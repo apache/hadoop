@@ -680,7 +680,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       // Test add one auto created queue dynamically and manually modify
       // capacity
       ManagedParentQueue parentQueue = (ManagedParentQueue) newCS.getQueue("c");
-      AutoCreatedLeafQueue c1 = new AutoCreatedLeafQueue(newCS, "c1",
+      AutoCreatedLeafQueue c1 = new AutoCreatedLeafQueue(newCS.getQueueContext(), "c1",
           parentQueue);
       newCS.addQueue(c1);
       c1.setCapacity(0.5f);
@@ -689,13 +689,13 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       setEntitlement(c1, new QueueEntitlement(0.5f, 1f));
 
-      AutoCreatedLeafQueue c2 = new AutoCreatedLeafQueue(newCS, "c2",
+      AutoCreatedLeafQueue c2 = new AutoCreatedLeafQueue(newCS.getQueueContext(), "c2",
           parentQueue);
       newCS.addQueue(c2);
       setEntitlement(c2, new QueueEntitlement(0.5f, 1f));
 
       try {
-        AutoCreatedLeafQueue c3 = new AutoCreatedLeafQueue(newCS, "c3",
+        AutoCreatedLeafQueue c3 = new AutoCreatedLeafQueue(newCS.getQueueContext(), "c3",
             parentQueue);
         newCS.addQueue(c3);
         fail("Expected exception for auto queue creation failure");

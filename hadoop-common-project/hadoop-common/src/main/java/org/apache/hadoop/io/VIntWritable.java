@@ -37,10 +37,13 @@ public class VIntWritable implements WritableComparable<VIntWritable> {
 
   public VIntWritable(int value) { set(value); }
 
-  /** Set the value of this VIntWritable. */
+  /**
+   * Set the value of this VIntWritable.
+   * @param value input value.
+   */
   public void set(int value) { this.value = value; }
 
-  /** Return the value of this VIntWritable. */
+  /** @return Return the value of this VIntWritable. */
   public int get() { return value; }
 
   @Override

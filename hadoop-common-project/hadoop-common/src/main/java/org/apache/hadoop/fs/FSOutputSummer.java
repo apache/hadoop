@@ -186,6 +186,8 @@ abstract public class FSOutputSummer extends OutputStream implements
 
   /**
    * Return the number of valid bytes currently in the buffer.
+   *
+   * @return buffer data size.
    */
   protected synchronized int getBufferedDataSize() {
     return count;
@@ -227,6 +229,10 @@ abstract public class FSOutputSummer extends OutputStream implements
 
   /**
    * Converts a checksum integer value to a byte stream
+   *
+   * @param sum check sum.
+   * @param checksumSize check sum size.
+   * @return byte stream.
    */
   static public byte[] convertToByteStream(Checksum sum, int checksumSize) {
     return int2byte((int)sum.getValue(), new byte[checksumSize]);
@@ -245,6 +251,8 @@ abstract public class FSOutputSummer extends OutputStream implements
 
   /**
    * Resets existing buffer with a new one of the specified size.
+   *
+   * @param size size.
    */
   protected synchronized void setChecksumBufSize(int size) {
     this.buf = new byte[size];

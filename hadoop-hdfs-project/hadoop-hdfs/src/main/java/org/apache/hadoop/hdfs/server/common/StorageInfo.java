@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.SortedSet;
@@ -111,6 +112,20 @@ public class StorageInfo {
     sb.append("lv=").append(layoutVersion).append(";cid=").append(clusterID)
     .append(";nsid=").append(namespaceID).append(";c=").append(cTime);
     return sb.toString();
+  }
+
+  /**
+   * Returns string representation of Storage info attributes stored in Map.
+   *
+   * @return string representation of storage info attributes.
+   */
+  public String toMapString() {
+    Map<String, Object> storageInfo = new HashMap<>();
+    storageInfo.put("LayoutVersion", layoutVersion);
+    storageInfo.put("ClusterId", clusterID);
+    storageInfo.put("NamespaceId", namespaceID);
+    storageInfo.put("CreationTime", cTime);
+    return storageInfo.toString();
   }
   
   public String toColonSeparatedString() {

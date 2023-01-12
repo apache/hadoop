@@ -29,12 +29,11 @@
  *   <li>The summary information saved in the {@code _SUCCESS} file.</li>
  * </ol>
  *
- * There are no guarantees of stability between versions; these are internal
- * structures.
  *
  * The {@link org.apache.hadoop.fs.s3a.commit.files.SuccessData} file is
- * the one visible to callers after a job completes; it is an unstable
- * manifest intended for testing only.
+ * the one visible to callers after a job completes; it is compatible with
+ * the manifest committer format persisted in
+ * {@code org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData}
  *
  */
 @InterfaceAudience.Private

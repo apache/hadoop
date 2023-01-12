@@ -32,7 +32,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 public class AbfsListStatusRemoteIterator
@@ -45,7 +48,7 @@ public class AbfsListStatusRemoteIterator
   private static final int MAX_QUEUE_SIZE = 10;
   private static final long POLL_WAIT_TIME_IN_MS = 250;
 
-  private final FileStatus fileStatus;
+  private final Path path;
   private final ListingSupport listingSupport;
   private final ArrayBlockingQueue<AbfsListResult> listResultQueue;
   private final TracingContext tracingContext;
@@ -55,13 +58,15 @@ public class AbfsListStatusRemoteIterator
   private String continuation;
   private Iterator<FileStatus> currIterator;
 
-  public AbfsListStatusRemoteIterator(final FileStatus fileStatus,
-      final ListingSupport listingSupport, TracingContext tracingContext) {
-    this.fileStatus = fileStatus;
+  public AbfsListStatusRemoteIterator(final Path path,
+      final ListingSupport listingSupport, TracingContext tracingContext)
+      throws IOException {
+    this.path = path;
     this.listingSupport = listingSupport;
     this.tracingContext = tracingContext;
     listResultQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
     currIterator = Collections.emptyIterator();
+    addNextBatchIteratorToQueue();
     fetchBatchesAsync();
   }
 
@@ -130,9 +135,6 @@ public class AbfsListStatusRemoteIterator
         Thread.currentThread().interrupt();
         LOG.error("Thread got interrupted: {}", interruptedException);
       }
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      LOG.error("Thread got interrupted: {}", e);
     } finally {
       synchronized (this) {
         isAsyncInProgress = false;
@@ -141,13 +143,21 @@ public class AbfsListStatusRemoteIterator
   }
 
   private synchronized void addNextBatchIteratorToQueue()
-      throws IOException, InterruptedException {
+      throws IOException {
     List<FileStatus> fileStatuses = new ArrayList<>();
-    continuation = listingSupport
-        .listStatus(fileStatus.getPath(), null, fileStatuses, FETCH_ALL_FALSE,
-            continuation, tracingContext);
-    if (!fileStatuses.isEmpty()) {
-      listResultQueue.put(new AbfsListResult(fileStatuses.iterator()));
+    try {
+      try {
+        continuation = listingSupport.listStatus(path, null, fileStatuses,
+            FETCH_ALL_FALSE, continuation, tracingContext);
+      } catch (AbfsRestOperationException ex) {
+        AzureBlobFileSystem.checkException(path, ex);
+      }
+      if (!fileStatuses.isEmpty()) {
+        listResultQueue.put(new AbfsListResult(fileStatuses.iterator()));
+      }
+    } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+      LOG.error("Thread interrupted", ie);
     }
     if (continuation == null || continuation.isEmpty()) {
       isIterationComplete = true;

@@ -32,6 +32,7 @@ public class TestViewFsConfig {
   @Test(expected = FileAlreadyExistsException.class)
   public void testInvalidConfig() throws IOException, URISyntaxException {
     Configuration conf = new Configuration();
+    ConfigUtil.setIsNestedMountPointSupported(conf, false);
     ConfigUtil.addLink(conf, "/internalDir/linkToDir2",
         new Path("file:///dir2").toUri());
     ConfigUtil.addLink(conf, "/internalDir/linkToDir2/linkToDir3",

@@ -52,7 +52,9 @@ class StatefulStripeReader extends StripeReader {
       cur = dfsStripedInputStream.getCurStripeBuf().duplicate();
     }
 
-    this.decodeInputs = new ECChunk[dataBlkNum + parityBlkNum];
+    if (this.decodeInputs == null) {
+      this.decodeInputs = new ECChunk[dataBlkNum + parityBlkNum];
+    }
     int bufLen = (int) alignedStripe.getSpanInBlock();
     int bufOff = (int) alignedStripe.getOffsetInBlock();
     for (int i = 0; i < dataBlkNum; i++) {
@@ -72,11 +74,6 @@ class StatefulStripeReader extends StripeReader {
   boolean prepareParityChunk(int index) {
     Preconditions.checkState(index >= dataBlkNum
         && alignedStripe.chunks[index] == null);
-    if (readerInfos[index] != null && readerInfos[index].shouldSkip) {
-      alignedStripe.chunks[index] = new StripingChunk(StripingChunk.MISSING);
-      // we have failed the block reader before
-      return false;
-    }
     final int parityIndex = index - dataBlkNum;
     ByteBuffer buf = dfsStripedInputStream.getParityBuffer().duplicate();
     buf.position(cellSize * parityIndex);

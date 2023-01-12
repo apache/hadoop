@@ -34,7 +34,7 @@ public class AbfsFileSystemContract extends AbstractBondedFSContract {
   public static final String CONTRACT_XML = "abfs.xml";
   private final boolean isSecure;
 
-  protected AbfsFileSystemContract(final Configuration conf, boolean secure) {
+  public AbfsFileSystemContract(final Configuration conf, boolean secure) {
     super(conf);
     //insert the base features
     addConfResource(CONTRACT_XML);

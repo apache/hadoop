@@ -27,6 +27,7 @@ import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.lib.wsrs.BooleanParam;
 import org.apache.hadoop.lib.wsrs.EnumParam;
 import org.apache.hadoop.lib.wsrs.EnumSetParam;
+import org.apache.hadoop.lib.wsrs.IntegerParam;
 import org.apache.hadoop.lib.wsrs.LongParam;
 import org.apache.hadoop.lib.wsrs.Param;
 import org.apache.hadoop.lib.wsrs.ParametersProvider;
@@ -59,7 +60,8 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.GETQUOTAUSAGE, new Class[]{});
     PARAMS_DEF.put(Operation.GETFILECHECKSUM,
         new Class[]{NoRedirectParam.class});
-    PARAMS_DEF.put(Operation.GETFILEBLOCKLOCATIONS, new Class[]{});
+    PARAMS_DEF.put(Operation.GETFILEBLOCKLOCATIONS,
+        new Class[] {OffsetParam.class, LenParam.class});
     PARAMS_DEF.put(Operation.GETACLSTATUS, new Class[]{});
     PARAMS_DEF.put(Operation.GETTRASHROOT, new Class[]{});
     PARAMS_DEF.put(Operation.INSTRUMENTATION, new Class[]{});
@@ -112,6 +114,9 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.RENAMESNAPSHOT,
             new Class[] {OldSnapshotNameParam.class,
                 SnapshotNameParam.class});
+    PARAMS_DEF.put(Operation.GETSNAPSHOTDIFFLISTING,
+        new Class[] {OldSnapshotNameParam.class, SnapshotNameParam.class,
+            SnapshotDiffStartPathParam.class, SnapshotDiffIndexParam.class});
     PARAMS_DEF.put(Operation.GETSNAPSHOTDIFF,
         new Class[] {OldSnapshotNameParam.class,
             SnapshotNameParam.class});
@@ -123,6 +128,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.GETECPOLICY, new Class[] {});
     PARAMS_DEF.put(Operation.UNSETECPOLICY, new Class[] {});
     PARAMS_DEF.put(Operation.SATISFYSTORAGEPOLICY, new Class[] {});
+    PARAMS_DEF.put(Operation.GET_BLOCK_LOCATIONS, new Class[] {OffsetParam.class, LenParam.class});
   }
 
   public HttpFSParametersProvider() {
@@ -667,6 +673,44 @@ public class HttpFSParametersProvider extends ParametersProvider {
     public OldSnapshotNameParam() {
       super(NAME, null);
     }
+  }
+
+  /**
+   * Class for SnapshotDiffStartPath parameter.
+   */
+  public static class SnapshotDiffStartPathParam extends StringParam {
+
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = HttpFSFileSystem.SNAPSHOT_DIFF_START_PATH;
+
+    /**
+     * Constructor.
+     */
+    public SnapshotDiffStartPathParam() {
+      super(NAME, "");
+    }
+
+  }
+
+  /**
+   * Class for SnapshotDiffStartPath parameter.
+   */
+  public static class SnapshotDiffIndexParam extends IntegerParam {
+
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = HttpFSFileSystem.SNAPSHOT_DIFF_INDEX;
+
+    /**
+     * Constructor.
+     */
+    public SnapshotDiffIndexParam() {
+      super(NAME, null);
+    }
+
   }
 
   /**

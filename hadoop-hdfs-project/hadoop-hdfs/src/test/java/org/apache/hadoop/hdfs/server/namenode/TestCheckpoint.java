@@ -2613,7 +2613,7 @@ public class TestCheckpoint {
   }
 
   private static CheckpointStorage spyOnSecondaryImage(SecondaryNameNode secondary1) {
-    CheckpointStorage spy = Mockito.spy((CheckpointStorage)secondary1.getFSImage());;
+    CheckpointStorage spy = Mockito.spy((CheckpointStorage)secondary1.getFSImage());
     secondary1.setFSImage(spy);
     return spy;
   }

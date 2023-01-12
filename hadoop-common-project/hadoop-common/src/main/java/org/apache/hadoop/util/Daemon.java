@@ -52,14 +52,21 @@ public class Daemon extends Thread {
     super();
   }
 
-  /** Construct a daemon thread. */
+  /**
+   * Construct a daemon thread.
+   * @param runnable runnable.
+   */
   public Daemon(Runnable runnable) {
     super(runnable);
     this.runnable = runnable;
     this.setName(((Object)runnable).toString());
   }
 
-  /** Construct a daemon thread to be part of a specified thread group. */
+  /**
+   * Construct a daemon thread to be part of a specified thread group.
+   * @param group thread group.
+   * @param runnable runnable.
+   */
   public Daemon(ThreadGroup group, Runnable runnable) {
     super(group, runnable);
     this.runnable = runnable;

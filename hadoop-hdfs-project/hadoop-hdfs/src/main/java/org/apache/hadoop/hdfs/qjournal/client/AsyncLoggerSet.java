@@ -87,7 +87,7 @@ class AsyncLoggerSet {
   
   /**
    * @return the epoch number for this writer. This may only be called after
-   * a successful call to {@link #createNewUniqueEpoch(NamespaceInfo)}.
+   * a successful call to {@link QuorumJournalManager#createNewUniqueEpoch()}.
    */
   long getEpoch() {
     Preconditions.checkState(myEpoch != INVALID_EPOCH,

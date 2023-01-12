@@ -22,7 +22,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import net.jcip.annotations.NotThreadSafe;
-import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.ContractValidationException;
+
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningQuotaException;
 import org.junit.Test;

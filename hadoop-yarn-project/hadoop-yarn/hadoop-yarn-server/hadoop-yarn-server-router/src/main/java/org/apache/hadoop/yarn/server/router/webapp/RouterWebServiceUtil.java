@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import static javax.servlet.http.HttpServletResponse.SC_NO_CONTENT;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices.DELEGATION_TOKEN_HEADER;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -30,6 +31,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Collection;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
@@ -40,16 +44,31 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
+import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationHandler;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
@@ -83,7 +102,7 @@ public final class RouterWebServiceUtil {
   /**
    * Creates and performs a REST call to a specific WebService.
    *
-   * @param webApp the address of the remote webap
+   * @param webApp the address of the remote webapp
    * @param hsr the servlet request
    * @param returnType the return type of the REST call
    * @param <T> Type of return object.
@@ -170,7 +189,7 @@ public final class RouterWebServiceUtil {
 
   /**
    * Performs an invocation of a REST call on a remote RMWebService.
-   * @param webApp the address of the remote webap
+   * @param webApp the address of the remote webapp
    * @param path  to add to the webapp address
    * @param method the HTTP method of the REST call
    * @param additionalPath the servlet request path
@@ -280,7 +299,7 @@ public final class RouterWebServiceUtil {
 
   /**
    * Merges a list of AppInfo grouping by ApplicationId. Our current policy is
-   * to merge the application reports from the reacheable SubClusters. Via
+   * to merge the application reports from the reachable SubClusters. Via
    * configuration parameter, we decide whether to return applications for which
    * the primary AM is missing or to omit them.
    *
@@ -293,8 +312,8 @@ public final class RouterWebServiceUtil {
       boolean returnPartialResult) {
     AppsInfo allApps = new AppsInfo();
 
-    Map<String, AppInfo> federationAM = new HashMap<String, AppInfo>();
-    Map<String, AppInfo> federationUAMSum = new HashMap<String, AppInfo>();
+    Map<String, AppInfo> federationAM = new HashMap<>();
+    Map<String, AppInfo> federationUAMSum = new HashMap<>();
     for (AppInfo a : appsInfo) {
       // Check if this AppInfo is an AM
       if (a.getAMHostHttpAddress() != null) {
@@ -332,7 +351,7 @@ public final class RouterWebServiceUtil {
       }
     }
 
-    allApps.addAll(new ArrayList<AppInfo>(federationAM.values()));
+    allApps.addAll(new ArrayList<>(federationAM.values()));
     return allApps;
   }
 
@@ -419,7 +438,7 @@ public final class RouterWebServiceUtil {
         nodesMap.put(node.getNodeId(), node);
       }
     }
-    nodesInfo.addAll(new ArrayList<NodeInfo>(nodesMap.values()));
+    nodesInfo.addAll(new ArrayList<>(nodesMap.values()));
     return nodesInfo;
   }
 
@@ -494,7 +513,7 @@ public final class RouterWebServiceUtil {
   protected static <T> String getMediaTypeFromHttpServletRequest(
       HttpServletRequest request, final Class<T> returnType) {
     if (request == null) {
-      // By default we return XML for REST call without HttpServletRequest
+      // By default, we return XML for REST call without HttpServletRequest
       return MediaType.APPLICATION_XML;
     }
     // TODO
@@ -503,10 +522,210 @@ public final class RouterWebServiceUtil {
     }
     String header = request.getHeader(HttpHeaders.ACCEPT);
     if (header == null || header.equals("*")) {
-      // By default we return JSON
+      // By default, we return JSON
       return MediaType.APPLICATION_JSON;
     }
     return header;
   }
 
+  public static NodeToLabelsInfo mergeNodeToLabels(
+      Map<SubClusterInfo, NodeToLabelsInfo> nodeToLabelsInfoMap) {
+
+    HashMap<String, NodeLabelsInfo> nodeToLabels = new HashMap<>();
+    Collection<NodeToLabelsInfo> nodeToLabelsInfos = nodeToLabelsInfoMap.values();
+
+    nodeToLabelsInfos.stream().forEach(nodeToLabelsInfo -> {
+      for (Map.Entry<String, NodeLabelsInfo> item : nodeToLabelsInfo.getNodeToLabels().entrySet()) {
+        String key = item.getKey();
+        NodeLabelsInfo itemValue = item.getValue();
+        NodeLabelsInfo nodeToLabelsValue = nodeToLabels.getOrDefault(item.getKey(), null);
+        Set<NodeLabel> hashSet = new HashSet<>();
+        if (itemValue != null) {
+          hashSet.addAll(itemValue.getNodeLabels());
+        }
+        if (nodeToLabelsValue != null) {
+          hashSet.addAll(nodeToLabelsValue.getNodeLabels());
+        }
+        nodeToLabels.put(key, new NodeLabelsInfo(hashSet));
+      }
+    });
+
+    return new NodeToLabelsInfo(nodeToLabels);
+  }
+
+  public static ApplicationStatisticsInfo mergeApplicationStatisticsInfo(
+      Collection<ApplicationStatisticsInfo> appStatistics) {
+    ApplicationStatisticsInfo result = new ApplicationStatisticsInfo();
+    Map<String, StatisticsItemInfo> statisticsItemMap = new HashMap<>();
+
+    appStatistics.stream().forEach(appStatistic -> {
+      List<StatisticsItemInfo> statisticsItemInfos = appStatistic.getStatItems();
+      for (StatisticsItemInfo statisticsItemInfo : statisticsItemInfos) {
+
+        String statisticsItemKey =
+            statisticsItemInfo.getType() + "_" + statisticsItemInfo.getState().toString();
+
+        StatisticsItemInfo statisticsItemValue;
+        if (statisticsItemMap.containsKey(statisticsItemKey)) {
+          statisticsItemValue = statisticsItemMap.get(statisticsItemKey);
+          long statisticsItemValueCount = statisticsItemValue.getCount();
+          long statisticsItemInfoCount = statisticsItemInfo.getCount();
+          long newCount = statisticsItemValueCount + statisticsItemInfoCount;
+          statisticsItemValue.setCount(newCount);
+        } else {
+          statisticsItemValue = new StatisticsItemInfo(statisticsItemInfo);
+        }
+
+        statisticsItemMap.put(statisticsItemKey, statisticsItemValue);
+      }
+    });
+
+    if (!statisticsItemMap.isEmpty()) {
+      result.getStatItems().addAll(statisticsItemMap.values());
+    }
+
+    return result;
+  }
+
+  public static NodeLabelsInfo mergeNodeLabelsInfo(Map<SubClusterInfo, NodeLabelsInfo> paramMap) {
+    Map<String, NodeLabelInfo> resultMap = new HashMap<>();
+    paramMap.values().stream()
+        .flatMap(nodeLabelsInfo -> nodeLabelsInfo.getNodeLabelsInfo().stream())
+        .forEach(nodeLabelInfo -> {
+          String keyLabelName = nodeLabelInfo.getName();
+          if (resultMap.containsKey(keyLabelName)) {
+            NodeLabelInfo mapNodeLabelInfo = resultMap.get(keyLabelName);
+            mapNodeLabelInfo = mergeNodeLabelInfo(mapNodeLabelInfo, nodeLabelInfo);
+            resultMap.put(keyLabelName, mapNodeLabelInfo);
+          } else {
+            resultMap.put(keyLabelName, nodeLabelInfo);
+          }
+        });
+    NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
+    nodeLabelsInfo.getNodeLabelsInfo().addAll(resultMap.values());
+    return nodeLabelsInfo;
+  }
+
+  private static NodeLabelInfo mergeNodeLabelInfo(NodeLabelInfo left, NodeLabelInfo right) {
+    NodeLabelInfo resultNodeLabelInfo = new NodeLabelInfo();
+    resultNodeLabelInfo.setName(left.getName());
+
+    int newActiveNMs = left.getActiveNMs() + right.getActiveNMs();
+    resultNodeLabelInfo.setActiveNMs(newActiveNMs);
+
+    boolean newExclusivity = left.getExclusivity() && right.getExclusivity();
+    resultNodeLabelInfo.setExclusivity(newExclusivity);
+
+    PartitionInfo leftPartition = left.getPartitionInfo();
+    PartitionInfo rightPartition = right.getPartitionInfo();
+    PartitionInfo newPartitionInfo = PartitionInfo.addTo(leftPartition, rightPartition);
+    resultNodeLabelInfo.setPartitionInfo(newPartitionInfo);
+    return resultNodeLabelInfo;
+  }
+
+  /**
+   * initForWritableEndpoints does the init and acls verification for all
+   * writable REST end points.
+   *
+   * @param conf Configuration.
+   * @param callerUGI remote caller who initiated the request.
+   * @throws AuthorizationException in case of no access to perfom this op.
+   */
+  public static void initForWritableEndpoints(Configuration conf, UserGroupInformation callerUGI)
+          throws AuthorizationException {
+    if (callerUGI == null) {
+      String msg = "Unable to obtain user name, user not authenticated";
+      throw new AuthorizationException(msg);
+    }
+
+    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(conf, callerUGI)) {
+      String msg = "The default static user cannot carry out this operation.";
+      throw new ForbiddenException(msg);
+    }
+  }
+
+  /**
+   * Determine whether the user is a static user.
+   *
+   * @param conf Configuration.
+   * @param callerUGI remote caller who initiated the request.
+   * @return true, static user; false, not static user;
+   */
+  private static boolean isStaticUser(Configuration conf, UserGroupInformation callerUGI) {
+    String staticUser = conf.get(CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER,
+            CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER);
+    return staticUser.equals(callerUGI.getUserName());
+  }
+
+  public static void createKerberosUserGroupInformation(HttpServletRequest hsr)
+          throws YarnException {
+    String authType = hsr.getAuthType();
+
+    if (!KerberosAuthenticationHandler.TYPE.equalsIgnoreCase(authType)) {
+      String msg = "Delegation token operations can only be carried out on a "
+              + "Kerberos authenticated channel. Expected auth type is "
+              + KerberosAuthenticationHandler.TYPE + ", got type " + authType;
+      throw new YarnException(msg);
+    }
+
+    Object ugiAttr =
+            hsr.getAttribute(DelegationTokenAuthenticationHandler.DELEGATION_TOKEN_UGI_ATTRIBUTE);
+    if (ugiAttr != null) {
+      String msg = "Delegation token operations cannot be carried out using "
+              + "delegation token authentication.";
+      throw new YarnException(msg);
+    }
+  }
+
+  /**
+   * Parse Token data.
+   *
+   * @param encodedToken tokenData
+   * @return RMDelegationTokenIdentifier.
+   */
+  public static Token<RMDelegationTokenIdentifier> extractToken(String encodedToken) {
+    Token<RMDelegationTokenIdentifier> token = new Token<>();
+    try {
+      token.decodeFromUrlString(encodedToken);
+    } catch (Exception ie) {
+      throw new BadRequestException("Could not decode encoded token");
+    }
+    return token;
+  }
+
+  public static Token<RMDelegationTokenIdentifier> extractToken(HttpServletRequest request) {
+    String encodedToken = request.getHeader(DELEGATION_TOKEN_HEADER);
+    if (encodedToken == null) {
+      String msg = "Header '" + DELEGATION_TOKEN_HEADER
+              + "' containing encoded token not found";
+      throw new BadRequestException(msg);
+    }
+    return extractToken(encodedToken);
+  }
+
+  /**
+   * Get Kerberos UserGroupInformation.
+   *
+   * Parse ugi from hsr and set kerberos authentication attributes.
+   *
+   * @param conf Configuration.
+   * @param request the servlet request.
+   * @return UserGroupInformation.
+   * @throws AuthorizationException if Kerberos auth failed.
+   * @throws YarnException If Authentication Type verification fails.
+   */
+  public static UserGroupInformation getKerberosUserGroupInformation(Configuration conf,
+      HttpServletRequest request) throws AuthorizationException, YarnException {
+    // Parse ugi from hsr And Check ugi as expected.
+    // If ugi is empty or user is a static user, an exception will be thrown.
+    UserGroupInformation callerUGI = RMWebAppUtil.getCallerUserGroupInformation(request, true);
+    initForWritableEndpoints(conf, callerUGI);
+
+    // Set AuthenticationMethod Kerberos for ugi.
+    createKerberosUserGroupInformation(request);
+    callerUGI.setAuthenticationMethod(UserGroupInformation.AuthenticationMethod.KERBEROS);
+
+    // return caller UGI
+    return callerUGI;
+  }
 }

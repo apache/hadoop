@@ -350,7 +350,7 @@ public class ReencryptionHandler implements Runnable {
         getReencryptionStatus().markZoneStarted(zoneId);
         resetSubmissionTracker(zoneId);
       } finally {
-        dir.getFSNamesystem().readUnlock();
+        dir.getFSNamesystem().readUnlock("reEncryptThread");
       }
 
       try {

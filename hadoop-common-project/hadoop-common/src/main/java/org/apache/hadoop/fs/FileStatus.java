@@ -116,6 +116,17 @@ public class FileStatus implements Writable, Comparable<Object>,
 
   /**
    * Constructor for file systems on which symbolic links are not supported
+   *
+   * @param length length.
+   * @param isdir isdir.
+   * @param block_replication block replication.
+   * @param blocksize block size.
+   * @param modification_time modification time.
+   * @param access_time access_time.
+   * @param permission permission.
+   * @param owner owner.
+   * @param group group.
+   * @param path the path.
    */
   public FileStatus(long length, boolean isdir,
                     int block_replication,
@@ -182,6 +193,7 @@ public class FileStatus implements Writable, Comparable<Object>,
    * Copy constructor.
    *
    * @param other FileStatus to copy
+   * @throws IOException raised on errors performing I/O.
    */
   public FileStatus(FileStatus other) throws IOException {
     // It's important to call the getters here instead of directly accessing the
@@ -375,6 +387,8 @@ public class FileStatus implements Writable, Comparable<Object>,
 
   /**
    * @return The contents of the symbolic link.
+   *
+   * @throws IOException raised on errors performing I/O.
    */
   public Path getSymlink() throws IOException {
     if (!isSymlink()) {
@@ -388,7 +402,8 @@ public class FileStatus implements Writable, Comparable<Object>,
   }
 
   /**
-   * Compare this FileStatus to another FileStatus
+   * Compare this FileStatus to another FileStatus based on lexicographical
+   * order of path.
    * @param   o the FileStatus to be compared.
    * @return  a negative integer, zero, or a positive integer as this object
    *   is less than, equal to, or greater than the specified object.
@@ -398,7 +413,8 @@ public class FileStatus implements Writable, Comparable<Object>,
   }
 
   /**
-   * Compare this FileStatus to another FileStatus.
+   * Compare this FileStatus to another FileStatus based on lexicographical
+   * order of path.
    * This method was added back by HADOOP-14683 to keep binary compatibility.
    *
    * @param   o the FileStatus to be compared.

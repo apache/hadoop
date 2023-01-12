@@ -145,14 +145,18 @@ public abstract class CryptoCodec implements Configurable, Closeable {
   public abstract CipherSuite getCipherSuite();
 
   /**
-   * Create a {@link org.apache.hadoop.crypto.Encryptor}. 
-   * @return Encryptor the encryptor
+   * Create a {@link org.apache.hadoop.crypto.Encryptor}.
+   *
+   * @return Encryptor the encryptor.
+   * @throws GeneralSecurityException thrown if create encryptor error.
    */
   public abstract Encryptor createEncryptor() throws GeneralSecurityException;
-  
+
   /**
    * Create a {@link org.apache.hadoop.crypto.Decryptor}.
+   *
    * @return Decryptor the decryptor
+   * @throws GeneralSecurityException thrown if create decryptor error.
    */
   public abstract Decryptor createDecryptor() throws GeneralSecurityException;
   

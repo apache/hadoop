@@ -345,7 +345,8 @@ public class TestSnapshotDiffReport {
           + nonSnapDir.getName() + "'should fail!");
     } catch (SnapshotException e) {
       GenericTestUtils.assertExceptionContains(
-          "Directory is neither snapshottable nor under a snap root!", e);
+          "The path " + nonSnapDir +
+              " is neither snapshottable nor under a snapshot root!", e);
     }
 
     final String invalidName = "invalid";

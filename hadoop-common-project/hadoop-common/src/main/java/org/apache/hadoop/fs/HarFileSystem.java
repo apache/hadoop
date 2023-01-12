@@ -463,7 +463,7 @@ public class HarFileSystem extends FileSystem {
    * @param start the start of the desired range in the contained file
    * @param len the length of the desired range
    * @return block locations for this segment of file
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public BlockLocation[] getFileBlockLocations(FileStatus file, long start,
@@ -525,7 +525,7 @@ public class HarFileSystem extends FileSystem {
    * Combine the status stored in the index and the underlying status. 
    * @param h status stored in the index
    * @return the combined file status
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   private FileStatus toFileStatus(HarStatus h) throws IOException {
     final Path p = h.isDir ? archivePath : new Path(archivePath, h.partName);
@@ -635,7 +635,7 @@ public class HarFileSystem extends FileSystem {
    * while creating a hadoop archive.
    * @param f the path in har filesystem
    * @return filestatus.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
@@ -1104,7 +1104,7 @@ public class HarFileSystem extends FileSystem {
      * @param start the start position in the part file
      * @param length the length of valid data in the part file
      * @param bufsize the buffer size
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public HarFSDataInputStream(FileSystem fs, Path  p, long start, 
         long length, int bufsize) throws IOException {

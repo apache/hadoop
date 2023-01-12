@@ -21,11 +21,18 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
+import org.apache.hadoop.hdfs.server.datanode.DataSetLockManager;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
 import org.apache.hadoop.hdfs.server.datanode.LocalReplica;
 
@@ -66,17 +73,18 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.FakeTimer;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -94,7 +102,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DN_CACHED_DFSUSED_CHECK_INTERVAL_MS;
@@ -140,6 +147,7 @@ public class TestFsDatasetImpl {
   private DataNode datanode;
   private DataStorage storage;
   private FsDatasetImpl dataset;
+  private DataSetLockManager manager = new DataSetLockManager();
   
   private final static String BLOCKPOOL = "BP-TEST";
 
@@ -213,6 +221,7 @@ public class TestFsDatasetImpl {
     this.conf.set(DFSConfigKeys.DFS_DATANODE_REPLICA_CACHE_ROOT_DIR_KEY,
         replicaCacheRootDir);
 
+    when(datanode.getDataSetLockManager()).thenReturn(manager);
     when(datanode.getConf()).thenReturn(conf);
     final DNConf dnConf = new DNConf(datanode);
     when(datanode.getDnConf()).thenReturn(dnConf);
@@ -221,6 +230,8 @@ public class TestFsDatasetImpl {
     final ShortCircuitRegistry shortCircuitRegistry =
         new ShortCircuitRegistry(conf);
     when(datanode.getShortCircuitRegistry()).thenReturn(shortCircuitRegistry);
+    DataNodeMetrics dataNodeMetrics = DataNodeMetrics.create(conf, "mockName");
+    when(datanode.getMetrics()).thenReturn(dataNodeMetrics);
 
     createStorageDirs(storage, conf, NUM_INIT_VOLUMES);
     dataset = new FsDatasetImpl(datanode, storage, conf);
@@ -232,116 +243,11 @@ public class TestFsDatasetImpl {
     assertEquals(0, dataset.getNumFailedVolumes());
   }
 
-  @Test(timeout=10000)
-  public void testReadLockEnabledByDefault()
-      throws Exception {
-    final FsDatasetSpi ds = dataset;
-    AtomicBoolean accessed = new AtomicBoolean(false);
-    CountDownLatch latch = new CountDownLatch(1);
-    CountDownLatch waiterLatch = new CountDownLatch(1);
-
-    Thread holder = new Thread() {
-      public void run() {
-        try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
-          latch.countDown();
-          // wait for the waiter thread to access the lock.
-          waiterLatch.await();
-        } catch (Exception e) {
-        }
-      }
-    };
-
-    Thread waiter = new Thread() {
-      public void run() {
-        try {
-          latch.await();
-        } catch (InterruptedException e) {
-          waiterLatch.countDown();
-          return;
-        }
-        try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
-          accessed.getAndSet(true);
-          // signal the holder thread.
-          waiterLatch.countDown();
-        } catch (Exception e) {
-        }
-      }
-    };
-    waiter.start();
-    holder.start();
-    holder.join();
-    waiter.join();
-    // The holder thread is still holding the lock, but the waiter can still
-    // run as the lock is a shared read lock.
-    // Otherwise test will timeout with deadlock.
-    assertEquals(true, accessed.get());
-    holder.interrupt();
-  }
-
-  @Test(timeout=20000)
-  public void testReadLockCanBeDisabledByConfig()
-      throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
-    conf.setBoolean(
-        DFSConfigKeys.DFS_DATANODE_LOCK_READ_WRITE_ENABLED_KEY, false);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(1).build();
-    try {
-      AtomicBoolean accessed = new AtomicBoolean(false);
-      cluster.waitActive();
-      DataNode dn = cluster.getDataNodes().get(0);
-      final FsDatasetSpi<?> ds = DataNodeTestUtils.getFSDataset(dn);
-
-      CountDownLatch latch = new CountDownLatch(1);
-      CountDownLatch waiterLatch = new CountDownLatch(1);
-      Thread holder = new Thread() {
-        public void run() {
-          try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
-            latch.countDown();
-            // wait for the waiter thread to access the lock.
-            waiterLatch.await();
-          } catch (Exception e) {
-          }
-        }
-      };
-
-      Thread waiter = new Thread() {
-        public void run() {
-          try {
-            // Wait for holder to get ds read lock.
-            latch.await();
-          } catch (InterruptedException e) {
-            waiterLatch.countDown();
-            return;
-          }
-          try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
-            accessed.getAndSet(true);
-            // signal the holder thread.
-            waiterLatch.countDown();
-          } catch (Exception e) {
-          }
-        }
-      };
-      waiter.start();
-      holder.start();
-      // Wait for sometime to make sure we are in deadlock,
-      try {
-        GenericTestUtils.waitFor(() ->
-                accessed.get(),
-            100, 10000);
-        fail("Waiter thread should not execute.");
-      } catch (TimeoutException e) {
-      }
-      // Release waiterLatch to exit deadlock.
-      waiterLatch.countDown();
-      holder.join();
-      waiter.join();
-      // After releasing waiterLatch water
-      // thread will be able to execute.
-      assertTrue(accessed.get());
-    } finally {
-      cluster.shutdown();
-    }
+  @After
+  public void checkDataSetLockManager() {
+    manager.lockLeakCheck();
+    // make sure no lock Leak.
+    assertNull(manager.getLastException());
   }
 
   @Test
@@ -413,6 +319,7 @@ public class TestFsDatasetImpl {
     final ShortCircuitRegistry shortCircuitRegistry =
         new ShortCircuitRegistry(conf);
     when(datanode.getShortCircuitRegistry()).thenReturn(shortCircuitRegistry);
+    when(datanode.getDataSetLockManager()).thenReturn(manager);
 
     createStorageDirs(storage, conf, 1);
     dataset = new FsDatasetImpl(datanode, storage, conf);
@@ -480,6 +387,8 @@ public class TestFsDatasetImpl {
     final ShortCircuitRegistry shortCircuitRegistry =
         new ShortCircuitRegistry(conf);
     when(datanode.getShortCircuitRegistry()).thenReturn(shortCircuitRegistry);
+    when(datanode.getDataSetLockManager()).thenReturn(manager);
+
 
     createStorageDirs(storage, conf, 0);
 
@@ -711,6 +620,56 @@ public class TestFsDatasetImpl {
         + "volumeMap.", 0, totalNumReplicas);
   }
 
+  @Test(timeout = 30000)
+  public void testConcurrentWriteAndDeleteBlock() throws Exception {
+    // Feed FsDataset with block metadata.
+    final int numBlocks = 1000;
+    final int threadCount = 10;
+    // Generate data blocks.
+    ExecutorService pool = Executors.newFixedThreadPool(threadCount);
+    List<Future<?>> futureList = new ArrayList<>();
+    Random random = new Random();
+    // Random write block and delete half of them.
+    for (int i = 0; i < threadCount; i++) {
+      Thread thread = new Thread() {
+        @Override
+        public void run() {
+          try {
+            String bpid = BLOCK_POOL_IDS[random.nextInt(BLOCK_POOL_IDS.length)];
+            for (int blockId = 0; blockId < numBlocks; blockId++) {
+              ExtendedBlock eb = new ExtendedBlock(bpid, blockId);
+              ReplicaHandler replica = null;
+              try {
+                replica = dataset.createRbw(StorageType.DEFAULT, null, eb,
+                    false);
+                if (blockId % 2 > 0) {
+                  dataset.invalidate(bpid, new Block[]{eb.getLocalBlock()});
+                }
+              } finally {
+                if (replica != null) {
+                  replica.close();
+                }
+              }
+            }
+            // Just keep final consistency no need to care exception.
+          } catch (Exception ignore) {}
+        }
+      };
+      thread.setName("AddBlock" + i);
+      futureList.add(pool.submit(thread));
+    }
+    // Wait for data generation
+    for (Future<?> f : futureList) {
+      f.get();
+    }
+    // Wait for the async deletion task finish.
+    GenericTestUtils.waitFor(() -> dataset.asyncDiskService.countPendingDeletions() == 0,
+        100, 10000);
+    for (String bpid : dataset.volumeMap.getBlockPoolList()) {
+      assertEquals(numBlocks / 2, dataset.volumeMap.size(bpid));
+    }
+  }
+
   @Test(timeout = 5000)
   public void testRemoveNewlyAddedVolume() throws IOException {
     final int numExistingVolumes = getNumVolumes();
@@ -745,6 +704,7 @@ public class TestFsDatasetImpl {
     FsDatasetImpl spyDataset = spy(dataset);
     FsVolumeImpl mockVolume = mock(FsVolumeImpl.class);
     File badDir = new File(BASE_DIR, "bad");
+    when(mockVolume.getStorageID()).thenReturn("test");
     badDir.mkdirs();
     doReturn(mockVolume).when(spyDataset)
         .createFsVolume(anyString(), any(StorageDirectory.class),
@@ -1874,6 +1834,95 @@ public class TestFsDatasetImpl {
       assertEquals(3, metrics.getTransferIoQuantiles().length);
       assertEquals(2, metrics.getNativeCopyIoSampleCount());
       assertEquals(3, metrics.getNativeCopyIoQuantiles().length);
+    }
+  }
+
+  /**
+   * The block should be in the replicaMap if the async deletion task is pending.
+   */
+  @Test
+  public void testAysncDiskServiceDeleteReplica()
+      throws IOException, InterruptedException, TimeoutException {
+    HdfsConfiguration config = new HdfsConfiguration();
+    // Bump up replication interval.
+    config.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 10);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(config).numDataNodes(3).build();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    String bpid = cluster.getNamesystem().getBlockPoolId();
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+    final Semaphore semaphore = new Semaphore(0);
+    try {
+      cluster.waitActive();
+      final DataNodeFaultInjector injector = new DataNodeFaultInjector() {
+        @Override
+        public void delayDeleteReplica() {
+          // Lets wait for the remove replica process.
+          try {
+            semaphore.acquire(1);
+          } catch (InterruptedException e) {
+            // ignore.
+          }
+        }
+      };
+      DataNodeFaultInjector.set(injector);
+
+      // Create file.
+      Path path = new Path("/testfile");
+      DFSTestUtil.createFile(fs, path, 1024, (short) 3, 0);
+      DFSTestUtil.waitReplication(fs, path, (short) 3);
+      LocatedBlock lb = DFSTestUtil.getAllBlocks(fs, path).get(0);
+      ExtendedBlock extendedBlock = lb.getBlock();
+      DatanodeInfo[] loc = lb.getLocations();
+      assertEquals(3, loc.length);
+
+      // DN side.
+      DataNode dn = cluster.getDataNode(loc[0].getIpcPort());
+      final FsDatasetImpl ds = (FsDatasetImpl) DataNodeTestUtils.getFSDataset(dn);
+      List<Block> blockList = Lists.newArrayList(extendedBlock.getLocalBlock());
+      assertNotNull(ds.getStoredBlock(bpid, extendedBlock.getBlockId()));
+      ds.invalidate(bpid, blockList.toArray(new Block[0]));
+
+      // Test get blocks and datanodes.
+      loc = DFSTestUtil.getAllBlocks(fs, path).get(0).getLocations();
+      assertEquals(3, loc.length);
+      List<String> uuids = Lists.newArrayList();
+      for (DatanodeInfo datanodeInfo : loc) {
+        uuids.add(datanodeInfo.getDatanodeUuid());
+      }
+      assertTrue(uuids.contains(dn.getDatanodeUuid()));
+
+      // Do verification that the first replication shouldn't be deleted from the memory first.
+      // Because the namenode still contains this replica, so client will try to read it.
+      // If this replica is deleted from memory, the client would got an ReplicaNotFoundException.
+      assertNotNull(ds.getStoredBlock(bpid, extendedBlock.getBlockId()));
+
+      // Make it resume the removeReplicaFromMem method.
+      semaphore.release(1);
+
+      // Waiting for the async deletion task finish.
+      GenericTestUtils.waitFor(() ->
+          ds.asyncDiskService.countPendingDeletions() == 0, 100, 1000);
+
+      // Sleep for two heartbeat times.
+      Thread.sleep(config.getTimeDuration(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
+          DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT,
+          TimeUnit.SECONDS, TimeUnit.MILLISECONDS) * 2);
+
+      // Test get blocks and datanodes again.
+      loc = DFSTestUtil.getAllBlocks(fs, path).get(0).getLocations();
+      assertEquals(2, loc.length);
+      uuids = Lists.newArrayList();
+      for (DatanodeInfo datanodeInfo : loc) {
+        uuids.add(datanodeInfo.getDatanodeUuid());
+      }
+      // The namenode does not contain this replica.
+      assertFalse(uuids.contains(dn.getDatanodeUuid()));
+
+      // This replica has deleted from datanode memory.
+      assertNull(ds.getStoredBlock(bpid, extendedBlock.getBlockId()));
+    } finally {
+      cluster.shutdown();
+      DataNodeFaultInjector.set(oldInjector);
     }
   }
 }

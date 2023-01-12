@@ -51,6 +51,8 @@ public class GenericsUtil {
    * <code>T[]</code>.
    * @param c the Class object of the items in the list
    * @param list the list to convert
+   * @param <T> Generics Type T.
+   * @return T Array.
    */
   public static <T> T[] toArray(Class<T> c, List<T> list)
   {
@@ -67,8 +69,10 @@ public class GenericsUtil {
    * Converts the given <code>List&lt;T&gt;</code> to a an array of 
    * <code>T[]</code>. 
    * @param list the list to convert
+   * @param <T> Generics Type T.
    * @throws ArrayIndexOutOfBoundsException if the list is empty. 
    * Use {@link #toArray(Class, List)} if the list may be empty.
+   * @return T Array.
    */
   public static <T> T[] toArray(List<T> list) {
     return toArray(getClass(list.get(0)), list);

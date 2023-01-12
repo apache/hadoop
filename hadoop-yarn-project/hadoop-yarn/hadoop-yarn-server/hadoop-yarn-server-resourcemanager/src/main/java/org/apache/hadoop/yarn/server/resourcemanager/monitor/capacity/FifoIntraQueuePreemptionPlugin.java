@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -40,7 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.IntraQueue
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy.IntraQueuePreemptionOrderPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
@@ -402,8 +401,7 @@ public class FifoIntraQueuePreemptionPlugin
       pending = (pending == null) ? Resources.createResource(0, 0) : pending;
       reserved = (reserved == null) ? Resources.createResource(0, 0) : reserved;
 
-      HashSet<String> partitions = new HashSet<String>(
-          app.getAppAttemptResourceUsage().getNodePartitionsSet());
+      Set<String> partitions = app.getAppAttemptResourceUsage().getExistingNodeLabels();
       partitions.addAll(app.getTotalPendingRequestsPerPartition().keySet());
 
       // Create TempAppPerQueue for further calculation.
@@ -577,7 +575,7 @@ public class FifoIntraQueuePreemptionPlugin
   }
 
   private Resource calculateUsedAMResourcesPerQueue(String partition,
-      LeafQueue leafQueue, Map<String, Resource> perUserAMUsed) {
+      AbstractLeafQueue leafQueue, Map<String, Resource> perUserAMUsed) {
     Collection<FiCaSchedulerApp> runningApps = leafQueue.getApplications();
     Resource amUsed = Resources.createResource(0, 0);
 

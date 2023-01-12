@@ -28,7 +28,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
+import static org.apache.hadoop.util.Preconditions.*;
 import org.apache.hadoop.thirdparty.com.google.common.collect.AbstractIterator;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;

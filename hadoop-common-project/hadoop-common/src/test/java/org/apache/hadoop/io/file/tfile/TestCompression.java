@@ -17,15 +17,12 @@
  */
 package org.apache.hadoop.io.file.tfile;
 
-import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.*;
 
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class TestCompression {
 

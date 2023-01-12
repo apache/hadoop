@@ -250,6 +250,11 @@ public class TestHarFileSystem {
 
     MultipartUploaderBuilder createMultipartUploader(Path basePath)
         throws IOException;
+
+    FSDataOutputStream append(Path f, boolean appendToNewBlock) throws IOException;
+
+    FSDataOutputStream append(Path f, int bufferSize,
+        Progressable progress, boolean appendToNewBlock) throws IOException;
   }
 
   @Test

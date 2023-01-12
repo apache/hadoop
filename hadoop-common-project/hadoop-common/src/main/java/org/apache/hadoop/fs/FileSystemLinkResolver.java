@@ -38,8 +38,8 @@ public abstract class FileSystemLinkResolver<T> {
    * an UnresolvedLinkException if called on an unresolved {@link Path}.
    * @param p Path on which to perform an operation
    * @return Generic type returned by operation
-   * @throws IOException
-   * @throws UnresolvedLinkException
+   * @throws IOException raised on errors performing I/O.
+   * @throws UnresolvedLinkException unresolved link exception.
    */
   abstract public T doCall(final Path p) throws IOException,
       UnresolvedLinkException;
@@ -54,7 +54,7 @@ public abstract class FileSystemLinkResolver<T> {
    * @param p
    *          Resolved Target of path
    * @return Generic type determined by implementation
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   abstract public T next(final FileSystem fs, final Path p) throws IOException;
 
@@ -66,7 +66,7 @@ public abstract class FileSystemLinkResolver<T> {
    * @param filesys FileSystem with which to try call
    * @param path Path with which to try call
    * @return Generic type determined by implementation
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public T resolve(final FileSystem filesys, final Path path)
       throws IOException {

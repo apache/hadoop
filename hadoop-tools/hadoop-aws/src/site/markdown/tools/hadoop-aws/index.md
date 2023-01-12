@@ -47,6 +47,8 @@ full details.
 * [Auditing](./auditing.html).
 * [Auditing Architecture](./auditing_architecture.html).
 * [Testing](./testing.html)
+* [Prefetching](./prefetching.html)
+* [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade.html)
 
 ## <a name="overview"></a> Overview
 
@@ -84,11 +86,10 @@ schemes.
 properties, the Hadoop key management store and IAM roles.
 * Supports per-bucket configuration.
 * Supports S3 "Server Side Encryption" for both reading and writing:
- SSE-S3, SSE-KMS and SSE-C
+ SSE-S3, SSE-KMS and SSE-C.
 * Instrumented with Hadoop metrics.
 * Before S3 was consistent, provided a consistent view of inconsistent storage
   through [S3Guard](./s3guard.html).
-
 * Actively maintained by the open source community.
 
 
@@ -148,32 +149,11 @@ Amazon S3 is an example of "an object store". In order to achieve scalability
 and especially high availability, S3 has —as many other cloud object stores have
 done— relaxed some of the constraints which classic "POSIX" filesystems promise.
 
-The [S3Guard](./s3guard.html) feature attempts to address some of these, but
-it cannot do so completely. Do read these warnings and consider how
-they apply.
-
 For further discussion on these topics, please consult
 [The Hadoop FileSystem API Definition](../../../hadoop-project-dist/hadoop-common/filesystem/index.html).
 
-### Warning #1: S3 Consistency model
 
-Amazon S3 is an example of "an object store". In order to achieve scalability
-and especially high availability, S3 has —as many other cloud object stores have
-done— relaxed some of the constraints which classic "POSIX" filesystems promise.
-
-Specifically
-
-1. Files that are newly created from the Hadoop Filesystem APIs may not be
-immediately visible.
-2. File delete and update operations may not immediately propagate. Old
-copies of the file may exist for an indeterminate time period.
-3. Directory operations: `delete()` and `rename()` are implemented by
-recursive file-by-file operations. They take time at least proportional to
-the number of files, during which time partial updates may be visible. If
-the operations are interrupted, the filesystem is left in an intermediate state.
-
-
-### Warning #2: Directories are mimicked
+### Warning #1: Directories are mimicked
 
 The S3A clients mimics directories by:
 
@@ -213,7 +193,7 @@ to safely save the output of queries directly into S3 object stores
 through the S3A filesystem.
 
 
-### Warning #3: Object stores have different authorization models
+### Warning #2: Object stores have different authorization models
 
 The object authorization model of S3 is much different from the file
 authorization model of HDFS and traditional file systems.
@@ -256,6 +236,9 @@ needs the credentials needed to interact with buckets.
 The client supports multiple authentication mechanisms and can be configured as to
 which mechanisms to use, and their order of use. Custom implementations
 of `com.amazonaws.auth.AWSCredentialsProvider` may also be used.
+However, with the upcoming upgrade to AWS Java SDK V2, these classes will need to be
+updated to implement `software.amazon.awssdk.auth.credentials.AwsCredentialsProvider`.
+For more information see [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade.html).
 
 *Important*: The S3A connector no longer supports username and secrets
 in URLs of the form `s3a://key:secret@bucket/`.
@@ -551,7 +534,7 @@ This means that the default S3A authentication chain can be defined as
     com.amazonaws.auth.AWSCredentialsProvider.
 
     When S3A delegation tokens are not enabled, this list will be used
-    to directly authenticate with S3 and DynamoDB services.
+    to directly authenticate with S3 and other AWS services.
     When S3A Delegation tokens are enabled, depending upon the delegation
     token binding it may be used
     to communicate with the STS endpoint to request session/role
@@ -778,10 +761,9 @@ All S3A client options are configured with options with the prefix `fs.s3a.`.
 The client supports <a href="per_bucket_configuration">Per-bucket configuration</a>
 to allow different buckets to override the shared settings. This is commonly
 used to change the endpoint, encryption and authentication mechanisms of buckets.
-S3Guard options, various minor options.
+and various minor options.
 
-Here are the S3A properties for use in production. The S3Guard options are
-documented in the [S3Guard documents](./s3guard.html); some testing-related
+Here are the S3A properties for use in production; some testing-related
 options are covered in [Testing](./testing.md).
 
 ```xml
@@ -990,9 +972,12 @@ options are covered in [Testing](./testing.md).
 
 <property>
   <name>fs.s3a.buffer.dir</name>
-  <value>${hadoop.tmp.dir}/s3a</value>
+  <value>${env.LOCAL_DIRS:-${hadoop.tmp.dir}}/s3a</value>
   <description>Comma separated list of directories that will be used to buffer file
-    uploads to.</description>
+    uploads to.
+    Yarn container path will be used as default value on yarn applications,
+    otherwise fall back to hadoop.tmp.dir
+  </description>
 </property>
 
 <property>
@@ -1031,6 +1016,14 @@ options are covered in [Testing](./testing.md).
 
 <property>
   <name>fs.s3a.readahead.range</name>
+  <value>64K</value>
+  <description>Bytes to read ahead during a seek() before closing and
+  re-opening the S3 HTTP connection. This option will be overridden if
+  any call to setReadahead() is made to an open stream.</description>
+</property>
+
+<property>
+  <name>fs.s3a.input.async.drain.threshold</name>
   <value>64K</value>
   <description>Bytes to read ahead during a seek() before closing and
   re-opening the S3 HTTP connection. This option will be overridden if
@@ -1091,6 +1084,40 @@ options are covered in [Testing](./testing.md).
   </description>
 </property>
 
+<property>
+  <name>fs.s3a.create.storage.class</name>
+  <value></value>
+  <description>
+      Storage class: standard, reduced_redundancy, intelligent_tiering, etc.
+      Specify the storage class for S3A PUT object requests.
+      If not set the storage class will be null
+      and mapped to default standard class on S3.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.prefetch.enabled</name>
+  <value>false</value>
+  <description>
+    Enables prefetching and caching when reading from input stream.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.prefetch.block.size</name>
+  <value>8MB</value>
+  <description>
+      The size of a single prefetched block of data.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.prefetch.block.count</name>
+  <value>8</value>
+  <description>
+      Maximum number of blocks prefetched concurrently at any given time.
+  </description>
+</property>
 ```
 
 ## <a name="retry_and_recovery"></a>Retry and Recovery
@@ -1176,10 +1203,10 @@ be the wrong decision: rebuild the `hadoop-aws` module with the constant
 
 
 
-### Throttled requests from S3 and Dynamo DB
+### Throttled requests from S3
 
 
-When S3A or Dynamo DB returns a response indicating that requests
+When AWS S3 returns a response indicating that requests
 from the caller are being throttled, an exponential back-off with
 an initial interval and a maximum number of requests.
 
@@ -1246,8 +1273,6 @@ performed by clients.
 !. Maybe: increase `fs.s3a.readahead.range` to increase the minimum amount
 of data asked for in every GET request, as well as how much data is
 skipped in the existing stream before aborting it and creating a new stream.
-1. If the DynamoDB tables used by S3Guard are being throttled, increase
-the capacity through `hadoop s3guard set-capacity` (and pay more, obviously).
 1. KMS: "consult AWS about increasing your capacity".
 
 
@@ -1322,13 +1347,6 @@ file are streamed from a single response.  An overwrite of the file after the
 that had already read the first byte.  Seeks backward on the other hand can
 result in new 'Get Object' requests that can trigger the
 `RemoteFileChangedException`.
-
-Additionally, due to the eventual consistency of S3 in a read-after-overwrite
-scenario, visibility of a new write may be delayed, avoiding the
-`RemoteFileChangedException` for some readers.  That said, if a reader does not
-see `RemoteFileChangedException`, they will have at least read a consistent view
-of a single version of the file (the version available when they started
-reading).
 
 ### Change detection with S3 Versions.
 
@@ -1616,7 +1634,7 @@ Accessing data through an access point, is done by using its ARN, as opposed to 
 You can set the Access Point ARN property using the following per bucket configuration property:
 ```xml
 <property>
-    <name>fs.s3a.sample-bucket.accesspoint.arn</name>
+    <name>fs.s3a.bucket.sample-bucket.accesspoint.arn</name>
     <value> {ACCESSPOINT_ARN_HERE} </value>
     <description>Configure S3a traffic to use this AccessPoint</description>
 </property>
@@ -1626,21 +1644,11 @@ This configures access to the `sample-bucket` bucket for S3A, to go through the
 new Access Point ARN. So, for example `s3a://sample-bucket/key` will now use your
 configured ARN when getting data from S3 instead of your bucket.
 
-You can also use an Access Point name as a path URI such as `s3a://finance-team-access/key`, by
-configuring the `.accesspoint.arn` property as a per-bucket override:
-```xml
-<property>
-    <name>fs.s3a.finance-team-access.accesspoint.arn</name>
-    <value> {ACCESSPOINT_ARN_HERE} </value>
-    <description>Configure S3a traffic to use this AccessPoint</description>
-</property>
-```
-
 The `fs.s3a.accesspoint.required` property can also require all access to S3 to go through Access
 Points. This has the advantage of increasing security inside a VPN / VPC as you only allow access
 to known sources of data defined through Access Points. In case there is a need to access a bucket
 directly (without Access Points) then you can use per bucket overrides to disable this setting on a
-bucket by bucket basis i.e. `fs.s3a.{YOUR-BUCKET}.accesspoint.required`.
+bucket by bucket basis i.e. `fs.s3a.bucket.{YOUR-BUCKET}.accesspoint.required`.
 
 ```xml
 <!-- Require access point only access -->
@@ -1650,7 +1658,7 @@ bucket by bucket basis i.e. `fs.s3a.{YOUR-BUCKET}.accesspoint.required`.
 </property>
 <!-- Disable it on a per-bucket basis if needed -->
 <property>
-    <name>fs.s3a.example-bucket.accesspoint.required</name>
+    <name>fs.s3a.bucket.example-bucket.accesspoint.required</name>
     <value>false</value>
 </property>
 ```
@@ -1661,6 +1669,45 @@ Before using Access Points make sure you're not impacted by the following:
 `s3-accesspoint.REGION.amazonaws.{com | com.cn}` depending on the Access Point ARN. While
 considering endpoints, if you have any custom signers that use the host endpoint property make
 sure to update them if needed;
+
+## <a name="requester_pays"></a>Requester Pays buckets
+
+S3A supports buckets with
+[Requester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html)
+enabled. When a bucket is configured with requester pays, the requester must cover
+the per-request cost.
+
+For requests to be successful, the S3 client must acknowledge that they will pay
+for these requests by setting a request flag, usually a header, on each request.
+
+To enable this feature within S3A, configure the `fs.s3a.requester.pays.enabled` property.
+
+```xml
+<property>
+    <name>fs.s3a.requester.pays.enabled</name>
+    <value>true</value>
+</property>
+```
+
+## <a name="storage_classes"></a>Storage Classes
+
+Amazon S3 offers a range of [Storage Classes](https://aws.amazon.com/s3/storage-classes/)
+that you can choose from based on behavior of your applications. By using the right
+storage class, you can reduce the cost of your bucket.
+
+S3A uses Standard storage class for PUT object requests by default, which is suitable for
+general use cases. To use a specific storage class, set the value in `fs.s3a.create.storage.class` property to
+the storage class you want.
+
+```xml
+<property>
+    <name>fs.s3a.create.storage.class</name>
+    <value>intelligent_tiering</value>
+</property>
+```
+
+Please note that S3A does not support reading from archive storage classes at the moment.
+`AccessDeniedException` with InvalidObjectState will be thrown if you're trying to do so.
 
 ## <a name="upload"></a>How S3A writes data to S3
 
@@ -1778,9 +1825,12 @@ consumed, and so eliminates heap size as the limiting factor in queued uploads
 
 <property>
   <name>fs.s3a.buffer.dir</name>
-  <value>${hadoop.tmp.dir}/s3a</value>
+  <value>${env.LOCAL_DIRS:-${hadoop.tmp.dir}}/s3a</value>
   <description>Comma separated list of directories that will be used to buffer file
-    uploads to.</description>
+    uploads to.
+    Yarn container path will be used as default value on yarn applications,
+    otherwise fall back to hadoop.tmp.dir
+  </description>
 </property>
 ```
 
@@ -2092,7 +2142,7 @@ except also allows for a custom SignerInitializer
 (`org.apache.hadoop.fs.s3a.AwsSignerInitializer`) class to be specified.
 
 #### Usage of the Signers
-Signers can be set at a per service level(S3, dynamodb, etc) or a common
+Signers can be set at a per-service level (S3, etc) or a common
 signer for all services.
 
 ```xml
@@ -2100,12 +2150,6 @@ signer for all services.
   <name>fs.s3a.s3.signing-algorithm</name>
   <value>${S3SignerName}</value>
   <description>Specify the signer for S3</description>
-</property>
-
-<property>
-  <name>fs.s3a.ddb.signing-algorithm</name>
-  <value>${DdbSignerName}</value>
-  <description>Specify the signer for DDB</description>
 </property>
 
 <property>

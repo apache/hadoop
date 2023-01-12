@@ -169,11 +169,11 @@ public class CommonConfigurationKeysPublic {
 
   /**
    * Number of filesystems instances can be created in parallel.
-   * <p></p>
+   * <p>
    * A higher number here does not necessarily improve performance, especially
    * for object stores, where multiple threads may be attempting to create an FS
    * instance for the same URI.
-   * <p></p>
+   * </p>
    * Default value: {@value}.
    */
   public static final String FS_CREATION_PARALLEL_COUNT =
@@ -181,8 +181,9 @@ public class CommonConfigurationKeysPublic {
 
   /**
    * Default value for {@link #FS_CREATION_PARALLEL_COUNT}.
-   * <p></p>
+   * <p>
    * Default value: {@value}.
+   * </p>
    */
   public static final int FS_CREATION_PARALLEL_COUNT_DEFAULT =
       64;
@@ -999,6 +1000,7 @@ public class CommonConfigurationKeysPublic {
       String.join(",",
           "secret$",
           "password$",
+          "username$",
           "ssl.keystore.pass$",
           "fs.s3.*[Ss]ecret.?[Kk]ey",
           "fs.s3a.*.server-side-encryption.key",
@@ -1053,5 +1055,13 @@ public class CommonConfigurationKeysPublic {
   public static final String HADOOP_HTTP_IDLE_TIMEOUT_MS_KEY =
       "hadoop.http.idle_timeout.ms";
   public static final int HADOOP_HTTP_IDLE_TIMEOUT_MS_DEFAULT = 60000;
+
+  /**
+   * To configure scheduling of server metrics update thread. This config is used to indicate
+   * initial delay and delay between each execution of the metric update runnable thread.
+   */
+  public static final String IPC_SERVER_METRICS_UPDATE_RUNNER_INTERVAL =
+      "ipc.server.metrics.update.runner.interval";
+  public static final int IPC_SERVER_METRICS_UPDATE_RUNNER_INTERVAL_DEFAULT = 5000;
 }
 

@@ -536,7 +536,7 @@ public class TestCopyCommitter {
           Collections.singletonList(new Path(sourceBase)),
           new Path("/out"))
           .withBlocksPerChunk(blocksPerChunk)
-          .withCRC(skipCrc)
+          .withSkipCRC(skipCrc)
           .build();
       options.appendToConf(conf);
       conf.setBoolean(

@@ -139,7 +139,7 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
 
   /**
    * Constructor for {@link MutableRollingAverages}.
-   * @param metricValueName
+   * @param metricValueName input metricValueName.
    */
   public MutableRollingAverages(String metricValueName) {
     if (metricValueName == null) {
@@ -285,6 +285,7 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
    * Retrieve a map of metric name {@literal ->} (aggregate).
    * Filter out entries that don't have at least minSamples.
    *
+   * @param minSamples input minSamples.
    * @return a map of peer DataNode Id to the average latency to that
    *         node seen over the measurement period.
    */
@@ -314,6 +315,7 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
 
   /**
    * Use for test only.
+   * @param value input value.
    */
   @VisibleForTesting
   public synchronized void setRecordValidityMs(long value) {

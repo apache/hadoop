@@ -633,4 +633,20 @@ public class TestNetworkTopology {
     numNodes = cluster.countNumOfAvailableNodes(NodeBase.ROOT, excludedNodes);
     assertEquals(12, numNodes);
   }
+
+  @Test
+  public void testAddAndRemoveNodeWithEmptyRack() {
+    DatanodeDescriptor n1 = DFSTestUtil.getDatanodeDescriptor("6.6.6.6", "/d2/r3");
+    DatanodeDescriptor n2 = DFSTestUtil.getDatanodeDescriptor("7.7.7.7", "/d2/r3");
+    DatanodeDescriptor n3 = DFSTestUtil.getDatanodeDescriptor("8.8.8.8", "/d2/r3");
+
+    cluster.decommissionNode(n1);
+    assertEquals(6, cluster.getNumOfNonEmptyRacks());
+    cluster.decommissionNode(n2);
+    cluster.decommissionNode(n3);
+    assertEquals(5, cluster.getNumOfNonEmptyRacks());
+
+    cluster.recommissionNode(n1);
+    assertEquals(6, cluster.getNumOfNonEmptyRacks());
+  }
 }

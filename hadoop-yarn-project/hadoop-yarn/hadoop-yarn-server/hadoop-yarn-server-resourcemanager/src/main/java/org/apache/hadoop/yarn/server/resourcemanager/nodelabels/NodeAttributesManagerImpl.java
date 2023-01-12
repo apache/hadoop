@@ -61,7 +61,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAttributesUpdateSchedulerEvent;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 /**
  * Manager holding the attributes to Labels.

@@ -70,30 +70,53 @@ public abstract class ChecksumFs extends FilterFs {
     this.verifyChecksum = inVerifyChecksum;
   }
 
-  /** get the raw file system. */
+  /**
+   * get the raw file system.
+   *
+   * @return abstract file system.
+   */
   public AbstractFileSystem getRawFs() {
     return getMyFs();
   }
 
-  /** Return the name of the checksum file associated with a file.*/
+  /**
+   * Return the name of the checksum file associated with a file.
+   *
+   * @param file the file path.
+   * @return the checksum file associated with a file.
+   */
   public Path getChecksumFile(Path file) {
     return new Path(file.getParent(), "." + file.getName() + ".crc");
   }
 
-  /** Return true iff file is a checksum file name.*/
+  /**
+   * Return true iff file is a checksum file name.
+   *
+   * @param file the file path.
+   * @return if is checksum file true,not false.
+   */
   public static boolean isChecksumFile(Path file) {
     String name = file.getName();
     return name.startsWith(".") && name.endsWith(".crc");
   }
 
-  /** Return the length of the checksum file given the size of the 
+  /**
+   * Return the length of the checksum file given the size of the
    * actual file.
-   **/
+   *
+   * @param file the file path.
+   * @param fileSize file size.
+   * @return check sum file length.
+   */
   public long getChecksumFileLength(Path file, long fileSize) {
     return getChecksumLength(fileSize, getBytesPerSum());
   }
 
-  /** Return the bytes Per Checksum. */
+  /**
+   * Return the bytes Per Checksum.
+   *
+   * @return bytes per sum.
+   */
   public int getBytesPerSum() {
     return defaultBytesPerChecksum;
   }
@@ -433,7 +456,7 @@ public abstract class ChecksumFs extends FilterFs {
    * Implement the abstract <tt>setReplication</tt> of <tt>FileSystem</tt>
    * @param src file name
    * @param replication new replication
-   * @throws IOException
+   * @throws IOException if an I/O error occurs.
    * @return true if successful;
    *         false if file does not exist or is a directory
    */

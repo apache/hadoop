@@ -239,8 +239,8 @@ The order in which you set these configurations is unimportant, but the values y
 
     The fencing methods used during a failover are configured as a
     carriage-return-separated list, which will be attempted in order until
-    one indicates that fencing has succeeded. There are two methods which ship with
-    Hadoop: *shell* and *sshfence*. For information on implementing your own custom
+    one indicates that fencing has succeeded. There are three methods which ship with
+    Hadoop: *shell*, *sshfence* and *powershell*. For information on implementing your own custom
     fencing method, see the *org.apache.hadoop.ha.NodeFencer* class.
 
     - - -
@@ -331,6 +331,26 @@ The order in which you set these configurations is unimportant, but the values y
 
     - - -
 
+    **powershell** - use PowerShell to remotely connect to a machine and kill
+    the required process
+
+    The *powershell* fencing method uses PowerShell command. It may be
+    configured like so:
+
+            <property>
+              <name>dfs.ha.fencing.methods</name>
+              <value>powershell(NameNode)</value>
+            </property>
+
+    The argument passed to this fencer should be a unique string in the "CommandLine"
+    attribute for the "java.exe" process. For example, the full path for the Namenode:
+    "org.apache.hadoop.hdfs.server.namenode.NameNode".
+    The administrator can also shorten the name to "Namenode" if it's unique.
+
+    **Note:** This only works in Windows.
+
+    - - -
+
 *   **fs.defaultFS** - the default path prefix used by the Hadoop FS client when none is given
 
     Optionally, you may now configure the default path for Hadoop clients to use
@@ -356,12 +376,14 @@ The order in which you set these configurations is unimportant, but the values y
           <value>/path/to/journal/node/local/data</value>
         </property>
 
-*   **dfs.ha.nn.not-become-active-in-safemode** - if prevent safe mode namenodes to become active
+*   **dfs.ha.nn.not-become-active-in-safemode** - if prevent safe mode namenodes to become active or observer
 
     Whether allow namenode to become active when it is in safemode, when it is
     set to true, namenode in safemode will report SERVICE_UNHEALTHY to ZKFC if
     auto failover is on, or will throw exception to fail the transition to
-    active if auto failover is off. For example:
+    active if auto failover is off. If you transition namenode to observer state
+    when it is in safemode, when this configuration is set to true, namenode will throw exception
+    to fail the transition to observer. For example:
 
         <property>
           <name>dfs.ha.nn.not-become-active-in-safemode</name>
@@ -479,6 +501,16 @@ lag time will be much longer. The relevant configurations are:
     succeed. For example, if a request attempted to fetch edits starting at transaction ID 10, but
     the oldest data in the cache was at transaction ID 20, a value of 10 would be added to the
     average.
+
+*   **dfs.journalnode.edit-cache-size.fraction** - This fraction refers to the proportion of
+    the maximum memory of the JVM. Used to calculate the size of the edits cache that is
+    kept in the JournalNode's memory. This config is an alternative to the
+    dfs.journalnode.edit-cache-size.bytes. And it is used to serve edits for tailing via
+    the RPC-based mechanism, and is only enabled when dfs.ha.tail-edits.in-progress is true.
+    Transactions range in size but are around 200 bytes on average, so the default of 1MB
+    can store around 5000 transactions. So we can configure a reasonable value based on
+    the maximum memory. The recommended value is less than 0.9. If we set
+    dfs.journalnode.edit-cache-size.bytes, this parameter will not take effect.
 
 This feature is primarily useful in conjunction with the Standby/Observer Read feature. Using this
 feature, read requests can be serviced from non-active NameNodes; thus tailing in-progress edits

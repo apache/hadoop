@@ -18,13 +18,12 @@
 
 package org.apache.hadoop.yarn.server.timeline.recovery;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.File;
 import java.io.IOException;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
@@ -36,10 +35,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.timeline.recovery.TimelineStateStore.TimelineServiceState;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestLeveldbTimelineStateStore {
 
@@ -48,7 +48,7 @@ public class TestLeveldbTimelineStateStore {
   private Configuration conf;
   private TimelineStateStore store;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     fsPath = new File("target", getClass().getSimpleName() +
         "-tmpDir").getAbsoluteFile();
@@ -63,7 +63,7 @@ public class TestLeveldbTimelineStateStore {
         fsPath.getAbsolutePath());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (store != null) {
       store.stop();
@@ -81,11 +81,11 @@ public class TestLeveldbTimelineStateStore {
   }
 
   @Test
-  public void testTokenStore() throws Exception {
+  void testTokenStore() throws Exception {
     initAndStartTimelineServiceStateStoreService();
     TimelineServiceState state = store.loadState();
-    assertTrue("token state not empty", state.tokenState.isEmpty());
-    assertTrue("key state not empty", state.tokenMasterKeyState.isEmpty());
+    assertTrue(state.tokenState.isEmpty(), "token state not empty");
+    assertTrue(state.tokenMasterKeyState.isEmpty(), "key state not empty");
 
     final DelegationKey key1 = new DelegationKey(1, 2, "keyData1".getBytes());
     final TimelineDelegationTokenIdentifier token1 =
@@ -120,19 +120,23 @@ public class TestLeveldbTimelineStateStore {
 
     initAndStartTimelineServiceStateStoreService();
     state = store.loadState();
-    assertEquals("incorrect loaded token count", 2, state.tokenState.size());
-    assertTrue("missing token 1", state.tokenState.containsKey(token1));
-    assertEquals("incorrect token 1 date", tokenDate1,
-        state.tokenState.get(token1));
-    assertTrue("missing token 2", state.tokenState.containsKey(token2));
-    assertEquals("incorrect token 2 date", tokenDate2,
-        state.tokenState.get(token2));
-    assertEquals("incorrect master key count", 1,
-        state.tokenMasterKeyState.size());
-    assertTrue("missing master key 1",
-        state.tokenMasterKeyState.contains(key1));
-    assertEquals("incorrect latest sequence number", 12345678,
-        state.getLatestSequenceNumber());
+    assertEquals(2, state.tokenState.size(), "incorrect loaded token count");
+    assertTrue(state.tokenState.containsKey(token1), "missing token 1");
+    assertEquals(tokenDate1,
+        state.tokenState.get(token1),
+        "incorrect token 1 date");
+    assertTrue(state.tokenState.containsKey(token2), "missing token 2");
+    assertEquals(tokenDate2,
+        state.tokenState.get(token2),
+        "incorrect token 2 date");
+    assertEquals(1,
+        state.tokenMasterKeyState.size(),
+        "incorrect master key count");
+    assertTrue(state.tokenMasterKeyState.contains(key1),
+        "missing master key 1");
+    assertEquals(12345678,
+        state.getLatestSequenceNumber(),
+        "incorrect latest sequence number");
 
     final DelegationKey key2 = new DelegationKey(3, 4, "keyData2".getBytes());
     final DelegationKey key3 = new DelegationKey(5, 6, "keyData3".getBytes());
@@ -154,46 +158,50 @@ public class TestLeveldbTimelineStateStore {
 
     initAndStartTimelineServiceStateStoreService();
     state = store.loadState();
-    assertEquals("incorrect loaded token count", 2, state.tokenState.size());
-    assertFalse("token 1 not removed", state.tokenState.containsKey(token1));
-    assertTrue("missing token 2", state.tokenState.containsKey(token2));
-    assertEquals("incorrect token 2 date", newTokenDate2,
-        state.tokenState.get(token2));
-    assertTrue("missing token 3", state.tokenState.containsKey(token3));
-    assertEquals("incorrect token 3 date", tokenDate3,
-        state.tokenState.get(token3));
-    assertEquals("incorrect master key count", 2,
-        state.tokenMasterKeyState.size());
-    assertFalse("master key 1 not removed",
-        state.tokenMasterKeyState.contains(key1));
-    assertTrue("missing master key 2",
-        state.tokenMasterKeyState.contains(key2));
-    assertTrue("missing master key 3",
-        state.tokenMasterKeyState.contains(key3));
-    assertEquals("incorrect latest sequence number", 12345679,
-        state.getLatestSequenceNumber());
+    assertEquals(2, state.tokenState.size(), "incorrect loaded token count");
+    assertFalse(state.tokenState.containsKey(token1), "token 1 not removed");
+    assertTrue(state.tokenState.containsKey(token2), "missing token 2");
+    assertEquals(newTokenDate2,
+        state.tokenState.get(token2),
+        "incorrect token 2 date");
+    assertTrue(state.tokenState.containsKey(token3), "missing token 3");
+    assertEquals(tokenDate3,
+        state.tokenState.get(token3),
+        "incorrect token 3 date");
+    assertEquals(2,
+        state.tokenMasterKeyState.size(),
+        "incorrect master key count");
+    assertFalse(state.tokenMasterKeyState.contains(key1),
+        "master key 1 not removed");
+    assertTrue(state.tokenMasterKeyState.contains(key2),
+        "missing master key 2");
+    assertTrue(state.tokenMasterKeyState.contains(key3),
+        "missing master key 3");
+    assertEquals(12345679,
+        state.getLatestSequenceNumber(),
+        "incorrect latest sequence number");
     store.close();
   }
 
   @Test
-  public void testCheckVersion() throws IOException {
+  void testCheckVersion() throws IOException {
     LeveldbTimelineStateStore store =
         initAndStartTimelineServiceStateStoreService();
     // default version
     Version defaultVersion = store.getCurrentVersion();
-    Assert.assertEquals(defaultVersion, store.loadVersion());
+    assertEquals(defaultVersion, store.loadVersion());
 
     // compatible version
     Version compatibleVersion =
         Version.newInstance(defaultVersion.getMajorVersion(),
             defaultVersion.getMinorVersion() + 2);
     store.storeVersion(compatibleVersion);
-    Assert.assertEquals(compatibleVersion, store.loadVersion());
+    assertEquals(compatibleVersion, store.loadVersion());
     store.stop();
 
     // overwrite the compatible version
     store = initAndStartTimelineServiceStateStoreService();
-    Assert.assertEquals(defaultVersion, store.loadVersion());
+    assertEquals(defaultVersion, store.loadVersion());
 
     // incompatible version
     Version incompatibleVersion =
@@ -204,10 +212,10 @@ public class TestLeveldbTimelineStateStore {
 
     try {
       initAndStartTimelineServiceStateStoreService();
-      Assert.fail("Incompatible version, should expect fail here.");
+      fail("Incompatible version, should expect fail here.");
     } catch (ServiceStateException e) {
-      Assert.assertTrue("Exception message mismatch",
-          e.getMessage().contains("Incompatible version for timeline state store"));
+      assertTrue(e.getMessage().contains("Incompatible version for timeline state store"),
+          "Exception message mismatch");
     }
   }
 }

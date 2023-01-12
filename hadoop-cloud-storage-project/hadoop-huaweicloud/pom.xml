@@ -100,10 +100,14 @@
       <artifactId>hadoop-common</artifactId>
       <scope>provided</scope>
       <exclusions>
-      <exclusion>
-      <groupId>jdk.tools</groupId>
-      <artifactId>jdk.tools</artifactId>
-      </exclusion>
+        <exclusion>
+          <groupId>jdk.tools</groupId>
+          <artifactId>jdk.tools</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.javassist</groupId>
+          <artifactId>javassist</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -160,6 +164,14 @@
         <exclusion>
           <artifactId>okio</artifactId>
           <groupId>com.squareup.okio</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>log4j-core</artifactId>
+          <groupId>org.apache.logging.log4j</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>log4j-api</artifactId>
+          <groupId>org.apache.logging.log4j</groupId>
         </exclusion>
       </exclusions>
     </dependency>

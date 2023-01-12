@@ -143,6 +143,11 @@ public class TestFilterFileSystem {
     of the filter such as checksums.
      */
     MultipartUploaderBuilder createMultipartUploader(Path basePath);
+
+    FSDataOutputStream append(Path f, boolean appendToNewBlock) throws IOException;
+
+    FSDataOutputStream append(Path f, int bufferSize,
+        Progressable progress, boolean appendToNewBlock) throws IOException;
   }
 
   @Test

@@ -129,6 +129,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
@@ -138,6 +139,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -202,6 +204,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ConfigVersionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerOverviewInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
@@ -1403,6 +1406,32 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     return new NodeLabelsInfo(nodeLabelsInfo);
   }
 
+  @GET
+  @Path(RMWSConsts.GET_RM_NODE_LABELS)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public NodeLabelsInfo getRMNodeLabels(@Context HttpServletRequest hsr)
+      throws IOException {
+
+    initForReadableEndpoints();
+    RMNodeLabelsManager nlm = rm.getRMContext().getNodeLabelManager();
+
+    ArrayList<NodeLabelInfo> nodeLabelsInfo = new ArrayList<>();
+    for (RMNodeLabel info : nlm.pullRMNodeLabelsInfo()) {
+      String labelName = info.getLabelName().isEmpty() ?
+          NodeLabel.DEFAULT_NODE_LABEL_PARTITION : info.getLabelName();
+      int activeNMs = info.getNumActiveNMs();
+      PartitionInfo partitionInfo =
+          new PartitionInfo(new ResourceInfo(info.getResource()));
+      NodeLabel nodeLabel = NodeLabel.newInstance(labelName, info.getIsExclusive());
+      NodeLabelInfo nodeLabelInfo = new NodeLabelInfo(nodeLabel, partitionInfo);
+      nodeLabelInfo.setActiveNMs(activeNMs);
+      nodeLabelsInfo.add(nodeLabelInfo);
+    }
+
+    return new NodeLabelsInfo(nodeLabelsInfo);
+  }
+
   @POST
   @Path(RMWSConsts.ADD_NODE_LABELS)
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
@@ -1435,7 +1464,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
-  public Response removeFromCluserNodeLabels(
+  public Response removeFromClusterNodeLabels(
       @QueryParam(RMWSConsts.LABELS) Set<String> oldNodeLabels,
       @Context HttpServletRequest hsr) throws Exception {
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
@@ -2656,8 +2685,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     initForWritableEndpoints(callerUGI, true);
 
     ResourceScheduler scheduler = rm.getResourceScheduler();
-    if (scheduler instanceof MutableConfScheduler
-        && ((MutableConfScheduler) scheduler).isConfigurationMutable()) {
+    if (isConfigurationMutable(scheduler)) {
       try {
         MutableConfigurationProvider mutableConfigurationProvider =
             ((MutableConfScheduler) scheduler).getMutableConfProvider();
@@ -2679,7 +2707,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     } else {
       return Response.status(Status.BAD_REQUEST)
           .entity("Scheduler Configuration format only supported by " +
-          "MutableConfScheduler.").build();
+              MutableConfScheduler.class.getSimpleName()).build();
     }
   }
 
@@ -2696,8 +2724,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
     initForWritableEndpoints(callerUGI, true);
     ResourceScheduler scheduler = rm.getResourceScheduler();
-    if (scheduler instanceof MutableConfScheduler && ((MutableConfScheduler)
-            scheduler).isConfigurationMutable()) {
+    if (isConfigurationMutable(scheduler)) {
       try {
         MutableConfigurationProvider mutableConfigurationProvider =
                 ((MutableConfScheduler) scheduler).getMutableConfProvider();
@@ -2729,8 +2756,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
                   .build();
       }
     } else {
-      String errorMsg = "Configuration change validation only supported by " +
-              "MutableConfScheduler.";
+      String errorMsg = String.format("Configuration change validation only supported by %s.",
+          MutableConfScheduler.class.getSimpleName());
       LOG.warn(errorMsg);
       return Response.status(Status.BAD_REQUEST)
               .entity(errorMsg)
@@ -2746,49 +2773,59 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public synchronized Response updateSchedulerConfiguration(SchedConfUpdateInfo
       mutationInfo, @Context HttpServletRequest hsr)
       throws AuthorizationException, InterruptedException {
-
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
     initForWritableEndpoints(callerUGI, true);
 
     ResourceScheduler scheduler = rm.getResourceScheduler();
-    if (scheduler instanceof MutableConfScheduler && ((MutableConfScheduler)
-        scheduler).isConfigurationMutable()) {
+    if (!(scheduler instanceof MutableConfScheduler)) {
+      return Response.status(Status.BAD_REQUEST)
+          .entity("Configuration change only supported by MutableConfScheduler.").build();
+    } else if (!((MutableConfScheduler) scheduler).isConfigurationMutable()) {
+      return Response.status(Status.BAD_REQUEST)
+          .entity("Configuration change only supported by mutable configuration store.").build();
+    } else {
       try {
-        callerUGI.doAs(new PrivilegedExceptionAction<Void>() {
-          @Override
-          public Void run() throws Exception {
-            MutableConfigurationProvider provider = ((MutableConfScheduler)
-                scheduler).getMutableConfProvider();
-            if (!provider.getAclMutationPolicy().isMutationAllowed(callerUGI,
-                mutationInfo)) {
-              throw new org.apache.hadoop.security.AccessControlException("User"
-                  + " is not admin of all modified queues.");
-            }
-            LogMutation logMutation = provider.logAndApplyMutation(callerUGI,
-                mutationInfo);
-            try {
-              rm.getRMContext().getRMAdminService().refreshQueues();
-            } catch (IOException | YarnException e) {
-              provider.confirmPendingMutation(logMutation, false);
-              throw e;
-            }
-            provider.confirmPendingMutation(logMutation, true);
-            return null;
-          }
+        callerUGI.doAs((PrivilegedExceptionAction<Void>) () -> {
+          MutableConfigurationProvider provider =
+              ((MutableConfScheduler) scheduler).getMutableConfProvider();
+          LogMutation logMutation = applyMutation(provider, callerUGI, mutationInfo);
+          return refreshQueues(provider, logMutation);
         });
       } catch (IOException e) {
         LOG.error("Exception thrown when modifying configuration.", e);
-        return Response.status(Status.BAD_REQUEST).entity(e.getMessage())
-            .build();
+        return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
       }
-      return Response.status(Status.OK).entity("Configuration change " +
-          "successfully applied.").build();
-    } else {
-      return Response.status(Status.BAD_REQUEST)
-          .entity("Configuration change only supported by " +
-              "MutableConfScheduler.")
+      return Response.status(Status.OK).entity("Configuration change successfully applied.")
           .build();
     }
+  }
+
+  private Void refreshQueues(MutableConfigurationProvider provider, LogMutation logMutation)
+      throws Exception {
+    try {
+      rm.getRMContext().getRMAdminService().refreshQueues();
+    } catch (IOException | YarnException e) {
+      provider.confirmPendingMutation(logMutation, false);
+      throw e;
+    }
+    provider.confirmPendingMutation(logMutation, true);
+    return null;
+  }
+
+  private LogMutation applyMutation(MutableConfigurationProvider provider,
+      UserGroupInformation callerUGI, SchedConfUpdateInfo mutationInfo) throws Exception {
+    if (!provider.getAclMutationPolicy().isMutationAllowed(callerUGI,
+        mutationInfo)) {
+      throw new org.apache.hadoop.security.AccessControlException("User"
+          + " is not admin of all modified queues.");
+    }
+    return provider.logAndApplyMutation(callerUGI,
+        mutationInfo);
+  }
+
+  private boolean isConfigurationMutable(ResourceScheduler scheduler) {
+    return scheduler instanceof MutableConfScheduler && ((MutableConfScheduler)
+        scheduler).isConfigurationMutable();
   }
 
   @GET
@@ -2803,8 +2840,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     initForWritableEndpoints(callerUGI, true);
 
     ResourceScheduler scheduler = rm.getResourceScheduler();
-    if (scheduler instanceof MutableConfScheduler
-        && ((MutableConfScheduler) scheduler).isConfigurationMutable()) {
+    if (isConfigurationMutable(scheduler)) {
       MutableConfigurationProvider mutableConfigurationProvider =
           ((MutableConfScheduler) scheduler).getMutableConfProvider();
       // We load the cached configuration from configuration store,
@@ -2816,10 +2852,11 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           .build();
     } else {
       return Response.status(Status.BAD_REQUEST).entity(
-          "This API only supports to retrieve scheduler configuration"
-              + " from a mutable-conf scheduler, underneath scheduler "
-              + scheduler.getClass().getSimpleName()
-              + " is not an instance of MutableConfScheduler")
+              String.format("This API only supports to retrieve scheduler configuration"
+                  + " from a mutable-conf scheduler, underneath scheduler %s"
+                  + " is not an instance of %s",
+                  scheduler.getClass().getSimpleName(),
+                  MutableConfScheduler.class.getSimpleName()))
           .build();
     }
   }
@@ -2835,8 +2872,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     initForWritableEndpoints(callerUGI, true);
 
     ResourceScheduler scheduler = rm.getResourceScheduler();
-    if (scheduler instanceof MutableConfScheduler
-        && ((MutableConfScheduler) scheduler).isConfigurationMutable()) {
+    if (isConfigurationMutable(scheduler)) {
       MutableConfigurationProvider mutableConfigurationProvider =
           ((MutableConfScheduler) scheduler).getMutableConfProvider();
 
@@ -2852,8 +2888,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       }
     } else {
       return Response.status(Status.BAD_REQUEST)
-          .entity("Configuration Version only supported by "
-          + "MutableConfScheduler.").build();
+          .entity(String.format("Configuration Version only supported by %s.",
+              MutableConfScheduler.class.getSimpleName())).build();
     }
   }
 
@@ -2934,5 +2970,15 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           .entity(e.getMessage()).build();
     }
     return Response.status(Status.OK).build();
+  }
+
+  @GET
+  @Path(RMWSConsts.SCHEDULER_OVERVIEW)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public SchedulerOverviewInfo getSchedulerOverview() {
+    initForReadableEndpoints();
+    ResourceScheduler rs = rm.getResourceScheduler();
+    return new SchedulerOverviewInfo(rs);
   }
 }

@@ -39,7 +39,7 @@ public class NullGroupsMapping implements GroupMappingServiceProvider {
    *
    * @param user User's name
    * @return set of group memberships of user
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public Set<String> getGroupsSet(String user) throws IOException {

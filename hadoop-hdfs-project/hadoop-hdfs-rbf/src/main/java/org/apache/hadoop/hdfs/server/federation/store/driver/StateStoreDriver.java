@@ -97,7 +97,7 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
   }
 
   /**
-   * Gets a unique identifier for the running task/process. Typically the
+   * Gets a unique identifier for the running task/process. Typically, the
    * router address.
    *
    * @return Unique identifier for the running task.

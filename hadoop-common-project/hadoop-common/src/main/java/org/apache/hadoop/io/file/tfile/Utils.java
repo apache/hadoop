@@ -49,7 +49,7 @@ public final class Utils {
    *          output stream
    * @param n
    *          The integer to be encoded
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    * @see Utils#writeVLong(DataOutput, long)
    */
   public static void writeVInt(DataOutput out, int n) throws IOException {
@@ -95,7 +95,7 @@ public final class Utils {
    *          output stream
    * @param n
    *          the integer number
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @SuppressWarnings("fallthrough")
   public static void writeVLong(DataOutput out, long n) throws IOException {
@@ -170,7 +170,7 @@ public final class Utils {
    * @param in
    *          input stream
    * @return the decoded integer
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    * 
    * @see Utils#readVLong(DataInput)
    */
@@ -199,7 +199,7 @@ public final class Utils {
    * @param in
    *          input stream
    * @return the decoded long integer.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
 
   public static long readVLong(DataInput in) throws IOException {
@@ -249,9 +249,9 @@ public final class Utils {
   /**
    * Write a String as a VInt n, followed by n Bytes as in Text format.
    * 
-   * @param out
-   * @param s
-   * @throws IOException
+   * @param out out.
+   * @param s s.
+   * @throws IOException raised on errors performing I/O.
    */
   public static void writeString(DataOutput out, String s) throws IOException {
     if (s != null) {
@@ -271,7 +271,7 @@ public final class Utils {
    * @param in
    *          The input stream.
    * @return The string
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static String readString(DataInput in) throws IOException {
     int length = readVInt(in);
@@ -299,7 +299,7 @@ public final class Utils {
      * 
      * @param in
      *          input stream
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public Version(DataInput in) throws IOException {
       major = in.readShort();
@@ -326,7 +326,7 @@ public final class Utils {
      * 
      * @param out
      *          The DataOutput object.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public void write(DataOutput out) throws IOException {
       out.writeShort(major);

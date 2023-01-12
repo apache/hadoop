@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
-import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.Container;

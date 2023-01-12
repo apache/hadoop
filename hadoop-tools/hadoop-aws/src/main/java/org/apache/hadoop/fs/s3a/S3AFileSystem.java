@@ -22,24 +22,24 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
-import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Objects;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -54,6 +54,8 @@ import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
@@ -70,6 +72,9 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.SelectObjectContentRequest;
+import com.amazonaws.services.s3.model.SelectObjectContentResult;
+import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.Copy;
@@ -80,35 +85,35 @@ import com.amazonaws.services.s3.transfer.model.CopyResult;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
 
-import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
-import org.apache.hadoop.fs.s3a.impl.CopyFromLocalOperation;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
-import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.Globber;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
 import org.apache.hadoop.fs.s3a.impl.BulkDeleteRetryHandler;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
+import org.apache.hadoop.fs.s3a.impl.CopyFromLocalOperation;
 import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
+import org.apache.hadoop.fs.s3a.impl.CreateFileBuilder;
 import org.apache.hadoop.fs.s3a.impl.DeleteOperation;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
@@ -117,33 +122,37 @@ import org.apache.hadoop.fs.s3a.impl.HeaderProcessing;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.MkdirOperation;
-import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
+import org.apache.hadoop.fs.s3a.impl.OpenFileSupport;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
 import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
 import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
-import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
-import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
+import org.apache.hadoop.fs.s3a.impl.V2Migration;
+import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.fs.store.audit.AuditEntryPoint;
+import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
+import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -173,13 +182,10 @@ import org.apache.hadoop.fs.s3a.commit.MagicCommitIntegration;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.select.SelectBinding;
 import org.apache.hadoop.fs.s3a.select.SelectConstants;
-import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
-import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
-import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
-import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.statistics.impl.BondedS3AStatisticsContext;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
@@ -198,7 +204,8 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
-import static org.apache.hadoop.fs.impl.AbstractFSBuilderImpl.rejectUnknownMandatoryKeys;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
@@ -213,15 +220,14 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.hasDe
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_ABORT_PENDING_UPLOADS;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_ABORT_PENDING_UPLOADS;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
-import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIgnoringExceptions;
+import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FILE_NO_OVERWRITE;
+import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FILE_OVERWRITE;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_INACCESSIBLE;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_REQUIRED_EXCEPTION;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_S3GUARD_INCOMPATIBLE;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.ARN_BUCKET_OPTION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_S3GUARD_INCOMPATIBLE;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_403;
@@ -229,7 +235,7 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
-import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.dirMetaToStatuses;
+import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.checkNoS3Guard;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
@@ -239,6 +245,7 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDura
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfSupplier;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.util.functional.RemoteIterators.typeCastingRemoteIterator;
 
 /**
@@ -274,10 +281,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   // APIs on an uninitialized filesystem.
   private Invoker invoker = new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL,
       Invoker.LOG_EVENT);
-  // Only used for very specific code paths which behave differently for
-  // S3Guard. Retries FileNotFound, so be careful if you use this.
-  private Invoker s3guardInvoker = new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL,
-      Invoker.LOG_EVENT);
+
   private final Retried onRetry = this::operationRetried;
 
   /**
@@ -293,6 +297,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private TransferManager transfers;
   private ExecutorService boundedThreadPool;
   private ThreadPoolExecutor unboundedThreadPool;
+
+  // S3 reads are prefetched asynchronously using this future pool.
+  private ExecutorServiceFuturePool futurePool;
+
+  // If true, the prefetching input stream is used for reads.
+  private boolean prefetchEnabled;
+
+  // Size in bytes of a single prefetch block.
+  private int prefetchBlockSize;
+
+  // Size of prefetch queue (in number of blocks).
+  private int prefetchBlockCount;
+
   private int executorCapacity;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
@@ -300,7 +317,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
   private LocalDirAllocator directoryAllocator;
   private CannedAccessControlList cannedACL;
-  private boolean failOnMetadataWriteError;
 
   /**
    * This must never be null; until initialized it just declares that there
@@ -314,13 +330,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /** Storage Statistics Bonded to the instrumentation. */
   private S3AStorageStatistics storageStatistics;
 
-  private long readAhead;
+  /**
+   * Default input policy; may be overridden in
+   * {@code openFile()}.
+   */
   private S3AInputPolicy inputPolicy;
+  /** Vectored IO context. */
+  private VectoredIOContext vectoredIOContext;
+
+  /**
+   * Maximum number of active range read operation a single
+   * input stream can have.
+   */
+  private int vectoredActiveRangeReads;
+
+  private long readAhead;
   private ChangeDetectionPolicy changeDetectionPolicy;
   private final AtomicBoolean closed = new AtomicBoolean(false);
   private volatile boolean isClosed = false;
-  private MetadataStore metadataStore;
-  private boolean allowAuthoritativeMetadataStore;
   private Collection<String> allowAuthoritativePaths;
 
   /** Delegation token integration; non-empty when DT support is enabled. */
@@ -332,14 +359,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private String blockOutputBuffer;
   private S3ADataBlocks.BlockFactory blockFactory;
   private int blockOutputActiveBlocks;
-  private WriteOperationHelper writeHelper;
   private boolean useListV1;
   private MagicCommitIntegration committerIntegration;
 
   private AWSCredentialProviderList credentials;
   private SignerManager signerManager;
-
-  private ITtlTimeProvider ttlTimeProvider;
 
   /**
    * Page size for deletions.
@@ -348,6 +372,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   private final ListingOperationCallbacks listingOperationCallbacks =
           new ListingOperationCallbacksImpl();
+
+  /**
+   * Helper for the openFile() method.
+   */
+  private OpenFileSupport openFileHelper;
+
   /**
    * Directory policy.
    */
@@ -382,6 +412,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Bucket AccessPoint.
    */
   private ArnResource accessPoint;
+
+  /**
+   * A cache of files that should be deleted when the FileSystem is closed
+   * or the JVM is exited.
+   */
+  private final Set<Path> deleteOnExit = new TreeSet<>();
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -422,6 +458,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     AuditSpan span = null;
     try {
       LOG.debug("Initializing S3AFileSystem for {}", bucket);
+      if (LOG.isTraceEnabled()) {
+        // log a full trace for deep diagnostics of where an object is created,
+        // for tracking down memory leak issues.
+        LOG.trace("Filesystem for {} created; fs.s3a.impl.disable.cache = {}",
+            name, originalConf.getBoolean("fs.s3a.impl.disable.cache", false),
+            new RuntimeException(super.toString()));
+      }
       // clone the configuration into one with propagated bucket options
       Configuration conf = propagateBucketOptions(originalConf, bucket);
       // HADOOP-17894. remove references to s3a stores in JCEKS credentials.
@@ -476,12 +519,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       workingDir = new Path("/user", username)
           .makeQualified(this.uri, this.getWorkingDirectory());
 
-      s3guardInvoker = new Invoker(new S3GuardExistsRetryPolicy(getConf()),
-          onRetry);
-
-      failOnMetadataWriteError = conf.getBoolean(FAIL_ON_METADATA_WRITE_ERROR,
-          FAIL_ON_METADATA_WRITE_ERROR_DEFAULT);
-
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
       partSize = getMultipartSizeProperty(conf,
           MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
@@ -492,8 +529,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       longBytesOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
       enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
 
-      readAhead = longBytesOption(conf, READAHEAD_RANGE,
-          DEFAULT_READAHEAD_RANGE, 0);
+      this.prefetchEnabled = conf.getBoolean(PREFETCH_ENABLED_KEY, PREFETCH_ENABLED_DEFAULT);
+      long prefetchBlockSizeLong =
+          longBytesOption(conf, PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE,
+              PREFETCH_BLOCK_DEFAULT_SIZE);
+      if (prefetchBlockSizeLong > (long) Integer.MAX_VALUE) {
+        throw new IOException("S3A prefatch block size exceeds int limit");
+      }
+      this.prefetchBlockSize = (int) prefetchBlockSizeLong;
+      this.prefetchBlockCount =
+          intOption(conf, PREFETCH_BLOCK_COUNT_KEY, PREFETCH_BLOCK_DEFAULT_COUNT, 1);
 
       initThreadPools(conf);
 
@@ -519,11 +564,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // requires the audit manager to be initialized.
       requestFactory = createRequestFactory();
 
-      // create the static write operation helper.
-      // this doesn't have a short-lived span; auditors which
-      // require one may reject usages.
-      writeHelper = createWriteOperationHelper(getActiveAuditSpan());
-
       // create an initial span for all other operations.
       span = createSpan(INITIALIZE_SPAN, bucket, null);
 
@@ -540,7 +580,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       doBucketProbing();
 
       inputPolicy = S3AInputPolicy.getPolicy(
-          conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
+          conf.getTrimmed(INPUT_FADVISE,
+              Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT),
+          S3AInputPolicy.Normal);
       LOG.debug("Input fadvise policy = {}", inputPolicy);
       changeDetectionPolicy = ChangeDetectionPolicy.getPolicy(conf);
       LOG.debug("Change detection policy = {}", changeDetectionPolicy);
@@ -570,32 +612,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Using S3ABlockOutputStream with buffer = {}; block={};" +
               " queue limit={}",
           blockOutputBuffer, partSize, blockOutputActiveBlocks);
-      long authDirTtl = conf.getTimeDuration(METADATASTORE_METADATA_TTL,
-          DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.MILLISECONDS);
-      ttlTimeProvider = new S3Guard.TtlTimeProvider(authDirTtl);
+      // verify there's no S3Guard in the store config.
+      checkNoS3Guard(this.getUri(), getConf());
 
-      setMetadataStore(S3Guard.getMetadataStore(this, ttlTimeProvider));
-      allowAuthoritativeMetadataStore = conf.getBoolean(METADATASTORE_AUTHORITATIVE,
-          DEFAULT_METADATASTORE_AUTHORITATIVE);
       allowAuthoritativePaths = S3Guard.getAuthoritativePaths(this);
 
-      if (hasMetadataStore()) {
-        LOG.debug("Using metadata store {}, authoritative store={}, authoritative path={}",
-            getMetadataStore(), allowAuthoritativeMetadataStore, allowAuthoritativePaths);
-        if (isCSEEnabled) {
-          throw new PathIOException(uri.toString(), CSE_S3GUARD_INCOMPATIBLE);
-        }
-        if (accessPoint != null) {
-          throw new PathIOException(uri.toString(), AP_S3GUARD_INCOMPATIBLE);
-        }
-      }
-
-      // LOG if S3Guard is disabled on the warn level set in config
-      if (!hasMetadataStore()) {
-        String warnLevel = conf.getTrimmed(S3GUARD_DISABLED_WARN_LEVEL,
-            DEFAULT_S3GUARD_DISABLED_WARN_LEVEL);
-        S3Guard.logS3GuardDisabled(LOG, warnLevel, bucket);
-      }
       // directory policy, which may look at authoritative paths
       directoryPolicy = DirectoryPolicyImpl.getDirectoryPolicy(conf,
           this::allowAuthoritative);
@@ -605,7 +626,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       pageSize = intOption(getConf(), BULK_DELETE_PAGE_SIZE,
           BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
+      checkArgument(pageSize <= InternalConstants.MAX_ENTRIES_TO_DELETE,
+              "page size out of range: %s", pageSize);
       listing = new Listing(listingOperationCallbacks, createStoreContext());
+      // now the open file logic
+      openFileHelper = new OpenFileSupport(
+          changeDetectionPolicy,
+          longBytesOption(conf, READAHEAD_RANGE,
+              DEFAULT_READAHEAD_RANGE, 0),
+          username,
+          intOption(conf, IO_FILE_BUFFER_SIZE_KEY,
+              IO_FILE_BUFFER_SIZE_DEFAULT, 0),
+          longBytesOption(conf, ASYNC_DRAIN_THRESHOLD,
+                        DEFAULT_ASYNC_DRAIN_THRESHOLD, 0),
+          inputPolicy);
+      vectoredActiveRangeReads = intOption(conf,
+              AWS_S3_VECTOR_ACTIVE_RANGE_READS, DEFAULT_AWS_S3_VECTOR_ACTIVE_RANGE_READS, 1);
+      vectoredIOContext = populateVectoredIOContext(conf);
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
@@ -617,6 +654,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       stopAllServices();
       throw e;
     }
+  }
+
+  /**
+   * Populates the configurations related to vectored IO operation
+   * in the context which has to passed down to input streams.
+   * @param conf configuration object.
+   * @return VectoredIOContext.
+   */
+  private VectoredIOContext populateVectoredIOContext(Configuration conf) {
+    final int minSeekVectored = (int) longBytesOption(conf, AWS_S3_VECTOR_READS_MIN_SEEK_SIZE,
+            DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE, 0);
+    final int maxReadSizeVectored = (int) longBytesOption(conf, AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE,
+            DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE, 0);
+    return new VectoredIOContext()
+            .setMinSeekForVectoredReads(minSeekVectored)
+            .setMaxReadSizeForVectoredReads(maxReadSizeVectored)
+            .build();
   }
 
   /**
@@ -718,9 +772,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS, 1);
     long keepAliveTime = longOption(conf, KEEPALIVE_TIME,
         DEFAULT_KEEPALIVE_TIME, 0);
+    int numPrefetchThreads = this.prefetchEnabled ? this.prefetchBlockCount : 0;
+
+    int activeTasksForBoundedThreadPool = maxThreads;
+    int waitingTasksForBoundedThreadPool = maxThreads + totalTasks + numPrefetchThreads;
     boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
-        maxThreads,
-        maxThreads + totalTasks,
+        activeTasksForBoundedThreadPool,
+        waitingTasksForBoundedThreadPool,
         keepAliveTime, TimeUnit.SECONDS,
         name + "-bounded");
     unboundedThreadPool = new ThreadPoolExecutor(
@@ -732,6 +790,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     unboundedThreadPool.allowCoreThreadTimeOut(true);
     executorCapacity = intOption(conf,
         EXECUTOR_CAPACITY, DEFAULT_EXECUTOR_CAPACITY, 1);
+    if (prefetchEnabled) {
+      final S3AInputStreamStatistics s3AInputStreamStatistics =
+          statisticsContext.newInputStreamStatistics();
+      futurePool = new ExecutorServiceFuturePool(
+          new SemaphoredDelegatingExecutor(
+              boundedThreadPool,
+              activeTasksForBoundedThreadPool + waitingTasksForBoundedThreadPool,
+              true,
+              s3AInputStreamStatistics));
+    }
   }
 
   /**
@@ -836,6 +904,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param dtEnabled are delegation tokens enabled?
    * @throws IOException failure.
    */
+  @SuppressWarnings("deprecation")
   private void bindAWSClient(URI name, boolean dtEnabled) throws IOException {
     Configuration conf = getConf();
     credentials = null;
@@ -848,6 +917,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // with it if so.
 
       LOG.debug("Using delegation tokens");
+      V2Migration.v1DelegationTokenCredentialProvidersUsed();
       S3ADelegationTokens tokens = new S3ADelegationTokens();
       this.delegationTokens = Optional.of(tokens);
       tokens.bindToFileSystem(getCanonicalUri(),
@@ -888,10 +958,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     S3ClientFactory.S3ClientCreationParameters parameters = null;
     parameters = new S3ClientFactory.S3ClientCreationParameters()
         .withCredentialSet(credentials)
+        .withPathUri(name)
         .withEndpoint(endpoint)
         .withMetrics(statisticsContext.newStatisticsFromAwsSdk())
         .withPathStyleAccess(conf.getBoolean(PATH_STYLE_ACCESS, false))
         .withUserAgentSuffix(uaSuffix)
+        .withRequesterPays(conf.getBoolean(ALLOW_REQUESTER_PAYS, DEFAULT_ALLOW_REQUESTER_PAYS))
         .withRequestHandlers(auditManager.createRequestHandlers());
 
     s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
@@ -991,6 +1063,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // Any encoding type
     String contentEncoding = getConf().getTrimmed(CONTENT_ENCODING, null);
 
+    String storageClassConf = getConf()
+        .getTrimmed(STORAGE_CLASS, "")
+        .toUpperCase(Locale.US);
+    StorageClass storageClass = null;
+    if (!storageClassConf.isEmpty()) {
+      try {
+        storageClass = StorageClass.fromValue(storageClassConf);
+      } catch (IllegalArgumentException e) {
+        LOG.warn("Unknown storage class property {}: {}; falling back to default storage class",
+            STORAGE_CLASS, storageClassConf);
+      }
+    } else {
+      LOG.debug("Unset storage class property {}; falling back to default storage class",
+          STORAGE_CLASS);
+    }
+
     return RequestFactoryImpl.builder()
         .withBucket(requireNonNull(bucket))
         .withCannedACL(getCannedACL())
@@ -998,6 +1086,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withMultipartPartCountLimit(partCountLimit)
         .withRequestPreparer(getAuditManager()::requestCreated)
         .withContentEncoding(contentEncoding)
+        .withStorageClass(storageClass)
         .build();
   }
 
@@ -1156,7 +1245,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * This is for internal use within the S3A code itself.
    * @return AmazonS3Client
    */
-  AmazonS3 getAmazonS3Client() {
+  private AmazonS3 getAmazonS3Client() {
     return s3;
   }
 
@@ -1170,6 +1259,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   public AmazonS3 getAmazonS3ClientForTesting(String reason) {
     LOG.warn("Access to S3A client requested, reason {}", reason);
+    V2Migration.v1S3ClientRequested();
     return s3;
   }
 
@@ -1226,15 +1316,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                     ? accessPoint.getRegion()
                     : s3.getBucketLocation(bucketName)));
     return fixBucketRegion(region);
-  }
-
-  /**
-   * Returns the read ahead range value used by this filesystem.
-   * @return the readahead range
-   */
-  @VisibleForTesting
-  long getReadAheadRange() {
-    return readAhead;
   }
 
   /**
@@ -1318,13 +1399,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Change the input policy for this FS.
+   * This is now a no-op, retained in case some application
+   * or external test invokes it.
+   *
+   * @deprecated use openFile() options
    * @param inputPolicy new policy
    */
   @InterfaceStability.Unstable
+  @Deprecated
   public void setInputPolicy(S3AInputPolicy inputPolicy) {
-    Objects.requireNonNull(inputPolicy, "Null inputStrategy");
-    LOG.debug("Setting input strategy: {}", inputPolicy);
-    this.inputPolicy = inputPolicy;
+    LOG.warn("setInputPolicy is no longer supported");
   }
 
   /**
@@ -1442,64 +1526,61 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   public FSDataInputStream open(Path f, int bufferSize)
       throws IOException {
-    return open(f, Optional.empty(), Optional.empty());
+    return executeOpen(qualify(f),
+        openFileHelper.openSimpleFile(bufferSize));
   }
 
   /**
    * Opens an FSDataInputStream at the indicated Path.
-   * if status contains an S3AFileStatus reference, it is used
-   * and so a HEAD request to the store is avoided.
-   *
-   * @param file the file to open
-   * @param options configuration options if opened with the builder API.
-   * @param providedStatus optional file status.
+   * The {@code fileInformation} parameter controls how the file
+   * is opened, whether it is normal vs. an S3 select call,
+   * can a HEAD be skipped, etc.
+   * @param path the file to open
+   * @param fileInformation information about the file to open
    * @throws IOException IO failure.
    */
-  @Retries.RetryTranslated
   @AuditEntryPoint
-  private FSDataInputStream open(
-      final Path file,
-      final Optional<Configuration> options,
-      final Optional<S3AFileStatus> providedStatus)
+  @Retries.RetryTranslated
+  private FSDataInputStream executeOpen(
+      final Path path,
+      final OpenFileSupport.OpenFileInformation fileInformation)
       throws IOException {
-
-    final Path path = qualify(file);
+    // create the input stream statistics before opening
+    // the file so that the time to prepare to open the file is included.
+    S3AInputStreamStatistics inputStreamStats =
+        statisticsContext.newInputStreamStatistics();
     // this span is passed into the stream.
     final AuditSpan auditSpan = entryPoint(INVOCATION_OPEN, path);
-    S3AFileStatus fileStatus = extractOrFetchSimpleFileStatus(path,
-        providedStatus);
-
-    S3AReadOpContext readContext;
-    if (options.isPresent()) {
-      Configuration o = options.get();
-      // normal path. Open the file with the chosen seek policy, if different
-      // from the normal one.
-      // and readahead.
-      S3AInputPolicy policy = S3AInputPolicy.getPolicy(
-          o.get(INPUT_FADVISE, inputPolicy.toString()));
-      long readAheadRange2 = o.getLong(READAHEAD_RANGE, readAhead);
-      // TODO support change detection policy from options?
-      readContext = createReadContext(
-          fileStatus,
-          policy,
-          changeDetectionPolicy,
-          readAheadRange2,
-          auditSpan);
-    } else {
-      readContext = createReadContext(
-          fileStatus,
-          inputPolicy,
-          changeDetectionPolicy,
-          readAhead,
-          auditSpan);
-    }
+    final S3AFileStatus fileStatus =
+        trackDuration(inputStreamStats,
+            ACTION_FILE_OPENED.getSymbol(), () ->
+            extractOrFetchSimpleFileStatus(path, fileInformation));
+    S3AReadOpContext readContext = createReadContext(
+        fileStatus,
+        auditSpan);
+    fileInformation.applyOptions(readContext);
     LOG.debug("Opening '{}'", readContext);
 
-    return new FSDataInputStream(
-        new S3AInputStream(
-            readContext,
-            createObjectAttributes(fileStatus),
-            createInputStreamCallbacks(auditSpan)));
+    if (this.prefetchEnabled) {
+      return new FSDataInputStream(
+          new S3APrefetchingInputStream(
+              readContext.build(),
+              createObjectAttributes(path, fileStatus),
+              createInputStreamCallbacks(auditSpan),
+              inputStreamStats));
+    } else {
+      return new FSDataInputStream(
+          new S3AInputStream(
+              readContext.build(),
+              createObjectAttributes(path, fileStatus),
+              createInputStreamCallbacks(auditSpan),
+                  inputStreamStats,
+                  new SemaphoredDelegatingExecutor(
+                          boundedThreadPool,
+                          vectoredActiveRangeReads,
+                          true,
+                          inputStreamStats)));
+    }
   }
 
   /**
@@ -1553,36 +1634,67 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         return s3.getObject(request);
       }
     }
+
+    @Override
+    public <T> CompletableFuture<T> submit(final CallableRaisingIOE<T> operation) {
+      CompletableFuture<T> result = new CompletableFuture<>();
+      unboundedThreadPool.submit(() ->
+          LambdaUtils.eval(result, () -> {
+            LOG.debug("Starting submitted operation in {}", auditSpan.getSpanId());
+            try (AuditSpan span = auditSpan.activate()) {
+              return operation.apply();
+            } finally {
+              LOG.debug("Completed submitted operation in {}", auditSpan.getSpanId());
+            }
+          }));
+      return result;
+    }
   }
+
+  /**
+   * Callbacks for WriteOperationHelper.
+   */
+  private final class WriteOperationHelperCallbacksImpl
+      implements WriteOperationHelper.WriteOperationHelperCallbacks {
+
+    @Override
+    public SelectObjectContentResult selectObjectContent(SelectObjectContentRequest request) {
+      return s3.selectObjectContent(request);
+    }
+
+    @Override
+    public CompleteMultipartUploadResult completeMultipartUpload(
+        CompleteMultipartUploadRequest request) {
+      return s3.completeMultipartUpload(request);
+    }
+  }
+
 
   /**
    * Create the read context for reading from the referenced file,
    * using FS state as well as the status.
    * @param fileStatus file status.
-   * @param seekPolicy input policy for this operation
-   * @param changePolicy change policy for this operation.
-   * @param readAheadRange readahead value.
    * @param auditSpan audit span.
    * @return a context for read and select operations.
    */
   @VisibleForTesting
   protected S3AReadOpContext createReadContext(
       final FileStatus fileStatus,
-      final S3AInputPolicy seekPolicy,
-      final ChangeDetectionPolicy changePolicy,
-      final long readAheadRange,
       final AuditSpan auditSpan) {
-    return new S3AReadOpContext(fileStatus.getPath(),
-        hasMetadataStore(),
+    final S3AReadOpContext roc = new S3AReadOpContext(
+        fileStatus.getPath(),
         invoker,
-        s3guardInvoker,
         statistics,
         statisticsContext,
         fileStatus,
-        seekPolicy,
-        changePolicy,
-        readAheadRange,
-        auditSpan);
+        vectoredIOContext,
+        IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator(),
+        futurePool,
+        prefetchBlockSize,
+        prefetchBlockCount)
+        .withAuditSpan(auditSpan);
+    openFileHelper.applyDefaultOptions(roc);
+    return roc.build();
   }
 
   /**
@@ -1610,13 +1722,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Create the attributes of an object for subsequent use.
+   * @param path path -this is used over the file status path.
    * @param fileStatus file status to build from.
    * @return attributes to use when building the query.
    */
   private S3ObjectAttributes createObjectAttributes(
+      final Path path,
       final S3AFileStatus fileStatus) {
     return createObjectAttributes(
-        fileStatus.getPath(),
+        path,
         fileStatus.getEtag(),
         fileStatus.getVersionId(),
         fileStatus.getLen());
@@ -1645,10 +1759,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     final Path path = qualify(f);
+
     // the span will be picked up inside the output stream
     return trackDurationAndSpan(INVOCATION_CREATE, path, () ->
-        innerCreateFile(path, permission, overwrite, bufferSize, replication,
-            blockSize, progress));
+        innerCreateFile(path,
+            progress,
+            getActiveAuditSpan(),
+            overwrite
+                ? OPTIONS_CREATE_FILE_OVERWRITE
+                : OPTIONS_CREATE_FILE_NO_OVERWRITE));
   }
 
   /**
@@ -1656,58 +1775,68 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * reporting; in the active span.
    * Retry policy: retrying, translated on the getFileStatus() probe.
    * No data is uploaded to S3 in this call, so no retry issues related to that.
+   * The "performance" flag disables safety checks for the path being a file,
+   * parent directory existing, and doesn't attempt to delete
+   * dir markers, irrespective of FS settings.
+   * If true, this method call does no IO at all.
    * @param path the file name to open
-   * @param permission the permission to set.
-   * @param overwrite if a file with this name already exists, then if true,
-   *   the file will be overwritten, and if false an error will be thrown.
-   * @param bufferSize the size of the buffer to be used.
-   * @param replication required block replication for the file.
-   * @param blockSize the requested block size.
    * @param progress the progress reporter.
+   * @param auditSpan audit span
+   * @param options options for the file
    * @throws IOException in the event of IO related errors.
-   * @see #setPermission(Path, FsPermission)
    */
   @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
   @Retries.RetryTranslated
-  private FSDataOutputStream innerCreateFile(Path path,
-      FsPermission permission,
-      boolean overwrite,
-      int bufferSize,
-      short replication,
-      long blockSize,
-      Progressable progress) throws IOException {
+  private FSDataOutputStream innerCreateFile(
+      final Path path,
+      final Progressable progress,
+      final AuditSpan auditSpan,
+      final CreateFileBuilder.CreateFileOptions options) throws IOException {
+    auditSpan.activate();
     String key = pathToKey(path);
-    FileStatus status = null;
-    try {
-      // get the status or throw an FNFE.
-      // when overwriting, there is no need to look for any existing file,
-      // and attempting to do so can poison the load balancers with 404
-      // entries.
-      status = innerGetFileStatus(path, false,
-          overwrite
-              ? StatusProbeEnum.DIRECTORIES
-              : StatusProbeEnum.ALL);
+    EnumSet<CreateFlag> flags = options.getFlags();
+    boolean overwrite = flags.contains(CreateFlag.OVERWRITE);
+    boolean performance = options.isPerformance();
+    boolean skipProbes = performance || isUnderMagicCommitPath(path);
+    if (skipProbes) {
+      LOG.debug("Skipping existence/overwrite checks");
+    } else {
+      try {
+        // get the status or throw an FNFE.
+        // when overwriting, there is no need to look for any existing file,
+        // just a directory (for safety)
+        FileStatus status = innerGetFileStatus(path, false,
+            overwrite
+                ? StatusProbeEnum.DIRECTORIES
+                : StatusProbeEnum.ALL);
 
-      // if the thread reaches here, there is something at the path
-      if (status.isDirectory()) {
-        // path references a directory: automatic error
-        throw new FileAlreadyExistsException(path + " is a directory");
+        // if the thread reaches here, there is something at the path
+        if (status.isDirectory()) {
+          // path references a directory: automatic error
+          throw new FileAlreadyExistsException(path + " is a directory");
+        }
+        if (!overwrite) {
+          // path references a file and overwrite is disabled
+          throw new FileAlreadyExistsException(path + " already exists");
+        }
+        LOG.debug("Overwriting file {}", path);
+      } catch (FileNotFoundException e) {
+        // this means there is nothing at the path; all good.
       }
-      if (!overwrite) {
-        // path references a file and overwrite is disabled
-        throw new FileAlreadyExistsException(path + " already exists");
-      }
-      LOG.debug("Overwriting file {}", path);
-    } catch (FileNotFoundException e) {
-      // this means the file is not found
-
     }
     instrumentation.fileCreated();
-    PutTracker putTracker =
-        committerIntegration.createTracker(path, key);
-    String destKey = putTracker.getDestKey();
     final BlockOutputStreamStatistics outputStreamStatistics
         = statisticsContext.newOutputStreamStatistics();
+    PutTracker putTracker =
+        committerIntegration.createTracker(path, key, outputStreamStatistics);
+    String destKey = putTracker.getDestKey();
+
+    // put options are derived from the path and the
+    // option builder.
+    boolean keep = performance || keepDirectoryMarkers(path);
+    final PutObjectOptions putOptions =
+        new PutObjectOptions(keep, null, options.getHeaders());
+
     final S3ABlockOutputStream.BlockOutputStreamBuilder builder =
         S3ABlockOutputStream.builder()
         .withKey(destKey)
@@ -1717,7 +1846,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withProgress(progress)
         .withPutTracker(putTracker)
         .withWriteOperations(
-            createWriteOperationHelper(getActiveAuditSpan()))
+            createWriteOperationHelper(auditSpan))
         .withExecutorService(
             new SemaphoredDelegatingExecutor(
                 boundedThreadPool,
@@ -1728,12 +1857,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             getConf().getBoolean(
                 DOWNGRADE_SYNCABLE_EXCEPTIONS,
                 DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT))
-        .withCSEEnabled(isCSEEnabled);
+        .withCSEEnabled(isCSEEnabled)
+        .withPutOptions(putOptions)
+        .withIOStatisticsAggregator(
+            IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator());
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);
   }
-
   /**
    * Create a Write Operation Helper with the current active span.
    * All operations made through this helper will activate the
@@ -1763,13 +1894,69 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         getConf(),
         statisticsContext,
         getAuditSpanSource(),
-        auditSpan);
+        auditSpan,
+        new WriteOperationHelperCallbacksImpl());
+  }
+
+  /**
+   * Create instance of an FSDataOutputStreamBuilder for
+   * creating a file at the given path.
+   * @param path path to create
+   * @return a builder.
+   * @throws UncheckedIOException for problems creating the audit span
+   */
+  @Override
+  @AuditEntryPoint
+  public FSDataOutputStreamBuilder createFile(final Path path) {
+    try {
+      final Path qualified = qualify(path);
+      final AuditSpan span = entryPoint(INVOCATION_CREATE_FILE,
+          pathToKey(qualified),
+          null);
+      return new CreateFileBuilder(this,
+          qualified,
+          new CreateFileBuilderCallbacksImpl(INVOCATION_CREATE_FILE, span))
+            .create()
+            .overwrite(true);
+    } catch (IOException e) {
+      // catch any IOEs raised in span creation and convert to
+      // an UncheckedIOException
+      throw new UncheckedIOException(e);
+    }
+  }
+
+  /**
+   * Callback for create file operations.
+   */
+  private final class CreateFileBuilderCallbacksImpl implements
+      CreateFileBuilder.CreateFileBuilderCallbacks {
+
+    private final Statistic statistic;
+    /** span for operations. */
+    private final AuditSpan span;
+
+    private CreateFileBuilderCallbacksImpl(
+        final Statistic statistic,
+        final AuditSpan span) {
+      this.statistic = statistic;
+      this.span = span;
+    }
+
+    @Override
+    public FSDataOutputStream createFileFromBuilder(
+        final Path path,
+        final Progressable progress,
+        final CreateFileBuilder.CreateFileOptions options) throws IOException {
+      // the span will be picked up inside the output stream
+      return trackDuration(getDurationTrackerFactory(), statistic.getSymbol(), () ->
+          innerCreateFile(path, progress, span, options));
+    }
   }
 
   /**
    * {@inheritDoc}
-   * @throws FileNotFoundException if the parent directory is not present -or
-   * is not a directory.
+   * The S3A implementations downgrades to the recursive creation, to avoid
+   * any race conditions with parent entries "disappearing".
    */
   @Override
   @AuditEntryPoint
@@ -1781,30 +1968,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       long blockSize,
       Progressable progress) throws IOException {
     final Path path = makeQualified(p);
-    // this span is passed into the stream.
-    try (AuditSpan span = entryPoint(INVOCATION_CREATE_NON_RECURSIVE, path)) {
-      Path parent = path.getParent();
-      // expect this to raise an exception if there is no parent dir
-      if (parent != null && !parent.isRoot()) {
-        S3AFileStatus status;
-        try {
-          // optimize for the directory existing: Call list first
-          status = innerGetFileStatus(parent, false,
-              StatusProbeEnum.DIRECTORIES);
-        } catch (FileNotFoundException e) {
-          // no dir, fall back to looking for a file
-          // (failure condition if true)
-          status = innerGetFileStatus(parent, false,
-              StatusProbeEnum.HEAD_ONLY);
-        }
-        if (!status.isDirectory()) {
-          throw new FileAlreadyExistsException("Not a directory: " + parent);
-        }
-      }
-      return innerCreateFile(path, permission,
-          flags.contains(CreateFlag.OVERWRITE), bufferSize,
-          replication, blockSize, progress);
+
+    // span is created and passed in to the callbacks.
+    final AuditSpan span = entryPoint(INVOCATION_CREATE_NON_RECURSIVE,
+        pathToKey(path),
+        null);
+    // uses the CreateFileBuilder, filling it in with the relevant arguments.
+    final CreateFileBuilder builder = new CreateFileBuilder(this,
+        path,
+        new CreateFileBuilderCallbacksImpl(INVOCATION_CREATE_NON_RECURSIVE, span))
+        .create()
+        .withFlags(flags)
+        .blockSize(blockSize)
+        .bufferSize(bufferSize);
+    if (progress != null) {
+      builder.progress(progress);
     }
+    return builder.build();
   }
 
   /**
@@ -1941,18 +2121,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           // threads.
           S3AFileStatus dstParentStatus = innerGetFileStatus(parent,
               false, StatusProbeEnum.FILE);
-          // if this doesn't raise an exception then it's one of
-          // raw S3: parent is a file: error
-          // guarded S3: parent is a file or a dir.
+          // if this doesn't raise an exception then
+          // the parent is a file or a dir.
           if (!dstParentStatus.isDirectory()) {
             throw new RenameFailedException(src, dst,
                 "destination parent is not a directory");
           }
         } catch (FileNotFoundException expected) {
           // nothing was found. Don't worry about it;
-          // expect rename to implicitly create the parent dir (raw S3)
-          // or the s3guard parents (guarded)
-
+          // expect rename to implicitly create the parent dir
         }
       }
     }
@@ -1994,7 +2171,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     // Initiate the rename.
     // this will call back into this class via the rename callbacks
-    // and interact directly with any metastore.
     RenameOperation renameOperation = new RenameOperation(
         createStoreContext(),
         src, srcKey, p.getLeft(),
@@ -2037,14 +2213,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public S3ObjectAttributes createObjectAttributes(
         final S3AFileStatus fileStatus) {
-      return S3AFileSystem.this.createObjectAttributes(fileStatus);
+      return S3AFileSystem.this.createObjectAttributes(
+          fileStatus.getPath(),
+          fileStatus);
     }
 
     @Override
     public S3AReadOpContext createReadContext(final FileStatus fileStatus) {
       return S3AFileSystem.this.createReadContext(fileStatus,
-          inputPolicy,
-          changeDetectionPolicy, readAhead,
           auditSpan);
     }
 
@@ -2052,13 +2228,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Retries.RetryTranslated
     public void deleteObjectAtPath(final Path path,
         final String key,
-        final boolean isFile,
-        final BulkOperationState operationState)
+        final boolean isFile)
         throws IOException {
       auditSpan.activate();
       once("delete", path.toString(), () ->
-          S3AFileSystem.this.deleteObjectAtPath(path, key, isFile,
-              operationState));
+          S3AFileSystem.this.deleteObjectAtPath(path, key, isFile));
     }
 
     @Override
@@ -2066,7 +2240,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public RemoteIterator<S3ALocatedFileStatus> listFilesAndDirectoryMarkers(
         final Path path,
         final S3AFileStatus status,
-        final boolean collectTombstones,
         final boolean includeSelf) throws IOException {
       auditSpan.activate();
       return innerListFiles(
@@ -2075,9 +2248,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           includeSelf
               ? Listing.ACCEPT_ALL_BUT_S3N
               : new Listing.AcceptAllButSelfAndS3nDirs(path),
-          status,
-          collectTombstones,
-          true);
+          status
+      );
     }
 
     @Override
@@ -2091,16 +2263,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public DeleteObjectsResult removeKeys(
-        final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-        final boolean deleteFakeDir,
-        final List<Path> undeletedObjectsOnFailure,
-        final BulkOperationState operationState,
-        final boolean quiet)
+    public void removeKeys(
+            final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+            final boolean deleteFakeDir)
         throws MultiObjectDeleteException, AmazonClientException, IOException {
       auditSpan.activate();
-      return S3AFileSystem.this.removeKeys(keysToDelete, deleteFakeDir,
-          undeletedObjectsOnFailure, operationState, quiet);
+      S3AFileSystem.this.removeKeys(keysToDelete, deleteFakeDir);
     }
 
     @Override
@@ -2111,15 +2279,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       if (!sourceRenamed.getParent().equals(destParent)) {
         LOG.debug("source & dest parents are different; fix up dir markers");
         if (!keepDirectoryMarkers(destParent)) {
-          deleteUnnecessaryFakeDirectories(destParent, null);
+          deleteUnnecessaryFakeDirectories(destParent);
         }
         maybeCreateFakeParentDirectory(sourceRenamed);
       }
-    }
-
-    @Override
-    public boolean allowAuthoritative(final Path p) {
-      return S3AFileSystem.this.allowAuthoritative(p);
     }
 
     @Override
@@ -2133,7 +2296,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               createListObjectsRequest(key, null),
               ACCEPT_ALL,
               Listing.ACCEPT_ALL_BUT_S3N,
-              null,
               auditSpan));
     }
   }
@@ -2148,12 +2310,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           ListingOperationCallbacks {
 
     @Override
-    @Retries.RetryRaw
     public CompletableFuture<S3ListResult> listObjectsAsync(
         S3ListRequest request,
         DurationTrackerFactory trackerFactory,
-        AuditSpan span)
-            throws IOException {
+        AuditSpan span) {
       return submit(unboundedThreadPool, span, () ->
           listObjects(request,
               pairedTrackerFactory(trackerFactory,
@@ -2166,8 +2326,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         S3ListRequest request,
         S3ListResult prevResult,
         DurationTrackerFactory trackerFactory,
-        AuditSpan span)
-            throws IOException {
+        AuditSpan span) {
       return submit(unboundedThreadPool, span,
           () -> continueListObjects(request, prevResult,
               pairedTrackerFactory(trackerFactory,
@@ -2200,15 +2359,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return S3AFileSystem.this.getMaxKeys();
     }
 
-    @Override
-    public ITtlTimeProvider getUpdatedTtlTimeProvider() {
-      return S3AFileSystem.this.ttlTimeProvider;
-    }
-
-    @Override
-    public boolean allowAuthoritative(final Path p) {
-      return S3AFileSystem.this.allowAuthoritative(p);
-    }
   }
 
   /**
@@ -2226,6 +2376,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   @InterfaceStability.Evolving
   public ObjectMetadata getObjectMetadata(Path path) throws IOException {
+    V2Migration.v1GetObjectMetadataCalled();
     return trackDurationAndSpan(INVOCATION_GET_FILE_STATUS, path, () ->
         getObjectMetadata(makeQualified(path), null, invoker,
             "getObjectMetadata"));
@@ -2245,47 +2396,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       ChangeTracker changeTracker, Invoker changeInvoker, String operation)
       throws IOException {
     String key = pathToKey(path);
-    return once(operation, path.toString(),
-        () ->
-            // this always does a full HEAD to the object
+    return once(operation, path.toString(), () ->
+            // HEAD against the object
             getObjectMetadata(
                 key, changeTracker, changeInvoker, operation));
-  }
-
-  /**
-   * Does this Filesystem have a metadata store?
-   * @return true iff the FS has been instantiated with a metadata store
-   */
-  public boolean hasMetadataStore() {
-    return !S3Guard.isNullMetadataStore(metadataStore);
-  }
-
-  /**
-   * Does the filesystem have an authoritative metadata store?
-   * @return true if there is a metadata store and the authoritative flag
-   * is set for this filesystem.
-   */
-  @VisibleForTesting
-  public boolean hasAuthoritativeMetadataStore() {
-    return hasMetadataStore() && allowAuthoritativeMetadataStore;
-  }
-
-  /**
-   * Get the metadata store.
-   * This will always be non-null, but may be bound to the
-   * {@code NullMetadataStore}.
-   * @return the metadata store of this FS instance
-   */
-  @VisibleForTesting
-  public MetadataStore getMetadataStore() {
-    return metadataStore;
-  }
-
-  /** For testing only.  See ITestS3GuardEmptyDirs. */
-  @VisibleForTesting
-  void setMetadataStore(MetadataStore ms) {
-    Preconditions.checkNotNull(ms);
-    metadataStore = ms;
   }
 
   /**
@@ -2408,7 +2522,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   public void operationRetried(Exception ex) {
     if (isThrottleException(ex)) {
-      operationThrottled(false);
+      LOG.debug("Request throttled");
+      incrementStatistic(STORE_IO_THROTTLED);
+      statisticsContext.addValueToQuantiles(STORE_IO_THROTTLE_RATE, 1);
     } else {
       incrementStatistic(STORE_IO_RETRY);
       incrementStatistic(IGNORED_ERRORS);
@@ -2428,46 +2544,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       int retries,
       boolean idempotent) {
     operationRetried(ex);
-  }
-
-  /**
-   * Callback from {@link Invoker} when an operation against a metastore
-   * is retried.
-   * Always increments the {@link Statistic#S3GUARD_METADATASTORE_RETRY}
-   * statistic/counter;
-   * if it is a throttling exception will update the associated
-   * throttled metrics/statistics.
-   *
-   * @param ex exception
-   * @param retries number of retries
-   * @param idempotent is the method idempotent
-   */
-  public void metastoreOperationRetried(Exception ex,
-      int retries,
-      boolean idempotent) {
-    incrementStatistic(S3GUARD_METADATASTORE_RETRY);
-    if (isThrottleException(ex)) {
-      operationThrottled(true);
-    } else {
-      incrementStatistic(IGNORED_ERRORS);
-    }
-  }
-
-  /**
-   * Note that an operation was throttled -this will update
-   * specific counters/metrics.
-   * @param metastore was the throttling observed in the S3Guard metastore?
-   */
-  private void operationThrottled(boolean metastore) {
-    LOG.debug("Request throttled on {}", metastore ? "S3": "DynamoDB");
-    if (metastore) {
-      incrementStatistic(S3GUARD_METADATASTORE_THROTTLED);
-      statisticsContext.addValueToQuantiles(S3GUARD_METADATASTORE_THROTTLE_RATE,
-          1);
-    } else {
-      incrementStatistic(STORE_IO_THROTTLED);
-      statisticsContext.addValueToQuantiles(STORE_IO_THROTTLE_RATE, 1);
-    }
   }
 
   /**
@@ -2671,8 +2747,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Delete an object. This is the low-level internal call which
-   * <i>does not</i> update the metastore.
+   * Delete an object.
    * Increments the {@code OBJECT_DELETE_REQUESTS} and write
    * operation statistics.
    * This call does <i>not</i> create any mock parent entries.
@@ -2706,21 +2781,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Delete an object, also updating the metastore.
+   * Delete an object.
    * This call does <i>not</i> create any mock parent entries.
    * Retry policy: retry untranslated; delete considered idempotent.
    * @param f path path to delete
    * @param key key of entry
    * @param isFile is the path a file (used for instrumentation only)
-   * @param operationState (nullable) operational state for a bulk update
    * @throws AmazonClientException problems working with S3
-   * @throws IOException IO failure in the metastore
+   * @throws IOException from invoker signature only -should not be raised.
    */
-  @Retries.RetryMixed
+  @Retries.RetryRaw
   void deleteObjectAtPath(Path f,
       String key,
-      boolean isFile,
-      @Nullable final BulkOperationState operationState)
+      boolean isFile)
       throws AmazonClientException, IOException {
     if (isFile) {
       instrumentation.fileDeleted(1);
@@ -2728,7 +2801,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       instrumentation.directoryDeleted();
     }
     deleteObject(key);
-    metadataStore.delete(f, operationState);
   }
 
   /**
@@ -2745,8 +2817,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Perform a bulk object delete operation against S3; leaves S3Guard
-   * alone.
+   * Perform a bulk object delete operation against S3.
    * Increments the {@code OBJECT_DELETE_REQUESTS} and write
    * operation statistics
    * <p></p>
@@ -2812,7 +2883,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   public PutObjectRequest newPutObjectRequest(String key,
       ObjectMetadata metadata, File srcfile) {
-    return requestFactory.newPutObjectRequest(key, metadata, srcfile);
+    return requestFactory.newPutObjectRequest(key, metadata, null, srcfile);
   }
 
   /**
@@ -2862,16 +2933,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Auditing: must be inside an audit span.
    * <i>Important: this call will close any input stream in the request.</i>
    * @param putObjectRequest the request
+   * @param putOptions put object options
    * @return the upload initiated
    * @throws AmazonClientException on problems
-   * @throws MetadataPersistenceException if metadata about the write could
-   * not be saved to the metadata store and
-   * fs.s3a.metadatastore.fail.on.write.error=true
    */
   @VisibleForTesting
-  @Retries.OnceRaw("For PUT; post-PUT actions are RetryTranslated")
-  PutObjectResult putObjectDirect(PutObjectRequest putObjectRequest)
-      throws AmazonClientException, MetadataPersistenceException {
+  @Retries.OnceRaw("For PUT; post-PUT actions are RetryExceptionsSwallowed")
+  PutObjectResult putObjectDirect(PutObjectRequest putObjectRequest,
+      PutObjectOptions putOptions)
+      throws AmazonClientException {
     long len = getPutRequestLength(putObjectRequest);
     LOG.debug("PUT {} bytes to {}", len, putObjectRequest.getKey());
     incrementPutStartStatistics(len);
@@ -2881,9 +2951,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           OBJECT_PUT_REQUESTS.getSymbol(), () ->
               s3.putObject(putObjectRequest));
       incrementPutCompletedStatistics(true, len);
-      // update metadata
+      // apply any post-write actions.
       finishedWrite(putObjectRequest.getKey(), len,
-          result.getETag(), result.getVersionId(), null);
+          result.getETag(), result.getVersionId(),
+          putOptions);
       return result;
     } catch (SdkBaseException e) {
       incrementPutCompletedStatistics(false, len);
@@ -2982,15 +3053,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Delete a list of keys on a s3-backend.
-   * This does <i>not</i> update the metastore.
    * Retry policy: retry untranslated; delete considered idempotent.
    * @param keysToDelete collection of keys to delete on the s3-backend.
    *        if empty, no request is made of the object store.
    * @param deleteFakeDir indicates whether this is for deleting fake dirs
-   * @param quiet should a bulk query be quiet, or should its result list
-   * all deleted keys?
-   * @return the deletion result if a multi object delete was invoked
-   * and it returned without a failure.
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
@@ -3000,10 +3066,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws AmazonClientException other amazon-layer failure.
    */
   @Retries.RetryRaw
-  private DeleteObjectsResult removeKeysS3(
-      List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      boolean deleteFakeDir,
-      boolean quiet)
+  private void removeKeysS3(
+          List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+          boolean deleteFakeDir)
       throws MultiObjectDeleteException, AmazonClientException,
       IOException {
     if (LOG.isDebugEnabled()) {
@@ -3014,18 +3079,30 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             key.getVersion() != null ? key.getVersion() : "");
       }
     }
-    DeleteObjectsResult result = null;
     if (keysToDelete.isEmpty()) {
       // exit fast if there are no keys to delete
-      return result;
+      return;
     }
     for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
       blockRootDelete(keyVersion.getKey());
     }
     try {
       if (enableMultiObjectsDelete) {
-        result = deleteObjects(
-            getRequestFactory().newBulkDeleteRequest(keysToDelete, quiet));
+        if (keysToDelete.size() <= pageSize) {
+          deleteObjects(getRequestFactory()
+                  .newBulkDeleteRequest(keysToDelete));
+        } else {
+          // Multi object deletion of more than 1000 keys is not supported
+          // by s3. So we are paging the keys by page size.
+          LOG.debug("Partitioning the keys to delete as it is more than " +
+                  "page size. Number of keys: {}, Page size: {}",
+                  keysToDelete.size(), pageSize);
+          for (List<DeleteObjectsRequest.KeyVersion> batchOfKeysToDelete :
+                  Lists.partition(keysToDelete, pageSize)) {
+            deleteObjects(getRequestFactory()
+                    .newBulkDeleteRequest(batchOfKeysToDelete));
+          }
+        }
       } else {
         for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
           deleteObject(keyVersion.getKey());
@@ -3041,7 +3118,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throw ex;
     }
     noteDeleted(keysToDelete.size(), deleteFakeDir);
-    return result;
   }
 
   /**
@@ -3058,13 +3134,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Invoke {@link #removeKeysS3(List, boolean, boolean)} with handling of
-   * {@code MultiObjectDeleteException}.
+   * Invoke {@link #removeKeysS3(List, boolean)}.
+   * If a {@code MultiObjectDeleteException} is raised, the
+   * relevant statistics are updated.
    *
    * @param keysToDelete collection of keys to delete on the s3-backend.
    *        if empty, no request is made of the object store.
    * @param deleteFakeDir indicates whether this is for deleting fake dirs
-   * @param operationState (nullable) operational state for a bulk update
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
@@ -3073,78 +3149,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException other IO Exception.
    */
   @VisibleForTesting
-  @Retries.RetryMixed
+  @Retries.RetryRaw
   public void removeKeys(
       final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      final boolean deleteFakeDir,
-      final BulkOperationState operationState)
+      final boolean deleteFakeDir)
       throws MultiObjectDeleteException, AmazonClientException,
       IOException {
-    removeKeys(keysToDelete, deleteFakeDir, new ArrayList<>(), operationState,
-        true);
-  }
-
-  /**
-   * Invoke {@link #removeKeysS3(List, boolean, boolean)} with handling of
-   * {@code MultiObjectDeleteException} before the exception is rethrown.
-   * Specifically:
-   * <ol>
-   *   <li>Failure and !deleteFakeDir: S3Guard is updated with all
-   *    deleted entries</li>
-   *   <li>Failure where deleteFakeDir == true: do nothing with S3Guard</li>
-   *   <li>Success: do nothing with S3Guard</li>
-   * </ol>
-   * @param keysToDelete collection of keys to delete on the s3-backend.
-   *        if empty, no request is made of the object store.
-   * @param deleteFakeDir indicates whether this is for deleting fake dirs.
-   * @param undeletedObjectsOnFailure List which will be built up of all
-   * files that were not deleted. This happens even as an exception
-   * is raised.
-   * @param operationState (nullable) operational state for a bulk update
-   * @param quiet should a bulk query be quiet, or should its result list
-   * all deleted keys
-   * @return the deletion result if a multi object delete was invoked
-   * and it returned without a failure, else null.
-   * @throws InvalidRequestException if the request was rejected due to
-   * a mistaken attempt to delete the root directory.
-   * @throws MultiObjectDeleteException one or more of the keys could not
-   * be deleted in a multiple object delete operation.
-   * @throws AmazonClientException amazon-layer failure.
-   * @throws IOException other IO Exception.
-   */
-  @Retries.RetryMixed
-  private DeleteObjectsResult removeKeys(
-      final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      final boolean deleteFakeDir,
-      final List<Path> undeletedObjectsOnFailure,
-      final BulkOperationState operationState,
-      final boolean quiet)
-      throws MultiObjectDeleteException, AmazonClientException, IOException {
-    undeletedObjectsOnFailure.clear();
     try (DurationInfo ignored = new DurationInfo(LOG, false,
-        "Deleting %d keys", keysToDelete.size())) {
-      return removeKeysS3(keysToDelete, deleteFakeDir, quiet);
-    } catch (MultiObjectDeleteException ex) {
-      LOG.debug("Partial delete failure");
-      // what to do if an IOE was raised? Given an exception was being
-      // raised anyway, and the failures are logged, do nothing.
-      if (!deleteFakeDir) {
-        // when deleting fake directories we don't want to delete metastore
-        // entries so we only process these failures on "real" deletes.
-        Triple<List<Path>, List<Path>, List<Pair<Path, IOException>>> results =
-            new MultiObjectDeleteSupport(createStoreContext(), operationState)
-                .processDeleteFailure(ex, keysToDelete, new ArrayList<Path>());
-        undeletedObjectsOnFailure.addAll(results.getLeft());
-      }
-      throw ex;
-    } catch (AmazonClientException | IOException ex) {
-      List<Path> paths = new MultiObjectDeleteSupport(
-          createStoreContext(),
-          operationState)
-          .processDeleteFailureGenericException(ex, keysToDelete);
-      // other failures. Assume nothing was deleted
-      undeletedObjectsOnFailure.addAll(paths);
-      throw ex;
+            "Deleting %d keys", keysToDelete.size())) {
+      removeKeysS3(keysToDelete, deleteFakeDir);
     }
   }
 
@@ -3166,6 +3179,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @AuditEntryPoint
   public boolean delete(Path f, boolean recursive) throws IOException {
     checkNotClosed();
+    return deleteWithoutCloseCheck(f, recursive);
+  }
+
+  /**
+   * Same as delete(), except that it does not check if fs is closed.
+   *
+   * @param f the path to delete.
+   * @param recursive if path is a directory and set to
+   * true, the directory is deleted else throws an exception. In
+   * case of a file the recursive can be set to either true or false.
+   * @return true if the path existed and then was deleted; false if there
+   * was no path in the first place, or the corner cases of root path deletion
+   * have surfaced.
+   * @throws IOException due to inability to delete a directory or file.
+   */
+
+  @VisibleForTesting
+  protected boolean deleteWithoutCloseCheck(Path f, boolean recursive) throws IOException {
     final Path path = qualify(f);
     // span covers delete, getFileStatus, fake directory operations.
     try (AuditSpan span = createSpan(INVOCATION_DELETE.getSymbol(),
@@ -3213,7 +3244,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // is mostly harmless to create a new one.
     if (!key.isEmpty() && !s3Exists(f, StatusProbeEnum.DIRECTORIES)) {
       LOG.debug("Creating new fake directory at {}", f);
-      createFakeDirectory(key);
+      createFakeDirectory(key, putOptionsForPath(f));
     }
   }
 
@@ -3228,7 +3259,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   protected void maybeCreateFakeParentDirectory(Path path)
       throws IOException, AmazonClientException {
     Path parent = path.getParent();
-    if (parent != null && !parent.isRoot()) {
+    if (parent != null && !parent.isRoot() && !isUnderMagicCommitPath(parent)) {
       createFakeDirectoryIfNecessary(parent);
     }
   }
@@ -3266,8 +3297,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     Path path = qualify(f);
     return trackDurationAndSpan(INVOCATION_LIST_STATUS, path, () ->
         once("listStatus", path.toString(),
-            () -> iteratorToStatuses(innerListStatus(path),
-                new HashSet<>())));
+            () -> iteratorToStatuses(innerListStatus(path))));
   }
 
   /**
@@ -3289,15 +3319,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     Path path = qualify(f);
     LOG.debug("List status for path: {}", path);
 
-    Triple<RemoteIterator<S3AFileStatus>, DirListingMetadata, Boolean>
-            statusesAssumingNonEmptyDir = listing
-            .getFileStatusesAssumingNonEmptyDir(path, getActiveAuditSpan());
-
-    if (!statusesAssumingNonEmptyDir.getLeft().hasNext() &&
-            statusesAssumingNonEmptyDir.getRight()) {
-      // We are sure that this is an empty directory in auth mode.
-      return statusesAssumingNonEmptyDir.getLeft();
-    } else if (!statusesAssumingNonEmptyDir.getLeft().hasNext()) {
+    final RemoteIterator<S3AFileStatus> statusIt = listing
+        .getFileStatusesAssumingNonEmptyDir(path, getActiveAuditSpan());
+    if (!statusIt.hasNext()) {
       // We may have an empty dir, or may have file or may have nothing.
       // So we call innerGetFileStatus to get the status, this may throw
       // FileNotFoundException if we have nothing.
@@ -3316,31 +3340,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
     }
     // Here we have a directory which may or may not be empty.
-    // So we update the metastore and return.
-    return S3Guard.dirListingUnion(
-            metadataStore,
-            path,
-            statusesAssumingNonEmptyDir.getLeft(),
-            statusesAssumingNonEmptyDir.getMiddle(),
-            allowAuthoritative(path),
-            ttlTimeProvider, p ->
-                    listing.createProvidedFileStatusIterator(
-                    dirMetaToStatuses(statusesAssumingNonEmptyDir.getMiddle()),
-                    ACCEPT_ALL,
-                    Listing.ACCEPT_ALL_BUT_S3N));
+    return statusIt;
   }
 
   /**
    * Is a path to be considered as authoritative?
-   * True iff there is an authoritative metastore or if there
-   * is a non-auth store with the supplied path under
+   * is a  store with the supplied path under
    * one of the paths declared as authoritative.
    * @param path path
    * @return true if the path is auth
    */
   public boolean allowAuthoritative(final Path path) {
     return S3Guard.allowAuthoritative(path, this,
-        allowAuthoritativeMetadataStore, allowAuthoritativePaths);
+        allowAuthoritativePaths);
   }
 
   /**
@@ -3418,6 +3430,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Make the given path and all non-existent parents into
    * directories. Has the semantics of Unix {@code 'mkdir -p'}.
    * Existence of the directory hierarchy is not an error.
+   * Parent elements are scanned to see if any are a file,
+   * <i>except under __magic</i> paths.
+   * There the FS assumes that the destination directory creation
+   * did that scan and that paths in job/task attempts are all
+   * "well formed"
    * @param p path to create
    * @param permission to apply to path
    * @return true if a directory was created or already existed
@@ -3435,7 +3452,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         new MkdirOperation(
             createStoreContext(),
             path,
-            createMkdirOperationCallbacks()));
+            createMkdirOperationCallbacks(),
+            isMagicCommitPath(path)));
   }
 
   /**
@@ -3461,9 +3479,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public void createFakeDirectory(final String key)
+    public void createFakeDirectory(final Path dir, final boolean keepMarkers)
         throws IOException {
-      S3AFileSystem.this.createEmptyObject(key);
+      S3AFileSystem.this.createFakeDirectory(
+          pathToKey(dir),
+          keepMarkers
+              ? PutObjectOptions.keepingDirs()
+              : putOptionsForPath(dir));
     }
   }
 
@@ -3509,9 +3531,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public RemoteIterator<S3AFileStatus> listStatusIterator(final Path path)
-        throws IOException {
-      return S3AFileSystem.this.innerListStatus(path);
+    public RemoteIterator<S3ALocatedFileStatus> listFilesIterator(final Path path,
+        final boolean recursive) throws IOException {
+      return S3AFileSystem.this.innerListFiles(path, recursive, Listing.ACCEPT_ALL_BUT_S3N, null);
     }
   }
 
@@ -3562,13 +3584,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Get the status of a file or directory, first through S3Guard and then
-   * through S3.
-   * The S3 probes can leave 404 responses in the S3 load balancers; if
-   * a check is only needed for a directory, declaring this saves time and
-   * avoids creating one for the object.
-   * When only probing for directories, if an entry for a file is found in
-   * S3Guard it is returned, but checks for updated values are skipped.
+   * Get the status of a file or directory.
    * Internal version of {@link #getFileStatus(Path)}.
    * @param f The path we want information from
    * @param needEmptyDirectoryFlag if true, implementation will calculate
@@ -3587,120 +3603,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     String key = pathToKey(path);
     LOG.debug("Getting path status for {}  ({}); needEmptyDirectory={}",
         path, key, needEmptyDirectoryFlag);
+    return s3GetFileStatus(path,
+        key,
+        probes,
+        needEmptyDirectoryFlag);
 
-    boolean allowAuthoritative = allowAuthoritative(path);
-    // Check MetadataStore, if any.
-    PathMetadata pm = null;
-    if (hasMetadataStore()) {
-      pm = S3Guard.getWithTtl(metadataStore, path, ttlTimeProvider,
-          needEmptyDirectoryFlag, allowAuthoritative);
-    }
-    Set<Path> tombstones = Collections.emptySet();
-    if (pm != null) {
-      S3AFileStatus msStatus = pm.getFileStatus();
-      if (pm.isDeleted()) {
-        OffsetDateTime deletedAt = OffsetDateTime.ofInstant(
-            Instant.ofEpochMilli(msStatus.getModificationTime()),
-            ZoneOffset.UTC);
-        throw new FileNotFoundException("Path " + path + " is recorded as " +
-            "deleted by S3Guard at " + deletedAt);
-      }
-
-      // if ms is not authoritative, check S3 if there's any recent
-      // modification - compare the modTime to check if metadata is up to date
-      // Skip going to s3 if the file checked is a directory. Because if the
-      // dest is also a directory, there's no difference.
-
-      if (!msStatus.isDirectory() &&
-          !allowAuthoritative &&
-          probes.contains(StatusProbeEnum.Head)) {
-        // a file has been found in a non-auth path and the caller has not said
-        // they only care about directories
-        LOG.debug("Metadata for {} found in the non-auth metastore.", path);
-        final long msModTime = pm.getFileStatus().getModificationTime();
-
-        S3AFileStatus s3AFileStatus;
-        try {
-          s3AFileStatus = s3GetFileStatus(path,
-              key,
-              probes,
-              tombstones,
-              needEmptyDirectoryFlag);
-        } catch (FileNotFoundException fne) {
-          LOG.trace("File Not Found from probes for {}", key, fne);
-          s3AFileStatus = null;
-        }
-        if (s3AFileStatus == null) {
-          LOG.warn("Failed to find file {}. Either it is not yet visible, or "
-              + "it has been deleted.", path);
-        } else {
-          final long s3ModTime = s3AFileStatus.getModificationTime();
-
-          if(s3ModTime > msModTime) {
-            LOG.debug("S3Guard metadata for {} is outdated;"
-                + " s3modtime={}; msModTime={} updating metastore",
-                path, s3ModTime, msModTime);
-            return S3Guard.putAndReturn(metadataStore, s3AFileStatus,
-                ttlTimeProvider);
-          }
-        }
-      }
-
-      if (needEmptyDirectoryFlag && msStatus.isDirectory()) {
-        // the caller needs to know if a directory is empty,
-        // and that this is a directory.
-        if (pm.isEmptyDirectory() != Tristate.UNKNOWN) {
-          // We have a definitive true / false from MetadataStore, we are done.
-          return msStatus;
-        } else {
-          // execute a S3Guard listChildren command to list tombstones under the
-          // path.
-          // This list will be used in the forthcoming s3GetFileStatus call.
-          DirListingMetadata children =
-              S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider,
-                  allowAuthoritative);
-          if (children != null) {
-            tombstones = children.listTombstones();
-          }
-          LOG.debug("MetadataStore doesn't know if {} is empty, using S3.",
-              path);
-        }
-      } else {
-        // Either this is not a directory, or we don't care if it is empty
-        return msStatus;
-      }
-
-      // now issue the S3 getFileStatus call.
-      try {
-        S3AFileStatus s3FileStatus = s3GetFileStatus(path,
-            key,
-            probes,
-            tombstones,
-            true);
-        // entry was found, so save in S3Guard and return the final value.
-        return S3Guard.putAndReturn(metadataStore, s3FileStatus,
-            ttlTimeProvider);
-      } catch (FileNotFoundException e) {
-        // If the metadata store has no children for it and it's not listed in
-        // S3 yet, we'll conclude that it is an empty directory
-        return S3AFileStatus.fromFileStatus(msStatus, Tristate.TRUE,
-            null, null);
-      }
-    } else {
-      // there was no entry in S3Guard
-      // retrieve the data and update the metadata store in the process.
-      return S3Guard.putAndReturn(metadataStore,
-          s3GetFileStatus(path,
-              key,
-              probes,
-              tombstones,
-              needEmptyDirectoryFlag),
-          ttlTimeProvider);
-    }
   }
 
   /**
-   * Raw {@code getFileStatus} that talks direct to S3.
+   * Probe store for file status with control of which probes are issued..
    * Used to implement {@link #innerGetFileStatus(Path, boolean, Set)},
    * and for direct management of empty directory blobs.
    *
@@ -3711,13 +3622,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    *     the key doesn't end in "/"
    *   </li>
    *   <li>
-   *     DirMarker: look for the directory marker -the key with a trailing /
-   *     if not passed in.
-   *     If an object was found with size 0 bytes, a directory status entry
-   *     is returned which declares that the directory is empty.
-   *   </li>
-   *    <li>
-   *     List: issue a LIST on the key (with / if needed), require one
+   *     DirMarker/List: issue a LIST on the key (with / if needed), require one
    *     entry to be found for the path to be considered a non-empty directory.
    *   </li>
    * </ol>
@@ -3725,12 +3630,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Notes:
    * <ul>
    *   <li>
-   *     Objects ending in / which are not 0-bytes long are not treated as
-   *     directory markers, but instead as files.
-   *   </li>
-   *   <li>
-   *     There's ongoing discussions about whether a dir marker
-   *     should be interpreted as an empty dir.
+   *     Objects ending in / are treated as directory markers,
+   *     irrespective of length.
    *   </li>
    *   <li>
    *     The HEAD requests require the permissions to read an object,
@@ -3739,8 +3640,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    *     the client for the HEAD to work.
    *   </li>
    *   <li>
-   *     The List probe needs list permission; it is also more prone to
-   *     inconsistency, even on newly created files.
+   *     The List probe needs list permission.
    *   </li>
    * </ul>
    *
@@ -3748,7 +3648,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param path Qualified path
    * @param key  Key string for the path
    * @param probes probes to make
-   * @param tombstones tombstones to filter
    * @param needEmptyDirectoryFlag if true, implementation will calculate
    *        a TRUE or FALSE value for {@link S3AFileStatus#isEmptyDirectory()}
    * @return Status
@@ -3760,7 +3659,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   S3AFileStatus s3GetFileStatus(final Path path,
       final String key,
       final Set<StatusProbeEnum> probes,
-      @Nullable final Set<Path> tombstones,
       final boolean needEmptyDirectoryFlag) throws IOException {
     LOG.debug("S3GetFileStatus {}", path);
     // either you aren't looking for the directory flag, or you are,
@@ -3769,7 +3667,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         || probes.contains(StatusProbeEnum.List),
         "s3GetFileStatus(%s) wants to know if a directory is empty but"
             + " does not request a list probe", path);
-
     if (key.isEmpty() && !needEmptyDirectoryFlag) {
       return new S3AFileStatus(Tristate.UNKNOWN, path, username);
     }
@@ -3797,6 +3694,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       } catch (AmazonServiceException e) {
         // if the response is a 404 error, it just means that there is
         // no file at that path...the remaining checks will be needed.
+        // But: an empty bucket is also a 404, so check for that
+        // and fail.
         if (e.getStatusCode() != SC_404 || isUnknownBucket(e)) {
           throw translateException("getFileStatus", path, e);
         }
@@ -3814,30 +3713,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // children, so ask for two entries, so as to find
         // a child
         String dirKey = maybeAddTrailingSlash(key);
-        // list size is dir marker + at least one non-tombstone entry
-        // there's a corner case: more tombstones than you have in a
-        // single page list. We assume that if you have been deleting
-        // that many files, then the AWS listing will have purged some
-        // by the time of listing so that the response includes some
-        // which have not.
+        // list size is dir marker + at least one entry
 
-        int listSize;
-        if (tombstones == null) {
-          // no tombstones so look for a marker and at least one child.
-          listSize = 2;
-        } else {
-          // build a listing > tombstones. If the caller has many thousands
-          // of tombstones this won't work properly, which is why pruning
-          // of expired tombstones matters.
-          listSize = Math.min(2 + tombstones.size(), Math.max(2, maxKeys));
-        }
+        final int listSize = 2;
         S3ListRequest request = createListObjectsRequest(dirKey, "/",
             listSize);
         // execute the request
         S3ListResult listResult = listObjects(request,
             getDurationTrackerFactory());
 
-        if (listResult.hasPrefixesOrObjects(contextAccessors, tombstones)) {
+        if (listResult.hasPrefixesOrObjects()) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Found path as directory (with /)");
             listResult.logAtDebug(LOG);
@@ -3847,8 +3732,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           // children.
           // So the listing must contain the marker entry only.
           if (needEmptyDirectoryFlag
-              && listResult.representsEmptyDirectory(
-                  contextAccessors, dirKey, tombstones)) {
+              && listResult.representsEmptyDirectory(dirKey)) {
             return new S3AFileStatus(Tristate.TRUE, path, username);
           }
           // either an empty directory is not needed, or the
@@ -3872,8 +3756,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Raw version of {@link FileSystem#exists(Path)} which uses S3 only:
-   * S3Guard MetadataStore, if any, will be skipped.
+   * Probe S3 for a file or dir existing, with the given probe set.
    * Retry policy: retrying; translated.
    * @param path qualified path to look for
    * @param probes probes to make
@@ -3885,7 +3768,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws IOException {
     String key = pathToKey(path);
     try {
-      s3GetFileStatus(path, key, probes, null, false);
+      s3GetFileStatus(path, key, probes, false);
       return true;
     } catch (FileNotFoundException e) {
       return false;
@@ -3926,12 +3809,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   protected CopyFromLocalOperation.CopyFromLocalOperationCallbacks
-  createCopyFromLocalCallbacks() throws IOException {
+      createCopyFromLocalCallbacks() throws IOException {
     LocalFileSystem local = getLocal(getConf());
     return new CopyFromLocalCallbacksImpl(local);
   }
 
-  protected class CopyFromLocalCallbacksImpl implements
+  protected final class CopyFromLocalCallbacksImpl implements
       CopyFromLocalOperation.CopyFromLocalOperationCallbacks {
     private final LocalFileSystem local;
 
@@ -3968,7 +3851,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             S3AFileSystem.this.invoker.retry(
                 "putObject(" + "" + ")", to.toString(),
                 true,
-                () -> executePut(putObjectRequest, progress));
+                () -> executePut(putObjectRequest, progress, putOptionsForPath(to)));
 
             return null;
           });
@@ -3987,28 +3870,28 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           new MkdirOperation(
               storeContext,
               path,
-              createMkdirOperationCallbacks()));
+              createMkdirOperationCallbacks(), false));
     }
   }
 
   /**
-   * Execute a PUT via the transfer manager, blocking for completion,
-   * updating the metastore afterwards.
+   * Execute a PUT via the transfer manager, blocking for completion.
    * If the waiting for completion is interrupted, the upload will be
    * aborted before an {@code InterruptedIOException} is thrown.
    * @param putObjectRequest request
    * @param progress optional progress callback
+   * @param putOptions put object options
    * @return the upload result
    * @throws InterruptedIOException if the blocking was interrupted.
-   * @throws MetadataPersistenceException if metadata about the write could
-   * not be saved to the metadata store and
-   * fs.s3a.metadatastore.fail.on.write.error=true
    */
-  @Retries.OnceRaw("For PUT; post-PUT actions are RetryTranslated")
-  UploadResult executePut(PutObjectRequest putObjectRequest,
-      Progressable progress)
-      throws InterruptedIOException, MetadataPersistenceException {
+  @Retries.OnceRaw("For PUT; post-PUT actions are RetrySwallowed")
+  UploadResult executePut(
+      final PutObjectRequest putObjectRequest,
+      final Progressable progress,
+      final PutObjectOptions putOptions)
+      throws InterruptedIOException {
     String key = putObjectRequest.getKey();
+    long len = getPutRequestLength(putObjectRequest);
     UploadInfo info = putObject(putObjectRequest);
     Upload upload = info.getUpload();
     ProgressableProgressListener listener = new ProgressableProgressListener(
@@ -4016,9 +3899,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     upload.addProgressListener(listener);
     UploadResult result = waitForUploadCompletion(key, info);
     listener.uploadCompleted();
+
     // post-write actions
-    finishedWrite(key, info.getLength(),
-        result.getETag(), result.getVersionId(), null);
+    finishedWrite(key, len,
+        result.getETag(), result.getVersionId(), putOptions);
     return result;
   }
 
@@ -4027,7 +3911,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * If the waiting for completion is interrupted, the upload will be
    * aborted before an {@code InterruptedIOException} is thrown.
    * If the upload (or its result collection) failed, this is where
-   * the failure is raised as an AWS exception
+   * the failure is raised as an AWS exception.
+   * Calls {@link #incrementPutCompletedStatistics(boolean, long)}
+   * to update the statistics.
    * @param key destination key
    * @param uploadInfo upload to wait for
    * @return the upload result
@@ -4053,6 +3939,61 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * This override bypasses checking for existence.
+   *
+   * @param f the path to delete; this may be unqualified.
+   * @return true, always.   * @param f the path to delete.
+   * @return  true if deleteOnExit is successful, otherwise false.
+   * @throws IOException IO failure
+   */
+  @Override
+  public boolean deleteOnExit(Path f) throws IOException {
+    Path qualifedPath = makeQualified(f);
+    synchronized (deleteOnExit) {
+      deleteOnExit.add(qualifedPath);
+    }
+    return true;
+  }
+
+  /**
+   * Cancel the scheduled deletion of the path when the FileSystem is closed.
+   * @param f the path to cancel deletion
+   * @return true if the path was found in the delete-on-exit list.
+   */
+  @Override
+  public boolean cancelDeleteOnExit(Path f) {
+    Path qualifedPath = makeQualified(f);
+    synchronized (deleteOnExit) {
+      return deleteOnExit.remove(qualifedPath);
+    }
+  }
+
+  /**
+   * Delete all paths that were marked as delete-on-exit. This recursively
+   * deletes all files and directories in the specified paths. It does not
+   * check if file exists and filesystem is closed.
+   *
+   * The time to process this operation is {@code O(paths)}, with the actual
+   * time dependent on the time for existence and deletion operations to
+   * complete, successfully or not.
+   */
+  @Override
+  protected void processDeleteOnExit() {
+    synchronized (deleteOnExit) {
+      for (Iterator<Path> iter = deleteOnExit.iterator(); iter.hasNext();) {
+        Path path = iter.next();
+        try {
+          deleteWithoutCloseCheck(path, true);
+        } catch (IOException e) {
+          LOG.info("Ignoring failure to deleteOnExit for path {}", path);
+          LOG.debug("The exception for deleteOnExit is {}", e);
+        }
+        iter.remove();
+      }
+    }
+  }
+
+  /**
    * Close the filesystem. This shuts down all transfers.
    * @throws IOException IO problem
    */
@@ -4064,22 +4005,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
     isClosed = true;
     LOG.debug("Filesystem {} is closed", uri);
-    if (getConf() != null) {
-      String iostatisticsLoggingLevel =
-          getConf().getTrimmed(IOSTATISTICS_LOGGING_LEVEL,
-              IOSTATISTICS_LOGGING_LEVEL_DEFAULT);
-      logIOStatisticsAtLevel(LOG, iostatisticsLoggingLevel, getIOStatistics());
-    }
     try {
       super.close();
     } finally {
       stopAllServices();
-    }
-    // Log IOStatistics at debug.
-    if (LOG.isDebugEnabled()) {
-      // robust extract and convert to string
-      LOG.debug("Statistics for {}: {}", uri,
-          IOStatisticsLogging.ioStatisticsToPrettyString(getIOStatistics()));
+      // log IO statistics, including of any file deletion during
+      // superclass close
+      if (getConf() != null) {
+        String iostatisticsLoggingLevel =
+            getConf().getTrimmed(IOSTATISTICS_LOGGING_LEVEL,
+                IOSTATISTICS_LOGGING_LEVEL_DEFAULT);
+        logIOStatisticsAtLevel(LOG, iostatisticsLoggingLevel, getIOStatistics());
+      }
     }
   }
 
@@ -4109,9 +4046,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     HadoopExecutors.shutdown(unboundedThreadPool, LOG,
         THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
     unboundedThreadPool = null;
+    if (futurePool != null) {
+      futurePool.shutdown(LOG, THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
+      futurePool = null;
+    }
     // other services are shutdown.
     cleanupWithLogger(LOG,
-        metadataStore,
         instrumentation,
         delegationTokens.orElse(null),
         signerManager,
@@ -4214,7 +4154,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Build the AWS policy for restricted access to the resources needed
    * by this bucket.
-   * The policy generated includes S3 access, S3Guard access
    * if needed, and KMS operations.
    * @param access access level desired.
    * @return a policy for use in roles
@@ -4236,11 +4175,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // too much encryption access.
     statements.add(STATEMENT_ALLOW_SSE_KMS_RW);
 
-    // add any metastore policies
-    if (metadataStore instanceof AWSPolicyProvider) {
-      statements.addAll(
-          ((AWSPolicyProvider) metadataStore).listAWSPolicyRules(access));
-    }
     return statements;
   }
 
@@ -4292,21 +4226,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     } catch (FileNotFoundException e) {
       // if rename fails at this point it means that the expected file was not
       // found.
-      // The cause is believed to always be one of
-      //  - File was deleted since LIST/S3Guard metastore.list.() knew of it.
-      //  - S3Guard is asking for a specific version and it's been removed by
-      //    lifecycle rules.
-      //  - there's a 404 cached in the S3 load balancers.
+      // This means the File was deleted since LIST enumerated it.
       LOG.debug("getObjectMetadata({}) failed to find an expected file",
           srcKey, e);
       // We create an exception, but the text depends on the S3Guard state
-      String message = hasMetadataStore()
-          ? RemoteFileChangedException.FILE_NEVER_FOUND
-          : RemoteFileChangedException.FILE_NOT_FOUND_SINGLE_ATTEMPT;
       throw new RemoteFileChangedException(
           keyToQualifiedPath(srcKey).toString(),
           action,
-          message,
+          RemoteFileChangedException.FILE_NOT_FOUND_SINGLE_ATTEMPT,
           e);
     }
 
@@ -4363,134 +4290,74 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Perform post-write actions.
-   * <p></p>
+   * <p>
    * This operation MUST be called after any PUT/multipart PUT completes
    * successfully.
-   * <p></p>
-   * The actions include:
-   * <ol>
-   *   <li>
-   *     Calling
-   *     {@link #deleteUnnecessaryFakeDirectories(Path, BulkOperationState)}
-   *     if directory markers are not being retained.
-   *   </li>
-   *   <li>
-   *     Updating any metadata store with details on the newly created
-   *     object.
-   *     </li>
-   * </ol>
+   * <p>
+   * The actions include calling
+   * {@link #deleteUnnecessaryFakeDirectories(Path)}
+   * if directory markers are not being retained.
    * @param key key written to
    * @param length  total length of file written
    * @param eTag eTag of the written object
    * @param versionId S3 object versionId of the written object
-   * @param operationState state of any ongoing bulk operation.
-   * @throws MetadataPersistenceException if metadata about the write could
-   * not be saved to the metadata store and
-   * fs.s3a.metadatastore.fail.on.write.error=true
+   * @param putOptions put object options
    */
   @InterfaceAudience.Private
-  @Retries.RetryTranslated("Except if failOnMetadataWriteError=false, in which"
-      + " case RetryExceptionsSwallowed")
-  void finishedWrite(String key, long length, String eTag, String versionId,
-      @Nullable final BulkOperationState operationState)
-      throws MetadataPersistenceException {
+  @Retries.RetryExceptionsSwallowed
+  void finishedWrite(
+      String key,
+      long length,
+      String eTag,
+      String versionId,
+      PutObjectOptions putOptions) {
     LOG.debug("Finished write to {}, len {}. etag {}, version {}",
         key, length, eTag, versionId);
-    Path p = keyToQualifiedPath(key);
     Preconditions.checkArgument(length >= 0, "content length is negative");
-    final boolean isDir = objectRepresentsDirectory(key);
-    // kick off an async delete
-    CompletableFuture<?> deletion;
-    if (!keepDirectoryMarkers(p)) {
-      deletion = submit(
-          unboundedThreadPool, getActiveAuditSpan(),
-          () -> {
-            deleteUnnecessaryFakeDirectories(
-                p.getParent(),
-                operationState);
-            return null;
-          });
-    } else {
-      deletion = null;
-    }
-    // this is only set if there is a metastore to update and the
-    // operationState parameter passed in was null.
-    BulkOperationState stateToClose = null;
-
-    // See note about failure semantics in S3Guard documentation
-    try {
-      if (hasMetadataStore()) {
-        BulkOperationState activeState = operationState;
-        if (activeState == null) {
-          // create an operation state if there was none, so that the
-          // information gleaned from addAncestors is preserved into the
-          // subsequent put.
-          stateToClose = S3Guard.initiateBulkWrite(metadataStore,
-              isDir
-                  ? BulkOperationState.OperationType.Mkdir
-                  : BulkOperationState.OperationType.Put,
-              keyToPath(key));
-          activeState = stateToClose;
-        }
-        S3Guard.addAncestors(metadataStore, p, ttlTimeProvider, activeState);
-        S3AFileStatus status = createUploadFileStatus(p,
-            isDir, length,
-            getDefaultBlockSize(p), username, eTag, versionId);
-        boolean authoritative = false;
-        if (isDir) {
-          // this is a directory marker so put it as such.
-          status.setIsEmptyDirectory(Tristate.TRUE);
-          // and maybe mark as auth
-          authoritative = allowAuthoritative(p);
-        }
-        if (!authoritative) {
-          // for files and non-auth directories
-          S3Guard.putAndReturn(metadataStore, status,
-              ttlTimeProvider,
-              activeState);
-        } else {
-          // authoritative directory
-          S3Guard.putAuthDirectoryMarker(metadataStore, status,
-              ttlTimeProvider,
-              activeState);
-        }
-      }
-      // and catch up with any delete operation.
-      waitForCompletionIgnoringExceptions(deletion);
-    } catch (IOException e) {
-      if (failOnMetadataWriteError) {
-        throw new MetadataPersistenceException(p.toString(), e);
-      } else {
-        LOG.error("S3Guard: Error updating MetadataStore for write to {}",
-            p, e);
-      }
-      instrumentation.errorIgnored();
-    } finally {
-      // if a new operation state was created, close it.
-      IOUtils.cleanupWithLogger(LOG, stateToClose);
+    if (!putOptions.isKeepMarkers()) {
+      Path p = keyToQualifiedPath(key);
+      deleteUnnecessaryFakeDirectories(p.getParent());
     }
   }
 
   /**
    * Should we keep directory markers under the path being created
    * by mkdir/file creation/rename?
+   * This is done if marker retention is enabled for the path,
+   * or it is under a magic path where we are saving IOPs
+   * knowing that all committers are on the same code version and
+   * therefore marker aware.
    * @param path path to probe
    * @return true if the markers MAY be retained,
    * false if they MUST be deleted
    */
   private boolean keepDirectoryMarkers(Path path) {
-    return directoryPolicy.keepDirectoryMarkers(path);
+    return directoryPolicy.keepDirectoryMarkers(path)
+        || isUnderMagicCommitPath(path);
+  }
+
+  /**
+   * Should we keep directory markers under the path being created
+   * by mkdir/file creation/rename?
+   * See {@link #keepDirectoryMarkers(Path)} for the policy.
+   *
+   * @param path path to probe
+   * @return the options to use with the put request
+   */
+  private PutObjectOptions putOptionsForPath(Path path) {
+    return keepDirectoryMarkers(path)
+        ? PutObjectOptions.keepingDirs()
+        : PutObjectOptions.deletingDirs();
   }
 
   /**
    * Delete mock parent directories which are no longer needed.
    * Retry policy: retrying; exceptions swallowed.
    * @param path path
-   * @param operationState (nullable) operational state for a bulk update
+   *
    */
   @Retries.RetryExceptionsSwallowed
-  private void deleteUnnecessaryFakeDirectories(Path path,
-      final BulkOperationState operationState) {
+  private void deleteUnnecessaryFakeDirectories(Path path) {
     List<DeleteObjectsRequest.KeyVersion> keysToRemove = new ArrayList<>();
     while (!path.isRoot()) {
       String key = pathToKey(path);
@@ -4500,7 +4367,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       path = path.getParent();
     }
     try {
-      removeKeys(keysToRemove, true, operationState);
+      removeKeys(keysToRemove, true);
     } catch(AmazonClientException | IOException e) {
       instrumentation.errorIgnored();
       if (LOG.isDebugEnabled()) {
@@ -4517,27 +4384,32 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Create a fake directory, always ending in "/".
    * Retry policy: retrying; translated.
    * @param objectName name of directory object.
+   * @param putOptions put object options
    * @throws IOException IO failure
    */
   @Retries.RetryTranslated
-  private void createFakeDirectory(final String objectName)
+  private void createFakeDirectory(final String objectName,
+      final PutObjectOptions putOptions)
       throws IOException {
-    createEmptyObject(objectName);
+    createEmptyObject(objectName, putOptions);
   }
 
   /**
    * Used to create an empty file that represents an empty directory.
+   * The policy for deleting parent dirs depends on the path, dir
+   * status and the putOptions value.
    * Retry policy: retrying; translated.
    * @param objectName object to create
+   * @param putOptions put object options
    * @throws IOException IO failure
    */
   @Retries.RetryTranslated
-  private void createEmptyObject(final String objectName)
+  private void createEmptyObject(final String objectName, PutObjectOptions putOptions)
       throws IOException {
     invoker.retry("PUT 0-byte object ", objectName,
          true, () ->
             putObjectDirect(getRequestFactory()
-                .newDirectoryMarkerRequest(objectName)));
+                .newDirectoryMarkerRequest(objectName), putOptions));
     incrementPutProgressStatistics(objectName, 0);
     instrumentation.directoryCreated();
   }
@@ -4545,9 +4417,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Return the number of bytes that large input files should be optimally
    * be split into to minimize I/O time.
-   * @deprecated use {@link #getDefaultBlockSize(Path)} instead
    */
-  @Deprecated
   public long getDefaultBlockSize() {
     return getConf().getLongBytes(FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE);
   }
@@ -4566,14 +4436,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         "S3AFileSystem{");
     sb.append("uri=").append(uri);
     sb.append(", workingDir=").append(workingDir);
-    sb.append(", inputPolicy=").append(inputPolicy);
     sb.append(", partSize=").append(partSize);
     sb.append(", enableMultiObjectsDelete=").append(enableMultiObjectsDelete);
     sb.append(", maxKeys=").append(maxKeys);
     if (cannedACL != null) {
-      sb.append(", cannedACL=").append(cannedACL.toString());
+      sb.append(", cannedACL=").append(cannedACL);
     }
-    sb.append(", readAhead=").append(readAhead);
+    if (openFileHelper != null) {
+      sb.append(", ").append(openFileHelper);
+    }
     if (getConf() != null) {
       sb.append(", blockSize=").append(getDefaultBlockSize());
     }
@@ -4587,8 +4458,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       sb.append(", blockFactory=").append(blockFactory);
     }
     sb.append(", auditManager=").append(auditManager);
-    sb.append(", metastore=").append(metadataStore);
-    sb.append(", authoritativeStore=").append(allowAuthoritativeMetadataStore);
     sb.append(", authoritativePath=").append(allowAuthoritativePaths);
     sb.append(", useListV1=").append(useListV1);
     if (committerIntegration != null) {
@@ -4649,12 +4518,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Predicate: is a path a magic commit path?
-   * True if magic commit is enabled and the path qualifies as special.
+   * True if magic commit is enabled and the path qualifies as special,
+   * and is not a a .pending or .pendingset file,
    * @param path path to examine
-   * @return true if the path is or is under a magic directory
+   * @return true if writing a file to the path triggers a "magic" write.
    */
   public boolean isMagicCommitPath(Path path) {
     return committerIntegration.isMagicCommitPath(path);
+  }
+
+  /**
+   * Predicate: is a path under a magic commit path?
+   * True if magic commit is enabled and the path is under __magic,
+   * irrespective of file type.
+   * @param path path to examine
+   * @return true if the path is in a magic dir and the FS has magic writes enabled.
+   */
+  private boolean isUnderMagicCommitPath(Path path) {
+    return committerIntegration.isUnderMagicPath(path);
   }
 
   /**
@@ -4910,7 +4791,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return toLocatedFileStatusIterator(
         trackDurationAndSpan(INVOCATION_LIST_FILES, path, () ->
             innerListFiles(path, recursive,
-                new Listing.AcceptFilesOnly(path), null, true, false)));
+                new Listing.AcceptFilesOnly(path), null)));
   }
 
   /**
@@ -4929,64 +4810,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return trackDurationAndSpan(INVOCATION_LIST_FILES, path, () ->
         innerListFiles(path, recursive,
             Listing.ACCEPT_ALL_BUT_S3N,
-            null, true, false));
-  }
-
-  /**
-   * Recursive List of files and empty directories, force metadatastore
-   * to act like it is non-authoritative.
-   * @param f path to list from
-   * @param recursive recursive listing?
-   * @return an iterator.
-   * @throws IOException failure
-   */
-  @InterfaceAudience.Private
-  @Retries.RetryTranslated
-  @AuditEntryPoint
-  public RemoteIterator<S3ALocatedFileStatus> listFilesAndEmptyDirectoriesForceNonAuth(
-      Path f, boolean recursive) throws IOException {
-    final Path path = qualify(f);
-    return trackDurationAndSpan(INVOCATION_LIST_FILES, path, () ->
-        innerListFiles(path, recursive,
-            Listing.ACCEPT_ALL_BUT_S3N,
-            null, true, true));
+            null));
   }
 
   /**
    * List files under the path.
    * <ol>
    *   <li>
-   *     If the path is authoritative on the client,
-   *     only S3Guard will be queried.
-   *   </li>
-   *   <li>
-   *     Otherwise, the S3Guard values are returned first, then the S3
-   *     entries will be retrieved and returned if not already listed.</li>
-   *   <li>
-   *     when collectTombstones} is true, S3Guard tombstones will
-   *     be used to filter out deleted files.
-   *     They MUST be used for normal listings; it is only for
-   *     deletion and low-level operations that they MAY be bypassed.
-   *   </li>
-   *   <li>
    *     The optional {@code status} parameter will be used to skip the
    *     initial getFileStatus call.
    *   </li>
    * </ol>
    *
-   * In case of recursive listing, if any of the directories reachable from
-   * the path are not authoritative on the client, this method will query S3
-   * for all the directories in the listing in addition to returning S3Guard
-   * entries.
-   *
    * @param f path
    * @param recursive recursive listing?
    * @param acceptor file status filter
    * @param status optional status of path to list.
-   * @param collectTombstones should tombstones be collected from S3Guard?
-   * @param forceNonAuthoritativeMS forces metadata store to act like non
-   *                                authoritative. This is useful when
-   *                                listFiles output is used by import tool.
    * @return an iterator over the listing.
    * @throws IOException failure
    */
@@ -4995,9 +4834,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final Path f,
       final boolean recursive,
       final Listing.FileStatusAcceptor acceptor,
-      final S3AFileStatus status,
-      final boolean collectTombstones,
-      final boolean forceNonAuthoritativeMS) throws IOException {
+      final S3AFileStatus status) throws IOException {
     Path path = qualify(f);
     LOG.debug("listFiles({}, {})", path, recursive);
     try {
@@ -5014,9 +4851,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               listing.getListFilesAssumingDir(path,
                       recursive,
                       acceptor,
-                      collectTombstones,
-                      forceNonAuthoritativeMS,
-                      getActiveAuditSpan());
+                  getActiveAuditSpan());
       // If there are no list entries present, we
       // fallback to file existence check as the path
       // can be a file or empty directory.
@@ -5254,9 +5089,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP:
     case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_DELETE:
     case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_AUTHORITATIVE:
-    case STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP:
-    case STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE:
       return getDirectoryMarkerPolicy().hasPathCapability(path, cap);
+
+     // keep for a magic path or if the policy retains it
+    case STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP:
+      return keepDirectoryMarkers(path);
+    // delete is the opposite of keep
+    case STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE:
+      return !keepDirectoryMarkers(path);
+
+    // create file options
+    case FS_S3A_CREATE_PERFORMANCE:
+    case FS_S3A_CREATE_HEADER:
+      return true;
 
     default:
       return super.hasPathCapability(p, cap);
@@ -5295,46 +5140,37 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return credentials.share();
   }
 
-  @VisibleForTesting
-  public ITtlTimeProvider getTtlTimeProvider() {
-    return ttlTimeProvider;
-  }
-
-  @VisibleForTesting
-  protected void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider) {
-    this.ttlTimeProvider = ttlTimeProvider;
-    metadataStore.setTtlTimeProvider(ttlTimeProvider);
-  }
-
   /**
    * This is a proof of concept of a select API.
    * @param source path to source data
-   * @param expression select expression
    * @param options request configuration from the builder.
-   * @param providedStatus any passed in status
+   * @param fileInformation any passed in information.
    * @return the stream of the results
    * @throws IOException IO failure
    */
   @Retries.RetryTranslated
   @AuditEntryPoint
   private FSDataInputStream select(final Path source,
-      final String expression,
       final Configuration options,
-      final Optional<S3AFileStatus> providedStatus)
+      final OpenFileSupport.OpenFileInformation fileInformation)
       throws IOException {
-    final AuditSpan auditSpan = entryPoint(OBJECT_SELECT_REQUESTS, source);
     requireSelectSupport(source);
+    final AuditSpan auditSpan = entryPoint(OBJECT_SELECT_REQUESTS, source);
     final Path path = makeQualified(source);
+    String expression = fileInformation.getSql();
     final S3AFileStatus fileStatus = extractOrFetchSimpleFileStatus(path,
-        providedStatus);
+        fileInformation);
 
     // readahead range can be dynamically set
-    long ra = options.getLong(READAHEAD_RANGE, readAhead);
-    S3ObjectAttributes objectAttributes = createObjectAttributes(fileStatus);
-    S3AReadOpContext readContext = createReadContext(fileStatus, inputPolicy,
-        changeDetectionPolicy, ra, auditSpan);
+    S3ObjectAttributes objectAttributes = createObjectAttributes(
+        path, fileStatus);
+    ChangeDetectionPolicy changePolicy = fileInformation.getChangePolicy();
+    S3AReadOpContext readContext = createReadContext(
+        fileStatus,
+        auditSpan);
+    fileInformation.applyOptions(readContext);
 
-    if (changeDetectionPolicy.getSource() != ChangeDetectionPolicy.Source.None
+    if (changePolicy.getSource() != ChangeDetectionPolicy.Source.None
         && fileStatus.getEtag() != null) {
       // if there is change detection, and the status includes at least an
       // etag,
@@ -5346,7 +5182,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // version in the final read; nor can we check the etag match)
       ChangeTracker changeTracker =
           new ChangeTracker(uri.toString(),
-              changeDetectionPolicy,
+              changePolicy,
               readContext.getS3AStatisticsContext()
                   .newInputStreamStatistics()
                   .getChangeTrackerStatistics(),
@@ -5384,38 +5220,36 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Extract the status from the optional parameter, querying
-   * S3Guard/s3 if it is absent.
-   * @param path path of the status
-   * @param optStatus optional status
+   * Get the file status of the source file.
+   * If in the fileInformation parameter return that
+   * if not found, issue a HEAD request, looking for a
+   * file only.
+   * @param path path of the file to open
+   * @param fileInformation information on the file to open
    * @return a file status
-   * @throws FileNotFoundException if there is no normal file at that path
+   * @throws FileNotFoundException if a HEAD request found no file
    * @throws IOException IO failure
    */
   private S3AFileStatus extractOrFetchSimpleFileStatus(
-      final Path path, final Optional<S3AFileStatus> optStatus)
+      final Path path,
+      final OpenFileSupport.OpenFileInformation fileInformation)
       throws IOException {
-    S3AFileStatus fileStatus;
-    if (optStatus.isPresent()) {
-      fileStatus = optStatus.get();
-    } else {
-      // this looks at S3guard and gets any type of status back,
-      // if it falls back to S3 it does a HEAD only.
-      // therefore: if there is no S3Guard and there is a dir, this
-      // will raise a FileNotFoundException
+    S3AFileStatus fileStatus = fileInformation.getStatus();
+    if (fileStatus == null) {
+      // we check here for the passed in status
+      // being a directory
       fileStatus = innerGetFileStatus(path, false,
           StatusProbeEnum.HEAD_ONLY);
     }
-    // we check here for the passed in status or the S3Guard value
-    // for being a directory
     if (fileStatus.isDirectory()) {
       throw new FileNotFoundException(path.toString() + " is a directory");
     }
+
     return fileStatus;
   }
 
   /**
-   * Initiate the open or select operation.
+   * Initiate the open() or select() operation.
    * This is invoked from both the FileSystem and FileContext APIs.
    * It's declared as an audit entry point but the span creation is pushed
    * down into the open/select methods it ultimately calls.
@@ -5434,54 +5268,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final Path rawPath,
       final OpenFileParameters parameters) throws IOException {
     final Path path = qualify(rawPath);
-    Configuration options = parameters.getOptions();
-    Set<String> mandatoryKeys = parameters.getMandatoryKeys();
-    String sql = options.get(SelectConstants.SELECT_SQL, null);
-    boolean isSelect = sql != null;
-    // choice of keys depends on open type
-    if (isSelect) {
-      rejectUnknownMandatoryKeys(
-          mandatoryKeys,
-          InternalSelectConstants.SELECT_OPTIONS,
-          "for " + path + " in S3 Select operation");
-    } else {
-      rejectUnknownMandatoryKeys(
-          mandatoryKeys,
-          InternalConstants.STANDARD_OPENFILE_KEYS,
-          "for " + path + " in non-select file I/O");
-    }
-    FileStatus providedStatus = parameters.getStatus();
-    S3AFileStatus fileStatus;
-    if (providedStatus != null) {
-      Preconditions.checkArgument(path.equals(providedStatus.getPath()),
-          "FileStatus parameter is not for the path %s: %s",
-          path, providedStatus);
-      if (providedStatus instanceof S3AFileStatus) {
-        // can use this status to skip our own probes,
-        // including etag and version.
-        LOG.debug("File was opened with a supplied S3AFileStatus;"
-            + " skipping getFileStatus call in open() operation: {}",
-            providedStatus);
-        fileStatus = (S3AFileStatus) providedStatus;
-      } else if (providedStatus instanceof S3ALocatedFileStatus) {
-        LOG.debug("File was opened with a supplied S3ALocatedFileStatus;"
-            + " skipping getFileStatus call in open() operation: {}",
-            providedStatus);
-        fileStatus = ((S3ALocatedFileStatus) providedStatus).toS3AFileStatus();
-      } else {
-        LOG.debug("Ignoring file status {}", providedStatus);
-        fileStatus = null;
-      }
-    } else {
-      fileStatus = null;
-    }
-    Optional<S3AFileStatus> ost = Optional.ofNullable(fileStatus);
+    OpenFileSupport.OpenFileInformation fileInformation =
+        openFileHelper.prepareToOpenFile(
+            path,
+            parameters,
+            getDefaultBlockSize());
     CompletableFuture<FSDataInputStream> result = new CompletableFuture<>();
-    if (!isSelect) {
+    if (!fileInformation.isS3Select()) {
       // normal path.
       unboundedThreadPool.submit(() ->
           LambdaUtils.eval(result,
-              () -> open(path, Optional.of(options), ost)));
+              () -> executeOpen(path, fileInformation)));
     } else {
       // it is a select statement.
       // fail fast if the operation is not available
@@ -5489,7 +5286,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // submit the query
       unboundedThreadPool.submit(() ->
           LambdaUtils.eval(result,
-              () -> select(path, sql, options, ost)));
+              () -> select(path, parameters.getOptions(), fileInformation)));
     }
     return result;
   }
@@ -5536,10 +5333,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .setInputPolicy(getInputPolicy())
         .setChangeDetectionPolicy(changeDetectionPolicy)
         .setMultiObjectDeleteEnabled(enableMultiObjectsDelete)
-        .setMetadataStore(metadataStore)
         .setUseListV1(useListV1)
         .setContextAccessors(new ContextAccessorsImpl())
-        .setTimeProvider(getTtlTimeProvider())
         .setAuditor(getAuditor())
         .setEnableCSE(isCSEEnabled)
         .build();

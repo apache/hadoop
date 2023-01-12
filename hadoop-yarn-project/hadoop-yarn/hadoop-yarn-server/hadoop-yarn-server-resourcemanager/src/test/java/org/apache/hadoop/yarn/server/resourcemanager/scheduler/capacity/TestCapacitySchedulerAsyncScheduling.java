@@ -153,7 +153,7 @@ public class TestCapacitySchedulerAsyncScheduling {
 
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     for (CapacityScheduler.AsyncScheduleThread thread :
-        cs.asyncSchedulerThreads) {
+        cs.getAsyncSchedulerThreads()) {
       Assert.assertTrue(thread.getName()
           .startsWith("AsyncCapacitySchedulerThread"));
     }

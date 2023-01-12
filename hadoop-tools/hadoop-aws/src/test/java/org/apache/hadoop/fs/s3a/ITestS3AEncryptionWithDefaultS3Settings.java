@@ -135,7 +135,7 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
     Path src = path(createFilename(1024));
     byte[] data = dataset(1024, 'a', 'z');
     EncryptionSecrets secrets = fs.getEncryptionSecrets();
-    validateEncrytionSecrets(secrets);
+    validateEncryptionSecrets(secrets);
     writeDataset(fs, src, data, data.length, 1024 * 1024, true);
     ContractTestUtils.verifyFileContents(fs, src, data);
 

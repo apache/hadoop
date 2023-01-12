@@ -155,4 +155,11 @@ public class DataNodeFaultInjector {
    * into an erasure coding reconstruction.
    */
   public void badDecoding(ByteBuffer[] outputs) {}
+
+  public void markSlow(String dnAddr, int[] replies) {}
+
+  /**
+   * Just delay delete replica a while.
+   */
+  public void delayDeleteReplica() {}
 }

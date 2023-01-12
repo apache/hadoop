@@ -30,8 +30,8 @@ are places where HDFS diverges from the expected behaviour of a POSIX
 filesystem.
 
 The bundled S3A FileSystem clients make Amazon's S3 Object Store ("blobstore")
-accessible through the FileSystem API. The Swift FileSystem driver provides similar
-functionality for the OpenStack Swift blobstore. The Azure WASB and ADL object
+accessible through the FileSystem API. 
+The Azure ABFS, WASB and ADL object
 storage FileSystems talks to Microsoft's Azure storage. All of these
 bind to object stores, which do have different behaviors, especially regarding
 consistency guarantees, and atomicity of operations.
@@ -314,10 +314,10 @@ child entries
 
 This specification refers to *Object Stores* in places, often using the
 term *Blobstore*. Hadoop does provide FileSystem client classes for some of these
-even though they violate many of the requirements. This is why, although
-Hadoop can read and write data in an object store, the two which Hadoop ships
-with direct support for &mdash; Amazon S3 and OpenStack Swift &mdash; cannot
-be used as direct replacements for HDFS.
+even though they violate many of the requirements.
+
+Consult the documentation for a specific store to determine its compatibility
+with specific applications and services.
 
 *What is an Object Store?*
 
@@ -343,7 +343,7 @@ stores pretend that they are a FileSystem, a FileSystem with the same
 features and operations as HDFS. This is &mdash;ultimately&mdash;a pretence:
 they have different characteristics and occasionally the illusion fails.
 
-1. **Consistency**. Object stores are generally *Eventually Consistent*: it
+1. **Consistency**. Object may be *Eventually Consistent*: it
 can take time for changes to objects &mdash;creation, deletion and updates&mdash;
 to become visible to all callers. Indeed, there is no guarantee a change is
 immediately visible to the client which just made the change. As an example,
@@ -447,10 +447,6 @@ Object stores have an even vaguer view of time, which can be summarized as
  * The timestamp is likely to be in UTC or the TZ of the object store. If the
    client is in a different timezone, the timestamp of objects may be ahead or
    behind that of the client.
- * Object stores with cached metadata databases (for example: AWS S3 with
-   an in-memory or a DynamoDB metadata store) may have timestamps generated
-   from the local system clock, rather than that of the service.
-   This is an optimization to avoid round-trip calls to the object stores.
  + A file's modification time is often the same as its creation time.
  + The `FileSystem.setTimes()` operation to set file timestamps *may* be ignored.
  * `FileSystem.chmod()` may update modification times (example: Azure `wasb://`).

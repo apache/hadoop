@@ -109,7 +109,7 @@ public class CodecPool {
       synchronized (pool) {
         codecSet = pool.get(codecClass);
         if (codecSet == null) {
-          codecSet = new HashSet<T>();
+          codecSet = new HashSet<>();
           pool.put(codecClass, codecSet);
         }
       }
@@ -205,6 +205,7 @@ public class CodecPool {
     }
     // if the compressor can't be reused, don't pool it.
     if (compressor.getClass().isAnnotationPresent(DoNotPool.class)) {
+      compressor.end();
       return;
     }
     compressor.reset();
@@ -225,6 +226,7 @@ public class CodecPool {
     }
     // if the decompressor can't be reused, don't pool it.
     if (decompressor.getClass().isAnnotationPresent(DoNotPool.class)) {
+      decompressor.end();
       return;
     }
     decompressor.reset();
@@ -235,7 +237,10 @@ public class CodecPool {
 
   /**
    * Return the number of leased {@link Compressor}s for this
-   * {@link CompressionCodec}
+   * {@link CompressionCodec}.
+   *
+   * @param codec codec.
+   * @return the number of leased.
    */
   public static int getLeasedCompressorsCount(CompressionCodec codec) {
     return (codec == null) ? 0 : getLeaseCount(compressorCounts,
@@ -244,7 +249,10 @@ public class CodecPool {
 
   /**
    * Return the number of leased {@link Decompressor}s for this
-   * {@link CompressionCodec}
+   * {@link CompressionCodec}.
+   *
+   * @param codec codec.
+   * @return the number of leased
    */
   public static int getLeasedDecompressorsCount(CompressionCodec codec) {
     return (codec == null) ? 0 : getLeaseCount(decompressorCounts,

@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.S3ListRequest;
 import org.apache.hadoop.fs.s3a.S3ListResult;
 import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
-import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
@@ -40,8 +39,7 @@ public class MinimalListingOperationCallbacks
   @Override
   public CompletableFuture<S3ListResult> listObjectsAsync(
       final S3ListRequest request,
-      final DurationTrackerFactory trackerFactory, AuditSpan span)
-      throws IOException {
+      final DurationTrackerFactory trackerFactory, AuditSpan span) {
     return null;
   }
 
@@ -49,8 +47,7 @@ public class MinimalListingOperationCallbacks
   public CompletableFuture<S3ListResult> continueListObjectsAsync(
       final S3ListRequest request,
       final S3ListResult prevResult,
-      final DurationTrackerFactory trackerFactory, AuditSpan span)
-      throws IOException {
+      final DurationTrackerFactory trackerFactory, AuditSpan span) {
     return null;
   }
 
@@ -76,16 +73,6 @@ public class MinimalListingOperationCallbacks
   @Override
   public int getMaxKeys() {
     return 0;
-  }
-
-  @Override
-  public ITtlTimeProvider getUpdatedTtlTimeProvider() {
-    return null;
-  }
-
-  @Override
-  public boolean allowAuthoritative(Path p) {
-    return false;
   }
 
 }

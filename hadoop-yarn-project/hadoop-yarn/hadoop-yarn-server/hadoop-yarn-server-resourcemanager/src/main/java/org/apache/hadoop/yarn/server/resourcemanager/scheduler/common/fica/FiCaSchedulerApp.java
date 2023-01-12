@@ -66,11 +66,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerCha
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAMContainerLaunchDiagnosticsConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAssignment;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityHeadroomProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.AbstractContainerAllocator;
@@ -958,8 +958,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     }
   }
 
-  public LeafQueue getCSLeafQueue() {
-    return (LeafQueue)queue;
+  public AbstractLeafQueue getCSLeafQueue() {
+    return (AbstractLeafQueue)queue;
   }
 
   public CSAssignment assignContainers(Resource clusterResource,
@@ -996,7 +996,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
   protected void getPendingAppDiagnosticMessage(
       StringBuilder diagnosticMessage) {
-    LeafQueue queue = getCSLeafQueue();
+    AbstractLeafQueue queue = getCSLeafQueue();
     diagnosticMessage.append(" Details : AM Partition = ")
         .append(appAMNodePartitionName.isEmpty()
         ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : appAMNodePartitionName)
@@ -1019,7 +1019,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
   protected void getActivedAppDiagnosticMessage(
       StringBuilder diagnosticMessage) {
-    LeafQueue queue = getCSLeafQueue();
+    AbstractLeafQueue queue = getCSLeafQueue();
     QueueCapacities queueCapacities = queue.getQueueCapacities();
     QueueResourceQuotas queueResourceQuotas = queue.getQueueResourceQuotas();
     diagnosticMessage.append(" Details : AM Partition = ")

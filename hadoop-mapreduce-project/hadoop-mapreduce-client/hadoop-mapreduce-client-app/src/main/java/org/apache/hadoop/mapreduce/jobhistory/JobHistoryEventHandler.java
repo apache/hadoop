@@ -1481,7 +1481,7 @@ public class JobHistoryEventHandler extends AbstractService
       summaryFileOut.writeUTF(mi.getJobSummary().getJobSummaryString());
       summaryFileOut.close();
       doneDirFS.setPermission(qualifiedSummaryDoneFile, new FsPermission(
-          JobHistoryUtils.HISTORY_INTERMEDIATE_FILE_PERMISSIONS));
+          JobHistoryUtils.getConfiguredHistoryIntermediateUserDoneDirPermissions(getConfig())));
     } catch (IOException e) {
       LOG.info("Unable to write out JobSummaryInfo to ["
           + qualifiedSummaryDoneFile + "]", e);
@@ -1738,8 +1738,9 @@ public class JobHistoryEventHandler extends AbstractService
       boolean copied = FileUtil.copy(stagingDirFS, fromPath, doneDirFS, toPath,
           false, getConfig());
 
-      doneDirFS.setPermission(toPath, new FsPermission(
-          JobHistoryUtils.HISTORY_INTERMEDIATE_FILE_PERMISSIONS));
+      doneDirFS.setPermission(toPath, new FsPermission(JobHistoryUtils.
+          getConfiguredHistoryIntermediateUserDoneDirPermissions(
+          getConfig())));
       if (copied) {
         LOG.info("Copied from: " + fromPath.toString()
             + " to done location: " + toPath.toString());

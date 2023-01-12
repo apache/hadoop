@@ -52,8 +52,8 @@ import org.apache.hadoop.util.ReflectionUtils;
  * attempt context and a possibly null path.
  *
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class PathOutputCommitterFactory extends Configured {
   private static final Logger LOG =
       LoggerFactory.getLogger(PathOutputCommitterFactory.class);
@@ -158,7 +158,7 @@ public class PathOutputCommitterFactory extends Configured {
           scheme);
       if (StringUtils.isNotEmpty(conf.getTrimmed(schemeKey))) {
         // it does, so use that key in the classname lookup
-        LOG.debug("Using schema-specific factory for {}", outputPath);
+        LOG.info("Using schema-specific factory for {}", outputPath);
         key = schemeKey;
       } else {
         LOG.debug("No scheme-specific factory defined in {}", schemeKey);
@@ -171,7 +171,7 @@ public class PathOutputCommitterFactory extends Configured {
     String trimmedValue = conf.getTrimmed(key, "");
     if (StringUtils.isEmpty(trimmedValue)) {
       // empty/null value, use default
-      LOG.debug("No output committer factory defined,"
+      LOG.info("No output committer factory defined,"
           + " defaulting to FileOutputCommitterFactory");
       factory = FileOutputCommitterFactory.class;
     } else {
@@ -179,7 +179,7 @@ public class PathOutputCommitterFactory extends Configured {
       factory = conf.getClass(key,
           FileOutputCommitterFactory.class,
           PathOutputCommitterFactory.class);
-      LOG.debug("Using OutputCommitter factory class {} from key {}",
+      LOG.info("Using OutputCommitter factory class {} from key {}",
           factory, key);
     }
     return ReflectionUtils.newInstance(factory, conf);

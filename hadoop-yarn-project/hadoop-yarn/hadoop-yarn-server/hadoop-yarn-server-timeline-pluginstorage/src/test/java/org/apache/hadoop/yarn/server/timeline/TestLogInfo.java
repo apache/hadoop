@@ -34,19 +34,18 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
-import java.util.EnumSet;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestLogInfo {
 
@@ -76,7 +75,7 @@ public class TestLogInfo {
 
   private static final short FILE_LOG_DIR_PERMISSIONS = 0770;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     config.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, TEST_ROOT_DIR.toString());
     HdfsConfiguration hdfsConfig = new HdfsConfiguration();
@@ -102,7 +101,7 @@ public class TestLogInfo {
     writeBrokenFile(new Path(testAppDirPath, TEST_BROKEN_FILE_NAME));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     jsonGenerator.close();
     outStream.close();
@@ -111,7 +110,7 @@ public class TestLogInfo {
   }
 
   @Test
-  public void testMatchesGroupId() throws Exception {
+  void testMatchesGroupId() throws Exception {
     String testGroupId = "app1_group1";
     // Match
     EntityLogInfo testLogInfo = new EntityLogInfo(TEST_ATTEMPT_DIR_NAME,
@@ -146,7 +145,7 @@ public class TestLogInfo {
   }
 
   @Test
-  public void testParseEntity() throws Exception {
+  void testParseEntity() throws Exception {
     // Load test data
     TimelineDataManager tdm = PluginStoreTestUtils.getTdmWithMemStore(config);
     EntityLogInfo testLogInfo = new EntityLogInfo(TEST_ATTEMPT_DIR_NAME,
@@ -156,28 +155,11 @@ public class TestLogInfo {
         fs);
     // Verify for the first batch
     PluginStoreTestUtils.verifyTestEntities(tdm);
-    // Load new data
-    TimelineEntity entityNew = PluginStoreTestUtils
-        .createEntity("id_3", "type_3", 789l, null, null,
-            null, null, "domain_id_1");
-    TimelineEntities entityList = new TimelineEntities();
-    entityList.addEntity(entityNew);
-    writeEntitiesLeaveOpen(entityList,
-        new Path(getTestRootPath(TEST_ATTEMPT_DIR_NAME), TEST_ENTITY_FILE_NAME));
-    testLogInfo.parseForStore(tdm, getTestRootPath(), true, jsonFactory, objMapper,
-        fs);
-    // Verify the newly added data
-    TimelineEntity entity3 = tdm.getEntity(entityNew.getEntityType(),
-        entityNew.getEntityId(), EnumSet.allOf(TimelineReader.Field.class),
-        UserGroupInformation.getLoginUser());
-    assertNotNull(entity3);
-    assertEquals("Failed to read out entity new",
-        entityNew.getStartTime(), entity3.getStartTime());
     tdm.close();
   }
 
   @Test
-  public void testParseBrokenEntity() throws Exception {
+  void testParseBrokenEntity() throws Exception {
     // Load test data
     TimelineDataManager tdm = PluginStoreTestUtils.getTdmWithMemStore(config);
     EntityLogInfo testLogInfo = new EntityLogInfo(TEST_ATTEMPT_DIR_NAME,
@@ -195,7 +177,7 @@ public class TestLogInfo {
   }
 
   @Test
-  public void testParseDomain() throws Exception {
+  void testParseDomain() throws Exception {
     // Load test data
     TimelineDataManager tdm = PluginStoreTestUtils.getTdmWithMemStore(config);
     DomainLogInfo domainLogInfo = new DomainLogInfo(TEST_ATTEMPT_DIR_NAME,

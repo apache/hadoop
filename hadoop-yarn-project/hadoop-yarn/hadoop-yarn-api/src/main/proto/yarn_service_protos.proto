@@ -18,7 +18,7 @@
 
 /**
  * These .proto interfaces are public and stable.
- * Please see http://wiki.apache.org/hadoop/Compatibility
+ * Please see https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html
  * for what changes are allowed for a *stable* .proto interface.
  */
 
@@ -106,6 +106,11 @@ message UpdatedContainerProto {
   required ContainerProto container = 2;
 }
 
+message EnhancedHeadroomProto {
+  optional int32 total_pending_count = 1;
+  optional int32 total_active_cores = 2;
+}
+
 message AllocateResponseProto {
   optional AMCommandProto a_m_command = 1;
   optional int32 response_id = 2;
@@ -123,6 +128,7 @@ message AllocateResponseProto {
   repeated UpdatedContainerProto updated_containers = 16;
   repeated ContainerProto containers_from_previous_attempts = 17;
   repeated RejectedSchedulingRequestProto rejected_scheduling_requests = 18;
+  optional EnhancedHeadroomProto enhanced_headroom = 19;
 }
 
 enum SchedulerResourceTypes {

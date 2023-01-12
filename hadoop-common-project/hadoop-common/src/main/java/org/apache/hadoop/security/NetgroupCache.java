@@ -65,7 +65,7 @@ public class NetgroupCache {
   }
 
   private static Set<String> getGroups() {
-    Set<String> allGroups = new HashSet<String> ();
+    Set<String> allGroups = new HashSet<>();
     for (Set<String> userGroups : userToNetgroupsMap.values()) {
       allGroups.addAll(userGroups);
     }

@@ -109,7 +109,7 @@ public class CompositeGroupsMapping
 
   @Override
   public synchronized Set<String> getGroupsSet(String user) throws IOException {
-    Set<String> groupSet = new HashSet<String>();
+    Set<String> groupSet = new HashSet<>();
 
     Set<String> groups = null;
     for (GroupMappingServiceProvider provider : providersList) {

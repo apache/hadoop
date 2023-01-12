@@ -45,7 +45,6 @@ import static java.util.Objects.requireNonNull;
  * don't expect to be able to parse everything.
  * It can generate simple models.
  * @see <a href="https://docs.aws.amazon.com/AmazonS3/latest/dev/s3-arn-format.html">Example S3 Policies</a>
- * @see <a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/api-permissions-reference.html">Dynamno DB Permissions</a>
  */
 @InterfaceAudience.LimitedPrivate("Tests")
 @InterfaceStability.Unstable

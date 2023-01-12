@@ -32,8 +32,8 @@ public class TestJaasConfiguration {
       krb5LoginModuleName = "com.sun.security.auth.module.Krb5LoginModule";
     }
 
-    ZKSignerSecretProvider.JaasConfiguration jConf =
-            new ZKSignerSecretProvider.JaasConfiguration("foo", "foo/localhost",
+    JaasConfiguration jConf =
+            new JaasConfiguration("foo", "foo/localhost",
             "/some/location/foo.keytab");
     AppConfigurationEntry[] entries = jConf.getAppConfigurationEntry("bar");
     Assert.assertNull(entries);

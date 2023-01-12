@@ -55,6 +55,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
@@ -520,6 +521,38 @@ public class TestWebHDFS {
     } catch (IOException ex) {
       GenericTestUtils.assertExceptionContains("Failed to find datanode", ex);
     }
+  }
+
+  @Test
+  public void testWebHdfsCreateWithInvalidPath() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+    // A path name include duplicated slashes.
+    String path = "//tmp//file";
+    assertResponse(path);
+  }
+
+  private String getUri(String path) {
+    final String user = System.getProperty("user.name");
+    final StringBuilder uri = new StringBuilder(cluster.getHttpUri(0));
+    uri.append("/webhdfs/v1").
+        append(path).
+        append("?op=CREATE").
+        append("&user.name=" + user);
+    return uri.toString();
+  }
+
+  private void assertResponse(String path) throws IOException {
+    URL url = new URL(getUri(path));
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod("PUT");
+    // Assert response code.
+    assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, conn.getResponseCode());
+    // Assert exception.
+    Map<?, ?> response = WebHdfsFileSystem.jsonParse(conn, true);
+    assertEquals("InvalidPathException",
+        ((LinkedHashMap) response.get("RemoteException")).get("exception"));
+    conn.disconnect();
   }
 
   /**

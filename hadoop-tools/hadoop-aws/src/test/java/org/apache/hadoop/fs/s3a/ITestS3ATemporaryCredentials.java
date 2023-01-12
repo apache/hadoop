@@ -71,6 +71,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3ATemporaryCredentials.class);
 
+  @SuppressWarnings("deprecation")
   private static final String TEMPORARY_AWS_CREDENTIALS
       = TemporaryAWSCredentialsProvider.NAME;
 
@@ -125,13 +126,14 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
         credentials,
         getStsEndpoint(conf),
         getStsRegion(conf));
-    STSClientFactory.STSClient clientConnection =
-        STSClientFactory.createClientConnection(
-            builder.build(),
-            new Invoker(new S3ARetryPolicy(conf), Invoker.LOG_EVENT));
-    Credentials sessionCreds = clientConnection
-        .requestSessionCredentials(TEST_SESSION_TOKEN_DURATION_SECONDS,
-            TimeUnit.SECONDS);
+    Credentials sessionCreds;
+    try (STSClientFactory.STSClient clientConnection =
+        STSClientFactory.createClientConnection(builder.build(),
+            new Invoker(new S3ARetryPolicy(conf), Invoker.LOG_EVENT))) {
+      sessionCreds = clientConnection
+          .requestSessionCredentials(
+              TEST_SESSION_TOKEN_DURATION_SECONDS, TimeUnit.SECONDS);
+    }
 
     // clone configuration so changes here do not affect the base FS.
     Configuration conf2 = new Configuration(conf);
@@ -174,6 +176,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testTemporaryCredentialValidation() throws Throwable {
     Configuration conf = new Configuration();
     conf.set(ACCESS_KEY, "accesskey");
@@ -275,8 +278,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
       // this is a failure path, so fail with a meaningful error
       fail("request to create a file should have failed");
     } catch (AWSBadRequestException expected){
-      // likely at two points in the operation, depending on
-      // S3Guard state
+      // could fail in fs creation or file IO
     } finally {
       IOUtils.closeStream(fs);
     }
@@ -358,6 +360,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
    * @return the caught exception.
    * @throws Exception any unexpected exception.
    */
+  @SuppressWarnings("deprecation")
   public <E extends Exception> E expectedSessionRequestFailure(
       final Class<E> clazz,
       final String endpoint,
@@ -380,11 +383,12 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
             Invoker invoker = new Invoker(new S3ARetryPolicy(conf),
                 LOG_AT_ERROR);
 
-            STSClientFactory.STSClient stsClient
-                = STSClientFactory.createClientConnection(tokenService,
-                invoker);
-
-            return stsClient.requestSessionCredentials(30, TimeUnit.MINUTES);
+            try (STSClientFactory.STSClient stsClient =
+                STSClientFactory.createClientConnection(
+                    tokenService, invoker)) {
+              return stsClient.requestSessionCredentials(
+                  30, TimeUnit.MINUTES);
+            }
           });
     }
   }
@@ -414,6 +418,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
           return sc.toString();
         });
   }
+
   @Test
   public void testEmptyTemporaryCredentialValidation() throws Throwable {
     Configuration conf = new Configuration();

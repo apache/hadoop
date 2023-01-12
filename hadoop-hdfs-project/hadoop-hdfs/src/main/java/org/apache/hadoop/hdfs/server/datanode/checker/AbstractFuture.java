@@ -29,7 +29,6 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFu
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.hadoop.util.Preconditions;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import static java.util.concurrent.atomic.AtomicReferenceFieldUpdater
     .newUpdater;
 

@@ -22,7 +22,7 @@ import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
@@ -91,7 +91,7 @@ public class MappingRuleValidationContextImpl
           "' under it.");
     case QUEUE_EXISTS:
       CSQueue queue = queueManager.getQueue(normalizedPath);
-      if (!(queue instanceof LeafQueue)) {
+      if (!(queue instanceof AbstractLeafQueue)) {
         throw new YarnException("Target queue '" + path.getFullPath() +
             "' but it's not a leaf queue.");
       }
@@ -157,7 +157,7 @@ public class MappingRuleValidationContextImpl
     //if the static part of our queue exists, and it's not a leaf queue,
     //we cannot do any deeper validation
     if (queue != null) {
-      if (queue instanceof LeafQueue) {
+      if (queue instanceof AbstractLeafQueue) {
         throw new YarnException("Queue path '" + path +"' is invalid " +
             "because '" + normalizedStaticPart + "' is a leaf queue, " +
             "which can have no other queues under it.");

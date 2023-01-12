@@ -111,6 +111,7 @@ public class FederationRegistryClient {
   /**
    * Write/update the UAM token for an application and a sub-cluster.
    *
+   * @param appId ApplicationId.
    * @param subClusterId sub-cluster id of the token
    * @param token the UAM of the application
    * @return whether the amrmToken is added or updated to a new value

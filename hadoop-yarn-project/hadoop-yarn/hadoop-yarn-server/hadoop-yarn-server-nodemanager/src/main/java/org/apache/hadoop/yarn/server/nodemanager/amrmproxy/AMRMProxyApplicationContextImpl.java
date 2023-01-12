@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 
 /**
  * Encapsulates the information about one application that is needed by the
- * request intercepters.
+ * request interceptors.
  *
  */
 public class AMRMProxyApplicationContextImpl implements

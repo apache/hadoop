@@ -308,9 +308,9 @@ public class TestRouterMountTableCacheRefresh {
         TimeUnit.SECONDS);
     mountTableRefresherService.init(config);
     // One router is not responding for 1 minute, still refresh should
-    // finished in 5 second as cache update timeout is set 5 second.
+    // finish in 5 second as cache update timeout is set 5 second.
     mountTableRefresherService.refresh();
-    // Test case timeout is assert for this test case.
+    // Test case timeout is asserted for this test case.
   }
 
   /**
@@ -349,7 +349,7 @@ public class TestRouterMountTableCacheRefresh {
     mountTableRefresherService.refresh();
     assertNotEquals("No RouterClient is created.", 0, createCounter.get());
     /*
-     * Wait for clients to expire. Lets wait triple the cache eviction period.
+     * Wait for clients to expire. Let's wait triple the cache eviction period.
      * After cache eviction period all created client must be removed and
      * closed.
      */

@@ -36,6 +36,8 @@ import org.assertj.core.api.ObjectAssert;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MAX;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MIN;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -345,6 +347,24 @@ public final class IOStatisticAssertions {
       final String key) {
     return assertThatStatisticLong(MAXIMUM, key,
         verifyStatisticsNotNull(stats).maximums());
+  }
+
+  /**
+   * Assert that a duration is within a given minimum/maximum range.
+   * @param stats statistics source
+   * @param key statistic key without any suffix
+   * @param min minimum statistic must be equal to or greater than this.
+   * @param max maximum statistic must be equal to or less than this.
+   */
+  public static void assertDurationRange(
+      final IOStatistics stats,
+      final String key,
+      final long min,
+      final long max) {
+    assertThatStatisticMinimum(stats, key + SUFFIX_MIN)
+        .isGreaterThanOrEqualTo(min);
+    assertThatStatisticMaximum(stats, key + SUFFIX_MAX)
+        .isLessThanOrEqualTo(max);
   }
 
   /**

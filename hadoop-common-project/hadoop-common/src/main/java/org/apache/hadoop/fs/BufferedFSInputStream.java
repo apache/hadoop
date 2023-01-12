@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,6 +22,9 @@ import java.io.EOFException;
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.util.StringJoiner;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -158,8 +161,24 @@ public class BufferedFSInputStream extends BufferedInputStream
   @Override
   public String toString() {
     return new StringJoiner(", ",
-        BufferedFSInputStream.class.getSimpleName() + "[", "]")
-        .add("in=" + in)
-        .toString();
+            BufferedFSInputStream.class.getSimpleName() + "[", "]")
+            .add("in=" + in)
+            .toString();
+  }
+
+  @Override
+  public int minSeekForVectorReads() {
+    return ((PositionedReadable) in).minSeekForVectorReads();
+  }
+
+  @Override
+  public int maxReadSizeForVectorReads() {
+    return ((PositionedReadable) in).maxReadSizeForVectorReads();
+  }
+
+  @Override
+  public void readVectored(List<? extends FileRange> ranges,
+                           IntFunction<ByteBuffer> allocate) throws IOException {
+    ((PositionedReadable) in).readVectored(ranges, allocate);
   }
 }

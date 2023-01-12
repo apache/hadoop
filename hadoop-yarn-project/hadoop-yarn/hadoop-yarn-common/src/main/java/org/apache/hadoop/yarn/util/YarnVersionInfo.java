@@ -80,6 +80,8 @@ public class YarnVersionInfo extends VersionInfo {
   
   /**
    * Get the subversion URL for the root YARN directory.
+   *
+   * @return URL for the root YARN directory.
    */
   public static String getUrl() {
     return YARN_VERSION_INFO._getUrl();
@@ -88,14 +90,18 @@ public class YarnVersionInfo extends VersionInfo {
   /**
    * Get the checksum of the source files from which YARN was
    * built.
-   **/
+   *
+   * @return srcChecksum.
+   */
   public static String getSrcChecksum() {
     return YARN_VERSION_INFO._getSrcChecksum();
   }
 
   /**
    * Returns the buildVersion which includes version, 
-   * revision, user and date. 
+   * revision, user and date.
+   *
+   * @return buildVersion.
    */
   public static String getBuildVersion(){
     return YARN_VERSION_INFO._getBuildVersion();

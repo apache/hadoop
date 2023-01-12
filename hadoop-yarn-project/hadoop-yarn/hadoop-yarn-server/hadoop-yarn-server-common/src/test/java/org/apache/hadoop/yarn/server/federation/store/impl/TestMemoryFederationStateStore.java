@@ -18,18 +18,74 @@
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretManagerState;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Map;
+import java.util.Set;
+
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Unit tests for MemoryFederationStateStore.
  */
-public class TestMemoryFederationStateStore
-    extends FederationStateStoreBaseTest {
+public class TestMemoryFederationStateStore extends FederationStateStoreBaseTest {
 
   @Override
   protected FederationStateStore createStateStore() {
     Configuration conf = new Configuration();
+    conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS, 10);
     super.setConf(conf);
     return new MemoryFederationStateStore();
+  }
+
+  @Override
+  protected void checkRouterMasterKey(DelegationKey delegationKey,
+      RouterMasterKey routerMasterKey) throws YarnException, IOException {
+    MemoryFederationStateStore memoryStateStore =
+        MemoryFederationStateStore.class.cast(this.getStateStore());
+    RouterRMDTSecretManagerState secretManagerState =
+        memoryStateStore.getRouterRMSecretManagerState();
+    assertNotNull(secretManagerState);
+
+    Set<DelegationKey> delegationKeys = secretManagerState.getMasterKeyState();
+    assertNotNull(delegationKeys);
+
+    assertTrue(delegationKeys.contains(delegationKey));
+
+    RouterMasterKey resultRouterMasterKey = RouterMasterKey.newInstance(delegationKey.getKeyId(),
+        ByteBuffer.wrap(delegationKey.getEncodedKey()), delegationKey.getExpiryDate());
+    assertEquals(resultRouterMasterKey, routerMasterKey);
+  }
+
+  @Override
+  protected void checkRouterStoreToken(RMDelegationTokenIdentifier identifier,
+      RouterStoreToken token) throws YarnException, IOException {
+    MemoryFederationStateStore memoryStateStore =
+        MemoryFederationStateStore.class.cast(this.getStateStore());
+    RouterRMDTSecretManagerState secretManagerState =
+        memoryStateStore.getRouterRMSecretManagerState();
+    assertNotNull(secretManagerState);
+
+    Map<RMDelegationTokenIdentifier, Long> tokenStateMap =
+        secretManagerState.getTokenState();
+    assertNotNull(tokenStateMap);
+
+    assertTrue(tokenStateMap.containsKey(identifier));
+
+    YARNDelegationTokenIdentifier tokenIdentifier = token.getTokenIdentifier();
+    assertTrue(tokenIdentifier instanceof RMDelegationTokenIdentifier);
+    assertEquals(identifier, tokenIdentifier);
   }
 }

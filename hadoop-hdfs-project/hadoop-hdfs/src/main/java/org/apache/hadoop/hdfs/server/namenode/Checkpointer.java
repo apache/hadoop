@@ -250,7 +250,7 @@ class Checkpointer extends Daemon {
               sig.mostRecentCheckpointTxId);
           bnImage.reloadFromImageFile(file, backupNode.getNamesystem());
         } finally {
-          backupNode.namesystem.writeUnlock();
+          backupNode.namesystem.writeUnlock("doCheckpointByBackupNode");
         }
       }
       rollForwardByApplyingLogs(manifest, bnImage, backupNode.getNamesystem());

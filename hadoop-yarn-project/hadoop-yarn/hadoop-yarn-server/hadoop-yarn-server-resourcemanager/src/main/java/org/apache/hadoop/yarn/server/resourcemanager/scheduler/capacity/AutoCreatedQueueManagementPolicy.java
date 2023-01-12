@@ -27,17 +27,15 @@ public interface AutoCreatedQueueManagementPolicy {
 
   /**
    * Initialize policy
-   * @param schedulerContext Capacity Scheduler context
+   * @param parentQueue parent queue
    */
-  void init(CapacitySchedulerContext schedulerContext, ParentQueue
-      parentQueue) throws IOException;
+  void init(ParentQueue parentQueue) throws IOException;
 
   /**
    * Reinitialize policy state ( if required )
-   * @param schedulerContext Capacity Scheduler context
+   * @param parentQueue parent queue
    */
-  void reinitialize(CapacitySchedulerContext schedulerContext,
-      ParentQueue parentQueue) throws IOException;
+  void reinitialize(ParentQueue parentQueue) throws IOException;
 
   /**
    * Get initial template for the specified leaf queue

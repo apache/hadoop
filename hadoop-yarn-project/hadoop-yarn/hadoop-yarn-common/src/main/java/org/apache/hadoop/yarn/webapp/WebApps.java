@@ -476,7 +476,7 @@ public class WebApps {
         LOG.info("Web app " + name + " started at "
             + httpServer.getConnectorAddress(0).getPort());
       } catch (IOException e) {
-        throw new WebAppException("Error starting http server", e);
+        throw new WebAppException("Error starting http server", e, webApp);
       }
       return webApp;
     }

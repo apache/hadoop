@@ -28,20 +28,37 @@ import org.apache.hadoop.io.Writable;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class FileChecksum implements Writable {
-  /** The checksum algorithm name */
+  /**
+   * The checksum algorithm name.
+   *
+   * @return algorithm name.
+   */
   public abstract String getAlgorithmName();
 
-  /** The length of the checksum in bytes */
+  /**
+   * The length of the checksum in bytes.
+   *
+   * @return length.
+   */
   public abstract int getLength();
 
-  /** The value of the checksum in bytes */
+  /**
+   * The value of the checksum in bytes.
+   *
+   * @return byte array.
+   */
   public abstract byte[] getBytes();
 
   public ChecksumOpt getChecksumOpt() {
     return null;
   }
 
-  /** Return true if both the algorithms and the values are the same. */
+  /**
+   * Return true if both the algorithms and the values are the same.
+   *
+   * @param other other.
+   * @return if equal true, not false.
+   */
   @Override
   public boolean equals(Object other) {
     if (other == this) {

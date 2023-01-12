@@ -84,7 +84,7 @@ public class QueryCommand extends Command {
         System.out.printf("%s", workStatus.currentStateString());
       }
     } catch (DiskBalancerException ex) {
-      LOG.error("Query plan failed. ex: {}", ex);
+      LOG.error("Query plan failed.", ex);
       throw ex;
     }
   }

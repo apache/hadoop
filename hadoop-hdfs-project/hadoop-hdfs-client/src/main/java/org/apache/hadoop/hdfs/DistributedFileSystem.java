@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
@@ -421,6 +422,16 @@ public class DistributedFileSystem extends FileSystem
     return append(f, EnumSet.of(CreateFlag.APPEND), bufferSize, progress);
   }
 
+  @Override
+  public FSDataOutputStream append(Path f, final int bufferSize,
+      final Progressable progress, boolean appendToNewBlock) throws IOException {
+    EnumSet<CreateFlag> flag = EnumSet.of(CreateFlag.APPEND);
+    if (appendToNewBlock) {
+      flag.add(CreateFlag.NEW_BLOCK);
+    }
+    return append(f, flag, bufferSize, progress);
+  }
+
   /**
    * Append to an existing file (optional operation).
    *
@@ -567,7 +578,7 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * Same as
-   * {@link #create(Path, FsPermission, EnumSet<CreateFlag>, int, short, long,
+   * {@link #create(Path, FsPermission, EnumSet, int, short, long,
    * Progressable, ChecksumOpt)} with a few additions. First, addition of
    * favoredNodes that is a hint to where the namenode should place the file
    * blocks. The favored nodes hint is not persisted in HDFS. Hence it may be
@@ -636,12 +647,12 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * Similar to {@link #create(Path, FsPermission, EnumSet, int, short, long,
-   * Progressable, ChecksumOpt, InetSocketAddress[], String)}, it provides a
+   * Progressable, ChecksumOpt, InetSocketAddress[], String, String)}, it provides a
    * HDFS-specific version of {@link #createNonRecursive(Path, FsPermission,
    * EnumSet, int, short, long, Progressable)} with a few additions.
    *
    * @see #create(Path, FsPermission, EnumSet, int, short, long, Progressable,
-   * ChecksumOpt, InetSocketAddress[], String) for the descriptions of
+   * ChecksumOpt, InetSocketAddress[], String, String) for the descriptions of
    * additional parameters, i.e., favoredNodes, ecPolicyName and
    * storagePolicyName.
    */
@@ -2401,6 +2412,51 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
+   * Get the difference between two snapshots of a directory iteratively.
+   *
+   * @param snapshotDir full path of the directory where snapshots are taken.
+   * @param fromSnapshotName snapshot name of the from point. Null indicates the current tree.
+   * @param toSnapshotName snapshot name of the to point. Null indicates the current tree.
+   * @param snapshotDiffStartPath path relative to the snapshottable root directory from where
+   *     the snapshotdiff computation needs to start.
+   * @param snapshotDiffIndex index in the created or deleted list of the directory at which the
+   *     snapshotdiff computation stopped during the last rpc call. -1 indicates the diff
+   *     computation needs to start right from the start path.
+   * @return the difference report represented as a {@link SnapshotDiffReportListing}.
+   * @throws IOException if an I/O error occurred.
+   */
+  public SnapshotDiffReportListing getSnapshotDiffReportListing(Path snapshotDir,
+      String fromSnapshotName, String toSnapshotName, String snapshotDiffStartPath,
+      int snapshotDiffIndex) throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_SNAPSHOT_DIFF);
+    Path absF = fixRelativePart(snapshotDir);
+    return new FileSystemLinkResolver<SnapshotDiffReportListing>() {
+
+      @Override
+      public SnapshotDiffReportListing doCall(final Path p) throws IOException {
+        return dfs.getSnapshotDiffReportListing(getPathName(p), fromSnapshotName, toSnapshotName,
+            DFSUtilClient.string2Bytes(snapshotDiffStartPath), snapshotDiffIndex);
+      }
+
+      @Override
+      public SnapshotDiffReportListing next(final FileSystem fs, final Path p)
+          throws IOException {
+        if (fs instanceof DistributedFileSystem) {
+          DistributedFileSystem distributedFileSystem = (DistributedFileSystem)fs;
+          distributedFileSystem.getSnapshotDiffReportListing(p, fromSnapshotName, toSnapshotName,
+              snapshotDiffStartPath, snapshotDiffIndex);
+        } else {
+          throw new UnsupportedOperationException("Cannot perform snapshot"
+              + " operations on a symlink to a non-DistributedFileSystem: "
+              + snapshotDir + " -> " + p);
+        }
+        return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
    * Get the close status of a file
    * @param src The path to the file
    *
@@ -3841,5 +3897,48 @@ public class DistributedFileSystem extends FileSystem
   public MultipartUploaderBuilder createMultipartUploader(final Path basePath)
       throws IOException {
     return new FileSystemMultipartUploaderBuilder(this, basePath);
+  }
+
+  /**
+   * Retrieve stats for slow running datanodes.
+   *
+   * @return An array of slow datanode info.
+   * @throws IOException If an I/O error occurs.
+   */
+  public DatanodeInfo[] getSlowDatanodeStats() throws IOException {
+    return dfs.slowDatanodeReport();
+  }
+
+  /**
+   * Returns LocatedBlocks of the corresponding HDFS file p from offset start
+   * for length len.
+   * This is similar to {@link #getFileBlockLocations(Path, long, long)} except
+   * that it returns LocatedBlocks rather than BlockLocation array.
+   * @param p path representing the file of interest.
+   * @param start offset
+   * @param len length
+   * @return a LocatedBlocks object
+   * @throws IOException
+   */
+  public LocatedBlocks getLocatedBlocks(Path p, long start, long len)
+      throws IOException {
+    final Path absF = fixRelativePart(p);
+    return new FileSystemLinkResolver<LocatedBlocks>() {
+      @Override
+      public LocatedBlocks doCall(final Path p) throws IOException {
+        return dfs.getLocatedBlocks(getPathName(p), start, len);
+      }
+      @Override
+      public LocatedBlocks next(final FileSystem fs, final Path p)
+          throws IOException {
+        if (fs instanceof DistributedFileSystem) {
+          DistributedFileSystem myDfs = (DistributedFileSystem)fs;
+          return myDfs.getLocatedBlocks(p, start, len);
+        }
+        throw new UnsupportedOperationException("Cannot getLocatedBlocks " +
+            "through a symlink to a non-DistributedFileSystem: " + fs + " -> "+
+            p);
+      }
+    }.resolve(this, absF);
   }
 }

@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.amazonaws.services.s3.model.PartETag;
+
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.assertj.core.api.Assertions;
 import org.junit.AfterClass;
@@ -48,18 +49,21 @@ import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.JsonSerialization;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.CONFLICT_MODE_APPEND;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_CONFLICT_MODE;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.PENDINGSET_SUFFIX;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.BUCKET;
-import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.outputPath;
-import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.outputPathUri;
+import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.getOutputPath;
+import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.getOutputPathUri;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.pathIsDirectory;
 
 /**
@@ -83,6 +87,7 @@ public class TestDirectoryCommitterScale
   public static final int TOTAL_COMMIT_COUNT = FILES_PER_TASK * TASKS;
 
   public static final int BLOCKS_PER_TASK = 1000;
+  private static final int COMMITTER_THREAD_COUNT = 100;
 
   private static File stagingDir;
 
@@ -95,13 +100,13 @@ public class TestDirectoryCommitterScale
 
   @Override
   DirectoryCommitterForTesting newJobCommitter() throws Exception {
-    return new DirectoryCommitterForTesting(outputPath,
+    return new DirectoryCommitterForTesting(getOutputPath(),
         createTaskAttemptForJob());
   }
 
   @BeforeClass
   public static void setupStaging() throws Exception {
-    stagingDir = File.createTempFile("staging", "");
+    stagingDir = File.createTempFile("staging", null);
     stagingDir.delete();
     stagingDir.mkdir();
     stagingPath = new Path(stagingDir.toURI());
@@ -125,7 +130,7 @@ public class TestDirectoryCommitterScale
     JobConf conf = super.createJobConf();
     conf.setInt(
         CommitConstants.FS_S3A_COMMITTER_THREADS,
-        100);
+        COMMITTER_THREAD_COUNT);
     return conf;
   }
 
@@ -149,7 +154,8 @@ public class TestDirectoryCommitterScale
    */
   private void createTasks() throws IOException {
     // create a stub multipart commit containing multiple files.
-
+    JsonSerialization<SinglePendingCommit> serializer =
+        SinglePendingCommit.serializer();
     // step1: a list of tags.
     // this is the md5sum of hadoop 3.2.1.tar
     String tag = "9062dcf18ffaee254821303bbd11c72b";
@@ -164,12 +170,14 @@ public class TestDirectoryCommitterScale
     // these get overwritten
     base.setDestinationKey("/base");
     base.setUploadId("uploadId");
-    base.setUri(outputPathUri.toString());
+    base.setUri(getOutputPathUri().toString());
+    byte[] bytes = base.toBytes(serializer);
 
     SinglePendingCommit[] singles = new SinglePendingCommit[FILES_PER_TASK];
-    byte[] bytes = base.toBytes();
+
     for (int i = 0; i < FILES_PER_TASK; i++) {
-      singles[i] = SinglePendingCommit.serializer().fromBytes(bytes);
+
+      singles[i] = serializer.fromBytes(bytes);
     }
     // now create the files, using this as the template
 
@@ -182,7 +190,7 @@ public class TestDirectoryCommitterScale
         String uploadId = String.format("%05d-task-%04d-file-%02d",
             uploadCount, task, i);
         // longer paths to take up more space.
-        Path p = new Path(outputPath,
+        Path p = new Path(getOutputPath(),
             "datasets/examples/testdirectoryscale/"
                 + "year=2019/month=09/day=26/hour=20/second=53"
                 + uploadId);
@@ -199,7 +207,7 @@ public class TestDirectoryCommitterScale
       }
       Path path = new Path(stagingPath,
           String.format("task-%04d." + PENDINGSET_SUFFIX, task));
-      pending.save(localFS, path, true);
+      pending.save(localFS, path, PendingSet.serializer());
     }
   }
 
@@ -211,12 +219,14 @@ public class TestDirectoryCommitterScale
     Configuration jobConf = getJobConf();
     jobConf.set(
         FS_S3A_COMMITTER_STAGING_CONFLICT_MODE, CONFLICT_MODE_APPEND);
-    FileSystem mockS3 = getMockS3A();
-    pathIsDirectory(mockS3, outputPath);
-    try (DurationInfo ignored =
-             new DurationInfo(LOG, "listing pending uploads")) {
+    S3AFileSystem mockS3 = getMockS3A();
+    pathIsDirectory(mockS3, getOutputPath());
+    final CommitOperations operations = new CommitOperations(getWrapperFS());
+    try (CommitContext commitContext
+             = operations.createCommitContextForTesting(getOutputPath(),
+        null, COMMITTER_THREAD_COUNT)) {
       AbstractS3ACommitter.ActiveCommit activeCommit
-          = committer.listPendingUploadsToCommit(getJob());
+          = committer.listPendingUploadsToCommit(commitContext);
       Assertions.assertThat(activeCommit.getSourceFiles())
           .describedAs("Source files of %s", activeCommit)
           .hasSize(TASKS);
@@ -232,7 +242,7 @@ public class TestDirectoryCommitterScale
     jobConf.set(
         FS_S3A_COMMITTER_STAGING_CONFLICT_MODE, CONFLICT_MODE_APPEND);
     S3AFileSystem mockS3 = getMockS3A();
-    pathIsDirectory(mockS3, outputPath);
+    pathIsDirectory(mockS3, getOutputPath());
 
     try (DurationInfo ignored =
              new DurationInfo(LOG, "Committing Job")) {
@@ -261,7 +271,7 @@ public class TestDirectoryCommitterScale
     jobConf.set(
         FS_S3A_COMMITTER_STAGING_CONFLICT_MODE, CONFLICT_MODE_APPEND);
     FileSystem mockS3 = getMockS3A();
-    pathIsDirectory(mockS3, outputPath);
+    pathIsDirectory(mockS3, getOutputPath());
 
     committer.abortJob(getJob(), JobStatus.State.FAILED);
   }
@@ -304,11 +314,11 @@ public class TestDirectoryCommitterScale
     }
 
     @Override
-    protected void commitJobInternal(final JobContext context,
+    protected void commitJobInternal(final CommitContext commitContext,
         final ActiveCommit pending)
         throws IOException {
       activeCommit = pending;
-      super.commitJobInternal(context, pending);
+      super.commitJobInternal(commitContext, pending);
     }
   }
 }

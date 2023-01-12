@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_MB;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -48,6 +52,54 @@ public final class CapacitySchedulerConfigGeneratorForTest {
     conf.put("yarn.scheduler.capacity.queue-mappings",
             "u:test1:root.test1,u:test2:root.test2");
     return createConfiguration(conf);
+  }
+
+  public static void setMinAllocMb(Configuration conf, int minAllocMb) {
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        minAllocMb);
+  }
+
+  public static void setMaxAllocMb(Configuration conf, int maxAllocMb) {
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        maxAllocMb);
+  }
+
+  public static void setMaxAllocMb(CapacitySchedulerConfiguration conf,
+                                   String queueName, int maxAllocMb) {
+    String propName = CapacitySchedulerConfiguration.getQueuePrefix(queueName)
+        + MAXIMUM_ALLOCATION_MB;
+    conf.setInt(propName, maxAllocMb);
+  }
+
+  public static void setMinAllocVcores(Configuration conf, int minAllocVcores) {
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+        minAllocVcores);
+  }
+
+  public static void setMaxAllocVcores(Configuration conf, int maxAllocVcores) {
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        maxAllocVcores);
+  }
+
+  public static void setMaxAllocVcores(CapacitySchedulerConfiguration conf,
+                                       String queueName, int maxAllocVcores) {
+    String propName = CapacitySchedulerConfiguration.getQueuePrefix(queueName)
+        + CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_VCORES;
+    conf.setInt(propName, maxAllocVcores);
+  }
+
+  public static void setMaxAllocation(CapacitySchedulerConfiguration conf,
+                                      String queueName, String maxAllocation) {
+    String propName = CapacitySchedulerConfiguration.getQueuePrefix(queueName)
+        + MAXIMUM_ALLOCATION;
+    conf.set(propName, maxAllocation);
+  }
+
+  public static void unsetMaxAllocation(CapacitySchedulerConfiguration conf,
+                                        String queueName) {
+    String propName = CapacitySchedulerConfiguration.getQueuePrefix(queueName)
+        + MAXIMUM_ALLOCATION;
+    conf.unset(propName);
   }
 
 }
