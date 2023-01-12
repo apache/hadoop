@@ -361,17 +361,67 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
           maxReadSizeForVectorReads());
       LOG.debug("Number of original ranges size {} , Number of combined ranges {} ",
           ranges.size(), combinedFileRanges.size());
-//      for (CombinedFileRange combinedFileRange: combinedFileRanges) {
-//        unboundedThreadPool.submit(
-//            () -> readCombinedRangeAndUpdateChildren(combinedFileRange, allocate));
-//      }
+      for (CombinedFileRange combinedFileRange: combinedFileRanges) {
+        unboundedThreadPool.submit(
+            () -> readCombinedRangeAndUpdateChildren(combinedFileRange, allocate));
+      }
     }
     LOG.debug("Finished submitting vectored read to threadpool" +
         " on path {} for ranges {} ", path, ranges);
   }
 
   /**
-   * Read data from S3 for this range and populate the buffer.
+   * Read the data for the bigger combined file range and update all the
+   * underlying ranges.
+   * @param combinedFileRange big combined file range.
+   * @param allocate method to create byte buffers to hold result data.
+   */
+  private void readCombinedRangeAndUpdateChildren(CombinedFileRange combinedFileRange,
+      IntFunction<ByteBuffer> allocate) {
+    LOG.debug("Start reading combined range {} from path {} ", combinedFileRange, path);
+    try {
+      checkIfVectoredIOStopped();
+      populateChildBuffers(combinedFileRange, allocate);
+    } catch (Exception ex) {
+      LOG.debug("Exception while reading a range {} from path {} ", combinedFileRange, path, ex);
+      for(FileRange child : combinedFileRange.getUnderlying()) {
+        child.getData().completeExceptionally(ex);
+      }
+    }
+    LOG.debug("Finished reading range {} from path {} ", combinedFileRange, path);
+  }
+
+  /**
+   * Populate underlying buffers of the child ranges.
+   * @param combinedFileRange big combined file range.
+   * @param allocate method to allocate child byte buffers.
+   * @throws IOException any IOE.
+   */
+  private void populateChildBuffers(CombinedFileRange combinedFileRange,
+      IntFunction<ByteBuffer> allocate) throws IOException {
+    // If the combined file range just contains a single child
+    // range, we only have to fill that one child buffer else
+    // we drain the intermediate data between consecutive ranges
+    // and fill the buffers one by one.
+    int combinedLengthToRead = (int) (combinedFileRange.getLength() + combinedFileRange.getOffset());
+    ByteBuffer buffer = allocate.apply(combinedLengthToRead);
+    readInternal(0, buffer.array(), 0, combinedLengthToRead, true);
+    if (combinedFileRange.getUnderlying().size() == 1) {
+      FileRange child = combinedFileRange.getUnderlying().get(0);
+      ByteBuffer buffer_child = allocate.apply(child.getLength());
+      System.arraycopy(buffer.array(), (int) child.getOffset(), buffer_child.array(), 0, child.getLength());
+      child.getData().complete(buffer_child);
+    } else {
+      for (FileRange child : combinedFileRange.getUnderlying()) {
+        ByteBuffer buffer_child = allocate.apply(child.getLength());
+        System.arraycopy(buffer.array(), (int) child.getOffset(), buffer_child.array(), 0, child.getLength());
+        child.getData().complete(buffer_child);
+      }
+    }
+  }
+
+  /**
+   * Read data for this range and populate the buffer.
    * @param range range of data to read.
    * @param buffer buffer to fill.
    */
@@ -381,7 +431,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     int length = range.getLength();
     try {
       checkIfVectoredIOStopped();
-      read(buffer.array(), offset, length);
+      readInternal(offset, buffer.array(), 0, length, true);
       range.getData().complete(buffer);
     }catch (Exception ex) {
       LOG.warn("Exception while reading a range {} from path {} ", range, path, ex);
