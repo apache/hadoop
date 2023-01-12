@@ -715,10 +715,7 @@ public class Client implements AutoCloseable {
           disposeSasl();
           if (shouldAuthenticateOverKrb()) {
             if (currRetries < maxRetries) {
-              if(LOG.isDebugEnabled()) {
-                LOG.debug("Exception encountered while connecting to "
-                    + "the server : " + ex);
-              }
+              LOG.debug("Exception encountered while connecting to the server {}", remoteId, ex);
               // try re-login
               if (UserGroupInformation.isLoginKeytabBased()) {
                 UserGroupInformation.getLoginUser().reloginFromKeytab();
@@ -736,7 +733,7 @@ public class Client implements AutoCloseable {
                   + UserGroupInformation.getLoginUser().getUserName() + " to "
                   + remoteId;
               LOG.warn(msg, ex);
-              throw (IOException) new IOException(msg).initCause(ex);
+              throw new IOException(msg, ex);
             }
           } else {
             // With RequestHedgingProxyProvider, one rpc call will send multiple
@@ -744,11 +741,9 @@ public class Client implements AutoCloseable {
             // all other requests will be interrupted. It's not a big problem,
             // and should not print a warning log.
             if (ex instanceof InterruptedIOException) {
-              LOG.debug("Exception encountered while connecting to the server",
-                  ex);
+              LOG.debug("Exception encountered while connecting to the server {}", remoteId, ex);
             } else {
-              LOG.warn("Exception encountered while connecting to the server ",
-                  ex);
+              LOG.warn("Exception encountered while connecting to the server {}", remoteId, ex);
             }
           }
           if (ex instanceof RemoteException)
