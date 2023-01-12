@@ -35,7 +35,9 @@ public class QiniuKodoFileSystemTest {
 
     @Test
     public void getDirStat() throws Exception {
-        FileStatus fileStatus = fs.getFileStatus(new Path("01/02/03/04/05"));
+        Path path = new Path("01/02/03/04/05");
+        fs.mkdirs(path);
+        FileStatus fileStatus = fs.getFileStatus(path);
         assertNotNull(fileStatus);
     }
 
@@ -59,7 +61,7 @@ public class QiniuKodoFileSystemTest {
 
     @Test
     public void testOpen() throws IOException {
-        FSDataInputStream is = fs.open(new Path("/abcd"));
+        FSDataInputStream is = fs.open(new Path("/user/zzq123.txt"));
         int ch;
         while((ch = is.read()) != -1) {
             System.out.print(ch + " ");
@@ -70,8 +72,9 @@ public class QiniuKodoFileSystemTest {
     @Test
     public void testWrite() throws IOException {
         FSDataOutputStream os = fs.create(new Path("/user/zzq123.txt"));
-        String s = "HelloWorld Qiniu";
-        os.writeUTF(s);
+        for (int i=0;i<100;i++) {
+            os.write(i);
+        }
         os.close();
     }
 }

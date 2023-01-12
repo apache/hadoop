@@ -5,6 +5,8 @@ import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.MemoryCacheBlockReader;
+import org.apache.hadoop.fs.qiniu.kodo.config.download.cache.DiskCacheConfig;
+import org.apache.hadoop.fs.qiniu.kodo.config.download.cache.MemoryCacheConfig;
 
 import java.io.IOException;
 
@@ -15,24 +17,27 @@ public class QiniuKodoBlockReader implements IBlockReader {
             QiniuKodoFsConfig fsConfig,
             QiniuKodoClient client
     ) throws IOException {
-        int blockSize = fsConfig.getDownloadBlockSize();
+        int blockSize = fsConfig.download.blockSize;
+        DiskCacheConfig diskCache = fsConfig.download.cache.disk;
+        MemoryCacheConfig memoryCache = fsConfig.download.cache.memory;
+
         // 构造原始数据获取器
         IBlockReader reader = new QiniuKodoSourceDataFetcher(blockSize, client);
 
-        if (fsConfig.getDiskCacheEnable()) {
+        if (diskCache.enable) {
             // 添加磁盘缓存层
             reader = new DiskCacheBlockReader(
                     reader,
-                    fsConfig.getDiskCacheBlocks(),
-                    fsConfig.getDiskCacheDir()
+                    diskCache.blocks,
+                    diskCache.dir
             );
         }
 
-        if (fsConfig.getMemoryCacheEnable()) {
+        if (memoryCache.enable) {
             // 添加内存缓存层
             reader = new MemoryCacheBlockReader(
                     reader,
-                    fsConfig.getMemoryCacheBlocks()
+                    memoryCache.blocks
             );
         }
         this.reader = reader;

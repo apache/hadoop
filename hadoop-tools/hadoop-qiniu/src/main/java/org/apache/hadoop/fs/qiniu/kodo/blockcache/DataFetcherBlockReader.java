@@ -22,7 +22,7 @@ public class DataFetcherBlockReader implements IBlockReader, IDataFetcher{
     @Override
     public byte[] readBlock(String key, int blockId) {
         long from = (long) blockId * getBlockSize();
-        long to = from + getBlockSize();
+        long to = from + getBlockSize() - 1;
         return fetch(key, from, to);
     }
 

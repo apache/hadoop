@@ -103,11 +103,12 @@ public class QiniuKodoClient {
     /**
      * 根据指定的key和文件大小获取一个输入流
      */
-    public InputStream fetch(String key, long from, long to) throws IOException {
+    public InputStream fetch(String key, long begin, long size) throws IOException {
         try {
             StringMap header = new StringMap();
-            header.put("Range", String.format("bytes=%d-%d", from, to));
-            Response response = this.client.get(getFileUrlByKey(key), header);
+            header.put("Range", String.format("bytes=%d-%d", begin, begin + size - 1));
+            String url = getFileUrlByKey(key);
+            Response response = this.client.get(url, header);
             return response.bodyStream();
         } catch (QiniuException e) {
             if (e.response != null) {

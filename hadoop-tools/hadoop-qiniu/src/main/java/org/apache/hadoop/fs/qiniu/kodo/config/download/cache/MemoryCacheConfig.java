@@ -17,14 +17,14 @@ public class MemoryCacheConfig extends AConfigBase {
      * 是否启用内存缓存
      */
     private boolean enable() {
-        return conf.getBoolean(namespace + ".enable", false);
+        return conf.getBoolean(namespace + ".enable", true);
     }
 
     /**
      * 读取文件时内存LRU缓冲区的最大块数量
      */
     private int blocks() {
-        return conf.getInt(namespace + ".blocks", 100);
+        return conf.getInt(namespace + ".blocks", 25);
     }
 
 }

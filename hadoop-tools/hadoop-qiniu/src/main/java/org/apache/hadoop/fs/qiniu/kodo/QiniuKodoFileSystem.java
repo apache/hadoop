@@ -50,8 +50,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         workingDir = new Path("/user", username).makeQualified(uri, null);
         LOG.debug("== workingDir:" + workingDir);
 
-        Auth auth = fsConfig.createAuth();
-        kodoClient = new QiniuKodoClient(auth, bucket, fsConfig);
+        kodoClient = new QiniuKodoClient(bucket, fsConfig);
 
         // 工作目录为相对路径使用的目录，其必须得存在，故需要预创建
         mkdirs(workingDir);
@@ -134,7 +133,12 @@ public class QiniuKodoFileSystem extends FileSystem {
         if (parent != null) {
             return false;
         }
-        FileStatus srcStatus = getFileStatus(srcPath);
+        FileStatus srcStatus;
+        try{
+            srcStatus = getFileStatus(srcPath);
+        }catch (FileNotFoundException fnde) {
+            srcStatus = null;
+        }
 
         FileStatus dstStatus;
         try {
@@ -174,9 +178,11 @@ public class QiniuKodoFileSystem extends FileSystem {
                 }
             } else {
                 // If dst is not a directory
-                throw new FileAlreadyExistsException(String.format(
-                        "Failed to rename %s to %s, file already exists!",
-                        srcPath, dstPath));
+//                if (srcStatus.isFile()) return false;
+//                throw new FileAlreadyExistsException(String.format(
+//                        "Failed to rename %s to %s, file already exists!",
+//                        srcPath, dstPath));
+                return false;
             }
         }
 
@@ -258,7 +264,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         if (!path.isRoot() && getFileStatus(path.getParent()) == null) throw new FileNotFoundException(path.toString());
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
-//        key = QiniuKodoUtils.keyToDirKey(key);
+        key = QiniuKodoUtils.keyToDirKey(key);
         LOG.debug("== listStatus, key:" + key);
 
         List<FileInfo> files = kodoClient.listStatus(key, true);
@@ -374,7 +380,7 @@ public class QiniuKodoFileSystem extends FileSystem {
                 file.fsize, // 文件大小
                 isDir,
                 0,
-                0,
+                fsConfig.download.blockSize,
                 putTime, // modification time
                 putTime, // access time
                 isDir ? new FsPermission(0715) : null,   // permission

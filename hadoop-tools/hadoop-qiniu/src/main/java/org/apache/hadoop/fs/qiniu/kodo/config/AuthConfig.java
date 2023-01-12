@@ -9,7 +9,7 @@ import java.util.Map;
 
 public class AuthConfig extends AConfigBase{
     public final String ACCESS_KEY = namespace + ".accessKey";
-    public final String SECRET_KEY = namespace + ".secret";
+    public final String SECRET_KEY = namespace + ".secretKey";
 
     public final String accessKey;
     public final String secretKey;
