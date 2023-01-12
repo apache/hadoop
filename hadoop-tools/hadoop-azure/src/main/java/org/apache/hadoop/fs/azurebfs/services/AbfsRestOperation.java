@@ -23,6 +23,7 @@ import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -72,6 +73,8 @@ public class AbfsRestOperation {
 
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
+
+  private final List<String> failureReasons = new ArrayList<>();
 
   /**
    * Checks if there is non-null HTTP response.
@@ -303,6 +306,7 @@ public class AbfsRestOperation {
     } catch (UnknownHostException ex) {
       String hostname = null;
       hostname = httpOperation.getHost();
+      failureReasons.add(RetryReason.UNKNOWN_HOST.name());
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
@@ -313,6 +317,8 @@ public class AbfsRestOperation {
       if (LOG.isDebugEnabled()) {
         LOG.debug("HttpRequestFailure: {}, {}", httpOperation, ex);
       }
+
+      failureReasons.add(RetryReason.getEnum(ex, -1).name());
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex);
@@ -326,6 +332,9 @@ public class AbfsRestOperation {
     LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
 
     if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {
+      int status = httpOperation.getStatusCode();
+      failureReasons.add(String.format("%s_%d",
+          RetryReason.getEnum(null, status).name(), status));
       return false;
     }
 
