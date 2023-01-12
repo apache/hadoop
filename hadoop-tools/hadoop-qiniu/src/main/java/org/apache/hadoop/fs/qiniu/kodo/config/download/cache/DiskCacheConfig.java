@@ -41,4 +41,14 @@ public class DiskCacheConfig extends AConfigBase {
         String hadoopTmpDir = conf.get("hadoop.tmp.dir");
         return Paths.get(hadoopTmpDir, "qiniu");
     }
+
+    @Override
+    public String toString() {
+        return "DiskCacheConfig{" +
+                "enable=" + enable +
+                ", blocks=" + blocks +
+                ", dir=" + dir +
+                ", namespace='" + namespace + '\'' +
+                '}';
+    }
 }

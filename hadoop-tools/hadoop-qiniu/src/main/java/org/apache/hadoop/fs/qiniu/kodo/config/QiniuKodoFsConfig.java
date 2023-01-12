@@ -50,4 +50,15 @@ public class QiniuKodoFsConfig extends AConfigBase{
     private DownloadConfig download() {
         return new DownloadConfig(conf, namespace + ".download");
     }
+
+    @Override
+    public String toString() {
+        return "QiniuKodoFsConfig{" +
+                "regionId='" + regionId + '\'' +
+                ", useHttps=" + useHttps +
+                ", auth=" + auth +
+                ", download=" + download +
+                ", namespace='" + namespace + '\'' +
+                '}';
+    }
 }

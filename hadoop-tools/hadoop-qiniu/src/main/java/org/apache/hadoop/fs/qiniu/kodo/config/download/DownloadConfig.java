@@ -34,5 +34,13 @@ public class DownloadConfig extends AConfigBase {
         return conf.get(namespace + ".domain");
     }
 
-
+    @Override
+    public String toString() {
+        return "DownloadConfig{" +
+                "cache=" + cache +
+                ", blockSize=" + blockSize +
+                ", domain='" + domain + '\'' +
+                ", namespace='" + namespace + '\'' +
+                '}';
+    }
 }

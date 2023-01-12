@@ -37,6 +37,9 @@ public class QiniuKodoFileSystem extends FileSystem {
         setConf(conf);
 
         this.fsConfig = new QiniuKodoFsConfig(getConf());
+
+        LOG.info("{}", fsConfig);
+
         String bucket = name.getHost();
         LOG.debug("== bucket:" + bucket);
 
@@ -159,6 +162,7 @@ public class QiniuKodoFileSystem extends FileSystem {
                         dstPath.getParent()));
             }
         } else {
+            assert srcStatus != null;
             if (srcStatus.getPath().equals(dstStatus.getPath())) {
                 return !srcStatus.isDirectory();
             } else if (dstStatus.isDirectory()) {
