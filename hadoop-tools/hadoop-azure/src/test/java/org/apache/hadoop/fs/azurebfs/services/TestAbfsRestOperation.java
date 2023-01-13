@@ -69,6 +69,57 @@ public class TestAbfsRestOperation {
   }
 
   @Test
+  public void testClientRequestIdForConnectAndReadTimeoutRetry() throws Exception {
+
+    AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
+    ExponentialRetryPolicy retryPolicy = Mockito.mock(
+        ExponentialRetryPolicy.class);
+    addMockBehaviourToAbfsClient(abfsClient, retryPolicy);
+
+
+    AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
+        AbfsRestOperationType.ReadFile,
+        abfsClient,
+        "PUT",
+        null,
+        new ArrayList<>()
+    ));
+
+    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
+    addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
+
+    Mockito.doThrow(new SocketTimeoutException("connect timed out"))
+        .doThrow(new SocketTimeoutException("read timed out"))
+        .doNothing()
+        .when(httpOperation)
+        .processResponse(nullable(byte[].class), nullable(int.class),
+            nullable(int.class));
+
+    Mockito.doReturn(200).when(httpOperation).getStatusCode();
+
+    TracingContext tracingContext = Mockito.mock(TracingContext.class);
+    Mockito.doNothing().when(tracingContext).setRetryCount(nullable(int.class));
+
+    int[] count = new int[1];
+    count[0] = 0;
+    Mockito.doAnswer(invocationOnMock -> {
+      if (count[0] == 1 ) {
+        Assertions.assertThat((String) invocationOnMock.getArgument(1))
+            .isEqualTo("CT");
+      }
+      if(count[0] == 2) {
+        Assertions.assertThat((String) invocationOnMock.getArgument(1))
+            .isEqualTo("RT");
+      }
+      count[0]++;
+      return null;
+    }).when(tracingContext).constructHeader(any(), any());
+
+    abfsRestOperation.execute(tracingContext);
+    Assertions.assertThat(count[0]).isEqualTo(3);
+  }
+
+  @Test
   public void testClientRequestIdForReadTimeoutRetry() throws Exception {
 
     AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
@@ -473,6 +524,7 @@ public class TestAbfsRestOperation {
         .when(retryPolicy)
         .shouldRetry(nullable(Integer.class), nullable(Integer.class));
     Mockito.doReturn(false).when(retryPolicy).shouldRetry(1, 200);
+    Mockito.doReturn(false).when(retryPolicy).shouldRetry(2, 200);
   }
 
 }
