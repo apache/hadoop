@@ -21,7 +21,7 @@ public class DiskCacheConfig extends AConfigBase {
      * 是否启用磁盘缓存
      */
     private boolean enable() {
-        return conf.getBoolean(namespace + ".enable", true);
+        return conf.getBoolean(namespace + ".enable", false);
     }
 
     /**
