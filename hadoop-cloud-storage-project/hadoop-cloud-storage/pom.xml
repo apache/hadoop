@@ -141,6 +141,12 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-qiniu</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.projectlombok</groupId>
+          <artifactId>lombok</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 </project>
