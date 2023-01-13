@@ -1,7 +1,5 @@
 package org.apache.hadoop.fs.qiniu.kodo.blockcache;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 class KeyBlockIdCacheKey {

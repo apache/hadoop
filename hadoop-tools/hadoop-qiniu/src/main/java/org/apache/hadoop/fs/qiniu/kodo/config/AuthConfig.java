@@ -1,9 +1,6 @@
 package org.apache.hadoop.fs.qiniu.kodo.config;
 
-import com.qiniu.util.Auth;
-import com.qiniu.util.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.authorize.AuthorizationException;
 
 import java.util.Map;
 

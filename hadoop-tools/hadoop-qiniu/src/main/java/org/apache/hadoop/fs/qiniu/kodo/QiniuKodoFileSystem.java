@@ -1,7 +1,6 @@
 package org.apache.hadoop.fs.qiniu.kodo;
 
 import com.qiniu.storage.model.FileInfo;
-import com.qiniu.util.Auth;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -17,7 +16,10 @@ import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.util.*;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Stack;
 
 public class QiniuKodoFileSystem extends FileSystem {
 
