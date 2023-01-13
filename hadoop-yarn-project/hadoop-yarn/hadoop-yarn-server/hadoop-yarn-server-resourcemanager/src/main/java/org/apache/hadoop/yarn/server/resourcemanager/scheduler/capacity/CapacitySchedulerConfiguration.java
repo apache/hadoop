@@ -168,6 +168,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    */
   public static final String ORDERING_POLICY = "ordering-policy";
 
+  private static final String CONCURRENT_SCHEDULER_PREFIX = PREFIX + "concurrent-scheduler";
+
+  private static final String CONCURRENT_SCHEDULER_ENABLED = CONCURRENT_SCHEDULER_PREFIX + ".enable";
+
+  private static final boolean DEFAULT_CONCURRENT_SCHEDULER_ENABLED = false;
+
   /*
    * Ordering policy inside a leaf queue to sort apps
    */
@@ -1215,6 +1221,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public boolean getEnableUserMetrics() {
     return getBoolean(ENABLE_USER_METRICS, DEFAULT_ENABLE_USER_METRICS);
+  }
+
+  public boolean isConcurrentSchedulerEnabled() {
+    return getBoolean(CONCURRENT_SCHEDULER_ENABLED, DEFAULT_CONCURRENT_SCHEDULER_ENABLED);
   }
 
   public int getOffSwitchPerHeartbeatLimit() {

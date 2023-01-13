@@ -252,6 +252,10 @@ public abstract class AbstractCSQueue implements CSQueue {
     return this.queuePath.getLeafName();
   }
 
+  public Resource getClusterResource() {
+    return this.queueContext.getClusterResource();
+  }
+
   @Override
   public CSQueue getParent() {
     return parent;

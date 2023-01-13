@@ -192,7 +192,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     LeafQueue queue = (LeafQueue) scheduler.getQueue(queueName);
     UsersManager.User user = queue.getUser(userName);
     Assert.assertEquals(memory,
-        user.getResourceUsage().getUsed(partition).getMemorySize());
+        user.getUsedCloned(partition).getMemorySize());
   }
 
   @Test(timeout = 60000)

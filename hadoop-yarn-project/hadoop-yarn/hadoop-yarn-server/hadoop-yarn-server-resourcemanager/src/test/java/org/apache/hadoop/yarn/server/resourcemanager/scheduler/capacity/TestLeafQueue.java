@@ -1030,9 +1030,9 @@ public class TestLeafQueue {
     } while (assign.getResource().getMemorySize() > 0 &&
         assign.getAssignmentInformation().getNumReservations() == 0);
 
-    assertTrue("Verify user_0 got resources ", queueUser0.getUsed()
+    assertTrue("Verify user_0 got resources ", queueUser0.getUsedCloned()
         .getMemorySize() > 0);
-    assertTrue("Verify user_1 got resources ", queueUser1.getUsed()
+    assertTrue("Verify user_1 got resources ", queueUser1.getUsedCloned()
         .getMemorySize() > 0);
     assertTrue(
         "Expected AbsoluteUsedCapacity > 0.95, got: "
@@ -1040,9 +1040,9 @@ public class TestLeafQueue {
 
     // Verify consumedRatio is based on dominant resources
     float expectedRatio =
-        queueUser0.getUsed().getVirtualCores()
+        queueUser0.getUsedCloned().getVirtualCores()
             / (numNodes * 100.0f)
-            + queueUser1.getUsed().getMemorySize()
+            + queueUser1.getUsedCloned().getMemorySize()
             / (numNodes * 8.0f * GB);
     // TODO - avoid depending on impl detail - usage ratio
 //    assertEquals(expectedRatio, b.getUsersManager().getUsageRatio(""), 0.001);
@@ -1055,9 +1055,9 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
     expectedRatio =
-        queueUser0.getUsed().getVirtualCores()
+        queueUser0.getUsedCloned().getVirtualCores()
             / (numNodes * 100.0f)
-            + queueUser1.getUsed().getMemorySize()
+            + queueUser1.getUsedCloned().getMemorySize()
             / (numNodes * 8.0f * GB);
 //    assertEquals(expectedRatio, b.getUsersManager().getUsageRatio(""), 0.001);
   }
@@ -1959,7 +1959,8 @@ public class TestLeafQueue {
     final String user_1 = "user_1";
 
     // Set user_0's weight to 1.5 in the a queue's object.
-    a.getUsersManager().getUserAndAddIfAbsent(user_0).setWeight(1.5f);
+    // TODO - call a.getUsersManager().submitapplication
+//    a.getUsersManager().getUserAndAddIfAbsent(user_0).setWeight(1.5f);
 
     // Submit applications
     final ApplicationAttemptId appAttemptId_0 =

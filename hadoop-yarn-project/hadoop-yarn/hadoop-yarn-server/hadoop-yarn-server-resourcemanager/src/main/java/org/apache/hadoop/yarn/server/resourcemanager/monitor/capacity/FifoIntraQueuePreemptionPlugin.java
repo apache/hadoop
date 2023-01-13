@@ -38,7 +38,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.IntraQueue
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.IntraQueueCandidatesSelector.TAPriorityComparator;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy.IntraQueuePreemptionOrderPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -418,10 +417,11 @@ public class FifoIntraQueuePreemptionPlugin
       String userName = app.getUser();
       TempUserPerPartition tmpUser = usersPerPartition.get(userName);
       if (tmpUser == null) {
-        // User might have already been removed, but preemption still accounts for this app,
-        // therefore reinserting the user will not cause a memory leak
-        User  user = tq.leafQueue.getOrCreateUser(userName);
-        ResourceUsage userResourceUsage = user.getResourceUsage();
+        User  user = tq.leafQueue.getUser(userName);
+        if (user == null) {
+          // TODO - Check why https://issues.apache.org/jira/browse/YARN-10996 expects user to be present here
+          continue;
+        }
 
         // perUserAMUsed was populated with running apps, now we are looping
         // through both running and pending apps.
@@ -430,9 +430,9 @@ public class FifoIntraQueuePreemptionPlugin
             ? Resources.none() : userSpecificAmUsed;
 
         tmpUser = new TempUserPerPartition(user, tq.queueName,
-            Resources.clone(userResourceUsage.getUsed(partition)),
+            user.getUsedCloned(partition),
             Resources.clone(amUsed),
-            Resources.clone(userResourceUsage.getReserved(partition)),
+            user.getReservedCloned(partition),
             Resources.none());
 
         Resource userLimitResource = Resources.clone(
