@@ -1062,4 +1062,93 @@ public final class FederationStateStoreFacade {
       updateApplicationHomeSubCluster(subClusterId, applicationId, appHomeSubCluster);
     }
   }
+
+  /**
+   * Exists ReservationHomeSubCluster Mapping.
+   *
+   * @param reservationId reservationId
+   * @return true - exist, false - not exist
+   */
+  public boolean existsReservationHomeSubCluster(ReservationId reservationId) {
+    try {
+      SubClusterId subClusterId = getReservationHomeSubCluster(reservationId);
+      if (subClusterId != null) {
+        return true;
+      }
+    } catch (YarnException e) {
+      LOG.warn("get homeSubCluster by reservationId = {} error.", reservationId, e);
+    }
+    return false;
+  }
+
+  /**
+   * Save Reservation And HomeSubCluster Mapping.
+   *
+   * @param reservationId reservationId
+   * @param homeSubCluster homeSubCluster
+   * @throws YarnException on failure
+   */
+  public void addReservationHomeSubCluster(ReservationId reservationId,
+      ReservationHomeSubCluster homeSubCluster) throws YarnException {
+    try {
+      // persist the mapping of reservationId and the subClusterId which has
+      // been selected as its home
+      addReservationHomeSubCluster(homeSubCluster);
+    } catch (YarnException e) {
+      String msg = String.format(
+          "Unable to insert the ReservationId %s into the FederationStateStore.", reservationId);
+      throw new YarnException(msg, e);
+    }
+  }
+
+  /**
+   * Update Reservation And HomeSubCluster Mapping.
+   *
+   * @param subClusterId subClusterId
+   * @param reservationId reservationId
+   * @param homeSubCluster homeSubCluster
+   * @throws YarnException on failure
+   */
+  public void updateReservationHomeSubCluster(SubClusterId subClusterId,
+      ReservationId reservationId, ReservationHomeSubCluster homeSubCluster) throws YarnException {
+    try {
+      // update the mapping of reservationId and the home subClusterId to
+      // the new subClusterId we have selected
+      updateReservationHomeSubCluster(homeSubCluster);
+    } catch (YarnException e) {
+      SubClusterId subClusterIdInStateStore = getReservationHomeSubCluster(reservationId);
+      if (subClusterId == subClusterIdInStateStore) {
+        LOG.info("Reservation {} already submitted on SubCluster {}.", reservationId, subClusterId);
+      } else {
+        String msg = String.format(
+            "Unable to update the ReservationId %s into the FederationStateStore.", reservationId);
+        throw new YarnException(msg, e);
+      }
+    }
+  }
+
+  /**
+   * Add or Update ReservationHomeSubCluster.
+   *
+   * @param reservationId reservationId.
+   * @param subClusterId homeSubClusterId, this is selected by strategy.
+   * @param retryCount number of retries.
+   * @throws YarnException yarn exception.
+   */
+  public void addOrUpdateReservationHomeSubCluster(ReservationId reservationId,
+      SubClusterId subClusterId, int retryCount) throws YarnException {
+    Boolean exists = existsReservationHomeSubCluster(reservationId);
+    ReservationHomeSubCluster reservationHomeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
+    if (!exists || retryCount == 0) {
+      // persist the mapping of reservationId and the subClusterId which has
+      // been selected as its home.
+      addReservationHomeSubCluster(reservationId, reservationHomeSubCluster);
+    } else {
+      // update the mapping of reservationId and the home subClusterId to
+      // the new subClusterId we have selected.
+      updateReservationHomeSubCluster(subClusterId, reservationId,
+          reservationHomeSubCluster);
+    }
+  }
 }
