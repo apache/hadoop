@@ -191,6 +191,10 @@ function run_ci() {
   YETUS_ARGS+=("--github-use-emoji-vote")
 
   "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
+
+  echo "Showing /c/hadoop/hadoop-dist/target"
+  ls -l "/c/hadoop/hadoop-dist/target"
+  tree "/c/hadoop/hadoop-dist/target"
 }
 
 ## @description  Cleans up the processes started by YETUS
