@@ -405,7 +405,7 @@ function personality_modules
     extra="${extra} ${flags}"
   fi
 
-  extra="-Ptest-patch -Dhttps.protocols=TLSv1.2 -Pnative-win -Drequire.openssl -Drequire.test.libhadoop -Dshell-executable=/c/Git/bin/bash.exe -Dopenssl.prefix=/c/vcpkg/installed/x64-windows -Dcmake.prefix.path=/c/vcpkg/installed/x64-windows -Dwindows.cmake.toolchain.file=/c/vcpkg/scripts/buildsystems/vcpkg.cmake -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142 ${extra}"
+  extra="-Ptest-patch -Dhttps.protocols=TLSv1.2 -Pnative-win,dist -Dtar -Drequire.openssl -Drequire.test.libhadoop -Dshell-executable=/c/Git/bin/bash.exe -Dopenssl.prefix=/c/vcpkg/installed/x64-windows -Dcmake.prefix.path=/c/vcpkg/installed/x64-windows -Dwindows.cmake.toolchain.file=/c/vcpkg/scripts/buildsystems/vcpkg.cmake -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142 ${extra}"
   for module in $(hadoop_order ${ordering}); do
     # shellcheck disable=SC2086
     personality_enqueue_module ${module} ${extra}

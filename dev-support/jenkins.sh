@@ -194,7 +194,7 @@ function run_ci() {
 
   echo "Showing /c/hadoop/hadoop-dist/target"
   ls -l "/c/hadoop/hadoop-dist/target"
-  tree "/c/hadoop/hadoop-dist/target"
+  find "/c/hadoop/hadoop-dist/target"
 }
 
 ## @description  Cleans up the processes started by YETUS
