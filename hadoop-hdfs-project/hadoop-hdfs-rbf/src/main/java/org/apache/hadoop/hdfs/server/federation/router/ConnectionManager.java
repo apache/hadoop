@@ -77,10 +77,6 @@ public class ConnectionManager {
    * Global federated namespace context for router.
    */
   private final RouterStateIdContext routerStateIdContext;
-  /**
-   * Map from connection pool ID to namespace.
-   */
-  private final Map<ConnectionPoolId, String> connectionPoolToNamespaceMap;
   /** Max size of queue for creating new connections. */
   private final int creatorQueueMaxSize;
 
@@ -105,7 +101,6 @@ public class ConnectionManager {
   public ConnectionManager(Configuration config, RouterStateIdContext routerStateIdContext) {
     this.conf = config;
     this.routerStateIdContext = routerStateIdContext;
-    this.connectionPoolToNamespaceMap = new HashMap<>();
     // Configure minimum, maximum and active connection pools
     this.maxSize = this.conf.getInt(
         RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_POOL_SIZE,
@@ -172,10 +167,6 @@ public class ConnectionManager {
         pool.close();
       }
       this.pools.clear();
-      for (String nsID: connectionPoolToNamespaceMap.values()) {
-        routerStateIdContext.removeNamespaceStateId(nsID);
-      }
-      connectionPoolToNamespaceMap.clear();
     } finally {
       writeLock.unlock();
     }
@@ -224,7 +215,6 @@ public class ConnectionManager {
               this.minActiveRatio, protocol,
               new PoolAlignmentContext(this.routerStateIdContext, nsId));
           this.pools.put(connectionId, pool);
-          this.connectionPoolToNamespaceMap.put(connectionId, nsId);
         }
       } finally {
         writeLock.unlock();
@@ -451,11 +441,6 @@ public class ConnectionManager {
         try {
           for (ConnectionPoolId poolId : toRemove) {
             pools.remove(poolId);
-            String nsID = connectionPoolToNamespaceMap.get(poolId);
-            connectionPoolToNamespaceMap.remove(poolId);
-            if (!connectionPoolToNamespaceMap.values().contains(nsID)) {
-              routerStateIdContext.removeNamespaceStateId(nsID);
-            }
           }
         } finally {
           writeLock.unlock();
