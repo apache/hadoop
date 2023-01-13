@@ -65,13 +65,10 @@ public class QiniuKodoFileSystemTest {
     @Test
     public void testOpen() throws IOException, InterruptedException {
         FSDataInputStream is = fs.open(new Path("/vscode2.zip"));
-        int ch;
-        int cnt = 0;
-        while((ch = is.read()) != -1) {
+        byte[] buf = new byte[4*1024*1024];
+        while((is.read(buf)) != -1) {
 //            System.out.print(ch + " ");
-            cnt++;
         }
-        LOG.info("cnt: {}", cnt);
         is.close();
     }
 

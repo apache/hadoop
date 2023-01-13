@@ -4,6 +4,7 @@ import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.DataFetcherBlockReader;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
@@ -17,22 +18,18 @@ public class QiniuKodoSourceDataFetcher extends DataFetcherBlockReader {
         this.client = client;
     }
 
+    private static final byte[] buffer = new byte[4*1024*1024];
+
     @Override
     public byte[] fetch(String key, long offset, int size) {
-        try(InputStream is = new BufferedInputStream(client.fetch(key, offset, size))) {
-            byte[] blockData = new byte[(int) size];
+        try(InputStream is = client.fetch(key, offset, size)) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream(size);
 
-            int pos = 0;
-            int b;
-            while((b = is.read()) != -1) {
-                blockData[pos++] = (byte) b;
+            int sz;
+            while ((sz = is.read(buffer)) != -1) {
+                out.write(buffer, 0, sz);
             }
-
-            // 读取到整块数据
-            if (pos == getBlockSize()) return blockData;
-
-            // 读取到的数据比整块数据少
-            return Arrays.copyOf(blockData, pos);
+            return out.toByteArray();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

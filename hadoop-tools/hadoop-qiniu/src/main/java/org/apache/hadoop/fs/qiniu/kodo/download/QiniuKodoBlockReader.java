@@ -13,6 +13,7 @@ import java.io.IOException;
 public class QiniuKodoBlockReader implements IBlockReader {
 
     private final IBlockReader reader;
+    private final int blockSize;
     public QiniuKodoBlockReader(
             QiniuKodoFsConfig fsConfig,
             QiniuKodoClient client
@@ -39,11 +40,12 @@ public class QiniuKodoBlockReader implements IBlockReader {
                 memoryCache.blocks
         );
         this.reader = reader;
+        this.blockSize = reader.getBlockSize();
     }
 
     @Override
     public int getBlockSize() {
-        return reader.getBlockSize();
+        return blockSize;
     }
 
     @Override

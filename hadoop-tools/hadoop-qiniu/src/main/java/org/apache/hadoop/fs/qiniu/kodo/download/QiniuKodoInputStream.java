@@ -15,11 +15,13 @@ public class QiniuKodoInputStream extends FSInputStream {
     private long position = 0;
 
     private final IBlockReader reader;
+    private final int blockSize;
 
 
     public QiniuKodoInputStream(String key, IBlockReader reader) {
         this.key = key;
         this.reader = reader;
+        this.blockSize = reader.getBlockSize();
     }
 
 
@@ -37,11 +39,10 @@ public class QiniuKodoInputStream extends FSInputStream {
 
     @Override
     public int read() throws IOException {
-        int blkSz = reader.getBlockSize();
-        int blockId = (int)(position / (long) blkSz);
+        int blockId = (int)(position / (long) blockSize);
         byte[] blockData = reader.readBlock(this.key, blockId);
-        int offset = (int)(position % (long) blkSz);
-        if (blockData.length < blkSz && offset >= blockData.length) {
+        int offset = (int)(position % (long) blockSize);
+        if (blockData.length < blockSize && offset >= blockData.length) {
             LOG.debug("read position: {} eof", position);
             return -1;
         }

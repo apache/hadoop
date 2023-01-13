@@ -14,12 +14,14 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
     private final IBlockReader source;
     private final LRUCache<KeyBlockIdCacheKey, Path> lruCache;
     private final Path bufferDir;
+    private final int blockSize;
 
     public DiskCacheBlockReader(IBlockReader source, int maxCacheBlocks, Path bufferDir) throws IOException {
         this.source = source;
         this.lruCache = new LRUCache<>(maxCacheBlocks);
         this.lruCache.setOnLRUCacheRemoveListener(this);
         this.bufferDir = bufferDir;
+        this.blockSize = source.getBlockSize();
         Files.createDirectories(bufferDir);
         LOG.debug("constructed: {}", this);
     }
@@ -55,7 +57,7 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
 
     @Override
     public int getBlockSize() {
-        return source.getBlockSize();
+        return blockSize;
     }
 
     @Override

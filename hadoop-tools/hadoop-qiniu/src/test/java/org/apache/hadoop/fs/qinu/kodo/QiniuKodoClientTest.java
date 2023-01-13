@@ -9,6 +9,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 
 public class QiniuKodoClientTest {
@@ -19,7 +20,7 @@ public class QiniuKodoClientTest {
         conf.addResource("contract-test-options.xml");
 
         QiniuKodoFsConfig fsConfig = new QiniuKodoFsConfig(conf);
-        String bucket = URI.create(conf.get("fs.contract.test.fs.qiniu")).getHost();
+        String bucket = URI.create(conf.get("fs.contract.test.fs.kodo")).getHost();
         client = new QiniuKodoClient(bucket, fsConfig);
     }
 
@@ -43,5 +44,13 @@ public class QiniuKodoClientTest {
     @Test
     public void testDeleteKeys() throws IOException {
         client.deleteKeys("");
+    }
+
+    @Test
+    public void testFetch() throws IOException {
+        InputStream is = client.fetch("vscode2.zip", 0, 999999999);
+        while (is.read() != -1) {
+
+        }
     }
 }
