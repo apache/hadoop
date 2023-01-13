@@ -184,8 +184,11 @@ public class TracingContext {
   private String addFailureReasons(final String header,
       final List<String> previousFailures) {
     String headerResult = header;
+    if(previousFailures.size() > 0) {
+      headerResult += ":";
+    }
     for(int iter = previousFailures.size() -1; iter >=0; iter--) {
-      headerResult += previousFailures.get(iter);
+      headerResult += String.format("%d_%s", iter, previousFailures.get(iter));
       if(headerResult.length() > MAX_CLIENT_REQUEST_ID) {
         headerResult = headerResult.substring(0, MAX_CLIENT_REQUEST_ID);
         break;
