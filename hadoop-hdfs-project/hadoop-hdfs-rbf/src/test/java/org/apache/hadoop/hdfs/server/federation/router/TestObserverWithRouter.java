@@ -34,9 +34,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAccumulator;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.ClientGSIContext;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RouterFederatedStateProto;
@@ -95,7 +97,7 @@ public class TestObserverWithRouter {
     conf.set(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, "0ms");
     conf.setBoolean(DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, true);
     if (confOverrides != null) {
-      conf.addResource(confOverrides);
+      confOverrides.iterator().forEachRemaining(entry -> conf.set(entry.getKey(), entry.getValue()));
     }
     cluster = new MiniRouterDFSCluster(true, 2, numberOfNamenode);
     cluster.addNamenodeOverrides(conf);
@@ -638,5 +640,37 @@ public class TestObserverWithRouter {
     assertEquals(1, namespace1.size());
     assertEquals("ns0", namespace1.get(0));
     assertTrue(namespace2.isEmpty());
+  }
+
+  @Test
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
+  public void testPeriodicStateRefreshUsingActiveNamenode() throws Exception {
+    Path rootPath = new Path("/");
+
+    Configuration confOverride = new Configuration(false);
+    confOverride.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_KEY, "500ms");
+    confOverride.set(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, "3s");
+    startUpCluster(1, confOverride);
+
+    fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads());
+    fileSystem.listStatus(rootPath);
+    int initialLengthOfRootListing = fileSystem.listStatus(rootPath).length;
+
+    DFSClient activeClient = cluster.getNamenodes("ns0")
+        .stream()
+        .filter(nnContext -> nnContext.getNamenode().isActiveState())
+        .findFirst().orElseThrow(() -> new IllegalStateException("No active namenode."))
+        .getClient();
+
+    for (int i = 0; i < 10; i++) {
+      activeClient.mkdirs("/dir" + i, null, false);
+    }
+    activeClient.close();
+
+    // Wait long enough for state in router to be considered stale.
+    Thread.sleep(700);
+    FileStatus[] rootFolderAfterMkdir = fileSystem.listStatus(rootPath);
+    assertEquals("List-status should show newly created directories.",
+        initialLengthOfRootListing + 10, rootFolderAfterMkdir.length);
   }
 }

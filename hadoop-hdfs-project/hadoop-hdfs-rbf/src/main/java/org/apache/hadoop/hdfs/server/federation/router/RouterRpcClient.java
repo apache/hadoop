@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -57,6 +58,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAccumulator;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -86,6 +88,7 @@ import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -136,6 +139,14 @@ public class RouterRpcClient {
   private final boolean observerReadEnabledDefault;
   /** Nameservice specific overrides of the default setting for enabling observer reads. */
   private HashSet<String> observerReadEnabledOverrides = new HashSet<>();
+  /**
+   * Period to refresh namespace stateID using active namenode.
+   * This ensures the namespace stateID is fresh even when an
+   * observer is trailing behind.
+   */
+  private long activeNNStateIdRefreshPeriodMs;
+  /** Last msync times for each namespace. */
+  private final Map<String, LongAccumulator> lastActiveNNRefreshTimes;
 
   /** Pattern to parse a stack trace line. */
   private static final Pattern STACK_TRACE_PATTERN =
@@ -218,6 +229,11 @@ public class RouterRpcClient {
     if (this.observerReadEnabledDefault) {
       LOG.info("Observer read is enabled for router.");
     }
+    this.activeNNStateIdRefreshPeriodMs = conf.getTimeDuration(
+        RBFConfigKeys.DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_KEY,
+        RBFConfigKeys.DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
+    this.lastActiveNNRefreshTimes = new HashMap<>();
   }
 
   /**
@@ -1702,7 +1718,8 @@ public class RouterRpcClient {
       boolean isObserverRead) throws IOException {
     final List<? extends FederationNamenodeContext> namenodes;
 
-    if (RouterStateIdContext.getClientStateIdFromCurrentCall(nsId) > Long.MIN_VALUE) {
+    if (isNamespaceStateIdFresh(nsId)
+        && (RouterStateIdContext.getClientStateIdFromCurrentCall(nsId) > Long.MIN_VALUE)) {
       namenodes = namenodeResolver.getNamenodesForNameserviceId(nsId, isObserverRead);
     } else {
       namenodes = namenodeResolver.getNamenodesForNameserviceId(nsId, false);
@@ -1729,5 +1746,34 @@ public class RouterRpcClient {
       return false;
     }
     return !method.getAnnotationsByType(ReadOnly.class)[0].activeOnly();
+  }
+
+  /**
+   * Checks and sets last refresh time for a namespace's stateId.
+   * Returns true if refresh time is newer than threshold.
+   * Otherwise, return false and call should be handled by active namenode.
+   * @param nsId namespaceID
+   */
+  private boolean isNamespaceStateIdFresh(String nsId) {
+    if (activeNNStateIdRefreshPeriodMs < 0) {
+      LOG.debug("Skipping freshness check and returning True since"
+          + RBFConfigKeys.DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_KEY
+          + " is less than 0");
+      return true;
+    }
+
+    Call call = Server.getCurCall().get();
+    long callStartTime = call != null ? (call.getTimestampNanos() / 1000000L)
+        : Time.monotonicNow();
+    LongAccumulator latestRefreshTime = lastActiveNNRefreshTimes
+        .computeIfAbsent(nsId, key -> new LongAccumulator(Math::max, 0));
+
+    if (callStartTime - latestRefreshTime.get() > activeNNStateIdRefreshPeriodMs) {
+      long requestTime = Time.monotonicNow();
+      latestRefreshTime.accumulate(requestTime);
+      return false;
+    }
+
+    return true;
   }
 }
