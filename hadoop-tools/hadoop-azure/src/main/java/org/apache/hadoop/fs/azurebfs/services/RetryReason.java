@@ -3,16 +3,9 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.net.SocketException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public enum RetryReason {
-  //3character string
-  //4xx exact status
-  //in case of 503: give reason of throttling , ref anmol@ PR.
-  //result.getStorageErrorMessage()
-  //
   CONNECTION_TIMEOUT(((exceptionCaptured, statusCode) -> {
     return exceptionCaptured != null && "connect timed out".equalsIgnoreCase(
         exceptionCaptured.getMessage());

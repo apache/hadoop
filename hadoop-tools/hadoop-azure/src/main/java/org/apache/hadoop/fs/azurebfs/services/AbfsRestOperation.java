@@ -23,7 +23,6 @@ import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -75,7 +74,7 @@ public class AbfsRestOperation {
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
 
-  private String failureReasons = null;
+  private String failureReason = null;
 
   /**
    * Checks if there is non-null HTTP response.
@@ -259,7 +258,7 @@ public class AbfsRestOperation {
       // initialize the HTTP request and open the connection
       httpOperation = getHttpOperation();
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
-      tracingContext.constructHeader(httpOperation, failureReasons);
+      tracingContext.constructHeader(httpOperation, failureReason);
 
       switch(client.getAuthType()) {
         case Custom:
@@ -312,7 +311,7 @@ public class AbfsRestOperation {
     } catch (UnknownHostException ex) {
       String hostname = null;
       hostname = httpOperation.getHost();
-      failureReasons = RetryReason.UNKNOWN_HOST.getAbbreviation(ex, null, null);
+      failureReason = RetryReason.UNKNOWN_HOST.getAbbreviation(ex, null, null);
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
@@ -324,7 +323,7 @@ public class AbfsRestOperation {
         LOG.debug("HttpRequestFailure: {}, {}", httpOperation, ex);
       }
 
-      failureReasons = RetryReason.getEnum(ex, -1).getAbbreviation(ex, -1, "");
+      failureReason = RetryReason.getEnum(ex, -1).getAbbreviation(ex, -1, "");
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex);
@@ -339,7 +338,7 @@ public class AbfsRestOperation {
 
     if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {
       int status = httpOperation.getStatusCode();
-      failureReasons = RetryReason.getEnum(null, status).getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
+      failureReason = RetryReason.getEnum(null, status).getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
       return false;
     }
 
