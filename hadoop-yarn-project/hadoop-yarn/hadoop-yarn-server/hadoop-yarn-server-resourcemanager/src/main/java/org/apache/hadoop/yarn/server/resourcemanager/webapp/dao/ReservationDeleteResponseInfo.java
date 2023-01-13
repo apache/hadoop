@@ -23,7 +23,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
 /**
- * Simple class that represent a reponse to a delete operation.
+ * Simple class that represent a response to a delete operation.
  */
 @XmlRootElement(name = "reservation-delete-response")
 @XmlAccessorType(XmlAccessType.FIELD)
