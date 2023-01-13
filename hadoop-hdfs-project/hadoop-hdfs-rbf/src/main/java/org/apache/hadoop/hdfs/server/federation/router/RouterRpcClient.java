@@ -222,7 +222,8 @@ public class RouterRpcClient {
     this.observerReadEnabledDefault = conf.getBoolean(
         RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY,
         RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_VALUE);
-    String[] observerReadOverrides = conf.getStrings(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES);
+    String[] observerReadOverrides =
+        conf.getStrings(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES);
     if (observerReadOverrides != null) {
       observerReadEnabledOverrides.addAll(Arrays.asList(observerReadOverrides));
     }
@@ -1733,7 +1734,8 @@ public class RouterRpcClient {
   }
 
   private boolean isObserverReadEligible(String nsId, Method method) {
-    boolean isReadEnabledForNamespace = observerReadEnabledDefault != observerReadEnabledOverrides.contains(nsId);
+    boolean isReadEnabledForNamespace =
+        observerReadEnabledDefault != observerReadEnabledOverrides.contains(nsId);
     return isReadEnabledForNamespace && isReadCall(method);
   }
 

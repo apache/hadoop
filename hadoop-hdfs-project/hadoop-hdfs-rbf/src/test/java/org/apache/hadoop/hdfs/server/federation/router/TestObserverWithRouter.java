@@ -97,7 +97,9 @@ public class TestObserverWithRouter {
     conf.set(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, "0ms");
     conf.setBoolean(DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, true);
     if (confOverrides != null) {
-      confOverrides.iterator().forEachRemaining(entry -> conf.set(entry.getKey(), entry.getValue()));
+      confOverrides
+          .iterator()
+          .forEachRemaining(entry -> conf.set(entry.getKey(), entry.getValue()));
     }
     cluster = new MiniRouterDFSCluster(true, 2, numberOfNamenode);
     cluster.addNamenodeOverrides(conf);
