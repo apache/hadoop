@@ -21,7 +21,7 @@ public enum RetryReason {
   }), 2, "RT"),
   UNKNOWN_HOST("UH"),
   CONNECTION_RESET(((exceptionCaptured, statusCode) -> {
-    return exceptionCaptured != null && exceptionCaptured.getMessage().contains("Connection reset");
+    return exceptionCaptured != null && exceptionCaptured.getMessage() != null && exceptionCaptured.getMessage().contains("Connection reset");
   }), 2, "CR"),
   STATUS_5XX(((exceptionCaptured, statusCode) -> {
     return statusCode/100 == 5;
