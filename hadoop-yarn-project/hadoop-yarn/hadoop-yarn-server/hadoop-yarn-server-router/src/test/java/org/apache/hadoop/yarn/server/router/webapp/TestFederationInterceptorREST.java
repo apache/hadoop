@@ -1542,13 +1542,14 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertTrue(typeInfo instanceof FederationSchedulerTypeInfo);
 
     FederationSchedulerTypeInfo federationSchedulerTypeInfo =
-            FederationSchedulerTypeInfo.class.cast(typeInfo);
+        FederationSchedulerTypeInfo.class.cast(typeInfo);
     Assert.assertNotNull(federationSchedulerTypeInfo);
     List<SchedulerTypeInfo> schedulerTypeInfos = federationSchedulerTypeInfo.getList();
     Assert.assertNotNull(schedulerTypeInfos);
     Assert.assertEquals(4, schedulerTypeInfos.size());
     List<String> subClusterIds =
-            subClusters.stream().map(subClusterId -> subClusterId.getId()).collect(Collectors.toList());
+        subClusters.stream().map(subClusterId -> subClusterId.getId()).
+        collect(Collectors.toList());
 
     for (SchedulerTypeInfo schedulerTypeInfo : schedulerTypeInfos) {
       Assert.assertNotNull(schedulerTypeInfo);
@@ -1562,7 +1563,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       Assert.assertNotNull(schedulerInfo);
       Assert.assertTrue(schedulerInfo instanceof CapacitySchedulerInfo);
       CapacitySchedulerInfo capacitySchedulerInfo =
-              CapacitySchedulerInfo.class.cast(schedulerInfo);
+          CapacitySchedulerInfo.class.cast(schedulerInfo);
       Assert.assertNotNull(capacitySchedulerInfo);
 
       // 3. The parent queue name should be root
@@ -1582,7 +1583,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       CapacitySchedulerQueueInfoList csSchedulerQueueInfoList = capacitySchedulerInfo.getQueues();
       Assert.assertNotNull(csSchedulerQueueInfoList);
       List<CapacitySchedulerQueueInfo> csQueueInfoList =
-              csSchedulerQueueInfoList.getQueueInfoList();
+          csSchedulerQueueInfoList.getQueueInfoList();
       Assert.assertEquals(2, csQueueInfoList.size());
       for (CapacitySchedulerQueueInfo csQueueInfo : csQueueInfoList) {
         Assert.assertNotNull(csQueueInfo);
