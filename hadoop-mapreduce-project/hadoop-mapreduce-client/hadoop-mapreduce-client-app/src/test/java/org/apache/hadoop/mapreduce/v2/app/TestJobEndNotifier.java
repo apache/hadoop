@@ -148,7 +148,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
    * Test that setting parameters has the desired effect
    */
   @Test
-  void checkConfiguration() {
+  public void checkConfiguration() {
     Configuration conf = new Configuration();
     testNumRetries(conf);
     testWaitInterval(conf);
@@ -166,7 +166,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
 
   //Check retries happen as intended
   @Test
-  void testNotifyRetries() throws InterruptedException {
+  public void testNotifyRetries() throws InterruptedException {
     JobConf conf = new JobConf();
     conf.set(MRJobConfig.MR_JOB_END_RETRY_ATTEMPTS, "0");
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_ATTEMPTS, "1");
@@ -232,18 +232,18 @@ public class TestJobEndNotifier extends JobEndNotifier {
   }
 
   @Test
-  void testNotificationOnLastRetryNormalShutdown() throws Exception {
+  public void testNotificationOnLastRetryNormalShutdown() throws Exception {
     testNotificationOnLastRetry(false);
   }
 
   @Test
-  void testNotificationOnLastRetryShutdownWithRuntimeException()
+  public void testNotificationOnLastRetryShutdownWithRuntimeException()
       throws Exception {
     testNotificationOnLastRetry(true);
   }
 
   @Test
-  void testAbsentNotificationOnNotLastRetryUnregistrationFailure()
+  public void testAbsentNotificationOnNotLastRetryUnregistrationFailure()
       throws Exception {
     HttpServer2 server = startHttpServer();
     MRApp app = spy(new MRAppWithCustomContainerAllocator(2, 2, false,
@@ -270,7 +270,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
   }
 
   @Test
-  void testNotificationOnLastRetryUnregistrationFailure()
+  public void testNotificationOnLastRetryUnregistrationFailure()
       throws Exception {
     HttpServer2 server = startHttpServer();
     MRApp app = spy(new MRAppWithCustomContainerAllocator(2, 2, false,
@@ -303,7 +303,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
   }
 
   @Test
-  void testCustomNotifierClass() throws InterruptedException {
+  public void testCustomNotifierClass() throws InterruptedException {
     JobConf conf = new JobConf();
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_URL,
              "http://example.com?jobId=$jobId&jobStatus=$jobStatus");

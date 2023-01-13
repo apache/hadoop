@@ -78,7 +78,7 @@ import org.mockito.Mockito;
 public class TestMRApp {
 
   @Test
-  void testMapReduce() throws Exception {
+  public void testMapReduce() throws Exception {
     MRApp app = new MRApp(2, 2, true, this.getClass().getName(), true);
     Job job = app.submit(new Configuration());
     app.waitForState(job, JobState.SUCCEEDED);
@@ -87,7 +87,7 @@ public class TestMRApp {
   }
 
   @Test
-  void testZeroMaps() throws Exception {
+  public void testZeroMaps() throws Exception {
     MRApp app = new MRApp(0, 1, true, this.getClass().getName(), true);
     Job job = app.submit(new Configuration());
     app.waitForState(job, JobState.SUCCEEDED);
@@ -95,14 +95,14 @@ public class TestMRApp {
   }
   
   @Test
-  void testZeroMapReduces() throws Exception{
+  public void testZeroMapReduces() throws Exception{
     MRApp app = new MRApp(0, 0, true, this.getClass().getName(), true);
     Job job = app.submit(new Configuration());
     app.waitForState(job, JobState.SUCCEEDED);
   }
   
   @Test
-  void testCommitPending() throws Exception {
+  public void testCommitPending() throws Exception {
     MRApp app = new MRApp(1, 0, false, this.getClass().getName(), true);
     Job job = app.submit(new Configuration());
     app.waitForState(job, JobState.RUNNING);
@@ -206,7 +206,7 @@ public class TestMRApp {
    * re-run information is preserved across AM restart
    */
   @Test
-  void testUpdatedNodes() throws Exception {
+  public void testUpdatedNodes() throws Exception {
     int runCount = 0;
     AsyncDispatcher dispatcher = new AsyncDispatcher();
     dispatcher.init(new Configuration());
@@ -469,7 +469,7 @@ public class TestMRApp {
   }
 
   @Test
-  void testJobError() throws Exception {
+  public void testJobError() throws Exception {
     MRApp app = new MRApp(1, 0, false, this.getClass().getName(), true);
     Job job = app.submit(new Configuration());
     app.waitForState(job, JobState.RUNNING);
@@ -490,7 +490,7 @@ public class TestMRApp {
 
   @SuppressWarnings("resource")
   @Test
-  void testJobSuccess() throws Exception {
+  public void testJobSuccess() throws Exception {
     MRApp app = new MRApp(2, 2, true, this.getClass().getName(), true, false);
     JobImpl job = (JobImpl) app.submit(new Configuration());
     app.waitForInternalState(job, JobStateInternal.SUCCEEDED);
@@ -502,7 +502,7 @@ public class TestMRApp {
   }
 
   @Test
-  void testJobRebootNotLastRetryOnUnregistrationFailure()
+  public void testJobRebootNotLastRetryOnUnregistrationFailure()
       throws Exception {
     MRApp app = new MRApp(1, 0, false, this.getClass().getName(), true);
     Job job = app.submit(new Configuration());
@@ -523,7 +523,7 @@ public class TestMRApp {
   }
 
   @Test
-  void testJobRebootOnLastRetryOnUnregistrationFailure()
+  public void testJobRebootOnLastRetryOnUnregistrationFailure()
       throws Exception {
     // make startCount as 2 since this is last retry which equals to
     // DEFAULT_MAX_AM_RETRY
@@ -567,7 +567,7 @@ public class TestMRApp {
   }
 
   @Test
-  void testCountersOnJobFinish() throws Exception {
+  public void testCountersOnJobFinish() throws Exception {
     MRAppWithSpiedJob app =
         new MRAppWithSpiedJob(1, 1, true, this.getClass().getName(), true);
     JobImpl job = (JobImpl)app.submit(new Configuration());
@@ -582,7 +582,7 @@ public class TestMRApp {
   }
 
   @Test
-  void checkJobStateTypeConversion() {
+  public void checkJobStateTypeConversion() {
     //verify that all states can be converted without 
     // throwing an exception
     for (JobState state : JobState.values()) {
@@ -591,7 +591,7 @@ public class TestMRApp {
   }
 
   @Test
-  void checkTaskStateTypeConversion() {
+  public void checkTaskStateTypeConversion() {
     //verify that all states can be converted without 
     // throwing an exception
     for (TaskState state : TaskState.values()) {
@@ -601,7 +601,7 @@ public class TestMRApp {
 
   private Container containerObtainedByContainerLauncher;
   @Test
-  void testContainerPassThrough() throws Exception {
+  public void testContainerPassThrough() throws Exception {
     MRApp app = new MRApp(0, 1, true, this.getClass().getName(), true) {
       @Override
       protected ContainerLauncher createContainerLauncher(AppContext context) {

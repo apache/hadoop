@@ -58,7 +58,7 @@ import org.junit.jupiter.api.Test;
 public class TestKill {
 
   @Test
-  void testKillJob() throws Exception {
+  public void testKillJob() throws Exception {
     final CountDownLatch latch = new CountDownLatch(1);
     
     MRApp app = new BlockingMRApp(1, 0, latch);
@@ -97,7 +97,7 @@ public class TestKill {
   }
 
   @Test
-  void testKillTask() throws Exception {
+  public void testKillTask() throws Exception {
     final CountDownLatch latch = new CountDownLatch(1);
     MRApp app = new BlockingMRApp(2, 0, latch);
     //this will start the job but job won't complete as Task is blocked
@@ -145,7 +145,7 @@ public class TestKill {
   }
 
   @Test
-  void testKillTaskWait() throws Exception {
+  public void testKillTaskWait() throws Exception {
     final Dispatcher dispatcher = new AsyncDispatcher() {
       private TaskAttemptEvent cachedKillEvent;
       @Override
@@ -220,7 +220,7 @@ public class TestKill {
   }
 
   @Test
-  void testKillTaskWaitKillJobAfterTA_DONE() throws Exception {
+  public void testKillTaskWaitKillJobAfterTA_DONE() throws Exception {
     CountDownLatch latch = new CountDownLatch(1);
     final Dispatcher dispatcher = new MyAsyncDispatch(latch, TaskAttemptEventType.TA_DONE);
     MRApp app = new MRApp(1, 1, false, this.getClass().getName(), true) {
@@ -269,7 +269,7 @@ public class TestKill {
 
 
   @Test
-  void testKillTaskWaitKillJobBeforeTA_DONE() throws Exception {
+  public void testKillTaskWaitKillJobBeforeTA_DONE() throws Exception {
     CountDownLatch latch = new CountDownLatch(1);
     final Dispatcher dispatcher = new MyAsyncDispatch(latch, JobEventType.JOB_KILL);
     MRApp app = new MRApp(1, 1, false, this.getClass().getName(), true) {
@@ -363,7 +363,7 @@ public class TestKill {
   }
 
   @Test
-  void testKillTaskAttempt() throws Exception {
+  public void testKillTaskAttempt() throws Exception {
     final CountDownLatch latch = new CountDownLatch(1);
     MRApp app = new BlockingMRApp(2, 0, latch);
     //this will start the job but job won't complete as Task is blocked

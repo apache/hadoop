@@ -171,7 +171,7 @@ public class TestContainerLauncherImpl {
   
   @Test
   @Timeout(5000)
-  void testHandle() throws Exception {
+  public void testHandle() throws Exception {
     LOG.info("STARTING testHandle");
     AppContext mockContext = mock(AppContext.class);
     @SuppressWarnings("unchecked")
@@ -230,7 +230,7 @@ public class TestContainerLauncherImpl {
   
   @Test
   @Timeout(5000)
-  void testOutOfOrder() throws Exception {
+  public void testOutOfOrder() throws Exception {
     LOG.info("STARTING testOutOfOrder");
     AppContext mockContext = mock(AppContext.class);
     @SuppressWarnings("unchecked")
@@ -305,7 +305,7 @@ public class TestContainerLauncherImpl {
 
   @Test
   @Timeout(5000)
-  void testMyShutdown() throws Exception {
+  public void testMyShutdown() throws Exception {
     LOG.info("in test Shutdown");
 
     AppContext mockContext = mock(AppContext.class);

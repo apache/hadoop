@@ -100,7 +100,7 @@ public class TestLocalContainerLauncher {
   @SuppressWarnings("rawtypes")
   @Test
   @Timeout(10000)
-  void testKillJob() throws Exception {
+  public void testKillJob() throws Exception {
     JobConf conf = new JobConf();
     AppContext context = mock(AppContext.class);
     // a simple event handler solely to detect the container cleaned event
@@ -188,7 +188,7 @@ public class TestLocalContainerLauncher {
 
 
   @Test
-  void testRenameMapOutputForReduce() throws Exception {
+  public void testRenameMapOutputForReduce() throws Exception {
     final JobConf conf = new JobConf();
 
     final MROutputFiles mrOutputFiles = new MROutputFiles();

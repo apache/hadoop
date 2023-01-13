@@ -120,7 +120,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobs() throws JSONException, Exception {
+  public void testJobs() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
         .path("jobs").accept(MediaType.APPLICATION_JSON)
@@ -138,7 +138,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobsSlash() throws JSONException, Exception {
+  public void testJobsSlash() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
         .path("jobs/").accept(MediaType.APPLICATION_JSON)
@@ -156,7 +156,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobsDefault() throws JSONException, Exception {
+  public void testJobsDefault() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
         .path("jobs").get(ClientResponse.class);
@@ -173,7 +173,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobsXML() throws Exception {
+  public void testJobsXML() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
         .path("jobs").accept(MediaType.APPLICATION_XML)
@@ -195,7 +195,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobId() throws JSONException, Exception {
+  public void testJobId() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -215,7 +215,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobIdSlash() throws JSONException, Exception {
+  public void testJobIdSlash() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -234,7 +234,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobIdDefault() throws JSONException, Exception {
+  public void testJobIdDefault() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -253,7 +253,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobIdNonExist() throws JSONException, Exception {
+  public void testJobIdNonExist() throws JSONException, Exception {
     WebResource r = resource();
 
     try {
@@ -281,7 +281,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobIdInvalid() throws JSONException, Exception {
+  public void testJobIdInvalid() throws JSONException, Exception {
     WebResource r = resource();
 
     try {
@@ -305,7 +305,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
 
   // verify the exception output default is JSON
   @Test
-  void testJobIdInvalidDefault() throws JSONException, Exception {
+  public void testJobIdInvalidDefault() throws JSONException, Exception {
     WebResource r = resource();
 
     try {
@@ -329,7 +329,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
 
   // test that the exception output works in XML
   @Test
-  void testJobIdInvalidXML() throws JSONException, Exception {
+  public void testJobIdInvalidXML() throws JSONException, Exception {
     WebResource r = resource();
 
     try {
@@ -369,7 +369,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobIdInvalidBogus() throws JSONException, Exception {
+  public void testJobIdInvalidBogus() throws JSONException, Exception {
     WebResource r = resource();
 
     try {
@@ -400,7 +400,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobIdXML() throws Exception {
+  public void testJobIdXML() throws Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -634,7 +634,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobCounters() throws JSONException, Exception {
+  public void testJobCounters() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -654,7 +654,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobCountersSlash() throws JSONException, Exception {
+  public void testJobCountersSlash() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -674,7 +674,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobCountersDefault() throws JSONException, Exception {
+  public void testJobCountersDefault() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -693,7 +693,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobCountersXML() throws Exception {
+  public void testJobCountersXML() throws Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -795,7 +795,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobAttempts() throws JSONException, Exception {
+  public void testJobAttempts() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -814,7 +814,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobAttemptsSlash() throws JSONException, Exception {
+  public void testJobAttemptsSlash() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -833,7 +833,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobAttemptsDefault() throws JSONException, Exception {
+  public void testJobAttemptsDefault() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -852,7 +852,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  void testJobAttemptsXML() throws Exception {
+  public void testJobAttemptsXML() throws Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {

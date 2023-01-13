@@ -111,7 +111,7 @@ public class TestCommitterEventHandler {
   }
   
   @Test
-  void testCommitWindow() throws Exception {
+  public void testCommitWindow() throws Exception {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     AsyncDispatcher dispatcher = new AsyncDispatcher();
@@ -224,7 +224,7 @@ public class TestCommitterEventHandler {
   }
 
   @Test
-  void testBasic() throws Exception {
+  public void testBasic() throws Exception {
     AppContext mockContext = mock(AppContext.class);
     OutputCommitter mockCommitter = mock(OutputCommitter.class);
     Clock mockClock = mock(Clock.class);
@@ -272,7 +272,7 @@ public class TestCommitterEventHandler {
   }
 
   @Test
-  void testFailure() throws Exception {
+  public void testFailure() throws Exception {
     AppContext mockContext = mock(AppContext.class);
     OutputCommitter mockCommitter = mock(OutputCommitter.class);
     Clock mockClock = mock(Clock.class);

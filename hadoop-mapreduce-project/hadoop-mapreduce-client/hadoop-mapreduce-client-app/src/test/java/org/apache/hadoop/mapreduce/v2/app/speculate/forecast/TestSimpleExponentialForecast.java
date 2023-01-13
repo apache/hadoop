@@ -98,21 +98,21 @@ public class TestSimpleExponentialForecast {
   }
 
   @Test
-  void testSimpleExponentialForecastLinearInc() throws Exception {
+  public void testSimpleExponentialForecastLinearInc() throws Exception {
     int res = incTestSimpleExponentialForecast();
     Assertions.assertEquals(res, 0,
         "We got the wrong estimate from simple exponential.");
   }
 
   @Test
-  void testSimpleExponentialForecastLinearDec() throws Exception {
+  public void testSimpleExponentialForecastLinearDec() throws Exception {
     int res = decTestSimpleExponentialForecast();
     Assertions.assertEquals(res, 0,
         "We got the wrong estimate from simple exponential.");
   }
 
   @Test
-  void testSimpleExponentialForecastZeros() throws Exception {
+  public void testSimpleExponentialForecastZeros() throws Exception {
     int res = zeroTestSimpleExponentialForecast();
     Assertions.assertEquals(res, 0,
         "We got the wrong estimate from simple exponential.");

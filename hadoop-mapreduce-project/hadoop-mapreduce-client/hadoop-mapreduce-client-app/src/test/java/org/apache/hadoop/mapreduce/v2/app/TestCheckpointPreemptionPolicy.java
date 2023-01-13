@@ -110,7 +110,7 @@ public class TestCheckpointPreemptionPolicy {
   }
 
   @Test
-  void testStrictPreemptionContract() {
+  public void testStrictPreemptionContract() {
 
     final Map<ContainerId,TaskAttemptId> containers = assignedContainers;
     AMPreemptionPolicy.Context mPctxt = new AMPreemptionPolicy.Context() {
@@ -153,7 +153,7 @@ public class TestCheckpointPreemptionPolicy {
 
 
   @Test
-  void testPreemptionContract() {
+  public void testPreemptionContract() {
     final Map<ContainerId,TaskAttemptId> containers = assignedContainers;
     AMPreemptionPolicy.Context mPctxt = new AMPreemptionPolicy.Context() {
       @Override

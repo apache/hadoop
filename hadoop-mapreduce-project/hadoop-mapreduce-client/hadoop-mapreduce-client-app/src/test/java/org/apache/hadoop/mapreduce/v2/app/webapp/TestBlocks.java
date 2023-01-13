@@ -61,7 +61,7 @@ public class TestBlocks {
    * Test rendering for ConfBlock
    */
   @Test
-  void testConfigurationBlock() throws Exception {
+  public void testConfigurationBlock() throws Exception {
     AppContext ctx = mock(AppContext.class);
     Job job = mock(Job.class);
     Path path = new Path("conf");
@@ -100,7 +100,7 @@ public class TestBlocks {
    * Test rendering for TasksBlock
    */
   @Test
-  void testTasksBlock() throws Exception {
+  public void testTasksBlock() throws Exception {
 
     ApplicationId appId = ApplicationIdPBImpl.newInstance(0, 1);
     JobId jobId = new JobIdPBImpl();
@@ -155,7 +155,7 @@ public class TestBlocks {
    * test AttemptsBlock's rendering.
    */
   @Test
-  void testAttemptsBlock() {
+  public void testAttemptsBlock() {
     AppContext ctx = mock(AppContext.class);
     AppForTest app = new AppForTest(ctx);
 
@@ -214,7 +214,7 @@ public class TestBlocks {
   }
 
   @Test
-  void testSingleCounterBlock() {
+  public void testSingleCounterBlock() {
     AppContext appCtx = mock(AppContext.class);
     View.ViewContext ctx = mock(View.ViewContext.class);
     JobId jobId = new JobIdPBImpl();

@@ -149,7 +149,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
   }
 
   @Test
-  void testJobConf() throws JSONException, Exception {
+  public void testJobConf() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -168,7 +168,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
   }
 
   @Test
-  void testJobConfSlash() throws JSONException, Exception {
+  public void testJobConfSlash() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -187,7 +187,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
   }
 
   @Test
-  void testJobConfDefault() throws JSONException, Exception {
+  public void testJobConfDefault() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -205,7 +205,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
   }
 
   @Test
-  void testJobConfXML() throws JSONException, Exception {
+  public void testJobConfXML() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {

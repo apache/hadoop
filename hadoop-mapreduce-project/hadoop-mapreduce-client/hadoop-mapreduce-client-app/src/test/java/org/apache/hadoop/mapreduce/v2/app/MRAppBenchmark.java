@@ -199,7 +199,7 @@ public class MRAppBenchmark {
 
   @Test
   @Timeout(60000)
-  void benchmark1() throws Exception {
+  public void benchmark1() throws Exception {
     int maps = 100; // Adjust for benchmarking. Start with thousands.
     int reduces = 0;
     System.out.println("Running benchmark with maps:"+maps +
@@ -279,7 +279,7 @@ public class MRAppBenchmark {
 
   @Test
   @Timeout(60000)
-  void benchmark2() throws Exception {
+  public void benchmark2() throws Exception {
     int maps = 100; // Adjust for benchmarking, start with a couple of thousands
     int reduces = 50;
     int maxConcurrentRunningTasks = 500;

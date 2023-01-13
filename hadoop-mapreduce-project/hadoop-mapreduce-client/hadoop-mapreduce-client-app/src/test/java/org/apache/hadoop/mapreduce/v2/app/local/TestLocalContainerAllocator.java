@@ -76,7 +76,7 @@ import org.mockito.ArgumentCaptor;
 public class TestLocalContainerAllocator {
 
   @Test
-  void testRMConnectionRetry() throws Exception {
+  public void testRMConnectionRetry() throws Exception {
     // verify the connection exception is thrown
     // if we haven't exhausted the retry interval
     ApplicationMasterProtocol mockScheduler =
@@ -113,7 +113,7 @@ public class TestLocalContainerAllocator {
   }
 
   @Test
-  void testAllocResponseId() throws Exception {
+  public void testAllocResponseId() throws Exception {
     ApplicationMasterProtocol scheduler = new MockScheduler();
     Configuration conf = new Configuration();
     LocalContainerAllocator lca =
@@ -128,7 +128,7 @@ public class TestLocalContainerAllocator {
   }
 
   @Test
-  void testAMRMTokenUpdate() throws Exception {
+  public void testAMRMTokenUpdate() throws Exception {
     Configuration conf = new Configuration();
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(1, 1), 1);
@@ -182,7 +182,7 @@ public class TestLocalContainerAllocator {
   }
 
   @Test
-  void testAllocatedContainerResourceIsNotNull() {
+  public void testAllocatedContainerResourceIsNotNull() {
     ArgumentCaptor<TaskAttemptContainerAssignedEvent> containerAssignedCaptor
         = ArgumentCaptor.forClass(TaskAttemptContainerAssignedEvent.class);
     @SuppressWarnings("unchecked")

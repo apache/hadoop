@@ -77,7 +77,7 @@ public class TestMRClientService {
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   
   @Test
-  void test() throws Exception {
+  public void test() throws Exception {
     MRAppWithClientService app = new MRAppWithClientService(1, 0, false);
     Configuration conf = new Configuration();
     Job job = app.submit(conf);
@@ -202,7 +202,7 @@ public class TestMRClientService {
   }
 
   @Test
-  void testViewAclOnlyCannotModify() throws Exception {
+  public void testViewAclOnlyCannotModify() throws Exception {
     final MRAppWithClientService app = new MRAppWithClientService(1, 0, false);
     final Configuration conf = new Configuration();
     conf.setBoolean(MRConfig.MR_ACLS_ENABLED, true);

@@ -166,7 +166,7 @@ public class TestJobHistoryEventHandler {
 
   @Test
   @Timeout(50000)
-  void testMaxUnflushedCompletionEvents() throws Exception {
+  public void testMaxUnflushedCompletionEvents() throws Exception {
     TestParams t = new TestParams();
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, t.workDir);
@@ -212,7 +212,7 @@ public class TestJobHistoryEventHandler {
 
   @Test
   @Timeout(50000)
-  void testUnflushedTimer() throws Exception {
+  public void testUnflushedTimer() throws Exception {
     TestParams t = new TestParams();
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, t.workDir);
@@ -256,7 +256,7 @@ public class TestJobHistoryEventHandler {
 
   @Test
   @Timeout(50000)
-  void testBatchedFlushJobEndMultiplier() throws Exception {
+  public void testBatchedFlushJobEndMultiplier() throws Exception {
     TestParams t = new TestParams();
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, t.workDir);
@@ -302,7 +302,7 @@ public class TestJobHistoryEventHandler {
   // In case of all types of events, process Done files if it's last AM retry
   @Test
   @Timeout(50000)
-  void testProcessDoneFilesOnLastAMRetry() throws Exception {
+  public void testProcessDoneFilesOnLastAMRetry() throws Exception {
     TestParams t = new TestParams(true);
     Configuration conf = new Configuration();
 
@@ -349,7 +349,7 @@ public class TestJobHistoryEventHandler {
   // Skip processing Done files in case of ERROR, if it's not last AM retry
   @Test
   @Timeout(50000)
-  void testProcessDoneFilesNotLastAMRetry() throws Exception {
+  public void testProcessDoneFilesNotLastAMRetry() throws Exception {
     TestParams t = new TestParams(false);
     Configuration conf = new Configuration();
     JHEvenHandlerForTest realJheh =
@@ -394,7 +394,7 @@ public class TestJobHistoryEventHandler {
   }
 
   @Test
-  void testPropertyRedactionForJHS() throws Exception {
+  public void testPropertyRedactionForJHS() throws Exception {
     final Configuration conf = new Configuration();
 
     String sensitivePropertyName = "aws.fake.credentials.name";
@@ -464,7 +464,7 @@ public class TestJobHistoryEventHandler {
 
   @Test
   @Timeout(50000)
-  void testDefaultFsIsUsedForHistory() throws Exception {
+  public void testDefaultFsIsUsedForHistory() throws Exception {
     // Create default configuration pointing to the minicluster
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
@@ -509,7 +509,7 @@ public class TestJobHistoryEventHandler {
   }
 
   @Test
-  void testGetHistoryIntermediateDoneDirForUser() throws IOException {
+  public void testGetHistoryIntermediateDoneDirForUser() throws IOException {
     // Test relative path
     Configuration conf = new Configuration();
     conf.set(JHAdminConfig.MR_HISTORY_INTERMEDIATE_DONE_DIR,
@@ -538,7 +538,7 @@ public class TestJobHistoryEventHandler {
   // test AMStartedEvent for submitTime and startTime
   @Test
   @Timeout(50000)
-  void testAMStartedEvent() throws Exception {
+  public void testAMStartedEvent() throws Exception {
     TestParams t = new TestParams();
     Configuration conf = new Configuration();
 
@@ -581,7 +581,7 @@ public class TestJobHistoryEventHandler {
   // stored to the Timeline store
   @Test
   @Timeout(50000)
-  void testTimelineEventHandling() throws Exception {
+  public void testTimelineEventHandling() throws Exception {
     TestParams t = new TestParams(RunningAppContext.class, false);
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
@@ -753,7 +753,7 @@ public class TestJobHistoryEventHandler {
 
   @Test
   @Timeout(50000)
-  void testCountersToJSON() throws Exception {
+  public void testCountersToJSON() throws Exception {
     JobHistoryEventHandler jheh = new JobHistoryEventHandler(null, 0);
     Counters counters = new Counters();
     CounterGroup group1 = counters.addGroup("DOCTORS",
@@ -790,7 +790,7 @@ public class TestJobHistoryEventHandler {
 
   @Test
   @Timeout(50000)
-  void testCountersToJSONEmpty() throws Exception {
+  public void testCountersToJSONEmpty() throws Exception {
     JobHistoryEventHandler jheh = new JobHistoryEventHandler(null, 0);
     Counters counters = null;
     JsonNode jsonNode = JobHistoryEventUtils.countersToJSON(counters);
@@ -906,7 +906,7 @@ public class TestJobHistoryEventHandler {
    * a JobUnsuccessfulEvent for jobs which were still running (so that they may
    * show up in the JobHistoryServer)
    */
-  void testSigTermedFunctionality() throws IOException {
+  public void testSigTermedFunctionality() throws IOException {
     AppContext mockedContext = Mockito.mock(AppContext.class);
     JHEventHandlerForSigtermTest jheh =
       new JHEventHandlerForSigtermTest(mockedContext, 0);
@@ -955,7 +955,7 @@ public class TestJobHistoryEventHandler {
 
   @Test
   @Timeout(50000)
-  void testSetTrackingURLAfterHistoryIsWritten() throws Exception {
+  public void testSetTrackingURLAfterHistoryIsWritten() throws Exception {
     TestParams t = new TestParams(true);
     Configuration conf = new Configuration();
 
@@ -987,7 +987,7 @@ public class TestJobHistoryEventHandler {
 
   @Test
   @Timeout(50000)
-  void testDontSetTrackingURLIfHistoryWriteFailed() throws Exception {
+  public void testDontSetTrackingURLIfHistoryWriteFailed() throws Exception {
     TestParams t = new TestParams(true);
     Configuration conf = new Configuration();
 
@@ -1019,7 +1019,7 @@ public class TestJobHistoryEventHandler {
   }
   @Test
   @Timeout(50000)
-  void testDontSetTrackingURLIfHistoryWriteThrows() throws Exception {
+  public void testDontSetTrackingURLIfHistoryWriteThrows() throws Exception {
     TestParams t = new TestParams(true);
     Configuration conf = new Configuration();
 
@@ -1056,7 +1056,7 @@ public class TestJobHistoryEventHandler {
 
   @Test
   @Timeout(50000)
-  void testJobHistoryFilePermissions() throws Exception {
+  public void testJobHistoryFilePermissions() throws Exception {
     TestParams t = new TestParams(true);
     Configuration conf = new Configuration();
     String setFilePermission = "777";

@@ -45,7 +45,7 @@ public class TestYarnChild {
   }
 
   @Test
-  void testReportErrorWhenCapacityExceptionNotHappenByDefault()
+  public void testReportErrorWhenCapacityExceptionNotHappenByDefault()
       throws IOException {
     Exception exception = new RuntimeException(new IOException());
 
@@ -53,7 +53,7 @@ public class TestYarnChild {
   }
 
   @Test
-  void testReportErrorWhenCapacityExceptionNotHappenAndFastFailDisabled()
+  public void testReportErrorWhenCapacityExceptionNotHappenAndFastFailDisabled()
       throws IOException {
     Exception exception = new RuntimeException(new IOException());
     conf.setBoolean(KILL_LIMIT_EXCEED_CONF_NAME, false);
@@ -62,7 +62,7 @@ public class TestYarnChild {
   }
 
   @Test
-  void testReportErrorWhenCapacityExceptionNotHappenAndFastFailEnabled()
+  public void testReportErrorWhenCapacityExceptionNotHappenAndFastFailEnabled()
       throws IOException {
     Exception exception = new RuntimeException(new IOException());
     conf.setBoolean(KILL_LIMIT_EXCEED_CONF_NAME, true);
@@ -71,7 +71,7 @@ public class TestYarnChild {
   }
 
   @Test
-  void testReportErrorWhenCapacityExceptionHappenByDefault()
+  public void testReportErrorWhenCapacityExceptionHappenByDefault()
       throws IOException {
     Exception exception =
         new RuntimeException(new ClusterStorageCapacityExceededException());
@@ -80,7 +80,7 @@ public class TestYarnChild {
   }
 
   @Test
-  void testReportErrorWhenCapacityExceptionHappenAndFastFailDisabled()
+  public void testReportErrorWhenCapacityExceptionHappenAndFastFailDisabled()
       throws IOException {
     Exception exception =
         new RuntimeException(new ClusterStorageCapacityExceededException());
@@ -90,7 +90,7 @@ public class TestYarnChild {
   }
 
   @Test
-  void testReportErrorWhenCapacityExceptionHappenAndFastFailEnabled()
+  public void testReportErrorWhenCapacityExceptionHappenAndFastFailEnabled()
       throws IOException {
     Exception exception =
         new RuntimeException(new ClusterStorageCapacityExceededException());
@@ -100,7 +100,7 @@ public class TestYarnChild {
   }
 
   @Test
-  void testReportErrorWhenCapacityExceptionHappenInThirdOfExceptionChain()
+  public void testReportErrorWhenCapacityExceptionHappenInThirdOfExceptionChain()
       throws IOException {
     Exception exception = new RuntimeException(new IllegalStateException(
         new ClusterStorageCapacityExceededException()));

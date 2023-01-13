@@ -168,7 +168,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testMRAppHistoryForMap() throws Exception {
+  public void testMRAppHistoryForMap() throws Exception {
     MRApp app = null;
     try {
       app = new FailingAttemptsMRApp(1, 0);
@@ -179,7 +179,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testMRAppHistoryForReduce() throws Exception {
+  public void testMRAppHistoryForReduce() throws Exception {
     MRApp app = null;
     try {
       app = new FailingAttemptsMRApp(0, 1);
@@ -190,7 +190,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testMRAppHistoryForTAFailedInAssigned() throws Exception {
+  public void testMRAppHistoryForTAFailedInAssigned() throws Exception {
     // test TA_CONTAINER_LAUNCH_FAILED for map
     FailingAttemptsDuringAssignedMRApp app = null;
 
@@ -269,7 +269,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testSingleRackRequest() throws Exception {
+  public void testSingleRackRequest() throws Exception {
     TaskAttemptImpl.RequestContainerTransition rct =
         new TaskAttemptImpl.RequestContainerTransition(false);
 
@@ -300,7 +300,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testHostResolveAttempt() throws Exception {
+  public void testHostResolveAttempt() throws Exception {
     TaskAttemptImpl.RequestContainerTransition rct =
         new TaskAttemptImpl.RequestContainerTransition(false);
 
@@ -340,7 +340,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testMillisCountersUpdate() throws Exception {
+  public void testMillisCountersUpdate() throws Exception {
     verifyMillisCounters(Resource.newInstance(1024, 1), 512);
     verifyMillisCounters(Resource.newInstance(2048, 4), 1024);
     verifyMillisCounters(Resource.newInstance(10240, 8), 2048);
@@ -596,7 +596,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testLaunchFailedWhileKilling() throws Exception {
+  public void testLaunchFailedWhileKilling() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId =
       ApplicationAttemptId.newInstance(appId, 0);
@@ -646,7 +646,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testContainerCleanedWhileRunning() throws Exception {
+  public void testContainerCleanedWhileRunning() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId =
       ApplicationAttemptId.newInstance(appId, 0);
@@ -705,7 +705,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testContainerCleanedWhileCommitting() throws Exception {
+  public void testContainerCleanedWhileCommitting() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId =
       ApplicationAttemptId.newInstance(appId, 0);
@@ -767,7 +767,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testDoubleTooManyFetchFailure() throws Exception {
+  public void testDoubleTooManyFetchFailure() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId =
       ApplicationAttemptId.newInstance(appId, 0);
@@ -842,7 +842,7 @@ public class TestTaskAttempt{
 
 
   @Test
-  void testAppDiagnosticEventOnUnassignedTask() {
+  public void testAppDiagnosticEventOnUnassignedTask() {
     ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         appId, 0);
@@ -899,7 +899,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testTooManyFetchFailureAfterKill() throws Exception {
+  public void testTooManyFetchFailureAfterKill() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId =
       ApplicationAttemptId.newInstance(appId, 0);
@@ -969,7 +969,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testAppDiagnosticEventOnNewTask() {
+  public void testAppDiagnosticEventOnNewTask() {
     ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         appId, 0);
@@ -1016,7 +1016,7 @@ public class TestTaskAttempt{
   }
     
   @Test
-  void testFetchFailureAttemptFinishTime() throws Exception{
+  public void testFetchFailureAttemptFinishTime() throws Exception{
     ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId =
     ApplicationAttemptId.newInstance(appId, 0);
@@ -1123,17 +1123,17 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testContainerKillOnNew() throws Exception {
+  public void testContainerKillOnNew() throws Exception {
     containerKillBeforeAssignment(false);
   }
 
   @Test
-  void testContainerKillOnUnassigned() throws Exception {
+  public void testContainerKillOnUnassigned() throws Exception {
     containerKillBeforeAssignment(true);
   }
 
   @Test
-  void testContainerKillAfterAssigned() throws Exception {
+  public void testContainerKillAfterAssigned() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId,
         0);
@@ -1189,7 +1189,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testContainerKillWhileRunning() throws Exception {
+  public void testContainerKillWhileRunning() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId,
         0);
@@ -1247,7 +1247,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testContainerKillWhileCommitPending() throws Exception {
+  public void testContainerKillWhileCommitPending() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId,
         0);
@@ -1310,7 +1310,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testKillMapTaskWhileSuccessFinishing() throws Exception {
+  public void testKillMapTaskWhileSuccessFinishing() throws Exception {
     MockEventHandler eventHandler = new MockEventHandler();
     TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
 
@@ -1353,7 +1353,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testKillMapOnlyTaskWhileSuccessFinishing() throws Exception {
+  public void testKillMapOnlyTaskWhileSuccessFinishing() throws Exception {
     MockEventHandler eventHandler = new MockEventHandler();
     TaskAttemptImpl taImpl = createMapOnlyTaskAttemptImpl(eventHandler);
 
@@ -1387,7 +1387,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testKillMapTaskAfterSuccess() throws Exception {
+  public void testKillMapTaskAfterSuccess() throws Exception {
     MockEventHandler eventHandler = new MockEventHandler();
     TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
 
@@ -1449,7 +1449,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testKillMapTaskWhileFailFinishing() throws Exception {
+  public void testKillMapTaskWhileFailFinishing() throws Exception {
     MockEventHandler eventHandler = new MockEventHandler();
     TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
 
@@ -1500,7 +1500,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testFailMapTaskByClient() throws Exception {
+  public void testFailMapTaskByClient() throws Exception {
     MockEventHandler eventHandler = new MockEventHandler();
     TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
 
@@ -1533,7 +1533,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testTaskAttemptDiagnosticEventOnFinishing() throws Exception {
+  public void testTaskAttemptDiagnosticEventOnFinishing() throws Exception {
     MockEventHandler eventHandler = new MockEventHandler();
     TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
 
@@ -1563,7 +1563,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testTimeoutWhileSuccessFinishing() throws Exception {
+  public void testTimeoutWhileSuccessFinishing() throws Exception {
     MockEventHandler eventHandler = new MockEventHandler();
     TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
 
@@ -1594,7 +1594,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testTimeoutWhileFailFinishing() throws Exception {
+  public void testTimeoutWhileFailFinishing() throws Exception {
     MockEventHandler eventHandler = new MockEventHandler();
     TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
 
@@ -1621,7 +1621,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testMapperCustomResourceTypes() {
+  public void testMapperCustomResourceTypes() {
     initResourceTypes();
     EventHandler eventHandler = mock(EventHandler.class);
     TaskSplitMetaInfo taskSplitMetaInfo = new TaskSplitMetaInfo();
@@ -1640,7 +1640,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testReducerCustomResourceTypes() {
+  public void testReducerCustomResourceTypes() {
     initResourceTypes();
     EventHandler eventHandler = mock(EventHandler.class);
     Clock clock = SystemClock.getInstance();
@@ -1658,7 +1658,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testReducerMemoryRequestViaMapreduceReduceMemoryMb() {
+  public void testReducerMemoryRequestViaMapreduceReduceMemoryMb() {
     EventHandler eventHandler = mock(EventHandler.class);
     Clock clock = SystemClock.getInstance();
     JobConf jobConf = new JobConf();
@@ -1672,7 +1672,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testReducerMemoryRequestViaMapreduceReduceResourceMemory() {
+  public void testReducerMemoryRequestViaMapreduceReduceResourceMemory() {
     EventHandler eventHandler = mock(EventHandler.class);
     Clock clock = SystemClock.getInstance();
     JobConf jobConf = new JobConf();
@@ -1687,7 +1687,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testReducerMemoryRequestDefaultMemory() {
+  public void testReducerMemoryRequestDefaultMemory() {
     EventHandler eventHandler = mock(EventHandler.class);
     Clock clock = SystemClock.getInstance();
     TaskAttemptImpl taImpl =
@@ -1699,7 +1699,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testReducerMemoryRequestWithoutUnits() {
+  public void testReducerMemoryRequestWithoutUnits() {
     Clock clock = SystemClock.getInstance();
     for (String memoryResourceName : ImmutableList.of(
         MRJobConfig.RESOURCE_TYPE_NAME_MEMORY,
@@ -1718,7 +1718,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testReducerMemoryRequestOverriding() {
+  public void testReducerMemoryRequestOverriding() {
     for (String memoryName : ImmutableList.of(
         MRJobConfig.RESOURCE_TYPE_NAME_MEMORY,
         MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY)) {
@@ -1751,7 +1751,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testReducerMemoryRequestMultipleName() {
+  public void testReducerMemoryRequestMultipleName() {
     assertThrows(IllegalArgumentException.class, () -> {
       EventHandler eventHandler = mock(EventHandler.class);
       Clock clock = SystemClock.getInstance();
@@ -1767,7 +1767,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testReducerCpuRequestViaMapreduceReduceCpuVcores() {
+  public void testReducerCpuRequestViaMapreduceReduceCpuVcores() {
     EventHandler eventHandler = mock(EventHandler.class);
     Clock clock = SystemClock.getInstance();
     JobConf jobConf = new JobConf();
@@ -1781,7 +1781,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testReducerCpuRequestViaMapreduceReduceResourceVcores() {
+  public void testReducerCpuRequestViaMapreduceReduceResourceVcores() {
     EventHandler eventHandler = mock(EventHandler.class);
     Clock clock = SystemClock.getInstance();
     JobConf jobConf = new JobConf();
@@ -1796,7 +1796,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testReducerCpuRequestDefaultMemory() {
+  public void testReducerCpuRequestDefaultMemory() {
     EventHandler eventHandler = mock(EventHandler.class);
     Clock clock = SystemClock.getInstance();
     TaskAttemptImpl taImpl =
@@ -1808,7 +1808,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testReducerCpuRequestOverriding() {
+  public void testReducerCpuRequestOverriding() {
     TestAppender testAppender = new TestAppender();
     final Logger logger = Logger.getLogger(TaskAttemptImpl.class);
     try {
@@ -1861,7 +1861,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testReducerCustomResourceTypeWithInvalidUnit() {
+  public void testReducerCustomResourceTypeWithInvalidUnit() {
     assertThrows(IllegalArgumentException.class, () -> {
       initResourceTypes();
       EventHandler eventHandler = mock(EventHandler.class);
@@ -1874,7 +1874,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testKillingTaskWhenContainerCleanup() {
+  public void testKillingTaskWhenContainerCleanup() {
     MockEventHandler eventHandler = new MockEventHandler();
     TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
     TaskId maptaskId = MRBuilderUtils.newTaskId(taImpl.getID().getTaskId()
@@ -1901,7 +1901,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testTooManyFetchFailureWhileContainerCleanup() {
+  public void testTooManyFetchFailureWhileContainerCleanup() {
     MockEventHandler eventHandler = new MockEventHandler();
     TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
     TaskId reducetaskId = MRBuilderUtils.newTaskId(taImpl.getID().getTaskId()
@@ -1937,7 +1937,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  void testTooManyFetchFailureWhileSuccessFinishing() throws Exception {
+  public void testTooManyFetchFailureWhileSuccessFinishing() throws Exception {
     MockEventHandler eventHandler = new MockEventHandler();
     TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
     TaskId reducetaskId = MRBuilderUtils.newTaskId(taImpl.getID().getTaskId()

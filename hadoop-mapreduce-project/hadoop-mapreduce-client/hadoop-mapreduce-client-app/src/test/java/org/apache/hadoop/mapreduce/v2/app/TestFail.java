@@ -60,7 +60,7 @@ public class TestFail {
   @Test
   //First attempt is failed and second attempt is passed
   //The job succeeds.
-  void testFailTask() throws Exception {
+  public void testFailTask() throws Exception {
     MRApp app = new MockFirstFailingAttemptMRApp(1, 0);
     Configuration conf = new Configuration();
     // this test requires two task attempts, but uberization overrides max to 1
@@ -85,7 +85,7 @@ public class TestFail {
   }
 
   @Test
-  void testMapFailureMaxPercent() throws Exception {
+  public void testMapFailureMaxPercent() throws Exception {
     MRApp app = new MockFirstFailingTaskMRApp(4, 0);
     Configuration conf = new Configuration();
     
@@ -114,7 +114,7 @@ public class TestFail {
   }
 
   @Test
-  void testReduceFailureMaxPercent() throws Exception {
+  public void testReduceFailureMaxPercent() throws Exception {
     MRApp app = new MockFirstFailingTaskMRApp(2, 4);
     Configuration conf = new Configuration();
     
@@ -148,7 +148,7 @@ public class TestFail {
 
   @Test
   //All Task attempts are timed out, leading to Job failure
-  void testTimedOutTask() throws Exception {
+  public void testTimedOutTask() throws Exception {
     MRApp app = new TimeOutTaskMRApp(1, 0);
     Configuration conf = new Configuration();
     int maxAttempts = 2;
@@ -174,7 +174,7 @@ public class TestFail {
   }
 
   @Test
-  void testTaskFailWithUnusedContainer() throws Exception {
+  public void testTaskFailWithUnusedContainer() throws Exception {
     MRApp app = new MRAppWithFailingTaskAndUnusedContainer();
     Configuration conf = new Configuration();
     int maxAttempts = 1;

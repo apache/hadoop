@@ -28,7 +28,7 @@ import static org.apache.hadoop.yarn.proto.YarnServiceProtos.*;
 
 public class TestResourceCalculatorUtils {
   @Test
-  void testComputeAvailableContainers() throws Exception {
+  public void testComputeAvailableContainers() throws Exception {
     Resource clusterAvailableResources = Resource.newInstance(81920, 40);
 
     Resource nonZeroResource = Resource.newInstance(1024, 2);

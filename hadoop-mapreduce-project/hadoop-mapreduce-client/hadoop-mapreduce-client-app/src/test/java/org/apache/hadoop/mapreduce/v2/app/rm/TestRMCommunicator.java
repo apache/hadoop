@@ -48,7 +48,7 @@ public class TestRMCommunicator {
 
   @Test
   @Timeout(2000)
-  void testRMContainerAllocatorExceptionIsHandled() throws Exception {
+  public void testRMContainerAllocatorExceptionIsHandled() throws Exception {
     ClientService mockClientService = mock(ClientService.class);
     AppContext mockContext = mock(AppContext.class);
     MockRMCommunicator mockRMCommunicator =
@@ -69,7 +69,7 @@ public class TestRMCommunicator {
   }
 
   @Test
-  void testRMContainerAllocatorYarnRuntimeExceptionIsHandled()
+  public void testRMContainerAllocatorYarnRuntimeExceptionIsHandled()
       throws Exception {
     ClientService mockClientService = mock(ClientService.class);
     AppContext mockContext = mock(AppContext.class);

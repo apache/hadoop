@@ -249,20 +249,20 @@ public class TestRuntimeEstimators {
   }
 
   @Test
-  void testLegacyEstimator() throws Exception {
+  public void testLegacyEstimator() throws Exception {
     TaskRuntimeEstimator specificEstimator = new LegacyTaskRuntimeEstimator();
     coreTestEstimator(specificEstimator, 3);
   }
 
   @Test
-  void testExponentialEstimator() throws Exception {
+  public void testExponentialEstimator() throws Exception {
     TaskRuntimeEstimator specificEstimator
         = new ExponentiallySmoothedTaskRuntimeEstimator();
     coreTestEstimator(specificEstimator, 3);
   }
 
   @Test
-  void testSimpleExponentialEstimator() throws Exception {
+  public void testSimpleExponentialEstimator() throws Exception {
     TaskRuntimeEstimator specificEstimator
         = new SimpleExponentialTaskRuntimeEstimator();
     coreTestEstimator(specificEstimator, 3);

@@ -59,7 +59,7 @@ public class TestJobSummary {
   }
 
   @Test
-  void testEscapeJobSummary() {
+  public void testEscapeJobSummary() {
     // verify newlines are escaped
     summary.setJobName("aa\rbb\ncc\r\ndd");
     String out = summary.getJobSummaryString();

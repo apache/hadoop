@@ -145,7 +145,7 @@ public class TestRecovery {
    * @throws Exception
    */
   @Test
-  void testCrashed() throws Exception {
+  public void testCrashed() throws Exception {
 
     int runCount = 0;
     long am1StartTimeEst = System.currentTimeMillis();
@@ -359,7 +359,7 @@ public class TestRecovery {
    * @throws Exception
    */
   @Test
-  void testCrashOfMapsOnlyJob() throws Exception {
+  public void testCrashOfMapsOnlyJob() throws Exception {
     int runCount = 0;
     MRApp app =
         new MRAppWithHistory(3, 0, false, this.getClass().getName(), true,
@@ -503,7 +503,7 @@ public class TestRecovery {
    * @throws Exception
    */
   @Test
-  void testRecoverySuccessUsingCustomOutputCommitter() throws Exception {
+  public void testRecoverySuccessUsingCustomOutputCommitter() throws Exception {
     int runCount = 0;
     MRApp app = new MRAppWithHistory(3, 0, false, this.getClass().getName(),
         true, ++runCount);
@@ -608,7 +608,7 @@ public class TestRecovery {
   }
 
   @Test
-  void testRecoveryWithSpillEncryption() throws Exception {
+  public void testRecoveryWithSpillEncryption() throws Exception {
     int runCount = 0;
     MRApp app = new MRAppWithHistory(1, 1, false, this.getClass().getName(),
         true, ++runCount) {
@@ -682,7 +682,7 @@ public class TestRecovery {
    * @throws Exception
    */
   @Test
-  void testRecoveryFailsUsingCustomOutputCommitter() throws Exception {
+  public void testRecoveryFailsUsingCustomOutputCommitter() throws Exception {
     int runCount = 0;
     MRApp app =
         new MRAppWithHistory(3, 0, false, this.getClass().getName(), true,
@@ -801,7 +801,7 @@ public class TestRecovery {
   }
 
   @Test
-  void testMultipleCrashes() throws Exception {
+  public void testMultipleCrashes() throws Exception {
 
     int runCount = 0;
     MRApp app =
@@ -931,7 +931,7 @@ public class TestRecovery {
   }
 
   @Test
-  void testOutputRecovery() throws Exception {
+  public void testOutputRecovery() throws Exception {
     int runCount = 0;
     MRApp app = new MRAppWithHistory(1, 2, false, this.getClass().getName(),
         true, ++runCount);
@@ -1040,7 +1040,7 @@ public class TestRecovery {
   }
 
   @Test
-  void testPreviousJobOutputCleanedWhenNoRecovery() throws Exception {
+  public void testPreviousJobOutputCleanedWhenNoRecovery() throws Exception {
     int runCount = 0;
     MRApp app = new MRAppWithHistory(1, 2, false, this.getClass().getName(),
         true, ++runCount);
@@ -1072,7 +1072,7 @@ public class TestRecovery {
   }
 
   @Test
-  void testPreviousJobIsNotCleanedWhenRecovery()
+  public void testPreviousJobIsNotCleanedWhenRecovery()
       throws Exception {
     int runCount = 0;
     MRApp app = new MRAppWithHistory(1, 2, false, this.getClass().getName(),
@@ -1109,7 +1109,7 @@ public class TestRecovery {
   }
 
   @Test
-  void testOutputRecoveryMapsOnly() throws Exception {
+  public void testOutputRecoveryMapsOnly() throws Exception {
     int runCount = 0;
     MRApp app = new MRAppWithHistory(2, 1, false, this.getClass().getName(),
         true, ++runCount);
@@ -1224,7 +1224,7 @@ public class TestRecovery {
   }
   
   @Test
-  void testRecoveryWithOldCommiter() throws Exception {
+  public void testRecoveryWithOldCommiter() throws Exception {
     int runCount = 0;
     MRApp app = new MRAppWithHistory(1, 2, false, this.getClass().getName(),
         true, ++runCount);
@@ -1341,7 +1341,7 @@ public class TestRecovery {
    * @throws Exception
    */
   @Test
-  void testSpeculative() throws Exception {
+  public void testSpeculative() throws Exception {
 
     int runCount = 0;
     long am1StartTimeEst = System.currentTimeMillis();
@@ -1495,7 +1495,7 @@ public class TestRecovery {
 
   @Test
   @Timeout(30000)
-  void testRecoveryWithoutShuffleSecret() throws Exception {
+  public void testRecoveryWithoutShuffleSecret() throws Exception {
     int runCount = 0;
     MRApp app = new MRAppNoShuffleSecret(2, 1, false,
         this.getClass().getName(), true, ++runCount);
@@ -1603,7 +1603,7 @@ public class TestRecovery {
   }
 
   @Test
-  void testRecoverySuccessAttempt() {
+  public void testRecoverySuccessAttempt() {
     LOG.info("--- START: testRecoverySuccessAttempt ---");
 
     long clusterTimestamp = System.currentTimeMillis();
@@ -1660,7 +1660,7 @@ public class TestRecovery {
   }
 
   @Test
-  void testRecoveryAllFailAttempts() {
+  public void testRecoveryAllFailAttempts() {
     LOG.info("--- START: testRecoveryAllFailAttempts ---");
 
     long clusterTimestamp = System.currentTimeMillis();
@@ -1718,7 +1718,7 @@ public class TestRecovery {
   }
 
   @Test
-  void testRecoveryTaskSuccessAllAttemptsFail() {
+  public void testRecoveryTaskSuccessAllAttemptsFail() {
     LOG.info("--- START:  testRecoveryTaskSuccessAllAttemptsFail ---");
 
     long clusterTimestamp = System.currentTimeMillis();
@@ -1777,7 +1777,7 @@ public class TestRecovery {
   }
 
   @Test
-  void testRecoveryTaskSuccessAllAttemptsSucceed() {
+  public void testRecoveryTaskSuccessAllAttemptsSucceed() {
     LOG.info("--- START:  testRecoveryTaskSuccessAllAttemptsFail ---");
 
     long clusterTimestamp = System.currentTimeMillis();
@@ -1834,7 +1834,7 @@ public class TestRecovery {
   }
 
   @Test
-  void testRecoveryAllAttemptsKilled() {
+  public void testRecoveryAllAttemptsKilled() {
     LOG.info("--- START:  testRecoveryAllAttemptsKilled ---");
 
     long clusterTimestamp = System.currentTimeMillis();

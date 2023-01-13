@@ -135,7 +135,7 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
   }
 
   @Test
-  void testGetTaskAttemptIdState() throws Exception {
+  public void testGetTaskAttemptIdState() throws Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 
@@ -165,7 +165,7 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
   }
 
   @Test
-  void testGetTaskAttemptIdXMLState() throws Exception {
+  public void testGetTaskAttemptIdXMLState() throws Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -202,7 +202,7 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
   }
 
   @Test
-  void testPutTaskAttemptIdState() throws Exception {
+  public void testPutTaskAttemptIdState() throws Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 
@@ -235,7 +235,7 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
   }
 
   @Test
-  void testPutTaskAttemptIdXMLState() throws Exception {
+  public void testPutTaskAttemptIdXMLState() throws Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 

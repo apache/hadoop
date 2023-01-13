@@ -48,7 +48,7 @@ public class TestMapReduceChildJVM {
       LoggerFactory.getLogger(TestMapReduceChildJVM.class);
 
   @Test
-  void testCommandLine() throws Exception {
+  public void testCommandLine() throws Exception {
     MyMRApp app = new MyMRApp(1, 0, true, this.getClass().getName(), true);
     Configuration conf = new Configuration();
     conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
@@ -83,7 +83,7 @@ public class TestMapReduceChildJVM {
 
   @Test
   @Timeout(30000)
-  void testReduceCommandLineWithSeparateShuffle() throws Exception {
+  public void testReduceCommandLineWithSeparateShuffle() throws Exception {
     final Configuration conf = new Configuration();
     conf.setBoolean(MRJobConfig.REDUCE_SEPARATE_SHUFFLE_LOG, true);
     testReduceCommandLine(conf);
@@ -91,7 +91,7 @@ public class TestMapReduceChildJVM {
 
   @Test
   @Timeout(30000)
-  void testReduceCommandLineWithSeparateCRLAShuffle() throws Exception {
+  public void testReduceCommandLineWithSeparateCRLAShuffle() throws Exception {
     final Configuration conf = new Configuration();
     conf.setBoolean(MRJobConfig.REDUCE_SEPARATE_SHUFFLE_LOG, true);
     conf.setLong(MRJobConfig.SHUFFLE_LOG_KB, 1L);
@@ -101,7 +101,7 @@ public class TestMapReduceChildJVM {
 
   @Test
   @Timeout(30000)
-  void testReduceCommandLine() throws Exception {
+  public void testReduceCommandLine() throws Exception {
     final Configuration conf = new Configuration();
     testReduceCommandLine(conf);
   }
@@ -153,7 +153,7 @@ public class TestMapReduceChildJVM {
   
   @Test
   @Timeout(30000)
-  void testCommandLineWithLog4JConifg() throws Exception {
+  public void testCommandLineWithLog4JConifg() throws Exception {
 
     MyMRApp app = new MyMRApp(1, 0, true, this.getClass().getName(), true);
     Configuration conf = new Configuration();
@@ -183,7 +183,7 @@ public class TestMapReduceChildJVM {
   }
 
   @Test
-  void testAutoHeapSizes() throws Exception {
+  public void testAutoHeapSizes() throws Exception {
     // Don't specify heap size or memory-mb
     testAutoHeapSize(-1, -1, null);
 
@@ -282,7 +282,7 @@ public class TestMapReduceChildJVM {
   }
   
   @Test
-  void testEnvironmentVariables() throws Exception {
+  public void testEnvironmentVariables() throws Exception {
     MyMRApp app = new MyMRApp(1, 0, true, this.getClass().getName(), true);
     Configuration conf = new Configuration();
     conf.set(JobConf.MAPRED_MAP_TASK_ENV, "HADOOP_CLIENT_OPTS=test");

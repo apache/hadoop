@@ -137,7 +137,7 @@ public class TestJobImpl {
   }
   
   @Test
-  void testJobNoTasks() {
+  public void testJobNoTasks() {
     Configuration conf = new Configuration();
     conf.setInt(MRJobConfig.NUM_REDUCES, 0);
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
@@ -178,7 +178,7 @@ public class TestJobImpl {
 
   @Test
   @Timeout(20000)
-  void testCommitJobFailsJob() throws Exception {
+  public void testCommitJobFailsJob() throws Exception {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     AsyncDispatcher dispatcher = new AsyncDispatcher();
@@ -204,7 +204,7 @@ public class TestJobImpl {
 
   @Test
   @Timeout(20000)
-  void testCheckJobCompleteSuccess() throws Exception {
+  public void testCheckJobCompleteSuccess() throws Exception {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     DrainDispatcher dispatcher = new DrainDispatcher();
@@ -257,7 +257,7 @@ public class TestJobImpl {
 
   @Test
   @Timeout(20000)
-  void testRebootedDuringSetup() throws Exception {
+  public void testRebootedDuringSetup() throws Exception {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     AsyncDispatcher dispatcher = new AsyncDispatcher();
@@ -301,7 +301,7 @@ public class TestJobImpl {
 
   @Test
   @Timeout(20000)
-  void testRebootedDuringCommit() throws Exception {
+  public void testRebootedDuringCommit() throws Exception {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     conf.setInt(MRJobConfig.MR_AM_MAX_ATTEMPTS, 2);
@@ -336,7 +336,7 @@ public class TestJobImpl {
 
   @Test
   @Timeout(20000)
-  void testKilledDuringSetup() throws Exception {
+  public void testKilledDuringSetup() throws Exception {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     AsyncDispatcher dispatcher = new AsyncDispatcher();
@@ -374,7 +374,7 @@ public class TestJobImpl {
 
   @Test
   @Timeout(20000)
-  void testKilledDuringCommit() throws Exception {
+  public void testKilledDuringCommit() throws Exception {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     AsyncDispatcher dispatcher = new AsyncDispatcher();
@@ -399,7 +399,7 @@ public class TestJobImpl {
   }
 
   @Test
-  void testAbortJobCalledAfterKillingTasks() throws IOException {
+  public void testAbortJobCalledAfterKillingTasks() throws IOException {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     conf.set(MRJobConfig.MR_AM_COMMITTER_CANCEL_TIMEOUT_MS, "1000");
@@ -432,7 +432,7 @@ public class TestJobImpl {
 
   @Test
   @Timeout(10000)
-  void testFailAbortDoesntHang() throws IOException {
+  public void testFailAbortDoesntHang() throws IOException {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     conf.set(MRJobConfig.MR_AM_COMMITTER_CANCEL_TIMEOUT_MS, "1000");
@@ -471,7 +471,7 @@ public class TestJobImpl {
 
   @Test
   @Timeout(20000)
-  void testKilledDuringFailAbort() throws Exception {
+  public void testKilledDuringFailAbort() throws Exception {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     AsyncDispatcher dispatcher = new AsyncDispatcher();
@@ -514,7 +514,7 @@ public class TestJobImpl {
 
   @Test
   @Timeout(20000)
-  void testKilledDuringKillAbort() throws Exception {
+  public void testKilledDuringKillAbort() throws Exception {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     // not initializing dispatcher to avoid potential race condition between
@@ -558,7 +558,7 @@ public class TestJobImpl {
 
   @Test
   @Timeout(20000)
-  void testUnusableNodeTransition() throws Exception {
+  public void testUnusableNodeTransition() throws Exception {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     conf.setInt(MRJobConfig.NUM_REDUCES, 1);
@@ -645,13 +645,13 @@ public class TestJobImpl {
   }
 
   @Test
-  void testJobNCompletedWhenAllReducersAreFinished()
+  public void testJobNCompletedWhenAllReducersAreFinished()
       throws Exception {
     testJobCompletionWhenReducersAreFinished(true);
   }
 
   @Test
-  void testJobNotCompletedWhenAllReducersAreFinished()
+  public void testJobNotCompletedWhenAllReducersAreFinished()
       throws Exception {
     testJobCompletionWhenReducersAreFinished(false);
   }
@@ -730,7 +730,7 @@ public class TestJobImpl {
   }
 
   @Test
-  void testCheckAccess() {
+  public void testCheckAccess() {
     // Create two unique users
     String user1 = System.getProperty("user.name");
     String user2 = user1 + "1234";
@@ -798,7 +798,7 @@ public class TestJobImpl {
   }
 
   @Test
-  void testReportDiagnostics() throws Exception {
+  public void testReportDiagnostics() throws Exception {
     JobID jobID = JobID.forName("job_1234567890000_0001");
     JobId jobId = TypeConverter.toYarn(jobID);
     final String diagMsg = "some diagnostic message";
@@ -832,7 +832,7 @@ public class TestJobImpl {
   }
 
   @Test
-  void testUberDecision() throws Exception {
+  public void testUberDecision() throws Exception {
 
     // with default values, no of maps is 2
     Configuration conf = new Configuration();
@@ -911,7 +911,7 @@ public class TestJobImpl {
   }
 
   @Test
-  void testTransitionsAtFailed() throws IOException {
+  public void testTransitionsAtFailed() throws IOException {
     Configuration conf = new Configuration();
     AsyncDispatcher dispatcher = new AsyncDispatcher();
     dispatcher.init(conf);
@@ -952,7 +952,7 @@ public class TestJobImpl {
 
   static final String EXCEPTIONMSG = "Splits max exceeded";
   @Test
-  void testMetaInfoSizeOverMax() throws Exception {
+  public void testMetaInfoSizeOverMax() throws Exception {
     Configuration conf = new Configuration();
     JobID jobID = JobID.forName("job_1234567890000_0001");
     JobId jobId = TypeConverter.toYarn(jobID);
@@ -980,7 +980,7 @@ public class TestJobImpl {
   }
 
   @Test
-  void testJobPriorityUpdate() throws Exception {
+  public void testJobPriorityUpdate() throws Exception {
     Configuration conf = new Configuration();
     AsyncDispatcher dispatcher = new AsyncDispatcher();
     dispatcher.init(conf);
@@ -1014,7 +1014,7 @@ public class TestJobImpl {
   }
 
   @Test
-  void testCleanupSharedCacheUploadPolicies() {
+  public void testCleanupSharedCacheUploadPolicies() {
     Configuration config = new Configuration();
     Map<String, Boolean> archivePolicies = new HashMap<>();
     archivePolicies.put("archive1", true);

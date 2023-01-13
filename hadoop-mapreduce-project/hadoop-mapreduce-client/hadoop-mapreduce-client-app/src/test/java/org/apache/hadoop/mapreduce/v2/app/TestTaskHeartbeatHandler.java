@@ -51,7 +51,7 @@ public class TestTaskHeartbeatHandler {
   
   @SuppressWarnings("unchecked")
   @Test
-  void testTaskTimeout() throws InterruptedException {
+  public void testTaskTimeout() throws InterruptedException {
     EventHandler mockHandler = mock(EventHandler.class);
     Clock clock = SystemClock.getInstance();
     TaskHeartbeatHandler hb = new TaskHeartbeatHandler(mockHandler, clock, 1);
@@ -85,7 +85,7 @@ public class TestTaskHeartbeatHandler {
 
   @Test
   @SuppressWarnings("unchecked")
-  void testTaskTimeoutDisable() throws InterruptedException {
+  public void testTaskTimeoutDisable() throws InterruptedException {
     EventHandler mockHandler = mock(EventHandler.class);
     Clock clock = SystemClock.getInstance();
     TaskHeartbeatHandler hb = new TaskHeartbeatHandler(mockHandler, clock, 1);
@@ -125,7 +125,7 @@ public class TestTaskHeartbeatHandler {
 
   @SuppressWarnings("unchecked")
   @Test
-  void testTaskStuck() throws InterruptedException {
+  public void testTaskStuck() throws InterruptedException {
     EventHandler mockHandler = mock(EventHandler.class);
     Clock clock = SystemClock.getInstance();
     TaskHeartbeatHandler hb = new TaskHeartbeatHandler(mockHandler, clock, 1);
@@ -169,7 +169,7 @@ public class TestTaskHeartbeatHandler {
    * report interval is set bigger than the task timeout in the configuration.
    */
   @Test
-  void testTaskTimeoutConfigSmallerThanTaskProgressReportInterval() {
+  public void testTaskTimeoutConfigSmallerThanTaskProgressReportInterval() {
     testTaskTimeoutWrtProgressReportInterval(1000L, 5000L);
   }
 
@@ -178,7 +178,7 @@ public class TestTaskHeartbeatHandler {
    * report interval is set smaller than the task timeout in the configuration.
    */
   @Test
-  void testTaskTimeoutConfigBiggerThanTaskProgressReportInterval() {
+  public void testTaskTimeoutConfigBiggerThanTaskProgressReportInterval() {
     testTaskTimeoutWrtProgressReportInterval(5000L, 1000L);
   }
 
@@ -187,7 +187,7 @@ public class TestTaskHeartbeatHandler {
    * report interval is not set in the configuration.
    */
   @Test
-  void testTaskTimeoutConfigWithoutTaskProgressReportInterval() {
+  public void testTaskTimeoutConfigWithoutTaskProgressReportInterval() {
     final long taskTimeoutConfiged = 2000L;
 
     final Configuration conf = new Configuration();
@@ -198,7 +198,7 @@ public class TestTaskHeartbeatHandler {
   }
 
   @Test
-  void testTaskUnregistered() throws Exception {
+  public void testTaskUnregistered() throws Exception {
     EventHandler mockHandler = mock(EventHandler.class);
     ControlledClock clock = new ControlledClock();
     clock.setTime(0);

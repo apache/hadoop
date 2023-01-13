@@ -85,7 +85,7 @@ import org.junit.jupiter.api.Timeout;
    }
 
    @Test
-   void testDeletionofStagingOnUnregistrationFailure()
+   public void testDeletionofStagingOnUnregistrationFailure()
        throws IOException {
      testDeletionofStagingOnUnregistrationFailure(2, false);
      testDeletionofStagingOnUnregistrationFailure(1, false);
@@ -122,7 +122,7 @@ import org.junit.jupiter.api.Timeout;
    }
 
    @Test
-   void testDeletionofStaging() throws IOException {
+   public void testDeletionofStaging() throws IOException {
      conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
      fs = mock(FileSystem.class);
      when(fs.delete(any(Path.class), anyBoolean())).thenReturn(true);
@@ -149,7 +149,7 @@ import org.junit.jupiter.api.Timeout;
 
    @Test
    @Timeout(30000)
-   void testNoDeletionofStagingOnReboot() throws IOException {
+   public void testNoDeletionofStagingOnReboot() throws IOException {
      conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
      fs = mock(FileSystem.class);
      when(fs.delete(any(Path.class),anyBoolean())).thenReturn(true);
@@ -201,7 +201,7 @@ import org.junit.jupiter.api.Timeout;
    
    @Test
    @Timeout(30000)
-   void testDeletionofStagingOnKill() throws IOException {
+   public void testDeletionofStagingOnKill() throws IOException {
      conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
      fs = mock(FileSystem.class);
      when(fs.delete(any(Path.class), anyBoolean())).thenReturn(true);
@@ -257,7 +257,7 @@ import org.junit.jupiter.api.Timeout;
    }
 
    @Test
-   void testByPreserveFailedStaging() throws IOException {
+   public void testByPreserveFailedStaging() throws IOException {
      conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
      // TODO: Decide which failed task files that should
      // be kept are in application log directory.
@@ -286,7 +286,7 @@ import org.junit.jupiter.api.Timeout;
    }
 
    @Test
-   void testPreservePatternMatchedStaging() throws IOException {
+   public void testPreservePatternMatchedStaging() throws IOException {
      conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
      // The staging files that are matched to the pattern
      // should not be deleted
@@ -314,7 +314,7 @@ import org.junit.jupiter.api.Timeout;
    }
 
   @Test
-  void testNotPreserveNotPatternMatchedStaging() throws IOException {
+  public void testNotPreserveNotPatternMatchedStaging() throws IOException {
     conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
     conf.set(MRJobConfig.PRESERVE_FILES_PATTERN, "NotMatching");
     fs = mock(FileSystem.class);
@@ -342,7 +342,7 @@ import org.junit.jupiter.api.Timeout;
   }
 
   @Test
-  void testPreservePatternMatchedAndFailedStaging() throws IOException {
+  public void testPreservePatternMatchedAndFailedStaging() throws IOException {
     conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
     // When RESERVE_FILES_PATTERN and PRESERVE_FAILED_TASK_FILES are set,
     // files in staging dir are always kept.
@@ -589,7 +589,7 @@ import org.junit.jupiter.api.Timeout;
 
   @Test
   @Timeout(20000)
-  void testStagingCleanupOrder() throws Exception {
+  public void testStagingCleanupOrder() throws Exception {
     MRAppTestCleanup app = new MRAppTestCleanup(1, 1, true,
         this.getClass().getName(), true);
     JobImpl job = (JobImpl)app.submit(new Configuration());

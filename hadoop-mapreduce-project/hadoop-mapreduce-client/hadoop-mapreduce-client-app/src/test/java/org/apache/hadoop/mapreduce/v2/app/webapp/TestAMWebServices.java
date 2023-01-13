@@ -110,7 +110,7 @@ public class TestAMWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testAM() throws JSONException, Exception {
+  public void testAM() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
@@ -122,7 +122,7 @@ public class TestAMWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testAMSlash() throws JSONException, Exception {
+  public void testAMSlash() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce/")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
@@ -134,7 +134,7 @@ public class TestAMWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testAMDefault() throws JSONException, Exception {
+  public void testAMDefault() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce/")
         .get(ClientResponse.class);
@@ -146,7 +146,7 @@ public class TestAMWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testAMXML() throws JSONException, Exception {
+  public void testAMXML() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
         .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
@@ -157,7 +157,7 @@ public class TestAMWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testInfo() throws JSONException, Exception {
+  public void testInfo() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
         .path("info").accept(MediaType.APPLICATION_JSON)
@@ -170,7 +170,7 @@ public class TestAMWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testInfoSlash() throws JSONException, Exception {
+  public void testInfoSlash() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
         .path("info/").accept(MediaType.APPLICATION_JSON)
@@ -183,7 +183,7 @@ public class TestAMWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testInfoDefault() throws JSONException, Exception {
+  public void testInfoDefault() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
         .path("info/").get(ClientResponse.class);
@@ -195,7 +195,7 @@ public class TestAMWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testInfoXML() throws JSONException, Exception {
+  public void testInfoXML() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
         .path("info/").accept(MediaType.APPLICATION_XML)
@@ -207,7 +207,7 @@ public class TestAMWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testInvalidUri() throws JSONException, Exception {
+  public void testInvalidUri() throws JSONException, Exception {
     WebResource r = resource();
     String responseStr = "";
     try {
@@ -223,7 +223,7 @@ public class TestAMWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testInvalidUri2() throws JSONException, Exception {
+  public void testInvalidUri2() throws JSONException, Exception {
     WebResource r = resource();
     String responseStr = "";
     try {
@@ -239,7 +239,7 @@ public class TestAMWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testInvalidAccept() throws JSONException, Exception {
+  public void testInvalidAccept() throws JSONException, Exception {
     WebResource r = resource();
     String responseStr = "";
     try {
@@ -256,7 +256,7 @@ public class TestAMWebServices extends JerseyTestBase {
   }
   
   @Test
-  void testBlacklistedNodes() throws JSONException, Exception {
+  public void testBlacklistedNodes() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
         .path("blacklistednodes").accept(MediaType.APPLICATION_JSON)
@@ -269,7 +269,7 @@ public class TestAMWebServices extends JerseyTestBase {
   }
   
   @Test
-  void testBlacklistedNodesXML() throws Exception {
+  public void testBlacklistedNodesXML() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
         .path("blacklistednodes").accept(MediaType.APPLICATION_XML)

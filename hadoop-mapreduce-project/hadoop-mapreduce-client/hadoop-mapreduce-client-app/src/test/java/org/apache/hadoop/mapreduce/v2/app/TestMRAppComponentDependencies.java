@@ -42,7 +42,7 @@ public class TestMRAppComponentDependencies {
 
   @Test
   @Timeout(20000)
-  void testComponentStopOrder() throws Exception {
+  public void testComponentStopOrder() throws Exception {
     @SuppressWarnings("resource")
     TestMRApp app = new TestMRApp(1, 1, true, this.getClass().getName(), true);
     JobImpl job = (JobImpl) app.submit(new Configuration());

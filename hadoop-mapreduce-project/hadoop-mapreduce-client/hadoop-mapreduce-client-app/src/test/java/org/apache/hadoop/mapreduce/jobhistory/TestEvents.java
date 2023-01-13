@@ -53,7 +53,7 @@ public class TestEvents {
    */
   @Test
   @Timeout(10000)
-  void testTaskAttemptFinishedEvent() throws Exception {
+  public void testTaskAttemptFinishedEvent() throws Exception {
     JobID jid = new JobID("001", 1);
     TaskID tid = new TaskID(jid, TaskType.REDUCE, 2);
     TaskAttemptID taskAttemptId = new TaskAttemptID(tid, 3);
@@ -82,7 +82,7 @@ public class TestEvents {
 
   @Test
   @Timeout(10000)
-  void testJobPriorityChange() throws Exception {
+  public void testJobPriorityChange() throws Exception {
     org.apache.hadoop.mapreduce.JobID jid = new JobID("001", 1);
     JobPriorityChangeEvent test = new JobPriorityChangeEvent(jid,
         JobPriority.LOW);
@@ -92,7 +92,7 @@ public class TestEvents {
 
   @Test
   @Timeout(10000)
-  void testJobQueueChange() throws Exception {
+  public void testJobQueueChange() throws Exception {
     org.apache.hadoop.mapreduce.JobID jid = new JobID("001", 1);
     JobQueueChangeEvent test = new JobQueueChangeEvent(jid,
         "newqueue");
@@ -107,7 +107,7 @@ public class TestEvents {
    */
   @Test
   @Timeout(10000)
-  void testTaskUpdated() throws Exception {
+  public void testTaskUpdated() throws Exception {
     JobID jid = new JobID("001", 1);
     TaskID tid = new TaskID(jid, TaskType.REDUCE, 2);
     TaskUpdatedEvent test = new TaskUpdatedEvent(tid, 1234L);
@@ -122,7 +122,7 @@ public class TestEvents {
    */
   @Test
   @Timeout(10000)
-  void testEvents() throws Exception {
+  public void testEvents() throws Exception {
     EventReader reader = new EventReader(new DataInputStream(
         new ByteArrayInputStream(getEvents())));
     HistoryEvent e = reader.getNextEvent();

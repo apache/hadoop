@@ -69,7 +69,7 @@ public class TestTaskAttemptContainerRequest {
   }
 
   @Test
-  void testAttemptContainerRequest() throws Exception {
+  public void testAttemptContainerRequest() throws Exception {
     final Text SECRET_KEY_ALIAS = new Text("secretkeyalias");
     final byte[] SECRET_KEY = ("secretkey").getBytes();
     Map<ApplicationAccessType, String> acls =

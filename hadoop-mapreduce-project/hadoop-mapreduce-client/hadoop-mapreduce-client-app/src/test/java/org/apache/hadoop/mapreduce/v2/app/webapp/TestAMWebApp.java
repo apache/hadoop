@@ -89,7 +89,7 @@ public class TestAMWebApp {
   }
 
   @Test
-  void testAppControllerIndex() {
+  public void testAppControllerIndex() {
     AppContext ctx = new MockAppContext(0, 1, 1, 1);
     Injector injector = WebAppTests.createMockInjector(AppContext.class, ctx);
     AppController controller = injector.getInstance(AppController.class);
@@ -98,28 +98,28 @@ public class TestAMWebApp {
   }
 
   @Test
-  void testAppView() {
+  public void testAppView() {
     WebAppTests.testPage(AppView.class, AppContext.class, new MockAppContext(0, 1, 1, 1));
   }
 
 
   
   @Test
-  void testJobView() {
+  public void testJobView() {
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = getJobParams(appContext);
     WebAppTests.testPage(JobPage.class, AppContext.class, appContext, params);
   }
 
   @Test
-  void testTasksView() {
+  public void testTasksView() {
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = getTaskParams(appContext);
     WebAppTests.testPage(TasksPage.class, AppContext.class, appContext, params);
   }
 
   @Test
-  void testTaskView() {
+  public void testTaskView() {
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = getTaskParams(appContext);
     App app = new App(appContext);
@@ -147,13 +147,13 @@ public class TestAMWebApp {
   }
 
   @Test
-  void testConfView() {
+  public void testConfView() {
     WebAppTests.testPage(JobConfPage.class, AppContext.class,
                          new MockAppContext(0, 1, 1, 1));
   }
 
   @Test
-  void testCountersView() {
+  public void testCountersView() {
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = getJobParams(appContext);
     WebAppTests.testPage(CountersPage.class, AppContext.class,
@@ -161,7 +161,7 @@ public class TestAMWebApp {
   }
   
   @Test
-  void testSingleCounterView() {
+  public void testSingleCounterView() {
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Job job = appContext.getAllJobs().values().iterator().next();
     // add a failed task to the job without any counters
@@ -177,7 +177,7 @@ public class TestAMWebApp {
   }
 
   @Test
-  void testTaskCountersView() {
+  public void testTaskCountersView() {
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = getTaskParams(appContext);
     WebAppTests.testPage(CountersPage.class, AppContext.class,
@@ -185,7 +185,7 @@ public class TestAMWebApp {
   }
 
   @Test
-  void testSingleTaskCounterView() {
+  public void testSingleTaskCounterView() {
     AppContext appContext = new MockAppContext(0, 1, 1, 2);
     Map<String, String> params = getTaskParams(appContext);
     params.put(AMParams.COUNTER_GROUP, 
@@ -205,7 +205,7 @@ public class TestAMWebApp {
   }
 
   @Test
-  void testMRWebAppSSLDisabled() throws Exception {
+  public void testMRWebAppSSLDisabled() throws Exception {
     MRApp app = new MRApp(2, 2, true, this.getClass().getName(), true) {
       @Override
       protected ClientService createClientService(AppContext context) {
@@ -247,7 +247,7 @@ public class TestAMWebApp {
   public EnvironmentVariables environmentVariables;
 
   @Test
-  void testMRWebAppSSLEnabled() throws Exception {
+  public void testMRWebAppSSLEnabled() throws Exception {
     MRApp app = new MRApp(2, 2, true, this.getClass().getName(), true) {
       @Override
       protected ClientService createClientService(AppContext context) {
@@ -302,7 +302,7 @@ public class TestAMWebApp {
   }
 
   @Test
-  void testMRWebAppSSLEnabledWithClientAuth() throws Exception {
+  public void testMRWebAppSSLEnabledWithClientAuth() throws Exception {
     MRApp app = new MRApp(2, 2, true, this.getClass().getName(), true) {
       @Override
       protected ClientService createClientService(AppContext context) {
@@ -383,7 +383,7 @@ public class TestAMWebApp {
   }
 
   @Test
-  void testMRWebAppRedirection() throws Exception {
+  public void testMRWebAppRedirection() throws Exception {
 
     String[] schemePrefix =
         { WebAppUtils.HTTP_PREFIX, WebAppUtils.HTTPS_PREFIX };

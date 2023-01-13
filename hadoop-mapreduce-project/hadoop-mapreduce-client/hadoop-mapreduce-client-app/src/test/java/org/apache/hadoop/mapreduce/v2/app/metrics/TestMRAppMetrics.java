@@ -38,7 +38,7 @@ public class TestMRAppMetrics {
   }
 
   @Test
-  void testNames() {
+  public void testNames() {
     Job job = mock(Job.class);
     Task mapTask = mock(Task.class);
     when(mapTask.getType()).thenReturn(TaskType.MAP);

@@ -183,7 +183,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testSimple() throws Exception {
+  public void testSimple() throws Exception {
 
     LOG.info("Running testSimple");
 
@@ -266,7 +266,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testMapNodeLocality() throws Exception {
+  public void testMapNodeLocality() throws Exception {
     // test checks that ordering of allocated containers list from the RM does
     // not affect the map->container assignment done by the AM. If there is a
     // node local container available for a map then it should be assigned to
@@ -352,7 +352,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testResource() throws Exception {
+  public void testResource() throws Exception {
 
     LOG.info("Running testResource");
 
@@ -419,7 +419,7 @@ public class TestRMContainerAllocator {
 
   @Test
   @Timeout(30000)
-  void testReducerRampdownDiagnostics() throws Exception {
+  public void testReducerRampdownDiagnostics() throws Exception {
     LOG.info("Running tesReducerRampdownDiagnostics");
 
     final Configuration conf = new Configuration();
@@ -523,7 +523,7 @@ public class TestRMContainerAllocator {
 
   @Test
   @Timeout(30000)
-  void testNonAggressivelyPreemptReducers() throws Exception {
+  public void testNonAggressivelyPreemptReducers() throws Exception {
     LOG.info("Running testNonAggressivelyPreemptReducers");
 
     final int preemptThreshold = 2; //sec
@@ -586,7 +586,7 @@ public class TestRMContainerAllocator {
 
   @Test
   @Timeout(30000)
-  void testUnconditionalPreemptReducers() throws Exception {
+  public void testUnconditionalPreemptReducers() throws Exception {
     LOG.info("Running testForcePreemptReducers");
 
     int forcePreemptThresholdSecs = 2;
@@ -651,7 +651,7 @@ public class TestRMContainerAllocator {
 
   @Test
   @Timeout(30000)
-  void testExcessReduceContainerAssign() throws Exception {
+  public void testExcessReduceContainerAssign() throws Exception {
     final Configuration conf = new Configuration();
     conf.setFloat(MRJobConfig.COMPLETED_MAPS_FOR_REDUCE_SLOWSTART, 0.0f);
     final MyResourceManager2 rm = new MyResourceManager2(conf);
@@ -699,7 +699,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testMapReduceAllocationWithNodeLabelExpression() throws Exception {
+  public void testMapReduceAllocationWithNodeLabelExpression() throws Exception {
 
     LOG.info("Running testMapReduceAllocationWithNodeLabelExpression");
     Configuration conf = new Configuration();
@@ -788,7 +788,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testUpdateCollectorInfo() throws Exception {
+  public void testUpdateCollectorInfo() throws Exception {
     LOG.info("Running testUpdateCollectorInfo");
     Configuration conf = new Configuration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
@@ -878,7 +878,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testMapReduceScheduling() throws Exception {
+  public void testMapReduceScheduling() throws Exception {
 
     LOG.info("Running testMapReduceScheduling");
 
@@ -1008,7 +1008,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testReportedAppProgress() throws Exception {
+  public void testReportedAppProgress() throws Exception {
 
     LOG.info("Running testReportedAppProgress");
 
@@ -1160,7 +1160,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testReportedAppProgressWithOnlyMaps() throws Exception {
+  public void testReportedAppProgressWithOnlyMaps() throws Exception {
 
     LOG.info("Running testReportedAppProgressWithOnlyMaps");
 
@@ -1258,7 +1258,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testUpdatedNodes() throws Exception {
+  public void testUpdatedNodes() throws Exception {
     Configuration conf = new Configuration();
     MyResourceManager rm = new MyResourceManager(conf);
     rm.start();
@@ -1345,7 +1345,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testBlackListedNodes() throws Exception {
+  public void testBlackListedNodes() throws Exception {
 
     LOG.info("Running testBlackListedNodes");
 
@@ -1455,7 +1455,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testIgnoreBlacklisting() throws Exception {
+  public void testIgnoreBlacklisting() throws Exception {
     LOG.info("Running testIgnoreBlacklisting");
 
     Configuration conf = new Configuration();
@@ -1651,7 +1651,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testBlackListedNodesWithSchedulingToThatNode() throws Exception {
+  public void testBlackListedNodesWithSchedulingToThatNode() throws Exception {
     LOG.info("Running testBlackListedNodesWithSchedulingToThatNode");
 
     Configuration conf = new Configuration();
@@ -2184,7 +2184,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testIfApplicationPriorityIsNotSet() {
+  public void testIfApplicationPriorityIsNotSet() {
     Job mockJob = mock(Job.class);
     RMCommunicator communicator = mock(RMCommunicator.class);
     ClientService service = mock(ClientService.class);
@@ -2198,7 +2198,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testReduceScheduling() throws Exception {
+  public void testReduceScheduling() throws Exception {
     int totalMaps = 10;
     int succeededMaps = 1;
     int scheduledMaps = 10;
@@ -2336,7 +2336,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testCompletedTasksRecalculateSchedule() throws Exception {
+  public void testCompletedTasksRecalculateSchedule() throws Exception {
     LOG.info("Running testCompletedTasksRecalculateSchedule");
 
     Configuration conf = new Configuration();
@@ -2381,7 +2381,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testHeartbeatHandler() throws Exception {
+  public void testHeartbeatHandler() throws Exception {
     LOG.info("Running testHeartbeatHandler");
 
     Configuration conf = new Configuration();
@@ -2442,7 +2442,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testCompletedContainerEvent() {
+  public void testCompletedContainerEvent() {
     RMContainerAllocator allocator = new RMContainerAllocator(
         mock(ClientService.class), mock(AppContext.class),
         new NoopAMPreemptionPolicy());
@@ -2512,7 +2512,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testUnregistrationOnlyIfRegistered() throws Exception {
+  public void testUnregistrationOnlyIfRegistered() throws Exception {
     Configuration conf = new Configuration();
     final MyResourceManager rm = new MyResourceManager(conf);
     rm.start();
@@ -2567,7 +2567,7 @@ public class TestRMContainerAllocator {
   // and another containerRequest(event5)
   // Step-6 : RM allocates containers i.e event3,event4 and cRequest5
   @Test
-  void testRMContainerAllocatorResendsRequestsOnRMRestart()
+  public void testRMContainerAllocatorResendsRequestsOnRMRestart()
       throws Exception {
 
     Configuration conf = new Configuration();
@@ -2749,7 +2749,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testUnsupportedMapContainerRequirement() throws Exception {
+  public void testUnsupportedMapContainerRequirement() throws Exception {
     final Resource maxContainerSupported = Resource.newInstance(1, 1);
 
     final ApplicationId appId = ApplicationId.newInstance(1, 1);
@@ -2788,7 +2788,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testUnsupportedReduceContainerRequirement() throws Exception {
+  public void testUnsupportedReduceContainerRequirement() throws Exception {
     final Resource maxContainerSupported = Resource.newInstance(1, 1);
 
     final ApplicationId appId = ApplicationId.newInstance(1, 1);
@@ -2831,7 +2831,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testRMUnavailable()
+  public void testRMUnavailable()
       throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(
@@ -2876,7 +2876,7 @@ public class TestRMContainerAllocator {
 
   @Test
   @Timeout(60000)
-  void testAMRMTokenUpdate() throws Exception {
+  public void testAMRMTokenUpdate() throws Exception {
     LOG.info("Running testAMRMTokenUpdate");
 
     final String rmAddr = "somermaddress:1234";
@@ -2961,7 +2961,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testConcurrentTaskLimitsDisabledIfSmaller() throws Exception {
+  public void testConcurrentTaskLimitsDisabledIfSmaller() throws Exception {
     final int MAP_COUNT = 1;
     final int REDUCE_COUNT = 1;
     final int MAP_LIMIT = 1;
@@ -3025,7 +3025,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testConcurrentTaskLimits() throws Exception {
+  public void testConcurrentTaskLimits() throws Exception {
     final int MAP_COUNT = 5;
     final int REDUCE_COUNT = 2;
     final int MAP_LIMIT = 3;
@@ -3156,7 +3156,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testAttemptNotFoundCausesRMCommunicatorException()
+  public void testAttemptNotFoundCausesRMCommunicatorException()
       throws Exception {
     assertThrows(RMContainerAllocationException.class, () -> {
       Configuration conf = new Configuration();
@@ -3192,7 +3192,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testUpdateAskOnRampDownAllReduces() throws Exception {
+  public void testUpdateAskOnRampDownAllReduces() throws Exception {
     LOG.info("Running testUpdateAskOnRampDownAllReduces");
     Configuration conf = new Configuration();
     MyResourceManager rm = new MyResourceManager(conf);
@@ -3323,7 +3323,7 @@ public class TestRMContainerAllocator {
    * right order while processing finished containers.
    */
   @Test
-  void testHandlingFinishedContainers() {
+  public void testHandlingFinishedContainers() {
     EventHandler eventHandler = mock(EventHandler.class);
 
     AppContext context = mock(RunningAppContext.class);
@@ -3362,7 +3362,7 @@ public class TestRMContainerAllocator {
   }
 
   @Test
-  void testAvoidAskMoreReducersWhenReducerPreemptionIsRequired()
+  public void testAvoidAskMoreReducersWhenReducerPreemptionIsRequired()
       throws Exception {
     LOG.info("Running testAvoidAskMoreReducersWhenReducerPreemptionIsRequired");
     Configuration conf = new Configuration();
@@ -3496,7 +3496,7 @@ public class TestRMContainerAllocator {
    * calculating headroom.
    */
   @Test
-  void testExcludeSchedReducesFromHeadroom() throws Exception {
+  public void testExcludeSchedReducesFromHeadroom() throws Exception {
     LOG.info("Running testExcludeSchedReducesFromHeadroom");
     Configuration conf = new Configuration();
     conf.setInt(MRJobConfig.MR_JOB_REDUCER_UNCONDITIONAL_PREEMPT_DELAY_SEC, -1);

@@ -55,7 +55,7 @@ public class TestKillAMPreemptionPolicy {
 
   @SuppressWarnings("unchecked")
   @Test
-  void testKillAMPreemptPolicy() {
+  public void testKillAMPreemptPolicy() {
 
     ApplicationId appId = ApplicationId.newInstance(123456789, 1);
     ContainerId container = ContainerId.newContainerId(

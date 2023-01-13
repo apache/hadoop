@@ -26,7 +26,7 @@ public class TestDataStatistics {
   private static final double TOL = 0.001;
 
   @Test
-  void testEmptyDataStatistics() throws Exception {
+  public void testEmptyDataStatistics() throws Exception {
     DataStatistics statistics = new DataStatistics();
     Assertions.assertEquals(0, statistics.count(), TOL);
     Assertions.assertEquals(0, statistics.mean(), TOL);
@@ -36,7 +36,7 @@ public class TestDataStatistics {
   }
   
   @Test
-  void testSingleEntryDataStatistics() throws Exception {
+  public void testSingleEntryDataStatistics() throws Exception {
     DataStatistics statistics = new DataStatistics(17.29);
     Assertions.assertEquals(1, statistics.count(), TOL);
     Assertions.assertEquals(17.29, statistics.mean(), TOL);
@@ -46,7 +46,7 @@ public class TestDataStatistics {
   }
   
   @Test
-  void testMutiEntryDataStatistics() throws Exception {
+  public void testMutiEntryDataStatistics() throws Exception {
     DataStatistics statistics = new DataStatistics();
     statistics.add(17);
     statistics.add(29);
@@ -58,7 +58,7 @@ public class TestDataStatistics {
  }
   
   @Test
-  void testUpdateStatistics() throws Exception {
+  public void testUpdateStatistics() throws Exception {
     DataStatistics statistics = new DataStatistics(17);
     statistics.add(29);
     Assertions.assertEquals(2, statistics.count(), TOL);

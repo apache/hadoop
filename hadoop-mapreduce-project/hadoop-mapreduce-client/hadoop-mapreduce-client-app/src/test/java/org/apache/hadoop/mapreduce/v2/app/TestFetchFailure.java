@@ -56,7 +56,7 @@ import org.junit.jupiter.api.Test;
 public class TestFetchFailure {
 
   @Test
-  void testFetchFailure() throws Exception {
+  public void testFetchFailure() throws Exception {
     MRApp app = new MRApp(1, 1, false, this.getClass().getName(), true);
     Configuration conf = new Configuration();
     // map -> reduce -> fetch-failure -> map retry is incompatible with
@@ -189,7 +189,7 @@ public class TestFetchFailure {
    * the AM re-runs the maps from scratch.
    */
   @Test
-  void testFetchFailureWithRecovery() throws Exception {
+  public void testFetchFailureWithRecovery() throws Exception {
     int runCount = 0;
     MRApp app = new MRAppWithHistory(1, 1, false, this.getClass().getName(), true, ++runCount);
     Configuration conf = new Configuration();
@@ -284,7 +284,7 @@ public class TestFetchFailure {
   }
   
   @Test
-  void testFetchFailureMultipleReduces() throws Exception {
+  public void testFetchFailureMultipleReduces() throws Exception {
     MRApp app = new MRApp(1, 3, false, this.getClass().getName(), true);
     Configuration conf = new Configuration();
     // map -> reduce -> fetch-failure -> map retry is incompatible with

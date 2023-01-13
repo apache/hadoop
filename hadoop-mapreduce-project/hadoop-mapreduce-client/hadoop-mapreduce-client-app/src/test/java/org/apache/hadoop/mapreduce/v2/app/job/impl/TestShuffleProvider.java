@@ -59,7 +59,7 @@ import org.junit.jupiter.api.Assertions;
 public class TestShuffleProvider {
 
   @Test
-  void testShuffleProviders() throws Exception {
+  public void testShuffleProviders() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(1, 1);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 1, TaskType.MAP);

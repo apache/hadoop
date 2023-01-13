@@ -132,7 +132,7 @@ public class TestMRAppMaster {
   }
 
   @Test
-  void testMRAppMasterForDifferentUser() throws IOException,
+  public void testMRAppMasterForDifferentUser() throws IOException,
       InterruptedException {
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000001";
     String containerIdStr = "container_1317529182569_0004_000001_1";
@@ -154,7 +154,7 @@ public class TestMRAppMaster {
   }
 
   @Test
-  void testMRAppMasterMidLock() throws IOException,
+  public void testMRAppMasterMidLock() throws IOException,
       InterruptedException {
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
     String containerIdStr = "container_1317529182569_0004_000002_1";
@@ -193,7 +193,7 @@ public class TestMRAppMaster {
   }
 
   @Test
-  void testMRAppMasterJobLaunchTime() throws IOException,
+  public void testMRAppMasterJobLaunchTime() throws IOException,
       InterruptedException {
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
     String containerIdStr = "container_1317529182569_0004_000002_1";
@@ -232,7 +232,7 @@ public class TestMRAppMaster {
   }
 
   @Test
-  void testMRAppMasterSuccessLock() throws IOException,
+  public void testMRAppMasterSuccessLock() throws IOException,
       InterruptedException {
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
     String containerIdStr = "container_1317529182569_0004_000002_1";
@@ -270,7 +270,7 @@ public class TestMRAppMaster {
   }
 
   @Test
-  void testMRAppMasterFailLock() throws IOException,
+  public void testMRAppMasterFailLock() throws IOException,
       InterruptedException {
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
     String containerIdStr = "container_1317529182569_0004_000002_1";
@@ -308,7 +308,7 @@ public class TestMRAppMaster {
   }
 
   @Test
-  void testMRAppMasterMissingStaging() throws IOException,
+  public void testMRAppMasterMissingStaging() throws IOException,
       InterruptedException {
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
     String containerIdStr = "container_1317529182569_0004_000002_1";
@@ -409,7 +409,7 @@ public class TestMRAppMaster {
   }
 
   @Test
-  void testMRAppMasterCredentials() throws Exception {
+  public void testMRAppMasterCredentials() throws Exception {
 
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
 
@@ -504,7 +504,7 @@ public class TestMRAppMaster {
   }
 
   @Test
-  void testMRAppMasterShutDownJob() throws Exception,
+  public void testMRAppMasterShutDownJob() throws Exception,
       InterruptedException {
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
     String containerIdStr = "container_1317529182569_0004_000002_1";

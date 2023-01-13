@@ -118,7 +118,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  void testTaskAttempts() throws JSONException, Exception {
+  public void testTaskAttempts() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -138,7 +138,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  void testTaskAttemptsSlash() throws JSONException, Exception {
+  public void testTaskAttemptsSlash() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -158,7 +158,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  void testTaskAttemptsDefault() throws JSONException, Exception {
+  public void testTaskAttemptsDefault() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -178,7 +178,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  void testTaskAttemptsXML() throws JSONException, Exception {
+  public void testTaskAttemptsXML() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -208,7 +208,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  void testTaskAttemptId() throws JSONException, Exception {
+  public void testTaskAttemptId() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 
@@ -238,7 +238,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  void testTaskAttemptIdSlash() throws JSONException, Exception {
+  public void testTaskAttemptIdSlash() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 
@@ -268,7 +268,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  void testTaskAttemptIdDefault() throws JSONException, Exception {
+  public void testTaskAttemptIdDefault() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 
@@ -297,7 +297,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  void testTaskAttemptIdXML() throws JSONException, Exception {
+  public void testTaskAttemptIdXML() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -333,14 +333,14 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  void testTaskAttemptIdBogus() throws JSONException, Exception {
+  public void testTaskAttemptIdBogus() throws JSONException, Exception {
 
     testTaskAttemptIdErrorGeneric("bogusid",
         "java.lang.Exception: TaskAttemptId string : bogusid is not properly formed");
   }
 
   @Test
-  void testTaskAttemptIdNonExist() throws JSONException, Exception {
+  public void testTaskAttemptIdNonExist() throws JSONException, Exception {
 
     testTaskAttemptIdErrorGeneric(
         "attempt_0_12345_m_000000_0",
@@ -348,21 +348,21 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  void testTaskAttemptIdInvalid() throws JSONException, Exception {
+  public void testTaskAttemptIdInvalid() throws JSONException, Exception {
 
     testTaskAttemptIdErrorGeneric("attempt_0_12345_d_000000_0",
         "java.lang.Exception: Bad TaskType identifier. TaskAttemptId string : attempt_0_12345_d_000000_0 is not properly formed.");
   }
 
   @Test
-  void testTaskAttemptIdInvalid2() throws JSONException, Exception {
+  public void testTaskAttemptIdInvalid2() throws JSONException, Exception {
 
     testTaskAttemptIdErrorGeneric("attempt_12345_m_000000_0",
         "java.lang.Exception: TaskAttemptId string : attempt_12345_m_000000_0 is not properly formed");
   }
 
   @Test
-  void testTaskAttemptIdInvalid3() throws JSONException, Exception {
+  public void testTaskAttemptIdInvalid3() throws JSONException, Exception {
 
     testTaskAttemptIdErrorGeneric("attempt_0_12345_m_000000",
         "java.lang.Exception: TaskAttemptId string : attempt_0_12345_m_000000 is not properly formed");
@@ -550,7 +550,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  void testTaskAttemptIdCounters() throws JSONException, Exception {
+  public void testTaskAttemptIdCounters() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 
@@ -580,7 +580,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   }
 
   @Test
-  void testTaskAttemptIdXMLCounters() throws JSONException, Exception {
+  public void testTaskAttemptIdXMLCounters() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {

@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestTaskReport {
 
   @Test
-  void testSetRawCounters() {
+  public void testSetRawCounters() {
     // Create basic class
     TaskReport report = Records.newRecord(TaskReport.class);
     org.apache.hadoop.mapreduce.Counters rCounters = MockJobs.newCounters();
@@ -46,7 +46,7 @@ public class TestTaskReport {
   }
 
   @Test
-  void testBuildImplicitRawCounters() {
+  public void testBuildImplicitRawCounters() {
     // Create basic class
     TaskReportPBImpl report = new TaskReportPBImpl();
     org.apache.hadoop.mapreduce.Counters rCounters = MockJobs.newCounters();
@@ -58,7 +58,7 @@ public class TestTaskReport {
   }
 
   @Test
-  void testCountersOverRawCounters() {
+  public void testCountersOverRawCounters() {
     // Create basic class
     TaskReport report = Records.newRecord(TaskReport.class);
     org.apache.hadoop.mapreduce.Counters rCounters = MockJobs.newCounters();
@@ -75,7 +75,7 @@ public class TestTaskReport {
   }
 
   @Test
-  void testUninitializedCounters() {
+  public void testUninitializedCounters() {
     // Create basic class
     TaskReport report = Records.newRecord(TaskReport.class);
     // Verify properties initialized to null
@@ -84,7 +84,7 @@ public class TestTaskReport {
   }
 
   @Test
-  void testSetRawCountersToNull() {
+  public void testSetRawCountersToNull() {
     // Create basic class
     TaskReport report = Records.newRecord(TaskReport.class);
     // Set raw counters to null
@@ -96,7 +96,7 @@ public class TestTaskReport {
   }
 
   @Test
-  void testSetCountersToNull() {
+  public void testSetCountersToNull() {
     // Create basic class
     TaskReport report = Records.newRecord(TaskReport.class);
     // Set raw counters to null
@@ -107,7 +107,7 @@ public class TestTaskReport {
   }
 
   @Test
-  void testSetNonNullCountersToNull() {
+  public void testSetNonNullCountersToNull() {
     // Create basic class
     TaskReport report = Records.newRecord(TaskReport.class);
     // Set raw counters
@@ -123,7 +123,7 @@ public class TestTaskReport {
   }
 
   @Test
-  void testSetNonNullRawCountersToNull() {
+  public void testSetNonNullRawCountersToNull() {
     // Create basic class
     TaskReport report = Records.newRecord(TaskReport.class);
     // Set raw counters

@@ -38,7 +38,7 @@ import org.junit.jupiter.api.Test;
 public class TestAMInfos {
 
   @Test
-  void testAMInfosWithoutRecoveryEnabled() throws Exception {
+  public void testAMInfosWithoutRecoveryEnabled() throws Exception {
     int runCount = 0;
     MRApp app =
         new MRAppWithHistory(1, 0, false, this.getClass().getName(), true,
