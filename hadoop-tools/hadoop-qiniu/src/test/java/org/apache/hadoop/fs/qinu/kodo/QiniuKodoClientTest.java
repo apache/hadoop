@@ -48,9 +48,19 @@ public class QiniuKodoClientTest {
 
     @Test
     public void testFetch() throws IOException {
-        InputStream is = client.fetch("vscode2.zip", 0, 999999999);
-        while (is.read() != -1) {
-
+        int blockSize = 4*1024*1024;
+        byte[] buf = new byte[blockSize];
+        for (int i=0;;i++) {
+            InputStream is = client.fetch("vscode2.zip", (long) blockSize *i, blockSize);
+            int total = 0;
+            int sz = 0;
+            while ((sz = is.read(buf)) != -1) {
+                total += sz;
+            }
+            if (total < blockSize) {
+                break;
+            }
         }
+
     }
 }

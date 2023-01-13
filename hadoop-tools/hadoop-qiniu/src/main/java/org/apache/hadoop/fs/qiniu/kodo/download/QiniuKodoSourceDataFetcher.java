@@ -18,7 +18,7 @@ public class QiniuKodoSourceDataFetcher extends DataFetcherBlockReader {
         this.client = client;
     }
 
-    private static final byte[] buffer = new byte[4*1024*1024];
+    private static final byte[] buffer = new byte[8*1024];
 
     @Override
     public byte[] fetch(String key, long offset, int size) {
