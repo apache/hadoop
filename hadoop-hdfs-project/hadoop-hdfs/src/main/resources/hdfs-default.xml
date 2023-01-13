@@ -3434,6 +3434,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.access-control-enforcer-reporting-threshold-ms</name>
+  <value>1000</value>
+  <description>
+    If an external AccessControlEnforcer runs for a long time to check permission with the FSnamesystem lock,
+    print a WARN log message. This sets how long must be run for logging to occur.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.lock.detailed-metrics.enabled</name>
   <value>false</value>
   <description>If true, the namenode will keep track of how long various
