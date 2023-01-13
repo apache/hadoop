@@ -2,7 +2,9 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.net.SocketException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public enum RetryReason {
@@ -12,14 +14,14 @@ public enum RetryReason {
   //result.getStorageErrorMessage()
   //
   CONNECTION_TIMEOUT(((exceptionCaptured, statusCode) -> {
-    return "connect timed out".equalsIgnoreCase(exceptionCaptured.getMessage());
+    return exceptionCaptured != null && "connect timed out".equalsIgnoreCase(exceptionCaptured.getMessage());
   }), 2, "CT"),
   READ_TIMEOUT(((exceptionCaptured, statusCode) -> {
-    return "Read timed out".equalsIgnoreCase(exceptionCaptured.getMessage());
+    return exceptionCaptured != null && "Read timed out".equalsIgnoreCase(exceptionCaptured.getMessage());
   }), 2, "RT"),
   UNKNOWN_HOST("UH"),
   CONNECTION_RESET(((exceptionCaptured, statusCode) -> {
-    return exceptionCaptured.getMessage().contains("Connection reset");
+    return exceptionCaptured != null && exceptionCaptured.getMessage().contains("Connection reset");
   }), 2, "CR"),
   STATUS_5XX(((exceptionCaptured, statusCode) -> {
     return statusCode/100 == 5;
@@ -84,10 +86,28 @@ public enum RetryReason {
     return null;
   }
 
+  private static List<RetryReason> retryReasonLSortedist;
+
+  private synchronized static void sortRetryReason() {
+    if(retryReasonLSortedist != null) {
+      return;
+    }
+    List<RetryReason> list = new ArrayList<>();
+    for(RetryReason reason : values()) {
+      list.add(reason);
+    }
+    list.sort((c1, c2) -> {
+      return c1.rank - c2.rank;
+    });
+    retryReasonLSortedist = list;
+  }
+
   static RetryReason getEnum(Exception ex, Integer statusCode) {
     RetryReason retryReasonResult = null;
-    for(RetryReason retryReason : Arrays.stream(values()).sorted().collect(
-        Collectors.toList())) {
+    if(retryReasonLSortedist == null) {
+      sortRetryReason();
+    }
+    for(RetryReason retryReason : retryReasonLSortedist) {
       if(retryReason.mechanism != null) {
         if(retryReason.mechanism.canCapture(ex, statusCode)) {
           retryReasonResult = retryReason;

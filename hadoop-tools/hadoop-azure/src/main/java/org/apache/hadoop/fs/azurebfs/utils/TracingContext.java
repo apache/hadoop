@@ -156,10 +156,10 @@ public class TracingContext {
    * X_MS_CLIENT_REQUEST_ID header of the http operation
    * @param httpOperation AbfsHttpOperation instance to set header into
    *                      connection
-   * @param previousFailures List of failures seen before this API trigger on
+   * @param previousFailure List of failures seen before this API trigger on
    * same operation from AbfsClient.
    */
-  public void constructHeader(AbfsHttpOperation httpOperation, List<String> previousFailures) {
+  public void constructHeader(AbfsHttpOperation httpOperation, String previousFailure) {
     clientRequestId = UUID.randomUUID().toString();
     switch (format) {
     case ALL_ID_FORMAT: // Optional IDs (e.g. streamId) may be empty
@@ -167,7 +167,7 @@ public class TracingContext {
           clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID + ":"
               + primaryRequestId + ":" + streamID + ":" + opType + ":"
               + retryCount;
-      header = addFailureReasons(header, previousFailures);
+      header = addFailureReasons(header, previousFailure);
       break;
     case TWO_ID_FORMAT:
       header = clientCorrelationID + ":" + clientRequestId;
@@ -182,19 +182,11 @@ public class TracingContext {
   }
 
   private String addFailureReasons(final String header,
-      final List<String> previousFailures) {
-    String headerResult = header;
-    if(previousFailures.size() > 0) {
-      headerResult += ":";
+      final String previousFailure) {
+    if(previousFailure == null) {
+      return header;
     }
-    for(int iter = previousFailures.size() -1; iter >=0; iter--) {
-      headerResult += String.format("%d_%s", iter, previousFailures.get(iter));
-      if(headerResult.length() > MAX_CLIENT_REQUEST_ID) {
-        headerResult = headerResult.substring(0, MAX_CLIENT_REQUEST_ID);
-        break;
-      }
-    }
-    return headerResult;
+    return String.format("%s_%s", header, previousFailure);
   }
 
   /**

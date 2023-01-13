@@ -29,6 +29,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -74,7 +75,7 @@ public class AbfsRestOperation {
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
 
-  private final List<String> failureReasons = new ArrayList<>();
+  private String failureReasons = null;
 
   /**
    * Checks if there is non-null HTTP response.
@@ -211,7 +212,7 @@ public class AbfsRestOperation {
   private void completeExecute(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     // see if we have latency reports from the previous requests
-    String latencyHeader = this.client.getAbfsPerfTracker().getClientLatency();
+    String latencyHeader = getClientLatency();
     if (latencyHeader != null && !latencyHeader.isEmpty()) {
       AbfsHttpHeader httpHeader =
               new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_ABFS_CLIENT_LATENCY, latencyHeader);
@@ -238,6 +239,11 @@ public class AbfsRestOperation {
     }
 
     LOG.trace("{} REST operation complete", operationType);
+  }
+
+  @VisibleForTesting
+  String getClientLatency() {
+    return this.client.getAbfsPerfTracker().getClientLatency();
   }
 
   /**
@@ -306,7 +312,7 @@ public class AbfsRestOperation {
     } catch (UnknownHostException ex) {
       String hostname = null;
       hostname = httpOperation.getHost();
-      failureReasons.add(RetryReason.UNKNOWN_HOST.name());
+      failureReasons = RetryReason.UNKNOWN_HOST.getAbbreviation(ex, null, null);
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
@@ -318,7 +324,7 @@ public class AbfsRestOperation {
         LOG.debug("HttpRequestFailure: {}, {}", httpOperation, ex);
       }
 
-      failureReasons.add(RetryReason.getEnum(ex, -1).name());
+      failureReasons = RetryReason.getEnum(ex, -1).getAbbreviation(ex, -1, "");
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex);
@@ -333,8 +339,7 @@ public class AbfsRestOperation {
 
     if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {
       int status = httpOperation.getStatusCode();
-      failureReasons.add(String.format("%s_%d",
-          RetryReason.getEnum(null, status).name(), status));
+      failureReasons = RetryReason.getEnum(null, status).getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
       return false;
     }
 
@@ -343,7 +348,8 @@ public class AbfsRestOperation {
     return true;
   }
 
-  private AbfsHttpOperation getHttpOperation() throws IOException {
+  @VisibleForTesting
+  AbfsHttpOperation getHttpOperation() throws IOException {
     return new AbfsHttpOperation(url, method, requestHeaders);
   }
 
