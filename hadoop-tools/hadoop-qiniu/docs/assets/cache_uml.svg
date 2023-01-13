@@ -1,0 +1,424 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css"
+     height="729px" preserveAspectRatio="none" style="width:1838px;height:729px;background:#FFFFFF;" version="1.1"
+     viewBox="0 0 1838 729" width="1838px" zoomAndPan="magnify">
+    <defs/>
+    <g><!--cluster org.apache.hadoop.fs.qiniu.kodo.blockcache-->
+        <g id="cluster_org.apache.hadoop.fs.qiniu.kodo.blockcache">
+            <path d="M197.5,129 L507.5,129 A3.75,3.75 0 0 1 510,131.5 L517,151.4883 L1828.5,151.4883 A2.5,2.5 0 0 1 1831,153.9883 L1831,514.5 A2.5,2.5 0 0 1 1828.5,517 L197.5,517 A2.5,2.5 0 0 1 195,514.5 L195,131.5 A2.5,2.5 0 0 1 197.5,129 "
+                  fill="none" style="stroke:#000000;stroke-width:1.5;"/>
+            <line style="stroke:#000000;stroke-width:1.5;" x1="195" x2="517" y1="151.4883" y2="151.4883"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="309" x="199" y="144.5352">org.apache.hadoop.fs.qiniu.kodo.blockcache
+            </text>
+        </g><!--cluster org.apache.hadoop.fs.qiniu.kodo.download-->
+        <g id="cluster_org.apache.hadoop.fs.qiniu.kodo.download">
+            <path d="M338.5,541 L640.5,541 A3.75,3.75 0 0 1 643,543.5 L650,563.4883 L1769.5,563.4883 A2.5,2.5 0 0 1 1772,565.9883 L1772,719.5 A2.5,2.5 0 0 1 1769.5,722 L338.5,722 A2.5,2.5 0 0 1 336,719.5 L336,543.5 A2.5,2.5 0 0 1 338.5,541 "
+                  fill="none" style="stroke:#000000;stroke-width:1.5;"/>
+            <line style="stroke:#000000;stroke-width:1.5;" x1="336" x2="650" y1="563.4883" y2="563.4883"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="301" x="340" y="556.5352">org.apache.hadoop.fs.qiniu.kodo.download
+            </text>
+        </g><!--cluster java.util-->
+        <g id="cluster_java.util">
+            <path d="M1468.5,6 L1526.5,6 A3.75,3.75 0 0 1 1529,8.5 L1536,28.4883 L1635.5,28.4883 A2.5,2.5 0 0 1 1638,30.9883 L1638,102.5 A2.5,2.5 0 0 1 1635.5,105 L1468.5,105 A2.5,2.5 0 0 1 1466,102.5 L1466,8.5 A2.5,2.5 0 0 1 1468.5,6 "
+                  fill="none" style="stroke:#000000;stroke-width:1.5;"/>
+            <line style="stroke:#000000;stroke-width:1.5;" x1="1466" x2="1536" y1="28.4883" y2="28.4883"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="57" x="1470" y="21.5352">java.util
+            </text>
+        </g><!--cluster org.apache.hadoop.fs-->
+        <g id="cluster_org.apache.hadoop.fs">
+            <path d="M8.5,377 L158.5,377 A3.75,3.75 0 0 1 161,379.5 L168,399.4883 L168.5,399.4883 A2.5,2.5 0 0 1 171,401.9883 L171,473.5 A2.5,2.5 0 0 1 168.5,476 L8.5,476 A2.5,2.5 0 0 1 6,473.5 L6,379.5 A2.5,2.5 0 0 1 8.5,377 "
+                  fill="none" style="stroke:#000000;stroke-width:1.5;"/>
+            <line style="stroke:#000000;stroke-width:1.5;" x1="6" x2="168" y1="399.4883" y2="399.4883"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="149" x="10" y="392.5352">org.apache.hadoop.fs
+            </text>
+        </g><!--class org.apache.hadoop.fs.qiniu.kodo.blockcache.LRUCache-->
+        <g id="elem_org.apache.hadoop.fs.qiniu.kodo.blockcache.LRUCache">
+            <rect codeLine="1" fill="#F1F1F1" height="97.4648" id="org.apache.hadoop.fs.qiniu.kodo.blockcache.LRUCache"
+                  rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="525" x="1289.5" y="189"/>
+            <ellipse cx="1513.75" cy="205" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/>
+            <path d="M1516.7231,210.6431 Q1516.1421,210.9419 1515.5029,211.0913 Q1514.8638,211.2407 1514.1582,211.2407 Q1511.6514,211.2407 1510.3315,209.5889 Q1509.0117,207.937 1509.0117,204.8159 Q1509.0117,201.6865 1510.3315,200.0347 Q1511.6514,198.3828 1514.1582,198.3828 Q1514.8638,198.3828 1515.5112,198.5322 Q1516.1587,198.6816 1516.7231,198.9805 L1516.7231,201.7031 Q1516.0923,201.1221 1515.4988,200.8523 Q1514.9053,200.5825 1514.2744,200.5825 Q1512.9297,200.5825 1512.2449,201.6492 Q1511.5601,202.7158 1511.5601,204.8159 Q1511.5601,206.9077 1512.2449,207.9744 Q1512.9297,209.041 1514.2744,209.041 Q1514.9053,209.041 1515.4988,208.7712 Q1516.0923,208.5015 1516.7231,207.9204 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="68"
+                  x="1534.25" y="210.291">LRUCache
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1290.5" x2="1813.5" y1="221" y2="221"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1290.5" x2="1813.5" y1="229" y2="229"/>
+            <ellipse cx="1300.5" cy="242.7441" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="159"
+                  x="1309.5" y="246.5352">«Create» LRUCache(int)
+            </text>
+            <ellipse cx="1300.5" cy="259.2324" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="499"
+                  x="1309.5" y="263.0234">void setOnLRUCacheRemoveListener(OnLRUCacheRemoveListener&lt;K,V&gt;)
+            </text>
+            <polygon fill="#FFFF44" points="1300.5,270.7207,1304.5,274.7207,1300.5,278.7207,1296.5,274.7207"
+                     style="stroke:#B38D22;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="309"
+                  x="1309.5" y="279.5117">boolean removeEldestEntry(Map.Entry&lt;K,V&gt;)
+            </text>
+        </g><!--class org.apache.hadoop.fs.qiniu.kodo.blockcache.DataFetcherBlockReader-->
+        <g id="elem_org.apache.hadoop.fs.qiniu.kodo.blockcache.DataFetcherBlockReader">
+            <rect codeLine="6" fill="#F1F1F1" height="130.4414"
+                  id="org.apache.hadoop.fs.qiniu.kodo.blockcache.DataFetcherBlockReader" rx="2.5" ry="2.5"
+                  style="stroke:#181818;stroke-width:0.5;" width="373" x="1075.5" y="371"/>
+            <ellipse cx="1174.75" cy="387" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/>
+            <path d="M1177.7231,392.6431 Q1177.1421,392.9419 1176.5029,393.0913 Q1175.8638,393.2407 1175.1582,393.2407 Q1172.6514,393.2407 1171.3315,391.5889 Q1170.0117,389.937 1170.0117,386.8159 Q1170.0117,383.6865 1171.3315,382.0347 Q1172.6514,380.3828 1175.1582,380.3828 Q1175.8638,380.3828 1176.5112,380.5322 Q1177.1587,380.6816 1177.7231,380.9805 L1177.7231,383.7031 Q1177.0923,383.1221 1176.4988,382.8523 Q1175.9053,382.5825 1175.2744,382.5825 Q1173.9297,382.5825 1173.2449,383.6492 Q1172.5601,384.7158 1172.5601,386.8159 Q1172.5601,388.9077 1173.2449,389.9744 Q1173.9297,391.041 1175.2744,391.041 Q1175.9053,391.041 1176.4988,390.7712 Q1177.0923,390.5015 1177.7231,389.9204 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="166"
+                  x="1195.25" y="392.291">DataFetcherBlockReader
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1076.5" x2="1447.5" y1="403" y2="403"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1076.5" x2="1447.5" y1="411" y2="411"/>
+            <ellipse cx="1086.5" cy="424.7441" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="347"
+                  x="1095.5" y="428.5352">«Create» DataFetcherBlockReader(int,IDataFetcher)
+            </text>
+            <ellipse cx="1086.5" cy="441.2324" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="257"
+                  x="1095.5" y="445.0234">«Create» DataFetcherBlockReader(int)
+            </text>
+            <ellipse cx="1086.5" cy="457.7207" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="118"
+                  x="1095.5" y="461.5117">int getBlockSize()
+            </text>
+            <ellipse cx="1086.5" cy="474.209" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="183"
+                  x="1095.5" y="478">byte[] readBlock(String,int)
+            </text>
+            <ellipse cx="1086.5" cy="490.6973" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="185"
+                  x="1095.5" y="494.4883">byte[] fetch(String,long,int)
+            </text>
+        </g><!--class org.apache.hadoop.fs.qiniu.kodo.blockcache.IDataFetcher-->
+        <g id="elem_org.apache.hadoop.fs.qiniu.kodo.blockcache.IDataFetcher">
+            <rect codeLine="13" fill="#F1F1F1" height="64.4883"
+                  id="org.apache.hadoop.fs.qiniu.kodo.blockcache.IDataFetcher" rx="2.5" ry="2.5"
+                  style="stroke:#181818;stroke-width:0.5;" width="211" x="1043.5" y="205.5"/>
+            <ellipse cx="1101.75" cy="221.5" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/>
+            <path d="M1097.6777,217.2651 L1097.6777,215.1069 L1105.0571,215.1069 L1105.0571,217.2651 L1102.5918,217.2651 L1102.5918,225.3418 L1105.0571,225.3418 L1105.0571,227.5 L1097.6777,227.5 L1097.6777,225.3418 L1100.1431,225.3418 L1100.1431,217.2651 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing"
+                  textLength="86" x="1122.25" y="226.791">IDataFetcher
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1044.5" x2="1253.5" y1="237.5" y2="237.5"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1044.5" x2="1253.5" y1="245.5" y2="245.5"/>
+            <polygon fill="#4177AF" points="1054.5,255.2441,1050.5,261.2441,1058.5,261.2441"
+                     style="stroke:#1963A0;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="185"
+                  x="1063.5" y="263.0352">byte[] fetch(String,long,int)
+            </text>
+        </g><!--class org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader-->
+        <g id="elem_org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader">
+            <rect codeLine="16" fill="#F1F1F1" height="80.9766"
+                  id="org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader" rx="2.5" ry="2.5"
+                  style="stroke:#181818;stroke-width:0.5;" width="209" x="799.5" y="197"/>
+            <ellipse cx="855.75" cy="213" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/>
+            <path d="M851.6777,208.7651 L851.6777,206.6069 L859.0571,206.6069 L859.0571,208.7651 L856.5918,208.7651 L856.5918,216.8418 L859.0571,216.8418 L859.0571,219 L851.6777,219 L851.6777,216.8418 L854.1431,216.8418 L854.1431,208.7651 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing"
+                  textLength="88" x="876.25" y="218.291">IBlockReader
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="800.5" x2="1007.5" y1="229" y2="229"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="800.5" x2="1007.5" y1="237" y2="237"/>
+            <polygon fill="#4177AF" points="810.5,246.7441,806.5,252.7441,814.5,252.7441"
+                     style="stroke:#1963A0;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="118"
+                  x="819.5" y="254.5352">int getBlockSize()
+            </text>
+            <polygon fill="#4177AF" points="810.5,263.2324,806.5,269.2324,814.5,269.2324"
+                     style="stroke:#1963A0;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="183"
+                  x="819.5" y="271.0234">byte[] readBlock(String,int)
+            </text>
+        </g><!--class org.apache.hadoop.fs.qiniu.kodo.blockcache.KeyBlockIdCacheKey-->
+        <g id="elem_org.apache.hadoop.fs.qiniu.kodo.blockcache.KeyBlockIdCacheKey">
+            <rect codeLine="20" fill="#F1F1F1" height="146.9297"
+                  id="org.apache.hadoop.fs.qiniu.kodo.blockcache.KeyBlockIdCacheKey" rx="2.5" ry="2.5"
+                  style="stroke:#181818;stroke-width:0.5;" width="264" x="500" y="164"/>
+            <ellipse cx="558.25" cy="180" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/>
+            <path d="M561.2231,185.6431 Q560.6421,185.9419 560.0029,186.0913 Q559.3638,186.2407 558.6582,186.2407 Q556.1514,186.2407 554.8315,184.5889 Q553.5117,182.937 553.5117,179.8159 Q553.5117,176.6865 554.8315,175.0347 Q556.1514,173.3828 558.6582,173.3828 Q559.3638,173.3828 560.0112,173.5322 Q560.6587,173.6816 561.2231,173.9805 L561.2231,176.7031 Q560.5923,176.1221 559.9988,175.8523 Q559.4053,175.5825 558.7744,175.5825 Q557.4297,175.5825 556.7449,176.6492 Q556.0601,177.7158 556.0601,179.8159 Q556.0601,181.9077 556.7449,182.9744 Q557.4297,184.041 558.7744,184.041 Q559.4053,184.041 559.9988,183.7712 Q560.5923,183.5015 561.2231,182.9204 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="139"
+                  x="578.75" y="185.291">KeyBlockIdCacheKey
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="501" x2="763" y1="196" y2="196"/>
+            <polygon fill="none" points="511,205.7441,507,211.7441,515,211.7441"
+                     style="stroke:#1963A0;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="68" x="520"
+                  y="213.5352">String key
+            </text>
+            <polygon fill="none" points="511,222.2324,507,228.2324,515,228.2324"
+                     style="stroke:#1963A0;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="72" x="520"
+                  y="230.0234">int blockId
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="501" x2="763" y1="236.9766" y2="236.9766"/>
+            <ellipse cx="511" cy="250.7207" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing"
+                  text-decoration="underline" textLength="238" x="520" y="254.5117">KeyBlockIdCacheKey get(String,int)
+            </text>
+            <ellipse cx="511" cy="267.209" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="159" x="520"
+                  y="271">boolean equals(Object)
+            </text>
+            <ellipse cx="511" cy="283.6973" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="101" x="520"
+                  y="287.4883">int hashCode()
+            </text>
+            <ellipse cx="511" cy="300.1855" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="110" x="520"
+                  y="303.9766">String toString()
+            </text>
+        </g><!--class org.apache.hadoop.fs.qiniu.kodo.blockcache.OnLRUCacheRemoveListener-->
+        <g id="elem_org.apache.hadoop.fs.qiniu.kodo.blockcache.OnLRUCacheRemoveListener">
+            <rect codeLine="44" fill="#F1F1F1" height="64.4883"
+                  id="org.apache.hadoop.fs.qiniu.kodo.blockcache.OnLRUCacheRemoveListener" rx="2.5" ry="2.5"
+                  style="stroke:#181818;stroke-width:0.5;" width="253" x="211.5" y="205.5"/>
+            <ellipse cx="237.75" cy="221.5" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/>
+            <path d="M233.6777,217.2651 L233.6777,215.1069 L241.0571,215.1069 L241.0571,217.2651 L238.5918,217.2651 L238.5918,225.3418 L241.0571,225.3418 L241.0571,227.5 L233.6777,227.5 L233.6777,225.3418 L236.1431,225.3418 L236.1431,217.2651 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing"
+                  textLength="196" x="254.25" y="226.791">OnLRUCacheRemoveListener
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="212.5" x2="463.5" y1="237.5" y2="237.5"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="212.5" x2="463.5" y1="245.5" y2="245.5"/>
+            <polygon fill="#4177AF" points="222.5,255.2441,218.5,261.2441,226.5,261.2441"
+                     style="stroke:#1963A0;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="227"
+                  x="231.5" y="263.0352">void onRemove(Map.Entry&lt;K,V&gt;)
+            </text>
+        </g><!--class org.apache.hadoop.fs.qiniu.kodo.blockcache.MemoryCacheBlockReader-->
+        <g id="elem_org.apache.hadoop.fs.qiniu.kodo.blockcache.MemoryCacheBlockReader">
+            <rect codeLine="47" fill="#F1F1F1" height="97.4648"
+                  id="org.apache.hadoop.fs.qiniu.kodo.blockcache.MemoryCacheBlockReader" rx="2.5" ry="2.5"
+                  style="stroke:#181818;stroke-width:0.5;" width="390" x="650" y="387.5"/>
+            <ellipse cx="750.25" cy="403.5" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/>
+            <path d="M753.2231,409.1431 Q752.6421,409.4419 752.0029,409.5913 Q751.3638,409.7407 750.6582,409.7407 Q748.1514,409.7407 746.8315,408.0889 Q745.5117,406.437 745.5117,403.3159 Q745.5117,400.1865 746.8315,398.5347 Q748.1514,396.8828 750.6582,396.8828 Q751.3638,396.8828 752.0112,397.0322 Q752.6587,397.1816 753.2231,397.4805 L753.2231,400.2031 Q752.5923,399.6221 751.9988,399.3523 Q751.4053,399.0825 750.7744,399.0825 Q749.4297,399.0825 748.7449,400.1492 Q748.0601,401.2158 748.0601,403.3159 Q748.0601,405.4077 748.7449,406.4744 Q749.4297,407.541 750.7744,407.541 Q751.4053,407.541 751.9988,407.2712 Q752.5923,407.0015 753.2231,406.4204 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="181"
+                  x="770.75" y="408.791">MemoryCacheBlockReader
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="651" x2="1039" y1="419.5" y2="419.5"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="651" x2="1039" y1="427.5" y2="427.5"/>
+            <ellipse cx="661" cy="441.2441" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="364" x="670"
+                  y="445.0352">«Create» MemoryCacheBlockReader(IBlockReader,int)
+            </text>
+            <ellipse cx="661" cy="457.7324" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="118" x="670"
+                  y="461.5234">int getBlockSize()
+            </text>
+            <ellipse cx="661" cy="474.2207" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="183" x="670"
+                  y="478.0117">byte[] readBlock(String,int)
+            </text>
+        </g><!--class org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader-->
+        <g id="elem_org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader">
+            <rect codeLine="52" fill="#F1F1F1" height="113.9531"
+                  id="org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader" rx="2.5" ry="2.5"
+                  style="stroke:#181818;stroke-width:0.5;" width="404" x="211" y="379"/>
+            <ellipse cx="331.25" cy="395" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/>
+            <path d="M334.2231,400.6431 Q333.6421,400.9419 333.0029,401.0913 Q332.3638,401.2407 331.6582,401.2407 Q329.1514,401.2407 327.8315,399.5889 Q326.5117,397.937 326.5117,394.8159 Q326.5117,391.6865 327.8315,390.0347 Q329.1514,388.3828 331.6582,388.3828 Q332.3638,388.3828 333.0112,388.5322 Q333.6587,388.6816 334.2231,388.9805 L334.2231,391.7031 Q333.5923,391.1221 332.9988,390.8523 Q332.4053,390.5825 331.7744,390.5825 Q330.4297,390.5825 329.7449,391.6492 Q329.0601,392.7158 329.0601,394.8159 Q329.0601,396.9077 329.7449,397.9744 Q330.4297,399.041 331.7744,399.041 Q332.4053,399.041 332.9988,398.7712 Q333.5923,398.5015 334.2231,397.9204 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="155"
+                  x="351.75" y="400.291">DiskCacheBlockReader
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="212" x2="614" y1="411" y2="411"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="212" x2="614" y1="419" y2="419"/>
+            <ellipse cx="222" cy="432.7441" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="372" x="231"
+                  y="436.5352">«Create» DiskCacheBlockReader(IBlockReader,int,Path)
+            </text>
+            <ellipse cx="222" cy="449.2324" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="118" x="231"
+                  y="453.0234">int getBlockSize()
+            </text>
+            <ellipse cx="222" cy="465.7207" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="183" x="231"
+                  y="469.5117">byte[] readBlock(String,int)
+            </text>
+            <ellipse cx="222" cy="482.209" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="378" x="231"
+                  y="486">void onRemove(Map.Entry&lt;KeyBlockIdCacheKey,Path&gt;)
+            </text>
+        </g><!--class org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoInputStream-->
+        <g id="elem_org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoInputStream">
+            <rect codeLine="28" fill="#F1F1F1" height="130.4414"
+                  id="org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoInputStream" rx="2.5" ry="2.5"
+                  style="stroke:#181818;stroke-width:0.5;" width="389" x="352.5" y="576"/>
+            <ellipse cx="464.25" cy="592" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/>
+            <path d="M467.2231,597.6431 Q466.6421,597.9419 466.0029,598.0913 Q465.3638,598.2407 464.6582,598.2407 Q462.1514,598.2407 460.8315,596.5889 Q459.5117,594.937 459.5117,591.8159 Q459.5117,588.6865 460.8315,587.0347 Q462.1514,585.3828 464.6582,585.3828 Q465.3638,585.3828 466.0112,585.5322 Q466.6587,585.6816 467.2231,585.9805 L467.2231,588.7031 Q466.5923,588.1221 465.9988,587.8523 Q465.4053,587.5825 464.7744,587.5825 Q463.4297,587.5825 462.7449,588.6492 Q462.0601,589.7158 462.0601,591.8159 Q462.0601,593.9077 462.7449,594.9744 Q463.4297,596.041 464.7744,596.041 Q465.4053,596.041 465.9988,595.7712 Q466.5923,595.5015 467.2231,594.9204 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="157"
+                  x="484.75" y="597.291">QiniuKodoInputStream
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="353.5" x2="740.5" y1="608" y2="608"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="353.5" x2="740.5" y1="616" y2="616"/>
+            <ellipse cx="363.5" cy="629.7441" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="363"
+                  x="372.5" y="633.5352">«Create» QiniuKodoInputStream(String,IBlockReader)
+            </text>
+            <ellipse cx="363.5" cy="646.2324" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="105"
+                  x="372.5" y="650.0234">void seek(long)
+            </text>
+            <ellipse cx="363.5" cy="662.7207" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="91"
+                  x="372.5" y="666.5117">long getPos()
+            </text>
+            <ellipse cx="363.5" cy="679.209" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="63"
+                  x="372.5" y="683">int read()
+            </text>
+            <ellipse cx="363.5" cy="695.6973" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="226"
+                  x="372.5" y="699.4883">boolean seekToNewSource(long)
+            </text>
+        </g><!--class org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoSourceDataFetcher-->
+        <g id="elem_org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoSourceDataFetcher">
+            <rect codeLine="35" fill="#F1F1F1" height="80.9766"
+                  id="org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoSourceDataFetcher" rx="2.5" ry="2.5"
+                  style="stroke:#181818;stroke-width:0.5;" width="436" x="777" y="600.5"/>
+            <ellipse cx="889.75" cy="616.5" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/>
+            <path d="M892.7231,622.1431 Q892.1421,622.4419 891.5029,622.5913 Q890.8638,622.7407 890.1582,622.7407 Q887.6514,622.7407 886.3315,621.0889 Q885.0117,619.437 885.0117,616.3159 Q885.0117,613.1865 886.3315,611.5347 Q887.6514,609.8828 890.1582,609.8828 Q890.8638,609.8828 891.5112,610.0322 Q892.1587,610.1816 892.7231,610.4805 L892.7231,613.2031 Q892.0923,612.6221 891.4988,612.3523 Q890.9053,612.0825 890.2744,612.0825 Q888.9297,612.0825 888.2449,613.1492 Q887.5601,614.2158 887.5601,616.3159 Q887.5601,618.4077 888.2449,619.4744 Q888.9297,620.541 890.2744,620.541 Q890.9053,620.541 891.4988,620.2712 Q892.0923,620.0015 892.7231,619.4204 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="202"
+                  x="910.25" y="621.791">QiniuKodoSourceDataFetcher
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="778" x2="1212" y1="632.5" y2="632.5"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="778" x2="1212" y1="640.5" y2="640.5"/>
+            <ellipse cx="788" cy="654.2441" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="410" x="797"
+                  y="658.0352">«Create» QiniuKodoSourceDataFetcher(int,QiniuKodoClient)
+            </text>
+            <ellipse cx="788" cy="670.7324" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="185" x="797"
+                  y="674.5234">byte[] fetch(String,long,int)
+            </text>
+        </g><!--class org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoBlockReader-->
+        <g id="elem_org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoBlockReader">
+            <rect codeLine="39" fill="#F1F1F1" height="97.4648"
+                  id="org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoBlockReader" rx="2.5" ry="2.5"
+                  style="stroke:#181818;stroke-width:0.5;" width="507" x="1248.5" y="592.5"/>
+            <ellipse cx="1419.25" cy="608.5" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/>
+            <path d="M1422.2231,614.1431 Q1421.6421,614.4419 1421.0029,614.5913 Q1420.3638,614.7407 1419.6582,614.7407 Q1417.1514,614.7407 1415.8315,613.0889 Q1414.5117,611.437 1414.5117,608.3159 Q1414.5117,605.1865 1415.8315,603.5347 Q1417.1514,601.8828 1419.6582,601.8828 Q1420.3638,601.8828 1421.0112,602.0322 Q1421.6587,602.1816 1422.2231,602.4805 L1422.2231,605.2031 Q1421.5923,604.6221 1420.9988,604.3523 Q1420.4053,604.0825 1419.7744,604.0825 Q1418.4297,604.0825 1417.7449,605.1492 Q1417.0601,606.2158 1417.0601,608.3159 Q1417.0601,610.4077 1417.7449,611.4744 Q1418.4297,612.541 1419.7744,612.541 Q1420.4053,612.541 1420.9988,612.2712 Q1421.5923,612.0015 1422.2231,611.4204 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="157"
+                  x="1439.75" y="613.791">QiniuKodoBlockReader
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1249.5" x2="1754.5" y1="624.5" y2="624.5"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1249.5" x2="1754.5" y1="632.5" y2="632.5"/>
+            <ellipse cx="1259.5" cy="646.2441" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="481"
+                  x="1268.5" y="650.0352">«Create» QiniuKodoBlockReader(QiniuKodoFsConfig,QiniuKodoClient)
+            </text>
+            <ellipse cx="1259.5" cy="662.7324" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="118"
+                  x="1268.5" y="666.5234">int getBlockSize()
+            </text>
+            <ellipse cx="1259.5" cy="679.2207" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="183"
+                  x="1268.5" y="683.0117">byte[] readBlock(String,int)
+            </text>
+        </g><!--class java.util.LinkedHashMap-->
+        <g id="elem_java.util.LinkedHashMap">
+            <rect fill="#F1F1F1" height="48" id="java.util.LinkedHashMap" rx="2.5" ry="2.5"
+                  style="stroke:#181818;stroke-width:0.5;" width="140" x="1482" y="41"/>
+            <ellipse cx="1497" cy="57" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/>
+            <path d="M1499.9731,62.6431 Q1499.3921,62.9419 1498.7529,63.0913 Q1498.1138,63.2407 1497.4082,63.2407 Q1494.9014,63.2407 1493.5815,61.5889 Q1492.2617,59.937 1492.2617,56.8159 Q1492.2617,53.6865 1493.5815,52.0347 Q1494.9014,50.3828 1497.4082,50.3828 Q1498.1138,50.3828 1498.7612,50.5322 Q1499.4087,50.6816 1499.9731,50.9805 L1499.9731,53.7031 Q1499.3423,53.1221 1498.7488,52.8523 Q1498.1553,52.5825 1497.5244,52.5825 Q1496.1797,52.5825 1495.4949,53.6492 Q1494.8101,54.7158 1494.8101,56.8159 Q1494.8101,58.9077 1495.4949,59.9744 Q1496.1797,61.041 1497.5244,61.041 Q1498.1553,61.041 1498.7488,60.7712 Q1499.3423,60.5015 1499.9731,59.9204 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="108"
+                  x="1511" y="62.291">LinkedHashMap
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1483" x2="1621" y1="73" y2="73"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1483" x2="1621" y1="81" y2="81"/>
+        </g><!--class org.apache.hadoop.fs.FSInputStream-->
+        <g id="elem_org.apache.hadoop.fs.FSInputStream">
+            <rect fill="#F1F1F1" height="48" id="org.apache.hadoop.fs.FSInputStream" rx="2.5" ry="2.5"
+                  style="stroke:#181818;stroke-width:0.5;" width="132" x="23" y="412"/>
+            <ellipse cx="38" cy="428" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/>
+            <path d="M40.9731,433.6431 Q40.3921,433.9419 39.7529,434.0913 Q39.1138,434.2407 38.4082,434.2407 Q35.9014,434.2407 34.5815,432.5889 Q33.2617,430.937 33.2617,427.8159 Q33.2617,424.6865 34.5815,423.0347 Q35.9014,421.3828 38.4082,421.3828 Q39.1138,421.3828 39.7612,421.5322 Q40.4087,421.6816 40.9731,421.9805 L40.9731,424.7031 Q40.3423,424.1221 39.7488,423.8523 Q39.1553,423.5825 38.5244,423.5825 Q37.1797,423.5825 36.4949,424.6492 Q35.8101,425.7158 35.8101,427.8159 Q35.8101,429.9077 36.4949,430.9744 Q37.1797,432.041 38.5244,432.041 Q39.1553,432.041 39.7488,431.7712 Q40.3423,431.5015 40.9731,430.9204 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="100" x="52"
+                  y="433.291">FSInputStream
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="24" x2="154" y1="444" y2="444"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="24" x2="154" y1="452" y2="452"/>
+        </g><!--reverse link java.util.LinkedHashMap to org.apache.hadoop.fs.qiniu.kodo.blockcache.LRUCache-->
+        <g id="link_java.util.LinkedHashMap_org.apache.hadoop.fs.qiniu.kodo.blockcache.LRUCache">
+            <path codeLine="60" d="M1552,110.66 C1552,134.63 1552,164.18 1552,188.62 " fill="none"
+                  id="java.util.LinkedHashMap-backto-org.apache.hadoop.fs.qiniu.kodo.blockcache.LRUCache"
+                  style="stroke:#181818;stroke-width:1.0;"/>
+            <polygon fill="none" points="1545,110.86,1552,90.86,1559,110.86,1545,110.86"
+                     style="stroke:#181818;stroke-width:1.0;"/>
+        </g><!--reverse link org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader to org.apache.hadoop.fs.qiniu.kodo.blockcache.DataFetcherBlockReader-->
+        <g id="link_org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader_org.apache.hadoop.fs.qiniu.kodo.blockcache.DataFetcherBlockReader">
+            <path codeLine="61"
+                  d="M988.04,289.22 C1000.7,296.63 1013.65,304.09 1026,311 C1061.55,330.88 1100.54,351.75 1136.41,370.57 "
+                  fill="none"
+                  id="org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader-backto-org.apache.hadoop.fs.qiniu.kodo.blockcache.DataFetcherBlockReader"
+                  style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/>
+            <polygon fill="none" points="984.77,295.42,971.1,279.23,991.88,283.36,984.77,295.42"
+                     style="stroke:#181818;stroke-width:1.0;"/>
+        </g><!--reverse link org.apache.hadoop.fs.qiniu.kodo.blockcache.IDataFetcher to org.apache.hadoop.fs.qiniu.kodo.blockcache.DataFetcherBlockReader-->
+        <g id="link_org.apache.hadoop.fs.qiniu.kodo.blockcache.IDataFetcher_org.apache.hadoop.fs.qiniu.kodo.blockcache.DataFetcherBlockReader">
+            <path codeLine="62" d="M1177.43,287.94 C1191.85,313.01 1209.54,343.77 1225,370.66 " fill="none"
+                  id="org.apache.hadoop.fs.qiniu.kodo.blockcache.IDataFetcher-backto-org.apache.hadoop.fs.qiniu.kodo.blockcache.DataFetcherBlockReader"
+                  style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/>
+            <polygon fill="none" points="1171.56,291.78,1167.66,270.95,1183.7,284.8,1171.56,291.78"
+                     style="stroke:#181818;stroke-width:1.0;"/>
+        </g><!--reverse link org.apache.hadoop.fs.FSInputStream to org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoInputStream-->
+        <g id="link_org.apache.hadoop.fs.FSInputStream_org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoInputStream">
+            <path codeLine="63"
+                  d="M127.54,475.05 C146.59,492.2 170.67,511.57 195,525 C243.69,551.87 299.66,573.71 352.44,590.86 "
+                  fill="none"
+                  id="org.apache.hadoop.fs.FSInputStream-backto-org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoInputStream"
+                  style="stroke:#181818;stroke-width:1.0;"/>
+            <polygon fill="none" points="122.86,480.26,113.02,461.49,132.41,470.03,122.86,480.26"
+                     style="stroke:#181818;stroke-width:1.0;"/>
+        </g><!--reverse link org.apache.hadoop.fs.qiniu.kodo.blockcache.DataFetcherBlockReader to org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoSourceDataFetcher-->
+        <g id="link_org.apache.hadoop.fs.qiniu.kodo.blockcache.DataFetcherBlockReader_org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoSourceDataFetcher">
+            <path codeLine="64" d="M1160.44,514.22 C1121.94,543.49 1079.68,575.62 1047.51,600.08 " fill="none"
+                  id="org.apache.hadoop.fs.qiniu.kodo.blockcache.DataFetcherBlockReader-backto-org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoSourceDataFetcher"
+                  style="stroke:#181818;stroke-width:1.0;"/>
+            <polygon fill="none" points="1156.16,508.68,1176.31,502.15,1164.63,519.82,1156.16,508.68"
+                     style="stroke:#181818;stroke-width:1.0;"/>
+        </g><!--reverse link org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader to org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoBlockReader-->
+        <g id="link_org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader_org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoBlockReader">
+            <path codeLine="65"
+                  d="M978.77,289.29 C993.88,297.7 1010.04,305.47 1026,311 C1119.19,343.3 1396.23,299.3 1466,369 C1524.34,427.28 1520.07,531.29 1511.31,592.1 "
+                  fill="none"
+                  id="org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader-backto-org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoBlockReader"
+                  style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/>
+            <polygon fill="none" points="975.28,295.36,961.59,279.18,982.38,283.29,975.28,295.36"
+                     style="stroke:#181818;stroke-width:1.0;"/>
+        </g><!--reverse link org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader to org.apache.hadoop.fs.qiniu.kodo.blockcache.MemoryCacheBlockReader-->
+        <g id="link_org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader_org.apache.hadoop.fs.qiniu.kodo.blockcache.MemoryCacheBlockReader">
+            <path codeLine="66" d="M885.88,298.83 C877.35,327.26 867.31,360.7 859.32,387.32 " fill="none"
+                  id="org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader-backto-org.apache.hadoop.fs.qiniu.kodo.blockcache.MemoryCacheBlockReader"
+                  style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/>
+            <polygon fill="none" points="879.17,296.86,891.63,279.71,892.58,300.88,879.17,296.86"
+                     style="stroke:#181818;stroke-width:1.0;"/>
+        </g><!--reverse link org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader to org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader-->
+        <g id="link_org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader_org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader">
+            <path codeLine="67"
+                  d="M823.61,289.08 C809.66,296.93 795.1,304.55 781,311 C745.59,327.19 667.22,354.01 591.87,378.58 "
+                  fill="none"
+                  id="org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader-backto-org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader"
+                  style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/>
+            <polygon fill="none" points="820.02,283.07,840.83,279.1,827.04,295.18,820.02,283.07"
+                     style="stroke:#181818;stroke-width:1.0;"/>
+        </g><!--reverse link org.apache.hadoop.fs.qiniu.kodo.blockcache.OnLRUCacheRemoveListener to org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader-->
+        <g id="link_org.apache.hadoop.fs.qiniu.kodo.blockcache.OnLRUCacheRemoveListener_org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader">
+            <path codeLine="68" d="M357.47,289.52 C367.9,316.85 380.78,350.58 391.5,378.68 " fill="none"
+                  id="org.apache.hadoop.fs.qiniu.kodo.blockcache.OnLRUCacheRemoveListener-backto-org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader"
+                  style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/>
+            <polygon fill="none" points="351.02,292.23,350.42,271.05,364.1,287.24,351.02,292.23"
+                     style="stroke:#181818;stroke-width:1.0;"/>
+        </g><!--SRC=[lLR1Sjem4BtxApJJYvWIVG73eJHC6KYJGjjB9mTXBQ3OaOWaoD04lhsIR3CE21SSoCbYtwwqRtVrH9nIhP5KKqBdD9u1cL4cvPnCD7dYWYz88faaurJ6IUpnmV1NnotGI_GPjLeT1TH0kuqAE-R2D2oqb9mX3UPM5CWG7kKI1bmR4A3m8Q3LR_vkDw9FQ2nb2bGWvU7hb84sryAe5RwXS-9NkUywYa-byPKQsWLZb-gBimw1Cb2xfC9UZcApLy8QnqOvH_j1Kp0U6V6_W9rnl3BmvzvIfSm3U6GK5zDc7fF34xTf0QMomDUH_O2Qq1XEAK6PWIM-kT0fRykx2V7VLFElqTu-hFm-FUOdpFxqPsUxeWHMUIBZpCcM-4KRQdYyHe5Gc-vkG_BPXAS5JJM-7Jz0lEtkZEfPHxAii_cHHcOBV3mT9fz5AYaZFvojRqqzCLyOkm_Gnzr93VaKEPTRKBgQa63NNMTnNyVoJcfSi72zm6MkBkAd_0xF8xbGCUJ1zTbasxmTmZ2dFKz_0xTm9-Lmt3sfcsg5H8HyyDROrHqf9dmQIlPq8QXv1GyfhRyIVXYao91pAEkDtKcj_74LPGjxuVAeDddzEft-7d2T_2_daCzUniqxQcPrTVvWC_OqoH_Z6nH53tH9oSBmb0ouI81zi_fZOr7hzUggpjCUrPNtrYiXxt-4exfls2MFxuxAudjKPIlrEth_VvMQIUo9wMNRNIcc7pPfORdvk44FA4Tq3WK_HoB_0000]-->
+    </g>
+</svg>
