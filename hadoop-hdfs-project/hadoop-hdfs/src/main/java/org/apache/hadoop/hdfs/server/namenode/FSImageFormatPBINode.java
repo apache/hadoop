@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -227,8 +226,8 @@ public final class FSImageFormatPBINode {
       LOG.info("Loading the INodeDirectory section in parallel with {} sub-" +
               "sections", sections.size());
       CountDownLatch latch = new CountDownLatch(sections.size());
-      final CopyOnWriteArrayList<IOException> exceptions =
-          new CopyOnWriteArrayList<>();
+      final List<IOException> exceptions = new ArrayList<>();
+      final Object exceptionListLock = new Object();
       for (FileSummary.Section s : sections) {
         service.submit(() -> {
           InputStream ins = null;
@@ -239,7 +238,10 @@ public final class FSImageFormatPBINode {
           } catch (Exception e) {
             LOG.error("An exception occurred loading INodeDirectories in " +
                 "parallel", e);
-            exceptions.add(new IOException(e));
+            IOException exception = new IOException(e);
+            synchronized (exceptionListLock) {
+              exceptions.add(exception);
+            }
           } finally {
             latch.countDown();
             try {
@@ -424,8 +426,8 @@ public final class FSImageFormatPBINode {
       long expectedInodes = 0;
       CountDownLatch latch = new CountDownLatch(sections.size());
       AtomicInteger totalLoaded = new AtomicInteger(0);
-      final CopyOnWriteArrayList<IOException> exceptions =
-          new CopyOnWriteArrayList<>();
+      final List<IOException> exceptions = new ArrayList<>();
+      final Object exceptionListLock = new Object();
 
       for (int i=0; i < sections.size(); i++) {
         FileSummary.Section s = sections.get(i);
@@ -441,7 +443,10 @@ public final class FSImageFormatPBINode {
                 totalLoaded.get());
           } catch (Exception e) {
             LOG.error("An exception occurred loading INodes in parallel", e);
-            exceptions.add(new IOException(e));
+            IOException exception = new IOException(e);
+            synchronized (exceptionListLock) {
+              exceptions.add(exception);
+            }
           } finally {
             latch.countDown();
             try {
