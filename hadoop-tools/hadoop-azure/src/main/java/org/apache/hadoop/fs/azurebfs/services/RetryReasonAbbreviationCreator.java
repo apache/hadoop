@@ -24,6 +24,7 @@ package org.apache.hadoop.fs.azurebfs.services;
  * response.
  * */
 public interface RetryReasonAbbreviationCreator {
+
   /**
    * Returns an abbreviation if the {@link RetryReason} enum can be applied on
    * the server response.
@@ -33,5 +34,7 @@ public interface RetryReasonAbbreviationCreator {
    * @return <ol><li>null if the enum can not be used on the server response</li>
    * <li>abbreviation corresponding to the server response.</li></ol>
    * */
-  String capturableAndGetAbbreviation(Exception ex, Integer statusCode, String serverErrorMessage);
+  String capturableAndGetAbbreviation(Exception ex,
+      Integer statusCode,
+      String serverErrorMessage);
 }

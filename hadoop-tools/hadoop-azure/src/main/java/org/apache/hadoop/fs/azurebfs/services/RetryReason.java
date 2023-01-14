@@ -30,34 +30,34 @@ import java.util.List;
  * */
 public enum RetryReason {
   CONNECTION_TIMEOUT(2, ((ex, statusCode, serverErrorMessage) -> {
-    if(ex != null && "connect timed out".equalsIgnoreCase(
+    if (ex != null && "connect timed out".equalsIgnoreCase(
         ex.getMessage())) {
       return "CT";
     }
     return null;
   })),
   READ_TIMEOUT(2, ((exceptionCaptured, statusCode, serverErrorMessage) -> {
-    if(exceptionCaptured != null && "Read timed out".equalsIgnoreCase(
+    if (exceptionCaptured != null && "Read timed out".equalsIgnoreCase(
         exceptionCaptured.getMessage())) {
       return "RT";
     }
     return null;
   })),
   UNKNOWN_HOST(2, ((ex, statusCode, serverErrorMessage) -> {
-    if(ex instanceof UnknownHostException) {
+    if (ex instanceof UnknownHostException) {
       return "UH";
     }
     return null;
   })),
   CONNECTION_RESET(2, ((exceptionCaptured, statusCode, serverErrorMessage) -> {
-    if(exceptionCaptured != null && exceptionCaptured.getMessage() != null
+    if (exceptionCaptured != null && exceptionCaptured.getMessage() != null
         && exceptionCaptured.getMessage().contains("Connection reset")) {
       return "CR";
     }
     return null;
   })),
   STATUS_5XX(0, ((ex, statusCode, serverErrorMessage) -> {
-    if(statusCode == null || statusCode / 100 != 5) {
+    if (statusCode == null || statusCode / 100 != 5) {
       return null;
     }
     if (statusCode == 503) {
@@ -81,19 +81,19 @@ public enum RetryReason {
     return statusCode + "";
   })),
   STATUS_4XX(0, ((ex, statusCode, serverErrorMessage) -> {
-    if(statusCode == null || statusCode / 100 != 4) {
+    if (statusCode == null || statusCode / 100 != 4) {
       return null;
     }
     return statusCode + "";
   })),
   UNKNOWN_SOCKET_EXCEPTION(1, ((ex, statusCode, serverErrorMessage) -> {
-    if(ex instanceof  SocketException) {
+    if (ex instanceof SocketException) {
       return "SE";
     }
     return null;
   })),
   UNKNOWN_IO_EXCEPTION(0, ((ex, statusCode, serverErrorMessage) -> {
-    if(ex instanceof IOException) {
+    if (ex instanceof IOException) {
       return "IOE";
     }
     return null;
@@ -153,13 +153,17 @@ public enum RetryReason {
    * @param statusCode statusCode in the server response.
    * @param storageErrorMessage storageErrorMessage in the server response.
    * */
-  static String getAbbreviation(Exception ex, Integer statusCode, String storageErrorMessage) {
+  static String getAbbreviation(Exception ex,
+      Integer statusCode,
+      String storageErrorMessage) {
     String result = null;
     if (retryReasonSortedList == null) {
       sortRetryReason();
     }
     for (RetryReason retryReason : retryReasonSortedList) {
-      String enumCapturedAndAbbreviate = retryReason.retryReasonAbbreviationCreator.capturableAndGetAbbreviation(ex, statusCode, storageErrorMessage);
+      String enumCapturedAndAbbreviate
+          = retryReason.retryReasonAbbreviationCreator.capturableAndGetAbbreviation(
+          ex, statusCode, storageErrorMessage);
       if (enumCapturedAndAbbreviate != null) {
         result = enumCapturedAndAbbreviate;
       }

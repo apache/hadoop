@@ -49,7 +49,8 @@ public class TestAbfsRestOperation {
   }
 
   @Test
-  public void testClientRequestIdForConnectAndReadTimeoutRetry() throws Exception {
+  public void testClientRequestIdForConnectAndReadTimeoutRetry()
+      throws Exception {
     Exception[] exceptions = new Exception[2];
     String[] abbreviations = new String[2];
     exceptions[0] = new SocketTimeoutException("connect timed out");
@@ -108,6 +109,7 @@ public class TestAbfsRestOperation {
   public void testClientRequestIdFor400Retry() throws Exception {
     testClientRequestIdForStatusRetry(400, "", "400");
   }
+
   @Test
   public void testClientRequestIdFor500Retry() throws Exception {
     testClientRequestIdForStatusRetry(500, "", "500");
@@ -197,7 +199,9 @@ public class TestAbfsRestOperation {
 
   }
 
-  private void testClientRequestIdForTimeoutRetry(Exception[] exceptions, String[] abbreviationsExpected, int len) throws Exception {
+  private void testClientRequestIdForTimeoutRetry(Exception[] exceptions,
+      String[] abbreviationsExpected,
+      int len) throws Exception {
     AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
     ExponentialRetryPolicy retryPolicy = Mockito.mock(
         ExponentialRetryPolicy.class);
@@ -216,7 +220,7 @@ public class TestAbfsRestOperation {
     addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
 
     Stubber stubber = Mockito.doThrow(exceptions[0]);
-    for(int iteration = 1; iteration < len; iteration++) {
+    for (int iteration = 1; iteration < len; iteration++) {
       stubber.doThrow(exceptions[iteration]);
     }
     stubber
@@ -233,7 +237,7 @@ public class TestAbfsRestOperation {
     int[] count = new int[1];
     count[0] = 0;
     Mockito.doAnswer(invocationOnMock -> {
-      if(count[0] > 0 && count[0] <= len) {
+      if (count[0] > 0 && count[0] <= len) {
         Assertions.assertThat((String) invocationOnMock.getArgument(1))
             .isEqualTo(abbreviationsExpected[count[0] - 1]);
       }
