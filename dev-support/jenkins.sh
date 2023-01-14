@@ -119,6 +119,7 @@ function run_ci() {
     rm -rf "${PATCHDIR:?}"
   fi
   mkdir -p "${PATCHDIR}"
+  rm -rf "/f/yetus/m2"
 
   # if given a JIRA issue, process it. If CHANGE_URL is set
   # (e.g., Github Branch Source plugin), process it.
