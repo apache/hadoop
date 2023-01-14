@@ -25,12 +25,11 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.List;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.stubbing.Stubber;
 
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
@@ -43,416 +42,103 @@ public class TestAbfsRestOperation {
   @Test
   public void testClientRequestIdForConnectTimeoutRetry() throws Exception {
 
-    AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
-    ExponentialRetryPolicy retryPolicy = Mockito.mock(
-        ExponentialRetryPolicy.class);
-    addMockBehaviourToAbfsClient(abfsClient, retryPolicy);
-
-
-    AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
-        AbfsRestOperationType.ReadFile,
-        abfsClient,
-        "PUT",
-        null,
-        new ArrayList<>()
-    ));
-
-    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
-    addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
-
-    Mockito.doThrow(new SocketTimeoutException("connect timed out"))
-        .doNothing()
-        .when(httpOperation)
-        .processResponse(nullable(byte[].class), nullable(int.class),
-            nullable(int.class));
-
-    Mockito.doReturn(200).when(httpOperation).getStatusCode();
-
-    TracingContext tracingContext = Mockito.mock(TracingContext.class);
-    Mockito.doNothing().when(tracingContext).setRetryCount(nullable(int.class));
-
-    int[] count = new int[1];
-    count[0] = 0;
-    Mockito.doAnswer(invocationOnMock -> {
-      if (count[0] == 1) {
-        Assertions.assertThat((String) invocationOnMock.getArgument(1))
-            .isEqualTo("CT");
-      }
-      count[0]++;
-      return null;
-    }).when(tracingContext).constructHeader(any(), any());
-
-    abfsRestOperation.execute(tracingContext);
-    Assertions.assertThat(count[0]).isEqualTo(2);
+    Exception[] exceptions = new Exception[1];
+    String[] abbreviations = new String[1];
+    exceptions[0] = new SocketTimeoutException("connect timed out");
+    abbreviations[0] = "CT";
+    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
   }
 
   @Test
   public void testClientRequestIdForConnectAndReadTimeoutRetry() throws Exception {
-
-    AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
-    ExponentialRetryPolicy retryPolicy = Mockito.mock(
-        ExponentialRetryPolicy.class);
-    addMockBehaviourToAbfsClient(abfsClient, retryPolicy);
-
-
-    AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
-        AbfsRestOperationType.ReadFile,
-        abfsClient,
-        "PUT",
-        null,
-        new ArrayList<>()
-    ));
-
-    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
-    addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
-
-    Mockito.doThrow(new SocketTimeoutException("connect timed out"))
-        .doThrow(new SocketTimeoutException("read timed out"))
-        .doNothing()
-        .when(httpOperation)
-        .processResponse(nullable(byte[].class), nullable(int.class),
-            nullable(int.class));
-
-    Mockito.doReturn(200).when(httpOperation).getStatusCode();
-
-    TracingContext tracingContext = Mockito.mock(TracingContext.class);
-    Mockito.doNothing().when(tracingContext).setRetryCount(nullable(int.class));
-
-    int[] count = new int[1];
-    count[0] = 0;
-    Mockito.doAnswer(invocationOnMock -> {
-      if (count[0] == 1 ) {
-        Assertions.assertThat((String) invocationOnMock.getArgument(1))
-            .isEqualTo("CT");
-      }
-      if(count[0] == 2) {
-        Assertions.assertThat((String) invocationOnMock.getArgument(1))
-            .isEqualTo("RT");
-      }
-      count[0]++;
-      return null;
-    }).when(tracingContext).constructHeader(any(), any());
-
-    abfsRestOperation.execute(tracingContext);
-    Assertions.assertThat(count[0]).isEqualTo(3);
+    Exception[] exceptions = new Exception[2];
+    String[] abbreviations = new String[2];
+    exceptions[0] = new SocketTimeoutException("connect timed out");
+    abbreviations[0] = "CT";
+    exceptions[1] = new SocketTimeoutException("Read timed out");
+    abbreviations[1] = "RT";
+    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
   }
 
   @Test
   public void testClientRequestIdForReadTimeoutRetry() throws Exception {
-
-    AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
-    ExponentialRetryPolicy retryPolicy = Mockito.mock(
-        ExponentialRetryPolicy.class);
-    addMockBehaviourToAbfsClient(abfsClient, retryPolicy);
-
-
-    AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
-        AbfsRestOperationType.ReadFile,
-        abfsClient,
-        "PUT",
-        null,
-        new ArrayList<>()
-    ));
-
-    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
-    addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
-
-    Mockito.doThrow(new SocketTimeoutException("Read timed out"))
-        .doNothing()
-        .when(httpOperation)
-        .processResponse(nullable(byte[].class), nullable(int.class),
-            nullable(int.class));
-
-    Mockito.doReturn(200).when(httpOperation).getStatusCode();
-
-    TracingContext tracingContext = Mockito.mock(TracingContext.class);
-    Mockito.doNothing().when(tracingContext).setRetryCount(nullable(int.class));
-
-    int[] count = new int[1];
-    count[0] = 0;
-    Mockito.doAnswer(invocationOnMock -> {
-      if (count[0] == 1) {
-        Assertions.assertThat((String) invocationOnMock.getArgument(1))
-            .isEqualTo("RT");
-      }
-      count[0]++;
-      return null;
-    }).when(tracingContext).constructHeader(any(), any());
-
-    abfsRestOperation.execute(tracingContext);
-    Assertions.assertThat(count[0]).isEqualTo(2);
+    Exception[] exceptions = new Exception[1];
+    String[] abbreviations = new String[1];
+    exceptions[0] = new SocketTimeoutException("Read timed out");
+    abbreviations[0] = "RT";
+    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
   }
 
   @Test
   public void testClientRequestIdForUnknownHostRetry() throws Exception {
-
-    AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
-    ExponentialRetryPolicy retryPolicy = Mockito.mock(
-        ExponentialRetryPolicy.class);
-    addMockBehaviourToAbfsClient(abfsClient, retryPolicy);
-
-
-    AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
-        AbfsRestOperationType.ReadFile,
-        abfsClient,
-        "PUT",
-        null,
-        new ArrayList<>()
-    ));
-
-    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
-    addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
-
-    Mockito.doThrow(new UnknownHostException())
-        .doNothing()
-        .when(httpOperation)
-        .processResponse(nullable(byte[].class), nullable(int.class),
-            nullable(int.class));
-
-    Mockito.doReturn(200).when(httpOperation).getStatusCode();
-
-    TracingContext tracingContext = Mockito.mock(TracingContext.class);
-    Mockito.doNothing().when(tracingContext).setRetryCount(nullable(int.class));
-
-    int[] count = new int[1];
-    count[0] = 0;
-    Mockito.doAnswer(invocationOnMock -> {
-      if (count[0] == 1) {
-        Assertions.assertThat((String) invocationOnMock.getArgument(1))
-            .isEqualTo("UH");
-      }
-      count[0]++;
-      return null;
-    }).when(tracingContext).constructHeader(any(), any());
-
-    abfsRestOperation.execute(tracingContext);
-    Assertions.assertThat(count[0]).isEqualTo(2);
-
+    Exception[] exceptions = new Exception[1];
+    String[] abbreviations = new String[1];
+    exceptions[0] = new UnknownHostException();
+    abbreviations[0] = "UH";
+    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
   }
 
   @Test
   public void testClientRequestIdForConnectionResetRetry() throws Exception {
-
-    AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
-    ExponentialRetryPolicy retryPolicy = Mockito.mock(
-        ExponentialRetryPolicy.class);
-    addMockBehaviourToAbfsClient(abfsClient, retryPolicy);
-
-
-    AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
-        AbfsRestOperationType.ReadFile,
-        abfsClient,
-        "PUT",
-        null,
-        new ArrayList<>()
-    ));
-
-    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
-    addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
-
-    Mockito.doThrow(new SocketException("Connection reset by peer"))
-        .doNothing()
-        .when(httpOperation)
-        .processResponse(nullable(byte[].class), nullable(int.class),
-            nullable(int.class));
-
-    Mockito.doReturn(200).when(httpOperation).getStatusCode();
-
-    TracingContext tracingContext = Mockito.mock(TracingContext.class);
-    Mockito.doNothing().when(tracingContext).setRetryCount(nullable(int.class));
-
-    int[] count = new int[1];
-    count[0] = 0;
-    Mockito.doAnswer(invocationOnMock -> {
-      if (count[0] == 1) {
-        Assertions.assertThat((String) invocationOnMock.getArgument(1))
-            .isEqualTo("CR");
-      }
-      count[0]++;
-      return null;
-    }).when(tracingContext).constructHeader(any(), any());
-
-    abfsRestOperation.execute(tracingContext);
-    Assertions.assertThat(count[0]).isEqualTo(2);
+    Exception[] exceptions = new Exception[1];
+    String[] abbreviations = new String[1];
+    exceptions[0] = new SocketTimeoutException("Connection reset by peer");
+    abbreviations[0] = "CR";
+    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
   }
 
   @Test
   public void testClientRequestIdForUnknownSocketExRetry() throws Exception {
-
-    AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
-    ExponentialRetryPolicy retryPolicy = Mockito.mock(
-        ExponentialRetryPolicy.class);
-    addMockBehaviourToAbfsClient(abfsClient, retryPolicy);
-
-
-    AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
-        AbfsRestOperationType.ReadFile,
-        abfsClient,
-        "PUT",
-        null,
-        new ArrayList<>()
-    ));
-
-    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
-    addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
-
-    Mockito.doThrow(new SocketException("unknown"))
-        .doNothing()
-        .when(httpOperation)
-        .processResponse(nullable(byte[].class), nullable(int.class),
-            nullable(int.class));
-
-    Mockito.doReturn(200).when(httpOperation).getStatusCode();
-
-    TracingContext tracingContext = Mockito.mock(TracingContext.class);
-    Mockito.doNothing().when(tracingContext).setRetryCount(nullable(int.class));
-
-    int[] count = new int[1];
-    count[0] = 0;
-    Mockito.doAnswer(invocationOnMock -> {
-      if (count[0] == 1) {
-        Assertions.assertThat((String) invocationOnMock.getArgument(1))
-            .isEqualTo("SE");
-      }
-      count[0]++;
-      return null;
-    }).when(tracingContext).constructHeader(any(), any());
-
-    abfsRestOperation.execute(tracingContext);
-    Assertions.assertThat(count[0]).isEqualTo(2);
+    Exception[] exceptions = new Exception[1];
+    String[] abbreviations = new String[1];
+    exceptions[0] = new SocketException("unknown");
+    abbreviations[0] = "SE";
+    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
   }
 
   @Test
   public void testClientRequestIdForIOERetry() throws Exception {
-
-    AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
-    ExponentialRetryPolicy retryPolicy = Mockito.mock(
-        ExponentialRetryPolicy.class);
-    addMockBehaviourToAbfsClient(abfsClient, retryPolicy);
-
-
-    AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
-        AbfsRestOperationType.ReadFile,
-        abfsClient,
-        "PUT",
-        null,
-        new ArrayList<>()
-    ));
-
-    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
-    addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
-
-    Mockito.doThrow(new InterruptedIOException())
-        .doNothing()
-        .when(httpOperation)
-        .processResponse(nullable(byte[].class), nullable(int.class),
-            nullable(int.class));
-
-    Mockito.doReturn(200).when(httpOperation).getStatusCode();
-
-    TracingContext tracingContext = Mockito.mock(TracingContext.class);
-    Mockito.doNothing().when(tracingContext).setRetryCount(nullable(int.class));
-
-    int[] count = new int[1];
-    count[0] = 0;
-    Mockito.doAnswer(invocationOnMock -> {
-      if (count[0] == 1) {
-        Assertions.assertThat((String) invocationOnMock.getArgument(1))
-            .isEqualTo("IOE");
-      }
-      count[0]++;
-      return null;
-    }).when(tracingContext).constructHeader(any(), any());
-
-    abfsRestOperation.execute(tracingContext);
-    Assertions.assertThat(count[0]).isEqualTo(2);
+    Exception[] exceptions = new Exception[1];
+    String[] abbreviations = new String[1];
+    exceptions[0] = new InterruptedIOException();
+    abbreviations[0] = "IOE";
+    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
   }
 
   @Test
-  public void testClientRequestIdFor4XXRetry() throws Exception {
-
-    AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
-    ExponentialRetryPolicy retryPolicy = Mockito.mock(
-        ExponentialRetryPolicy.class);
-    addMockBehaviourToAbfsClient(abfsClient, retryPolicy);
-
-
-    AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
-        AbfsRestOperationType.ReadFile,
-        abfsClient,
-        "PUT",
-        null,
-        new ArrayList<>()
-    ));
-
-    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
-    addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
-
-    Mockito.doNothing()
-        .doNothing()
-        .when(httpOperation)
-        .processResponse(nullable(byte[].class), nullable(int.class),
-            nullable(int.class));
-
-    int[] statusCount = new int[1];
-    statusCount[0] = 0;
-    Mockito.doAnswer(answer -> {
-      if (statusCount[0] <= 5) {
-        statusCount[0]++;
-        return 400;
-      }
-      return 200;
-    }).when(httpOperation).getStatusCode();
-
-    TracingContext tracingContext = Mockito.mock(TracingContext.class);
-    Mockito.doNothing().when(tracingContext).setRetryCount(nullable(int.class));
-
-    int[] count = new int[1];
-    count[0] = 0;
-    Mockito.doAnswer(invocationOnMock -> {
-      if (count[0] == 1) {
-        Assertions.assertThat((String) invocationOnMock.getArgument(1))
-            .isEqualTo("400");
-      }
-      count[0]++;
-      return null;
-    }).when(tracingContext).constructHeader(any(), any());
-
-    abfsRestOperation.execute(tracingContext);
-    Assertions.assertThat(count[0]).isEqualTo(2);
-
+  public void testClientRequestIdFor400Retry() throws Exception {
+    testClientRequestIdForStatusRetry(400, "", "400");
   }
-
   @Test
   public void testClientRequestIdFor500Retry() throws Exception {
-    testClientRequestIdFor5XXRetry(500, "", "500");
+    testClientRequestIdForStatusRetry(500, "", "500");
   }
 
   @Test
   public void testClientRequestIdFor503INGRetry() throws Exception {
-    testClientRequestIdFor5XXRetry(503, "Ingress is over the account limit.",
+    testClientRequestIdForStatusRetry(503, "Ingress is over the account limit.",
         "ING");
   }
 
   @Test
   public void testClientRequestIdFor503egrRetry() throws Exception {
-    testClientRequestIdFor5XXRetry(503, "Egress is over the account limit.",
+    testClientRequestIdForStatusRetry(503, "Egress is over the account limit.",
         "EGR");
   }
 
   @Test
   public void testClientRequestIdFor503OPRRetry() throws Exception {
-    testClientRequestIdFor5XXRetry(503,
+    testClientRequestIdForStatusRetry(503,
         "Operations per second is over the account limit.", "OPR");
   }
 
   @Test
   public void testClientRequestIdFor503OtherRetry() throws Exception {
-    testClientRequestIdFor5XXRetry(503, "Other.", "503");
+    testClientRequestIdForStatusRetry(503, "Other.", "503");
   }
 
 
-  private void testClientRequestIdFor5XXRetry(int status,
+  private void testClientRequestIdForStatusRetry(int status,
       String serverErrorMessage,
       String keyExpected) throws Exception {
 
@@ -510,6 +196,54 @@ public class TestAbfsRestOperation {
     abfsRestOperation.execute(tracingContext);
     Assertions.assertThat(count[0]).isEqualTo(2);
 
+  }
+
+  private void testClientRequestIdForTimeoutRetry(Exception[] exceptions, String[] abbreviationsExpected, int len) throws Exception {
+    AbfsClient abfsClient = Mockito.mock(AbfsClient.class);
+    ExponentialRetryPolicy retryPolicy = Mockito.mock(
+        ExponentialRetryPolicy.class);
+    addMockBehaviourToAbfsClient(abfsClient, retryPolicy);
+
+
+    AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
+        AbfsRestOperationType.ReadFile,
+        abfsClient,
+        "PUT",
+        null,
+        new ArrayList<>()
+    ));
+
+    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
+    addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
+
+    Stubber stubber = Mockito.doThrow(exceptions[0]);
+    for(int iteration = 1; iteration < len; iteration++) {
+      stubber.doThrow(exceptions[iteration]);
+    }
+    stubber
+        .doNothing()
+        .when(httpOperation)
+        .processResponse(nullable(byte[].class), nullable(int.class),
+            nullable(int.class));
+
+    Mockito.doReturn(200).when(httpOperation).getStatusCode();
+
+    TracingContext tracingContext = Mockito.mock(TracingContext.class);
+    Mockito.doNothing().when(tracingContext).setRetryCount(nullable(int.class));
+
+    int[] count = new int[1];
+    count[0] = 0;
+    Mockito.doAnswer(invocationOnMock -> {
+      if(count[0] > 0 && count[0] <= len) {
+        Assertions.assertThat((String) invocationOnMock.getArgument(1))
+            .isEqualTo(abbreviationsExpected[count[0] - 1]);
+      }
+      count[0]++;
+      return null;
+    }).when(tracingContext).constructHeader(any(), any());
+
+    abfsRestOperation.execute(tracingContext);
+    Assertions.assertThat(count[0]).isEqualTo(len + 1);
   }
 
   private void addMockBehaviourToRestOpAndHttpOp(final AbfsRestOperation abfsRestOperation,
