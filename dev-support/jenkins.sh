@@ -174,9 +174,6 @@ function run_ci() {
   # much attention to them
   YETUS_ARGS+=("--tests-filter=checkstyle")
 
-  YETUS_ARGS+=("--mvn-custom-repos")
-  YETUS_ARGS+=("--mvn-custom-repos-dir=${MAVEN_REPO_DIR}")
-
   # effectively treat dev-suport as a custom maven module
   YETUS_ARGS+=("--skip-dirs=dev-support")
 
