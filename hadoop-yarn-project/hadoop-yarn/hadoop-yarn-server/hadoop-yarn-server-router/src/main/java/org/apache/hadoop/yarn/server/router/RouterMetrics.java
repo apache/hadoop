@@ -740,7 +740,7 @@ public final class RouterMetrics {
   public long getNumSucceededGetSchedulerInfoRetrieved() {
     return totalSucceededGetSchedulerInfoRetrieved.lastStat().numSamples();
   }
-  
+
   @VisibleForTesting
   public long getNumSucceededRefreshSuperUserGroupsConfigurationRetrieved() {
     return totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.lastStat().numSamples();
@@ -985,7 +985,7 @@ public final class RouterMetrics {
   public double getLatencySucceededGetSchedulerInfoRetrieved() {
     return totalSucceededGetSchedulerInfoRetrieved.lastStat().mean();
   }
-  
+
   @VisibleForTesting
   public double getLatencySucceededRefreshSuperUserGroupsConfigurationRetrieved() {
     return totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.lastStat().mean();
@@ -1452,7 +1452,7 @@ public final class RouterMetrics {
     totalSucceededGetSchedulerInfoRetrieved.add(duration);
     getSchedulerInfoRetrievedLatency.add(duration);
   }
-  
+
   public void succeededRefreshSuperUserGroupsConfRetrieved(long duration) {
     totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.add(duration);
     refreshSuperUserGroupsConfLatency.add(duration);
