@@ -1013,30 +1013,16 @@ public class MockRM extends ResourceManager {
 
     public static void waitforContainerCompletion(MockRM rm, MockNM nm,
       ContainerId amContainerId, RMContainer container) throws Exception {
-    ContainerId containerId = container.getContainerId();
-    if (null != rm.scheduler.getRMContainer(containerId)) {
-      if (containerId.equals(amContainerId)) {
-        rm.waitForState(nm, containerId, RMContainerState.COMPLETED);
+      ContainerId containerId = container.getContainerId();
+      if (null != rm.scheduler.getRMContainer(containerId)) {
+        if (containerId.equals(amContainerId)) {
+          rm.waitForState(nm, containerId, RMContainerState.COMPLETED);
+        } else {
+          rm.waitForState(nm, containerId, RMContainerState.KILLED);
+        }
       } else {
-        rm.waitForState(nm, containerId, RMContainerState.KILLED);
+        rm.drainEvents();
       }
-    } else {
-      rm.drainEvents();
-    }
-  }
-
-    /**
-   * Wait until an attempt has reached a specified state.
-   * The timeout is 40 seconds.
-   * @param finalState the attempt state waited
-   * @throws InterruptedException
-   *         if interrupted while waiting for the state transition
-   */
-  public static void waitForState(RMAppAttemptState finalState, RMContext context, ApplicationAttemptId attemptId)
-      throws InterruptedException {
-    RMApp app = context.getRMApps().get(attemptId.getApplicationId());
-    RMAppAttempt attempt = app.getRMAppAttempt(attemptId);
-    MockRM.waitForState(attempt, finalState);
   }
 
   private void drainEventsImplicitly() {
