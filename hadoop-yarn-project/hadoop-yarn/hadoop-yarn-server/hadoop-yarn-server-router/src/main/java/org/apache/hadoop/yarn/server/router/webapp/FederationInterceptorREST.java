@@ -1159,20 +1159,22 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public String dumpSchedulerLogs(String time, HttpServletRequest hsr)
       throws IOException {
 
-    if (StringUtils.isBlank(time)) {
-      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the time is empty or null.");
-    }
+    try {
+      if (StringUtils.isBlank(time)) {
+        routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+        throw new IllegalArgumentException("Parameter error, the time is empty or null.");
+      }
 
-    if (!RouterServerUtil.isNumericInteger(time)) {
+      int period = Integer.parseInt(time);
+      if (period <= 0) {
+        routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+        throw new IllegalArgumentException("time must be greater than 0.");
+      }
+    } catch (NumberFormatException e) {
       routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
       throw new IllegalArgumentException("time must be a number.");
-    }
-
-    int period = Integer.parseInt(time);
-    if (period <= 0) {
-      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
-      throw new IllegalArgumentException("time must be greater than 0.");
+    } catch (IllegalArgumentException e){
+      throw e;
     }
 
     try {

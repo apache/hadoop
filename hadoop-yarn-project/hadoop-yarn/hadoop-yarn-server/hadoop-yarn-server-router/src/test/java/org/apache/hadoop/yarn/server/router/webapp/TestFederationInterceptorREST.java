@@ -1720,22 +1720,4 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
         "time must be a number.",
         () -> interceptor.dumpSchedulerLogs("abc", mockHsr));
   }
-
-  @Test
-  public void testCheckNumericInteger() {
-    // Check if a number is negative.
-    Assert.assertFalse(RouterServerUtil.isNumericInteger(null));
-    Assert.assertFalse(RouterServerUtil.isNumericInteger(""));
-    Assert.assertFalse(RouterServerUtil.isNumericInteger("  "));
-    Assert.assertFalse(RouterServerUtil.isNumericInteger("12 3"));
-    Assert.assertFalse(RouterServerUtil.isNumericInteger("ab2c"));
-    Assert.assertFalse(RouterServerUtil.isNumericInteger("12-3"));
-    Assert.assertFalse(RouterServerUtil.isNumericInteger("12.3"));
-    Assert.assertFalse(RouterServerUtil.isNumericInteger("+123"));
-
-    // Check if a string is a number.
-    Assert.assertTrue(RouterServerUtil.isNumericInteger("\u0967\u0968\u0969"));
-    Assert.assertTrue(RouterServerUtil.isNumericInteger("123"));
-    Assert.assertTrue(RouterServerUtil.isNumericInteger("-123"));
-  }
 }
