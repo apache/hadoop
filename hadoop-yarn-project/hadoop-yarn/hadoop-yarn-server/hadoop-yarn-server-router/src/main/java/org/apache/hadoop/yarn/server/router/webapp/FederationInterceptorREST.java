@@ -72,6 +72,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.RouterPolicyFacade;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
@@ -82,39 +83,9 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
@@ -1345,10 +1316,61 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         "getLabelsToNodes by labels = %s Failed.", StringUtils.join(labels, ","));
   }
 
+  /**
+   * This method replaces all the node labels for specific nodes, and it is
+   * reachable by using {@link RMWSConsts#REPLACE_NODE_TO_LABELS}.
+   *
+   * @see ResourceManagerAdministrationProtocol#replaceLabelsOnNode
+   * @param newNodeToLabels the list of new labels. It is a content param.
+   * @param hsr the servlet request
+   * @return Response containing the status code
+   * @throws Exception if an exception happened
+   */
   @Override
   public Response replaceLabelsOnNodes(NodeToLabelsEntryList newNodeToLabels,
       HttpServletRequest hsr) throws IOException {
-    throw new NotImplementedException("Code is not implemented");
+    // Step1.
+    Map<String, NodeToLabelsEntry> nodeIdToLabels = new HashMap<>();
+    newNodeToLabels.getNodeToLabels().stream().forEach(nodeIdToLabel -> {
+      String nodeId = nodeIdToLabel.getNodeId();
+      nodeIdToLabels.put(nodeId, nodeIdToLabel);
+    });
+
+    // Step2.
+    Map<SubClusterInfo, NodeToLabelsEntryList> subClusterToNodeToLabelsEntryList = new HashMap<>();
+    nodeIdToLabels.forEach((nodeId, nodeToLabelsEntry) -> {
+      SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
+      if (subClusterInfo == null) {
+        LOG.warn("Unable to find subCluster by nodeId = {}.", nodeId);
+      } else {
+        NodeToLabelsEntryList nodeToLabelsEntryList = subClusterToNodeToLabelsEntryList.
+            getOrDefault(subClusterInfo, new NodeToLabelsEntryList());
+        nodeToLabelsEntryList.getNodeToLabels().add(nodeToLabelsEntry);
+        subClusterToNodeToLabelsEntryList.put(subClusterInfo, nodeToLabelsEntryList);
+      }
+    });
+
+    // Step3.
+    final HttpServletRequest hsrCopy = clone(hsr);
+    StringBuilder builder = new StringBuilder();
+    subClusterToNodeToLabelsEntryList.forEach((subCluster, nodeToLabelsEntryList) -> {
+      SubClusterId subClusterId = subCluster.getSubClusterId();
+      try {
+        DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+            subCluster.getSubClusterId(), subCluster.getRMWebServiceAddress());
+        Response response = interceptor.replaceLabelsOnNodes(nodeToLabelsEntryList, hsrCopy);
+        int statusOKCode = Status.OK.getStatusCode();
+        if (response != null && response.getStatus() == statusOKCode) {
+          builder.append(subClusterId.getId() + " : Success");
+        }
+      } catch (Exception e) {
+        LOG.error("replaceLabelsOnNodes Failed. subClusterId = {}.", subClusterId, e);
+        builder.append(subClusterId.getId() + " : Failed.");
+      }
+    });
+
+    // Step4.
+    return Response.status(Status.OK).entity(builder.toString()).build();
   }
 
   @Override
