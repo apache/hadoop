@@ -41,7 +41,6 @@ public class TestAbfsRestOperation {
 
   @Test
   public void testClientRequestIdForConnectTimeoutRetry() throws Exception {
-
     Exception[] exceptions = new Exception[1];
     String[] abbreviations = new String[1];
     exceptions[0] = new SocketTimeoutException("connect timed out");
@@ -278,5 +277,4 @@ public class TestAbfsRestOperation {
     Mockito.doReturn(false).when(retryPolicy).shouldRetry(1, 200);
     Mockito.doReturn(false).when(retryPolicy).shouldRetry(2, 200);
   }
-
 }
