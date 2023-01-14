@@ -395,12 +395,12 @@ public class BlockManager implements BlockStatsMXBean {
    * The maximum number of outgoing replication streams a given node should have
    * at one time considering all but the highest priority replications needed.
     */
-  volatile int maxReplicationStreams;
+  private volatile int maxReplicationStreams;
   /**
    * The maximum number of outgoing replication streams a given node should have
    * at one time.
    */
-  volatile int replicationStreamsHardLimit;
+  private volatile int replicationStreamsHardLimit;
   /** Minimum copies needed or else write is disallowed */
   public final short minReplication;
   /** Default number of replicas */
@@ -1017,10 +1017,17 @@ public class BlockManager implements BlockStatsMXBean {
    *
    * @param newVal - Must be a positive non-zero integer.
    */
-  public void setMaxReplicationStreams(int newVal) {
-    ensurePositiveInt(newVal,
-        DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY);
+  @VisibleForTesting
+  public void setMaxReplicationStreams(int newVal, boolean ensurePositiveInt) {
+    if (ensurePositiveInt) {
+      ensurePositiveInt(newVal,
+          DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY);
+    }
     maxReplicationStreams = newVal;
+  }
+
+  public void setMaxReplicationStreams(int newVal) {
+    setMaxReplicationStreams(newVal, true);
   }
 
   /** Returns the current setting for maxReplicationStreamsHardLimit, set by
