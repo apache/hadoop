@@ -481,7 +481,7 @@ public final class RouterMetrics {
 
     getBulkActivitiesLatency = registry.newQuantiles("getBulkActivitiesLatency",
          "latency of get bulk activities timeouts", "ops", "latency", 10);
-    
+
     refreshSuperUserGroupsConfLatency = registry.newQuantiles("refreshSuperUserGroupsConfLatency",
         "latency of refresh superuser groups configuration timeouts", "ops", "latency", 10);
 
@@ -750,9 +750,9 @@ public final class RouterMetrics {
 
   @VisibleForTesting
   public long getNumSucceededGetBulkActivitiesRetrieved() {
-    return totalSucceededGetBulkActivitiesRetrieved.lastStat().numSamples(); 
-  }  
-   
+    return totalSucceededGetBulkActivitiesRetrieved.lastStat().numSamples();
+  }
+
   public long getNumSucceededRefreshSuperUserGroupsConfigurationRetrieved() {
     return totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.lastStat().numSamples();
   }
@@ -1001,7 +1001,7 @@ public final class RouterMetrics {
   public double getLatencySucceededGetBulkActivitiesRetrieved() {
     return totalSucceededGetBulkActivitiesRetrieved.lastStat().mean();
   }
-  
+
   public double getLatencySucceededRefreshSuperUserGroupsConfigurationRetrieved() {
     return totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.lastStat().mean();
   }
@@ -1476,7 +1476,7 @@ public final class RouterMetrics {
     totalSucceededGetBulkActivitiesRetrieved.add(duration);
     getBulkActivitiesLatency.add(duration);
   }
-  
+
   public void succeededRefreshSuperUserGroupsConfRetrieved(long duration) {
     totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.add(duration);
     refreshSuperUserGroupsConfLatency.add(duration);
