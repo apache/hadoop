@@ -311,7 +311,7 @@ public class AbfsRestOperation {
     } catch (UnknownHostException ex) {
       String hostname = null;
       hostname = httpOperation.getHost();
-      failureReason = RetryReason.UNKNOWN_HOST.getAbbreviation(ex, null, null);
+      failureReason = RetryReason.getAbbreviation(ex, null, null);
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
@@ -323,7 +323,7 @@ public class AbfsRestOperation {
         LOG.debug("HttpRequestFailure: {}, {}", httpOperation, ex);
       }
 
-      failureReason = RetryReason.getEnum(ex, -1).getAbbreviation(ex, -1, "");
+      failureReason = RetryReason.getAbbreviation(ex, -1, "");
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex);
@@ -338,7 +338,7 @@ public class AbfsRestOperation {
 
     if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {
       int status = httpOperation.getStatusCode();
-      failureReason = RetryReason.getEnum(null, status).getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
+      failureReason = RetryReason.getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
       return false;
     }
 
