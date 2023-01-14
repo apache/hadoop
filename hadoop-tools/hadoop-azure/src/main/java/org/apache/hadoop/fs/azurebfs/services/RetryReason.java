@@ -24,6 +24,10 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * In case of retry, this enum would give the information on the reason for
+ * previous API call.
+ * */
 public enum RetryReason {
   CONNECTION_TIMEOUT(2, ((ex, statusCode, serverErrorMessage) -> {
     if(ex != null && "connect timed out".equalsIgnoreCase(
@@ -99,16 +103,32 @@ public enum RetryReason {
 
   private int rank = 0;
 
+  /**
+   * Constructor to have rank and the implementation of {@link RetryReasonAbbreviationCreator}.
+   * @param rank rank of a given enum. For example SocketTimeoutException is
+   * subclass of IOException. Rank of SocketTimeoutException enum has to be
+   * more than that of IOException enum.
+   * @param abbreviationCreator The implementation of {@link RetryReasonAbbreviationCreator}
+   * which would give the information if a given enum can be mapped to an error or not.
+   * */
   RetryReason(int rank,
       RetryReasonAbbreviationCreator abbreviationCreator) {
     this.rank = rank;
     this.retryReasonAbbreviationCreator = abbreviationCreator;
   }
 
-  private static List<RetryReason> retryReasonLSortedist;
+  private static List<RetryReason> retryReasonSortedList;
 
+  /**
+   * Synchronized method to assign sorted list in {@link RetryReason#retryReasonSortedList}.
+   * Method would check if list is assigned or not. If yes, method would return. This is required
+   * because multiple threads could be waiting to get into this method, and once a thread is done
+   * with this method, other thread would get into this method. Since the list would be assigned by
+   * first thread, the second thread need not run the whole mechanism of sorting.
+   * The enums are sorted on the ascending order of their rank.
+   * */
   private synchronized static void sortRetryReason() {
-    if (retryReasonLSortedist != null) {
+    if (retryReasonSortedList != null) {
       return;
     }
     List<RetryReason> list = new ArrayList<>();
@@ -118,18 +138,30 @@ public enum RetryReason {
     list.sort((c1, c2) -> {
       return c1.rank - c2.rank;
     });
-    retryReasonLSortedist = list;
+    retryReasonSortedList = list;
   }
 
-  static String getAbbreviation(Exception ex, Integer statusCode, String storageStatusCode) {
+  /**
+   * Method to get correct abbreviation for a given set of exception, statusCode,
+   * storageStatusCode.
+   * Method would iterate through the {@link RetryReason#retryReasonSortedList},
+   * and would return the abbreviation returned by highest enum to be applicable on the group.
+   * For example, if SocketTimeoutException(rank 2) and IOException(rank 0) can be
+   * applied on the group, the abbreviation of SocketTimeoutException has to be returned.
+   *
+   * @param ex exception caught during server communication.
+   * @param statusCode statusCode in the server response.
+   * @param storageErrorMessage storageErrorMessage in the server response.
+   * */
+  static String getAbbreviation(Exception ex, Integer statusCode, String storageErrorMessage) {
     String result = null;
-    if (retryReasonLSortedist == null) {
+    if (retryReasonSortedList == null) {
       sortRetryReason();
     }
-    for (RetryReason retryReason : retryReasonLSortedist) {
-      String enumCaputredAndAbbreviate = retryReason.retryReasonAbbreviationCreator.capturableAndGetAbbreviation(ex, statusCode, storageStatusCode);
-      if (enumCaputredAndAbbreviate != null) {
-        result = enumCaputredAndAbbreviate;
+    for (RetryReason retryReason : retryReasonSortedList) {
+      String enumCapturedAndAbbreviate = retryReason.retryReasonAbbreviationCreator.capturableAndGetAbbreviation(ex, statusCode, storageErrorMessage);
+      if (enumCapturedAndAbbreviate != null) {
+        result = enumCapturedAndAbbreviate;
       }
     }
     return result;
