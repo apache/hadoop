@@ -183,7 +183,7 @@ public class TracingContext {
 
   private String addFailureReasons(final String header,
       final String previousFailure) {
-    if(previousFailure == null) {
+    if (previousFailure == null) {
       return header;
     }
     return String.format("%s_%s", header, previousFailure);
