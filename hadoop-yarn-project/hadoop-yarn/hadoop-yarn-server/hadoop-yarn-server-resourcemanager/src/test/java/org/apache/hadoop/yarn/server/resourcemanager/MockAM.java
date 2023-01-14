@@ -88,19 +88,7 @@ public class MockAM {
     this.amRMProtocol = amRMProtocol;
   }
 
-  /**
-   * Wait until an attempt has reached a specified state.
-   * The timeout is 40 seconds.
-   * @param finalState the attempt state waited
-   * @throws InterruptedException
-   *         if interrupted while waiting for the state transition
-   */
-  private void waitForState(RMAppAttemptState finalState)
-      throws InterruptedException {
-    RMApp app = context.getRMApps().get(attemptId.getApplicationId());
-    RMAppAttempt attempt = app.getRMAppAttempt(attemptId);
-    MockRM.waitForState(attempt, finalState);
-  }
+
 
   public RegisterApplicationMasterResponse registerAppAttempt()
       throws Exception {
@@ -120,7 +108,7 @@ public class MockAM {
   public RegisterApplicationMasterResponse registerAppAttempt(boolean wait)
       throws Exception {
     if (wait) {
-      waitForState(RMAppAttemptState.LAUNCHED);
+      MockRM.waitForState(RMAppAttemptState.LAUNCHED, context, attemptId);
     }
     responseId = 0;
     final RegisterApplicationMasterRequest req =
@@ -420,7 +408,7 @@ public class MockAM {
   }
 
   public void unregisterAppAttempt() throws Exception {
-    waitForState(RMAppAttemptState.RUNNING);
+    MockRM.waitForState(RMAppAttemptState.RUNNING, context, attemptId);
     unregisterAppAttempt(true);
   }
 
@@ -435,7 +423,7 @@ public class MockAM {
   public void unregisterAppAttempt(final FinishApplicationMasterRequest req,
       boolean waitForStateRunning) throws Exception {
     if (waitForStateRunning) {
-      waitForState(RMAppAttemptState.RUNNING);
+      MockRM.waitForState(RMAppAttemptState.RUNNING, context, attemptId);
     }
     if (ugi == null) {
       ugi =  UserGroupInformation.createRemoteUser(attemptId.toString());
