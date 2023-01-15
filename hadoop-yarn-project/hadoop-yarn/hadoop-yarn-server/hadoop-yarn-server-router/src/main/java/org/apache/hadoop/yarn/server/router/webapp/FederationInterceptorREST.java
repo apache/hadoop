@@ -1329,14 +1329,15 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public Response replaceLabelsOnNodes(NodeToLabelsEntryList newNodeToLabels,
       HttpServletRequest hsr) throws IOException {
-    // Step1.
+
+    // Step1. We map the NodeId and NodeToLabelsEntry in the request.
     Map<String, NodeToLabelsEntry> nodeIdToLabels = new HashMap<>();
     newNodeToLabels.getNodeToLabels().stream().forEach(nodeIdToLabel -> {
       String nodeId = nodeIdToLabel.getNodeId();
       nodeIdToLabels.put(nodeId, nodeIdToLabel);
     });
 
-    // Step2.
+    // Step2. We map SubCluster with NodeToLabelsEntryList
     Map<SubClusterInfo, NodeToLabelsEntryList> subClusterToNodeToLabelsEntryList = new HashMap<>();
     nodeIdToLabels.forEach((nodeId, nodeToLabelsEntry) -> {
       SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
@@ -1350,7 +1351,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       }
     });
 
-    // Step3.
+    // Step3. Traverse the subCluster and call the replaceLabelsOnNodes interface.
     final HttpServletRequest hsrCopy = clone(hsr);
     StringBuilder builder = new StringBuilder();
     subClusterToNodeToLabelsEntryList.forEach((subCluster, nodeToLabelsEntryList) -> {
@@ -1369,14 +1370,30 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       }
     });
 
-    // Step4.
+    // Step4. return call result.
     return Response.status(Status.OK).entity(builder.toString()).build();
   }
 
+  /**
+   * This method replaces all the node labels for specific node, and it is
+   * reachable by using {@link RMWSConsts#NODES_NODEID_REPLACE_LABELS}.
+   *
+   * @see ResourceManagerAdministrationProtocol#replaceLabelsOnNode
+   * @param newNodeLabelsName the list of new labels. It is a QueryParam.
+   * @param hsr the servlet request
+   * @param nodeId the node we want to replace the node labels. It is a
+   *     PathParam.
+   * @return Response containing the status code
+   * @throws Exception if an exception happened
+   */
   @Override
   public Response replaceLabelsOnNode(Set<String> newNodeLabelsName,
       HttpServletRequest hsr, String nodeId) throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+    SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
+    DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+        subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+    final HttpServletRequest hsrCopy = clone(hsr);
+    return interceptor.replaceLabelsOnNode(newNodeLabelsName, hsrCopy, nodeId);
   }
 
   @Override
