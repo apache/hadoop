@@ -44,6 +44,11 @@ public class NodeToLabelsEntry {
     this.labels = labels;
   }
 
+  public NodeToLabelsEntry(String nodeId, Collection<String> labels) {
+    this.nodeId = nodeId;
+    this.labels.addAll(labels);
+  }
+
   public String getNodeId() {
     return nodeId;
   }

@@ -135,6 +135,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationReque
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateResponseInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteResponseInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
@@ -296,9 +297,14 @@ public class MockDefaultRequestInterceptorREST
     if (!isRunning) {
       throw new RuntimeException("RM is stopped");
     }
-    NodeInfo node = new NodeInfo();
-    node.setId(nodeId);
-    node.setLastHealthUpdate(Integer.valueOf(getSubClusterId().getId()));
+    NodeInfo node = null;
+    SubClusterId subCluster = getSubClusterId();
+    String subClusterId = subCluster.getId();
+    if (nodeId.contains(subClusterId) || nodeId.contains("test")) {
+      node = new NodeInfo();
+      node.setId(nodeId);
+      node.setLastHealthUpdate(Integer.valueOf(getSubClusterId().getId()));
+    }
     return node;
   }
 
@@ -1205,5 +1211,17 @@ public class MockDefaultRequestInterceptorREST
 
       return new RMQueueAclInfo(true, user.getUserName(), "");
     }
+  }
+
+  @Override
+  public Response replaceLabelsOnNodes(NodeToLabelsEntryList newNodeToLabels,
+      HttpServletRequest hsr) throws IOException {
+    return super.replaceLabelsOnNodes(newNodeToLabels, hsr);
+  }
+
+  @Override
+  public Response replaceLabelsOnNode(Set<String> newNodeLabelsName,
+      HttpServletRequest hsr, String nodeId) throws Exception {
+    return super.replaceLabelsOnNode(newNodeLabelsName, hsr, nodeId);
   }
 }

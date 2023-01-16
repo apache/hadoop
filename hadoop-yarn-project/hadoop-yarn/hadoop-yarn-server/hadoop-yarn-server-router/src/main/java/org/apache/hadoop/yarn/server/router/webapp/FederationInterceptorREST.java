@@ -1333,12 +1333,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       HttpServletRequest hsr) throws IOException {
     try {
       // Step1. Check the parameters to ensure that the parameters are not empty.
-      if (newNodeToLabels != null) {
+      if (newNodeToLabels == null) {
         throw new IllegalArgumentException("newNodeToLabels must not be empty.");
       }
-      List<NodeToLabelsEntry> nodeToLabelsEntrys = newNodeToLabels.getNodeToLabels();
-      if(CollectionUtils.isEmpty(nodeToLabelsEntrys)){
-        throw new IllegalArgumentException("nodeToLabelsEntrys must not be empty.");
+      List<NodeToLabelsEntry> nodeToLabelsEntries = newNodeToLabels.getNodeToLabels();
+      if(CollectionUtils.isEmpty(nodeToLabelsEntries)){
+        throw new IllegalArgumentException("nodeToLabelsEntries must not be empty.");
       }
 
       // Step2. We map the NodeId and NodeToLabelsEntry in the request.
@@ -1373,7 +1373,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
               subCluster.getSubClusterId(), subCluster.getRMWebServiceAddress());
           interceptor.replaceLabelsOnNodes(nodeToLabelsEntryList, hsrCopy);
-          builder.append(subClusterId.getId() + " : Success.");
+          builder.append("subCluster#" + subClusterId.getId() + ":Success;");
         } catch (Exception e) {
           LOG.error("replaceLabelsOnNodes Failed. subClusterId = {}.", subClusterId, e);
           builder.append(subClusterId.getId() + " : Failed.");
@@ -1426,16 +1426,16 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
       // Step3. Return the response result.
       long stopTime = clock.getTime();
-      routerMetrics.succeededReplaceLabelOnNodeRetrieved(stopTime - startTime);
+      routerMetrics.succeededReplaceLabelsOnNodeRetrieved(stopTime - startTime);
       return Response.status(Status.OK).build();
     } catch (IllegalArgumentException e) {
-      routerMetrics.incrReplaceLabelOnNodeFailedRetrieved();
+      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
       throw e;
     } catch (NotFoundException e) {
-      routerMetrics.incrReplaceLabelOnNodeFailedRetrieved();
+      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
       throw e;
     } catch (Exception e){
-      routerMetrics.incrReplaceLabelOnNodeFailedRetrieved();
+      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
       throw e;
     }
   }

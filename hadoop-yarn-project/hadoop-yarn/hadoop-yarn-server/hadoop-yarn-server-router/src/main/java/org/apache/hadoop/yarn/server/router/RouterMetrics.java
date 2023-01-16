@@ -141,8 +141,8 @@ public final class RouterMetrics {
   private MutableGaugeInt numRefreshUserToGroupsMappingsFailedRetrieved;
   @Metric("# of replaceLabelsOnNodes failed to be retrieved")
   private MutableGaugeInt numReplaceLabelsOnNodesFailedRetrieved;
-  @Metric("# of replaceLabelOnNode failed to be retrieved")
-  private MutableGaugeInt numReplaceLabelOnNodeFailedRetrieved;
+  @Metric("# of replaceLabelsOnNode failed to be retrieved")
+  private MutableGaugeInt numReplaceLabelsOnNodeFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -246,7 +246,7 @@ public final class RouterMetrics {
   @Metric("Total number of successful Retrieved ReplaceLabelsOnNodes and latency(ms)")
   private MutableRate totalSucceededReplaceLabelsOnNodesRetrieved;
   @Metric("Total number of successful Retrieved ReplaceLabelsOnNode and latency(ms)")
-  private MutableRate totalSucceededReplaceLabelOnNodesRetrieved;
+  private MutableRate totalSucceededReplaceLabelsOnNodeRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -301,7 +301,7 @@ public final class RouterMetrics {
   private MutableQuantiles refreshSuperUserGroupsConfLatency;
   private MutableQuantiles refreshUserToGroupsMappingsLatency;
   private MutableQuantiles replaceLabelsOnNodesLatency;
-  private MutableQuantiles replaceLabelOnNodesLatency;
+  private MutableQuantiles replaceLabelsOnNodeLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
@@ -485,8 +485,8 @@ public final class RouterMetrics {
     replaceLabelsOnNodesLatency = registry.newQuantiles("replaceLabelsOnNodesLatency",
         "latency of replace labels on nodes timeouts", "ops", "latency", 10);
 
-    replaceLabelOnNodesLatency = registry.newQuantiles("replaceLabelOnNodesLatency",
-        "latency of replace label on node timeouts", "ops", "latency", 10);
+    replaceLabelsOnNodeLatency = registry.newQuantiles("replaceLabelsOnNodeLatency",
+        "latency of replace labels on node timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -754,8 +754,8 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
-  public long getNumSucceededReplaceLabelOnNodesRetrieved() {
-    return totalSucceededReplaceLabelOnNodesRetrieved.lastStat().numSamples();
+  public long getNumSucceededReplaceLabelsOnNodeRetrieved() {
+    return totalSucceededReplaceLabelsOnNodeRetrieved.lastStat().numSamples();
   }
 
   @VisibleForTesting
@@ -1004,8 +1004,8 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
-  public double getLatencySucceededReplaceLabelOnNodesRetrieved() {
-    return totalSucceededReplaceLabelOnNodesRetrieved.lastStat().mean();
+  public double getLatencySucceededReplaceLabelsOnNodeRetrieved() {
+    return totalSucceededReplaceLabelsOnNodeRetrieved.lastStat().mean();
   }
 
   @VisibleForTesting
@@ -1218,8 +1218,8 @@ public final class RouterMetrics {
     return numReplaceLabelsOnNodesFailedRetrieved.value();
   }
 
-  public int getNumReplaceLabelOnNodeFailedRetrieved() {
-    return numReplaceLabelOnNodeFailedRetrieved.value();
+  public int getNumReplaceLabelsOnNodeFailedRetrieved() {
+    return numReplaceLabelsOnNodeFailedRetrieved.value();
   }
 
   public int getDelegationTokenFailedRetrieved() {
@@ -1484,9 +1484,9 @@ public final class RouterMetrics {
     replaceLabelsOnNodesLatency.add(duration);
   }
 
-  public void succeededReplaceLabelOnNodeRetrieved(long duration) {
-    totalSucceededReplaceLabelOnNodesRetrieved.add(duration);
-    replaceLabelOnNodesLatency.add(duration);
+  public void succeededReplaceLabelsOnNodeRetrieved(long duration) {
+    totalSucceededReplaceLabelsOnNodeRetrieved.add(duration);
+    replaceLabelsOnNodeLatency.add(duration);
   }
 
   public void incrAppsFailedCreated() {
@@ -1689,7 +1689,7 @@ public final class RouterMetrics {
     numReplaceLabelsOnNodesFailedRetrieved.incr();
   }
 
-  public void incrReplaceLabelOnNodeFailedRetrieved() {
-    numReplaceLabelOnNodeFailedRetrieved.incr();
+  public void incrReplaceLabelsOnNodeFailedRetrieved() {
+    numReplaceLabelsOnNodeFailedRetrieved.incr();
   }
 }

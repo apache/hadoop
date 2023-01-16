@@ -94,6 +94,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntry;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService.RequestInterceptorChainWrapper;
@@ -1684,5 +1686,42 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Response cancelResponse = interceptor.cancelDelegationToken(request);
     Assert.assertNotNull(cancelResponse);
     Assert.assertEquals(response.getStatus(), Status.OK.getStatusCode());
+  }
+
+  @Test
+  public void testReplaceLabelsOnNodes() throws Exception {
+    // subCluster0 -> node0:0 -> label:NodeLabel0
+    // subCluster1 -> node1:0 -> label:NodeLabel1
+    // subCluster2 -> node2:0 -> label:NodeLabel2
+    // subCluster3 -> node3:0 -> label:NodeLabel3
+    NodeToLabelsEntryList nodeToLabelsEntryList = new NodeToLabelsEntryList();
+    for (int i = 0; i < NUM_SUBCLUSTER; i++) {
+      // labels
+      List<String> labels = new ArrayList<>();
+      labels.add("NodeLabel" + i);
+      // nodes
+      String nodeId = "node" + i + ":" + i;
+      NodeToLabelsEntry nodeToLabelsEntry = new NodeToLabelsEntry(nodeId, labels);
+      List<NodeToLabelsEntry> nodeToLabelsEntrys = nodeToLabelsEntryList.getNodeToLabels();
+      nodeToLabelsEntrys.add(nodeToLabelsEntry);
+    }
+
+    // subCluster#0:Success;subCluster#1:Success;subCluster#3:Success;subCluster#2:Success;
+    Response response = interceptor.replaceLabelsOnNodes(nodeToLabelsEntryList, null);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(200, response.getStatus());
+
+    Object entityObject = response.getEntity();
+    Assert.assertNotNull(entityObject);
+
+    String entityValue = String.valueOf(entityObject);
+    String[] entities = entityValue.split(";");
+    Assert.assertNotNull(entities);
+    Assert.assertEquals(4, entities.length);
+    String expectValue =
+        "subCluster#0:Success;subCluster#1:Success;subCluster#2:Success;subCluster#3:Success;";
+    for (String entity : entities) {
+      Assert.assertTrue(expectValue.contains(entity));
+    }
   }
 }
