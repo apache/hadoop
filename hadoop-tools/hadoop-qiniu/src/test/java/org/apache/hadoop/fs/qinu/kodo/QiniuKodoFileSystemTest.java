@@ -72,6 +72,20 @@ public class QiniuKodoFileSystemTest {
         is.close();
     }
 
+    void writeEmptyFile(String file) throws IOException {
+        fs.create(new Path(file)).close();
+    }
+
+    @Test
+    public void testEmptyFileWriteRead() throws IOException {
+        writeEmptyFile("emptyFile.txt");
+        FSDataInputStream is = fs.open(new Path("emptyFile.txt"));
+        byte[] buf = new byte[4*1024*1024];
+        while((is.read(buf)) != -1) {
+        }
+        is.close();
+    }
+
     @Test
     public void testWrite() throws IOException {
         FSDataOutputStream os = fs.create(new Path("/user/zzq123.txt"));

@@ -15,6 +15,7 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -111,11 +112,16 @@ public class QiniuKodoClient {
             Response response = this.client.get(url, header);
             return response.bodyStream();
         } catch (QiniuException e) {
-            if (e.response != null) {
-                throw new IOException(e.response + "");
-            } else {
+            if (e.response == null) {
                 throw e;
             }
+            if (e.response.statusCode == 416) {
+                // Requested Range not satisfiable
+                if (offset == 0) {
+                    return new ByteArrayInputStream(new byte[0]);
+                }
+            }
+            throw new IOException(e.response.toString());
         }
     }
 
@@ -159,7 +165,7 @@ public class QiniuKodoClient {
      */
     public boolean copyKey(String oldKey, String newKey) throws IOException {
         Response response = bucketManager.copy(bucket, oldKey, bucket, newKey);
-        return throwExceptionWhileResponseNotSuccess(response);
+        return response.isOK();
     }
 
     /**
@@ -183,7 +189,7 @@ public class QiniuKodoClient {
                 }
                 if (operations == null) continue;
                 Response response = bucketManager.batch(operations);
-                if (!throwExceptionWhileResponseNotSuccess(response)) return false;
+                if (!response.isOK()) return false;
             }
             marker = fileListing.marker;
         } while (!fileListing.isEOF());
@@ -196,7 +202,7 @@ public class QiniuKodoClient {
     public boolean renameKey(String oldKey, String newKey) throws IOException {
         if (Objects.equals(oldKey, newKey)) return true;
         Response response = bucketManager.rename(bucket, oldKey, newKey);
-        return throwExceptionWhileResponseNotSuccess(response);
+        return response.isOK();
     }
 
     /**
@@ -227,14 +233,14 @@ public class QiniuKodoClient {
                 }
                 if (operations == null) continue;
                 Response response = bucketManager.batch(operations);
-                if (!throwExceptionWhileResponseNotSuccess(response)) return false;
+                if (!response.isOK()) return false;
             }
             marker = fileListing.marker;
         } while (!fileListing.isEOF());
 
         if (hasPrefixObject) {
             Response response = bucketManager.rename(bucket, oldPrefix, newPrefix);
-            return throwExceptionWhileResponseNotSuccess(response);
+            return response.isOK();
         }
         return true;
     }
@@ -243,8 +249,7 @@ public class QiniuKodoClient {
      * 仅删除一层 key
      */
     public boolean deleteKey(String key) throws IOException {
-        Response response = bucketManager.delete(bucket, key);
-        return throwExceptionWhileResponseNotSuccess(response);
+        return bucketManager.delete(bucket, key).isOK();
     }
 
     /**
@@ -274,14 +279,14 @@ public class QiniuKodoClient {
                 }
                 if (!shouldExecBatch) continue;
                 Response response = bucketManager.batch(operations);
-                if (!throwExceptionWhileResponseNotSuccess(response)) return false;
+                if (!response.isOK()) return false;
             }
             marker = fileListing.marker;
         } while (!fileListing.isEOF());
 
         if (hasPrefixObject) {
             Response response = bucketManager.delete(bucket, prefix);
-            return throwExceptionWhileResponseNotSuccess(response);
+            return response.isOK();
         }
         return true;
     }
@@ -293,8 +298,7 @@ public class QiniuKodoClient {
     public boolean makeEmptyObject(String key) throws IOException {
         byte[] content = new byte[]{};
         String token = auth.uploadToken(bucket, null, 3 * 3600L, null);
-        Response response = uploadManager.put(content, key, token);
-        return throwExceptionWhileResponseNotSuccess(response);
+        return uploadManager.put(content, key, token).isOK();
     }
 
     /**
@@ -323,17 +327,4 @@ public class QiniuKodoClient {
         DownloadUrl downloadUrl = new DownloadUrl(downloadDomain, useHttps, key);
         return auth.privateDownloadUrl(downloadUrl.buildURL(), 7 * 24 * 3600);
     }
-
-    private boolean throwExceptionWhileResponseNotSuccess(Response response) throws IOException {
-        if (response == null) {
-            return false;
-        }
-
-        if (response.isOK()) {
-            return true;
-        }
-
-        throw new IOException(response + "");
-    }
-
 }
