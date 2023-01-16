@@ -82,7 +82,13 @@ public class QiniuKodoFileSystem extends FileSystem {
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         LOG.debug("== open, key:" + key);
 
-        return new FSDataInputStream(new QiniuKodoInputStream(key, new QiniuKodoBlockReader(fsConfig, kodoClient)));
+        return new FSDataInputStream(
+                new QiniuKodoInputStream(
+                    key,
+                    new QiniuKodoBlockReader(fsConfig, kodoClient),
+                    fileStatus.getLen()
+                )
+        );
     }
 
     /**
@@ -257,7 +263,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         List<FileInfo> files = kodoClient.listStatus(dirKey, false);
 
         // 有子文件文件，但未 recursive 抛出异常
-        if (files != null && files.size() > 0 && !recursive) {
+        if (files.size() > 0 && !recursive) {
             throw new IOException("file is not empty");
         }
         return kodoClient.deleteKeys(dirKey);
