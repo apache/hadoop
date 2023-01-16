@@ -733,7 +733,11 @@ public class Client implements AutoCloseable {
                   + UserGroupInformation.getLoginUser().getUserName() + " to "
                   + remoteId;
               LOG.warn(msg, ex);
-              throw new IOException(msg, ex);
+              throw NetUtils.wrapException(remoteId.getAddress().getHostName(),
+                  remoteId.getAddress().getPort(),
+                  NetUtils.getHostname(),
+                  0,
+                  new IOException(msg, ex));
             }
           } else {
             // With RequestHedgingProxyProvider, one rpc call will send multiple
