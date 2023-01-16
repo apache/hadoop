@@ -43,10 +43,12 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -1329,49 +1331,66 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public Response replaceLabelsOnNodes(NodeToLabelsEntryList newNodeToLabels,
       HttpServletRequest hsr) throws IOException {
-
-    // Step1. We map the NodeId and NodeToLabelsEntry in the request.
-    Map<String, NodeToLabelsEntry> nodeIdToLabels = new HashMap<>();
-    newNodeToLabels.getNodeToLabels().stream().forEach(nodeIdToLabel -> {
-      String nodeId = nodeIdToLabel.getNodeId();
-      nodeIdToLabels.put(nodeId, nodeIdToLabel);
-    });
-
-    // Step2. We map SubCluster with NodeToLabelsEntryList
-    Map<SubClusterInfo, NodeToLabelsEntryList> subClusterToNodeToLabelsEntryList = new HashMap<>();
-    nodeIdToLabels.forEach((nodeId, nodeToLabelsEntry) -> {
-      SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
-      if (subClusterInfo == null) {
-        LOG.warn("Unable to find subCluster by nodeId = {}.", nodeId);
-      } else {
-        NodeToLabelsEntryList nodeToLabelsEntryList = subClusterToNodeToLabelsEntryList.
-            getOrDefault(subClusterInfo, new NodeToLabelsEntryList());
-        nodeToLabelsEntryList.getNodeToLabels().add(nodeToLabelsEntry);
-        subClusterToNodeToLabelsEntryList.put(subClusterInfo, nodeToLabelsEntryList);
+    try {
+      // Step1. Check the parameters to ensure that the parameters are not empty.
+      if (newNodeToLabels != null) {
+        throw new IllegalArgumentException("newNodeToLabels must not be empty.");
       }
-    });
+      List<NodeToLabelsEntry> nodeToLabelsEntrys = newNodeToLabels.getNodeToLabels();
+      if(CollectionUtils.isEmpty(nodeToLabelsEntrys)){
+        throw new IllegalArgumentException("nodeToLabelsEntrys must not be empty.");
+      }
 
-    // Step3. Traverse the subCluster and call the replaceLabelsOnNodes interface.
-    final HttpServletRequest hsrCopy = clone(hsr);
-    StringBuilder builder = new StringBuilder();
-    subClusterToNodeToLabelsEntryList.forEach((subCluster, nodeToLabelsEntryList) -> {
-      SubClusterId subClusterId = subCluster.getSubClusterId();
-      try {
-        DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-            subCluster.getSubClusterId(), subCluster.getRMWebServiceAddress());
-        Response response = interceptor.replaceLabelsOnNodes(nodeToLabelsEntryList, hsrCopy);
-        int statusOKCode = Status.OK.getStatusCode();
-        if (response != null && response.getStatus() == statusOKCode) {
-          builder.append(subClusterId.getId() + " : Success");
+      // Step2. We map the NodeId and NodeToLabelsEntry in the request.
+      Map<String, NodeToLabelsEntry> nodeIdToLabels = new HashMap<>();
+      newNodeToLabels.getNodeToLabels().stream().forEach(nodeIdToLabel -> {
+        String nodeId = nodeIdToLabel.getNodeId();
+        nodeIdToLabels.put(nodeId, nodeIdToLabel);
+      });
+
+      // Step3. We map SubCluster with NodeToLabelsEntryList
+      Map<SubClusterInfo, NodeToLabelsEntryList> subClusterToNodeToLabelsEntryList =
+          new HashMap<>();
+      nodeIdToLabels.forEach((nodeId, nodeToLabelsEntry) -> {
+        SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
+        if (subClusterInfo == null) {
+          LOG.warn("Unable to find subCluster by nodeId = {}.", nodeId);
+        } else {
+          NodeToLabelsEntryList nodeToLabelsEntryList = subClusterToNodeToLabelsEntryList.
+              getOrDefault(subClusterInfo, new NodeToLabelsEntryList());
+          nodeToLabelsEntryList.getNodeToLabels().add(nodeToLabelsEntry);
+          subClusterToNodeToLabelsEntryList.put(subClusterInfo, nodeToLabelsEntryList);
         }
-      } catch (Exception e) {
-        LOG.error("replaceLabelsOnNodes Failed. subClusterId = {}.", subClusterId, e);
-        builder.append(subClusterId.getId() + " : Failed.");
-      }
-    });
+      });
 
-    // Step4. return call result.
-    return Response.status(Status.OK).entity(builder.toString()).build();
+      // Step4. Traverse the subCluster and call the replaceLabelsOnNodes interface.
+      long startTime = clock.getTime();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      StringBuilder builder = new StringBuilder();
+      subClusterToNodeToLabelsEntryList.forEach((subCluster, nodeToLabelsEntryList) -> {
+        SubClusterId subClusterId = subCluster.getSubClusterId();
+        try {
+          DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+              subCluster.getSubClusterId(), subCluster.getRMWebServiceAddress());
+          interceptor.replaceLabelsOnNodes(nodeToLabelsEntryList, hsrCopy);
+          builder.append(subClusterId.getId() + " : Success.");
+        } catch (Exception e) {
+          LOG.error("replaceLabelsOnNodes Failed. subClusterId = {}.", subClusterId, e);
+          builder.append(subClusterId.getId() + " : Failed.");
+        }
+      });
+      long stopTime = clock.getTime();
+      routerMetrics.succeededReplaceLabelsOnNodesRetrieved(stopTime - startTime);
+
+      // Step5. return call result.
+      return Response.status(Status.OK).entity(builder.toString()).build();
+    } catch (NotFoundException e) {
+      routerMetrics.incrReplaceLabelsOnNodesFailedRetrieved();
+      throw e;
+    } catch (Exception e) {
+      routerMetrics.incrReplaceLabelsOnNodesFailedRetrieved();
+      throw e;
+    }
   }
 
   /**
@@ -1389,11 +1408,36 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public Response replaceLabelsOnNode(Set<String> newNodeLabelsName,
       HttpServletRequest hsr, String nodeId) throws Exception {
-    SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
-    DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-        subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
-    final HttpServletRequest hsrCopy = clone(hsr);
-    return interceptor.replaceLabelsOnNode(newNodeLabelsName, hsrCopy, nodeId);
+    try {
+      // Step1. Check the parameters to ensure that the parameters are not empty.
+      Validate.checkNotNullAndNotEmpty(nodeId, "nodeId");
+      if (CollectionUtils.isEmpty(newNodeLabelsName)) {
+        throw new IllegalArgumentException("newNodeLabelsName must not be empty.");
+      }
+
+      // Step2. We find the subCluster according to the nodeId,
+      // and then call the replaceLabelsOnNode of the subCluster.
+      long startTime = clock.getTime();
+      SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      final HttpServletRequest hsrCopy = clone(hsr);
+      interceptor.replaceLabelsOnNode(newNodeLabelsName, hsrCopy, nodeId);
+
+      // Step3. Return the response result.
+      long stopTime = clock.getTime();
+      routerMetrics.succeededReplaceLabelOnNodeRetrieved(stopTime - startTime);
+      return Response.status(Status.OK).build();
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrReplaceLabelOnNodeFailedRetrieved();
+      throw e;
+    } catch (NotFoundException e) {
+      routerMetrics.incrReplaceLabelOnNodeFailedRetrieved();
+      throw e;
+    } catch (Exception e){
+      routerMetrics.incrReplaceLabelOnNodeFailedRetrieved();
+      throw e;
+    }
   }
 
   @Override

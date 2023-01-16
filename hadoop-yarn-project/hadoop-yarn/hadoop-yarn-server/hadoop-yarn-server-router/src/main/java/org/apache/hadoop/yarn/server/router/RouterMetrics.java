@@ -139,6 +139,10 @@ public final class RouterMetrics {
   private MutableGaugeInt numRefreshSuperUserGroupsConfigurationFailedRetrieved;
   @Metric("# of refreshUserToGroupsMappings failed to be retrieved")
   private MutableGaugeInt numRefreshUserToGroupsMappingsFailedRetrieved;
+  @Metric("# of replaceLabelsOnNodes failed to be retrieved")
+  private MutableGaugeInt numReplaceLabelsOnNodesFailedRetrieved;
+  @Metric("# of replaceLabelOnNode failed to be retrieved")
+  private MutableGaugeInt numReplaceLabelOnNodeFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -239,6 +243,10 @@ public final class RouterMetrics {
   private MutableRate totalSucceededRefreshSuperUserGroupsConfigurationRetrieved;
   @Metric("Total number of successful Retrieved RefreshUserToGroupsMappings and latency(ms)")
   private MutableRate totalSucceededRefreshUserToGroupsMappingsRetrieved;
+  @Metric("Total number of successful Retrieved ReplaceLabelsOnNodes and latency(ms)")
+  private MutableRate totalSucceededReplaceLabelsOnNodesRetrieved;
+  @Metric("Total number of successful Retrieved ReplaceLabelsOnNode and latency(ms)")
+  private MutableRate totalSucceededReplaceLabelOnNodesRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -292,6 +300,8 @@ public final class RouterMetrics {
   private MutableQuantiles cancelDelegationTokenLatency;
   private MutableQuantiles refreshSuperUserGroupsConfLatency;
   private MutableQuantiles refreshUserToGroupsMappingsLatency;
+  private MutableQuantiles replaceLabelsOnNodesLatency;
+  private MutableQuantiles replaceLabelOnNodesLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
@@ -471,6 +481,12 @@ public final class RouterMetrics {
 
     refreshUserToGroupsMappingsLatency = registry.newQuantiles("refreshUserToGroupsMappingsLatency",
         "latency of refresh user to groups mappings timeouts", "ops", "latency", 10);
+
+    replaceLabelsOnNodesLatency = registry.newQuantiles("replaceLabelsOnNodesLatency",
+        "latency of replace labels on nodes timeouts", "ops", "latency", 10);
+
+    replaceLabelOnNodesLatency = registry.newQuantiles("replaceLabelOnNodesLatency",
+        "latency of replace label on node timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -733,6 +749,16 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededReplaceLabelsOnNodesRetrieved() {
+    return totalSucceededReplaceLabelsOnNodesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededReplaceLabelOnNodesRetrieved() {
+    return totalSucceededReplaceLabelOnNodesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededAppsCreated() {
     return totalSucceededAppsCreated.lastStat().mean();
   }
@@ -973,6 +999,16 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededReplaceLabelsOnNodesRetrieved() {
+    return totalSucceededReplaceLabelsOnNodesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededReplaceLabelOnNodesRetrieved() {
+    return totalSucceededReplaceLabelOnNodesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public int getAppsFailedCreated() {
     return numAppsFailedCreated.value();
   }
@@ -1176,6 +1212,14 @@ public final class RouterMetrics {
 
   public int getNumRefreshUserToGroupsMappingsFailedRetrieved() {
     return numRefreshUserToGroupsMappingsFailedRetrieved.value();
+  }
+
+  public int getNumReplaceLabelsOnNodesFailedRetrieved() {
+    return numReplaceLabelsOnNodesFailedRetrieved.value();
+  }
+
+  public int getNumReplaceLabelOnNodeFailedRetrieved() {
+    return numReplaceLabelOnNodeFailedRetrieved.value();
   }
 
   public int getDelegationTokenFailedRetrieved() {
@@ -1435,6 +1479,16 @@ public final class RouterMetrics {
     refreshUserToGroupsMappingsLatency.add(duration);
   }
 
+  public void succeededReplaceLabelsOnNodesRetrieved(long duration) {
+    totalSucceededReplaceLabelsOnNodesRetrieved.add(duration);
+    replaceLabelsOnNodesLatency.add(duration);
+  }
+
+  public void succeededReplaceLabelOnNodeRetrieved(long duration) {
+    totalSucceededReplaceLabelOnNodesRetrieved.add(duration);
+    replaceLabelOnNodesLatency.add(duration);
+  }
+
   public void incrAppsFailedCreated() {
     numAppsFailedCreated.incr();
   }
@@ -1629,5 +1683,13 @@ public final class RouterMetrics {
 
   public void incrCancelDelegationTokenFailedRetrieved() {
     numCancelDelegationTokenFailedRetrieved.incr();
+  }
+
+  public void incrReplaceLabelsOnNodesFailedRetrieved() {
+    numReplaceLabelsOnNodesFailedRetrieved.incr();
+  }
+
+  public void incrReplaceLabelOnNodeFailedRetrieved() {
+    numReplaceLabelOnNodeFailedRetrieved.incr();
   }
 }
