@@ -51,12 +51,13 @@ public class QiniuKodoOutputStream extends OutputStream {
         pos.close();
         try {
             thread.join();
-            if (uploadException != null) {
-                if (uploadException.response.statusCode == 614) {
-                    throw new FileAlreadyExistsException("key exists " + key);
-                }
-                throw uploadException;
+            if (uploadException == null) {
+                return;
             }
+            if (uploadException.response.statusCode == 614) {
+                throw new FileAlreadyExistsException("key exists " + key);
+            }
+            throw uploadException;
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
