@@ -117,9 +117,7 @@ public class QiniuKodoClient {
             }
             if (e.response.statusCode == 416) {
                 // Requested Range not satisfiable
-                if (offset == 0) {
-                    return new ByteArrayInputStream(new byte[0]);
-                }
+                return new ByteArrayInputStream(new byte[0]);
             }
             throw new IOException(e.response.toString());
         }

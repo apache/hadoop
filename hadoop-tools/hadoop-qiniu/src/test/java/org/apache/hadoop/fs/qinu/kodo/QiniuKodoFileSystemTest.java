@@ -94,4 +94,25 @@ public class QiniuKodoFileSystemTest {
         }
         os.close();
     }
+
+    @Test
+    public void testReadFully() throws IOException {
+        byte[] data = new byte[256];
+        for(int i=0;i<256;i++) {
+            data[i] = (byte) i;
+        }
+
+        FSDataOutputStream os = fs.create(new Path("testFile.tmp"), true);
+        os.write(data);
+        os.close();
+
+        FSDataInputStream is = fs.open(new Path("testFile.tmp"));
+        byte[] buf = new byte[256];
+        is.read();
+        LOG.info("{}", is.read(buf,1, 101));
+        LOG.info("{}", buf);
+
+
+        is.close();
+    }
 }

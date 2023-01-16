@@ -86,7 +86,7 @@ public class QiniuKodoFileSystem extends FileSystem {
                 new QiniuKodoInputStream(
                     key,
                     new QiniuKodoBlockReader(fsConfig, kodoClient),
-                    fileStatus.getLen()
+                    fileStatus.getLen(), statistics
                 )
         );
     }
