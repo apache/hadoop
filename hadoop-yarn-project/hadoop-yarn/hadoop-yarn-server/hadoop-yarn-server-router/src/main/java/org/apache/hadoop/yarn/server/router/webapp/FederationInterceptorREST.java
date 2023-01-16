@@ -1326,7 +1326,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * @param newNodeToLabels the list of new labels. It is a content param.
    * @param hsr the servlet request
    * @return Response containing the status code
-   * @throws Exception if an exception happened
+   * @throws IOException if an exception happened
    */
   @Override
   public Response replaceLabelsOnNodes(NodeToLabelsEntryList newNodeToLabels,
@@ -1353,14 +1353,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           new HashMap<>();
       nodeIdToLabels.forEach((nodeId, nodeToLabelsEntry) -> {
         SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
-        if (subClusterInfo == null) {
-          LOG.warn("Unable to find subCluster by nodeId = {}.", nodeId);
-        } else {
-          NodeToLabelsEntryList nodeToLabelsEntryList = subClusterToNodeToLabelsEntryList.
-              getOrDefault(subClusterInfo, new NodeToLabelsEntryList());
-          nodeToLabelsEntryList.getNodeToLabels().add(nodeToLabelsEntry);
-          subClusterToNodeToLabelsEntryList.put(subClusterInfo, nodeToLabelsEntryList);
-        }
+        NodeToLabelsEntryList nodeToLabelsEntryList = subClusterToNodeToLabelsEntryList.
+            getOrDefault(subClusterInfo, new NodeToLabelsEntryList());
+        nodeToLabelsEntryList.getNodeToLabels().add(nodeToLabelsEntry);
+        subClusterToNodeToLabelsEntryList.put(subClusterInfo, nodeToLabelsEntryList);
       });
 
       // Step4. Traverse the subCluster and call the replaceLabelsOnNodes interface.
