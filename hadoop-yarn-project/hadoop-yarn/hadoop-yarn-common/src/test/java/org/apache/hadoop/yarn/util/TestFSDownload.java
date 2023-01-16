@@ -18,13 +18,6 @@
 
 package org.apache.hadoop.yarn.util;
 
-import static org.apache.hadoop.fs.CreateFlag.CREATE;
-import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -52,14 +45,17 @@ import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import org.apache.hadoop.util.concurrent.HadoopExecutors;
-import org.apache.hadoop.yarn.api.records.URL;
-import org.junit.Assert;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -70,17 +66,21 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.junit.AfterClass;
-import org.junit.Test;
 
-import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
-import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
-import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import static org.apache.hadoop.fs.CreateFlag.CREATE;
+import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Unit test for the FSDownload class.
@@ -96,7 +96,7 @@ public class TestFSDownload {
   };
   private Configuration conf = new Configuration();
 
-  @AfterClass
+  @AfterAll
   public static void deleteTestDir() throws IOException {
     FileContext fs = FileContext.getLocalFSFileContext();
     fs.delete(new Path("target", TestFSDownload.class.getSimpleName()), true);
@@ -270,16 +270,17 @@ public class TestFSDownload {
     return ret;
   }
 
-  @Test (timeout=10000)
-  public void testDownloadBadPublic() throws IOException, URISyntaxException,
+  @Test
+  @Timeout(10000)
+  void testDownloadBadPublic() throws IOException, URISyntaxException,
       InterruptedException {
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
     FileContext files = FileContext.getLocalFSFileContext(conf);
     final Path basedir = files.makeQualified(new Path("target",
-      TestFSDownload.class.getSimpleName()));
+        TestFSDownload.class.getSimpleName()));
     files.mkdir(basedir, null, true);
     conf.setStrings(TestFSDownload.class.getName(), basedir.toString());
-    
+
     Map<LocalResource, LocalResourceVisibility> rsrcVis =
         new HashMap<LocalResource, LocalResourceVisibility>();
 
@@ -288,11 +289,11 @@ public class TestFSDownload {
     rand.setSeed(sharedSeed);
     System.out.println("SEED: " + sharedSeed);
 
-    Map<LocalResource,Future<Path>> pending =
-      new HashMap<LocalResource,Future<Path>>();
+    Map<LocalResource, Future<Path>> pending =
+        new HashMap<LocalResource, Future<Path>>();
     ExecutorService exec = HadoopExecutors.newSingleThreadExecutor();
     LocalDirAllocator dirs =
-      new LocalDirAllocator(TestFSDownload.class.getName());
+        new LocalDirAllocator(TestFSDownload.class.getName());
     int size = 512;
     LocalResourceVisibility vis = LocalResourceVisibility.PUBLIC;
     Path path = new Path(basedir, "test-file");
@@ -300,32 +301,33 @@ public class TestFSDownload {
     rsrcVis.put(rsrc, vis);
     Path destPath = dirs.getLocalPathForWrite(
         basedir.toString(), size, conf);
-    destPath = new Path (destPath,
-      Long.toString(uniqueNumberGenerator.incrementAndGet()));
+    destPath = new Path(destPath,
+        Long.toString(uniqueNumberGenerator.incrementAndGet()));
     FSDownload fsd =
-      new FSDownload(files, UserGroupInformation.getCurrentUser(), conf,
-          destPath, rsrc);
+        new FSDownload(files, UserGroupInformation.getCurrentUser(), conf,
+            destPath, rsrc);
     pending.put(rsrc, exec.submit(fsd));
     exec.shutdown();
-    while (!exec.awaitTermination(1000, TimeUnit.MILLISECONDS));
-    Assert.assertTrue(pending.get(rsrc).isDone());
+    while (!exec.awaitTermination(1000, TimeUnit.MILLISECONDS)) ;
+    assertTrue(pending.get(rsrc).isDone());
 
     try {
-      for (Map.Entry<LocalResource,Future<Path>> p : pending.entrySet()) {
+      for (Map.Entry<LocalResource, Future<Path>> p : pending.entrySet()) {
         p.getValue().get();
-        Assert.fail("We localized a file that is not public.");
+        fail("We localized a file that is not public.");
       }
     } catch (ExecutionException e) {
-      Assert.assertTrue(e.getCause() instanceof IOException);
+      assertTrue(e.getCause() instanceof IOException);
     }
   }
 
-  @Test (timeout=60000)
-  public void testDownloadPublicWithStatCache() throws IOException,
+  @Test
+  @Timeout(60000)
+  void testDownloadPublicWithStatCache() throws IOException,
       URISyntaxException, InterruptedException, ExecutionException {
     FileContext files = FileContext.getLocalFSFileContext(conf);
     Path basedir = files.makeQualified(new Path("target",
-      TestFSDownload.class.getSimpleName()));
+        TestFSDownload.class.getSimpleName()));
 
     // if test directory doesn't have ancestor permission, skip this test
     FileSystem f = basedir.getFileSystem(conf);
@@ -336,28 +338,28 @@ public class TestFSDownload {
 
     int size = 512;
 
-    final ConcurrentMap<Path,AtomicInteger> counts =
-        new ConcurrentHashMap<Path,AtomicInteger>();
-    final CacheLoader<Path,Future<FileStatus>> loader =
+    final ConcurrentMap<Path, AtomicInteger> counts =
+        new ConcurrentHashMap<Path, AtomicInteger>();
+    final CacheLoader<Path, Future<FileStatus>> loader =
         FSDownload.createStatusCacheLoader(conf);
-    final LoadingCache<Path,Future<FileStatus>> statCache =
-        CacheBuilder.newBuilder().build(new CacheLoader<Path,Future<FileStatus>>() {
-      public Future<FileStatus> load(Path path) throws Exception {
-        // increment the count
-        AtomicInteger count = counts.get(path);
-        if (count == null) {
-          count = new AtomicInteger(0);
-          AtomicInteger existing = counts.putIfAbsent(path, count);
-          if (existing != null) {
-            count = existing;
-          }
-        }
-        count.incrementAndGet();
+    final LoadingCache<Path, Future<FileStatus>> statCache =
+        CacheBuilder.newBuilder().build(new CacheLoader<Path, Future<FileStatus>>() {
+          public Future<FileStatus> load(Path path) throws Exception {
+            // increment the count
+            AtomicInteger count = counts.get(path);
+            if (count == null) {
+              count = new AtomicInteger(0);
+              AtomicInteger existing = counts.putIfAbsent(path, count);
+              if (existing != null) {
+                count = existing;
+              }
+            }
+            count.incrementAndGet();
 
-        // use the default loader
-        return loader.load(path);
-      }
-    });
+            // use the default loader
+            return loader.load(path);
+          }
+        });
 
     // test FSDownload.isPublic() concurrently
     final int fileCount = 3;
@@ -382,11 +384,11 @@ public class TestFSDownload {
     try {
       List<Future<Boolean>> futures = exec.invokeAll(tasks);
       // files should be public
-      for (Future<Boolean> future: futures) {
+      for (Future<Boolean> future : futures) {
         assertTrue(future.get());
       }
       // for each path exactly one file status call should be made
-      for (AtomicInteger count: counts.values()) {
+      for (AtomicInteger count : counts.values()) {
         assertSame(count.get(), 1);
       }
     } finally {
@@ -394,16 +396,17 @@ public class TestFSDownload {
     }
   }
 
-  @Test (timeout=10000)
-  public void testDownload() throws IOException, URISyntaxException,
+  @Test
+  @Timeout(10000)
+  void testDownload() throws IOException, URISyntaxException,
       InterruptedException {
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
     FileContext files = FileContext.getLocalFSFileContext(conf);
     final Path basedir = files.makeQualified(new Path("target",
-      TestFSDownload.class.getSimpleName()));
+        TestFSDownload.class.getSimpleName()));
     files.mkdir(basedir, null, true);
     conf.setStrings(TestFSDownload.class.getName(), basedir.toString());
-    
+
     Map<LocalResource, LocalResourceVisibility> rsrcVis =
         new HashMap<LocalResource, LocalResourceVisibility>();
 
@@ -412,16 +415,16 @@ public class TestFSDownload {
     rand.setSeed(sharedSeed);
     System.out.println("SEED: " + sharedSeed);
 
-    Map<LocalResource,Future<Path>> pending =
-      new HashMap<LocalResource,Future<Path>>();
+    Map<LocalResource, Future<Path>> pending =
+        new HashMap<LocalResource, Future<Path>>();
     ExecutorService exec = HadoopExecutors.newSingleThreadExecutor();
     LocalDirAllocator dirs =
-      new LocalDirAllocator(TestFSDownload.class.getName());
+        new LocalDirAllocator(TestFSDownload.class.getName());
     int[] sizes = new int[10];
     for (int i = 0; i < 10; ++i) {
       sizes[i] = rand.nextInt(512) + 512;
       LocalResourceVisibility vis = LocalResourceVisibility.PRIVATE;
-      if (i%2 == 1) {
+      if (i % 2 == 1) {
         vis = LocalResourceVisibility.APPLICATION;
       }
       Path p = new Path(basedir, "" + i);
@@ -429,7 +432,7 @@ public class TestFSDownload {
       rsrcVis.put(rsrc, vis);
       Path destPath = dirs.getLocalPathForWrite(
           basedir.toString(), sizes[i], conf);
-      destPath = new Path (destPath,
+      destPath = new Path(destPath,
           Long.toString(uniqueNumberGenerator.incrementAndGet()));
       FSDownload fsd =
           new FSDownload(files, UserGroupInformation.getCurrentUser(), conf,
@@ -438,29 +441,29 @@ public class TestFSDownload {
     }
 
     exec.shutdown();
-    while (!exec.awaitTermination(1000, TimeUnit.MILLISECONDS));
-    for (Future<Path> path: pending.values()) {
-      Assert.assertTrue(path.isDone());
+    while (!exec.awaitTermination(1000, TimeUnit.MILLISECONDS)) ;
+    for (Future<Path> path : pending.values()) {
+      assertTrue(path.isDone());
     }
 
     try {
-      for (Map.Entry<LocalResource,Future<Path>> p : pending.entrySet()) {
+      for (Map.Entry<LocalResource, Future<Path>> p : pending.entrySet()) {
         Path localized = p.getValue().get();
         assertEquals(sizes[Integer.parseInt(localized.getName())], p.getKey()
             .getSize());
 
         FileStatus status = files.getFileStatus(localized.getParent());
         FsPermission perm = status.getPermission();
-        assertEquals("Cache directory permissions are incorrect",
-            new FsPermission((short)0755), perm);
+        assertEquals(new FsPermission((short) 0755), perm,
+            "Cache directory permissions are incorrect");
 
         status = files.getFileStatus(localized);
         perm = status.getPermission();
-        System.out.println("File permission " + perm + 
+        System.out.println("File permission " + perm +
             " for rsrc vis " + p.getKey().getVisibility().name());
         assert(rsrcVis.containsKey(p.getKey()));
-        Assert.assertTrue("Private file should be 500",
-            perm.toShort() == FSDownload.PRIVATE_FILE_PERMS.toShort());
+        assertTrue(perm.toShort() == FSDownload.PRIVATE_FILE_PERMS.toShort(),
+            "Private file should be 500");
       }
     } catch (ExecutionException e) {
       throw new IOException("Failed exec", e);
@@ -524,15 +527,14 @@ public class TestFSDownload {
           FileStatus[] childFiles = files.getDefaultFileSystem().listStatus(
               filestatus.getPath());
           for (FileStatus childfile : childFiles) {
-            if(strFileName.endsWith(".ZIP") &&
-               childfile.getPath().getName().equals(strFileName) &&
-               !childfile.isDirectory()) {
-               Assert.fail("Failure...After unzip, there should have been a" +
-                 " directory formed with zip file name but found a file. "
-                 + childfile.getPath());
+            if (strFileName.endsWith(".ZIP") && childfile.getPath().getName().equals(strFileName)
+                && !childfile.isDirectory()) {
+              fail("Failure...After unzip, there should have been a"
+                  + " directory formed with zip file name but found a file. "
+                  + childfile.getPath());
             }
             if (childfile.getPath().getName().startsWith("tmp")) {
-              Assert.fail("Tmp File should not have been there "
+              fail("Tmp File should not have been there "
                   + childfile.getPath());
             }
           }
@@ -543,20 +545,23 @@ public class TestFSDownload {
     }
   }
 
-  @Test (timeout=10000)
-  public void testDownloadArchive() throws IOException, URISyntaxException,
+  @Test
+  @Timeout(10000)
+  void testDownloadArchive() throws IOException, URISyntaxException,
       InterruptedException {
     downloadWithFileType(TEST_FILE_TYPE.TAR);
   }
 
-  @Test (timeout=10000)
-  public void testDownloadPatternJar() throws IOException, URISyntaxException,
+  @Test
+  @Timeout(10000)
+  void testDownloadPatternJar() throws IOException, URISyntaxException,
       InterruptedException {
     downloadWithFileType(TEST_FILE_TYPE.JAR);
   }
 
-  @Test (timeout=10000)
-  public void testDownloadArchiveZip() throws IOException, URISyntaxException,
+  @Test
+  @Timeout(10000)
+  void testDownloadArchiveZip() throws IOException, URISyntaxException,
       InterruptedException {
     downloadWithFileType(TEST_FILE_TYPE.ZIP);
   }
@@ -564,8 +569,9 @@ public class TestFSDownload {
   /*
    * To test fix for YARN-3029
    */
-  @Test (timeout=10000)
-  public void testDownloadArchiveZipWithTurkishLocale() throws IOException,
+  @Test
+  @Timeout(10000)
+  void testDownloadArchiveZipWithTurkishLocale() throws IOException,
       URISyntaxException, InterruptedException {
     Locale defaultLocale = Locale.getDefault();
     // Set to Turkish
@@ -576,8 +582,9 @@ public class TestFSDownload {
     Locale.setDefault(defaultLocale);
   }
 
-  @Test (timeout=10000)
-  public void testDownloadArchiveTgz() throws IOException, URISyntaxException,
+  @Test
+  @Timeout(10000)
+  void testDownloadArchiveTgz() throws IOException, URISyntaxException,
       InterruptedException {
     downloadWithFileType(TEST_FILE_TYPE.TGZ);
   }
@@ -588,11 +595,11 @@ public class TestFSDownload {
     FileStatus status = files.getFileStatus(p);
     if (status.isDirectory()) {
       if (vis == LocalResourceVisibility.PUBLIC) {
-        Assert.assertTrue(status.getPermission().toShort() ==
+        assertTrue(status.getPermission().toShort() ==
           FSDownload.PUBLIC_DIR_PERMS.toShort());
       }
       else {
-        Assert.assertTrue(status.getPermission().toShort() ==
+        assertTrue(status.getPermission().toShort() ==
           FSDownload.PRIVATE_DIR_PERMS.toShort());
       }
       if (!status.isSymlink()) {
@@ -604,40 +611,41 @@ public class TestFSDownload {
     }
     else {
       if (vis == LocalResourceVisibility.PUBLIC) {
-        Assert.assertTrue(status.getPermission().toShort() ==
+        assertTrue(status.getPermission().toShort() ==
           FSDownload.PUBLIC_FILE_PERMS.toShort());
       }
       else {
-        Assert.assertTrue(status.getPermission().toShort() ==
+        assertTrue(status.getPermission().toShort() ==
           FSDownload.PRIVATE_FILE_PERMS.toShort());
       }
     }      
   }
 
-  @Test (timeout=10000)
-  public void testDirDownload() throws IOException, InterruptedException {
+  @Test
+  @Timeout(10000)
+  void testDirDownload() throws IOException, InterruptedException {
     FileContext files = FileContext.getLocalFSFileContext(conf);
     final Path basedir = files.makeQualified(new Path("target",
-      TestFSDownload.class.getSimpleName()));
+        TestFSDownload.class.getSimpleName()));
     files.mkdir(basedir, null, true);
     conf.setStrings(TestFSDownload.class.getName(), basedir.toString());
-    
+
     Map<LocalResource, LocalResourceVisibility> rsrcVis =
         new HashMap<LocalResource, LocalResourceVisibility>();
-  
+
     Random rand = new Random();
     long sharedSeed = rand.nextLong();
     rand.setSeed(sharedSeed);
     System.out.println("SEED: " + sharedSeed);
 
-    Map<LocalResource,Future<Path>> pending =
-      new HashMap<LocalResource,Future<Path>>();
+    Map<LocalResource, Future<Path>> pending =
+        new HashMap<LocalResource, Future<Path>>();
     ExecutorService exec = HadoopExecutors.newSingleThreadExecutor();
     LocalDirAllocator dirs =
-      new LocalDirAllocator(TestFSDownload.class.getName());
+        new LocalDirAllocator(TestFSDownload.class.getName());
     for (int i = 0; i < 5; ++i) {
       LocalResourceVisibility vis = LocalResourceVisibility.PRIVATE;
-      if (i%2 == 1) {
+      if (i % 2 == 1) {
         vis = LocalResourceVisibility.APPLICATION;
       }
 
@@ -646,7 +654,7 @@ public class TestFSDownload {
       rsrcVis.put(rsrc, vis);
       Path destPath = dirs.getLocalPathForWrite(
           basedir.toString(), conf);
-      destPath = new Path (destPath,
+      destPath = new Path(destPath,
           Long.toString(uniqueNumberGenerator.incrementAndGet()));
       FSDownload fsd =
           new FSDownload(files, UserGroupInformation.getCurrentUser(), conf,
@@ -655,21 +663,21 @@ public class TestFSDownload {
     }
 
     exec.shutdown();
-    while (!exec.awaitTermination(1000, TimeUnit.MILLISECONDS));
-    for (Future<Path> path: pending.values()) {
-      Assert.assertTrue(path.isDone());
+    while (!exec.awaitTermination(1000, TimeUnit.MILLISECONDS)) ;
+    for (Future<Path> path : pending.values()) {
+      assertTrue(path.isDone());
     }
 
     try {
-      
-      for (Map.Entry<LocalResource,Future<Path>> p : pending.entrySet()) {
+
+      for (Map.Entry<LocalResource, Future<Path>> p : pending.entrySet()) {
         Path localized = p.getValue().get();
         FileStatus status = files.getFileStatus(localized);
 
         System.out.println("Testing path " + localized);
         assert(status.isDirectory());
         assert(rsrcVis.containsKey(p.getKey()));
-        
+
         verifyPermsRecursively(localized.getFileSystem(conf),
             files, localized, rsrcVis.get(p.getKey()));
       }
@@ -678,8 +686,9 @@ public class TestFSDownload {
     }
   }
 
-  @Test (timeout=10000)
-  public void testUniqueDestinationPath() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testUniqueDestinationPath() throws Exception {
     FileContext files = FileContext.getLocalFSFileContext(conf);
     final Path basedir = files.makeQualified(new Path("target",
         TestFSDownload.class.getSimpleName()));
@@ -704,12 +713,12 @@ public class TestFSDownload {
             destPath, rsrc);
     Future<Path> rPath = singleThreadedExec.submit(fsd);
     singleThreadedExec.shutdown();
-    while (!singleThreadedExec.awaitTermination(1000, TimeUnit.MILLISECONDS));
-    Assert.assertTrue(rPath.isDone());
+    while (!singleThreadedExec.awaitTermination(1000, TimeUnit.MILLISECONDS)) ;
+    assertTrue(rPath.isDone());
     // Now FSDownload will not create a random directory to localize the
     // resource. Therefore the final localizedPath for the resource should be
     // destination directory (passed as an argument) + file name.
-    Assert.assertEquals(destPath, rPath.get().getParent());
+    assertEquals(destPath, rPath.get().getParent());
   }
 
   /**
@@ -717,8 +726,9 @@ public class TestFSDownload {
    * from modification to the local resource's timestamp on the source FS just
    * before the download of this local resource has started.
    */
-  @Test(timeout=10000)
-  public void testResourceTimestampChangeDuringDownload()
+  @Test
+  @Timeout(10000)
+  void testResourceTimestampChangeDuringDownload()
       throws IOException, InterruptedException {
     conf = new Configuration();
     FileContext files = FileContext.getLocalFSFileContext(conf);
@@ -759,7 +769,7 @@ public class TestFSDownload {
       FileSystem sourceFs = sourceFsPath.getFileSystem(conf);
       sourceFs.setTimes(sourceFsPath, modifiedFSTimestamp, modifiedFSTimestamp);
     } catch (URISyntaxException use) {
-      Assert.fail("No exception expected.");
+      fail("No exception expected.");
     }
 
     // Execute the FSDownload operation.
@@ -770,19 +780,19 @@ public class TestFSDownload {
     exec.shutdown();
 
     exec.awaitTermination(1000, TimeUnit.MILLISECONDS);
-    Assert.assertTrue(pending.get(localResource).isDone());
+    assertTrue(pending.get(localResource).isDone());
 
     try {
       for (Map.Entry<LocalResource, Future<Path>> p : pending.entrySet()) {
         p.getValue().get();
       }
-      Assert.fail("Exception expected from timestamp update during download");
+      fail("Exception expected from timestamp update during download");
     } catch (ExecutionException ee) {
-      Assert.assertTrue(ee.getCause() instanceof IOException);
-      Assert.assertTrue("Exception contains original timestamp",
-          ee.getMessage().contains(Times.formatISO8601(origLRTimestamp)));
-      Assert.assertTrue("Exception contains modified timestamp",
-          ee.getMessage().contains(Times.formatISO8601(modifiedFSTimestamp)));
+      assertTrue(ee.getCause() instanceof IOException);
+      assertTrue(ee.getMessage().contains(Times.formatISO8601(origLRTimestamp)),
+          "Exception contains original timestamp");
+      assertTrue(ee.getMessage().contains(Times.formatISO8601(modifiedFSTimestamp)),
+          "Exception contains modified timestamp");
     }
   }
 }

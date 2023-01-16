@@ -33,4 +33,27 @@ public abstract class RefreshUserToGroupsMappingsRequest {
         Records.newRecord(RefreshUserToGroupsMappingsRequest.class);
     return request;
   }
+
+  @Public
+  @Stable
+  public static RefreshUserToGroupsMappingsRequest newInstance(String subClusterId) {
+    RefreshUserToGroupsMappingsRequest request =
+        Records.newRecord(RefreshUserToGroupsMappingsRequest.class);
+    request.setSubClusterId(subClusterId);
+    return request;
+  }
+
+  /**
+   * Get the subClusterId.
+   *
+   * @return subClusterId.
+   */
+  public abstract String getSubClusterId();
+
+  /**
+   * Set the subClusterId.
+   *
+   * @param subClusterId subCluster Id.
+   */
+  public abstract void setSubClusterId(String subClusterId);
 }

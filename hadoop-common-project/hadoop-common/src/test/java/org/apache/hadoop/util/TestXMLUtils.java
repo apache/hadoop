@@ -20,10 +20,12 @@ package org.apache.hadoop.util;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.SAXParser;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
@@ -31,6 +33,7 @@ import javax.xml.transform.stream.StreamSource;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Assert;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
@@ -126,6 +129,15 @@ public class TestXMLUtils extends AbstractHadoopTestBase {
     ) {
       transformer.transform(new StreamSource(stream), new StreamResult(stringWriter));
     }
+  }
+
+  @Test
+  public void testBestEffortSetAttribute() throws Exception {
+    TransformerFactory factory = TransformerFactory.newInstance();
+    Assert.assertFalse("unexpected attribute results in return of false",
+            XMLUtils.bestEffortSetAttribute(factory, "unsupportedAttribute false", "abc"));
+    Assert.assertTrue("expected attribute results in return of false",
+            XMLUtils.bestEffortSetAttribute(factory, XMLConstants.ACCESS_EXTERNAL_DTD, ""));
   }
 
   private static InputStream getResourceStream(final String filename) {

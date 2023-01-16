@@ -121,10 +121,24 @@ public final class RouterMetrics {
   private MutableGaugeInt numGetAppTimeoutFailedRetrieved;
   @Metric("# of getAppTimeouts failed to be retrieved")
   private MutableGaugeInt numGetAppTimeoutsFailedRetrieved;
+  @Metric("# of refreshQueues failed to be retrieved")
+  private MutableGaugeInt numRefreshQueuesFailedRetrieved;
   @Metric("# of getRMNodeLabels failed to be retrieved")
   private MutableGaugeInt numGetRMNodeLabelsFailedRetrieved;
   @Metric("# of checkUserAccessToQueue failed to be retrieved")
   private MutableGaugeInt numCheckUserAccessToQueueFailedRetrieved;
+  @Metric("# of refreshNodes failed to be retrieved")
+  private MutableGaugeInt numRefreshNodesFailedRetrieved;
+  @Metric("# of getDelegationToken failed to be retrieved")
+  private MutableGaugeInt numGetDelegationTokenFailedRetrieved;
+  @Metric("# of renewDelegationToken failed to be retrieved")
+  private MutableGaugeInt numRenewDelegationTokenFailedRetrieved;
+  @Metric("# of renewDelegationToken failed to be retrieved")
+  private MutableGaugeInt numCancelDelegationTokenFailedRetrieved;
+  @Metric("# of refreshSuperUserGroupsConfiguration failed to be retrieved")
+  private MutableGaugeInt numRefreshSuperUserGroupsConfigurationFailedRetrieved;
+  @Metric("# of refreshUserToGroupsMappings failed to be retrieved")
+  private MutableGaugeInt numRefreshUserToGroupsMappingsFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -207,10 +221,24 @@ public final class RouterMetrics {
   private MutableRate totalSucceededGetAppTimeoutRetrieved;
   @Metric("Total number of successful Retrieved GetAppTimeouts and latency(ms)")
   private MutableRate totalSucceededGetAppTimeoutsRetrieved;
+  @Metric("Total number of successful Retrieved RefreshQueues and latency(ms)")
+  private MutableRate totalSucceededRefreshQueuesRetrieved;
   @Metric("Total number of successful Retrieved GetRMNodeLabels and latency(ms)")
   private MutableRate totalSucceededGetRMNodeLabelsRetrieved;
   @Metric("Total number of successful Retrieved CheckUserAccessToQueue and latency(ms)")
   private MutableRate totalSucceededCheckUserAccessToQueueRetrieved;
+  @Metric("Total number of successful Retrieved RefreshNodes and latency(ms)")
+  private MutableRate totalSucceededRefreshNodesRetrieved;
+  @Metric("Total number of successful Retrieved GetDelegationToken and latency(ms)")
+  private MutableRate totalSucceededGetDelegationTokenRetrieved;
+  @Metric("Total number of successful Retrieved RenewDelegationToken and latency(ms)")
+  private MutableRate totalSucceededRenewDelegationTokenRetrieved;
+  @Metric("Total number of successful Retrieved CancelDelegationToken and latency(ms)")
+  private MutableRate totalSucceededCancelDelegationTokenRetrieved;
+  @Metric("Total number of successful Retrieved RefreshSuperUserGroupsConfig and latency(ms)")
+  private MutableRate totalSucceededRefreshSuperUserGroupsConfigurationRetrieved;
+  @Metric("Total number of successful Retrieved RefreshUserToGroupsMappings and latency(ms)")
+  private MutableRate totalSucceededRefreshUserToGroupsMappingsRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -255,8 +283,15 @@ public final class RouterMetrics {
   private MutableQuantiles getUpdateQueueLatency;
   private MutableQuantiles getAppTimeoutLatency;
   private MutableQuantiles getAppTimeoutsLatency;
+  private MutableQuantiles refreshQueuesLatency;
   private MutableQuantiles getRMNodeLabelsLatency;
   private MutableQuantiles checkUserAccessToQueueLatency;
+  private MutableQuantiles refreshNodesLatency;
+  private MutableQuantiles getDelegationTokenLatency;
+  private MutableQuantiles renewDelegationTokenLatency;
+  private MutableQuantiles cancelDelegationTokenLatency;
+  private MutableQuantiles refreshSuperUserGroupsConfLatency;
+  private MutableQuantiles refreshUserToGroupsMappingsLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
@@ -410,11 +445,32 @@ public final class RouterMetrics {
     getAppTimeoutsLatency = registry.newQuantiles("getAppTimeoutsLatency",
          "latency of get apptimeouts timeouts", "ops", "latency", 10);
 
+    refreshQueuesLatency = registry.newQuantiles("refreshQueuesLatency",
+         "latency of get refresh queues timeouts", "ops", "latency", 10);
+
     getRMNodeLabelsLatency = registry.newQuantiles("getRMNodeLabelsLatency",
         "latency of get rmnodelabels timeouts", "ops", "latency", 10);
 
     checkUserAccessToQueueLatency = registry.newQuantiles("checkUserAccessToQueueLatency",
         "latency of get apptimeouts timeouts", "ops", "latency", 10);
+
+    refreshNodesLatency = registry.newQuantiles("refreshNodesLatency",
+        "latency of get refresh nodes timeouts", "ops", "latency", 10);
+
+    getDelegationTokenLatency = registry.newQuantiles("getDelegationTokenLatency",
+        "latency of get delegation token timeouts", "ops", "latency", 10);
+
+    renewDelegationTokenLatency = registry.newQuantiles("renewDelegationTokenLatency",
+       "latency of renew delegation token timeouts", "ops", "latency", 10);
+
+    cancelDelegationTokenLatency = registry.newQuantiles("cancelDelegationTokenLatency",
+        "latency of cancel delegation token timeouts", "ops", "latency", 10);
+
+    refreshSuperUserGroupsConfLatency = registry.newQuantiles("refreshSuperUserGroupsConfLatency",
+        "latency of refresh superuser groups configuration timeouts", "ops", "latency", 10);
+
+    refreshUserToGroupsMappingsLatency = registry.newQuantiles("refreshUserToGroupsMappingsLatency",
+        "latency of refresh user to groups mappings timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -637,13 +693,43 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededRefreshQueuesRetrieved() {
+    return totalSucceededRefreshQueuesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededRefreshNodesRetrieved() {
+    return totalSucceededRefreshNodesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public long getNumSucceededGetRMNodeLabelsRetrieved() {
     return totalSucceededGetRMNodeLabelsRetrieved.lastStat().numSamples();
   }
 
   @VisibleForTesting
-  public long getNumSucceededCheckUserAccessToQueueRetrievedRetrieved() {
+  public long getNumSucceededCheckUserAccessToQueueRetrieved() {
     return totalSucceededCheckUserAccessToQueueRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetDelegationTokenRetrieved() {
+    return totalSucceededGetDelegationTokenRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededRenewDelegationTokenRetrieved() {
+    return totalSucceededRenewDelegationTokenRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededCancelDelegationTokenRetrieved() {
+    return totalSucceededCancelDelegationTokenRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededRefreshSuperUserGroupsConfigurationRetrieved() {
+    return totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.lastStat().numSamples();
   }
 
   @VisibleForTesting
@@ -847,6 +933,16 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededRefreshQueuesRetrieved() {
+    return totalSucceededRefreshQueuesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededRefreshNodesRetrieved() {
+    return totalSucceededRefreshNodesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededGetRMNodeLabelsRetrieved() {
     return totalSucceededGetRMNodeLabelsRetrieved.lastStat().mean();
   }
@@ -854,6 +950,26 @@ public final class RouterMetrics {
   @VisibleForTesting
   public double getLatencySucceededCheckUserAccessToQueueRetrieved() {
     return totalSucceededCheckUserAccessToQueueRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetDelegationTokenRetrieved() {
+    return totalSucceededGetDelegationTokenRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededRenewDelegationTokenRetrieved() {
+    return totalSucceededRenewDelegationTokenRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededCancelDelegationTokenRetrieved() {
+    return totalSucceededCancelDelegationTokenRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededRefreshSuperUserGroupsConfigurationRetrieved() {
+    return totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.lastStat().mean();
   }
 
   @VisibleForTesting
@@ -1037,12 +1153,41 @@ public final class RouterMetrics {
     return numGetAppTimeoutsFailedRetrieved.value();
   }
 
+
+  public int getRefreshQueuesFailedRetrieved() {
+    return numRefreshQueuesFailedRetrieved.value();
+  }
+
   public int getRMNodeLabelsFailedRetrieved() {
     return numGetRMNodeLabelsFailedRetrieved.value();
   }
 
   public int getCheckUserAccessToQueueFailedRetrieved() {
     return numCheckUserAccessToQueueFailedRetrieved.value();
+  }
+
+  public int getNumRefreshNodesFailedRetrieved() {
+    return numRefreshNodesFailedRetrieved.value();
+  }
+
+  public int getNumRefreshSuperUserGroupsConfigurationFailedRetrieved() {
+    return numRefreshSuperUserGroupsConfigurationFailedRetrieved.value();
+  }
+
+  public int getNumRefreshUserToGroupsMappingsFailedRetrieved() {
+    return numRefreshUserToGroupsMappingsFailedRetrieved.value();
+  }
+
+  public int getDelegationTokenFailedRetrieved() {
+    return numGetDelegationTokenFailedRetrieved.value();
+  }
+
+  public int getRenewDelegationTokenFailedRetrieved() {
+    return numRenewDelegationTokenFailedRetrieved.value();
+  }
+
+  public int getCancelDelegationTokenFailedRetrieved() {
+    return numCancelDelegationTokenFailedRetrieved.value();
   }
 
   public void succeededAppsCreated(long duration) {
@@ -1245,6 +1390,16 @@ public final class RouterMetrics {
     getAppTimeoutsLatency.add(duration);
   }
 
+  public void succeededRefreshQueuesRetrieved(long duration) {
+    totalSucceededRefreshQueuesRetrieved.add(duration);
+    refreshQueuesLatency.add(duration);
+  }
+
+  public void succeededRefreshNodesRetrieved(long duration) {
+    totalSucceededRefreshNodesRetrieved.add(duration);
+    refreshNodesLatency.add(duration);
+  }
+
   public void succeededGetRMNodeLabelsRetrieved(long duration) {
     totalSucceededGetRMNodeLabelsRetrieved.add(duration);
     getRMNodeLabelsLatency.add(duration);
@@ -1253,6 +1408,31 @@ public final class RouterMetrics {
   public void succeededCheckUserAccessToQueueRetrieved(long duration) {
     totalSucceededCheckUserAccessToQueueRetrieved.add(duration);
     checkUserAccessToQueueLatency.add(duration);
+  }
+
+  public void succeededGetDelegationTokenRetrieved(long duration) {
+    totalSucceededGetDelegationTokenRetrieved.add(duration);
+    getDelegationTokenLatency.add(duration);
+  }
+
+  public void succeededRenewDelegationTokenRetrieved(long duration) {
+    totalSucceededRenewDelegationTokenRetrieved.add(duration);
+    renewDelegationTokenLatency.add(duration);
+  }
+
+  public void succeededCancelDelegationTokenRetrieved(long duration) {
+    totalSucceededCancelDelegationTokenRetrieved.add(duration);
+    cancelDelegationTokenLatency.add(duration);
+  }
+
+  public void succeededRefreshSuperUserGroupsConfRetrieved(long duration) {
+    totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.add(duration);
+    refreshSuperUserGroupsConfLatency.add(duration);
+  }
+
+  public void succeededRefreshUserToGroupsMappingsRetrieved(long duration) {
+    totalSucceededRefreshUserToGroupsMappingsRetrieved.add(duration);
+    refreshUserToGroupsMappingsLatency.add(duration);
   }
 
   public void incrAppsFailedCreated() {
@@ -1415,11 +1595,39 @@ public final class RouterMetrics {
     numGetAppTimeoutsFailedRetrieved.incr();
   }
 
+  public void incrRefreshQueuesFailedRetrieved() {
+    numRefreshQueuesFailedRetrieved.incr();
+  }
+
   public void incrGetRMNodeLabelsFailedRetrieved() {
     numGetRMNodeLabelsFailedRetrieved.incr();
   }
 
   public void incrCheckUserAccessToQueueFailedRetrieved() {
     numCheckUserAccessToQueueFailedRetrieved.incr();
+  }
+
+  public void incrRefreshNodesFailedRetrieved() {
+    numRefreshNodesFailedRetrieved.incr();
+  }
+
+  public void incrRefreshSuperUserGroupsConfigurationFailedRetrieved() {
+    numRefreshSuperUserGroupsConfigurationFailedRetrieved.incr();
+  }
+
+  public void incrRefreshUserToGroupsMappingsFailedRetrieved() {
+    numRefreshUserToGroupsMappingsFailedRetrieved.incr();
+  }
+
+  public void incrGetDelegationTokenFailedRetrieved() {
+    numGetDelegationTokenFailedRetrieved.incr();
+  }
+
+  public void incrRenewDelegationTokenFailedRetrieved() {
+    numRenewDelegationTokenFailedRetrieved.incr();
+  }
+
+  public void incrCancelDelegationTokenFailedRetrieved() {
+    numCancelDelegationTokenFailedRetrieved.incr();
   }
 }

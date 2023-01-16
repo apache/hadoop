@@ -20,8 +20,10 @@ package org.apache.hadoop.fs.s3a.audit;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import org.junit.After;
 import org.junit.Before;
 import org.slf4j.Logger;
@@ -139,6 +141,17 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
   }
 
   /**
+   * Create a GetObject request and modify it before passing it through auditor.
+   * @param modifyRequest Consumer Interface for changing the request before passing to the auditor
+   * @return the request
+   */
+  protected GetObjectRequest get(Consumer<GetObjectRequest> modifyRequest) {
+    GetObjectRequest req = requestFactory.newGetObjectRequest("/");
+    modifyRequest.accept(req);
+    return manager.beforeExecution(req);
+  }
+
+  /**
    * Assert a head request fails as there is no
    * active span.
    */
@@ -208,6 +221,17 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
     assertThat(params.get(key))
         .describedAs(key)
         .isEqualTo(expected);
+  }
+
+  /**
+   * Assert the map does not contain the key, i.e, it is null.
+   * @param params map of params
+   * @param key key
+   */
+  protected void assertMapNotContains(final Map<String, String> params, final String key) {
+    assertThat(params.get(key))
+            .describedAs(key)
+            .isNull();
   }
 
 }

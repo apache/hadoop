@@ -108,32 +108,6 @@ public class DatanodeAdminManager {
     Preconditions.checkArgument(intervalSecs >= 0, "Cannot set a negative " +
         "value for " + DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY);
 
-    int blocksPerInterval = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BLOCKS_PER_INTERVAL_KEY,
-        DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BLOCKS_PER_INTERVAL_DEFAULT);
-
-    final String deprecatedKey =
-        "dfs.namenode.decommission.nodes.per.interval";
-    final String strNodes = conf.get(deprecatedKey);
-    if (strNodes != null) {
-      LOG.warn("Deprecated configuration key {} will be ignored.",
-          deprecatedKey);
-      LOG.warn("Please update your configuration to use {} instead.",
-          DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BLOCKS_PER_INTERVAL_KEY);
-    }
-
-    Preconditions.checkArgument(blocksPerInterval > 0,
-        "Must set a positive value for "
-        + DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BLOCKS_PER_INTERVAL_KEY);
-
-    final int maxConcurrentTrackedNodes = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES,
-        DFSConfigKeys
-            .DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES_DEFAULT);
-    Preconditions.checkArgument(maxConcurrentTrackedNodes >= 0,
-        "Cannot set a negative value for "
-        + DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES);
-
     Class cls = null;
     try {
       cls = conf.getClass(
@@ -152,12 +126,7 @@ public class DatanodeAdminManager {
     executor.scheduleWithFixedDelay(monitor, intervalSecs, intervalSecs,
         TimeUnit.SECONDS);
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Activating DatanodeAdminManager with interval {} seconds, " +
-              "{} max blocks per interval, " +
-              "{} max concurrently tracked nodes.", intervalSecs,
-          blocksPerInterval, maxConcurrentTrackedNodes);
-    }
+    LOG.debug("Activating DatanodeAdminManager with interval {} seconds.", intervalSecs);
   }
 
   /**
@@ -352,8 +321,7 @@ public class DatanodeAdminManager {
         }
       }
     }
-    if (isMaintenance
-      && numLive >= blockManager.getMinReplicationToBeInMaintenance()) {
+    if (isMaintenance && numLive >= blockManager.getMinMaintenanceStorageNum(block)) {
       return true;
     }
     return false;

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.router.clientrm;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -40,7 +41,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -118,9 +118,13 @@ import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRespo
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.RouterPolicyFacade;
@@ -136,6 +140,7 @@ import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
+import org.apache.hadoop.yarn.util.Records;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -272,17 +277,6 @@ public class FederationClientInterceptor
     return list.get(rand.nextInt(list.size()));
   }
 
-  @VisibleForTesting
-  private int getActiveSubClustersCount() throws YarnException {
-    Map<SubClusterId, SubClusterInfo> activeSubClusters =
-        federationFacade.getSubClusters(true);
-    if (activeSubClusters == null || activeSubClusters.isEmpty()) {
-      return 0;
-    } else {
-      return activeSubClusters.size();
-    }
-  }
-
   /**
    * YARN Router forwards every getNewApplication requests to any RM. During
    * this operation there will be no communication with the State Store. The
@@ -318,7 +312,7 @@ public class FederationClientInterceptor
 
     // Try calling the getNewApplication method
     List<SubClusterId> blacklist = new ArrayList<>();
-    int activeSubClustersCount = getActiveSubClustersCount();
+    int activeSubClustersCount = federationFacade.getActiveSubClustersCount();
     int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries);
 
     try {
@@ -361,7 +355,7 @@ public class FederationClientInterceptor
       List<SubClusterId> blackList, GetNewApplicationRequest request, int retryCount)
       throws YarnException, IOException {
     SubClusterId subClusterId =
-        RouterServerUtil.getRandomActiveSubCluster(subClustersActive, blackList);
+        federationFacade.getRandomActiveSubCluster(subClustersActive, blackList);
     LOG.info("getNewApplication try #{} on SubCluster {}.", retryCount, subClusterId);
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
     try {
@@ -474,7 +468,7 @@ public class FederationClientInterceptor
       // the user will provide us with an expected submitRetries,
       // but if the number of Active SubClusters is less than this number at this time,
       // we should provide a high number of retry according to the number of Active SubClusters.
-      int activeSubClustersCount = getActiveSubClustersCount();
+      int activeSubClustersCount = federationFacade.getActiveSubClustersCount();
       int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries);
 
       // Try calling the SubmitApplication method
@@ -542,17 +536,10 @@ public class FederationClientInterceptor
       LOG.info("submitApplication appId {} try #{} on SubCluster {}.",
           applicationId, retryCount, subClusterId);
 
-      // Step2. Query homeSubCluster according to ApplicationId.
-      Boolean exists = existsApplicationHomeSubCluster(applicationId);
-
-      ApplicationHomeSubCluster appHomeSubCluster =
-          ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
-
-      if (!exists || retryCount == 0) {
-        addApplicationHomeSubCluster(applicationId, appHomeSubCluster);
-      } else {
-        updateApplicationHomeSubCluster(subClusterId, applicationId, appHomeSubCluster);
-      }
+      // Step2. We Store the mapping relationship
+      // between Application and HomeSubCluster in stateStore.
+      federationFacade.addOrUpdateApplicationHomeSubCluster(
+          applicationId, subClusterId, retryCount);
 
       // Step3. SubmitApplication to the subCluster
       ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
@@ -579,70 +566,6 @@ public class FederationClientInterceptor
     // If SubmitApplicationResponse is empty, the request fails.
     String msg = String.format("Application %s failed to be submitted.", applicationId);
     throw new YarnException(msg);
-  }
-
-  /**
-   * Add ApplicationHomeSubCluster to FederationStateStore.
-   *
-   * @param applicationId applicationId.
-   * @param homeSubCluster homeSubCluster, homeSubCluster selected according to policy.
-   * @throws YarnException yarn exception.
-   */
-  private void addApplicationHomeSubCluster(ApplicationId applicationId,
-      ApplicationHomeSubCluster homeSubCluster) throws YarnException {
-    try {
-      federationFacade.addApplicationHomeSubCluster(homeSubCluster);
-    } catch (YarnException e) {
-      RouterServerUtil.logAndThrowException(e,
-          "Unable to insert the ApplicationId %s into the FederationStateStore.", applicationId);
-    }
-  }
-
-  /**
-   * Update ApplicationHomeSubCluster to FederationStateStore.
-   *
-   * @param subClusterId homeSubClusterId
-   * @param applicationId applicationId.
-   * @param homeSubCluster homeSubCluster, homeSubCluster selected according to policy.
-   * @throws YarnException yarn exception.
-   */
-  private void updateApplicationHomeSubCluster(SubClusterId subClusterId,
-      ApplicationId applicationId, ApplicationHomeSubCluster homeSubCluster) throws YarnException {
-    try {
-      federationFacade.updateApplicationHomeSubCluster(homeSubCluster);
-    } catch (YarnException e) {
-      SubClusterId subClusterIdInStateStore =
-          federationFacade.getApplicationHomeSubCluster(applicationId);
-      if (subClusterId == subClusterIdInStateStore) {
-        LOG.info("Application {} already submitted on SubCluster {}.",
-            applicationId, subClusterId);
-      } else {
-        RouterServerUtil.logAndThrowException(e,
-            "Unable to update the ApplicationId %s into the FederationStateStore.",
-            applicationId);
-      }
-    }
-  }
-
-  /**
-   * Query SubClusterId By applicationId.
-   *
-   * If SubClusterId is not empty, it means it exists and returns true;
-   * if SubClusterId is empty, it means it does not exist and returns false.
-   *
-   * @param applicationId applicationId
-   * @return true, SubClusterId exists; false, SubClusterId not exists.
-   */
-  private boolean existsApplicationHomeSubCluster(ApplicationId applicationId) {
-    try {
-      SubClusterId subClusterId = federationFacade.getApplicationHomeSubCluster(applicationId);
-      if (subClusterId != null) {
-        return true;
-      }
-    } catch (YarnException e) {
-      LOG.warn("get homeSubCluster by applicationId = {} error.", applicationId, e);
-    }
-    return false;
   }
 
   /**
@@ -1474,19 +1397,103 @@ public class FederationClientInterceptor
   @Override
   public GetDelegationTokenResponse getDelegationToken(
       GetDelegationTokenRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (request == null || request.getRenewer() == null) {
+      routerMetrics.incrGetDelegationTokenFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing getDelegationToken request or Renewer.", null);
+    }
+
+    try {
+      // Verify that the connection is kerberos authenticated
+      if (!RouterServerUtil.isAllowedDelegationTokenOp()) {
+        routerMetrics.incrGetDelegationTokenFailedRetrieved();
+        throw new IOException(
+            "Delegation Token can be issued only with kerberos authentication.");
+      }
+
+      long startTime = clock.getTime();
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      Text owner = new Text(ugi.getUserName());
+      Text realUser = null;
+      if (ugi.getRealUser() != null) {
+        realUser = new Text(ugi.getRealUser().getUserName());
+      }
+
+      RMDelegationTokenIdentifier tokenIdentifier =
+          new RMDelegationTokenIdentifier(owner, new Text(request.getRenewer()), realUser);
+      Token<RMDelegationTokenIdentifier> realRMDToken =
+          new Token<>(tokenIdentifier, this.getTokenSecretManager());
+
+      org.apache.hadoop.yarn.api.records.Token routerRMDTToken =
+          BuilderUtils.newDelegationToken(realRMDToken.getIdentifier(),
+              realRMDToken.getKind().toString(),
+              realRMDToken.getPassword(), realRMDToken.getService().toString());
+
+      long stopTime = clock.getTime();
+      routerMetrics.succeededGetDelegationTokenRetrieved((stopTime - startTime));
+      return GetDelegationTokenResponse.newInstance(routerRMDTToken);
+    } catch(IOException e) {
+      routerMetrics.incrGetDelegationTokenFailedRetrieved();
+      throw new YarnException(e);
+    }
   }
 
   @Override
   public RenewDelegationTokenResponse renewDelegationToken(
       RenewDelegationTokenRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+
+      if (!RouterServerUtil.isAllowedDelegationTokenOp()) {
+        routerMetrics.incrRenewDelegationTokenFailedRetrieved();
+        throw new IOException(
+            "Delegation Token can be renewed only with kerberos authentication");
+      }
+
+      long startTime = clock.getTime();
+      org.apache.hadoop.yarn.api.records.Token protoToken = request.getDelegationToken();
+      Token<RMDelegationTokenIdentifier> token = new Token<>(
+          protoToken.getIdentifier().array(), protoToken.getPassword().array(),
+          new Text(protoToken.getKind()), new Text(protoToken.getService()));
+      String user = RouterServerUtil.getRenewerForToken(token);
+      long nextExpTime = this.getTokenSecretManager().renewToken(token, user);
+      RenewDelegationTokenResponse renewResponse =
+          Records.newRecord(RenewDelegationTokenResponse.class);
+      renewResponse.setNextExpirationTime(nextExpTime);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededRenewDelegationTokenRetrieved((stopTime - startTime));
+      return renewResponse;
+
+    } catch (IOException e) {
+      routerMetrics.incrRenewDelegationTokenFailedRetrieved();
+      throw new YarnException(e);
+    }
   }
 
   @Override
   public CancelDelegationTokenResponse cancelDelegationToken(
       CancelDelegationTokenRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      if (!RouterServerUtil.isAllowedDelegationTokenOp()) {
+        routerMetrics.incrCancelDelegationTokenFailedRetrieved();
+        throw new IOException(
+            "Delegation Token can be cancelled only with kerberos authentication");
+      }
+
+      long startTime = clock.getTime();
+      org.apache.hadoop.yarn.api.records.Token protoToken = request.getDelegationToken();
+      Token<RMDelegationTokenIdentifier> token = new Token<>(
+          protoToken.getIdentifier().array(), protoToken.getPassword().array(),
+          new Text(protoToken.getKind()), new Text(protoToken.getService()));
+      String user = UserGroupInformation.getCurrentUser().getUserName();
+      this.getTokenSecretManager().cancelToken(token, user);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededCancelDelegationTokenRetrieved((stopTime - startTime));
+      return Records.newRecord(CancelDelegationTokenResponse.class);
+    } catch (IOException e) {
+      routerMetrics.incrCancelDelegationTokenFailedRetrieved();
+      throw new YarnException(e);
+    }
   }
 
   @Override
