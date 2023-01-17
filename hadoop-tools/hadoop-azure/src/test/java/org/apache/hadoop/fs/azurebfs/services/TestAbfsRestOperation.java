@@ -33,6 +33,10 @@ import org.mockito.stubbing.Stubber;
 
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
+import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.services.AuthType.OAuth;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.nullable;
@@ -107,37 +111,38 @@ public class TestAbfsRestOperation {
 
   @Test
   public void testClientRequestIdFor400Retry() throws Exception {
-    testClientRequestIdForStatusRetry(400, "", "400");
+    testClientRequestIdForStatusRetry(HTTP_BAD_REQUEST, "", "400");
   }
 
   @Test
   public void testClientRequestIdFor500Retry() throws Exception {
-    testClientRequestIdForStatusRetry(500, "", "500");
+    testClientRequestIdForStatusRetry(HTTP_INTERNAL_ERROR, "", "500");
   }
 
   @Test
   public void testClientRequestIdFor503INGRetry() throws Exception {
-    testClientRequestIdForStatusRetry(503, "Ingress is over the account limit.",
+    testClientRequestIdForStatusRetry(HTTP_UNAVAILABLE,
+        "Ingress is over the account limit.",
         "ING");
   }
 
   @Test
   public void testClientRequestIdFor503egrRetry() throws Exception {
-    testClientRequestIdForStatusRetry(503, "Egress is over the account limit.",
+    testClientRequestIdForStatusRetry(HTTP_UNAVAILABLE,
+        "Egress is over the account limit.",
         "EGR");
   }
 
   @Test
   public void testClientRequestIdFor503OPRRetry() throws Exception {
-    testClientRequestIdForStatusRetry(503,
+    testClientRequestIdForStatusRetry(HTTP_UNAVAILABLE,
         "Operations per second is over the account limit.", "OPR");
   }
 
   @Test
   public void testClientRequestIdFor503OtherRetry() throws Exception {
-    testClientRequestIdForStatusRetry(503, "Other.", "503");
+    testClientRequestIdForStatusRetry(HTTP_UNAVAILABLE, "Other.", "503");
   }
-
 
   private void testClientRequestIdForStatusRetry(int status,
       String serverErrorMessage,
@@ -173,7 +178,7 @@ public class TestAbfsRestOperation {
         statusCount[0]++;
         return status;
       }
-      return 200;
+      return HTTP_OK;
     }).when(httpOperation).getStatusCode();
 
     Mockito.doReturn(serverErrorMessage)
@@ -229,7 +234,7 @@ public class TestAbfsRestOperation {
         .processResponse(nullable(byte[].class), nullable(int.class),
             nullable(int.class));
 
-    Mockito.doReturn(200).when(httpOperation).getStatusCode();
+    Mockito.doReturn(HTTP_OK).when(httpOperation).getStatusCode();
 
     TracingContext tracingContext = Mockito.mock(TracingContext.class);
     Mockito.doNothing().when(tracingContext).setRetryCount(nullable(int.class));
@@ -278,7 +283,7 @@ public class TestAbfsRestOperation {
     Mockito.doReturn(true)
         .when(retryPolicy)
         .shouldRetry(nullable(Integer.class), nullable(Integer.class));
-    Mockito.doReturn(false).when(retryPolicy).shouldRetry(1, 200);
-    Mockito.doReturn(false).when(retryPolicy).shouldRetry(2, 200);
+    Mockito.doReturn(false).when(retryPolicy).shouldRetry(1, HTTP_OK);
+    Mockito.doReturn(false).when(retryPolicy).shouldRetry(2, HTTP_OK);
   }
 }

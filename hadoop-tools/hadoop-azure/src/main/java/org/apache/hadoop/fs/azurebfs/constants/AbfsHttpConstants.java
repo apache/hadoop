@@ -111,6 +111,15 @@ public final class AbfsHttpConstants {
   public static final char CHAR_EQUALS = '=';
   public static final char CHAR_STAR = '*';
   public static final char CHAR_PLUS = '+';
+  /**
+   * Value that differentiates categories of the http_status.<br>
+   * 100 - 199 : Informational responses<br>
+   * 200 - 299 : Successful responses<br>
+   * 300 - 399 : Redirection messages<br>
+   * 400 - 499 : Client error responses<br>
+   * 500 - 599 : Server error responses<br>
+   * */
+  public static final Integer HTTP_STATUS_CATEGORY_QUOTIENT = 100;
 
   private AbfsHttpConstants() {}
 }

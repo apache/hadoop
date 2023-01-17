@@ -24,6 +24,9 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_STATUS_CATEGORY_QUOTIENT;
+
 /**
  * In case of retry, this enum would give the information on the reason for
  * previous API call.
@@ -57,10 +60,10 @@ public enum RetryReason {
     return null;
   })),
   STATUS_5XX(0, ((ex, statusCode, serverErrorMessage) -> {
-    if (statusCode == null || statusCode / 100 != 5) {
+    if (statusCode == null || statusCode / HTTP_STATUS_CATEGORY_QUOTIENT != 5) {
       return null;
     }
-    if (statusCode == 503) {
+    if (statusCode == HTTP_UNAVAILABLE) {
       //ref: https://github.com/apache/hadoop/pull/4564/files#diff-75a2f54df6618d4015c63812e6a9916ddfb475d246850edfd2a6f57e36805e79
       serverErrorMessage = serverErrorMessage.split(System.lineSeparator(),
           2)[0];
@@ -76,12 +79,12 @@ public enum RetryReason {
           serverErrorMessage)) {
         return "OPR";
       }
-      return "503";
+      return HTTP_UNAVAILABLE + "";
     }
     return statusCode + "";
   })),
   STATUS_4XX(0, ((ex, statusCode, serverErrorMessage) -> {
-    if (statusCode == null || statusCode / 100 != 4) {
+    if (statusCode == null || statusCode / HTTP_STATUS_CATEGORY_QUOTIENT != 4) {
       return null;
     }
     return statusCode + "";
@@ -127,7 +130,7 @@ public enum RetryReason {
    * first thread, the second thread need not run the whole mechanism of sorting.
    * The enums are sorted on the ascending order of their rank.
    * */
-  private synchronized static void sortRetryReason() {
+  private static synchronized void sortRetryReason() {
     if (retryReasonSortedList != null) {
       return;
     }
