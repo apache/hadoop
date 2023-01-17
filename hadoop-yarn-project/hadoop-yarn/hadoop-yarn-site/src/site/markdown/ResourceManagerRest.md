@@ -162,6 +162,7 @@ The cluster metrics resource provides some overall metrics about the cluster. Mo
 | appsPending | int | The number of applications pending |
 | appsRunning | int | The number of applications running |
 | appsFailed | int | The number of applications failed |
+| appsFinalFailed | int | The number of applications finally failed |
 | appsKilled | int | The number of applications killed |
 | reservedMB | long | The amount of memory reserved in MB |
 | availableMB | long | The amount of memory available in MB |
