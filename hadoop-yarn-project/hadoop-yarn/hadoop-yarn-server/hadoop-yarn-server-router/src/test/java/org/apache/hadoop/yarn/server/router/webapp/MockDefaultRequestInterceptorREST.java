@@ -100,6 +100,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
@@ -139,6 +141,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntr
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -1212,8 +1217,7 @@ public class MockDefaultRequestInterceptorREST
       return new RMQueueAclInfo(true, user.getUserName(), "");
     }
   }
-
-  @Override
+  
   public Response replaceLabelsOnNodes(NodeToLabelsEntryList newNodeToLabels,
       HttpServletRequest hsr) throws IOException {
     return super.replaceLabelsOnNodes(newNodeToLabels, hsr);
@@ -1223,5 +1227,17 @@ public class MockDefaultRequestInterceptorREST
   public Response replaceLabelsOnNode(Set<String> newNodeLabelsName,
       HttpServletRequest hsr, String nodeId) throws Exception {
     return super.replaceLabelsOnNode(newNodeLabelsName, hsr, nodeId);
+  }
+  
+  public SchedulerTypeInfo getSchedulerInfo() {
+    try {
+      ResourceManager resourceManager = CapacitySchedulerTestUtilities.createResourceManager();
+      CapacityScheduler cs = (CapacityScheduler) resourceManager.getResourceScheduler();
+      CSQueue root = cs.getRootQueue();
+      SchedulerInfo schedulerInfo = new CapacitySchedulerInfo(root, cs);
+      return new SchedulerTypeInfo(schedulerInfo);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }

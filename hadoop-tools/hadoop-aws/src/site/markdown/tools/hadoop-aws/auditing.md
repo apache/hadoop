@@ -411,7 +411,7 @@ log4j.logger.org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor=DEBUG
 This adds one log line per request -and does provide some insight into
 communications between the S3A client and AWS S3.
 
-For low-level debugging of the Auditing system, such as when when spans are
+For low-level debugging of the Auditing system, such as when spans are
 entered and exited, set the log to `TRACE`:
 
 ```
