@@ -1263,7 +1263,7 @@ public class FairScheduler extends
       }
       AppRemovedSchedulerEvent appRemovedEvent = (AppRemovedSchedulerEvent)event;
       removeApplication(appRemovedEvent.getApplicationID(),
-        appRemovedEvent.getFinalState(), appRemovedEvent.getFinalApplicationStatus());
+          appRemovedEvent.getFinalState(), appRemovedEvent.getFinalApplicationStatus());
       break;
     case NODE_RESOURCE_UPDATE:
       if (!(event instanceof NodeResourceUpdateSchedulerEvent)) {

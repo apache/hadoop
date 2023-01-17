@@ -502,7 +502,7 @@ public class TestPartitionQueueMetrics {
     metrics.finishAppAttempt(app.getApplicationId(), app.isPending(),
         app.getUser(), false);
 
-    metrics.finishApp(user, RMAppState.FINISHED, FinalApplicationStatus.SUCCEEDED,false);
+    metrics.finishApp(user, RMAppState.FINISHED, FinalApplicationStatus.SUCCEEDED, false);
   }
 
   @Test

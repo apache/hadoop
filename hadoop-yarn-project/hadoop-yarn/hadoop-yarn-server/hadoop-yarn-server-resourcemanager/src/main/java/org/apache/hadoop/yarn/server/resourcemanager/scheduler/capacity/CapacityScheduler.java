@@ -2014,7 +2014,7 @@ public class CapacityScheduler extends
     {
       AppRemovedSchedulerEvent appRemovedEvent = (AppRemovedSchedulerEvent)event;
       doneApplication(appRemovedEvent.getApplicationID(),
-        appRemovedEvent.getFinalState(), appRemovedEvent.getFinalApplicationStatus());
+          appRemovedEvent.getFinalState(), appRemovedEvent.getFinalApplicationStatus());
     }
     break;
     case APP_ATTEMPT_ADDED:

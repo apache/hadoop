@@ -1149,7 +1149,8 @@ public class TestSchedulerUtils {
     Assert.assertEquals("user", app.getUser());
 
     AppRemovedSchedulerEvent appRemoveEvent =
-            new AppRemovedSchedulerEvent(appId, RMAppState.FINISHED, FinalApplicationStatus.SUCCEEDED);
+            new AppRemovedSchedulerEvent(appId, RMAppState.FINISHED,
+                FinalApplicationStatus.SUCCEEDED);
     handler.handle(appRemoveEvent);
     Assert.assertNull(applications.get(appId));
     return app;
