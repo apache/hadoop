@@ -87,7 +87,39 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntry;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
@@ -1334,11 +1366,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     try {
       // Step1. Check the parameters to ensure that the parameters are not empty.
       if (newNodeToLabels == null) {
-        throw new IllegalArgumentException("newNodeToLabels must not be empty.");
+        throw new IllegalArgumentException("Parameter error, newNodeToLabels must not be empty.");
       }
       List<NodeToLabelsEntry> nodeToLabelsEntries = newNodeToLabels.getNodeToLabels();
       if(CollectionUtils.isEmpty(nodeToLabelsEntries)){
-        throw new IllegalArgumentException("nodeToLabelsEntries must not be empty.");
+        throw new IllegalArgumentException("Parameter error, " +
+            "nodeToLabelsEntries must not be empty.");
       }
 
       // Step2. We map the NodeId and NodeToLabelsEntry in the request.
@@ -1408,7 +1441,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       // Step1. Check the parameters to ensure that the parameters are not empty.
       Validate.checkNotNullAndNotEmpty(nodeId, "nodeId");
       if (CollectionUtils.isEmpty(newNodeLabelsName)) {
-        throw new IllegalArgumentException("newNodeLabelsName must not be empty.");
+        throw new IllegalArgumentException("Parameter error, newNodeLabelsName must not be empty.");
       }
 
       // Step2. We find the subCluster according to the nodeId,
@@ -1423,7 +1456,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       // Step3. Return the response result.
       long stopTime = clock.getTime();
       routerMetrics.succeededReplaceLabelsOnNodeRetrieved(stopTime - startTime);
-      return Response.status(Status.OK).build();
+      String msg = "subCluster#" + subClusterInfo.getSubClusterId().getId() + ":Success;";
+      return Response.status(Status.OK).entity(msg).build();
     } catch (IllegalArgumentException e) {
       routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
       throw e;
