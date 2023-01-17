@@ -137,6 +137,8 @@ public final class RouterMetrics {
   private MutableGaugeInt numCancelDelegationTokenFailedRetrieved;
   @Metric("# of dumpSchedulerLogs failed to be retrieved")
   private MutableGaugeInt numDumpSchedulerLogsFailedRetrieved;
+  @Metric("# of getSchedulerInfo failed to be retrieved")
+  private MutableGaugeInt numGetSchedulerInfoFailedRetrieved;
   @Metric("# of refreshSuperUserGroupsConfiguration failed to be retrieved")
   private MutableGaugeInt numRefreshSuperUserGroupsConfigurationFailedRetrieved;
   @Metric("# of refreshUserToGroupsMappings failed to be retrieved")
@@ -244,6 +246,9 @@ public final class RouterMetrics {
   @Metric("Total number of successful Retrieved RefreshUserToGroupsMappings and latency(ms)")
   private MutableRate totalSucceededRefreshUserToGroupsMappingsRetrieved;
 
+  @Metric("Total number of successful Retrieved GetSchedulerInfo and latency(ms)")
+  private MutableRate totalSucceededGetSchedulerInfoRetrieved;
+
   /**
    * Provide quantile counters for all latencies.
    */
@@ -295,6 +300,7 @@ public final class RouterMetrics {
   private MutableQuantiles renewDelegationTokenLatency;
   private MutableQuantiles cancelDelegationTokenLatency;
   private MutableQuantiles dumpSchedulerLogsLatency;
+  private MutableQuantiles getSchedulerInfoRetrievedLatency;
   private MutableQuantiles refreshSuperUserGroupsConfLatency;
   private MutableQuantiles refreshUserToGroupsMappingsLatency;
 
@@ -473,6 +479,9 @@ public final class RouterMetrics {
 
     dumpSchedulerLogsLatency = registry.newQuantiles("dumpSchedulerLogsLatency",
         "latency of dump scheduler logs timeouts", "ops", "latency", 10);
+
+    getSchedulerInfoRetrievedLatency = registry.newQuantiles("getSchedulerInfoRetrievedLatency",
+        "latency of get scheduler info timeouts", "ops", "latency", 10);
 
     refreshSuperUserGroupsConfLatency = registry.newQuantiles("refreshSuperUserGroupsConfLatency",
         "latency of refresh superuser groups configuration timeouts", "ops", "latency", 10);
@@ -739,6 +748,11 @@ public final class RouterMetrics {
   public long getNumSucceededDumpSchedulerLogsRetrieved() {
     return totalSucceededDumpSchedulerLogsRetrieved.lastStat().numSamples();
   }
+  
+  @VisibleForTesting
+  public long getNumSucceededGetSchedulerInfoRetrieved() {
+    return totalSucceededGetSchedulerInfoRetrieved.lastStat().numSamples();
+  }
 
   @VisibleForTesting
   public long getNumSucceededRefreshSuperUserGroupsConfigurationRetrieved() {
@@ -984,6 +998,11 @@ public final class RouterMetrics {
   public double getLatencySucceededDumpSchedulerLogsRetrieved() {
     return totalSucceededDumpSchedulerLogsRetrieved.lastStat().mean();
   }
+  
+  @VisibleForTesting
+  public double getLatencySucceededGetSchedulerInfoRetrieved() {
+    return totalSucceededGetSchedulerInfoRetrieved.lastStat().mean();
+  }
 
   @VisibleForTesting
   public double getLatencySucceededRefreshSuperUserGroupsConfigurationRetrieved() {
@@ -1210,6 +1229,10 @@ public final class RouterMetrics {
 
   public int getDumpSchedulerLogsFailedRetrieved() {
     return numDumpSchedulerLogsFailedRetrieved.value();
+  }
+  
+  public int getSchedulerInfoFailedRetrieved() {
+    return numGetSchedulerInfoFailedRetrieved.value();
   }
 
   public void succeededAppsCreated(long duration) {
@@ -1446,10 +1469,15 @@ public final class RouterMetrics {
     totalSucceededCancelDelegationTokenRetrieved.add(duration);
     cancelDelegationTokenLatency.add(duration);
   }
-
+  
   public void succeededDumpSchedulerLogsRetrieved(long duration) {
     totalSucceededDumpSchedulerLogsRetrieved.add(duration);
     dumpSchedulerLogsLatency.add(duration);
+  }
+  
+  public void succeededGetSchedulerInfoRetrieved(long duration) {
+    totalSucceededGetSchedulerInfoRetrieved.add(duration);
+    getSchedulerInfoRetrievedLatency.add(duration);
   }
 
   public void succeededRefreshSuperUserGroupsConfRetrieved(long duration) {
@@ -1657,8 +1685,12 @@ public final class RouterMetrics {
   public void incrCancelDelegationTokenFailedRetrieved() {
     numCancelDelegationTokenFailedRetrieved.incr();
   }
-
+  
   public void incrDumpSchedulerLogsFailedRetrieved() {
     numDumpSchedulerLogsFailedRetrieved.incr();
+  }
+  
+  public void incrGetSchedulerInfoFailedRetrieved() {
+    numGetSchedulerInfoFailedRetrieved.incr();
   }
 }

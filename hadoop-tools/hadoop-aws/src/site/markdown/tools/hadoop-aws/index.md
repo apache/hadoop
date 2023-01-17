@@ -505,7 +505,7 @@ providers listed after it will be ignored.
 
 ### <a name="auth_simple"></a> Simple name/secret credentials with `SimpleAWSCredentialsProvider`*
 
-This is is the standard credential provider, which supports the secret
+This is the standard credential provider, which supports the secret
 key in `fs.s3a.access.key` and token in `fs.s3a.secret.key`
 values.
 
@@ -1392,7 +1392,7 @@ an S3 implementation that doesn't return eTags.
 
 When `true` (default) and 'Get Object' doesn't return eTag or
 version ID (depending on configured 'source'), a `NoVersionAttributeException`
-will be thrown.  When `false` and and eTag or version ID is not returned,
+will be thrown.  When `false` and eTag or version ID is not returned,
 the stream can be read, but without any version checking.
 
 
@@ -1868,7 +1868,7 @@ in byte arrays in the JVM's heap prior to upload.
 This *may* be faster than buffering to disk.
 
 The amount of data which can be buffered is limited by the available
-size of the JVM heap heap. The slower the write bandwidth to S3, the greater
+size of the JVM heap. The slower the write bandwidth to S3, the greater
 the risk of heap overflows. This risk can be mitigated by
 [tuning the upload settings](#upload_thread_tuning).
 
