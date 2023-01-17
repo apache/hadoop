@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Collections;
+import java.util.stream.Collectors;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
@@ -37,6 +38,7 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -105,12 +107,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInf
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfoList;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewReservation;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Times;
@@ -1552,6 +1560,64 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       String nodeId = nodeInfos.get(0).getNodeId();
       Assert.assertEquals(expectNodeId, nodeId);
     });
+  }
+  
+  @Test
+  public void testGetSchedulerInfo() {
+    // In this test case, we will get the return results of 4 sub-clusters.
+    SchedulerTypeInfo typeInfo = interceptor.getSchedulerInfo();
+    Assert.assertNotNull(typeInfo);
+    Assert.assertTrue(typeInfo instanceof FederationSchedulerTypeInfo);
+
+    FederationSchedulerTypeInfo federationSchedulerTypeInfo =
+        FederationSchedulerTypeInfo.class.cast(typeInfo);
+    Assert.assertNotNull(federationSchedulerTypeInfo);
+    List<SchedulerTypeInfo> schedulerTypeInfos = federationSchedulerTypeInfo.getList();
+    Assert.assertNotNull(schedulerTypeInfos);
+    Assert.assertEquals(4, schedulerTypeInfos.size());
+    List<String> subClusterIds =
+        subClusters.stream().map(subClusterId -> subClusterId.getId()).
+        collect(Collectors.toList());
+
+    for (SchedulerTypeInfo schedulerTypeInfo : schedulerTypeInfos) {
+      Assert.assertNotNull(schedulerTypeInfo);
+
+      // 1. Whether the returned subClusterId is in the subCluster list
+      String subClusterId = schedulerTypeInfo.getSubClusterId();
+      Assert.assertTrue(subClusterIds.contains(subClusterId));
+
+      // 2. We test CapacityScheduler, the returned type should be CapacityScheduler.
+      SchedulerInfo schedulerInfo = schedulerTypeInfo.getSchedulerInfo();
+      Assert.assertNotNull(schedulerInfo);
+      Assert.assertTrue(schedulerInfo instanceof CapacitySchedulerInfo);
+      CapacitySchedulerInfo capacitySchedulerInfo =
+          CapacitySchedulerInfo.class.cast(schedulerInfo);
+      Assert.assertNotNull(capacitySchedulerInfo);
+
+      // 3. The parent queue name should be root
+      String queueName = capacitySchedulerInfo.getQueueName();
+      Assert.assertEquals("root", queueName);
+
+      // 4. schedulerType should be CapacityScheduler
+      String schedulerType = capacitySchedulerInfo.getSchedulerType();
+      Assert.assertEquals("Capacity Scheduler", schedulerType);
+
+      // 5. queue path should be root
+      String queuePath = capacitySchedulerInfo.getQueuePath();
+      Assert.assertEquals("root", queuePath);
+
+      // 6. mockRM has 2 test queues, [root.a, root.b]
+      List<String> queues = Lists.newArrayList("root.a", "root.b");
+      CapacitySchedulerQueueInfoList csSchedulerQueueInfoList = capacitySchedulerInfo.getQueues();
+      Assert.assertNotNull(csSchedulerQueueInfoList);
+      List<CapacitySchedulerQueueInfo> csQueueInfoList =
+          csSchedulerQueueInfoList.getQueueInfoList();
+      Assert.assertEquals(2, csQueueInfoList.size());
+      for (CapacitySchedulerQueueInfo csQueueInfo : csQueueInfoList) {
+        Assert.assertNotNull(csQueueInfo);
+        Assert.assertTrue(queues.contains(csQueueInfo.getQueuePath()));
+      }
+    }
   }
 
   @Test
