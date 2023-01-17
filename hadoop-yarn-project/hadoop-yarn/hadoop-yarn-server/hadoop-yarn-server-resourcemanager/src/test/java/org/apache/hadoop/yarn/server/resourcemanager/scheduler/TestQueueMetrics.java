@@ -162,7 +162,7 @@ public class TestQueueMetrics {
         .counter(APPS_SUBMITTED, 1)
         .gaugeInt(APPS_RUNNING, 0)
         .checkAgainst(queueSource, true);
-    metrics.finishApp(USER, RMAppState.FINISHED, FinalApplicationStatus.FAILED, false);
+    metrics.finishApp(USER, RMAppState.FINISHED, FinalApplicationStatus.SUCCEEDED, false);
     AppMetricsChecker.createFromChecker(appMetricsChecker)
         .counter(APPS_COMPLETED, 1)
         .checkAgainst(queueSource, true);
@@ -446,7 +446,7 @@ public class TestQueueMetrics {
         AppMetricsChecker.createFromChecker(appMetricsUserSourceChecker)
             .gaugeInt(APPS_RUNNING, 0)
             .checkAgainst(userSource, true);
-    metrics.finishApp(USER_2, RMAppState.FINISHED, FinalApplicationStatus.FAILED, false);
+    metrics.finishApp(USER_2, RMAppState.FINISHED, FinalApplicationStatus.SUCCEEDED, false);
     AppMetricsChecker.createFromChecker(appMetricsQueueSourceChecker)
         .counter(APPS_COMPLETED, 1)
         .checkAgainst(queueSource, true);
@@ -715,7 +715,7 @@ public class TestQueueMetrics {
             .gaugeInt(APPS_RUNNING, 0)
             .checkAgainst(root.userSource, true);
 
-    leaf.queueMetrics.finishApp(USER, RMAppState.FINISHED, FinalApplicationStatus.FAILED, false);
+    leaf.queueMetrics.finishApp(USER, RMAppState.FINISHED, FinalApplicationStatus.SUCCEEDED, false);
     AppMetricsChecker.createFromChecker(appMetricsQueueSourceChecker)
         .counter(APPS_COMPLETED, 1)
         .checkAgainst(leaf.queueSource, true);
