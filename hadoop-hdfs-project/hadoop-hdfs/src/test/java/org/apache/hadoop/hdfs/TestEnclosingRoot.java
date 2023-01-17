@@ -92,11 +92,14 @@ public class TestEnclosingRoot extends AbstractHadoopTestBase {
 
   @After
   public void teardown() {
-    if (cluster != null) {
-      cluster.shutdown();
-      cluster = null;
+    try {
+      if (cluster != null) {
+        cluster.shutdown();
+        cluster = null;
+      }
+    } finally {
+      EncryptionFaultInjector.instance = new EncryptionFaultInjector();
     }
-    EncryptionFaultInjector.instance = new EncryptionFaultInjector();
   }
 
   @Test
