@@ -895,7 +895,7 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_HA_IDS = RM_HA_PREFIX + "rm-ids";
   public static final String RM_HA_ID = RM_HA_PREFIX + "id";
 
-  /** YARN DNS resolving related configs */
+  /** YARN DNS resolving related configs. */
   public static final String  RESOLVE_RM_ADDRESS_NEEDED_KEY = RM_HA_PREFIX + "resolve-needed";
   public static final boolean RESOLVE_RM_ADDRESS_NEEDED_DEFAULT = false;
   public static final String RESOLVE_RM_ADDRESS_KEY = RM_HA_PREFIX + "resolver.impl";
