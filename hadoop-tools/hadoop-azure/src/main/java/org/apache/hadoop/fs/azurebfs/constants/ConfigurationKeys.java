@@ -259,10 +259,11 @@ public final class ConfigurationKeys {
   public static final String AZURE_KEY_ACCOUNT_SHELLKEYPROVIDER_SCRIPT = "fs.azure.shellkeyprovider.script";
 
   /**
-   * Enable or disable readahead buffer in AbfsInputStream.
+   * Enable or disable readahead buffer in AbfsInputStream. @deprecated
    * Value: {@value}.
    */
   public static final String FS_AZURE_ENABLE_READAHEAD = "fs.azure.enable.readahead";
+  public static final String FS_AZURE_ENABLE_READAHEAD_V2 = "fs.azure.enable.readahead.v2";
 
   /** Setting this true will make the driver use it's own RemoteIterator implementation */
   public static final String FS_AZURE_ENABLE_ABFS_LIST_ITERATOR = "fs.azure.enable.abfslistiterator";

@@ -2366,7 +2366,7 @@ The switch to turn S3A auditing on or off.
 </property>
 
 <property>
-  <name>fs.azure.enable.readahead</name>
+  <name>fs.azure.enable.readahead.v2</name>
   <value>true</value>
   <description>Enabled readahead/prefetching in AbfsInputStream.</description>
 </property>
