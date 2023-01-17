@@ -704,7 +704,7 @@ public class Client implements AutoCloseable {
      * handle that, a relogin is attempted.
      */
     private synchronized void handleSaslConnectionFailure(
-        final int currRetries, final int maxRetries, final Exception ex,
+        final int currRetries, final int maxRetries, final IOException ex,
         final Random rand, final UserGroupInformation ugi) throws IOException,
         InterruptedException {
       ugi.doAs(new PrivilegedExceptionAction<Object>() {
@@ -737,7 +737,7 @@ public class Client implements AutoCloseable {
                   remoteId.getAddress().getPort(),
                   NetUtils.getHostname(),
                   0,
-                  new IOException(msg, ex));
+                  ex);
             }
           } else {
             // With RequestHedgingProxyProvider, one rpc call will send multiple
