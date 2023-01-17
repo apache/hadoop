@@ -782,7 +782,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
 
     if (expectedQueueEntitlements.get(label).getCapacity() > EPSILON) {
       if (leafQueue.getCapacityConfigType().equals(ABSOLUTE_RESOURCE)) {
-        String templatePrefix = cs.getConfiguration().getAutoCreatedQueueTemplateConfPrefix(
+        String templatePrefix = QueuePrefixes.getAutoCreatedQueueTemplateConfPrefix(
             parentQueue.getQueuePath());
         Resource resourceTemplate = parentQueue.getLeafQueueTemplate().getLeafQueueConfigs()
             .getMinimumResourceRequirement(label, templatePrefix, RESOURCE_TYPES);

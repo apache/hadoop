@@ -45,6 +45,9 @@ import org.junit.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A_QUEUE_PATH;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT_QUEUE_PATH;
+
 public class TestQueueParsing {
 
   private static final Logger LOG =
@@ -95,7 +98,7 @@ public class TestQueueParsing {
       CapacitySchedulerConfiguration conf) {
     // Define top-level queues
     conf.set(
-        CapacitySchedulerConfiguration
+      QueuePrefixes
             .getQueuePrefix(CapacitySchedulerConfiguration.ROOT)
             + CapacitySchedulerConfiguration.QUEUES, " a ,b, c");
 
@@ -115,7 +118,7 @@ public class TestQueueParsing {
       CapacitySchedulerConfiguration conf) {
     // Define top-level queues
     conf.set(
-        CapacitySchedulerConfiguration
+      QueuePrefixes
             .getQueuePrefix(CapacitySchedulerConfiguration.ROOT)
             + CapacitySchedulerConfiguration.QUEUES, " a ,b, c");
 
@@ -131,7 +134,7 @@ public class TestQueueParsing {
     conf.setMaximumCapacity(C, 70);
 
     // sub queues for A
-    conf.set(CapacitySchedulerConfiguration.getQueuePrefix(A)
+    conf.set(QueuePrefixes.getQueuePrefix(A)
         + CapacitySchedulerConfiguration.QUEUES, "a1, a2 ");
 
     final String A1 = CapacitySchedulerConfiguration.ROOT + ".a.a1";
@@ -1155,16 +1158,16 @@ public class TestQueueParsing {
 
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "a" });
-    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "x", 100);
-    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "y", 100);
-    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "z", 100);
+    conf.setLabeledQueueWeight(ROOT_QUEUE_PATH, "x", 100);
+    conf.setLabeledQueueWeight(ROOT_QUEUE_PATH, "y", 100);
+    conf.setLabeledQueueWeight(ROOT_QUEUE_PATH, "z", 100);
 
     final String A = CapacitySchedulerConfiguration.ROOT + ".a";
-    conf.setNonLabeledQueueWeight(A, 100);
+    conf.setNonLabeledQueueWeight(A_QUEUE_PATH, 100);
     conf.setAccessibleNodeLabels(A, ImmutableSet.of("x", "y", "z"));
-    conf.setLabeledQueueWeight(A, "x", 100);
-    conf.setLabeledQueueWeight(A, "y", 100);
-    conf.setLabeledQueueWeight(A, "z", 70);
+    conf.setLabeledQueueWeight(A_QUEUE_PATH, "x", 100);
+    conf.setLabeledQueueWeight(A_QUEUE_PATH, "y", 100);
+    conf.setLabeledQueueWeight(A_QUEUE_PATH, "z", 70);
     MockRM rm = null;
     try {
       rm = new MockRM(conf) {

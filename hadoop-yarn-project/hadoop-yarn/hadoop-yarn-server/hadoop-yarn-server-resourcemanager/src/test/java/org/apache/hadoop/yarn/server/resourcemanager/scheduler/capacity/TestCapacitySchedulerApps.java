@@ -1042,7 +1042,7 @@ public class TestCapacitySchedulerApps {
     MockRM rm = setUpMove();
     ResourceScheduler scheduler = rm.getResourceScheduler();
     CapacityScheduler cs = (CapacityScheduler) scheduler;
-    cs.getQueueContext().getConfiguration().setInt(CapacitySchedulerConfiguration.getQueuePrefix(A1)
+    cs.getQueueContext().getConfiguration().setInt(QueuePrefixes.getQueuePrefix(A1)
         + CapacitySchedulerConfiguration.MAX_PARALLEL_APPLICATIONS, MAX_PARALLEL_APPS);
     cs.reinitialize(cs.getQueueContext().getConfiguration(), mockContext);
     List<ApplicationAttemptId> attemptIds = new ArrayList<>();

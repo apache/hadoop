@@ -62,6 +62,7 @@ import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT_QUEUE_PATH;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -448,7 +449,7 @@ public class TestCapacitySchedulerPerf {
     CapacitySchedulerConfiguration csconf =
         new CapacitySchedulerConfiguration();
     csconf.setResourceComparator(DominantResourceCalculator.class);
-    csconf.setMaximumApplicationMasterResourcePerQueuePercent("root", 100.0f);
+    csconf.setMaximumApplicationMasterResourcePerQueuePercent(ROOT_QUEUE_PATH, 100.0f);
     csconf.setMaximumAMResourcePercentPerPartition("root", "", 100.0f);
     csconf.setCapacity("root.default", 0.0f);
     csconf.setOffSwitchPerHeartbeatLimit(numQueues);
@@ -457,14 +458,14 @@ public class TestCapacitySchedulerPerf {
     String[] subQueues = new String[numQueues];
     for (int i = 0; i < numQueues; i++) {
       String queueName = String.format("%03d", i);
-      String queuePath = "root." + queueName;
+      QueuePath queuePath = new QueuePath("root." + queueName);
       subQueues[i] = queueName;
       csconf.setMaximumApplicationMasterResourcePerQueuePercent(
           queuePath, 100.0f);
-      csconf.setMaximumAMResourcePercentPerPartition(queuePath, "", 100.0f);
-      csconf.setCapacity(queuePath, capacity);
-      csconf.setUserLimitFactor(queuePath, 100.0f);
-      csconf.setMaximumCapacity(queuePath, 100.0f);
+      csconf.setMaximumAMResourcePercentPerPartition(queuePath.getFullPath(), "", 100.0f);
+      csconf.setCapacity(queuePath.getFullPath(), capacity);
+      csconf.setUserLimitFactor(queuePath.getFullPath(), 100.0f);
+      csconf.setMaximumCapacity(queuePath.getFullPath(), 100.0f);
     }
 
     csconf.setQueues("root", subQueues);

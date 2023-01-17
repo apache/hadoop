@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.DEFAULT_QUEUE_PATH;
 import static org.junit.Assert.assertEquals;
 
 import java.util.*;
@@ -31,6 +32,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.junit.Assert;
 import org.junit.Test;
@@ -163,12 +165,12 @@ public class TestFairOrderingPolicy {
         new CapacitySchedulerConfiguration();
 
     // Define top-level queues
-    String queuePath = CapacitySchedulerConfiguration.ROOT + ".default";
+    QueuePath queuePath = DEFAULT_QUEUE_PATH;
     csConf.set(YarnConfiguration.RM_SCHEDULER,
         CapacityScheduler.class.getCanonicalName());
-    csConf.setOrderingPolicy(queuePath,
+    csConf.setOrderingPolicy(queuePath.getFullPath(),
         CapacitySchedulerConfiguration.FAIR_APP_ORDERING_POLICY);
-    csConf.setOrderingPolicyParameter(queuePath,
+    csConf.setOrderingPolicyParameter(queuePath.getFullPath(),
         FairOrderingPolicy.ENABLE_SIZE_BASED_WEIGHT, "true");
     csConf.setMaximumApplicationMasterResourcePerQueuePercent(queuePath, 0.1f);
 

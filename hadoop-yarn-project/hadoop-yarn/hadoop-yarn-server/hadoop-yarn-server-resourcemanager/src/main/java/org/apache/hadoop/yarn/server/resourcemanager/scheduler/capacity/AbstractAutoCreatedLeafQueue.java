@@ -63,7 +63,7 @@ public class AbstractAutoCreatedLeafQueue extends AbstractLeafQueue {
   @Override
   protected Resource getMinimumAbsoluteResource(String queuePath,
       String label) {
-    return super.getMinimumAbsoluteResource(queueContext.getConfiguration()
+    return super.getMinimumAbsoluteResource(QueuePrefixes
         .getAutoCreatedQueueTemplateConfPrefix(this.getParent().getQueuePath()),
         label);
   }
@@ -71,7 +71,7 @@ public class AbstractAutoCreatedLeafQueue extends AbstractLeafQueue {
   @Override
   protected Resource getMaximumAbsoluteResource(String queuePath,
       String label) {
-    return super.getMaximumAbsoluteResource(queueContext.getConfiguration()
+    return super.getMaximumAbsoluteResource(QueuePrefixes
         .getAutoCreatedQueueTemplateConfPrefix(this.getParent().getQueuePath()),
         label);
   }
@@ -79,7 +79,7 @@ public class AbstractAutoCreatedLeafQueue extends AbstractLeafQueue {
   @Override
   protected boolean checkConfigTypeIsAbsoluteResource(String queuePath,
       String label) {
-    return super.checkConfigTypeIsAbsoluteResource(queueContext.getConfiguration()
+    return super.checkConfigTypeIsAbsoluteResource(QueuePrefixes
         .getAutoCreatedQueueTemplateConfPrefix(this.getParent().getQueuePath()),
         label);
   }

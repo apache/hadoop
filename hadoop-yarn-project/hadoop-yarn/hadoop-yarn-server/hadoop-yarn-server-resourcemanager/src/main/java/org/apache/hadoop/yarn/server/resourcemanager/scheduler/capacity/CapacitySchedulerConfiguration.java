@@ -39,7 +39,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
@@ -77,6 +76,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes.*;
 
 public class CapacitySchedulerConfiguration extends ReservationSchedulerConfiguration {
 
@@ -426,12 +427,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   private ConfigurationProperties configurationProperties;
 
-  public int getMaximumAutoCreatedQueueDepth(String queuePath) {
+  public int getMaximumAutoCreatedQueueDepth(QueuePath queuePath) {
     return getInt(getQueuePrefix(queuePath) + MAXIMUM_QUEUE_DEPTH,
         getInt(PREFIX + MAXIMUM_QUEUE_DEPTH, DEFAULT_MAXIMUM_QUEUE_DEPTH));
   }
 
-  public void setMaximumAutoCreatedQueueDepth(String queuePath, int value) {
+  public void setMaximumAutoCreatedQueueDepth(QueuePath queuePath, int value) {
     setInt(getQueuePrefix(queuePath) + MAXIMUM_QUEUE_DEPTH, value);
   }
 
@@ -464,25 +465,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
   }
 
-  public static String getQueuePrefix(String queue) {
-    String queueName = PREFIX + queue + DOT;
-    return queueName;
-  }
-
-  static String getQueueOrderingPolicyPrefix(String queue) {
-    String queueName = PREFIX + queue + DOT + ORDERING_POLICY + DOT;
-    return queueName;
-  }
-
   static String getUserPrefix(String user) {
     return PREFIX + "user." + user + DOT;
-  }
-
-  public static String getNodeLabelPrefix(String queue, String label) {
-    if (label.equals(CommonNodeLabelsManager.NO_LABEL)) {
-      return getQueuePrefix(queue);
-    }
-    return getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS + DOT + label + DOT;
   }
 
   public void setMaximumSystemApplications(int numMaxApps) {
@@ -503,73 +487,73 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   /**
    * Get the maximum applications per queue setting.
-   * @param queue name of the queue
+   * @param queuePath path of the queue
    * @return setting specified or -1 if not set
    */
-  public int getMaximumApplicationsPerQueue(String queue) {
+  public int getMaximumApplicationsPerQueue(QueuePath queuePath) {
     int maxApplicationsPerQueue =
-        getInt(getQueuePrefix(queue) + MAXIMUM_APPLICATIONS_SUFFIX,
+        getInt(getQueuePrefix(queuePath) + MAXIMUM_APPLICATIONS_SUFFIX,
             (int)UNDEFINED);
     return maxApplicationsPerQueue;
   }
 
   @VisibleForTesting
-  public void setMaximumApplicationsPerQueue(String queue,
+  public void setMaximumApplicationsPerQueue(QueuePath queuePath,
       int numMaxApps) {
-    setInt(getQueuePrefix(queue) + MAXIMUM_APPLICATIONS_SUFFIX,
+    setInt(getQueuePrefix(queuePath) + MAXIMUM_APPLICATIONS_SUFFIX,
             numMaxApps);
   }
 
   /**
    * Get the maximum am resource percent per queue setting.
-   * @param queue name of the queue
+   * @param queuePath path of the queue
    * @return per queue setting or defaults to the global am-resource-percent
    *         setting if per queue setting not present
    */
-  public float getMaximumApplicationMasterResourcePerQueuePercent(String queue) {
-    return getFloat(getQueuePrefix(queue) + MAXIMUM_AM_RESOURCE_SUFFIX,
+  public float getMaximumApplicationMasterResourcePerQueuePercent(QueuePath queuePath) {
+    return getFloat(getQueuePrefix(queuePath) + MAXIMUM_AM_RESOURCE_SUFFIX,
     		getMaximumApplicationMasterResourcePercent());
   }
 
-  public void setMaximumApplicationMasterResourcePerQueuePercent(String queue,
+  public void setMaximumApplicationMasterResourcePerQueuePercent(QueuePath queuePath,
       float percent) {
-    setFloat(getQueuePrefix(queue) + MAXIMUM_AM_RESOURCE_SUFFIX, percent);
+    setFloat(getQueuePrefix(queuePath) + MAXIMUM_AM_RESOURCE_SUFFIX, percent);
   }
 
-  private void throwExceptionForUnexpectedWeight(float weight, String queue,
+  private void throwExceptionForUnexpectedWeight(float weight, QueuePath queuePath,
       String label) {
     if ((weight < -1e-6 && Math.abs(weight + 1) > 1e-6) || weight > 10000) {
       throw new IllegalArgumentException(
-          "Illegal " + "weight=" + weight + " for queue=" + queue + "label="
+          "Illegal " + "weight=" + weight + " for queue=" + queuePath.getFullPath() + "label="
               + label
               + ". Acceptable values: [0, 10000], -1 is same as not set");
     }
   }
 
-  public float getNonLabeledQueueWeight(String queue) {
-    String configuredValue = get(getQueuePrefix(queue) + CAPACITY);
+  public float getNonLabeledQueueWeight(QueuePath queuePath) {
+    String configuredValue = get(getQueuePrefix(queuePath) + CAPACITY);
     float weight = extractFloatValueFromWeightConfig(configuredValue);
-    throwExceptionForUnexpectedWeight(weight, queue, "");
+    throwExceptionForUnexpectedWeight(weight, queuePath, "");
     return weight;
   }
 
-  public void setNonLabeledQueueWeight(String queue, float weight) {
-    set(getQueuePrefix(queue) + CAPACITY, weight + WEIGHT_SUFFIX);
+  public void setNonLabeledQueueWeight(QueuePath queuePath, float weight) {
+    set(getQueuePrefix(queuePath) + CAPACITY, weight + WEIGHT_SUFFIX);
   }
 
-  public void setLabeledQueueWeight(String queue, String label, float weight) {
-    set(getNodeLabelPrefix(queue, label) + CAPACITY, weight + WEIGHT_SUFFIX);
+  public void setLabeledQueueWeight(QueuePath queuePath, String label, float weight) {
+    set(getNodeLabelPrefix(queuePath, label) + CAPACITY, weight + WEIGHT_SUFFIX);
   }
 
-  public float getLabeledQueueWeight(QueuePath queue, String label) {
-    String configuredValue = get(getNodeLabelPrefix(queue.getFullPath(), label) + CAPACITY);
+  public float getLabeledQueueWeight(QueuePath queuePath, String label) {
+    String configuredValue = get(getNodeLabelPrefix(queuePath, label) + CAPACITY);
     float weight = extractFloatValueFromWeightConfig(configuredValue);
-    throwExceptionForUnexpectedWeight(weight, queue.getFullPath(), label);
+    throwExceptionForUnexpectedWeight(weight, queuePath, label);
     return weight;
   }
 
-  public float getNonLabeledQueueCapacity(QueuePath queue) {
-    String configuredCapacity = get(getQueuePrefix(queue.getFullPath()) + CAPACITY);
+  public float getNonLabeledQueueCapacity(QueuePath queuePath) {
+    String configuredCapacity = get(getQueuePrefix(queuePath) + CAPACITY);
     boolean absoluteResourceConfigured = (configuredCapacity != null)
         && RESOURCE_PATTERN.matcher(configuredCapacity).find();
     if (absoluteResourceConfigured || configuredWeightAsCapacity(
@@ -578,10 +562,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       // root.From AbstractCSQueue, absolute resource will be parsed and
       // updated. Once nodes are added/removed in cluster, capacity in
       // percentage will also be re-calculated.
-      return queue.isRoot() ? 100.0f : 0f;
+      return queuePath.isRoot() ? 100.0f : 0f;
     }
 
-    float capacity = queue.isRoot()
+    float capacity = queuePath.isRoot()
         ? 100.0f
         : (configuredCapacity == null)
             ? 0f
@@ -589,39 +573,39 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     if (capacity < MINIMUM_CAPACITY_VALUE
         || capacity > MAXIMUM_CAPACITY_VALUE) {
       throw new IllegalArgumentException(
-          "Illegal " + "capacity of " + capacity + " for queue " + queue);
+          "Illegal " + "capacity of " + capacity + " for queue " + queuePath);
     }
     LOG.debug("CSConf - getCapacity: queuePrefix={}, capacity={}",
-        getQueuePrefix(queue.getFullPath()), capacity);
+        getQueuePrefix(queuePath), capacity);
 
     return capacity;
   }
 
-  public void setCapacity(String queue, float capacity) {
-    if (queue.equals("root")) {
+  public void setCapacity(QueuePath queuePath, float capacity) {
+    if (queuePath.getFullPath().equals("root")) {
       throw new IllegalArgumentException(
           "Cannot set capacity, root queue has a fixed capacity of 100.0f");
     }
-    setFloat(getQueuePrefix(queue) + CAPACITY, capacity);
+    setFloat(getQueuePrefix(queuePath) + CAPACITY, capacity);
     LOG.debug("CSConf - setCapacity: queuePrefix={}, capacity={}",
-        getQueuePrefix(queue), capacity);
+        getQueuePrefix(queuePath), capacity);
 
   }
 
   @VisibleForTesting
-  public void setCapacity(String queue, String absoluteResourceCapacity) {
-    if (queue.equals("root")) {
+  public void setCapacity(QueuePath queuePath, String absoluteResourceCapacity) {
+    if (queuePath.getFullPath().equals("root")) {
       throw new IllegalArgumentException(
           "Cannot set capacity, root queue has a fixed capacity");
     }
-    set(getQueuePrefix(queue) + CAPACITY, absoluteResourceCapacity);
+    set(getQueuePrefix(queuePath) + CAPACITY, absoluteResourceCapacity);
     LOG.debug("CSConf - setCapacity: queuePrefix={}, capacity={}",
-        getQueuePrefix(queue), absoluteResourceCapacity);
+        getQueuePrefix(queuePath), absoluteResourceCapacity);
 
   }
 
-  public float getNonLabeledQueueMaximumCapacity(QueuePath queue) {
-    String configuredCapacity = get(getQueuePrefix(queue.getFullPath()) + MAXIMUM_CAPACITY);
+  public float getNonLabeledQueueMaximumCapacity(QueuePath queuePath) {
+    String configuredCapacity = get(getQueuePrefix(queuePath) + MAXIMUM_CAPACITY);
     boolean matcher = (configuredCapacity != null)
         && RESOURCE_PATTERN.matcher(configuredCapacity).find();
     if (matcher) {
@@ -641,14 +625,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return maxCapacity;
   }
 
-  public void setMaximumCapacity(String queue, float maxCapacity) {
+  public void setMaximumCapacity(QueuePath queuePath, float maxCapacity) {
     if (maxCapacity > MAXIMUM_CAPACITY_VALUE) {
       throw new IllegalArgumentException("Illegal " +
-          "maximum-capacity of " + maxCapacity + " for queue " + queue);
+          "maximum-capacity of " + maxCapacity + " for queue " + queuePath.getFullPath());
     }
-    setFloat(getQueuePrefix(queue) + MAXIMUM_CAPACITY, maxCapacity);
+    setFloat(getQueuePrefix(queuePath) + MAXIMUM_CAPACITY, maxCapacity);
     LOG.debug("CSConf - setMaxCapacity: queuePrefix={}, maxCapacity={}",
-        getQueuePrefix(queue), maxCapacity);
+        getQueuePrefix(queuePath), maxCapacity);
   }
 
   public void setCapacityByLabel(String queue, String label, float capacity) {
@@ -2291,23 +2275,6 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         getQueuePrefix(queuePath) + AUTO_QUEUE_CREATION_V2_ENABLED,
         DEFAULT_AUTO_QUEUE_CREATION_ENABLED);
     return isAutoQueueCreation;
-  }
-
-  /**
-   * Get the auto created leaf queue's template configuration prefix
-   * Leaf queue's template capacities are configured at the parent queue
-   *
-   * @param queuePath parent queue's path
-   * @return Config prefix for leaf queue template configurations
-   */
-  @Private
-  public String getAutoCreatedQueueTemplateConfPrefix(String queuePath) {
-    return queuePath + DOT + AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX;
-  }
-
-  @Private
-  public QueuePath getAutoCreatedQueueObjectTemplateConfPrefix(String queuePath) {
-    return new QueuePath(queuePath, AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX);
   }
 
   @Private

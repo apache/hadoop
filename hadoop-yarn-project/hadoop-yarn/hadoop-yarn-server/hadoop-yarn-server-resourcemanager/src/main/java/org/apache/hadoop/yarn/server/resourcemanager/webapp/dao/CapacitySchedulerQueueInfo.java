@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlanQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.helper.CapacitySchedulerInfoHelper;
 
 @XmlRootElement
@@ -195,7 +196,7 @@ public class CapacitySchedulerQueueInfo {
 
     String aclApplicationMaxPriority = "acl_" +
         StringUtils.toLowerCase(AccessType.APPLICATION_MAX_PRIORITY.toString());
-    String priorityAcls = conf.get(CapacitySchedulerConfiguration
+    String priorityAcls = conf.get(QueuePrefixes
         .getQueuePrefix(queuePath) + aclApplicationMaxPriority,
         CapacitySchedulerConfiguration.ALL_ACL);
 

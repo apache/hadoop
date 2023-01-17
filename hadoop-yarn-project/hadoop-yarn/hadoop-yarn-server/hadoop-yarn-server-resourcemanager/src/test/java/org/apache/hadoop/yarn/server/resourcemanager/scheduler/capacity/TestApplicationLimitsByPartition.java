@@ -138,8 +138,9 @@ public class TestApplicationLimitsByPartition {
     // as 0.2 (Label X) and for Queue C1 as 0.2 (Empty Label)
     final String A1 = CapacitySchedulerConfiguration.ROOT + ".a" + ".a1";
     final String C1 = CapacitySchedulerConfiguration.ROOT + ".c" + ".c1";
+    final QueuePath C1_QUEUE_PATH = new QueuePath(C1);
     config.setMaximumAMResourcePercentPerPartition(A1, "x", 0.2f);
-    config.setMaximumApplicationMasterResourcePerQueuePercent(C1, 0.2f);
+    config.setMaximumApplicationMasterResourcePerQueuePercent(C1_QUEUE_PATH, 0.2f);
 
     // Now inject node label manager with this updated config
     MockRM rm1 = new MockRM(config) {
@@ -294,8 +295,9 @@ public class TestApplicationLimitsByPartition {
     // as 0.15 (Label X) and for Queue C1 as 0.15 (Empty Label)
     final String A1 = CapacitySchedulerConfiguration.ROOT + ".a" + ".a1";
     final String C1 = CapacitySchedulerConfiguration.ROOT + ".c" + ".c1";
+    final QueuePath C1_QUEUE_PATH = new QueuePath(C1);
     config.setMaximumAMResourcePercentPerPartition(A1, "x", 0.15f);
-    config.setMaximumApplicationMasterResourcePerQueuePercent(C1, 0.15f);
+    config.setMaximumApplicationMasterResourcePerQueuePercent(C1_QUEUE_PATH, 0.15f);
     // inject node label manager
     MockRM rm1 = new MockRM(config) {
       @Override
@@ -402,7 +404,8 @@ public class TestApplicationLimitsByPartition {
     // After getting queue conf, configure AM resource percent for Queue A1
     // as 0.2 (not for partition, rather in queue level)
     final String A1 = CapacitySchedulerConfiguration.ROOT + ".a" + ".a1";
-    config.setMaximumApplicationMasterResourcePerQueuePercent(A1, 0.2f);
+    final QueuePath A1_QUEUE_PATH = new QueuePath(A1);
+    config.setMaximumApplicationMasterResourcePerQueuePercent(A1_QUEUE_PATH, 0.2f);
     // inject node label manager
     MockRM rm1 = new MockRM(config) {
       @Override
@@ -627,8 +630,9 @@ public class TestApplicationLimitsByPartition {
      */
     final String A1 = CapacitySchedulerConfiguration.ROOT + ".a" + ".a1";
     final String B1 = CapacitySchedulerConfiguration.ROOT + ".b" + ".b1";
+    final QueuePath B1_QUEUE_PATH = new QueuePath(B1);
     config.setMaximumAMResourcePercentPerPartition(A1, "y", 0.25f);
-    config.setMaximumApplicationMasterResourcePerQueuePercent(B1, 0.15f);
+    config.setMaximumApplicationMasterResourcePerQueuePercent(B1_QUEUE_PATH, 0.15f);
 
     // Now inject node label manager with this updated config
     MockRM rm1 = new MockRM(config) {

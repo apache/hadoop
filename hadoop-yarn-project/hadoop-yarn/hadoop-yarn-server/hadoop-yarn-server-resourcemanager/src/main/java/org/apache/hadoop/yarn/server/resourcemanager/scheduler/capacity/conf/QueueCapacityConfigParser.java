@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
 import java.util.ArrayList;
@@ -73,7 +74,7 @@ public class QueueCapacityConfigParser {
       return QueueCapacityVector.of(100f, QueueCapacityType.PERCENTAGE);
     }
 
-    String propertyName = CapacitySchedulerConfiguration.getNodeLabelPrefix(
+    String propertyName = QueuePrefixes.getNodeLabelPrefix(
         queuePath, label) + CapacitySchedulerConfiguration.CAPACITY;
     String capacityString = conf.get(propertyName);
 

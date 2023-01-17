@@ -25,7 +25,6 @@ import org.junit.Test;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getQueuePrefix;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -57,7 +56,7 @@ public class TestCapacitySchedulerConfiguration {
   }
 
   private String getSubmitAppsConfigKey(String queue) {
-    return getQueuePrefix(queue) + "acl_submit_applications";
+    return QueuePrefixes.getQueuePrefix(queue) + "acl_submit_applications";
   }
 
   private void testWithGivenAclNoOneHasAccess(String queue, String aclValue) {

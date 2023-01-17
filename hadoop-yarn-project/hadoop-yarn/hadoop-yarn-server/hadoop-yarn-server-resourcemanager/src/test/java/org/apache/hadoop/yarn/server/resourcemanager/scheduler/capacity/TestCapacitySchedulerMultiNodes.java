@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.DEFAULT_QUEUE_PATH;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.waitforNMRegistered;
 
@@ -200,7 +201,7 @@ public class TestCapacitySchedulerMultiNodes {
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     newConf.setInt(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
         + ".resource-based.sorting-interval.ms", 0);
-    newConf.setMaximumApplicationMasterResourcePerQueuePercent("root.default",
+    newConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT_QUEUE_PATH,
         1.0f);
     MockRM rm1 = new MockRM(newConf);
 
@@ -286,7 +287,7 @@ public class TestCapacitySchedulerMultiNodes {
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     newConf.setInt(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
         + ".resource-based.sorting-interval.ms", 0);
-    newConf.setMaximumApplicationMasterResourcePerQueuePercent("root.default",
+    newConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT_QUEUE_PATH,
         1.0f);
     MockRM rm1 = new MockRM(newConf);
 
@@ -357,7 +358,7 @@ public class TestCapacitySchedulerMultiNodes {
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     newConf.setInt(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
         + ".resource-based.sorting-interval.ms", 0);
-    newConf.setMaximumApplicationMasterResourcePerQueuePercent("root.default",
+    newConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT_QUEUE_PATH,
         1.0f);
     MockRM rm1 = new MockRM(newConf);
 

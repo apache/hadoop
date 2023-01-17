@@ -57,6 +57,9 @@ import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.Assert;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.DEFAULT_QUEUE_PATH;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT_QUEUE_PATH;
 import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
@@ -116,9 +119,9 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
 
     CapacitySchedulerConfiguration csconf =
         new CapacitySchedulerConfiguration();
-    csconf.setMaximumApplicationMasterResourcePerQueuePercent("root", 100.0f);
+    csconf.setMaximumApplicationMasterResourcePerQueuePercent(ROOT_QUEUE_PATH, 100.0f);
     csconf.setMaximumAMResourcePercentPerPartition("root", "", 100.0f);
-    csconf.setMaximumApplicationMasterResourcePerQueuePercent("root.default",
+    csconf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT_QUEUE_PATH,
         100.0f);
     csconf.setMaximumAMResourcePercentPerPartition("root.default", "", 100.0f);
     csconf.setResourceComparator(DominantResourceCalculator.class);
@@ -271,9 +274,9 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
 
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.setMaximumApplicationMasterResourcePerQueuePercent("root", 100.0f);
+    csConf.setMaximumApplicationMasterResourcePerQueuePercent(ROOT_QUEUE_PATH, 100.0f);
     csConf.setMaximumAMResourcePercentPerPartition("root", "", 100.0f);
-    csConf.setMaximumApplicationMasterResourcePerQueuePercent("root.default",
+    csConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT_QUEUE_PATH,
         100.0f);
     csConf.setMaximumAMResourcePercentPerPartition("root.default", "", 100.0f);
     csConf.setResourceComparator(DominantResourceCalculator.class);

@@ -59,6 +59,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Predicate;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.*;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_ACT_ALLOCATIONS;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_ACT_ALLOCATION_STATE;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_ACT_COUNT;
@@ -140,13 +141,11 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     config.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[] {"a", "b"});
 
-    final String queueA = CapacitySchedulerConfiguration.ROOT + ".a";
-    config.setCapacity(queueA, 10.5f);
-    config.setMaximumCapacity(queueA, 50);
+    config.setCapacity(A, 10.5f);
+    config.setMaximumCapacity(A, 50);
 
-    final String queueB = CapacitySchedulerConfiguration.ROOT + ".b";
-    config.setCapacity(queueB, 89.5f);
-    config.setMaximumApplicationMasterResourcePerQueuePercent(queueB, 100);
+    config.setCapacity(B, 89.5f);
+    config.setMaximumApplicationMasterResourcePerQueuePercent(B_QUEUE_PATH, 100);
   }
 
   @Before

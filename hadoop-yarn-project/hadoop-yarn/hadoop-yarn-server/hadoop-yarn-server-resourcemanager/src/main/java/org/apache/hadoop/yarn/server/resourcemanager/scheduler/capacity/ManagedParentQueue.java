@@ -156,8 +156,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
         queueContext.getConfiguration();
 
     // TODO load configs into CapacitySchedulerConfiguration instead of duplicating them
-    String leafQueueTemplateConfPrefix = getLeafQueueConfigPrefix(
-        configuration);
+    String leafQueueTemplateConfPrefix = getLeafQueueConfigPrefix();
     //Load template configuration into CapacitySchedulerConfiguration
     CapacitySchedulerConfiguration autoCreatedTemplateConfig =
         super.initializeLeafQueueConfigs(leafQueueTemplateConfPrefix);
@@ -165,7 +164,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     QueueResourceQuotas queueResourceQuotas = new QueueResourceQuotas();
     setAbsoluteResourceTemplates(configuration, queueResourceQuotas);
 
-    QueuePath templateQueuePath = configuration
+    QueuePath templateQueuePath = QueuePrefixes
         .getAutoCreatedQueueObjectTemplateConfPrefix(getQueuePath());
     Set<String> templateConfiguredNodeLabels = queueContext
         .getQueueManager().getConfiguredNodeLabelsForAllQueues()
@@ -193,7 +192,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
 
   private void setAbsoluteResourceTemplates(CapacitySchedulerConfiguration configuration,
                                             QueueResourceQuotas queueResourceQuotas) throws IOException {
-    QueuePath templateQueuePath = configuration
+    QueuePath templateQueuePath = QueuePrefixes
         .getAutoCreatedQueueObjectTemplateConfPrefix(getQueuePath());
     Set<String> templateConfiguredNodeLabels = queueContext
         .getQueueManager().getConfiguredNodeLabelsForAllQueues()
@@ -222,14 +221,14 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
               queueContext.getClusterResource(),
               configuration.getMinimumResourceRequirement(
                   label,
-                  configuration
+                  QueuePrefixes
                       .getAutoCreatedQueueTemplateConfPrefix(getQueuePath()),
                   resourceTypes),
               getQueueResourceQuotas().getConfiguredMinResource(label)));
 
       Resource childMaxResource = configuration
           .getMaximumResourceRequirement(label,
-              configuration
+              QueuePrefixes
                   .getAutoCreatedQueueTemplateConfPrefix(getQueuePath()),
               resourceTypes);
       Resource parentMaxRes = getQueueResourceQuotas()
@@ -379,8 +378,8 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     }
   }
 
-  public String getLeafQueueConfigPrefix(CapacitySchedulerConfiguration conf) {
-    return CapacitySchedulerConfiguration.PREFIX + conf
+  public String getLeafQueueConfigPrefix() {
+    return CapacitySchedulerConfiguration.PREFIX + QueuePrefixes
         .getAutoCreatedQueueTemplateConfPrefix(getQueuePath());
   }
 

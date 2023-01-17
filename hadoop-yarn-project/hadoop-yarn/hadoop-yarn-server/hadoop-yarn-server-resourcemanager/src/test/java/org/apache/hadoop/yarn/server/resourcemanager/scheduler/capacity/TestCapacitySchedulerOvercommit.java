@@ -23,6 +23,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerOvercommit;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.DEFAULT_QUEUE_PATH;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT_QUEUE_PATH;
+
 /**
  * Test changing resources and overcommit in the Capacity Scheduler
  * {@link CapacityScheduler}.
@@ -39,13 +42,13 @@ public class TestCapacitySchedulerOvercommit extends TestSchedulerOvercommit {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration(conf);
     csConf.setMaximumApplicationMasterResourcePerQueuePercent(
-        CapacitySchedulerConfiguration.ROOT, 100.0f);
+        ROOT_QUEUE_PATH, 100.0f);
     csConf.setMaximumAMResourcePercentPerPartition(
         CapacitySchedulerConfiguration.ROOT, "", 100.0f);
     csConf.setMaximumApplicationMasterResourcePerQueuePercent(
-        CapacitySchedulerConfiguration.ROOT + ".default", 100.0f);
+        DEFAULT_QUEUE_PATH, 100.0f);
     csConf.setMaximumAMResourcePercentPerPartition(
-        CapacitySchedulerConfiguration.ROOT + ".default", "", 100.0f);
+        DEFAULT_QUEUE_PATH.getFullPath(), "", 100.0f);
 
     return csConf;
   }

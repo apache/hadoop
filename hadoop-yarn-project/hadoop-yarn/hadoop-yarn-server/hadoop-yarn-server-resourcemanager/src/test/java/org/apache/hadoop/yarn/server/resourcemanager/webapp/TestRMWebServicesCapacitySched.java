@@ -60,6 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
@@ -124,7 +125,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     final String a = CapacitySchedulerConfiguration.ROOT + ".a";
     config.setCapacity(a, 10.5f);
     config.setMaximumCapacity(a, 50);
-    config.setInt(CapacitySchedulerConfiguration.getQueuePrefix(a) + MAX_PARALLEL_APPLICATIONS, 42);
+    config.setInt(QueuePrefixes.getQueuePrefix(a) + MAX_PARALLEL_APPLICATIONS, 42);
 
     final String b = CapacitySchedulerConfiguration.ROOT + ".b";
     config.setCapacity(b, 89.5f);

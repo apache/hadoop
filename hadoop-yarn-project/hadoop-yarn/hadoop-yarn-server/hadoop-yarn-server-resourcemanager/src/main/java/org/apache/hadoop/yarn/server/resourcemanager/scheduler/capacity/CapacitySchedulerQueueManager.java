@@ -571,7 +571,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     }
 
     int maximumDepthOfStaticParent = csContext.getConfiguration().getMaximumAutoCreatedQueueDepth(
-        firstExistingStaticParent.getQueuePath());
+        firstExistingStaticParent.getQueuePathObject());
     if (firstStaticParentDistance > maximumDepthOfStaticParent) {
       throw new SchedulerDynamicEditException(
           "Could not auto create queue " + queue.getFullPath()

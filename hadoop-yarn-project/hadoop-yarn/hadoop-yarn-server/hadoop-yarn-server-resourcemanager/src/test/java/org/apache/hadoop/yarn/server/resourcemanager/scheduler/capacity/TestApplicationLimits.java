@@ -329,7 +329,7 @@ public class TestApplicationLimits {
     // should return -1 if per queue setting not set
     assertEquals(
         (int)CapacitySchedulerConfiguration.UNDEFINED, 
-        csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
+        csConf.getMaximumApplicationsPerQueue(queue.getQueuePathObject()));
     int expectedMaxApps =  
         (int)
         (CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS * 
@@ -344,7 +344,7 @@ public class TestApplicationLimits {
     // should default to global setting if per queue setting not set
     assertEquals(CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT,
         csConf.getMaximumApplicationMasterResourcePerQueuePercent(
-            queue.getQueuePath()), epsilon);
+            queue.getQueuePathObject()), epsilon);
 
     // Change the per-queue max AM resources percentage.
     csConf.setFloat(PREFIX + queue.getQueuePath()
@@ -364,7 +364,7 @@ public class TestApplicationLimits {
 
     assertEquals(0.5f,
         csConf.getMaximumApplicationMasterResourcePerQueuePercent(
-          queue.getQueuePath()), epsilon);
+          queue.getQueuePathObject()), epsilon);
 
     assertThat(queue.calculateAndGetAMResourceLimit()).isEqualTo(
         Resource.newInstance(800 * GB, 1));
@@ -384,7 +384,8 @@ public class TestApplicationLimits {
         clusterResource));
 
     queue = (LeafQueue)queues.get(A);
-    assertEquals(9999, (int)csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
+    assertEquals(9999, (int)csConf.getMaximumApplicationsPerQueue(
+        queue.getQueuePathObject()));
     assertEquals(9999, queue.getMaxApplications());
 
     expectedMaxAppsPerUser = Math.min(9999, (int)(9999 *

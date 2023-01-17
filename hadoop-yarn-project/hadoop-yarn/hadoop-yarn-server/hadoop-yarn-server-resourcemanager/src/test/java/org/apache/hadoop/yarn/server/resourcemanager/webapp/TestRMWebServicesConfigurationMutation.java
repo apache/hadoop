@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -67,6 +68,7 @@ import java.util.Map;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.CAPACITY;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A_QUEUE_PATH;
 import static org.apache.hadoop.yarn.webapp.util.YarnWebServiceUtils.toJson;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -718,7 +720,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     assertEquals(CapacitySchedulerConfiguration
             .DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT,
         cs.getConfiguration()
-            .getMaximumApplicationMasterResourcePerQueuePercent("root.a"),
+            .getMaximumApplicationMasterResourcePerQueuePercent(A_QUEUE_PATH),
         0.001f);
     response =
         r.path("ws").path("v1").path("cluster")
@@ -731,7 +733,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf = cs.getConfiguration();
     assertEquals(0.2f, newCSConf
-        .getMaximumApplicationMasterResourcePerQueuePercent("root.a"), 0.001f);
+        .getMaximumApplicationMasterResourcePerQueuePercent(A_QUEUE_PATH), 0.001f);
 
     // Remove config. Config value should be reverted to default.
     updateParam.put(CapacitySchedulerConfiguration.MAXIMUM_AM_RESOURCE_SUFFIX,
@@ -750,7 +752,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     newCSConf = cs.getConfiguration();
     assertEquals(CapacitySchedulerConfiguration
         .DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT, newCSConf
-            .getMaximumApplicationMasterResourcePerQueuePercent("root.a"),
+            .getMaximumApplicationMasterResourcePerQueuePercent(A_QUEUE_PATH),
         0.001f);
   }
 
@@ -1021,8 +1023,8 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
   private String getConfValueForQueueAndLabelAndType(CapacityScheduler cs,
       QueuePath queuePath, String label, String type) {
     return cs.getConfiguration().get(
-        CapacitySchedulerConfiguration.getNodeLabelPrefix(
-            queuePath.getFullPath(), label) + type);
+            QueuePrefixes.getNodeLabelPrefix(
+            queuePath, label) + type);
   }
 
   private Object logAndReturnJson(WebResource ws, String json) {

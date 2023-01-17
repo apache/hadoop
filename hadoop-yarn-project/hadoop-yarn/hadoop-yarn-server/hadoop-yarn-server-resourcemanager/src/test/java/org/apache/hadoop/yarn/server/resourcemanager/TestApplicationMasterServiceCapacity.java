@@ -55,6 +55,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A_QUEUE_PATH;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B_QUEUE_PATH;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils.toSet;
 import static org.junit.Assert.fail;
 
@@ -265,15 +267,15 @@ public class TestApplicationMasterServiceCapacity extends
     conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "y", 100);
 
     final String A = CapacitySchedulerConfiguration.ROOT + ".a";
-    conf.setCapacity(A, 50);
-    conf.setMaximumCapacity(A, 100);
+    conf.setCapacity(A_QUEUE_PATH, 50);
+    conf.setMaximumCapacity(A_QUEUE_PATH, 100);
     conf.setAccessibleNodeLabels(A, toSet("x"));
     conf.setDefaultNodeLabelExpression(A, "x");
     conf.setCapacityByLabel(A, "x", 100);
 
     final String B = CapacitySchedulerConfiguration.ROOT + ".b";
-    conf.setCapacity(B, 50);
-    conf.setMaximumCapacity(B, 100);
+    conf.setCapacity(B_QUEUE_PATH, 50);
+    conf.setMaximumCapacity(B_QUEUE_PATH, 100);
     conf.setAccessibleNodeLabels(B, toSet("y"));
     conf.setDefaultNodeLabelExpression(B, "y");
     conf.setCapacityByLabel(B, "y", 100);

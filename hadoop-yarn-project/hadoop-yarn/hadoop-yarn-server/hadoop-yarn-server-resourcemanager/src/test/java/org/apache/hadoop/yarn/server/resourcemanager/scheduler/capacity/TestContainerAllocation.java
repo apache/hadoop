@@ -1343,7 +1343,7 @@ public class TestContainerAllocation {
             .getConfigurationWithMultipleQueues(conf);
     newConf.setClass(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
         DominantResourceCalculator.class, ResourceCalculator.class);
-    newConf.set(CapacitySchedulerConfiguration.getQueuePrefix("root.a")
+    newConf.set(QueuePrefixes.getQueuePrefix("root.a")
         + MAXIMUM_ALLOCATION_MB, "4096");
 
     MockRM rm1 = new MockRM(newConf);

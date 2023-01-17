@@ -195,9 +195,9 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
       maxAMResourcePerQueuePercent =
           configuration.getMaximumApplicationMasterResourcePerQueuePercent(
-              getQueuePath());
+              getQueuePathObject());
 
-      maxApplications = configuration.getMaximumApplicationsPerQueue(getQueuePath());
+      maxApplications = configuration.getMaximumApplicationsPerQueue(getQueuePathObject());
       if (maxApplications < 0) {
         int maxGlobalPerQueueApps =
             configuration.getGlobalMaximumApplicationsPerQueue();
@@ -1697,7 +1697,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     queueContext.getConfiguration().setUserLimitFactor(getQueuePath(), -1);
     // Set Max AM percentage to a higher value
     queueContext.getConfiguration().setMaximumApplicationMasterResourcePerQueuePercent(
-        getQueuePath(), 1f);
+        getQueuePathObject(), 1f);
     super.setDynamicQueueProperties();
   }
 
@@ -2343,7 +2343,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   void updateMaximumApplications() {
     CapacitySchedulerConfiguration configuration = queueContext.getConfiguration();
-    int maxAppsForQueue = configuration.getMaximumApplicationsPerQueue(getQueuePath());
+    int maxAppsForQueue = configuration.getMaximumApplicationsPerQueue(getQueuePathObject());
 
     int maxDefaultPerQueueApps = configuration.getGlobalMaximumApplicationsPerQueue();
     int maxSystemApps = configuration.getMaximumSystemApplications();

@@ -131,7 +131,7 @@ public final class CapacitySchedulerConfigValidator {
       }
 
       final String queuePath = oldQueue.getQueuePath();
-      final String configPrefix = CapacitySchedulerConfiguration.getQueuePrefix(
+      final String configPrefix = QueuePrefixes.getQueuePrefix(
           oldQueue.getQueuePath());
       final QueueState newQueueState = createQueueState(newConf.get(configPrefix + "state"),
           queuePath);

@@ -27,6 +27,7 @@ import static org.junit.Assert.assertEquals;
 
 public final class CapacitySchedulerQueueHelpers {
 
+  public static final String DEFAULT = CapacitySchedulerConfiguration.ROOT + ".default";
   public static final String A = CapacitySchedulerConfiguration.ROOT + ".a";
   public static final String B = CapacitySchedulerConfiguration.ROOT + ".b";
   public static final String A_CHILD = A + ".a";
@@ -35,6 +36,15 @@ public final class CapacitySchedulerQueueHelpers {
   public static final String B1 = B + ".b1";
   public static final String B2 = B + ".b2";
   public static final String B3 = B + ".b3";
+  public static final QueuePath ROOT_QUEUE_PATH = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  public static final QueuePath DEFAULT_QUEUE_PATH = new QueuePath(DEFAULT);
+  public static final QueuePath A_QUEUE_PATH = new QueuePath(A);
+  public static final QueuePath B_QUEUE_PATH = new QueuePath(B);
+  public static final QueuePath A1_QUEUE_PATH = new QueuePath(A1);
+  public static final QueuePath A2_QUEUE_PATH = new QueuePath(A2);
+  public static final QueuePath B1_QUEUE_PATH = new QueuePath(B1);
+  public static final QueuePath B2_QUEUE_PATH = new QueuePath(B2);
+  public static final QueuePath B3_QUEUE_PATH = new QueuePath(B3);
   public static final float A_CAPACITY = 10.5f;
   public static final float B_CAPACITY = 89.5f;
   public static final String P1 = CapacitySchedulerConfiguration.ROOT + ".p1";

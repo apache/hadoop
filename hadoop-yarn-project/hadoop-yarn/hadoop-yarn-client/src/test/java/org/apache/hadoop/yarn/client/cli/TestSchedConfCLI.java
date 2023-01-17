@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.client.cli;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -182,7 +183,7 @@ public class TestSchedConfCLI extends JerseyTestBase {
       CapacitySchedulerConfiguration config) {
     config.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[]{"testqueue"});
-    String a = CapacitySchedulerConfiguration.ROOT + ".testqueue";
+    QueuePath a = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".testqueue");
     config.setCapacity(a, 100f);
     config.setMaximumCapacity(a, 100f);
   }

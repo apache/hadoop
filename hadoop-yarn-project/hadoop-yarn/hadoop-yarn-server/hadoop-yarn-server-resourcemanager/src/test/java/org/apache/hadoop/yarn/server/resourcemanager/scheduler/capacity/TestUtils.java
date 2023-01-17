@@ -55,6 +55,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B1_QUEUE_PATH;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -311,7 +312,7 @@ public class TestUtils {
     conf.setCapacity(B1, 100);
     conf.setMaximumCapacity(B1, 100);
     conf.setCapacityByLabel(B1, "y", 100);
-    conf.setMaximumApplicationMasterResourcePerQueuePercent(B1, 1f);
+    conf.setMaximumApplicationMasterResourcePerQueuePercent(B1_QUEUE_PATH, 1f);
 
     final String C1 = C + ".c1";
     conf.setQueues(C, new String[] {"c1"});
