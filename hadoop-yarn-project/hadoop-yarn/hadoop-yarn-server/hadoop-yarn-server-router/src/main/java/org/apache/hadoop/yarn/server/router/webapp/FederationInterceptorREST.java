@@ -125,6 +125,7 @@ import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecret
 import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationBulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -1143,9 +1144,43 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     throw new NotImplementedException("Code is not implemented");
   }
 
+  /**
+   * This method retrieves the current scheduler status, and it is reachable by
+   * using {@link RMWSConsts#SCHEDULER}.
+   *
+   * For the federation mode, the SchedulerType information of the cluster
+   * cannot be integrated and displayed, and the specific cluster information needs to be marked.
+   *
+   * @return the current scheduler status
+   */
   @Override
   public SchedulerTypeInfo getSchedulerInfo() {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      long startTime = Time.now();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      Class[] argsClasses = new Class[]{};
+      Object[] args = new Object[]{};
+      ClientMethod remoteMethod = new ClientMethod("getSchedulerInfo", argsClasses, args);
+      Map<SubClusterInfo, SchedulerTypeInfo> subClusterInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, SchedulerTypeInfo.class);
+      FederationSchedulerTypeInfo federationSchedulerTypeInfo = new FederationSchedulerTypeInfo();
+      subClusterInfoMap.forEach((subClusterInfo, schedulerTypeInfo) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        schedulerTypeInfo.setSubClusterId(subClusterId.getId());
+        federationSchedulerTypeInfo.getList().add(schedulerTypeInfo);
+      });
+      long stopTime = Time.now();
+      routerMetrics.succeededGetSchedulerInfoRetrieved(stopTime - startTime);
+      return federationSchedulerTypeInfo;
+    } catch (NotFoundException e) {
+      routerMetrics.incrGetSchedulerInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException | IOException e) {
+      routerMetrics.incrGetSchedulerInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("getSchedulerInfo error.", e);
+    }
+    routerMetrics.incrGetSchedulerInfoFailedRetrieved();
+    throw new RuntimeException("getSchedulerInfo error.");
   }
 
   @Override
