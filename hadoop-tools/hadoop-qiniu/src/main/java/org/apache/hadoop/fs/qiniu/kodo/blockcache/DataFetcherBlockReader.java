@@ -1,6 +1,7 @@
 package org.apache.hadoop.fs.qiniu.kodo.blockcache;
 
 
+import java.io.IOException;
 
 public class DataFetcherBlockReader implements IBlockReader, IDataFetcher{
     private final int blockSize;
@@ -30,5 +31,10 @@ public class DataFetcherBlockReader implements IBlockReader, IDataFetcher{
             return dataFetcher.fetch(key, offset, size);
         }
         return new byte[0];
+    }
+
+    @Override
+    public void close() throws IOException {
+
     }
 }

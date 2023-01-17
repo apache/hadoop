@@ -4,6 +4,7 @@ import com.qiniu.storage.model.FileInfo;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoInputStream;
@@ -32,6 +33,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     private QiniuKodoClient kodoClient;
 
     private QiniuKodoFsConfig fsConfig;
+    private IBlockReader blockReader;
 
     @Override
     public void initialize(URI name, Configuration conf) throws IOException {
@@ -55,10 +57,12 @@ public class QiniuKodoFileSystem extends FileSystem {
         workingDir = new Path("/user", username).makeQualified(uri, null);
         LOG.debug("== workingDir:" + workingDir);
 
-        kodoClient = new QiniuKodoClient(bucket, fsConfig);
+        kodoClient = new QiniuKodoClient(bucket, fsConfig, statistics);
 
         // 工作目录为相对路径使用的目录，其必须得存在，故需要预创建
         mkdirs(workingDir);
+
+        blockReader = new QiniuKodoBlockReader(fsConfig, kodoClient);
     }
 
     @Override
@@ -85,10 +89,16 @@ public class QiniuKodoFileSystem extends FileSystem {
         return new FSDataInputStream(
                 new QiniuKodoInputStream(
                     key,
-                    new QiniuKodoBlockReader(fsConfig, kodoClient),
+                    blockReader,
                     fileStatus.getLen(), statistics
                 )
         );
+    }
+
+    @Override
+    public void close() throws IOException {
+        super.close();
+        blockReader.close();
     }
 
     /**

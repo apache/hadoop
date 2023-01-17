@@ -2,7 +2,7 @@ package org.apache.hadoop.fs.qiniu.kodo.blockcache;
 
 import java.util.Objects;
 
-class KeyBlockIdCacheKey {
+public class KeyBlockIdCacheKey {
     String key;
     int blockId;
 

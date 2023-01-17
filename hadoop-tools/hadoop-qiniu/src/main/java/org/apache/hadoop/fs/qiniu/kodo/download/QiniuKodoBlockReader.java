@@ -12,7 +12,11 @@ import java.io.IOException;
 
 public class QiniuKodoBlockReader implements IBlockReader {
 
-    private final IBlockReader reader;
+    private IBlockReader sourceReader = null;
+    private IBlockReader diskCacheReader = null;
+    private IBlockReader memoryCacheReader = null;
+
+    private IBlockReader finalReader = null;
     private final int blockSize;
     public QiniuKodoBlockReader(
             QiniuKodoFsConfig fsConfig,
@@ -23,24 +27,24 @@ public class QiniuKodoBlockReader implements IBlockReader {
         MemoryCacheConfig memoryCache = fsConfig.download.cache.memory;
 
         // 构造原始数据获取器
-        IBlockReader reader = new QiniuKodoSourceDataFetcher(blockSize, client);
+        this.sourceReader = new QiniuKodoSourceDataFetcher(blockSize, client);
 
         if (diskCache.enable) {
             // 添加磁盘缓存层
-            reader = new DiskCacheBlockReader(
-                    reader,
+            this.diskCacheReader = new DiskCacheBlockReader(
+                    sourceReader,
                     diskCache.blocks,
                     diskCache.dir
             );
         }
 
         // 必须添加内存缓存层，否则单字节读取可能将不断读取文件块
-        reader = new MemoryCacheBlockReader(
-                reader,
+        this.memoryCacheReader = new MemoryCacheBlockReader(
+                diskCacheReader == null? sourceReader:diskCacheReader,
                 memoryCache.blocks
         );
-        this.reader = reader;
-        this.blockSize = reader.getBlockSize();
+        this.finalReader = memoryCacheReader;
+        this.blockSize = finalReader.getBlockSize();
     }
 
     @Override
@@ -50,6 +54,13 @@ public class QiniuKodoBlockReader implements IBlockReader {
 
     @Override
     public byte[] readBlock(String key, int blockId) {
-        return reader.readBlock(key, blockId);
+        return finalReader.readBlock(key, blockId);
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (sourceReader != null) sourceReader.close();
+        if (diskCacheReader != null) diskCacheReader.close();
+        if (memoryCacheReader != null) memoryCacheReader.close();
     }
 }

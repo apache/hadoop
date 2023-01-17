@@ -102,48 +102,74 @@ public class QiniuKodoInputStream extends FSInputStream {
         return Byte.toUnsignedInt(currentBlockData[offset]);
     }
 
-    @Override
-    public synchronized int read(byte[] buf, int off, int len) throws IOException {
-        LOG.debug("Read to buf array: offset={}, len={}", off, len);
-        checkNotClosed();
-
-        if (buf == null) {
-            throw new NullPointerException();
-        } else if (off < 0 || len < 0 || len > buf.length - off) {
-            throw new IndexOutOfBoundsException();
-        } else if (len == 0) {
-            return 0;
-        }
-
-        long endPosition = position + len;  // 结束位置
-        int blockIdStart = (int) (position / blockSize); // 当前pos的blockId
-        int blockIdEnd = (int) (endPosition / blockSize);    // 结束pos的blockId
-
-        for(int blockId = blockIdStart; blockId < blockIdEnd; blockId++) {
-            refreshCurrentBlock(); // 加载当前的块数据
-            int start = (int)(position % blockSize);    // 计算块内起始位置
-            System.arraycopy(currentBlockData, start,
-                    buf, off + blockId * blockSize,
-                    blockSize - start);
-            // 循环次数
-            position += blockSize - start;
-        }
-
-        refreshCurrentBlock();
-        // 最后一块的数据
-        int remainBlockSize = (int)(endPosition % blockSize);
-        System.arraycopy(currentBlockData, 0,
-                buf,off + blockIdEnd*blockSize,
-                remainBlockSize);
-        position += remainBlockSize;
-
-        // 还能读
-        if (position <= contentLength) {
-            return len;
-        }
-
-        return -1;
-    }
+//    @Override
+//    public synchronized int read(byte[] buf, int off, int len) throws IOException {
+//        LOG.debug("Read to buf array: offset={}, len={}, pos={}", off, len, position);
+//        checkNotClosed();
+//
+//        if (buf == null) {
+//            throw new NullPointerException();
+//        } else if (off < 0 || len < 0 || len > buf.length - off) {
+//            throw new IndexOutOfBoundsException();
+//        } else if (len == 0) {
+//            return 0;
+//        }
+//
+//        long startPosition = position;
+//        long endPosition = position + len;  // 结束位置
+//        int blockIdStart = (int) (position / blockSize); // 当前pos的blockId
+//        int blockIdEnd = (int) (endPosition / blockSize);    // 结束pos的blockId
+//
+//        for(int blockId = blockIdStart; blockId < blockIdEnd; blockId++) {
+//            refreshCurrentBlock(); // 加载当前的块数据
+//            int srcPosition = (int)(position % blockSize);    // 计算块内起始位置
+//
+//            // 以下两个目标参数可能会发生越界
+//            int destPosition = off + blockId * blockSize;      // 计算目标缓冲区的起始位置
+//            int copyLength = blockSize - srcPosition;
+//
+//            for(int i=0;i<copyLength;i++) {
+//                if (destPosition+i >= buf.length) {
+//                    return (int) (position - startPosition);
+//                }
+//                buf[destPosition+i] = currentBlockData[srcPosition+i];
+//                position++;
+//            }
+////            System.arraycopy(
+////                    currentBlockData, srcPosition,
+////                    buf, destPosition,
+////                    copyLength);
+//
+////            position += copyLength;
+//        }
+//
+//        refreshCurrentBlock();
+//        // 最后一块的数据
+//        int srcPosition = 0;
+//        int destPosition = off + blockIdEnd*blockSize;
+//        int copyLength = (int)Math.min(endPosition % blockSize, len);
+//
+//        for(int i=0;i<copyLength;i++) {
+//            if (destPosition+i >= buf.length) {
+//                return (int) (position - startPosition);
+//            }
+//            buf[destPosition+i] = currentBlockData[srcPosition+i];
+//            position++;
+//        }
+////        System.arraycopy(
+////                currentBlockData, srcPosition,
+////                buf,destPosition,
+////                copyLength);
+////
+////        position += copyLength;
+//
+//        // 还能读
+//        if (position <= contentLength) {
+//            return len;
+//        }
+//
+//        return -1;
+//    }
 
     @Override
     public boolean seekToNewSource(long targetPos) throws IOException {

@@ -21,7 +21,7 @@ public class QiniuKodoClientTest {
 
         QiniuKodoFsConfig fsConfig = new QiniuKodoFsConfig(conf);
         String bucket = URI.create(conf.get("fs.contract.test.fs.kodo")).getHost();
-        client = new QiniuKodoClient(bucket, fsConfig);
+        client = new QiniuKodoClient(bucket, fsConfig, null);
     }
 
     @Test

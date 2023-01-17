@@ -10,6 +10,7 @@ import com.qiniu.storage.model.FileListing;
 import com.qiniu.util.Auth;
 import com.qiniu.util.StringMap;
 import com.qiniu.util.StringUtils;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.slf4j.Logger;
@@ -40,9 +41,12 @@ public class QiniuKodoClient {
     private final boolean useHttps;
 
     private String downloadDomain;
+    private final FileSystem.Statistics statistics;
 
-    public QiniuKodoClient(String bucket, QiniuKodoFsConfig fsConfig) throws QiniuException, AuthorizationException {
+    public QiniuKodoClient(String bucket, QiniuKodoFsConfig fsConfig, FileSystem.Statistics statistics) throws QiniuException, AuthorizationException {
         this.bucket = bucket;
+        this.statistics = statistics;
+
         this.auth = getAuth(fsConfig);
 
         Configuration configuration = new Configuration();
@@ -134,6 +138,7 @@ public class QiniuKodoClient {
         FileListing fileListing;
         do {
             fileListing = bucketManager.listFilesV2(bucket, key, marker, 100, useDirectory ? QiniuKodoUtils.PATH_SEPARATOR : "");
+            if (statistics != null) statistics.incrementReadOps(1);
 
             // 列举出除自身外的所有对象
             if (fileListing.items != null) {
@@ -142,6 +147,7 @@ public class QiniuKodoClient {
                     retFiles.add(file);
                 }
                 fileListing = bucketManager.listFilesV2(bucket, key, marker, 100, useDirectory ? QiniuKodoUtils.PATH_SEPARATOR : "");
+                if (statistics != null) statistics.incrementReadOps(1);
             }
 
             // 列举出目录
@@ -200,6 +206,7 @@ public class QiniuKodoClient {
     public boolean renameKey(String oldKey, String newKey) throws IOException {
         if (Objects.equals(oldKey, newKey)) return true;
         Response response = bucketManager.rename(bucket, oldKey, newKey);
+        if (statistics != null) statistics.incrementReadOps(1);
         return response.isOK();
     }
 
@@ -216,6 +223,8 @@ public class QiniuKodoClient {
 
         do {
             fileListing = bucketManager.listFilesV2(bucket, oldPrefix, marker, 100, "");
+            if (statistics != null) statistics.incrementReadOps(1);
+
             if (fileListing.items != null) {
                 BucketManager.BatchOperations operations = null;
                 for (FileInfo file : fileListing.items) {
@@ -231,6 +240,8 @@ public class QiniuKodoClient {
                 }
                 if (operations == null) continue;
                 Response response = bucketManager.batch(operations);
+                if (statistics != null) statistics.incrementReadOps(1);
+
                 if (!response.isOK()) return false;
             }
             marker = fileListing.marker;
@@ -247,7 +258,9 @@ public class QiniuKodoClient {
      * 仅删除一层 key
      */
     public boolean deleteKey(String key) throws IOException {
-        return bucketManager.delete(bucket, key).isOK();
+        Response response = bucketManager.delete(bucket, key);
+        if (statistics != null) statistics.incrementReadOps(1);
+        return response.isOK();
     }
 
     /**
@@ -263,6 +276,8 @@ public class QiniuKodoClient {
 
         do {
             fileListing = bucketManager.listFilesV2(bucket, prefix, marker, 100, "");
+            if (statistics != null) statistics.incrementReadOps(1);
+
             if (fileListing.items != null) {
                 BucketManager.BatchOperations operations = new BucketManager.BatchOperations();
                 boolean shouldExecBatch = false;
@@ -277,6 +292,8 @@ public class QiniuKodoClient {
                 }
                 if (!shouldExecBatch) continue;
                 Response response = bucketManager.batch(operations);
+                if (statistics != null) statistics.incrementReadOps(1);
+
                 if (!response.isOK()) return false;
             }
             marker = fileListing.marker;
@@ -284,6 +301,8 @@ public class QiniuKodoClient {
 
         if (hasPrefixObject) {
             Response response = bucketManager.delete(bucket, prefix);
+            if (statistics != null) statistics.incrementReadOps(1);
+
             return response.isOK();
         }
         return true;
@@ -296,7 +315,8 @@ public class QiniuKodoClient {
     public boolean makeEmptyObject(String key) throws IOException {
         byte[] content = new byte[]{};
         String token = auth.uploadToken(bucket, null, 3 * 3600L, null);
-        return uploadManager.put(content, key, token).isOK();
+        Response response = uploadManager.put(content, key, token);
+        return response.isOK();
     }
 
     /**

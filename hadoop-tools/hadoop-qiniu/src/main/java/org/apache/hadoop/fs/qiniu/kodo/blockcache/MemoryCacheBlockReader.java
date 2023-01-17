@@ -1,5 +1,7 @@
 package org.apache.hadoop.fs.qiniu.kodo.blockcache;
 
+import java.io.IOException;
+
 public class MemoryCacheBlockReader implements IBlockReader{
     private final IBlockReader source;
     private final LRUCache<KeyBlockIdCacheKey, byte[]> lruCache;
@@ -24,5 +26,10 @@ public class MemoryCacheBlockReader implements IBlockReader{
         byte[] blockData = source.readBlock(key, blockId);
         lruCache.put(kbck, blockData);
         return blockData;
+    }
+
+    @Override
+    public void close() throws IOException {
+        lruCache.clear();
     }
 }
