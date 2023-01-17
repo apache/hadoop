@@ -67,6 +67,10 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * These ranges should not be merged as difference in offsets is greater than 4 KB.
+   * @throws Throwable
+   */
   @Test
   public void testDisjointRangesWithVectoredRead() throws Throwable {
     int fileSize = ONE_MB;
@@ -90,6 +94,11 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * The last two ranges should get merged, so it covers the case of combinedFileRanges
+   * where there is a single underlying child and multiple as well.
+   * @throws Throwable
+   */
   @Test
   public void testMultipleDisjointRangesWithVectoredRead() throws Throwable {
     int fileSize = ONE_MB;
@@ -114,6 +123,10 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * Case which covers multiple disjoint ranges.
+   * @throws Throwable
+   */
   @Test
   public void testMultipleRangesWithVectoredRead() throws Throwable {
     int fileSize = ONE_MB;
@@ -139,6 +152,10 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * Case to verify two ranges with offset difference less than 4 KB will get merged.
+   * @throws Throwable
+   */
   @Test
   public void testMergedRangesWithVectoredRead() throws Throwable {
     int fileSize = ONE_MB;
@@ -162,6 +179,10 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * Verify read ranges for a huge file.
+   * @throws Throwable
+   */
   @Test
   public void test_045_vectoredIOHugeFile() throws Throwable {
     int fileSize = 100 * ONE_MB;

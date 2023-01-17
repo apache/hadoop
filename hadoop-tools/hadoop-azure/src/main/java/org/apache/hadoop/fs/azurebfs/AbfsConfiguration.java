@@ -143,8 +143,7 @@ public class AbfsConfiguration{
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MIN_BACKOFF_INTERVAL,
       DefaultValue = DEFAULT_MIN_BACKOFF_INTERVAL)
-  private int
-      minBackoffInterval;
+  private int minBackoffInterval;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MAX_BACKOFF_INTERVAL,
       DefaultValue = DEFAULT_MAX_BACKOFF_INTERVAL)
