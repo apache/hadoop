@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -1148,7 +1149,7 @@ public class TestSchedulerUtils {
     Assert.assertEquals("user", app.getUser());
 
     AppRemovedSchedulerEvent appRemoveEvent =
-            new AppRemovedSchedulerEvent(appId, RMAppState.FINISHED);
+            new AppRemovedSchedulerEvent(appId, RMAppState.FINISHED, FinalApplicationStatus.SUCCEEDED);
     handler.handle(appRemoveEvent);
     Assert.assertNull(applications.get(appId));
     return app;

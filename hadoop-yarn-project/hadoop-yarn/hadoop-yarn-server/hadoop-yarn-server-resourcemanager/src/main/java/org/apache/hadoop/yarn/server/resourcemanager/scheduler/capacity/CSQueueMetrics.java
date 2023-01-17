@@ -120,18 +120,18 @@ public class CSQueueMetrics extends QueueMetrics {
     return usedAMResourceVCores.value();
   }
 
-  public void setAMResouceLimit(String partition, Resource res) {
+  public void setAMResourceLimit(String partition, Resource res) {
     if(partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
       AMResourceLimitMB.set(res.getMemorySize());
       AMResourceLimitVCores.set(res.getVirtualCores());
     }
   }
 
-  public void setAMResouceLimitForUser(String partition,
+  public void setAMResourceLimitForUser(String partition,
       String user, Resource res) {
     CSQueueMetrics userMetrics = (CSQueueMetrics) getUserMetrics(user);
     if (userMetrics != null) {
-      userMetrics.setAMResouceLimit(partition, res);
+      userMetrics.setAMResourceLimit(partition, res);
     }
   }
 

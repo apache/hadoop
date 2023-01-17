@@ -463,6 +463,8 @@ public final class RouterWebServiceUtil {
         metrics.getAppsFailed() + metricsResponse.getAppsFailed());
     metrics.setAppsKilled(
         metrics.getAppsKilled() + metricsResponse.getAppsKilled());
+    metrics.setAppsFinalFailed(
+        metrics.getAppsFinalFailed() + metricsResponse.getAppsFinalFailed());
 
     metrics.setReservedMB(
         metrics.getReservedMB() + metricsResponse.getReservedMB());

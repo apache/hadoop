@@ -337,6 +337,7 @@ public class MockDefaultRequestInterceptorREST
     metrics.setAppsRunning(Integer.valueOf(getSubClusterId().getId()));
     metrics.setAppsFailed(Integer.valueOf(getSubClusterId().getId()));
     metrics.setAppsKilled(Integer.valueOf(getSubClusterId().getId()));
+    metrics.setAppsFinalFailed(Integer.valueOf(getSubClusterId().getId()));
 
     return metrics;
   }

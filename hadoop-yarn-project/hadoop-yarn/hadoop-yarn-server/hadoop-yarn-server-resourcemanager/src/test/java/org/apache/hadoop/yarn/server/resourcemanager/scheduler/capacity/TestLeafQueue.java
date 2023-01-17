@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -541,7 +542,7 @@ public class TestLeafQueue {
         RMAppAttemptState.FINISHED, false);
     cs.handle(event);
     AppRemovedSchedulerEvent rEvent = new AppRemovedSchedulerEvent(
-        appAttemptId_0.getApplicationId(), RMAppState.FINISHED);
+        appAttemptId_0.getApplicationId(), RMAppState.FINISHED, FinalApplicationStatus.FAILED);
     cs.handle(rEvent);
     
     assertEquals(1, a.getMetrics().getAppsSubmitted());
@@ -609,7 +610,7 @@ public class TestLeafQueue {
         RMAppAttemptState.FINISHED, false);
     cs.handle(event);
     AppRemovedSchedulerEvent rEvent = new AppRemovedSchedulerEvent(
-        appAttemptId0.getApplicationId(), RMAppState.FINISHED);
+        appAttemptId0.getApplicationId(), RMAppState.FINISHED, FinalApplicationStatus.FAILED);
     cs.handle(rEvent);
 
     assertEquals(1, a.getMetrics().getUnmanagedAppsSubmitted());

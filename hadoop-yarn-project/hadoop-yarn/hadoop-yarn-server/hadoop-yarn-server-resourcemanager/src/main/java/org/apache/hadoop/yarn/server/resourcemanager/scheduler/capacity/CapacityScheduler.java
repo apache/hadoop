@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -1198,7 +1199,7 @@ public class CapacityScheduler extends
   }
 
   private void doneApplication(ApplicationId applicationId,
-      RMAppState finalState) {
+      RMAppState finalState, FinalApplicationStatus finalApplicationStatus) {
     writeLock.lock();
     try {
       SchedulerApplication<FiCaSchedulerApp> application = applications.get(
@@ -1216,7 +1217,7 @@ public class CapacityScheduler extends
       } else{
         queue.finishApplication(applicationId, application.getUser());
       }
-      application.stop(finalState);
+      application.stop(finalState, finalApplicationStatus);
       applications.remove(applicationId);
     } finally {
       writeLock.unlock();
@@ -2013,7 +2014,7 @@ public class CapacityScheduler extends
     {
       AppRemovedSchedulerEvent appRemovedEvent = (AppRemovedSchedulerEvent)event;
       doneApplication(appRemovedEvent.getApplicationID(),
-        appRemovedEvent.getFinalState());
+        appRemovedEvent.getFinalState(), appRemovedEvent.getFinalApplicationStatus());
     }
     break;
     case APP_ATTEMPT_ADDED:

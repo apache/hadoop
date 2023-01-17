@@ -26,6 +26,7 @@ import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -41,6 +42,7 @@ import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_COMPLETED;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_FAILED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_FINAL_FAILED;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_PENDING;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_RUNNING;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_SUBMITTED;
@@ -160,7 +162,7 @@ public class TestQueueMetrics {
         .counter(APPS_SUBMITTED, 1)
         .gaugeInt(APPS_RUNNING, 0)
         .checkAgainst(queueSource, true);
-    metrics.finishApp(USER, RMAppState.FINISHED, false);
+    metrics.finishApp(USER, RMAppState.FINISHED, FinalApplicationStatus.FAILED, false);
     AppMetricsChecker.createFromChecker(appMetricsChecker)
         .counter(APPS_COMPLETED, 1)
         .checkAgainst(queueSource, true);
@@ -238,10 +240,11 @@ public class TestQueueMetrics {
         .gaugeInt(APPS_RUNNING, 0)
         .checkAgainst(queueSource, true);
 
-    metrics.finishApp(USER, RMAppState.FAILED, false);
+    metrics.finishApp(USER, RMAppState.FAILED, FinalApplicationStatus.FAILED,false);
     AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_RUNNING, 0)
         .counter(APPS_FAILED, 1)
+        .counter(APPS_FINAL_FAILED, 1)
         .checkAgainst(queueSource, true);
 
     assertNull(userSource);
@@ -319,10 +322,10 @@ public class TestQueueMetrics {
         .gaugeInt(UNMANAGED_APPS_RUNNING, 0).gaugeInt(APPS_RUNNING, 0)
         .checkAgainst(queueSource, true);
 
-    metrics.finishApp(USER, RMAppState.FAILED, true);
+    metrics.finishApp(USER, RMAppState.FAILED, FinalApplicationStatus.FAILED,true);
     AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(UNMANAGED_APPS_RUNNING, 0).gaugeInt(APPS_RUNNING, 0)
-        .counter(UNMANAGED_APPS_FAILED, 1).counter(APPS_FAILED, 1)
+        .counter(UNMANAGED_APPS_FAILED, 1).counter(APPS_FAILED, 1).counter(APPS_FINAL_FAILED, 1)
         .checkAgainst(queueSource, true);
 
     assertNull(userSource);
@@ -443,7 +446,7 @@ public class TestQueueMetrics {
         AppMetricsChecker.createFromChecker(appMetricsUserSourceChecker)
             .gaugeInt(APPS_RUNNING, 0)
             .checkAgainst(userSource, true);
-    metrics.finishApp(USER_2, RMAppState.FINISHED, false);
+    metrics.finishApp(USER_2, RMAppState.FINISHED, FinalApplicationStatus.FAILED, false);
     AppMetricsChecker.createFromChecker(appMetricsQueueSourceChecker)
         .counter(APPS_COMPLETED, 1)
         .checkAgainst(queueSource, true);
@@ -712,7 +715,7 @@ public class TestQueueMetrics {
             .gaugeInt(APPS_RUNNING, 0)
             .checkAgainst(root.userSource, true);
 
-    leaf.queueMetrics.finishApp(USER, RMAppState.FINISHED, false);
+    leaf.queueMetrics.finishApp(USER, RMAppState.FINISHED, FinalApplicationStatus.FAILED,false);
     AppMetricsChecker.createFromChecker(appMetricsQueueSourceChecker)
         .counter(APPS_COMPLETED, 1)
         .checkAgainst(leaf.queueSource, true);

@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -635,13 +636,13 @@ public class FairScheduler extends
   }
 
   private void removeApplication(ApplicationId applicationId,
-      RMAppState finalState) {
+      RMAppState finalState, FinalApplicationStatus finalApplicationStatus) {
     SchedulerApplication<FSAppAttempt> application = applications.remove(
         applicationId);
     if (application == null) {
       LOG.warn("Couldn't find application " + applicationId);
     } else{
-      application.stop(finalState);
+      application.stop(finalState, finalApplicationStatus);
     }
   }
 
@@ -1262,7 +1263,7 @@ public class FairScheduler extends
       }
       AppRemovedSchedulerEvent appRemovedEvent = (AppRemovedSchedulerEvent)event;
       removeApplication(appRemovedEvent.getApplicationID(),
-        appRemovedEvent.getFinalState());
+        appRemovedEvent.getFinalState(), appRemovedEvent.getFinalApplicationStatus());
       break;
     case NODE_RESOURCE_UPDATE:
       if (!(event instanceof NodeResourceUpdateSchedulerEvent)) {

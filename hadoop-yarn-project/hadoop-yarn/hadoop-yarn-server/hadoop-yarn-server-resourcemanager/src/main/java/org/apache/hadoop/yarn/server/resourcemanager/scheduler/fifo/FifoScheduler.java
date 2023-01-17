@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -441,7 +442,7 @@ public class FifoScheduler extends
   }
 
   private synchronized void doneApplication(ApplicationId applicationId,
-      RMAppState finalState) {
+      RMAppState finalState, FinalApplicationStatus finalApplicationStatus) {
     SchedulerApplication<FifoAppAttempt> application =
         applications.get(applicationId);
     if (application == null){
@@ -452,7 +453,7 @@ public class FifoScheduler extends
     // Inform the activeUsersManager
     activeUsersManager.deactivateApplication(application.getUser(),
       applicationId);
-    application.stop(finalState);
+    application.stop(finalState, finalApplicationStatus);
     applications.remove(applicationId);
   }
 
@@ -779,7 +780,7 @@ public class FifoScheduler extends
     {
       AppRemovedSchedulerEvent appRemovedEvent = (AppRemovedSchedulerEvent)event;
       doneApplication(appRemovedEvent.getApplicationID(),
-        appRemovedEvent.getFinalState());
+        appRemovedEvent.getFinalState(), appRemovedEvent.getFinalApplicationStatus());
     }
     break;
     case APP_ATTEMPT_ADDED:

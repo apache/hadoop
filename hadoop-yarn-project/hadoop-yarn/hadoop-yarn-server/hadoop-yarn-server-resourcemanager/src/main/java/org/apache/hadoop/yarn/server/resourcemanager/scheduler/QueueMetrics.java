@@ -43,6 +43,7 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.metrics.CustomResourceMetricValue;
@@ -64,6 +65,7 @@ public class QueueMetrics implements MetricsSource {
   @Metric("# of apps completed") MutableCounterInt appsCompleted;
   @Metric("# of apps killed") MutableCounterInt appsKilled;
   @Metric("# of apps failed") MutableCounterInt appsFailed;
+  @Metric("# of apps finally failed") MutableCounterInt appsFinalFailed;
 
   @Metric("# of Unmanaged apps submitted")
   private MutableCounterInt unmanagedAppsSubmitted;
@@ -498,12 +500,16 @@ public class QueueMetrics implements MetricsSource {
     }
   }
 
-  public void finishApp(String user, RMAppState rmAppFinalState,
+  public void finishApp(String user, RMAppState rmAppFinalState, FinalApplicationStatus finalApplicationStatus,
       boolean unmanagedAM) {
     switch (rmAppFinalState) {
       case KILLED: appsKilled.incr(); break;
       case FAILED: appsFailed.incr(); break;
       default: appsCompleted.incr();  break;
+    }
+
+    if (finalApplicationStatus == FinalApplicationStatus.FAILED) {
+      appsFinalFailed.incr();
     }
 
     if(unmanagedAM) {
@@ -522,10 +528,10 @@ public class QueueMetrics implements MetricsSource {
 
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
-      userMetrics.finishApp(user, rmAppFinalState, unmanagedAM);
+      userMetrics.finishApp(user, rmAppFinalState, finalApplicationStatus, unmanagedAM);
     }
     if (parent != null) {
-      parent.finishApp(user, rmAppFinalState, unmanagedAM);
+      parent.finishApp(user, rmAppFinalState, finalApplicationStatus, unmanagedAM);
     }
   }
 
@@ -1136,6 +1142,10 @@ public class QueueMetrics implements MetricsSource {
 
   public int getAppsFailed() {
     return appsFailed.value();
+  }
+
+  public int getAppsFinalFailed() {
+    return appsFinalFailed.value();
   }
 
   public int getUnmanagedAppsFailed() {

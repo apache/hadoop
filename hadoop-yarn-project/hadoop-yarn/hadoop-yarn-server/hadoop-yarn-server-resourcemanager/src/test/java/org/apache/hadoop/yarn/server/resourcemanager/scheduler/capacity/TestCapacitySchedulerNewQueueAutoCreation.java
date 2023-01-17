@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -903,7 +904,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
             RMAppAttemptState.FINISHED, false);
     cs.handle(event);
     AppRemovedSchedulerEvent rEvent = new AppRemovedSchedulerEvent(
-        a2App.getApplicationId(), RMAppState.FINISHED);
+        a2App.getApplicationId(), RMAppState.FINISHED, FinalApplicationStatus.FAILED);
     cs.handle(rEvent);
 
     // Now there are no apps in a2 queue.
@@ -985,7 +986,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
             RMAppAttemptState.FINISHED, false);
     cs.handle(event);
     AppRemovedSchedulerEvent rEvent = new AppRemovedSchedulerEvent(
-        a2App.getApplicationId(), RMAppState.FINISHED);
+        a2App.getApplicationId(), RMAppState.FINISHED, FinalApplicationStatus.FAILED);
     cs.handle(rEvent);
 
     // Now there are no apps in a2 queue.

@@ -444,6 +444,9 @@ public class TestRouterWebServiceUtil {
     Assert.assertEquals(
         metricsResponse.getAppsKilled() + metricsClone.getAppsKilled(),
         metrics.getAppsKilled());
+    Assert.assertEquals(
+        metricsResponse.getAppsFinalFailed() + metricsClone.getAppsFinalFailed(),
+        metrics.getAppsFinalFailed());
 
     Assert.assertEquals(
         metricsResponse.getReservedMB() + metricsClone.getReservedMB(),
@@ -525,6 +528,7 @@ public class TestRouterWebServiceUtil {
     metricsClone.setAppsRunning(metrics.getAppsRunning());
     metricsClone.setAppsFailed(metrics.getAppsFailed());
     metricsClone.setAppsKilled(metrics.getAppsKilled());
+    metricsClone.setAppsFinalFailed(metrics.getAppsFinalFailed());
 
     metricsClone.setReservedMB(metrics.getReservedMB());
     metricsClone.setAvailableMB(metrics.getAvailableMB());
@@ -561,6 +565,7 @@ public class TestRouterWebServiceUtil {
     metrics.setAppsRunning(rand.nextInt(1000));
     metrics.setAppsFailed(rand.nextInt(1000));
     metrics.setAppsKilled(rand.nextInt(1000));
+    metrics.setAppsFinalFailed(rand.nextInt(1000));
 
     metrics.setReservedMB(rand.nextInt(1000));
     metrics.setAvailableMB(rand.nextInt(1000));

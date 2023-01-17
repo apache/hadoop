@@ -100,6 +100,7 @@ public class MetricsOverviewTable extends HtmlBlock {
         th().$class("ui-state-default").__("Apps Submitted").__().
         th().$class("ui-state-default").__("Apps Pending").__().
         th().$class("ui-state-default").__("Apps Running").__().
+        th().$class("ui-state-default").__("Apps FinalFailed").__().
         th().$class("ui-state-default").__("Apps Completed").__().
         th().$class("ui-state-default").__("Containers Running").__().
         th().$class("ui-state-default").__("Used Resources").__().
@@ -114,6 +115,7 @@ public class MetricsOverviewTable extends HtmlBlock {
         td(String.valueOf(clusterMetrics.getAppsSubmitted())).
         td(String.valueOf(clusterMetrics.getAppsPending())).
         td(String.valueOf(clusterMetrics.getAppsRunning())).
+        td(String.valueOf(clusterMetrics.getAppsFinalFailed())).
         td(
             String.valueOf(
                 clusterMetrics.getAppsCompleted() + 
@@ -165,6 +167,7 @@ public class MetricsOverviewTable extends HtmlBlock {
             th().$class("ui-state-default").__("Apps Submitted").__().
             th().$class("ui-state-default").__("Apps Pending").__().
             th().$class("ui-state-default").__("Apps Running").__().
+            th().$class("ui-state-default").__("Apps FinalFailed").__().
             th().$class("ui-state-default").__("Apps Completed").__().
             th().$class("ui-state-default").__("Containers Running").__().
             th().$class("ui-state-default").__("Containers Pending").__().
@@ -182,6 +185,7 @@ public class MetricsOverviewTable extends HtmlBlock {
             td(String.valueOf(userMetrics.getAppsSubmitted())).
             td(String.valueOf(userMetrics.getAppsPending())).
             td(String.valueOf(userMetrics.getAppsRunning())).
+            td(String.valueOf(userMetrics.getAppsFinalFailed())).
             td(
                 String.valueOf(
                     (userMetrics.getAppsCompleted() + 

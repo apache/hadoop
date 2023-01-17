@@ -31,6 +31,7 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueMetrics;
@@ -501,7 +502,7 @@ public class TestPartitionQueueMetrics {
     metrics.finishAppAttempt(app.getApplicationId(), app.isPending(),
         app.getUser(), false);
 
-    metrics.finishApp(user, RMAppState.FINISHED, false);
+    metrics.finishApp(user, RMAppState.FINISHED, FinalApplicationStatus.SUCCEEDED,false);
   }
 
   @Test
@@ -625,7 +626,7 @@ public class TestPartitionQueueMetrics {
     metrics1.finishAppAttempt(app.getApplicationId(), app.isPending(),
         app.getUser(), false);
 
-    metrics1.finishApp(user, RMAppState.FINISHED, false);
+    metrics1.finishApp(user, RMAppState.FINISHED, FinalApplicationStatus.SUCCEEDED, false);
   }
 
   /**
@@ -690,7 +691,7 @@ public class TestPartitionQueueMetrics {
 
     q1.finishAppAttempt(app.getApplicationId(), app.isPending(), app.getUser(),
         false);
-    q1.finishApp(user, RMAppState.FINISHED, false);
+    q1.finishApp(user, RMAppState.FINISHED, FinalApplicationStatus.FAILED, false);
   }
 
   public static MetricsSource partitionSource(MetricsSystem ms,

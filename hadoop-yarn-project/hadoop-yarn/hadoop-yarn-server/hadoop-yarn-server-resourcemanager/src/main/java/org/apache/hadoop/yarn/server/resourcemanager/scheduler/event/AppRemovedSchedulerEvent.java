@@ -19,18 +19,21 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 
 public class AppRemovedSchedulerEvent extends SchedulerEvent {
 
   private final ApplicationId applicationId;
   private final RMAppState finalState;
+  private final FinalApplicationStatus finalApplicationStatus;
 
   public AppRemovedSchedulerEvent(ApplicationId applicationId,
-      RMAppState finalState) {
+      RMAppState finalState, FinalApplicationStatus finalApplicationStatus) {
     super(SchedulerEventType.APP_REMOVED);
     this.applicationId = applicationId;
     this.finalState = finalState;
+    this.finalApplicationStatus = finalApplicationStatus;
   }
 
   public ApplicationId getApplicationID() {
@@ -39,5 +42,9 @@ public class AppRemovedSchedulerEvent extends SchedulerEvent {
 
   public RMAppState getFinalState() {
     return this.finalState;
+  }
+
+  public FinalApplicationStatus getFinalApplicationStatus() {
+    return finalApplicationStatus;
   }
 }

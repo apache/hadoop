@@ -491,6 +491,8 @@ public class TestFederationInterceptorRESTRetry
         response.getAppsFailed());
     Assert.assertEquals(Integer.parseInt(good.getId()),
         response.getAppsKilled());
+    Assert.assertEquals(Integer.parseInt(good.getId()),
+        response.getAppsFinalFailed());
   }
 
   private void checkEmptyMetrics(ClusterMetricsInfo response) {
@@ -500,6 +502,7 @@ public class TestFederationInterceptorRESTRetry
     Assert.assertEquals(0, response.getAppsRunning());
     Assert.assertEquals(0, response.getAppsFailed());
     Assert.assertEquals(0, response.getAppsKilled());
+    Assert.assertEquals(0, response.getAppsFinalFailed());
 
     Assert.assertEquals(0, response.getReservedMB());
     Assert.assertEquals(0, response.getAvailableMB());

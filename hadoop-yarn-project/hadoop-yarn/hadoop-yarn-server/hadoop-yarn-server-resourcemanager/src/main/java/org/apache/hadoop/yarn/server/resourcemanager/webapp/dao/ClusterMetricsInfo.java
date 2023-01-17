@@ -38,6 +38,7 @@ public class ClusterMetricsInfo {
   private int appsRunning;
   private int appsFailed;
   private int appsKilled;
+  private int appsFinalFailed;
 
   private long reservedMB;
   private long availableMB;
@@ -103,6 +104,7 @@ public class ClusterMetricsInfo {
     this.appsRunning = metrics.getAppsRunning();
     this.appsFailed = metrics.getAppsFailed();
     this.appsKilled = metrics.getAppsKilled();
+    this.appsFinalFailed = metrics.getAppsFinalFailed();
 
     this.reservedMB = metrics.getReservedMB();
     this.availableMB = metrics.getAvailableMB();
@@ -191,6 +193,10 @@ public class ClusterMetricsInfo {
 
   public int getAppsKilled() {
     return appsKilled;
+  }
+
+  public int getAppsFinalFailed() {
+    return appsFinalFailed;
   }
 
   public long getReservedMB() {
@@ -319,6 +325,10 @@ public class ClusterMetricsInfo {
 
   public void setAppsKilled(int appsKilled) {
     this.appsKilled = appsKilled;
+  }
+
+  public void setAppsFinalFailed(int appsFinalFailed) {
+    this.appsFinalFailed = appsFinalFailed;
   }
 
   public void setReservedMB(long reservedMB) {
