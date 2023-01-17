@@ -93,7 +93,7 @@ public final class FSImageFormatPBINode {
   public static final int XATTR_NAMESPACE_EXT_OFFSET = 5;
   public static final int XATTR_NAMESPACE_EXT_MASK = 1;
 
-  private static final Logger LOG =
+  public static final Logger LOG =
       LoggerFactory.getLogger(FSImageFormatPBINode.class);
 
   private static final int DIRECTORY_ENTRY_BATCH_SIZE = 1000;
@@ -227,6 +227,7 @@ public final class FSImageFormatPBINode {
       LOG.info("Loading the INodeDirectory section in parallel with {} sub-" +
               "sections", sections.size());
       CountDownLatch latch = new CountDownLatch(sections.size());
+      AtomicInteger totalLoaded = new AtomicInteger(0);
       final CopyOnWriteArrayList<IOException> exceptions =
           new CopyOnWriteArrayList<>();
       for (FileSummary.Section s : sections) {
@@ -235,7 +236,7 @@ public final class FSImageFormatPBINode {
           try {
             ins = parent.getInputStreamForSection(s,
                 compressionCodec);
-            loadINodeDirectorySection(ins);
+            totalLoaded.addAndGet(loadINodeDirectorySection(ins));
           } catch (Exception e) {
             LOG.error("An exception occurred loading INodeDirectories in " +
                 "parallel", e);
@@ -254,6 +255,7 @@ public final class FSImageFormatPBINode {
       }
       try {
         latch.await();
+        totalLoaded.incrementAndGet(); // increase ROOT_INODE
       } catch (InterruptedException e) {
         LOG.error("Interrupted waiting for countdown latch", e);
         throw new IOException(e);
@@ -263,12 +265,14 @@ public final class FSImageFormatPBINode {
             exceptions.size());
         throw exceptions.get(0);
       }
-      LOG.info("Completed loading all INodeDirectory sub-sections");
+      LOG.info("Completed loading all INodeDirectory sub-sections. Loaded {} inodes.",
+          totalLoaded.get());
     }
 
-    void loadINodeDirectorySection(InputStream in) throws IOException {
+    int loadINodeDirectorySection(InputStream in) throws IOException {
       final List<INodeReference> refList = parent.getLoaderContext()
           .getRefList();
+      int cntr = 0;
       while (true) {
         INodeDirectorySection.DirEntry e = INodeDirectorySection.DirEntry
             .parseDelimitedFrom(in);
@@ -279,6 +283,9 @@ public final class FSImageFormatPBINode {
         INodeDirectory p = dir.getInode(e.getParent()).asDirectory();
         for (long id : e.getChildrenList()) {
           INode child = dir.getInode(id);
+          if (child.isDirectory()) {
+            cntr++;
+          }
           if (!addToParent(p, child)) {
             LOG.warn("Failed to add the inode {} to the directory {}",
                 child.getId(), p.getId());
@@ -293,6 +300,8 @@ public final class FSImageFormatPBINode {
           }
         }
       }
+
+      return cntr;
     }
 
     private void fillUpInodeList(ArrayList<INode> inodeList, INode inode) {
