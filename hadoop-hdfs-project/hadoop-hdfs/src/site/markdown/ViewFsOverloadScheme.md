@@ -84,11 +84,11 @@ If users want some of their existing cluster (`hdfs://cluster`) data to mount wi
 
 Let's consider the following operations to understand where these operations will be delegated based on mount links.
 
-  *Op1:* Create a file with the the path `hdfs://cluster/user/fileA`, then physically this file will be created at `hdfs://cluster/user/fileA`. This delegation happened based on the first configuration parameter in above configurations. Here `/user` mapped to `hdfs://cluster/user/`.
+  *Op1:* Create a file with the path `hdfs://cluster/user/fileA`, then physically this file will be created at `hdfs://cluster/user/fileA`. This delegation happened based on the first configuration parameter in above configurations. Here `/user` mapped to `hdfs://cluster/user/`.
 
-  *Op2:* Create a file the the path `hdfs://cluster/data/datafile`, then this file will be created at `o3fs://bucket1.volume1.omhost/data/datafile`. This delegation happened based on second configurations parameter in above configurations. Here `/data` was mapped with `o3fs://bucket1.volume1.omhost/data/`.
+  *Op2:* Create a file the path `hdfs://cluster/data/datafile`, then this file will be created at `o3fs://bucket1.volume1.omhost/data/datafile`. This delegation happened based on second configurations parameter in above configurations. Here `/data` was mapped with `o3fs://bucket1.volume1.omhost/data/`.
 
-  *Op3:* Create a file with the the path `hdfs://cluster/backup/data.zip`, then  physically this file will be created at `s3a://bucket1/backup/data.zip`. This delegation happened based on the third configuration parameter in above configurations. Here `/backup` was mapped to `s3a://bucket1/backup/`.
+  *Op3:* Create a file with the path `hdfs://cluster/backup/data.zip`, then  physically this file will be created at `s3a://bucket1/backup/data.zip`. This delegation happened based on the third configuration parameter in above configurations. Here `/backup` was mapped to `s3a://bucket1/backup/`.
 
 
 **Example 2:**
@@ -114,11 +114,11 @@ If users want some of their existing cluster (`s3a://bucketA/`) data to mount wi
 ```
 Let's consider the following operations to understand to where these operations will be delegated based on mount links.
 
- *Op1:* Create a file with the the path `s3a://bucketA/user/fileA`, then this file will be created physically at `hdfs://cluster/user/fileA`. This delegation happened based on the first configuration parameter in above configurations. Here `/user` mapped to `hdfs://cluster/user`.
+ *Op1:* Create a file with the path `s3a://bucketA/user/fileA`, then this file will be created physically at `hdfs://cluster/user/fileA`. This delegation happened based on the first configuration parameter in above configurations. Here `/user` mapped to `hdfs://cluster/user`.
 
-  *Op2:* Create a file the the path `s3a://bucketA/data/datafile`, then this file will be created at `o3fs://bucket1.volume1.omhost/data/datafile`. This delegation happened based on second configurations parameter in above configurations. Here `/data` was mapped with `o3fs://bucket1.volume1.omhost/data/`.
+  *Op2:* Create a file the path `s3a://bucketA/data/datafile`, then this file will be created at `o3fs://bucket1.volume1.omhost/data/datafile`. This delegation happened based on second configurations parameter in above configurations. Here `/data` was mapped with `o3fs://bucket1.volume1.omhost/data/`.
 
-  *Op3:* Create a file with the the path `s3a://bucketA/salesDB/dbfile`, then  physically this file will be created at `s3a://bucketA/salesDB/dbfile`. This delegation happened based on the third configuration parameter in above configurations. Here `/salesDB` was mapped to `s3a://bucket1/salesDB`.
+  *Op3:* Create a file with the path `s3a://bucketA/salesDB/dbfile`, then  physically this file will be created at `s3a://bucketA/salesDB/dbfile`. This delegation happened based on the third configuration parameter in above configurations. Here `/salesDB` was mapped to `s3a://bucket1/salesDB`.
 
 Note: In above examples we used create operation only, but the same mechanism applies to any other file system APIs here.
 
