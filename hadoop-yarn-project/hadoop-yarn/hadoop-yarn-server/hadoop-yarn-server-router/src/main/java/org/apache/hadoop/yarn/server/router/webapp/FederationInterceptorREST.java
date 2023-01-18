@@ -1194,24 +1194,26 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public String dumpSchedulerLogs(String time, HttpServletRequest hsr)
       throws IOException {
 
+    // Step1. We will check the time parameter to
+    // ensure that the time parameter is not empty and greater than 0.
     try {
       if (StringUtils.isBlank(time)) {
-        routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
         throw new IllegalArgumentException("Parameter error, the time is empty or null.");
       }
 
       int period = Integer.parseInt(time);
       if (period <= 0) {
-        routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
         throw new IllegalArgumentException("time must be greater than 0.");
       }
     } catch (NumberFormatException e) {
       routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
       throw new IllegalArgumentException("time must be a number.");
-    } catch (IllegalArgumentException e){
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
       throw e;
     }
 
+    // Step2. Call dumpSchedulerLogs of each subcluster.
     try {
       long startTime = clock.getTime();
       Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();

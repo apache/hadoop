@@ -748,7 +748,7 @@ public final class RouterMetrics {
   public long getNumSucceededDumpSchedulerLogsRetrieved() {
     return totalSucceededDumpSchedulerLogsRetrieved.lastStat().numSamples();
   }
-  
+
   @VisibleForTesting
   public long getNumSucceededGetSchedulerInfoRetrieved() {
     return totalSucceededGetSchedulerInfoRetrieved.lastStat().numSamples();
@@ -998,7 +998,7 @@ public final class RouterMetrics {
   public double getLatencySucceededDumpSchedulerLogsRetrieved() {
     return totalSucceededDumpSchedulerLogsRetrieved.lastStat().mean();
   }
-  
+
   @VisibleForTesting
   public double getLatencySucceededGetSchedulerInfoRetrieved() {
     return totalSucceededGetSchedulerInfoRetrieved.lastStat().mean();
@@ -1230,7 +1230,7 @@ public final class RouterMetrics {
   public int getDumpSchedulerLogsFailedRetrieved() {
     return numDumpSchedulerLogsFailedRetrieved.value();
   }
-  
+
   public int getSchedulerInfoFailedRetrieved() {
     return numGetSchedulerInfoFailedRetrieved.value();
   }
@@ -1469,12 +1469,12 @@ public final class RouterMetrics {
     totalSucceededCancelDelegationTokenRetrieved.add(duration);
     cancelDelegationTokenLatency.add(duration);
   }
-  
+
   public void succeededDumpSchedulerLogsRetrieved(long duration) {
     totalSucceededDumpSchedulerLogsRetrieved.add(duration);
     dumpSchedulerLogsLatency.add(duration);
   }
-  
+
   public void succeededGetSchedulerInfoRetrieved(long duration) {
     totalSucceededGetSchedulerInfoRetrieved.add(duration);
     getSchedulerInfoRetrievedLatency.add(duration);
@@ -1685,11 +1685,11 @@ public final class RouterMetrics {
   public void incrCancelDelegationTokenFailedRetrieved() {
     numCancelDelegationTokenFailedRetrieved.incr();
   }
-  
+
   public void incrDumpSchedulerLogsFailedRetrieved() {
     numDumpSchedulerLogsFailedRetrieved.incr();
   }
-  
+
   public void incrGetSchedulerInfoFailedRetrieved() {
     numGetSchedulerInfoFailedRetrieved.incr();
   }
