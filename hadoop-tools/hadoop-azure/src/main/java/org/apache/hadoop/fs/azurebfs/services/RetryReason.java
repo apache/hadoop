@@ -32,13 +32,14 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_STA
  * previous API call.
  * */
 public enum RetryReason {
-  CONNECTION_TIMEOUT(2, ((ex, statusCode, serverErrorMessage) -> {
-    if (ex != null && "connect timed out".equalsIgnoreCase(
-        ex.getMessage())) {
-      return "CT";
-    }
-    return null;
-  })),
+  CONNECTION_TIMEOUT(2,
+      ((exceptionCaptured, statusCode, serverErrorMessage) -> {
+        if (exceptionCaptured != null && "connect timed out".equalsIgnoreCase(
+            exceptionCaptured.getMessage())) {
+          return "CT";
+        }
+        return null;
+      })),
   READ_TIMEOUT(2, ((exceptionCaptured, statusCode, serverErrorMessage) -> {
     if (exceptionCaptured != null && "Read timed out".equalsIgnoreCase(
         exceptionCaptured.getMessage())) {
@@ -46,8 +47,8 @@ public enum RetryReason {
     }
     return null;
   })),
-  UNKNOWN_HOST(2, ((ex, statusCode, serverErrorMessage) -> {
-    if (ex instanceof UnknownHostException) {
+  UNKNOWN_HOST(2, ((exceptionCaptured, statusCode, serverErrorMessage) -> {
+    if (exceptionCaptured instanceof UnknownHostException) {
       return "UH";
     }
     return null;
@@ -59,12 +60,11 @@ public enum RetryReason {
     }
     return null;
   })),
-  STATUS_5XX(0, ((ex, statusCode, serverErrorMessage) -> {
+  STATUS_5XX(0, ((exceptionCaptured, statusCode, serverErrorMessage) -> {
     if (statusCode == null || statusCode / HTTP_STATUS_CATEGORY_QUOTIENT != 5) {
       return null;
     }
     if (statusCode == HTTP_UNAVAILABLE) {
-      //ref: https://github.com/apache/hadoop/pull/4564/files#diff-75a2f54df6618d4015c63812e6a9916ddfb475d246850edfd2a6f57e36805e79
       serverErrorMessage = serverErrorMessage.split(System.lineSeparator(),
           2)[0];
       if ("Ingress is over the account limit.".equalsIgnoreCase(
@@ -83,24 +83,26 @@ public enum RetryReason {
     }
     return statusCode + "";
   })),
-  STATUS_4XX(0, ((ex, statusCode, serverErrorMessage) -> {
+  STATUS_4XX(0, ((exceptionCaptured, statusCode, serverErrorMessage) -> {
     if (statusCode == null || statusCode / HTTP_STATUS_CATEGORY_QUOTIENT != 4) {
       return null;
     }
     return statusCode + "";
   })),
-  UNKNOWN_SOCKET_EXCEPTION(1, ((ex, statusCode, serverErrorMessage) -> {
-    if (ex instanceof SocketException) {
-      return "SE";
-    }
-    return null;
-  })),
-  UNKNOWN_IO_EXCEPTION(0, ((ex, statusCode, serverErrorMessage) -> {
-    if (ex instanceof IOException) {
-      return "IOE";
-    }
-    return null;
-  }));
+  UNKNOWN_SOCKET_EXCEPTION(1,
+      ((exceptionCaptured, statusCode, serverErrorMessage) -> {
+        if (exceptionCaptured instanceof SocketException) {
+          return "SE";
+        }
+        return null;
+      })),
+  UNKNOWN_IO_EXCEPTION(0,
+      ((exceptionCaptured, statusCode, serverErrorMessage) -> {
+        if (exceptionCaptured instanceof IOException) {
+          return "IOE";
+        }
+        return null;
+      }));
 
   private RetryReasonAbbreviationCreator retryReasonAbbreviationCreator = null;
 

@@ -67,9 +67,6 @@ public class TracingContext {
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
   public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
 
-  //x-ms-client-request-id can have maximum 1KB string
-  private static final Integer MAX_CLIENT_REQUEST_ID = 1024;
-
   /**
    * Initialize TracingContext
    * @param clientCorrelationID Provided over config by client

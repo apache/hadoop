@@ -262,8 +262,6 @@ public class TestAbfsRestOperation {
         .setRequestProperty(nullable(String.class), nullable(String.class));
     Mockito.doReturn(httpURLConnection).when(httpOperation).getConnection();
     Mockito.doReturn("").when(abfsRestOperation).getClientLatency();
-
-    //new AbfsHttpOperation(null, "PUT", new ArrayList<>()));
     Mockito.doReturn(httpOperation).when(abfsRestOperation).getHttpOperation();
   }
 
