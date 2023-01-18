@@ -636,12 +636,8 @@ public class NMClientAsyncImpl extends NMClientAsync {
                 + "Container " + containerId, thr);
           }
           return ContainerState.RUNNING;
-        } catch (YarnException e) {
+        } catch (Throwable e) {
           return onExceptionRaised(container, event, e);
-        } catch (IOException e) {
-          return onExceptionRaised(container, event, e);
-        } catch (Throwable t) {
-          return onExceptionRaised(container, event, t);
         }
       }
 
@@ -854,12 +850,8 @@ public class NMClientAsyncImpl extends NMClientAsync {
                 + "Container " + event.getContainerId(), thr);
           }
           return ContainerState.DONE;
-        } catch (YarnException e) {
+        } catch (Throwable e) {
           return onExceptionRaised(container, event, e);
-        } catch (IOException e) {
-          return onExceptionRaised(container, event, e);
-        } catch (Throwable t) {
-          return onExceptionRaised(container, event, t);
         }
       }
 
@@ -966,12 +958,8 @@ public class NMClientAsyncImpl extends NMClientAsync {
                 "Unchecked exception is thrown from onContainerStatusReceived" +
                     " for Container " + event.getContainerId(), thr);
           }
-        } catch (YarnException e) {
+        } catch (Throwable e) {
           onExceptionRaised(containerId, e);
-        } catch (IOException e) {
-          onExceptionRaised(containerId, e);
-        } catch (Throwable t) {
-          onExceptionRaised(containerId, t);
         }
       } else {
         StatefulContainer container = containers.get(containerId);
