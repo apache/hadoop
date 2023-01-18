@@ -44,9 +44,9 @@ public class NodeToLabelsEntry {
     this.labels = labels;
   }
 
-  public NodeToLabelsEntry(String nodeId, Collection<String> labels) {
+  public NodeToLabelsEntry(String nodeId, Collection<String> pLabels) {
     this.nodeId = nodeId;
-    this.labels.addAll(labels);
+    this.labels.addAll(pLabels);
   }
 
   public String getNodeId() {

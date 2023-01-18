@@ -1712,7 +1712,7 @@ public final class RouterMetrics {
   public void incrCancelDelegationTokenFailedRetrieved() {
     numCancelDelegationTokenFailedRetrieved.incr();
   }
-  
+
   public void incrReplaceLabelsOnNodesFailedRetrieved() {
     numReplaceLabelsOnNodesFailedRetrieved.incr();
   }
@@ -1720,7 +1720,7 @@ public final class RouterMetrics {
   public void incrReplaceLabelsOnNodeFailedRetrieved() {
     numReplaceLabelsOnNodeFailedRetrieved.incr();
   }
-  
+
   public void incrGetSchedulerInfoFailedRetrieved() {
     numGetSchedulerInfoFailedRetrieved.incr();
   }

@@ -48,7 +48,6 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -1398,16 +1397,20 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public Response replaceLabelsOnNodes(NodeToLabelsEntryList newNodeToLabels,
       HttpServletRequest hsr) throws IOException {
+
+    // Step1. Check the parameters to ensure that the parameters are not empty.
+    if (newNodeToLabels == null) {
+      routerMetrics.incrReplaceLabelsOnNodesFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, newNodeToLabels must not be empty.");
+    }
+    List<NodeToLabelsEntry> nodeToLabelsEntries = newNodeToLabels.getNodeToLabels();
+    if (CollectionUtils.isEmpty(nodeToLabelsEntries)) {
+      routerMetrics.incrReplaceLabelsOnNodesFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, " +
+         "nodeToLabelsEntries must not be empty.");
+    }
+
     try {
-      // Step1. Check the parameters to ensure that the parameters are not empty.
-      if (newNodeToLabels == null) {
-        throw new IllegalArgumentException("Parameter error, newNodeToLabels must not be empty.");
-      }
-      List<NodeToLabelsEntry> nodeToLabelsEntries = newNodeToLabels.getNodeToLabels();
-      if(CollectionUtils.isEmpty(nodeToLabelsEntries)){
-        throw new IllegalArgumentException("Parameter error, " +
-            "nodeToLabelsEntries must not be empty.");
-      }
 
       // Step2. We map the NodeId and NodeToLabelsEntry in the request.
       Map<String, NodeToLabelsEntry> nodeIdToLabels = new HashMap<>();
@@ -1472,13 +1475,18 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public Response replaceLabelsOnNode(Set<String> newNodeLabelsName,
       HttpServletRequest hsr, String nodeId) throws Exception {
-    try {
-      // Step1. Check the parameters to ensure that the parameters are not empty.
-      Validate.checkNotNullAndNotEmpty(nodeId, "nodeId");
-      if (CollectionUtils.isEmpty(newNodeLabelsName)) {
-        throw new IllegalArgumentException("Parameter error, newNodeLabelsName must not be empty.");
-      }
 
+    // Step1. Check the parameters to ensure that the parameters are not empty.
+    if (StringUtils.isBlank(nodeId)) {
+      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, nodeId must not be null or empty.");
+    }
+    if (CollectionUtils.isEmpty(newNodeLabelsName)) {
+      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, newNodeLabelsName must not be empty.");
+    }
+
+    try {
       // Step2. We find the subCluster according to the nodeId,
       // and then call the replaceLabelsOnNode of the subCluster.
       long startTime = clock.getTime();
@@ -1493,9 +1501,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       routerMetrics.succeededReplaceLabelsOnNodeRetrieved(stopTime - startTime);
       String msg = "subCluster#" + subClusterInfo.getSubClusterId().getId() + ":Success;";
       return Response.status(Status.OK).entity(msg).build();
-    } catch (IllegalArgumentException e) {
-      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
-      throw e;
     } catch (NotFoundException e) {
       routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
       throw e;

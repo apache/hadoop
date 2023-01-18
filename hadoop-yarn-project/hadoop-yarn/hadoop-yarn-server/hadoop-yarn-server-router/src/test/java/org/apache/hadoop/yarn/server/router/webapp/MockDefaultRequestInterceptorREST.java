@@ -1217,7 +1217,7 @@ public class MockDefaultRequestInterceptorREST
       return new RMQueueAclInfo(true, user.getUserName(), "");
     }
   }
-  
+
   public Response replaceLabelsOnNodes(NodeToLabelsEntryList newNodeToLabels,
       HttpServletRequest hsr) throws IOException {
     return super.replaceLabelsOnNodes(newNodeToLabels, hsr);
@@ -1228,7 +1228,7 @@ public class MockDefaultRequestInterceptorREST
       HttpServletRequest hsr, String nodeId) throws Exception {
     return super.replaceLabelsOnNode(newNodeLabelsName, hsr, nodeId);
   }
-  
+
   public SchedulerTypeInfo getSchedulerInfo() {
     try {
       ResourceManager resourceManager = CapacitySchedulerTestUtilities.createResourceManager();

@@ -1818,7 +1818,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Response response = interceptor.replaceLabelsOnNode(labels, null, nodeId);
     Assert.assertNotNull(response);
     Assert.assertEquals(200, response.getStatus());
-    
+
     Object entityObject = response.getEntity();
     Assert.assertNotNull(entityObject);
 
@@ -1836,7 +1836,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     // nodeId is null
     LambdaTestUtils.intercept(IllegalArgumentException.class,
-        "'nodeId' must not be null.",
+        "Parameter error, nodeId must not be null or empty.",
         () -> interceptor.replaceLabelsOnNode(labels, null, null));
 
     // labels is null
