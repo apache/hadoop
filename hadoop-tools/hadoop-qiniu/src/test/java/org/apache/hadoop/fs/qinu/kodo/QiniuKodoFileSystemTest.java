@@ -108,6 +108,7 @@ public class QiniuKodoFileSystemTest {
 
         FSDataInputStream is = fs.open(new Path("testFile.tmp"));
         byte[] buf = new byte[5];
+
         int sz;
         while((sz = is.read(buf)) != -1) {
             LOG.info("sz: {}, buf: {}", sz, buf);
@@ -116,15 +117,29 @@ public class QiniuKodoFileSystemTest {
         is.close();
     }
 
+
+    @Test
+    public void testReadBigFile1() throws IOException {
+        FSDataInputStream is = fs.open(new Path("/vscode.zip"));
+        int ch;
+        long st = System.currentTimeMillis();
+        while ((ch = is.read()) != -1) {
+        }
+        is.close();
+        long et = System.currentTimeMillis();
+        System.out.printf("%f\n", (double)(et - st) / 1000f);
+    }
     @Test
     public void testReadBigFile() throws Exception {
         FSDataInputStream is = fs.open(new Path("/vscode.zip"));
-        byte[] buf = new byte[2*1024*1024];
-        int sz = 0;
+        byte[] buf = new byte[4*1024*1024];
+        int sz;
+        long st = System.currentTimeMillis();
         while ((sz = is.read(buf)) != -1) {
-            System.out.println(sz);
-            Thread.sleep(1000);
+//            System.out.println(sz);
         }
         is.close();
+        long et = System.currentTimeMillis();
+        System.out.printf("%f\n", (double)(et - st) / 1000f);
     }
 }
