@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -226,8 +227,7 @@ public final class FSImageFormatPBINode {
       LOG.info("Loading the INodeDirectory section in parallel with {} sub-" +
               "sections", sections.size());
       CountDownLatch latch = new CountDownLatch(sections.size());
-      final List<IOException> exceptions = new ArrayList<>();
-      final Object exceptionListLock = new Object();
+      final List<IOException> exceptions = Collections.synchronizedList(new ArrayList<>());
       for (FileSummary.Section s : sections) {
         service.submit(() -> {
           InputStream ins = null;
@@ -236,12 +236,8 @@ public final class FSImageFormatPBINode {
                 compressionCodec);
             loadINodeDirectorySection(ins);
           } catch (Exception e) {
-            LOG.error("An exception occurred loading INodeDirectories in " +
-                "parallel", e);
-            IOException exception = new IOException(e);
-            synchronized (exceptionListLock) {
-              exceptions.add(exception);
-            }
+            LOG.error("An exception occurred loading INodeDirectories in parallel", e);
+            exceptions.add(new IOException(e));
           } finally {
             latch.countDown();
             try {
@@ -426,8 +422,7 @@ public final class FSImageFormatPBINode {
       long expectedInodes = 0;
       CountDownLatch latch = new CountDownLatch(sections.size());
       AtomicInteger totalLoaded = new AtomicInteger(0);
-      final List<IOException> exceptions = new ArrayList<>();
-      final Object exceptionListLock = new Object();
+      final List<IOException> exceptions = Collections.synchronizedList(new ArrayList<>());
 
       for (int i=0; i < sections.size(); i++) {
         FileSummary.Section s = sections.get(i);
@@ -443,10 +438,7 @@ public final class FSImageFormatPBINode {
                 totalLoaded.get());
           } catch (Exception e) {
             LOG.error("An exception occurred loading INodes in parallel", e);
-            IOException exception = new IOException(e);
-            synchronized (exceptionListLock) {
-              exceptions.add(exception);
-            }
+            exceptions.add(new IOException(e));
           } finally {
             latch.countDown();
             try {
