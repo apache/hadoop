@@ -128,7 +128,7 @@ public class QiniuKodoInputStream extends FSInputStream {
         buf[off] = (byte)c;
 
         int i = 1;
-        for (; i < len ; i++) {
+        while (i < len) {
             offset = (int)(position % (long) blockSize);
             refreshCurrentBlock();
             if (currentBlockData.length < blockSize && offset >= currentBlockData.length) {
@@ -138,6 +138,7 @@ public class QiniuKodoInputStream extends FSInputStream {
             c = currentBlockData[offset];
 
             buf[off + i] = (byte)c;
+            i++;
         }
 
         statistics.incrementBytesRead(i);
