@@ -1011,18 +1011,29 @@ public class MockRM extends ResourceManager {
     LOG.info("app is removed from scheduler, " + appId);
   }
 
-    public static void waitforContainerCompletion(MockRM rm, MockNM nm,
-      ContainerId amContainerId, RMContainer container) throws Exception {
-      ContainerId containerId = container.getContainerId();
-      if (null != rm.scheduler.getRMContainer(containerId)) {
-        if (containerId.equals(amContainerId)) {
-          rm.waitForState(nm, containerId, RMContainerState.COMPLETED);
-        } else {
-          rm.waitForState(nm, containerId, RMContainerState.KILLED);
-        }
+  /**
+   * Wait until a container has reached a completion state.
+   * The timeout is 20 seconds.
+   * @param nm A mock nodemanager
+   * @param rm A mock resourcemanager
+   * @param amContainerId The id of an am container
+   * @param container A rm container
+   * @throws Exception
+   *         if interrupted while waiting for the completion transition
+   *         or an unexpected error while MockNM is hearbeating.
+   */
+  public static void waitForContainerCompletion(MockRM rm, MockNM nm,
+    ContainerId amContainerId, RMContainer container) throws Exception {
+    ContainerId containerId = container.getContainerId();
+    if (null != rm.scheduler.getRMContainer(containerId)) {
+      if (containerId.equals(amContainerId)) {
+        rm.waitForState(nm, containerId, RMContainerState.COMPLETED);
       } else {
-        rm.drainEvents();
+        rm.waitForState(nm, containerId, RMContainerState.KILLED);
       }
+    } else {
+      rm.drainEvents();
+    }
   }
 
   private void drainEventsImplicitly() {

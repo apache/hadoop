@@ -88,7 +88,7 @@ public class MockAM {
     this.amRMProtocol = amRMProtocol;
   }
 
-   /**
+  /**
    * Wait until an attempt has reached a specified state.
    * The timeout is 40 seconds.
    * @param finalState the attempt state waited

@@ -348,7 +348,7 @@ public class TestContainerResourceUsage {
       // If keepRunningContainers is false, all live containers should now
       // be completed. Calculate the resource usage metrics for all of them.
       for (RMContainer c : rmContainers) {
-        MockRM.waitforContainerCompletion(rm, nm, amContainerId, c);
+        MockRM.waitForContainerCompletion(rm, nm, amContainerId, c);
         AggregateAppResourceUsage ru = calculateContainerResourceMetrics(c);
         memorySeconds += ru.getMemorySeconds();
         vcoreSeconds += ru.getVcoreSeconds();
@@ -400,7 +400,7 @@ public class TestContainerResourceUsage {
 
     // Calculate container usage metrics for second attempt.
     for (RMContainer c : rmContainers) {
-      MockRM.waitforContainerCompletion(rm, nm, amContainerId, c);
+      MockRM.waitForContainerCompletion(rm, nm, amContainerId, c);
       AggregateAppResourceUsage ru = calculateContainerResourceMetrics(c);
       memorySeconds += ru.getMemorySeconds();
       vcoreSeconds += ru.getVcoreSeconds();
