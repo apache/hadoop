@@ -265,12 +265,14 @@ public class LoggingAuditor
     private void attachRangeFromRequest(SdkHttpRequest request,
         ExecutionAttributes executionAttributes) {
 
-      if (executionAttributes.getAttribute(AwsExecutionAttribute.OPERATION_NAME).equals("GetObject")) {
-        if (request.headers() != null
-            && request.headers().get("Range") != null) {
-          String rangeValue = request.headers().get("Range").get(0);
-          String rangeHeader = rangeValue.split("=")[1];
-          referrer.set(AuditConstants.PARAM_RANGE, rangeHeader);
+      if (executionAttributes.getAttribute(AwsExecutionAttribute.OPERATION_NAME)
+          .equals("GetObject")) {
+        if (request.headers() != null && request.headers().get("Range") != null) {
+          String[] rangeHeader = request.headers().get("Range").get(0).split("=");
+          // only set header if range unit is  bytes
+          if (rangeHeader[0].equals("bytes")) {
+            referrer.set(AuditConstants.PARAM_RANGE, rangeHeader[1]);
+          }
         }
       }
     }
