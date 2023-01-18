@@ -1810,13 +1810,13 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     List<BulkActivitiesInfo> activitiesInfos = federationBulkActivitiesInfo.getList();
     Assert.assertNotNull(activitiesInfos);
-    Assert.assertTrue(activitiesInfos.size() == 4);
+    Assert.assertEquals(4, activitiesInfos.size());
 
     for (BulkActivitiesInfo activitiesInfo : activitiesInfos) {
       Assert.assertNotNull(activitiesInfo);
       List<ActivitiesInfo> activitiesInfoList = activitiesInfo.getActivities();
       Assert.assertNotNull(activitiesInfoList);
-      Assert.assertTrue(activitiesInfoList.size() == 5);
+      Assert.assertEquals(5, activitiesInfoList.size());
     }
   }
 

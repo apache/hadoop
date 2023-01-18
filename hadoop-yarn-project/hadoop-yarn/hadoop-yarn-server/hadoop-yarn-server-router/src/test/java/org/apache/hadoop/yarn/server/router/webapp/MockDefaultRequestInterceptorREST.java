@@ -1275,7 +1275,7 @@ public class MockDefaultRequestInterceptorREST
 
     return bulkActivitiesInfo;
   }
-  
+
   public SchedulerTypeInfo getSchedulerInfo() {
     try {
       ResourceManager resourceManager = CapacitySchedulerTestUtilities.createResourceManager();

@@ -1252,7 +1252,7 @@ public final class RouterMetrics {
   public int getBulkActivitiesFailedRetrieved(){
     return numGetBulkActivitiesFailedRetrieved.value();
   }
-  
+
   public int getSchedulerInfoFailedRetrieved() {
     return numGetSchedulerInfoFailedRetrieved.value();
   }
@@ -1491,7 +1491,7 @@ public final class RouterMetrics {
     totalSucceededCancelDelegationTokenRetrieved.add(duration);
     cancelDelegationTokenLatency.add(duration);
   }
-  
+
   public void succeededGetActivitiesLatencyRetrieved(long duration) {
     totalSucceededGetActivitiesRetrieved.add(duration);
     getActivitiesLatency.add(duration);
@@ -1501,7 +1501,7 @@ public final class RouterMetrics {
     totalSucceededGetBulkActivitiesRetrieved.add(duration);
     getBulkActivitiesLatency.add(duration);
   }
-  
+
   public void succeededGetSchedulerInfoRetrieved(long duration) {
     totalSucceededGetSchedulerInfoRetrieved.add(duration);
     getSchedulerInfoRetrievedLatency.add(duration);
@@ -1712,7 +1712,7 @@ public final class RouterMetrics {
   public void incrCancelDelegationTokenFailedRetrieved() {
     numCancelDelegationTokenFailedRetrieved.incr();
   }
-  
+
   public void incrGetActivitiesFailedRetrieved() {
     numGetActivitiesFailedRetrieved.incr();
   }
@@ -1720,7 +1720,7 @@ public final class RouterMetrics {
   public void incrGetBulkActivitiesFailedRetrieved() {
     numGetBulkActivitiesFailedRetrieved.incr();
   }
-  
+
   public void incrGetSchedulerInfoFailedRetrieved() {
     numGetSchedulerInfoFailedRetrieved.incr();
   }
