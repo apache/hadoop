@@ -43,7 +43,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         this.fsConfig = new QiniuKodoFsConfig(getConf());
 
-        LOG.info("{}", fsConfig);
+        LOG.debug("QiniuKodoConfig: {}", fsConfig);
 
         String bucket = name.getHost();
         LOG.debug("== bucket:" + bucket);
