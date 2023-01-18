@@ -24,11 +24,17 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatistic
 import static org.apache.hadoop.tools.DistCpConstants.CONF_LABEL_DISTCP_JOB_ID;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -71,6 +77,9 @@ public abstract class AbstractContractDistCpTest
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractContractDistCpTest.class);
+
+  /** Using offset to change modification time in tests. */
+  private static final long MODIFICATION_TIME_OFFSET = 10000;
 
   public static final String SCALE_TEST_DISTCP_FILE_SIZE_KB
       = "scale.test.distcp.file.size.kb";
@@ -857,4 +866,83 @@ public abstract class AbstractContractDistCpTest
     verifyFileContents(localFS, dest, block);
   }
 
+  @Test
+  public void testDistCpUpdateCheckFileSkip() throws Exception {
+    describe("Distcp update to check file skips.");
+
+    Path source = new Path(remoteDir, "file");
+    Path dest = new Path(localDir, "file");
+    dest = localFS.makeQualified(dest);
+
+    // Creating a source file with certain dataset.
+    byte[] sourceBlock = dataset(10, 'a', 'z');
+
+    // Write the dataset and as well create the target path.
+    try (FSDataOutputStream out = remoteFS.create(source)) {
+      out.write(sourceBlock);
+      localFS.create(dest);
+    }
+
+    verifyPathExists(remoteFS, "", source);
+    verifyPathExists(localFS, "", dest);
+    DistCpTestUtils
+        .assertRunDistCp(DistCpConstants.SUCCESS, remoteDir.toString(),
+            localDir.toString(), "-delete -update" + getDefaultCLIOptions(),
+            conf);
+
+    // First distcp -update would normally copy the source to dest.
+    verifyFileContents(localFS, dest, sourceBlock);
+
+    // Remove the source file and replace with a file with same name and size
+    // but different content.
+    remoteFS.delete(source, false);
+    Path updatedSource = new Path(remoteDir, "file");
+    byte[] updatedSourceBlock = dataset(10, 'b', 'z');
+    try (FSDataOutputStream out = remoteFS.create(updatedSource)) {
+      out.write(updatedSourceBlock);
+    }
+
+    // For testing purposes we would take the modification time of the
+    // updated Source file and add an offset or subtract the offset and set
+    // that time as the modification time for target file, this way we can
+    // ensure that our test can emulate a scenario where source is either more
+    // recently changed after -update so that copy takes place or target file
+    // is more recently changed which would skip the copying since the source
+    // has not been recently updated.
+    FileStatus fsSourceUpd = remoteFS.getFileStatus(updatedSource);
+    long modTimeSourceUpd = fsSourceUpd.getModificationTime();
+
+    // Add by an offset which would ensure enough gap for the test to
+    // not fail due to race conditions.
+    long newTargetModTimeNew = modTimeSourceUpd + MODIFICATION_TIME_OFFSET;
+    localFS.setTimes(dest, newTargetModTimeNew, -1);
+
+    DistCpTestUtils
+        .assertRunDistCp(DistCpConstants.SUCCESS, remoteDir.toString(),
+            localDir.toString(), "-delete -update" + getDefaultCLIOptions(),
+            conf);
+
+    // File contents should remain same since the mod time for target is
+    // newer than the updatedSource which indicates that the sync happened
+    // more recently and there is no update.
+    verifyFileContents(localFS, dest, sourceBlock);
+
+    // Subtract by an offset which would ensure enough gap for the test to
+    // not fail due to race conditions.
+    long newTargetModTimeOld =
+        Math.min(modTimeSourceUpd - MODIFICATION_TIME_OFFSET, 0);
+    localFS.setTimes(dest, newTargetModTimeOld, -1);
+
+    DistCpTestUtils
+        .assertRunDistCp(DistCpConstants.SUCCESS, remoteDir.toString(),
+            localDir.toString(), "-delete -update" + getDefaultCLIOptions(),
+            conf);
+
+    Assertions.assertThat(RemoteIterators.toList(localFS.listFiles(dest, true)))
+        .hasSize(1);
+    // Now the copy should take place and the file contents should change
+    // since the mod time for target is older than the source file indicating
+    // that there was an update to the source after the last sync took place.
+    verifyFileContents(localFS, dest, updatedSourceBlock);
+  }
 }

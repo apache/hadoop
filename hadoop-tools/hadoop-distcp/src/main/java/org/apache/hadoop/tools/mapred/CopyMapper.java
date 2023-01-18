@@ -354,7 +354,14 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
     boolean sameLength = target.getLen() == source.getLen();
     boolean sameBlockSize = source.getBlockSize() == target.getBlockSize()
         || !preserve.contains(FileAttribute.BLOCKSIZE);
-    if (sameLength && sameBlockSize) {
+    // checksum check to be done if same file len(greater than 0), same block
+    // size and the target file has been updated more recently than the source
+    // file.
+    // Note: For Different cloud stores with different checksum algorithms,
+    // checksum comparisons are not performed so we would be depending on the
+    // file size and modification time.
+    if (sameLength && (source.getLen() > 0) && sameBlockSize &&
+        source.getModificationTime() < target.getModificationTime()) {
       return skipCrc ||
           DistCpUtils.checksumsAreEqual(sourceFS, source.getPath(), null,
               targetFS, target.getPath(), source.getLen());
