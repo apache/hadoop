@@ -1724,6 +1724,7 @@ public class RouterRpcClient {
       namenodes = namenodeResolver.getNamenodesForNameserviceId(nsId, isObserverRead);
     } else {
       namenodes = namenodeResolver.getNamenodesForNameserviceId(nsId, false);
+      refreshTimeOfLastCallToActiveNameNode(nsId);
     }
 
     if (namenodes == null || namenodes.isEmpty()) {
@@ -1756,7 +1757,8 @@ public class RouterRpcClient {
    * Otherwise, return false and call should be handled by active namenode.
    * @param nsId namespaceID
    */
-  private boolean isNamespaceStateIdFresh(String nsId) {
+  @VisibleForTesting
+  boolean isNamespaceStateIdFresh(String nsId) {
     if (activeNNStateIdRefreshPeriodMs < 0) {
       LOG.debug("Skipping freshness check and returning True since"
           + RBFConfigKeys.DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_KEY
@@ -1771,11 +1773,16 @@ public class RouterRpcClient {
         .computeIfAbsent(nsId, key -> new LongAccumulator(Math::max, 0));
 
     if (callStartTime - latestRefreshTime.get() > activeNNStateIdRefreshPeriodMs) {
-      long requestTime = Time.monotonicNow();
-      latestRefreshTime.accumulate(requestTime);
       return false;
     }
 
     return true;
+  }
+
+  private void refreshTimeOfLastCallToActiveNameNode(String namespaceId) {
+    LongAccumulator latestRefreshTime = lastActiveNNRefreshTimes
+        .computeIfAbsent(namespaceId, key -> new LongAccumulator(Math::max, 0));
+    long requestTime = Time.monotonicNow();
+    latestRefreshTime.accumulate(requestTime);
   }
 }

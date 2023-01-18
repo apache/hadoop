@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServi
 import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
@@ -670,7 +671,10 @@ public class TestObserverWithRouter {
     activeClient.close();
 
     // Wait long enough for state in router to be considered stale.
-    Thread.sleep(700);
+    GenericTestUtils.waitFor(() -> !routerContext.getRouterRpcClient().isNamespaceStateIdFresh("ns0")
+        , 100
+        , 10000
+        , "Timeout: Namespace state was never considered stale.");
     FileStatus[] rootFolderAfterMkdir = fileSystem.listStatus(rootPath);
     assertEquals("List-status should show newly created directories.",
         initialLengthOfRootListing + 10, rootFolderAfterMkdir.length);
