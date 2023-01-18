@@ -2730,7 +2730,7 @@ public class TestClientRMService {
 
     Resource resource = Resources.createResource(976562);
     resource.setResourceInformation("memory-mb",
-        ResourceInformation.newInstance("memory-mb","G",976562));
+        ResourceInformation.newInstance("memory-mb", "G", 976562));
     resource.setResourceInformation("resource1",
         ResourceInformation.newInstance("resource1", "T", 1));
     resource.setResourceInformation("resource2",
