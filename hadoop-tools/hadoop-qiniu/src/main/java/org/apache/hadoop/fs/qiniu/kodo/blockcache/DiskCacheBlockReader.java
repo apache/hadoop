@@ -150,23 +150,26 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
         IOException exception = null;
         for(int i=0;i<3;i++) {
             try {
-                if (lruCache.containsKey(kbck)) {
-                    Path blockFile = lruCache.get(kbck);
-                    long now = Instant.now().getEpochSecond();
-                    long lastModifiedTime = Files.getLastModifiedTime(blockFile).toInstant().getEpochSecond();
-                    int duration = (int)(now - lastModifiedTime);
-                    if (duration > expires) {
-                        // 过期了，删除缓存块
-                        Files.deleteIfExists(blockFile);
-                        lruCache.remove(kbck);
-                        // 需要刷新缓存元数据文件
-                        saveBlockCacheMetaFile();
-                    }else {
-                        // 没过期，可以直接返回
-                        return readFile(blockFile);
+                if (expires != 0) {
+                    if (lruCache.containsKey(kbck)) {
+                        Path blockFile = lruCache.get(kbck);
+                        long now = Instant.now().getEpochSecond();
+                        long lastModifiedTime = Files.getLastModifiedTime(blockFile).toInstant().getEpochSecond();
+                        int duration = (int)(now - lastModifiedTime);
+                        if (duration > expires) {
+                            // 过期了，删除缓存块
+                            Files.deleteIfExists(blockFile);
+                            lruCache.remove(kbck);
+                            // 需要刷新缓存元数据文件
+                            saveBlockCacheMetaFile();
+                        }else {
+                            // 没过期，可以直接返回
+                            return readFile(blockFile);
+                        }
                     }
                 }
-                // 可能没有缓存或缓存过期了，穿透至下一层数据源获取数据
+
+                // 可能没有缓存, 缓存过期, 缓存有效期为0，直接穿透至下一层数据源获取数据
                 Path cachedBlockFile = Paths.get(bufferDir.toString(), key, String.format("%d.blk", blockId));
                 byte[] blockData = source.readBlock(key, blockId);
                 writeFile(cachedBlockFile, blockData);
@@ -200,6 +203,7 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
             LOG.debug("Disk cache meta file has been saved in: {}", metaFilePath);
         }
     }
+
     @Override
     public void close() throws IOException {
         saveBlockCacheMetaFile();
