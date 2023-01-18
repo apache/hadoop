@@ -1,6 +1,7 @@
 package org.apache.hadoop.fs.qiniu.kodo.blockcache;
 
 import com.google.gson.Gson;
+import org.apache.commons.io.FileDeleteStrategy;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,6 +10,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -21,17 +23,19 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
     private final Path bufferDir;
     private final Path metaFilePath;
     private final int blockSize;
+    private final int expires;
 
-    public DiskCacheBlockReader(IBlockReader source, int maxCacheBlocks, Path bufferDir) throws IOException {
+    public DiskCacheBlockReader(IBlockReader source, int maxCacheBlocks, Path bufferDir, int expires) throws IOException {
         this.source = source;
         this.lruCache = new LRUCache<>(maxCacheBlocks);
         this.lruCache.setOnLRUCacheRemoveListener(this);
         this.bufferDir = bufferDir;
         this.metaFilePath = Paths.get(bufferDir.toString(), META_FILE_NAME);
         this.blockSize = source.getBlockSize();
+        this.expires = expires;
         Files.createDirectories(bufferDir);
         LOG.debug("constructed: {}", this);
-        if (metaFilePath.toFile().exists()) {
+        if (Files.exists(metaFilePath)) {
             try(Reader re = Files.newBufferedReader(metaFilePath)) {
                 StringWriter sr = new StringWriter();
                 IOUtils.copy(re, sr);
@@ -54,18 +58,22 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
                 return new PersistentEntity(e.getKey(), e.getValue().toString());
             }
         }
+        // 块数据条目
         public List<PersistentEntity> items;
+        // 当前缓存块大小
+        public int blockSize;
 
-        public PersistentData(List<PersistentEntity> items) {
+        public PersistentData(List<PersistentEntity> items, int blockSize) {
             this.items = items;
+            this.blockSize = blockSize;
         }
 
-        public static PersistentData fromMap(Map<KeyBlockIdCacheKey, Path> m) {
+        public static PersistentData fromMap(Map<KeyBlockIdCacheKey, Path> m, int blockSize) {
             List<PersistentEntity> items = m.entrySet()
                     .stream()
                     .map(PersistentEntity::fromMapEntry)
                     .collect(Collectors.toList());
-            return new PersistentData(items);
+            return new PersistentData(items, blockSize);
         }
 
         public LRUCache<KeyBlockIdCacheKey, Path> toLRUCache(int maxCacheBlocks) {
@@ -86,13 +94,23 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
 
     public String saveLRUCacheMetaToJson() {
         Gson gson = new Gson();
-        return gson.toJson(PersistentData.fromMap(lruCache));
+        return gson.toJson(PersistentData.fromMap(lruCache, blockSize));
     }
 
-    public void loadLRUCacheMetaFromJson(String json) {
+    public void loadLRUCacheMetaFromJson(String json) throws IOException {
         Gson gson = new Gson();
-        gson.fromJson(json, PersistentData.class).addToMap(lruCache);
+        PersistentData data = gson.fromJson(json, PersistentData.class);
+        if (data.blockSize != blockSize) {
+            // 块大小被改变了，缓存全部失效，需要清除缓存
+            LOG.info("BlockSize was changed, clear all cached block.");
+            LOG.info("old blockSize: {}, new blockSize: {}", data.blockSize, blockSize);
+            FileDeleteStrategy.FORCE.delete(bufferDir.toFile());
+            Files.createDirectories(bufferDir);
+            return;
+        }
+        data.addToMap(lruCache);
     }
+
 
     private byte[] readFile(Path path) throws IOException {
         LOG.debug("read file: {}", path);
@@ -115,6 +133,8 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
         try(OutputStream f = Files.newOutputStream(path)) {
             f.write(data);
         }
+        // 刷新元数据存储
+        saveBlockCacheMetaFile();
     }
 
     @Override
@@ -132,9 +152,21 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
             try {
                 if (lruCache.containsKey(kbck)) {
                     Path blockFile = lruCache.get(kbck);
-                    return readFile(blockFile);
+                    long now = Instant.now().getEpochSecond();
+                    long lastModifiedTime = Files.getLastModifiedTime(blockFile).toInstant().getEpochSecond();
+                    int duration = (int)(now - lastModifiedTime);
+                    if (duration > expires) {
+                        // 过期了，删除缓存块
+                        Files.deleteIfExists(blockFile);
+                        lruCache.remove(kbck);
+                        // 需要刷新缓存元数据文件
+                        saveBlockCacheMetaFile();
+                    }else {
+                        // 没过期，可以直接返回
+                        return readFile(blockFile);
+                    }
                 }
-
+                // 可能没有缓存或缓存过期了，穿透至下一层数据源获取数据
                 Path cachedBlockFile = Paths.get(bufferDir.toString(), key, String.format("%d.blk", blockId));
                 byte[] blockData = source.readBlock(key, blockId);
                 writeFile(cachedBlockFile, blockData);
@@ -161,11 +193,16 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
         }
     }
 
-    @Override
-    public void close() throws IOException {
+    private void saveBlockCacheMetaFile() throws IOException{
         String json = saveLRUCacheMetaToJson();
         try(Writer wr = Files.newBufferedWriter(metaFilePath)) {
             wr.write(json);
+            LOG.debug("Disk cache meta file has been saved in: {}", metaFilePath);
         }
+    }
+    @Override
+    public void close() throws IOException {
+        saveBlockCacheMetaFile();
+        LOG.debug("Disk cache has been closed");
     }
 }

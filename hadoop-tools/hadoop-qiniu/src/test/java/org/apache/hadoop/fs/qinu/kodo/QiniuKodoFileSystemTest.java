@@ -3,6 +3,7 @@ package org.apache.hadoop.fs.qinu.kodo;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -28,6 +29,13 @@ public class QiniuKodoFileSystemTest {
 
         fs = new QiniuKodoFileSystem();
         fs.initialize(URI.create(conf.get("fs.contract.test.fs.kodo")), conf);
+    }
+
+    @After
+    public void exit() throws Exception {
+        if (fs != null) {
+            fs.close();
+        }
     }
 
     @Test

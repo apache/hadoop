@@ -34,7 +34,8 @@ public class QiniuKodoBlockReader implements IBlockReader {
             this.diskCacheReader = new DiskCacheBlockReader(
                     sourceReader,
                     diskCache.blocks,
-                    diskCache.dir
+                    diskCache.dir,
+                    diskCache.expires
             );
         }
 

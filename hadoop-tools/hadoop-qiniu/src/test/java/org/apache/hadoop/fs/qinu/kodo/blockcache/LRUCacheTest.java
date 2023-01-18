@@ -23,7 +23,7 @@ public class LRUCacheTest {
             System.out.println(e);
         }
         Gson gson = new Gson();
-        String json = gson.toJson(DiskCacheBlockReader.PersistentData.fromMap(cache));
+        String json = gson.toJson(DiskCacheBlockReader.PersistentData.fromMap(cache, 3600));
         System.out.println(json);
 
         DiskCacheBlockReader.PersistentData m1 = gson.fromJson(json, DiskCacheBlockReader.PersistentData.class);
