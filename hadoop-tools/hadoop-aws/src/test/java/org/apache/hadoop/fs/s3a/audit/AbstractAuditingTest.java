@@ -20,13 +20,17 @@ package org.apache.hadoop.fs.s3a.audit;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
+import software.amazon.awssdk.awscore.AwsExecutionAttribute;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.interceptor.InterceptorContext;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.http.SdkHttpRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import org.junit.After;
 import org.junit.Before;
@@ -159,14 +163,37 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
   }
 
   /**
-   * Create a GetObject request and modify it before passing it through auditor.
-   * @param modifyRequest Consumer Interface for changing the request before passing to the auditor
-   * @return the request
+   * Create a get request and pass it through the manager's beforeExecution()
+   * callback.
+   *
+   * @return a processed request.
    */
-  protected GetObjectRequest get(Consumer<GetObjectRequest> modifyRequest) {
-    GetObjectRequest req = requestFactory.newGetObjectRequest("/");
-    modifyRequest.accept(req);
-    return manager.beforeExecution(req);
+  protected SdkHttpRequest get(String range) {
+    GetObjectRequest.Builder getObjectRequestBuilder =
+        requestFactory.newGetObjectRequestBuilder("/");
+
+    SdkHttpRequest.Builder httpRequestBuilder =
+        SdkHttpRequest.builder().uri(URI.create("https://test")).method(SdkHttpMethod.GET);
+
+    if (!range.isEmpty()) {
+      getObjectRequestBuilder.range(range);
+      List<String> rangeHeader = new ArrayList<>();
+      rangeHeader.add(range);
+      Map<String, List<String>> headers = new HashMap<>();
+      headers.put("Range", rangeHeader);
+      httpRequestBuilder.headers(headers);
+    }
+
+    manager.requestCreated(getObjectRequestBuilder);
+    GetObjectRequest getObjectRequest = getObjectRequestBuilder.build();
+    ExecutionAttributes executionAttributes = ExecutionAttributes.builder().build().putAttribute(
+        AwsExecutionAttribute.OPERATION_NAME, "GetObject");
+    InterceptorContext context = InterceptorContext.builder()
+        .request(getObjectRequest)
+        .httpRequest(httpRequestBuilder.build())
+        .build();
+    manager.beforeExecution(context, executionAttributes);
+    return manager.modifyHttpRequest(context, executionAttributes);
   }
 
   /**

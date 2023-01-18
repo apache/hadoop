@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import software.amazon.awssdk.awscore.AwsExecutionAttribute;
 import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.core.interceptor.Context;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
@@ -248,21 +249,18 @@ public class LoggingAuditor
      * Attach Range of data for GetObject Request.
      * @param request given get object request
      */
-//    private void attachRangeFromRequest(AmazonWebServiceRequest request) {
-//      if (request instanceof GetObjectRequest) {
-//        long[] rangeValue = ((GetObjectRequest) request).getRange();
-//        if (rangeValue == null || rangeValue.length == 0) {
-//          return;
-//        }
-//        if (rangeValue.length != 2) {
-//          WARN_INCORRECT_RANGE.warn("Expected range to contain 0 or 2 elements."
-//              + " Got {} elements. Ignoring.", rangeValue.length);
-//          return;
-//        }
-//        String combinedRangeValue = String.format("%d-%d", rangeValue[0], rangeValue[1]);
-//        referrer.set(AuditConstants.PARAM_RANGE, combinedRangeValue);
-//      }
-//    }
+    private void attachRangeFromRequest(SdkHttpRequest request,
+        ExecutionAttributes executionAttributes) {
+
+      if (executionAttributes.getAttribute(AwsExecutionAttribute.OPERATION_NAME).equals("GetObject")) {
+        if (request.headers() != null
+            && request.headers().get("Range") != null) {
+          String rangeValue = request.headers().get("Range").get(0);
+          String rangeHeader = rangeValue.split("=")[1];
+          referrer.set(AuditConstants.PARAM_RANGE, rangeHeader);
+        }
+      }
+    }
 
     private final String description;
 
@@ -356,6 +354,8 @@ public class LoggingAuditor
     public SdkHttpRequest modifyHttpRequest(Context.ModifyHttpRequest context,
         ExecutionAttributes executionAttributes) {
       SdkHttpRequest httpRequest = context.httpRequest();
+      // attach range for GetObject requests
+      attachRangeFromRequest(httpRequest, executionAttributes);
       // build the referrer header
       final String header = referrer.buildHttpReferrer();
       // update the outer class's field.

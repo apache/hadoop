@@ -322,13 +322,16 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
   @Test
   public void testGetObjectRange() throws Throwable {
     AuditSpan span = span();
-    GetObjectRequest request = get(getObjectRequest -> getObjectRequest.setRange(100, 200));
-    Map<String, String> headers
-            = request.getCustomRequestHeaders();
+    SdkHttpRequest request = get("bytes=100-200");
+    Map<String, List<String>> headers = request.headers();
     assertThat(headers)
-            .describedAs("Custom headers")
-            .containsKey(HEADER_REFERRER);
-    String header = headers.get(HEADER_REFERRER);
+        .describedAs("Custom headers")
+        .containsKey(HEADER_REFERRER);
+    List<String> headerValues = headers.get(HEADER_REFERRER);
+    assertThat(headerValues)
+        .describedAs("Multiple referrer headers")
+        .hasSize(1);
+    String header = headerValues.get(0);
     LOG.info("Header is {}", header);
     Map<String, String> params
             = HttpReferrerAuditHeader.extractQueryParameters(header);
@@ -341,13 +344,16 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
   @Test
   public void testGetObjectWithoutRange() throws Throwable {
     AuditSpan span = span();
-    GetObjectRequest request = get(getObjectRequest -> {});
-    Map<String, String> headers
-        = request.getCustomRequestHeaders();
+    SdkHttpRequest request = get("");
+    Map<String, List<String>> headers = request.headers();
     assertThat(headers)
         .describedAs("Custom headers")
         .containsKey(HEADER_REFERRER);
-    String header = headers.get(HEADER_REFERRER);
+    List<String> headerValues = headers.get(HEADER_REFERRER);
+    assertThat(headerValues)
+        .describedAs("Multiple referrer headers")
+        .hasSize(1);
+    String header = headerValues.get(0);
     LOG.info("Header is {}", header);
     Map<String, String> params
         = HttpReferrerAuditHeader.extractQueryParameters(header);
