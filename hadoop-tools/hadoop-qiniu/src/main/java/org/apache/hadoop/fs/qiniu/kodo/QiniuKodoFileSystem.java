@@ -14,6 +14,7 @@ import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -83,6 +84,9 @@ public class QiniuKodoFileSystem extends FileSystem {
                     " because it is a directory");
         }
 
+        if (fileStatus.getLen() == 0) {
+            return new FSDataInputStream(new ByteArrayInputStream(new byte[0]));
+        }
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         LOG.debug("== open, key:" + key);
 
