@@ -2,12 +2,11 @@ package org.apache.hadoop.fs.qiniu.kodo.download;
 
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.fs.FileSystem.Statistics;
 
-import java.io.EOFException;
 import java.io.IOException;
 
 public class QiniuKodoInputStream extends FSInputStream {

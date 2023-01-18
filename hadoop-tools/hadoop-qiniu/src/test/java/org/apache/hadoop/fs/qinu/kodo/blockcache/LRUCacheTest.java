@@ -1,7 +1,6 @@
 package org.apache.hadoop.fs.qinu.kodo.blockcache;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.KeyBlockIdCacheKey;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.LRUCache;
@@ -9,8 +8,7 @@ import org.junit.Test;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 public class LRUCacheTest {
     @Test

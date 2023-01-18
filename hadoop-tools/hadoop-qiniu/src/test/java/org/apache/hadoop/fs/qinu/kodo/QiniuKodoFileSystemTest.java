@@ -3,8 +3,6 @@ package org.apache.hadoop.fs.qinu.kodo;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem;
-
-import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -12,7 +10,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.Map;
+
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class QiniuKodoFileSystemTest {
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoFileSystemTest.class);

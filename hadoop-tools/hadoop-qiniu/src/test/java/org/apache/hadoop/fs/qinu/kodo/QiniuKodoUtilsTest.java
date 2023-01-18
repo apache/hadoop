@@ -4,7 +4,6 @@ import org.apache.hadoop.fs.Path;
 import org.junit.Test;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 
 import static org.apache.hadoop.fs.qiniu.kodo.QiniuKodoUtils.*;
 import static org.junit.Assert.*;

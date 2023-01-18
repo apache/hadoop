@@ -6,7 +6,6 @@ import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem;
 import org.junit.Before;
 
 import java.net.URI;
-import java.util.Map;
 
 public class QiniuKodoFileSystemContractBaseTest extends FileSystemContractBaseTest {
     @Before

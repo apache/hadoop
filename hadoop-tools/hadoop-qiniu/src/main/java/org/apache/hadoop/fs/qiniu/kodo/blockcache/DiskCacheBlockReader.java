@@ -1,7 +1,7 @@
 package org.apache.hadoop.fs.qiniu.kodo.blockcache;
 
+import com.google.gson.Gson;
 import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.io.retry.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,11 +12,10 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import com.google.gson.Gson;
 
 public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListener<KeyBlockIdCacheKey, Path> {
     private static final Logger LOG = LoggerFactory.getLogger(DiskCacheBlockReader.class);
-    private static final String META_FILE_NAME = "BUFFER_META.json";
+    private static final String META_FILE_NAME = ".BUFFER_META.json";
     private final IBlockReader source;
     private final LRUCache<KeyBlockIdCacheKey, Path> lruCache;
     private final Path bufferDir;
