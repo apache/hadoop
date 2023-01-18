@@ -125,7 +125,6 @@ import static org.apache.hadoop.mapred.ShuffleHandler.LOG;
  * +--------+-------------------------------------------------+----------------+
  * </pre>
  */
-@SuppressWarnings("checkstyle:LineLength")
 public class ShuffleChannelHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
   private final ShuffleChannelHandlerContext handlerCtx;
 
@@ -313,7 +312,6 @@ public class ShuffleChannelHandler extends SimpleChannelInboundHandler<FullHttpR
         }
         LOG.trace("Calling sendMapOutput; channel='{}'", reduceContext.ctx.channel().id());
         ChannelFuture nextMap = sendMapOutput(
-            reduceContext.getCtx(),
             reduceContext.getCtx().channel(),
             reduceContext.getUser(), mapId,
             reduceContext.getReduceId(), info);
@@ -493,8 +491,7 @@ public class ShuffleChannelHandler extends SimpleChannelInboundHandler<FullHttpR
     return wrappedBuffer(dob.getData(), 0, dob.getLength());
   }
 
-  protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx, Channel ch,
-                                        String user, String mapId, int reduce,
+  protected ChannelFuture sendMapOutput(Channel ch, String user, String mapId, int reduce,
                                         MapOutputInfo mapOutputInfo)
       throws IOException {
     final IndexRecord info = mapOutputInfo.indexRecord;
@@ -678,30 +675,36 @@ public class ShuffleChannelHandler extends SimpleChannelInboundHandler<FullHttpR
 
     @Override
     public void operationComplete(ChannelFuture future) throws Exception {
-      LOG.trace("SendMap operation complete; mapsToWait='{}', channel='{}'", this.reduceContext.getMapsToWait().get(), future.channel().id());
+      LOG.trace("SendMap operation complete; mapsToWait='{}', channel='{}'",
+          this.reduceContext.getMapsToWait().get(), future.channel().id());
       if (!future.isSuccess()) {
-        LOG.error("Future is unsuccessful. channel='{}' Cause: ", future.channel().id(), future.cause());
+        LOG.error("Future is unsuccessful. channel='{}' Cause: ",
+            future.channel().id(), future.cause());
         future.channel().close();
         return;
       }
       int waitCount = this.reduceContext.getMapsToWait().decrementAndGet();
       if (waitCount == 0) {
-        ChannelFuture lastContentFuture = future.channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+        ChannelFuture lastContentFuture =
+            future.channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
         handler.handlerCtx.metrics.operationComplete(future);
 
         // Let the idle timer handler close keep-alive connections
         if (reduceContext.getKeepAlive()) {
-          LOG.trace("SendMap operation complete, keeping alive the connection; channel='{}'", future.channel().id());
+          LOG.trace("SendMap operation complete, keeping alive the connection; channel='{}'",
+              future.channel().id());
           ChannelPipeline pipeline = future.channel().pipeline();
           ShuffleHandler.TimeoutHandler timeoutHandler =
               (ShuffleHandler.TimeoutHandler)pipeline.get(TIMEOUT_HANDLER);
           timeoutHandler.setEnabledTimeout(true);
         } else {
-          LOG.trace("SendMap operation complete, closing connection; channel='{}'", future.channel().id());
+          LOG.trace("SendMap operation complete, closing connection; channel='{}'",
+              future.channel().id());
           lastContentFuture.addListener(ChannelFutureListener.CLOSE);
         }
       } else {
-        LOG.trace("SendMap operation complete, waitCount > 0, invoking sendMap with reduceContext; channel='{}'",
+        LOG.trace("SendMap operation complete, waitCount > 0, " +
+                "invoking sendMap with reduceContext; channel='{}'",
             future.channel().id());
         handler.sendMap(reduceContext);
       }
