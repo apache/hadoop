@@ -1369,7 +1369,7 @@ public class ViewFileSystem extends FileSystem {
       throw new NotInMountpointException(p, "hasPathCapability");
     }
   }
-  
+
   @Override
   public Path getEnclosingRoot(Path path) throws IOException {
     InodeTree.ResolveResult<FileSystem> res;
@@ -1380,7 +1380,8 @@ public class ViewFileSystem extends FileSystem {
     }
     Path mountPath = new Path(res.resolvedPath);
     Path enclosingPath = res.targetFileSystem.getEnclosingRoot(new Path(getUriPath(path)));
-    return fixRelativePart(this.makeQualified(enclosingPath.depth() > mountPath.depth() ?  enclosingPath : mountPath));
+    return fixRelativePart(this.makeQualified(enclosingPath.depth() > mountPath.depth()
+        ?  enclosingPath : mountPath));
   }
 
   /**

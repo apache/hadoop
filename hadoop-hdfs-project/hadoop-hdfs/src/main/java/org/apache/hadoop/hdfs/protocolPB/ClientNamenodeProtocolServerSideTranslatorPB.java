@@ -2083,7 +2083,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     try {
       Path enclosingRootPath = server.getEnclosingRoot(req.getFilename());
-      return GetEnclosingRootResponseProto.newBuilder().setEnclosingRootPath(enclosingRootPath.toUri().toString())
+      return GetEnclosingRootResponseProto.newBuilder()
+          .setEnclosingRootPath(enclosingRootPath.toUri().toString())
           .build();
     } catch (IOException e) {
       throw new ServiceException(e);

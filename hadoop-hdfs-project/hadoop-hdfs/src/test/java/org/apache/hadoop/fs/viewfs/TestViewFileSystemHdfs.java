@@ -200,7 +200,8 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
       DFSTestUtil.createKey("test_key", cluster, CONF);
       HdfsAdmin hdfsAdmin = new HdfsAdmin(cluster.getURI(0), CONF);
-      final EnumSet<CreateEncryptionZoneFlag> provisionTrash = EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
+      final EnumSet<CreateEncryptionZoneFlag> provisionTrash =
+          EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
       hdfsAdmin.createEncryptionZone(zone1, "test_key", provisionTrash);
 
       final Path encFile = new Path(zone1, "encFile");
@@ -213,11 +214,13 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
       //Verify file deletion within EZ
       DFSTestUtil.verifyDelete(shell, fsTarget, encFile, true);
-      assertTrue("ViewFileSystem trash roots should include EZ file trash", (fsView.getTrashRoots(true).size() == 1));
+      assertTrue("ViewFileSystem trash roots should include EZ file trash",
+          (fsView.getTrashRoots(true).size() == 1));
 
       //Verify deletion of EZ
       DFSTestUtil.verifyDelete(shell, fsTarget, zone, true);
-      assertTrue("ViewFileSystem trash roots should include EZ zone trash", (fsView.getTrashRoots(true).size() == 2));
+      assertTrue("ViewFileSystem trash roots should include EZ zone trash",
+          (fsView.getTrashRoots(true).size() == 2));
     } finally {
       DFSTestUtil.deleteKey("test_key", cluster);
     }
@@ -527,7 +530,8 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
       DFSTestUtil.createKey("test_key", cluster, 0, CONF);
       HdfsAdmin hdfsAdmin = new HdfsAdmin(cluster.getURI(0), CONF);
-      final EnumSet<CreateEncryptionZoneFlag> provisionTrash = EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
+      final EnumSet<CreateEncryptionZoneFlag> provisionTrash =
+          EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
       hdfsAdmin.createEncryptionZone(zone1, "test_key", provisionTrash);
       assertEquals(fsView.getEnclosingRoot(zone), getViewFsPath("/data", fsView));
       assertEquals(fsView.getEnclosingRoot(zone1), getViewFsPath(zone1, fsView));
@@ -539,10 +543,12 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
       DFSTestUtil.createKey("test_key", cluster, 1, CONF);
       hdfsAdmin2.createEncryptionZone(nn02Ez, "test_key", provisionTrash);
       assertEquals(fsView.getEnclosingRoot((nn02Ez)), getViewFsPath(nn02Ez, fsView));
-      assertEquals(fsView.getEnclosingRoot(new Path(nn02Ez, "dir/dir2/file")), getViewFsPath(nn02Ez, fsView));
+      assertEquals(fsView.getEnclosingRoot(new Path(nn02Ez, "dir/dir2/file")),
+          getViewFsPath(nn02Ez, fsView));
 
       // With viewfs:// scheme
-      assertEquals(fsView.getEnclosingRoot(fsView.getWorkingDirectory()), getViewFsPath("/user", fsView));
+      assertEquals(fsView.getEnclosingRoot(fsView.getWorkingDirectory()),
+          getViewFsPath("/user", fsView));
     } finally {
       DFSTestUtil.deleteKey("test_key", cluster, 0);
     }
@@ -572,7 +578,8 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
       DFSTestUtil.createKey("test_key", cluster, 0, CONF);
       HdfsAdmin hdfsAdmin = new HdfsAdmin(cluster.getURI(0), CONF);
-      final EnumSet<CreateEncryptionZoneFlag> provisionTrash = EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
+      final EnumSet<CreateEncryptionZoneFlag> provisionTrash =
+          EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
       hdfsAdmin.createEncryptionZone(zone1, "test_key", provisionTrash);
 
       UserGroupInformation ugi = UserGroupInformation.createRemoteUser("foo");

@@ -42,7 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestEnclosingRoot extends AbstractHadoopTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestEnclosingRoot.class);
-  private final String TEST_KEY = "test_key";
+  private static final String TEST_KEY = "test_key";
   private static final EnumSet<CreateEncryptionZoneFlag> NO_TRASH =
       EnumSet.of(CreateEncryptionZoneFlag.NO_TRASH);
 
