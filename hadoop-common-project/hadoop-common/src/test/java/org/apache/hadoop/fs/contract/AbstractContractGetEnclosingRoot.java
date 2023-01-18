@@ -79,7 +79,7 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
     assertEquals(fs.getEnclosingRoot(new Path("/foo/bar")), root);
 
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("foo");
-    Path p = (Path) ugi.doAs((PrivilegedExceptionAction) () -> {
+    Path p = ugi.doAs((PrivilegedExceptionAction<Path>) () -> {
       FileSystem wFs = getContract().getTestFileSystem();
       return wFs.getEnclosingRoot(new Path("/foo/bar"));
     });

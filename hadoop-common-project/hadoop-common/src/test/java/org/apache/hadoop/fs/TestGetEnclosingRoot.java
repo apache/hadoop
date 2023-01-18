@@ -71,7 +71,7 @@ public class TestGetEnclosingRoot {
     assertEquals(fs.getEnclosingRoot(new Path("/foo/bar")), root);
 
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("foo");
-    Path p = (Path) ugi.doAs((PrivilegedExceptionAction) () -> {
+    Path p = ugi.doAs((PrivilegedExceptionAction<Path>) () -> {
       FileSystem wFs = getFileSystem();
       return wFs.getEnclosingRoot(new Path("/foo/bar"));
     });

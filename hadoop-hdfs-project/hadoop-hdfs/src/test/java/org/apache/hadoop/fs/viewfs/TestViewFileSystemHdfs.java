@@ -559,7 +559,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     LambdaTestUtils.intercept(IllegalArgumentException.class,
         ()-> fsView.getEnclosingRoot(fs1));
     LambdaTestUtils.intercept(IllegalArgumentException.class,
-        ()-> fsView.getEnclosingRoot(new Path("hdfs://fakeauthority/")));
+        ()-> fsView.getEnclosingRoot(new Path("hdfs://fakeAuthority/")));
   }
 
   @Test
@@ -576,12 +576,12 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
       hdfsAdmin.createEncryptionZone(zone1, "test_key", provisionTrash);
 
       UserGroupInformation ugi = UserGroupInformation.createRemoteUser("foo");
-      Path p = (Path) ugi.doAs((PrivilegedExceptionAction) () -> {
+      Path p = ugi.doAs((PrivilegedExceptionAction<Path>) () -> {
         FileSystem wFs = FileSystem.get(FsConstants.VIEWFS_URI, this.conf);
         return wFs.getEnclosingRoot(zone);
       });
       assertEquals(p, getViewFsPath("/data", fsView));
-      p = (Path) ugi.doAs((PrivilegedExceptionAction) () -> {
+      p = ugi.doAs((PrivilegedExceptionAction<Path>) () -> {
         FileSystem wFs = FileSystem.get(FsConstants.VIEWFS_URI, this.conf);
         return wFs.getEnclosingRoot(zone1);
       });
