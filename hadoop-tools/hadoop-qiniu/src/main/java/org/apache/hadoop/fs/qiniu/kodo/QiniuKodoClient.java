@@ -42,6 +42,8 @@ public class QiniuKodoClient {
 
     private String downloadDomain;
     private final FileSystem.Statistics statistics;
+    private final boolean useSign;
+    private final int signExpires;
 
     public QiniuKodoClient(String bucket, QiniuKodoFsConfig fsConfig, FileSystem.Statistics statistics) throws QiniuException, AuthorizationException {
         this.bucket = bucket;
@@ -68,6 +70,9 @@ public class QiniuKodoClient {
 
         // 设置下载域名，若未配置，则走源站
         if ((downloadDomain = fsConfig.download.domain) == null) downloadDomain = bucket + "." + region.getRegionEndpoint();
+
+        this.useSign = fsConfig.download.sign.enable;
+        this.signExpires = fsConfig.download.sign.expires;
     }
 
     private static Auth getAuth(QiniuKodoFsConfig fsConfig) throws AuthorizationException {
@@ -118,10 +123,6 @@ public class QiniuKodoClient {
         } catch (QiniuException e) {
             if (e.response == null) {
                 throw e;
-            }
-            if (e.response.statusCode == 416) {
-                // Requested Range not satisfiable
-                return new ByteArrayInputStream(new byte[0]);
             }
             throw new IOException(e.response.toString());
         }
@@ -343,6 +344,10 @@ public class QiniuKodoClient {
      */
     private String getFileUrlByKey(String key) throws IOException {
         DownloadUrl downloadUrl = new DownloadUrl(downloadDomain, useHttps, key);
-        return auth.privateDownloadUrl(downloadUrl.buildURL(), 7 * 24 * 3600);
+        String url = downloadUrl.buildURL();
+        if (!useSign) {
+            return url;
+        }
+        return auth.privateDownloadUrl(url, signExpires);
     }
 }
