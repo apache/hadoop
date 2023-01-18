@@ -1561,7 +1561,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       Assert.assertEquals(expectNodeId, nodeId);
     });
   }
-  
+
   @Test
   public void testGetSchedulerInfo() {
     // In this test case, we will get the return results of 4 sub-clusters.

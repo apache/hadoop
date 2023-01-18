@@ -45,7 +45,6 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -2533,8 +2532,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     // If there is a sub-cluster access error,
     // we should choose whether to throw exception information according to user configuration.
     // Send the requests in parallel.
-    CompletionService<SubClusterResult<R>> compSvc =
-        new ExecutorCompletionService<>(threadpool);
+    CompletionService<SubClusterResult<R>> compSvc = new ExecutorCompletionService<>(threadpool);
 
     // This part of the code should be able to expose the accessed Exception information.
     // We use Pair to store related information. The left value of the Pair is the response,
