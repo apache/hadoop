@@ -19,7 +19,6 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -79,7 +78,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -262,12 +260,6 @@ public class TestTaskAttemptListenerImpl {
         createTce(3, false, TaskAttemptCompletionEventStatus.FAILED) };
     TaskAttemptCompletionEvent[] mapEvents = { taskEvents[0], taskEvents[2] };
     Job mockJob = mock(Job.class);
-    lenient().when(mockJob.getTaskAttemptCompletionEvents(0, 100))
-        .thenReturn(taskEvents);
-    lenient().when(mockJob.getTaskAttemptCompletionEvents(0, 2))
-        .thenReturn(Arrays.copyOfRange(taskEvents, 0, 2));
-    lenient().when(mockJob.getTaskAttemptCompletionEvents(2, 100))
-        .thenReturn(Arrays.copyOfRange(taskEvents, 2, 4));
     when(mockJob.getMapAttemptCompletionEvents(0, 100)).thenReturn(
         TypeConverter.fromYarn(mapEvents));
     when(mockJob.getMapAttemptCompletionEvents(0, 2)).thenReturn(

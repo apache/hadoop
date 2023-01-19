@@ -69,6 +69,7 @@ public class TestRMCommunicator {
   }
 
   @Test
+  @Timeout(2000)
   public void testRMContainerAllocatorYarnRuntimeExceptionIsHandled()
       throws Exception {
     ClientService mockClientService = mock(ClientService.class);
