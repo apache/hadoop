@@ -398,22 +398,40 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
           "Unable to refreshAdminAcls due to exception. " + e.getMessage());
     }
 
+    routerMetrics.incrRefreshAdminAclsFailedRetrieved();
     throw new YarnException("Unable to refreshAdminAcls.");
   }
 
   @Override
   public RefreshServiceAclsResponse refreshServiceAcls(RefreshServiceAclsRequest request)
       throws YarnException, IOException {
-    long startTime = clock.getTime();
-    RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
-        new Class[] {RefreshServiceAclsRequest.class}, new Object[] {request});
-    String subClusterId = request.getSubClusterId();
-    Collection<RefreshServiceAclsResponse> refreshServiceAclsResps =
-        remoteMethod.invokeConcurrent(this, RefreshServiceAclsResponse.class, subClusterId);
-    if (CollectionUtils.isNotEmpty(refreshServiceAclsResps)) {
-      long stopTime = clock.getTime();
-      return RefreshServiceAclsResponse.newInstance();
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrRefreshServiceAclsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshServiceAcls request.", null);
     }
+
+    // call refreshAdminAcls of activeSubClusters.
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{RefreshServiceAclsRequest.class}, new Object[]{request});
+      String subClusterId = request.getSubClusterId();
+      Collection<RefreshServiceAclsResponse> refreshServiceAclsResps =
+          remoteMethod.invokeConcurrent(this, RefreshServiceAclsResponse.class, subClusterId);
+      if (CollectionUtils.isNotEmpty(refreshServiceAclsResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRefreshServiceAclsRetrieved(stopTime - startTime);
+        return RefreshServiceAclsResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRefreshServiceAclsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshAdminAcls due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrRefreshServiceAclsFailedRetrieved();
     throw new YarnException("Unable to refreshServiceAcls.");
   }
 
