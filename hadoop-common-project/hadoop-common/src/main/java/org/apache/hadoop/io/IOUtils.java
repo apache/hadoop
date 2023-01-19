@@ -32,7 +32,6 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -256,7 +255,7 @@ public class IOUtils {
    * instead
    */
   @Deprecated
-  public static void cleanup(Log log, java.io.Closeable... closeables) {
+  public static void cleanup(Logger log, java.io.Closeable... closeables) {
     for (java.io.Closeable c : closeables) {
       if (c != null) {
         try {

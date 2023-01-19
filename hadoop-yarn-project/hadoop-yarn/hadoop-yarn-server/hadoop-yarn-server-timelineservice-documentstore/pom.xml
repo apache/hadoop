@@ -122,6 +122,10 @@
           <groupId>io.netty</groupId>
           <artifactId>netty-handler-proxy</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>commons-logging</groupId>
+          <artifactId>commons-logging</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
   </dependencies>

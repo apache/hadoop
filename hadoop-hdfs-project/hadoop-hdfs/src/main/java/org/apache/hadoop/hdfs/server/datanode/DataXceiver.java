@@ -21,7 +21,6 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import javax.crypto.SecretKey;
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSUtilClient;
@@ -105,7 +104,7 @@ import static org.apache.hadoop.util.Time.monotonicNow;
  */
 class DataXceiver extends Receiver implements Runnable {
   public static final Logger LOG = DataNode.LOG;
-  static final Log ClientTraceLog = DataNode.ClientTraceLog;
+  static final Logger ClientTraceLog = DataNode.ClientTraceLog;
   
   private Peer peer;
   private final String remoteAddress; // address of remote side

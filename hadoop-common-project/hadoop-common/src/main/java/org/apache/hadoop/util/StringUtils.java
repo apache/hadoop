@@ -743,17 +743,6 @@ public class StringUtils {
    * @param LOG the target log object
    */
   public static void startupShutdownMessage(Class<?> clazz, String[] args,
-                                     final org.apache.commons.logging.Log LOG) {
-    startupShutdownMessage(clazz, args, LogAdapter.create(LOG));
-  }
-
-  /**
-   * Print a log message for starting up and shutting down
-   * @param clazz the class of the server
-   * @param args arguments
-   * @param LOG the target log object
-   */
-  public static void startupShutdownMessage(Class<?> clazz, String[] args,
                                      final org.slf4j.Logger LOG) {
     startupShutdownMessage(clazz, args, LogAdapter.create(LOG));
   }

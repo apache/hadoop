@@ -21,7 +21,6 @@ package org.apache.hadoop.service;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.slf4j.Logger;
@@ -65,26 +64,6 @@ public final class ServiceOperations {
    */
   public static Exception stopQuietly(Service service) {
     return stopQuietly(LOG, service);
-  }
-
-  /**
-   * Stop a service; if it is null do nothing. Exceptions are caught and
-   * logged at warn level. (but not Throwables). This operation is intended to
-   * be used in cleanup operations
-   *
-   * @param log the log to warn at
-   * @param service a service; may be null
-   * @return any exception that was caught; null if none was.
-   * @see ServiceOperations#stopQuietly(Service)
-   */
-  public static Exception stopQuietly(Log log, Service service) {
-    try {
-      stop(service);
-    } catch (Exception e) {
-      log.warn("When stopping the service " + service.getName(), e);
-      return e;
-    }
-    return null;
   }
 
   /**

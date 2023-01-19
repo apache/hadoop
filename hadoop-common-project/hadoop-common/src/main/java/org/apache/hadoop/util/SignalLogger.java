@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.util;
 
+import org.slf4j.Logger;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -68,7 +68,7 @@ public enum SignalLogger {
    *
    * @param LOG        The log4j logfile to use in the signal handlers.
    */
-  public void register(final Log LOG) {
+  public void register(final Logger LOG) {
     register(LogAdapter.create(LOG));
   }
 

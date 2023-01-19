@@ -31,8 +31,6 @@ import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.metrics2.util.MBeans;
@@ -58,11 +56,11 @@ public class MetricsLoggerTask implements Runnable {
     }
   }
 
-  private Log metricsLog;
+  private org.apache.log4j.Logger metricsLog;
   private String nodeName;
   private short maxLogLineLength;
 
-  public MetricsLoggerTask(Log metricsLog, String nodeName,
+  public MetricsLoggerTask(org.apache.log4j.Logger metricsLog, String nodeName,
       short maxLogLineLength) {
     this.metricsLog = metricsLog;
     this.nodeName = nodeName;
@@ -118,13 +116,8 @@ public class MetricsLoggerTask implements Runnable {
         .substring(0, maxLogLineLength) + "...");
   }
 
-  private static boolean hasAppenders(Log logger) {
-    if (!(logger instanceof Log4JLogger)) {
-      // Don't bother trying to determine the presence of appenders.
-      return true;
-    }
-    Log4JLogger log4JLogger = ((Log4JLogger) logger);
-    return log4JLogger.getLogger().getAllAppenders().hasMoreElements();
+  private static boolean hasAppenders(org.apache.log4j.Logger logger) {
+    return logger.getAllAppenders().hasMoreElements();
   }
 
   /**
@@ -150,13 +143,8 @@ public class MetricsLoggerTask implements Runnable {
    * Make the metrics logger async and add all pre-existing appenders to the
    * async appender.
    */
-  public static void makeMetricsLoggerAsync(Log metricsLog) {
-    if (!(metricsLog instanceof Log4JLogger)) {
-      LOG.warn("Metrics logging will not be async since "
-          + "the logger is not log4j");
-      return;
-    }
-    org.apache.log4j.Logger logger = ((Log4JLogger) metricsLog).getLogger();
+  public static void makeMetricsLoggerAsync(org.apache.log4j.Logger metricsLog) {
+    org.apache.log4j.Logger logger = metricsLog;
     logger.setAdditivity(false); // Don't pollute actual logs with metrics dump
 
     @SuppressWarnings("unchecked")

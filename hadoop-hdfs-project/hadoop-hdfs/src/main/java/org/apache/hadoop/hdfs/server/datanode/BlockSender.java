@@ -32,7 +32,6 @@ import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.hdfs.DFSUtilClient;
@@ -103,7 +102,7 @@ import org.slf4j.Logger;
  */
 class BlockSender implements java.io.Closeable {
   static final Logger LOG = DataNode.LOG;
-  static final Log ClientTraceLog = DataNode.ClientTraceLog;
+  static final Logger ClientTraceLog = DataNode.ClientTraceLog;
   private static final boolean is32Bit = 
       System.getProperty("sun.arch.data.model").equals("32");
   /**
