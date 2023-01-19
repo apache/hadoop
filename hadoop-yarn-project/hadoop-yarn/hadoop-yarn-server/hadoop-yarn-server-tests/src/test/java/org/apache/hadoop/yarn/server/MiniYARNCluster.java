@@ -457,6 +457,19 @@ public class MiniYARNCluster extends CompositeService {
   }
 
   /**
+   * Stop a MiniYarnCluster can take more than 30s what blocks the test execution,
+   * so to prevent that we can start the cluster stop asynchronously,
+   * what can decrease the test execution time.
+   * @param owner the Test class, what owns the instance of MiniYarnCluster
+   */
+  public void asyncStop(Object owner) {
+    new Thread(
+        this::stop,
+        "Async-Minicluster-Stopper-" + owner.getClass().getSimpleName()
+    ).start();
+  }
+
+  /**
    * @return the active {@link ResourceManager} of the cluster,
    * null if none of them are active.
    */
