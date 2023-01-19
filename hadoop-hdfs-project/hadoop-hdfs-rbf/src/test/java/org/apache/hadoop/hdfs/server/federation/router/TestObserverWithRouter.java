@@ -671,10 +671,13 @@ public class TestObserverWithRouter {
     activeClient.close();
 
     // Wait long enough for state in router to be considered stale.
-    GenericTestUtils.waitFor(() -> !routerContext.getRouterRpcClient().isNamespaceStateIdFresh("ns0")
-        , 100
-        , 10000
-        , "Timeout: Namespace state was never considered stale.");
+    GenericTestUtils.waitFor(
+        () -> !routerContext
+            .getRouterRpcClient()
+            .isNamespaceStateIdFresh("ns0"),
+        100,
+        10000,
+        "Timeout: Namespace state was never considered stale.");
     FileStatus[] rootFolderAfterMkdir = fileSystem.listStatus(rootPath);
     assertEquals("List-status should show newly created directories.",
         initialLengthOfRootListing + 10, rootFolderAfterMkdir.length);
