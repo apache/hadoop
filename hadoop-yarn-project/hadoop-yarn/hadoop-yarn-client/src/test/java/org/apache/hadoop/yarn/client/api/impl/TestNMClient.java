@@ -28,7 +28,6 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -42,7 +41,6 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.NMClient;
@@ -70,7 +68,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeoutException;
@@ -100,13 +97,7 @@ public class TestNMClient {
    * a container has transitioned into a state.
    */
   public static class DebugSumContainerStateListener implements ContainerStateTransitionListener {
-
-    private static final Logger LOG =
-        LoggerFactory.getLogger(DebugSumContainerStateListener.class);
-    private static final Map<ContainerId,
-        Map<org.apache.hadoop.yarn.server.nodemanager.containermanager
-            .container.ContainerState, Long>>
-        TRANSITION_COUNTER = new HashMap<>();
+    public static final Map<ContainerId, Integer> RUNNING_TRANSITIONS = new HashMap<>();
 
     public void init(Context context) {
     }
@@ -125,32 +116,12 @@ public class TestNMClient {
         org.apache.hadoop.yarn.server.nodemanager.containermanager.container
             .ContainerState afterState,
         ContainerEvent processedEvent) {
-      synchronized (TRANSITION_COUNTER) {
-        if (beforeState != afterState) {
-          ContainerId id = op.getContainerId();
-          TRANSITION_COUNTER.putIfAbsent(id, new HashMap<>());
-          long sum = TRANSITION_COUNTER.get(id)
-              .compute(afterState, (state, count) -> count == null ? 1 : count + 1);
-          LOG.info("***** " + id +
-              " Transition from " + beforeState +
-              " to " + afterState +
-              " sum:" + sum);
-        }
+      if (beforeState != afterState &&
+        afterState == org.apache.hadoop.yarn.server.nodemanager.containermanager.container
+            .ContainerState.RUNNING) {
+        RUNNING_TRANSITIONS.compute(op.getContainerId(),
+            (containerId, counter) -> counter == null ? 1 : ++counter);
       }
-    }
-
-    /**
-     * Get the current number of state transitions.
-     * This is useful to check, if an event has occurred in unit tests.
-     * @param id Container id to check
-     * @return Number of transitions to the state specified
-     */
-    static long getTransitionCounter(ContainerId id) {
-      return TRANSITION_COUNTER
-          .getOrDefault(id, new HashMap<>())
-          .getOrDefault(org.apache.hadoop.yarn.server.nodemanager
-              .containermanager.container
-              .ContainerState.RUNNING, 0L);
     }
   }
 
@@ -373,27 +344,27 @@ public class TestNMClient {
       NMClientImpl client, int i, Container container, ContainerLaunchContext clc
   ) throws YarnException, IOException, EarlyFinishException {
     testContainerStatusRunning(container);
-    waitForContainerTransitionCount(container, 1);
+    waitForContainerRunningTransitionCount(container, 1);
     testIncreaseContainerResource(container);
     testRestartContainer(container);
     testContainerStatusRunning(container, "will be Restarted");
-    waitForContainerTransitionCount(container, 2);
+    waitForContainerRunningTransitionCount(container, 2);
     if (i % 2 == 0) {
       testReInitializeContainer(container, clc, false);
       testContainerStatusRunning(container,  "will be Re-initialized");
-      waitForContainerTransitionCount(container, 3);
+      waitForContainerRunningTransitionCount(container, 3);
       testContainerRollback(container, true);
       testContainerStatusRunning(container, "will be Rolled-back");
-      waitForContainerTransitionCount(container, 4);
+      waitForContainerRunningTransitionCount(container, 4);
       testContainerCommit(container, false);
       testReInitializeContainer(container, clc, false);
       testContainerStatusRunning(container, "will be Re-initialized");
-      waitForContainerTransitionCount(container, 5);
+      waitForContainerRunningTransitionCount(container, 5);
       testContainerCommit(container, true);
     } else {
       testReInitializeContainer(container, clc, true);
       testContainerStatusRunning(container, "will be Re-initialized");
-      waitForContainerTransitionCount(container, 3);
+      waitForContainerRunningTransitionCount(container, 3);
       testContainerRollback(container, false);
       testContainerCommit(container, false);
     }
@@ -401,14 +372,10 @@ public class TestNMClient {
     testContainerStatusCompleted(container, "killed by the ApplicationMaster");
   }
 
-  /**
-   * Wait until the container reaches a state N times.
-   * @param container container to watch
-   * @param transitions the number N above
-   */
-  private void waitForContainerTransitionCount(Container container, long transitions) {
-    while (DebugSumContainerStateListener.getTransitionCounter(container.getId()) != transitions) {
-      sleep(1000);
+  private void waitForContainerRunningTransitionCount(Container container, long transitions) {
+    while (DebugSumContainerStateListener.RUNNING_TRANSITIONS
+        .getOrDefault(container.getId(), 0) != transitions) {
+      sleep(500);
     }
   }
 
