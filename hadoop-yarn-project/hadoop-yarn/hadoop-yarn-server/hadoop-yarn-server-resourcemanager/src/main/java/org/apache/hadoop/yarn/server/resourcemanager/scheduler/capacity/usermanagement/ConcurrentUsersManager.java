@@ -1,6 +1,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement;
 
-import com.google.common.collect.ImmutableSet;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,8 +39,9 @@ class ConcurrentUsersManager extends AbstractCSUsersManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(ConcurrentUsersManager.class);
 
-  private final Set<SchedulingMode> schedulingModes =
-      ImmutableSet.of(SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY, SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+  private static final Set<SchedulingMode> schedulingModes = Collections.unmodifiableSet(
+      new HashSet<>(Arrays.asList(SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY, SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY))
+  );
 
   // TODO - share threads in a global pool and enable a thread to compute user limits of multiple queues
   // If scheduler has too many queues, its not ideal to start a thread per queue
