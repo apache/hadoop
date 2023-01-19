@@ -18,16 +18,11 @@
 package org.apache.hadoop.mapred;
 
 
-import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
-import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
-import org.apache.hadoop.thirdparty.com.google.common.cache.RemovalListener;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
-import static org.apache.hadoop.io.MapFile.DATA_FILE_NAME;
-import static org.apache.hadoop.io.MapFile.INDEX_FILE_NAME;
 import static org.apache.hadoop.mapred.ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY;
 import static org.apache.hadoop.mapreduce.security.SecureShuffleUtils.HTTP_HEADER_URL_HASH;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
@@ -56,9 +51,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nonnull;
 import javax.crypto.SecretKey;
 
 import org.apache.hadoop.conf.Configuration;
@@ -515,30 +508,7 @@ public class TestShuffleHandler extends TestShuffleHandlerBase {
       return new ShuffleChannelHandlerContext(getConfig(),
           userRsrc,
           secretManager,
-          CacheBuilder.newBuilder().expireAfterAccess(
-                  5,
-                  TimeUnit.MINUTES).softValues().concurrencyLevel(16).
-              removalListener(
-                  (RemovalListener<ShuffleHandler.AttemptPathIdentifier,
-                      ShuffleHandler.AttemptPathInfo>) notification -> {
-                  }
-              ).maximumWeight(10 * 1024 * 1024).weigher(
-                  (key, value) -> key.jobId.length() + key.user.length() +
-                      key.attemptId.length() +
-                      value.indexPath.toString().length() +
-                      value.dataPath.toString().length()
-              ).build(new CacheLoader<ShuffleHandler.AttemptPathIdentifier,
-                  ShuffleHandler.AttemptPathInfo>() {
-                @Override
-                public ShuffleHandler.AttemptPathInfo load(
-                    @Nonnull ShuffleHandler.AttemptPathIdentifier key) {
-                  String base = String.format("%s/%s/%s/", tempDir, key.jobId, key.user);
-                  String attemptBase = base + key.attemptId;
-                  Path indexFileName = new Path(attemptBase + "/" + INDEX_FILE_NAME);
-                  Path mapOutputFileName = new Path(attemptBase + "/" + DATA_FILE_NAME);
-                  return new ShuffleHandler.AttemptPathInfo(indexFileName, mapOutputFileName);
-                }
-              }),
+          createLoadingCache(),
           new IndexCache(new JobConf(getConfig())),
           ms.register(new ShuffleHandler.ShuffleMetrics()),
           allChannels

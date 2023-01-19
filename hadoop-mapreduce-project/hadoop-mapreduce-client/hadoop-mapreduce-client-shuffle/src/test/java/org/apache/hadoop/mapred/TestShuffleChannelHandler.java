@@ -27,17 +27,13 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.FileRegion;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.handler.codec.Headers;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpObjectDecoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
@@ -48,8 +44,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
-import io.netty.util.CharsetUtil;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
 import java.io.ByteArrayOutputStream;
@@ -69,7 +63,6 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nonnull;
 import javax.crypto.SecretKey;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -77,7 +70,6 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
@@ -88,9 +80,6 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
-import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
-import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
-import org.apache.hadoop.thirdparty.com.google.common.cache.RemovalListener;
 import org.eclipse.jetty.http.HttpHeader;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
@@ -98,8 +87,6 @@ import org.slf4j.LoggerFactory;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static org.apache.hadoop.io.MapFile.DATA_FILE_NAME;
-import static org.apache.hadoop.io.MapFile.INDEX_FILE_NAME;
 import static org.apache.hadoop.mapred.ShuffleChannelHandler.shuffleHeaderToBytes;
 import static org.apache.hadoop.mapred.ShuffleChannelInitializer.MAX_CONTENT_LENGTH;
 import static org.apache.hadoop.mapred.ShuffleHandler.CONNECTION_CLOSE;
@@ -276,7 +263,7 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
   }
 
   private ShuffleTest createShuffleTest(Configuration conf) {
-    return new ShuffleTest(conf, tempDir.toAbsolutePath().toString());
+    return new ShuffleTest(conf);
   }
 
   private File getResourceFile(String resourceName) {
@@ -299,36 +286,13 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
     private final ShuffleChannelHandlerContext ctx;
     private final SecretKey shuffleSecretKey;
 
-    ShuffleTest(Configuration conf, String tempDir) {
+    ShuffleTest(Configuration conf) {
       JobConf jobConf = new JobConf(conf);
       MetricsSystem ms = DefaultMetricsSystem.instance();
       this.ctx = new ShuffleChannelHandlerContext(conf,
           new ConcurrentHashMap<>(),
           new JobTokenSecretManager(),
-          CacheBuilder.newBuilder().expireAfterAccess(
-                  5,
-                  TimeUnit.MINUTES).softValues().concurrencyLevel(16).
-              removalListener(
-                  (RemovalListener<ShuffleHandler.AttemptPathIdentifier,
-                      ShuffleHandler.AttemptPathInfo>) notification -> {
-                  }
-              ).maximumWeight(10 * 1024 * 1024).weigher(
-                  (key, value) -> key.jobId.length() + key.user.length() +
-                      key.attemptId.length() +
-                      value.indexPath.toString().length() +
-                      value.dataPath.toString().length()
-              ).build(new CacheLoader<ShuffleHandler.AttemptPathIdentifier,
-                  ShuffleHandler.AttemptPathInfo>() {
-                @Override
-                public ShuffleHandler.AttemptPathInfo load(
-                    @Nonnull ShuffleHandler.AttemptPathIdentifier key) {
-                  String base = String.format("%s/%s/%s/", tempDir, key.jobId, key.user);
-                  String attemptBase = base + key.attemptId;
-                  Path indexFileName = new Path(attemptBase + "/" + INDEX_FILE_NAME);
-                  Path mapOutputFileName = new Path(attemptBase + "/" + DATA_FILE_NAME);
-                  return new ShuffleHandler.AttemptPathInfo(indexFileName, mapOutputFileName);
-                }
-              }),
+          createLoadingCache(),
           new IndexCache(jobConf),
           ms.register(new ShuffleHandler.ShuffleMetrics()),
           new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)

@@ -233,7 +233,9 @@ public class ShuffleHandler extends AuxiliaryService {
     }
   }
 
+  @SuppressWarnings("checkstyle:VisibilityModifier")
   protected final MetricsSystem ms;
+  @SuppressWarnings("checkstyle:VisibilityModifier")
   final ShuffleMetrics metrics;
 
   ShuffleHandler(MetricsSystem ms) {
@@ -250,18 +252,20 @@ public class ShuffleHandler extends AuxiliaryService {
    * Serialize the shuffle port into a ByteBuffer for use later on.
    * @param port the port to be sent to the ApplciationMaster
    * @return the serialized form of the port.
+   * @throws IOException on failure
    */
   public static ByteBuffer serializeMetaData(int port) throws IOException {
     //TODO these bytes should be versioned
-    DataOutputBuffer port_dob = new DataOutputBuffer();
-    port_dob.writeInt(port);
-    return ByteBuffer.wrap(port_dob.getData(), 0, port_dob.getLength());
+    DataOutputBuffer portDob = new DataOutputBuffer();
+    portDob.writeInt(port);
+    return ByteBuffer.wrap(portDob.getData(), 0, portDob.getLength());
   }
 
   /**
    * A helper function to deserialize the metadata returned by ShuffleHandler.
    * @param meta the metadata returned by the ShuffleHandler
    * @return the port the Shuffle Handler is listening on to serve shuffle data.
+   * @throws IOException on failure
    */
   public static int deserializeMetaData(ByteBuffer meta) throws IOException {
     //TODO this should be returning a class not just an int
@@ -277,13 +281,14 @@ public class ShuffleHandler extends AuxiliaryService {
    * @param jobToken the job token to be used for authentication of
    * shuffle data requests.
    * @return the serialized version of the jobToken.
+   * @throws IOException on failure
    */
   public static ByteBuffer serializeServiceData(Token<JobTokenIdentifier> jobToken)
       throws IOException {
     //TODO these bytes should be versioned
-    DataOutputBuffer jobToken_dob = new DataOutputBuffer();
-    jobToken.write(jobToken_dob);
-    return ByteBuffer.wrap(jobToken_dob.getData(), 0, jobToken_dob.getLength());
+    DataOutputBuffer jobTokenDob = new DataOutputBuffer();
+    jobToken.write(jobTokenDob);
+    return ByteBuffer.wrap(jobTokenDob.getData(), 0, jobTokenDob.getLength());
   }
 
   public static Token<JobTokenIdentifier> deserializeServiceData(ByteBuffer secret)

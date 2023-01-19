@@ -59,11 +59,14 @@ public class ShuffleChannelInitializer extends ChannelInitializer<SocketChannel>
     pipeline.addLast("aggregator", new HttpObjectAggregator(MAX_CONTENT_LENGTH));
     pipeline.addLast("chunking", new ChunkedWriteHandler());
 
-    // An EventExecutorGroup could be specified to run in a different thread than an I/O thread so that the I/O thread
-    // is not blocked by a time-consuming task: https://netty.io/4.1/api/io/netty/channel/ChannelPipeline.html
+    // An EventExecutorGroup could be specified to run in a
+    // different thread than an I/O thread so that the I/O thread
+    // is not blocked by a time-consuming task:
+    // https://netty.io/4.1/api/io/netty/channel/ChannelPipeline.html
     pipeline.addLast("shuffle", new ShuffleChannelHandler(handlerContext));
 
-    pipeline.addLast(TIMEOUT_HANDLER, new ShuffleHandler.TimeoutHandler(handlerContext.connectionKeepAliveTimeOut));
+    pipeline.addLast(TIMEOUT_HANDLER,
+        new ShuffleHandler.TimeoutHandler(handlerContext.connectionKeepAliveTimeOut));
     // TODO factor security manager into pipeline
     // TODO factor out encode/decode to permit binary shuffle
     // TODO factor out decode of index to permit alt. models

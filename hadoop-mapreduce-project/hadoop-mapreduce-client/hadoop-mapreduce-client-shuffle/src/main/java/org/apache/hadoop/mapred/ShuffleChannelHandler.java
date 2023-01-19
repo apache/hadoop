@@ -89,8 +89,10 @@ import static org.apache.hadoop.mapred.ShuffleHandler.LOG;
  * <pre>
  * Example Request
  * ===================
- * GET /mapOutput?job=job_1111111111111_0001&reduce=0&map=attempt_1111111111111_0001_m_000001_0,
- *     attempt_1111111111111_0002_m_000002_0,attempt_1111111111111_0003_m_000003_0 HTTP/1.1
+ * GET /mapOutput?job=job_1111111111111_0001&amp;reduce=0&amp;
+ *     map=attempt_1111111111111_0001_m_000001_0,
+ *     attempt_1111111111111_0002_m_000002_0,
+ *     attempt_1111111111111_0003_m_000003_0 HTTP/1.1
  * name: mapreduce
  * version: 1.0.0
  * UrlHash: 9zS++qE0/7/D2l1Rg0TqRoSguAk=

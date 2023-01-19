@@ -29,11 +29,18 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nonnull;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.RemovalListener;
 import org.junit.After;
 import org.junit.Before;
 
@@ -133,5 +140,33 @@ public class TestShuffleHandlerBase {
     return String.format("/mapOutput?job=%s&reduce=%d&map=%s%s",
         jobId, reduce, String.join(",", maps),
         keepAlive ? "&keepAlive=true" : "");
+  }
+
+  public LoadingCache<ShuffleHandler.AttemptPathIdentifier,
+      ShuffleHandler.AttemptPathInfo> createLoadingCache() {
+    return CacheBuilder.newBuilder().expireAfterAccess(
+            5,
+            TimeUnit.MINUTES).softValues().concurrencyLevel(16).
+        removalListener(
+            (RemovalListener<ShuffleHandler.AttemptPathIdentifier,
+                ShuffleHandler.AttemptPathInfo>) notification -> {
+            }
+        ).maximumWeight(10 * 1024 * 1024).weigher(
+            (key, value) -> key.jobId.length() + key.user.length() +
+                key.attemptId.length() +
+                value.indexPath.toString().length() +
+                value.dataPath.toString().length()
+        ).build(new CacheLoader<ShuffleHandler.AttemptPathIdentifier,
+            ShuffleHandler.AttemptPathInfo>() {
+          @Override
+          public ShuffleHandler.AttemptPathInfo load(
+              @Nonnull ShuffleHandler.AttemptPathIdentifier key) {
+            String base = String.format("%s/%s/%s/", tempDir, key.jobId, key.user);
+            String attemptBase = base + key.attemptId;
+            Path indexFileName = new Path(attemptBase + "/" + INDEX_FILE_NAME);
+            Path mapOutputFileName = new Path(attemptBase + "/" + DATA_FILE_NAME);
+            return new ShuffleHandler.AttemptPathInfo(indexFileName, mapOutputFileName);
+          }
+        });
   }
 }
