@@ -31,7 +31,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Abstract
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -46,7 +45,6 @@ import org.apache.hadoop.classification.VisibleForTesting;
  * {@link UsersManager} tracks users in the system and its respective data
  * structures.
  */
-@Private
 // TODO - make UsersManager package private
 public class UsersManager extends AbstractCSUsersManager {
 
