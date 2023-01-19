@@ -19,39 +19,32 @@ package org.apache.hadoop.util;
 
 import org.slf4j.Logger;
 
+@Deprecated
 class LogAdapter {
 
-  private final Logger LOGGER;
+  private final Logger logger;
 
-  private LogAdapter(Logger LOGGER) {
-    this.LOGGER = LOGGER;
+  private LogAdapter(Logger logger) {
+    this.logger = logger;
   }
 
-  public static LogAdapter create(Logger LOGGER) {
-    return new LogAdapter(LOGGER);
+  public static LogAdapter create(Logger logger) {
+    return new LogAdapter(logger);
   }
 
   public void info(String msg) {
-    if (LOGGER != null) {
-      LOGGER.info(msg);
-    }
+    logger.info(msg);
   }
 
   public void warn(String msg, Throwable t) {
-    if (LOGGER != null) {
-      LOGGER.warn(msg, t);
-    }
+    logger.warn(msg, t);
   }
 
   public void debug(Throwable t) {
-    if (LOGGER != null) {
-      LOGGER.debug("", t);
-    }
+    logger.debug("", t);
   }
 
   public void error(String msg) {
-    if (LOGGER != null) {
-      LOGGER.error(msg);
-    }
+    logger.error(msg);
   }
 }

@@ -62,7 +62,7 @@ public class TestAuditLogAtDebug {
                Joiner.on(",").join(debugCommands.get()));
     }
     logger.initialize(conf);
-    GenericTestUtils.setLogLevel(FSNamesystem.auditLog, level);
+    GenericTestUtils.setLogLevel(FSNamesystem.AUDIT_LOG, level);
     return spy(logger);
   }
   

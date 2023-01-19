@@ -21,6 +21,7 @@ package org.apache.hadoop.util;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -37,6 +38,14 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
 public class TestJarFinder {
+
+  @Test
+  public void testJar() throws Exception {
+
+    //picking a class that is for sure in a JAR in the classpath
+    String jar = JarFinder.getJar(LoggerFactory.class);
+    Assert.assertTrue(new File(jar).exists());
+  }
 
   private static void delete(File file) throws IOException {
     if (file.getAbsolutePath().length() < 5) {

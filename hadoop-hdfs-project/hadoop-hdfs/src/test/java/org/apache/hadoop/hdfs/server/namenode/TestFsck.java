@@ -251,7 +251,7 @@ public class TestFsck {
     if (file.exists()) {
       file.delete();
     }
-    Logger logger = FSNamesystem.auditLog;
+    Logger logger = FSNamesystem.AUDIT_LOG;
     logger.removeAllAppenders();
     logger.setLevel(Level.INFO);
     PatternLayout layout = new PatternLayout("%m%n");
@@ -290,7 +290,7 @@ public class TestFsck {
       if (reader != null) {
         reader.close();
       }
-      Logger logger = FSNamesystem.auditLog;
+      Logger logger = FSNamesystem.AUDIT_LOG;
       if (logger != null) {
         logger.removeAllAppenders();
       }

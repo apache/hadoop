@@ -375,21 +375,5 @@ public class LogLevel {
           + "Effective Level: <b>" + log.getEffectiveLevel() + "</b><br />");
     }
 
-    private static void process(java.util.logging.Logger log, String level,
-        PrintWriter out) throws IOException {
-      if (level != null) {
-        String levelToUpperCase = level.toUpperCase();
-        try {
-          log.setLevel(java.util.logging.Level.parse(levelToUpperCase));
-        } catch (IllegalArgumentException e) {
-          out.println(MARKER + "Bad Level : <b>" + level + "</b><br />");
-        }
-        out.println(MARKER + "Setting Level to " + level + " ...<br />");
-      }
-
-      java.util.logging.Level lev;
-      for(; (lev = log.getLevel()) == null; log = log.getParent());
-      out.println(MARKER + "Effective Level: <b>" + lev + "</b><br />");
-    }
   }
 }

@@ -317,7 +317,7 @@ public class DataNode extends ReconfigurableBase
         ", blockid: %s" + // block id
         ", duration(ns): %s";  // duration time
 
-  static final Logger ClientTraceLog =
+  static final Logger CLIENT_TRACE_LOG =
       LoggerFactory.getLogger(DataNode.class.getName() + ".clienttrace");
   
   private static final String USAGE =

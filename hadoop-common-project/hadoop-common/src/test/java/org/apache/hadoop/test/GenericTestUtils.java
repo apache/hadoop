@@ -132,11 +132,6 @@ public abstract class GenericTestUtils {
     disableLog(toLog4j(logger));
   }
 
-  /**
-   * @deprecated
-   * use {@link #setLogLevel(org.slf4j.Logger, org.slf4j.event.Level)} instead
-   */
-  @Deprecated
   public static void setLogLevel(Logger logger, Level level) {
     logger.setLevel(level);
   }
