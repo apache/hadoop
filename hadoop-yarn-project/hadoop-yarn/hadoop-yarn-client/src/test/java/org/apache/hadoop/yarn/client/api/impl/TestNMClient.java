@@ -83,6 +83,7 @@ public class TestNMClient {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestNMClient.class);
   private static final int MAX_EARLY_FINISH = 3;
+  private static final int NUMBER_OF_CONTAINERS = 5;
   private Configuration conf;
   private MiniYARNCluster yarnCluster;
   private YarnClientImpl yarnClient;
@@ -204,7 +205,7 @@ public class TestNMClient {
       try {
         setup();
         rmClient.registerApplicationMaster("Host", 10_000, "");
-        testContainerManagement(nmClient, allocateContainers(rmClient, 5));
+        testContainerManagement(nmClient, allocateContainers(rmClient));
         rmClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, null, null);
         stopNmClient();
         assertFalse(nmClient.startedContainers.isEmpty());
@@ -230,7 +231,7 @@ public class TestNMClient {
       try {
         setup();
         rmClient.registerApplicationMaster("Host", 10_000, "");
-        testContainerManagement(nmClient, allocateContainers(rmClient, 5));
+        testContainerManagement(nmClient, allocateContainers(rmClient));
         rmClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, null, null);
         // stop the running containers on close
         assertFalse(nmClient.startedContainers.isEmpty());
@@ -261,9 +262,9 @@ public class TestNMClient {
   }
 
   private Set<Container> allocateContainers(
-      AMRMClientImpl<ContainerRequest> rmClient, int num
+      AMRMClientImpl<ContainerRequest> rmClient
   ) throws YarnException, IOException {
-    for (int i = 0; i < num; ++i) {
+    for (int i = 0; i < NUMBER_OF_CONTAINERS; ++i) {
       rmClient.addContainerRequest(new ContainerRequest(
           Resource.newInstance(256, 0),
           new String[] {nodeReports.get(0).getNodeId().getHost()},
@@ -272,13 +273,13 @@ public class TestNMClient {
       ));
     }
     Set<Container> allocateContainers = new TreeSet<>();
-    while (allocateContainers.size() < num) {
+    while (allocateContainers.size() < NUMBER_OF_CONTAINERS) {
       AllocateResponse allocResponse = rmClient.allocate(0.1f);
       allocateContainers.addAll(allocResponse.getAllocatedContainers());
       for (NMToken token : allocResponse.getNMTokens()) {
         rmClient.getNMTokenCache().setToken(token.getNodeId().toString(), token.getToken());
       }
-      if (allocateContainers.size() < num) {
+      if (allocateContainers.size() < NUMBER_OF_CONTAINERS) {
         sleep(100);
       }
     }
@@ -382,7 +383,8 @@ public class TestNMClient {
   private void testContainerStatusRunning(
       Container container, String... diagnostics
   ) throws YarnException, IOException, EarlyFinishException {
-    ContainerStatus actualStatus = nmClient.getContainerStatus(container.getId(), container.getNodeId());
+    ContainerStatus actualStatus = nmClient
+        .getContainerStatus(container.getId(), container.getNodeId());
     while (ContainerState.NEW == actualStatus.getState()) {
       sleep(100);
       actualStatus = nmClient.getContainerStatus(container.getId(), container.getNodeId());
@@ -402,7 +404,8 @@ public class TestNMClient {
   private void testContainerStatusCompleted(
       Container container, String... diagnostics
   ) throws YarnException, IOException {
-    ContainerStatus actualStatus = nmClient.getContainerStatus(container.getId(), container.getNodeId());
+    ContainerStatus actualStatus = nmClient
+        .getContainerStatus(container.getId(), container.getNodeId());
     while (ContainerState.COMPLETE != actualStatus.getState()) {
       sleep(100);
       actualStatus = nmClient.getContainerStatus(container.getId(), container.getNodeId());
