@@ -22,6 +22,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNod
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -55,8 +56,13 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
@@ -789,6 +795,7 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected AdminService createAdminService() {
+    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
     return new AdminService(this) {
       @Override
       protected void startServer() {
@@ -798,6 +805,19 @@ public class MockRM extends ResourceManager {
       @Override
       protected void stopServer() {
         // don't do anything
+      }
+
+      @Override
+      public RefreshServiceAclsResponse refreshServiceAcls(RefreshServiceAclsRequest request)
+          throws YarnException, IOException {
+        Configuration config = this.getConfig();
+        boolean authorization =
+            config.getBoolean(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, false);
+        if (!authorization) {
+          throw RPCUtil.getRemoteException(new IOException("Service Authorization (" +
+              CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION + ") not enabled."));
+        }
+        return recordFactory.newRecordInstance(RefreshServiceAclsResponse.class);
       }
     };
   }
