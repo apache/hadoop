@@ -203,7 +203,7 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
 
   public static final String DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_KEY =
       FEDERATION_ROUTER_PREFIX + "observer.state.id.refresh.period";
-  public static final String DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_DEFAULT = "5s";
+  public static final String DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_DEFAULT = "15s";
 
   public static final String FEDERATION_STORE_SERIALIZER_CLASS =
       FEDERATION_STORE_PREFIX + "serializer";

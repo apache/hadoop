@@ -867,7 +867,7 @@
 
   <property>
     <name>dfs.federation.router.observer.state.id.refresh.period</name>
-    <value>5s</value>
+    <value>15s</value>
     <description>
       Period to refresh namespace stateID using active namenode. This ensures the
       namespace stateID is refresh even when an observer is trailing behind.

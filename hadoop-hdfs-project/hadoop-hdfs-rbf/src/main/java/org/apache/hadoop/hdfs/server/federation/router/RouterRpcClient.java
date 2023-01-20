@@ -146,7 +146,7 @@ public class RouterRpcClient {
    */
   private long activeNNStateIdRefreshPeriodMs;
   /** Last msync times for each namespace. */
-  private final Map<String, LongAccumulator> lastActiveNNRefreshTimes;
+  private final ConcurrentHashMap<String, LongAccumulator> lastActiveNNRefreshTimes;
 
   /** Pattern to parse a stack trace line. */
   private static final Pattern STACK_TRACE_PATTERN =
@@ -234,7 +234,13 @@ public class RouterRpcClient {
         RBFConfigKeys.DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_KEY,
         RBFConfigKeys.DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_DEFAULT,
         TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
-    this.lastActiveNNRefreshTimes = new HashMap<>();
+    if (activeNNStateIdRefreshPeriodMs < 0) {
+      LOG.info("Periodic stateId freshness check is disabled"
+              + " since '{}' is {}ms, which is less than 0.",
+          RBFConfigKeys.DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_KEY,
+          activeNNStateIdRefreshPeriodMs);
+    }
+    this.lastActiveNNRefreshTimes = new ConcurrentHashMap<>();
   }
 
   /**
@@ -1760,29 +1766,20 @@ public class RouterRpcClient {
   @VisibleForTesting
   boolean isNamespaceStateIdFresh(String nsId) {
     if (activeNNStateIdRefreshPeriodMs < 0) {
-      LOG.debug("Skipping freshness check and returning True since"
-          + RBFConfigKeys.DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_KEY
-          + " is less than 0");
       return true;
     }
 
-    Call call = Server.getCurCall().get();
-    long callStartTime = call != null ? (call.getTimestampNanos() / 1000000L)
-        : Time.monotonicNow();
-    LongAccumulator latestRefreshTime = lastActiveNNRefreshTimes
+    long currentTimeMs = Time.monotonicNow();
+    LongAccumulator latestRefreshTimeMs = lastActiveNNRefreshTimes
         .computeIfAbsent(nsId, key -> new LongAccumulator(Math::max, 0));
 
-    if (callStartTime - latestRefreshTime.get() > activeNNStateIdRefreshPeriodMs) {
-      return false;
-    }
-
-    return true;
+    return ((currentTimeMs - latestRefreshTimeMs.get()) <= activeNNStateIdRefreshPeriodMs);
   }
 
   private void refreshTimeOfLastCallToActiveNameNode(String namespaceId) {
-    LongAccumulator latestRefreshTime = lastActiveNNRefreshTimes
+    LongAccumulator latestRefreshTimeMs = lastActiveNNRefreshTimes
         .computeIfAbsent(namespaceId, key -> new LongAccumulator(Math::max, 0));
-    long requestTime = Time.monotonicNow();
-    latestRefreshTime.accumulate(requestTime);
+    long requestTimeMs = Time.monotonicNow();
+    latestRefreshTimeMs.accumulate(requestTimeMs);
   }
 }
