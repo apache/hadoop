@@ -273,14 +273,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     private boolean deleteDir(String dirKey, boolean recursive) throws IOException {
         dirKey = QiniuKodoUtils.keyToDirKey(dirKey);
         LOG.debug("== deleteDir, dirKey:" + dirKey + " recursive:" + recursive);
-
-        List<FileInfo> files = kodoClient.listStatus(dirKey, false);
-
-        // 有子文件文件，但未 recursive 抛出异常
-        if (files.size() > 0 && !recursive) {
-            throw new IOException("file is not empty");
-        }
-        return kodoClient.deleteKeys(dirKey);
+        return kodoClient.deleteKeys(dirKey, recursive);
     }
 
     @Override

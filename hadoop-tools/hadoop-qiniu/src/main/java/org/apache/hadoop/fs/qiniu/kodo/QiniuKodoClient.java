@@ -34,7 +34,7 @@ public class QiniuKodoClient {
     private final Client client;
 
     private final UploadManager uploadManager;
-    private final BucketManager bucketManager;
+    public final BucketManager bucketManager;
 
     private QiniuKodoRegionManager.QiniuKodoRegion region;
 
@@ -267,7 +267,7 @@ public class QiniuKodoClient {
     /**
      * 删除该前缀的所有文件夹
      */
-    public boolean deleteKeys(String prefix) throws IOException {
+    public boolean deleteKeys(String prefix, boolean recursive) throws IOException {
         boolean hasPrefixObject = false;
 
         FileListing fileListing;
@@ -277,6 +277,13 @@ public class QiniuKodoClient {
 
         do {
             fileListing = bucketManager.listFilesV2(bucket, prefix, marker, 100, "");
+            for (FileInfo file: fileListing.items) {
+                // 略过自身
+                if (file.key.equals(prefix)) continue;
+                // 除去自身外还有子文件文件，但未 recursive 抛出异常
+                if (!recursive) throw new IOException("file" + prefix + "is not empty");
+            }
+
             if (statistics != null) statistics.incrementReadOps(1);
 
             if (fileListing.items != null) {
