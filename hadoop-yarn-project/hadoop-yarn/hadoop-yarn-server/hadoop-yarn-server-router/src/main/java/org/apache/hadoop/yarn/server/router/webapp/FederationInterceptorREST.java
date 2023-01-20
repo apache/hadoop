@@ -45,7 +45,6 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -123,6 +122,7 @@ import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.SubClusterResult;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
@@ -2590,7 +2590,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     // If there is a sub-cluster access error,
     // we should choose whether to throw exception information according to user configuration.
     // Send the requests in parallel.
-    CompletionService<Pair<R, Exception>> compSvc = new ExecutorCompletionService<>(threadpool);
+    CompletionService<SubClusterResult<R>> compSvc = new ExecutorCompletionService<>(threadpool);
 
     // This part of the code should be able to expose the accessed Exception information.
     // We use Pair to store related information. The left value of the Pair is the response,
@@ -2606,36 +2606,41 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
               getMethod(request.getMethodName(), request.getTypes());
           Object retObj = method.invoke(interceptor, request.getParams());
           R ret = clazz.cast(retObj);
-          return Pair.of(ret, null);
+          return new SubClusterResult<>(info, ret, null);
         } catch (Exception e) {
           LOG.error("SubCluster {} failed to call {} method.",
               info.getSubClusterId(), request.getMethodName(), e);
-          return Pair.of(null, e);
+          return new SubClusterResult<>(info, null, e);
         }
       });
     }
 
-    clusterIds.stream().forEach(clusterId -> {
+    for (int i = 0; i < clusterIds.size(); i++) {
+      SubClusterInfo subClusterInfo = null;
       try {
-        Future<Pair<R, Exception>> future = compSvc.take();
-        Pair<R, Exception> pair = future.get();
-        R response = pair.getKey();
+        Future<SubClusterResult<R>> future = compSvc.take();
+        SubClusterResult<R> result = future.get();
+        subClusterInfo = result.getSubClusterInfo();
+
+        R response = result.getResponse();
         if (response != null) {
-          results.put(clusterId, response);
+          results.put(subClusterInfo, response);
         }
-        Exception exception = pair.getValue();
+
+        Exception exception = result.getException();
+
         // If allowPartialResult=false, it means that if an exception occurs in a subCluster,
         // an exception will be thrown directly.
         if (!allowPartialResult && exception != null) {
           throw exception;
         }
       } catch (Throwable e) {
-        String msg = String.format("SubCluster %s failed to %s report.",
-            clusterId.getSubClusterId(), request.getMethodName());
-        LOG.error(msg, e);
+        String subClusterId = subClusterInfo != null ?
+            subClusterInfo.getSubClusterId().getId() : "UNKNOWN";
+        LOG.error("SubCluster {} failed to {} report.", subClusterId, request.getMethodName(), e);
         throw new YarnRuntimeException(e.getCause().getMessage(), e);
       }
-    });
+    }
 
     return results;
   }
@@ -2705,5 +2710,17 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   public void setAllowPartialResult(boolean allowPartialResult) {
     this.allowPartialResult = allowPartialResult;
+  }
+
+  @VisibleForTesting
+  public Map<SubClusterInfo, NodesInfo> invokeConcurrentGetNodeLabel()
+      throws IOException, YarnException {
+    Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+    Class[] argsClasses = new Class[]{String.class};
+    Object[] args = new Object[]{null};
+    ClientMethod remoteMethod = new ClientMethod("getNodes", argsClasses, args);
+    Map<SubClusterInfo, NodesInfo> nodesMap =
+        invokeConcurrent(subClustersActive.values(), remoteMethod, NodesInfo.class);
+    return nodesMap;
   }
 }
