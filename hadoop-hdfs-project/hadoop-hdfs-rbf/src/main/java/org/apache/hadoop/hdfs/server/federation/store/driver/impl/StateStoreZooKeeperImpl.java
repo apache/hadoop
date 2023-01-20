@@ -260,7 +260,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
     );
     try {
       if (enableConcurrent) {
-          executorService.invokeAll(callables);
+        executorService.invokeAll(callables);
       } else {
         for(Callable<Void> callable : callables) {
           callable.call();
