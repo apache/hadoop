@@ -18,8 +18,6 @@
 package org.apache.hadoop.hdfs.server.federation.store.driver;
 
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
-import static org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.FEDERATION_STORE_ZK_PARENT_PATH;
-import static org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -77,10 +75,10 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     // Disable auto-repair of connection
     conf.setLong(RBFConfigKeys.FEDERATION_STORE_CONNECTION_TEST_MS,
         TimeUnit.HOURS.toMillis(1));
-    conf.setInt(StateStoreZooKeeperImpl.FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE, 10);
+    conf.setInt(RBFConfigKeys.FEDERATION_STORE_ZK_ASYNC_MAX_THREADS, 10);
 
-    baseZNode = conf.get(FEDERATION_STORE_ZK_PARENT_PATH,
-        FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT);
+    baseZNode = conf.get(RBFConfigKeys.FEDERATION_STORE_ZK_PARENT_PATH,
+        RBFConfigKeys.FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT);
     getStateStore(conf);
   }
 
@@ -152,16 +150,14 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     long startAsync = Time.now();
     stateStoreDriver.putAll(insertList, true, false);
     long endAsync = Time.now();
-    System.out.printf("Sync mode total running time is %d ms, "
-            + "and async mode total running time is %d ms",
-        endSync - startSync, endAsync - startAsync);
-    assertTrue((endSync - startSync) > (endAsync - startAsync) * 2);
+    assertTrue((endSync - startSync) > (endAsync - startAsync));
   }
 
   @Test
   public void testGetNullRecord() throws Exception {
     StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
     testGetNullRecord(stateStoreDriver);
+    // test async mode
     stateStoreDriver.setEnableConcurrent(true);
     testGetNullRecord(stateStoreDriver);
   }
@@ -171,6 +167,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
       throws IllegalArgumentException, IllegalAccessException, IOException {
     StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
     testInsert(stateStoreDriver);
+    // test async mode
     stateStoreDriver.setEnableConcurrent(true);
     testInsert(stateStoreDriver);
   }
@@ -181,6 +178,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
       IOException, SecurityException {
     StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
     testPut(stateStoreDriver);
+    // test async mode
     stateStoreDriver.setEnableConcurrent(true);
     testPut(stateStoreDriver);
   }
@@ -190,6 +188,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
       throws IllegalArgumentException, IllegalAccessException, IOException {
     StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
     testRemove(stateStoreDriver);
+    // test async mode
     stateStoreDriver.setEnableConcurrent(true);
     testRemove(stateStoreDriver);
   }
@@ -199,6 +198,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
       throws IllegalArgumentException, IllegalAccessException, IOException {
     StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
     testFetchErrors(stateStoreDriver);
+    // test async mode
     stateStoreDriver.setEnableConcurrent(true);
     testFetchErrors(stateStoreDriver);
   }

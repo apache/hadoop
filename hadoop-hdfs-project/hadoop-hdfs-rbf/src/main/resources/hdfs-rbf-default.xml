@@ -378,13 +378,13 @@
   </property>
 
   <property>
-    <name>dfs.federation.router.store.driver.zk.client.size</name>
+    <name>dfs.federation.router.store.driver.zk.async.max.threads</name>
     <value>-1</value>
     <description>
-      Client threads size of StateStoreZooKeeperImpl in async mode.
+      Max threads number of StateStoreZooKeeperImpl in async mode.
       The only class currently being supported:
       org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.
-      Default value is -1, which means StateStoreZooKeeperImpl working is in sync mode.
+      Default value is -1, which means StateStoreZooKeeperImpl is working in sync mode.
       Use positive integer value to enable async mode.
     </description>
   </property>

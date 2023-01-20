@@ -66,17 +66,6 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
   private static final Logger LOG =
       LoggerFactory.getLogger(StateStoreZooKeeperImpl.class);
 
-
-  /** Configuration keys. */
-  public static final String FEDERATION_STORE_ZK_DRIVER_PREFIX =
-      RBFConfigKeys.FEDERATION_STORE_PREFIX + "driver.zk.";
-  public static final String FEDERATION_STORE_ZK_PARENT_PATH =
-      FEDERATION_STORE_ZK_DRIVER_PREFIX + "parent-path";
-  public static final String FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE =
-      FEDERATION_STORE_ZK_DRIVER_PREFIX + "client.size";
-  public static final int FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE_DEFAULT = -1;
-  public static final String FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT =
-      "/hdfs-federation";
   /** Service to get/update zk state. */
   private ThreadPoolExecutor executorService;
   private boolean enableConcurrent;
@@ -97,11 +86,11 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
 
     Configuration conf = getConf();
     baseZNode = conf.get(
-        FEDERATION_STORE_ZK_PARENT_PATH,
-        FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT);
+        RBFConfigKeys.FEDERATION_STORE_ZK_PARENT_PATH,
+        RBFConfigKeys.FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT);
     int numThreads = conf.getInt(
-        FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE,
-        FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE_DEFAULT);
+        RBFConfigKeys.FEDERATION_STORE_ZK_ASYNC_MAX_THREADS,
+        RBFConfigKeys.FEDERATION_STORE_ZK_ASYNC_MAX_THREADS_DEFAULT);
     enableConcurrent = numThreads > 0;
     if (enableConcurrent) {
       ThreadFactory threadFactory = new ThreadFactoryBuilder()
@@ -145,7 +134,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
 
   @Override
   public void close() throws Exception {
-    if(executorService != null) {
+    if (executorService != null) {
       executorService.shutdown();
     }
     if (zkManager  != null) {
@@ -173,10 +162,9 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
     List<T> ret = new ArrayList<>();
     String znode = getZNodeForClass(clazz);
     try {
-      List<String> children = zkManager.getChildren(znode);
       List<Callable<T>> callables = new ArrayList<>();
+      zkManager.getChildren(znode).forEach(c -> callables.add(() -> getRecord(clazz, znode, c)));
       if (enableConcurrent) {
-        children.forEach(child -> callables.add(() -> getRecord(clazz, znode, child)));
         List<Future<T>> futures = executorService.invokeAll(callables);
         for (Future<T> future : futures) {
           if (future.get() != null) {
@@ -184,12 +172,12 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
           }
         }
       } else {
-        children.forEach(child -> {
-          T record = getRecord(clazz, znode, child);
+        for (Callable<T> callable : callables) {
+          T record = callable.call();
           if (record != null) {
             ret.add(record);
           }
-        });
+        }
       }
     } catch (Exception e) {
       getMetrics().addFailure(monotonicNow() - start);
@@ -256,36 +244,31 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
 
     long start = monotonicNow();
     final AtomicBoolean status = new AtomicBoolean(true);
-    if (enableConcurrent) {
-      List<Callable<Void>> callables = new ArrayList<>();
-      records.forEach(record ->
-          callables.add(
-              () -> {
-                String primaryKey = getPrimaryKey(record);
-                String recordZNode = getNodePath(znode, primaryKey);
-                byte[] data = serialize(record);
-                if (!writeNode(recordZNode, data, update, error)) {
-                  status.set(false);
-                }
-                return null;
+    List<Callable<Void>> callables = new ArrayList<>();
+    records.forEach(record ->
+        callables.add(
+            () -> {
+              String primaryKey = getPrimaryKey(record);
+              String recordZNode = getNodePath(znode, primaryKey);
+              byte[] data = serialize(record);
+              if (!writeNode(recordZNode, data, update, error)) {
+                status.set(false);
               }
-          )
-      );
-      try {
-        executorService.invokeAll(callables);
-      } catch (Exception e) {
-        LOG.error("Write record failed : {}", e.getMessage(), e);
-        throw new IOException(e);
-      }
-    } else {
-      records.forEach(record -> {
-        String primaryKey = getPrimaryKey(record);
-        String recordZNode = getNodePath(znode, primaryKey);
-        byte[] data = serialize(record);
-        if (!writeNode(recordZNode, data, update, error)) {
-          status.set(false);
+              return null;
+            }
+        )
+    );
+    try {
+      if (enableConcurrent) {
+          executorService.invokeAll(callables);
+      } else {
+        for(Callable<Void> callable : callables) {
+          callable.call();
         }
-      });
+      }
+    } catch (Exception e) {
+      LOG.error("Write record failed : {}", e.getMessage(), e);
+      throw new IOException(e);
     }
     long end = monotonicNow();
     if (status.get()) {
