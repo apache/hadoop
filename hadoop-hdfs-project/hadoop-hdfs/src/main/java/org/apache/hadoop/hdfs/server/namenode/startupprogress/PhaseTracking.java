@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -42,5 +43,16 @@ final class PhaseTracking extends AbstractTracking {
       clone.steps.put(entry.getKey(), entry.getValue().clone());
     }
     return clone;
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this)
+        .append("file", file)
+        .append("size", size)
+        .append("steps", steps)
+        .append("beginTime", beginTime)
+        .append("endTime", endTime)
+        .toString();
   }
 }

@@ -39,6 +39,7 @@ public class VariableContext {
    * This is our actual variable store.
    */
   private Map<String, String> variables = new HashMap<>();
+  private Map<String, String> originalVariables = new HashMap<>();
 
   /**
    * This is our conditional variable store.
@@ -124,6 +125,10 @@ public class VariableContext {
     return this;
   }
 
+  public void putOriginal(String name, String value) {
+    originalVariables.put(name, value);
+  }
+
   /**
    * This method is used to add a conditional variable to the variable context.
    * @param name Name of the variable
@@ -148,6 +153,10 @@ public class VariableContext {
   public String get(String name) {
     String ret = variables.get(name);
     return ret == null ? "" : ret;
+  }
+
+  public String getOriginal(String name) {
+    return originalVariables.get(name);
   }
 
   /**
