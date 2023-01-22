@@ -20,7 +20,7 @@ package org.apache.hadoop.util;
 import org.slf4j.Logger;
 
 @Deprecated
-class LogAdapter {
+final class LogAdapter {
 
   private final Logger logger;
 

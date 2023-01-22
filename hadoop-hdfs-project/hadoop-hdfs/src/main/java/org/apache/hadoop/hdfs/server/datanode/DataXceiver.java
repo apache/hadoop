@@ -586,13 +586,10 @@ class DataXceiver extends Receiver implements Runnable {
     BlockSender blockSender = null;
     DatanodeRegistration dnR = 
       datanode.getDNRegistrationForBP(block.getBlockPoolId());
-    final String clientTraceFmt =
-      clientName.length() > 0 && CLIENT_TRACE_LOG.isInfoEnabled()
-        ? String.format(DN_CLIENTTRACE_FORMAT, localAddress, remoteAddress,
-            "", "%d", "HDFS_READ", clientName, "%d",
-            dnR.getDatanodeUuid(), block, "%d")
-        : dnR + " Served block " + block + " to " +
-            remoteAddress;
+    final String clientTraceFmt = clientName.length() > 0 && CLIENT_TRACE_LOG.isInfoEnabled() ?
+        String.format(DN_CLIENTTRACE_FORMAT, localAddress, remoteAddress, "", "%d", "HDFS_READ",
+            clientName, "%d", dnR.getDatanodeUuid(), block, "%d") :
+        dnR + " Served block " + block + " to " + remoteAddress;
 
     try {
       try {
