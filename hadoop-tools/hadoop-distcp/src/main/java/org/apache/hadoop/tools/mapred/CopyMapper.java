@@ -85,6 +85,7 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
   private boolean append = false;
   private boolean verboseLog = false;
   private boolean directWrite = false;
+  private boolean useModTimeToUpdate = true;
   private EnumSet<FileAttribute> preserve = EnumSet.noneOf(FileAttribute.class);
 
   private FileSystem targetFS = null;
@@ -114,6 +115,8 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
         PRESERVE_STATUS.getConfigLabel()));
     directWrite = conf.getBoolean(
         DistCpOptionSwitch.DIRECT_WRITE.getConfigLabel(), false);
+    useModTimeToUpdate =
+        conf.getBoolean(DistCpConstants.CONF_LABEL_UPDATE_MOD_TIME, true);
 
     targetWorkPath = new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
     Path targetFinalPath = new Path(conf.get(
@@ -354,17 +357,31 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
     boolean sameLength = target.getLen() == source.getLen();
     boolean sameBlockSize = source.getBlockSize() == target.getBlockSize()
         || !preserve.contains(FileAttribute.BLOCKSIZE);
-    // checksum check to be done if same file len(greater than 0), same block
-    // size and the target file has been updated more recently than the source
-    // file.
-    // Note: For Different cloud stores with different checksum algorithms,
-    // checksum comparisons are not performed so we would be depending on the
-    // file size and modification time.
-    if (sameLength && (source.getLen() > 0) && sameBlockSize &&
-        source.getModificationTime() < target.getModificationTime()) {
-      return skipCrc ||
-          DistCpUtils.checksumsAreEqual(sourceFS, source.getPath(), null,
-              targetFS, target.getPath(), source.getLen());
+    if (source.getLen() == 0) {
+      return false;
+    }
+    // if both the source and target have the same length, then check if the
+    // config to use modification time is set to true, then use the
+    // modification time and checksum comparison to determine if the copy can
+    // be skipped else if not set then just use the checksum comparison to
+    // check copy skip.
+    //
+    // Note: Different object stores can have different checksum algorithms
+    // resulting in no checksum comparison that results in return true
+    // always, having the modification time enabled can help in these
+    // scenarios to not incorrectly skip a copy. Refer: HADOOP-18596.
+    if (sameLength && sameBlockSize) {
+      if (useModTimeToUpdate) {
+        return
+            (source.getModificationTime() < target.getModificationTime()) &&
+                (skipCrc || DistCpUtils.checksumsAreEqual(sourceFS,
+                    source.getPath(), null,
+                    targetFS, target.getPath(), source.getLen()));
+      } else {
+        return skipCrc || DistCpUtils
+            .checksumsAreEqual(sourceFS, source.getPath(), null,
+                targetFS, target.getPath(), source.getLen());
+      }
     } else {
       return false;
     }

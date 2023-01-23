@@ -142,6 +142,13 @@ public final class DistCpConstants {
       "distcp.blocks.per.chunk";
 
   public static final String CONF_LABEL_USE_ITERATOR = "distcp.use.iterator";
+
+  /** Distcp -update to use modification time of source and target file to
+   * check while skipping.
+   */
+  public static final String CONF_LABEL_UPDATE_MOD_TIME =
+      "distcp.update.modification.time";
+
   /**
    * Constants for DistCp return code to shell / consumer of ToolRunner's run
    */
