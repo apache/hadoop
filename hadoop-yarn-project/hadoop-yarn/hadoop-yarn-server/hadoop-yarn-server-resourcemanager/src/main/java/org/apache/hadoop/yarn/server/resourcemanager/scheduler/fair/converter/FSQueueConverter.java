@@ -23,7 +23,6 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.ConfigurableResource;
@@ -48,7 +47,7 @@ public class FSQueueConverter {
   private static final String FIFO_POLICY = "fifo";
 
   private final FSConfigToCSConfigRuleHandler ruleHandler;
-  private Configuration capacitySchedulerConfig;
+  private CapacitySchedulerConfiguration capacitySchedulerConfig;
   private final boolean preemptionEnabled;
   private final boolean sizeBasedWeight;
   @SuppressWarnings("unused")
