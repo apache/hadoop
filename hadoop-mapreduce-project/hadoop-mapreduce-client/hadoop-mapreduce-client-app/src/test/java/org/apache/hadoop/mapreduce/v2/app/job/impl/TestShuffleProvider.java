@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -53,13 +55,12 @@ import org.apache.hadoop.yarn.server.api.AuxiliaryService;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Test;
-import org.junit.Assert;
+import org.junit.jupiter.api.Test;
 
 public class TestShuffleProvider {
 
   @Test
-  public void testShuffleProviders() throws Exception {
+  void testShuffleProviders() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(1, 1);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 1, TaskType.MAP);
@@ -75,8 +76,8 @@ public class TestShuffleProvider {
     jobConf.set(JobConf.MAPRED_MAP_TASK_ENV, "");
 
     jobConf.set(YarnConfiguration.NM_AUX_SERVICES,
-      TestShuffleHandler1.MAPREDUCE_TEST_SHUFFLE_SERVICEID + "," +
-      TestShuffleHandler2.MAPREDUCE_TEST_SHUFFLE_SERVICEID);
+        TestShuffleHandler1.MAPREDUCE_TEST_SHUFFLE_SERVICEID + "," +
+            TestShuffleHandler2.MAPREDUCE_TEST_SHUFFLE_SERVICEID);
 
     String serviceName = TestShuffleHandler1.MAPREDUCE_TEST_SHUFFLE_SERVICEID;
     String serviceStr = String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, serviceName);
@@ -87,8 +88,8 @@ public class TestShuffleProvider {
     jobConf.set(serviceStr, TestShuffleHandler2.class.getName());
 
     jobConf.set(MRJobConfig.MAPREDUCE_JOB_SHUFFLE_PROVIDER_SERVICES,
-                  TestShuffleHandler1.MAPREDUCE_TEST_SHUFFLE_SERVICEID
-                     + "," + TestShuffleHandler2.MAPREDUCE_TEST_SHUFFLE_SERVICEID);
+        TestShuffleHandler1.MAPREDUCE_TEST_SHUFFLE_SERVICEID
+            + "," + TestShuffleHandler2.MAPREDUCE_TEST_SHUFFLE_SERVICEID);
 
     Credentials credentials = new Credentials();
     Token<JobTokenIdentifier> jobToken = new Token<JobTokenIdentifier>(
@@ -110,9 +111,9 @@ public class TestShuffleProvider {
             credentials);
 
     Map<String, ByteBuffer> serviceDataMap = launchCtx.getServiceData();
-    Assert.assertNotNull("TestShuffleHandler1 is missing", serviceDataMap.get(TestShuffleHandler1.MAPREDUCE_TEST_SHUFFLE_SERVICEID));
-    Assert.assertNotNull("TestShuffleHandler2 is missing", serviceDataMap.get(TestShuffleHandler2.MAPREDUCE_TEST_SHUFFLE_SERVICEID));
-    Assert.assertTrue("mismatch number of services in map", serviceDataMap.size() == 3); // 2 that we entered + 1 for the built-in shuffle-provider
+    assertNotNull(serviceDataMap.get(TestShuffleHandler1.MAPREDUCE_TEST_SHUFFLE_SERVICEID), "TestShuffleHandler1 is missing");
+    assertNotNull(serviceDataMap.get(TestShuffleHandler2.MAPREDUCE_TEST_SHUFFLE_SERVICEID), "TestShuffleHandler2 is missing");
+    assertTrue(serviceDataMap.size() == 3, "mismatch number of services in map"); // 2 that we entered + 1 for the built-in shuffle-provider
   }
 
   static public class StubbedFS extends RawLocalFileSystem {

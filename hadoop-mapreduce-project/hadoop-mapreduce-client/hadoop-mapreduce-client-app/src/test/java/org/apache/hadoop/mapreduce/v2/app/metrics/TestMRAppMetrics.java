@@ -25,19 +25,21 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import static org.apache.hadoop.test.MetricsAsserts.*;
 
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestMRAppMetrics {
 
-  @After
+  @AfterEach
   public void tearDown() {
     DefaultMetricsSystem.shutdown();
   }
 
-  @Test public void testNames() {
+  @Test
+  void testNames() {
     Job job = mock(Job.class);
     Task mapTask = mock(Task.class);
     when(mapTask.getType()).thenReturn(TaskType.MAP);
@@ -92,8 +94,8 @@ public class TestMRAppMetrics {
     metrics.completedJob(job);
 
     checkMetrics(/*job*/3, 1, 1, 1, 0, 0,
-                 /*map*/3, 1, 1, 1, 0, 0,
-                 /*reduce*/1, 1, 0, 0, 0, 0);
+        /*map*/3, 1, 1, 1, 0, 0,
+        /*reduce*/1, 1, 0, 0, 0, 0);
   }
 
   private void checkMetrics(int jobsSubmitted, int jobsCompleted,

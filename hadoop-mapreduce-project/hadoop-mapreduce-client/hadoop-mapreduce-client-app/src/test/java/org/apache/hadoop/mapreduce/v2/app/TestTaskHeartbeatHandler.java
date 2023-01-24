@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -40,23 +41,22 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 
 public class TestTaskHeartbeatHandler {
-  
+
   @SuppressWarnings("unchecked")
   @Test
-  public void testTaskTimeout() throws InterruptedException {
+  void testTaskTimeout() throws InterruptedException {
     EventHandler mockHandler = mock(EventHandler.class);
     Clock clock = SystemClock.getInstance();
     TaskHeartbeatHandler hb = new TaskHeartbeatHandler(mockHandler, clock, 1);
-    
-    
+
+
     Configuration conf = new Configuration();
     conf.setInt(MRJobConfig.TASK_TIMEOUT, 10); //10 ms
     // set TASK_PROGRESS_REPORT_INTERVAL to a value smaller than TASK_TIMEOUT
@@ -64,7 +64,7 @@ public class TestTaskHeartbeatHandler {
     conf.setLong(MRJobConfig.TASK_PROGRESS_REPORT_INTERVAL, 5);
     conf.setInt(MRJobConfig.TASK_TIMEOUT_CHECK_INTERVAL_MS, 10); //10 ms
     conf.setDouble(MRJobConfig.TASK_LOG_PROGRESS_DELTA_THRESHOLD, 0.01);
-    
+
     hb.init(conf);
     hb.start();
     try {
@@ -85,7 +85,7 @@ public class TestTaskHeartbeatHandler {
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testTaskTimeoutDisable() throws InterruptedException {
+  void testTaskTimeoutDisable() throws InterruptedException {
     EventHandler mockHandler = mock(EventHandler.class);
     Clock clock = SystemClock.getInstance();
     TaskHeartbeatHandler hb = new TaskHeartbeatHandler(mockHandler, clock, 1);
@@ -125,7 +125,7 @@ public class TestTaskHeartbeatHandler {
 
   @SuppressWarnings("unchecked")
   @Test
-  public void testTaskStuck() throws InterruptedException {
+  void testTaskStuck() throws InterruptedException {
     EventHandler mockHandler = mock(EventHandler.class);
     Clock clock = SystemClock.getInstance();
     TaskHeartbeatHandler hb = new TaskHeartbeatHandler(mockHandler, clock, 1);
@@ -169,7 +169,7 @@ public class TestTaskHeartbeatHandler {
    * report interval is set bigger than the task timeout in the configuration.
    */
   @Test
-  public void testTaskTimeoutConfigSmallerThanTaskProgressReportInterval() {
+  void testTaskTimeoutConfigSmallerThanTaskProgressReportInterval() {
     testTaskTimeoutWrtProgressReportInterval(1000L, 5000L);
   }
 
@@ -178,7 +178,7 @@ public class TestTaskHeartbeatHandler {
    * report interval is set smaller than the task timeout in the configuration.
    */
   @Test
-  public void testTaskTimeoutConfigBiggerThanTaskProgressReportInterval() {
+  void testTaskTimeoutConfigBiggerThanTaskProgressReportInterval() {
     testTaskTimeoutWrtProgressReportInterval(5000L, 1000L);
   }
 
@@ -187,7 +187,7 @@ public class TestTaskHeartbeatHandler {
    * report interval is not set in the configuration.
    */
   @Test
-  public void testTaskTimeoutConfigWithoutTaskProgressReportInterval() {
+  void testTaskTimeoutConfigWithoutTaskProgressReportInterval() {
     final long taskTimeoutConfiged = 2000L;
 
     final Configuration conf = new Configuration();
@@ -198,7 +198,7 @@ public class TestTaskHeartbeatHandler {
   }
 
   @Test
-  public void testTaskUnregistered() throws Exception {
+  void testTaskUnregistered() throws Exception {
     EventHandler mockHandler = mock(EventHandler.class);
     ControlledClock clock = new ControlledClock();
     clock.setTime(0);
@@ -214,11 +214,11 @@ public class TestTaskHeartbeatHandler {
       JobId jobId = MRBuilderUtils.newJobId(appId, 4);
       TaskId tid = MRBuilderUtils.newTaskId(jobId, 3, TaskType.MAP);
       final TaskAttemptId taid = MRBuilderUtils.newTaskAttemptId(tid, 2);
-      Assert.assertFalse(hb.hasRecentlyUnregistered(taid));
+      assertFalse(hb.hasRecentlyUnregistered(taid));
       hb.register(taid);
-      Assert.assertFalse(hb.hasRecentlyUnregistered(taid));
+      assertFalse(hb.hasRecentlyUnregistered(taid));
       hb.unregister(taid);
-      Assert.assertTrue(hb.hasRecentlyUnregistered(taid));
+      assertTrue(hb.hasRecentlyUnregistered(taid));
       long unregisterTimeout = conf.getLong(MRJobConfig.TASK_EXIT_TIMEOUT,
           MRJobConfig.TASK_EXIT_TIMEOUT_DEFAULT);
       clock.setTime(unregisterTimeout + 1);
@@ -260,7 +260,7 @@ public class TestTaskHeartbeatHandler {
         new TaskHeartbeatHandler(null, SystemClock.getInstance(), 1);
     hb.init(conf);
 
-    Assert.assertTrue("The value of the task timeout is incorrect.",
-        hb.getTaskTimeOut() == expectedTimeout);
+    assertTrue(hb.getTaskTimeOut() == expectedTimeout,
+        "The value of the task timeout is incorrect.");
   }
 }

@@ -79,8 +79,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,7 +95,7 @@ public class TestContainerLauncherImpl {
   private Map<String, ByteBuffer> serviceResponse =
       new HashMap<String, ByteBuffer>();
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     serviceResponse.clear();
     serviceResponse.put(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID,
@@ -167,9 +168,10 @@ public class TestContainerLauncherImpl {
     TaskId tID = MRBuilderUtils.newTaskId(jID, taskId, taskType);
     return MRBuilderUtils.newTaskAttemptId(tID, id);
   }
-  
-  @Test(timeout = 5000)
-  public void testHandle() throws Exception {
+
+  @Test
+  @Timeout(5000)
+  void testHandle() throws Exception {
     LOG.info("STARTING testHandle");
     AppContext mockContext = mock(AppContext.class);
     @SuppressWarnings("unchecked")
@@ -180,7 +182,7 @@ public class TestContainerLauncherImpl {
         mock(ContainerManagementProtocolClient.class);
     ContainerLauncherImplUnderTest ut =
         new ContainerLauncherImplUnderTest(mockContext, mockCM);
-    
+
     Configuration conf = new Configuration();
     ut.init(conf);
     ut.start();
@@ -188,26 +190,26 @@ public class TestContainerLauncherImpl {
       ContainerId contId = makeContainerId(0l, 0, 0, 1);
       TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
       StartContainersResponse startResp =
-        recordFactory.newRecordInstance(StartContainersResponse.class);
+          recordFactory.newRecordInstance(StartContainersResponse.class);
       startResp.setAllServicesMetaData(serviceResponse);
-      
+
 
       LOG.info("inserting launch event");
-      ContainerRemoteLaunchEvent mockLaunchEvent = 
-        mock(ContainerRemoteLaunchEvent.class);
+      ContainerRemoteLaunchEvent mockLaunchEvent =
+          mock(ContainerRemoteLaunchEvent.class);
       when(mockLaunchEvent.getType())
-        .thenReturn(EventType.CONTAINER_REMOTE_LAUNCH);
+          .thenReturn(EventType.CONTAINER_REMOTE_LAUNCH);
       when(mockLaunchEvent.getContainerID())
-        .thenReturn(contId);
+          .thenReturn(contId);
       when(mockLaunchEvent.getTaskAttemptID()).thenReturn(taskAttemptId);
       when(mockLaunchEvent.getContainerMgrAddress()).thenReturn(cmAddress);
       when(mockCM.startContainers(any(StartContainersRequest.class))).thenReturn(startResp);
       when(mockLaunchEvent.getContainerToken()).thenReturn(
           createNewContainerToken(contId, cmAddress));
       ut.handle(mockLaunchEvent);
-      
+
       ut.waitForPoolToIdle();
-      
+
       verify(mockCM).startContainers(any(StartContainersRequest.class));
 
       LOG.info("inserting cleanup event");
@@ -217,17 +219,18 @@ public class TestContainerLauncherImpl {
       when(mockCleanupEvent.getTaskAttemptID()).thenReturn(taskAttemptId);
       when(mockCleanupEvent.getContainerMgrAddress()).thenReturn(cmAddress);
       ut.handle(mockCleanupEvent);
-      
+
       ut.waitForPoolToIdle();
-      
+
       verify(mockCM).stopContainers(any(StopContainersRequest.class));
     } finally {
       ut.stop();
     }
   }
-  
-  @Test(timeout = 5000)
-  public void testOutOfOrder() throws Exception {
+
+  @Test
+  @Timeout(5000)
+  void testOutOfOrder() throws Exception {
     LOG.info("STARTING testOutOfOrder");
     AppContext mockContext = mock(AppContext.class);
     @SuppressWarnings("unchecked")
@@ -238,7 +241,7 @@ public class TestContainerLauncherImpl {
         mock(ContainerManagementProtocolClient.class);
     ContainerLauncherImplUnderTest ut =
         new ContainerLauncherImplUnderTest(mockContext, mockCM);
-    
+
     Configuration conf = new Configuration();
     ut.init(conf);
     ut.start();
@@ -247,38 +250,38 @@ public class TestContainerLauncherImpl {
       TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
       String cmAddress = "127.0.0.1:8000";
       StartContainersResponse startResp =
-        recordFactory.newRecordInstance(StartContainersResponse.class);
+          recordFactory.newRecordInstance(StartContainersResponse.class);
       startResp.setAllServicesMetaData(serviceResponse);
 
       LOG.info("inserting cleanup event");
-      ContainerLauncherEvent mockCleanupEvent = 
-        mock(ContainerLauncherEvent.class);
+      ContainerLauncherEvent mockCleanupEvent =
+          mock(ContainerLauncherEvent.class);
       when(mockCleanupEvent.getType())
-        .thenReturn(EventType.CONTAINER_REMOTE_CLEANUP);
+          .thenReturn(EventType.CONTAINER_REMOTE_CLEANUP);
       when(mockCleanupEvent.getContainerID())
-        .thenReturn(contId);
+          .thenReturn(contId);
       when(mockCleanupEvent.getTaskAttemptID()).thenReturn(taskAttemptId);
       when(mockCleanupEvent.getContainerMgrAddress()).thenReturn(cmAddress);
       ut.handle(mockCleanupEvent);
-      
+
       ut.waitForPoolToIdle();
-      
+
       verify(mockCM, never()).stopContainers(any(StopContainersRequest.class));
 
       LOG.info("inserting launch event");
-      ContainerRemoteLaunchEvent mockLaunchEvent = 
-        mock(ContainerRemoteLaunchEvent.class);
+      ContainerRemoteLaunchEvent mockLaunchEvent =
+          mock(ContainerRemoteLaunchEvent.class);
       when(mockLaunchEvent.getType())
-        .thenReturn(EventType.CONTAINER_REMOTE_LAUNCH);
+          .thenReturn(EventType.CONTAINER_REMOTE_LAUNCH);
       when(mockLaunchEvent.getContainerID())
-        .thenReturn(contId);
+          .thenReturn(contId);
       when(mockLaunchEvent.getTaskAttemptID()).thenReturn(taskAttemptId);
       when(mockLaunchEvent.getContainerMgrAddress()).thenReturn(cmAddress);
       when(mockCM.startContainers(any(StartContainersRequest.class))).thenReturn(startResp);
       when(mockLaunchEvent.getContainerToken()).thenReturn(
           createNewContainerToken(contId, cmAddress));
       ut.handle(mockLaunchEvent);
-      
+
       ut.waitForPoolToIdle();
 
       verify(mockCM).startContainers(any(StartContainersRequest.class));
@@ -300,8 +303,9 @@ public class TestContainerLauncherImpl {
     }
   }
 
-  @Test(timeout = 5000)
-  public void testMyShutdown() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testMyShutdown() throws Exception {
     LOG.info("in test Shutdown");
 
     AppContext mockContext = mock(AppContext.class);
@@ -322,16 +326,16 @@ public class TestContainerLauncherImpl {
       TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
       String cmAddress = "127.0.0.1:8000";
       StartContainersResponse startResp =
-        recordFactory.newRecordInstance(StartContainersResponse.class);
+          recordFactory.newRecordInstance(StartContainersResponse.class);
       startResp.setAllServicesMetaData(serviceResponse);
 
       LOG.info("inserting launch event");
       ContainerRemoteLaunchEvent mockLaunchEvent =
-        mock(ContainerRemoteLaunchEvent.class);
+          mock(ContainerRemoteLaunchEvent.class);
       when(mockLaunchEvent.getType())
-        .thenReturn(EventType.CONTAINER_REMOTE_LAUNCH);
+          .thenReturn(EventType.CONTAINER_REMOTE_LAUNCH);
       when(mockLaunchEvent.getContainerID())
-        .thenReturn(contId);
+          .thenReturn(contId);
       when(mockLaunchEvent.getTaskAttemptID()).thenReturn(taskAttemptId);
       when(mockLaunchEvent.getContainerMgrAddress()).thenReturn(cmAddress);
       when(mockCM.startContainers(any(StartContainersRequest.class))).thenReturn(startResp);
@@ -350,17 +354,18 @@ public class TestContainerLauncherImpl {
       verify(mockCM).stopContainers(any(StopContainersRequest.class));
     }
   }
-  
-  @SuppressWarnings({ "rawtypes", "unchecked" })
-  @Test(timeout = 5000)
-  public void testContainerCleaned() throws Exception {
+
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  @Test
+  @Timeout(5000)
+  void testContainerCleaned() throws Exception {
     LOG.info("STARTING testContainerCleaned");
-    
+
     CyclicBarrier startLaunchBarrier = new CyclicBarrier(2);
     CyclicBarrier completeLaunchBarrier = new CyclicBarrier(2);
 
     AppContext mockContext = mock(AppContext.class);
-    
+
     EventHandler mockEventHandler = mock(EventHandler.class);
     when(mockContext.getEventHandler()).thenReturn(mockEventHandler);
 
@@ -368,7 +373,7 @@ public class TestContainerLauncherImpl {
         new ContainerManagerForTest(startLaunchBarrier, completeLaunchBarrier);
     ContainerLauncherImplUnderTest ut =
         new ContainerLauncherImplUnderTest(mockContext, mockCM);
-    
+
     Configuration conf = new Configuration();
     ut.init(conf);
     ut.start();
@@ -377,46 +382,46 @@ public class TestContainerLauncherImpl {
       TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
       String cmAddress = "127.0.0.1:8000";
       StartContainersResponse startResp =
-        recordFactory.newRecordInstance(StartContainersResponse.class);
+          recordFactory.newRecordInstance(StartContainersResponse.class);
       startResp.setAllServicesMetaData(serviceResponse);
-      
-     
+
+
       LOG.info("inserting launch event");
-      ContainerRemoteLaunchEvent mockLaunchEvent = 
-        mock(ContainerRemoteLaunchEvent.class);
+      ContainerRemoteLaunchEvent mockLaunchEvent =
+          mock(ContainerRemoteLaunchEvent.class);
       when(mockLaunchEvent.getType())
-        .thenReturn(EventType.CONTAINER_REMOTE_LAUNCH);
+          .thenReturn(EventType.CONTAINER_REMOTE_LAUNCH);
       when(mockLaunchEvent.getContainerID())
-        .thenReturn(contId);
+          .thenReturn(contId);
       when(mockLaunchEvent.getTaskAttemptID()).thenReturn(taskAttemptId);
       when(mockLaunchEvent.getContainerMgrAddress()).thenReturn(cmAddress);
       when(mockLaunchEvent.getContainerToken()).thenReturn(
           createNewContainerToken(contId, cmAddress));
       ut.handle(mockLaunchEvent);
-      
+
       startLaunchBarrier.await();
-      
-           
+
+
       LOG.info("inserting cleanup event");
-      ContainerLauncherEvent mockCleanupEvent = 
-        mock(ContainerLauncherEvent.class);
+      ContainerLauncherEvent mockCleanupEvent =
+          mock(ContainerLauncherEvent.class);
       when(mockCleanupEvent.getType())
-        .thenReturn(EventType.CONTAINER_REMOTE_CLEANUP);
+          .thenReturn(EventType.CONTAINER_REMOTE_CLEANUP);
       when(mockCleanupEvent.getContainerID())
-        .thenReturn(contId);
+          .thenReturn(contId);
       when(mockCleanupEvent.getTaskAttemptID()).thenReturn(taskAttemptId);
       when(mockCleanupEvent.getContainerMgrAddress()).thenReturn(cmAddress);
       ut.handle(mockCleanupEvent);
 
       completeLaunchBarrier.await();
-     
+
       ut.waitForPoolToIdle();
-      
+
       ArgumentCaptor<Event> arg = ArgumentCaptor.forClass(Event.class);
       verify(mockEventHandler, atLeast(2)).handle(arg.capture());
       boolean containerCleaned = false;
-      
-      for (int i =0; i < arg.getAllValues().size(); i++) {
+
+      for (int i = 0; i < arg.getAllValues().size(); i++) {
         LOG.info(arg.getAllValues().get(i).toString());
         Event currentEvent = arg.getAllValues().get(i);
         if (currentEvent.getType() == TaskAttemptEventType.TA_CONTAINER_CLEANED) {
@@ -424,7 +429,7 @@ public class TestContainerLauncherImpl {
         }
       }
       assert(containerCleaned);
-      
+
     } finally {
       ut.stop();
     }

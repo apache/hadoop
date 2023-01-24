@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.StringReader;
 import java.util.Enumeration;
@@ -50,8 +50,8 @@ import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -118,7 +118,7 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
         Guice.createInjector(new WebServletModule()));
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -135,7 +135,7 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
   }
 
   @Test
-  public void testGetTaskAttemptIdState() throws Exception {
+  void testGetTaskAttemptIdState() throws Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 
@@ -155,9 +155,9 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
               .queryParam("user.name", webserviceUserName)
               .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
           assertEquals(MediaType.APPLICATION_JSON_TYPE + "; "
-                  + JettyUtils.UTF_8, response.getType().toString());
+              + JettyUtils.UTF_8, response.getType().toString());
           JSONObject json = response.getEntity(JSONObject.class);
-          assertEquals("incorrect number of elements", 1, json.length());
+          assertEquals(1, json.length(), "incorrect number of elements");
           assertEquals(att.getState().toString(), json.get("state"));
         }
       }
@@ -165,7 +165,7 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
   }
 
   @Test
-  public void testGetTaskAttemptIdXMLState() throws Exception {
+  void testGetTaskAttemptIdXMLState() throws Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -202,7 +202,7 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
   }
 
   @Test
-  public void testPutTaskAttemptIdState() throws Exception {
+  void testPutTaskAttemptIdState() throws Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 
@@ -224,9 +224,9 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
               .type(MediaType.APPLICATION_JSON)
               .put(ClientResponse.class, "{\"state\":\"KILLED\"}");
           assertEquals(MediaType.APPLICATION_JSON_TYPE + "; "
-                  + JettyUtils.UTF_8, response.getType().toString());
+              + JettyUtils.UTF_8, response.getType().toString());
           JSONObject json = response.getEntity(JSONObject.class);
-          assertEquals("incorrect number of elements", 1, json.length());
+          assertEquals(1, json.length(), "incorrect number of elements");
           assertEquals(TaskAttemptState.KILLED.toString(), json.get("state"));
         }
       }
@@ -234,7 +234,7 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
   }
 
   @Test
-  public void testPutTaskAttemptIdXMLState() throws Exception {
+  void testPutTaskAttemptIdXMLState() throws Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
 

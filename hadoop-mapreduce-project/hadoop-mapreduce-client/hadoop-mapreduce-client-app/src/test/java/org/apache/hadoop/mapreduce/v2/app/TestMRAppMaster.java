@@ -18,9 +18,7 @@
 package org.apache.hadoop.mapreduce.v2.app;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -40,7 +38,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.Assert;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
@@ -84,10 +81,11 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.slf4j.event.Level;
@@ -104,7 +102,7 @@ public class TestMRAppMaster {
   static String stagingDir = new Path(testDir, "staging").toString();
   private static FileContext localFS = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws AccessControlException,
       FileNotFoundException, IllegalArgumentException, IOException {
     //Do not error out if metrics are inited multiple times
@@ -116,7 +114,7 @@ public class TestMRAppMaster {
     new File(testDir.toString()).mkdir();
   }
 
-  @Before
+  @BeforeEach
   public void prepare() throws IOException {
     File dir = new File(stagingDir);
     if(dir.exists()) {
@@ -125,13 +123,13 @@ public class TestMRAppMaster {
     dir.mkdirs();
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws IOException {
     localFS.delete(testDir, true);
   }
 
   @Test
-  public void testMRAppMasterForDifferentUser() throws IOException,
+  void testMRAppMasterForDifferentUser() throws IOException,
       InterruptedException {
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000001";
     String containerIdStr = "container_1317529182569_0004_000001_1";
@@ -149,11 +147,11 @@ public class TestMRAppMaster {
     Path userPath = new Path(stagingDir, userName);
     Path userStagingPath = new Path(userPath, ".staging");
     assertEquals(userStagingPath.toString(),
-      appMaster.stagingDirPath.toString());
+        appMaster.stagingDirPath.toString());
   }
 
   @Test
-  public void testMRAppMasterMidLock() throws IOException,
+  void testMRAppMasterMidLock() throws IOException,
       InterruptedException {
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
     String containerIdStr = "container_1317529182569_0004_000002_1";
@@ -188,11 +186,11 @@ public class TestMRAppMaster {
     appMaster.stop();
 
     // verify the final status is FAILED
-    verifyFailedStatus((MRAppMasterTest)appMaster, "FAILED");
+    verifyFailedStatus((MRAppMasterTest) appMaster, "FAILED");
   }
 
   @Test
-  public void testMRAppMasterJobLaunchTime() throws IOException,
+  void testMRAppMasterJobLaunchTime() throws IOException,
       InterruptedException {
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
     String containerIdStr = "container_1317529182569_0004_000002_1";
@@ -226,12 +224,12 @@ public class TestMRAppMaster {
             "host", -1, -1, System.currentTimeMillis());
     MRAppMaster.initAndStartAppMaster(appMaster, conf, userName);
     appMaster.stop();
-    assertTrue("Job launch time should not be negative.",
-            appMaster.jobLaunchTime.get() >= 0);
+    assertTrue(appMaster.jobLaunchTime.get() >= 0,
+        "Job launch time should not be negative.");
   }
 
   @Test
-  public void testMRAppMasterSuccessLock() throws IOException,
+  void testMRAppMasterSuccessLock() throws IOException,
       InterruptedException {
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
     String containerIdStr = "container_1317529182569_0004_000002_1";
@@ -265,11 +263,11 @@ public class TestMRAppMaster {
     appMaster.stop();
 
     // verify the final status is SUCCEEDED
-    verifyFailedStatus((MRAppMasterTest)appMaster, "SUCCEEDED");
+    verifyFailedStatus((MRAppMasterTest) appMaster, "SUCCEEDED");
   }
 
   @Test
-  public void testMRAppMasterFailLock() throws IOException,
+  void testMRAppMasterFailLock() throws IOException,
       InterruptedException {
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
     String containerIdStr = "container_1317529182569_0004_000002_1";
@@ -303,11 +301,11 @@ public class TestMRAppMaster {
     appMaster.stop();
 
     // verify the final status is FAILED
-    verifyFailedStatus((MRAppMasterTest)appMaster, "FAILED");
+    verifyFailedStatus((MRAppMasterTest) appMaster, "FAILED");
   }
 
   @Test
-  public void testMRAppMasterMissingStaging() throws IOException,
+  void testMRAppMasterMissingStaging() throws IOException,
       InterruptedException {
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
     String containerIdStr = "container_1317529182569_0004_000002_1";
@@ -319,7 +317,7 @@ public class TestMRAppMaster {
 
     //Delete the staging directory
     File dir = new File(stagingDir);
-    if(dir.exists()) {
+    if (dir.exists()) {
       FileUtils.deleteDirectory(dir);
     }
 
@@ -343,12 +341,13 @@ public class TestMRAppMaster {
     appMaster.stop();
   }
 
-  @Test (timeout = 30000)
-  public void testMRAppMasterMaxAppAttempts() throws IOException,
+  @Test
+  @Timeout(30000)
+  void testMRAppMasterMaxAppAttempts() throws IOException,
       InterruptedException {
     // No matter what's the maxAppAttempt or attempt id, the isLastRetry always
     // equals to false
-    Boolean[] expectedBools = new Boolean[]{ false, false, false };
+    Boolean[] expectedBools = new Boolean[]{false, false, false};
 
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
     String containerIdStr = "container_1317529182569_0004_000002_1";
@@ -368,8 +367,9 @@ public class TestMRAppMaster {
           new MRAppMasterTest(applicationAttemptId, containerId, "host", -1, -1,
               System.currentTimeMillis(), false, true);
       MRAppMaster.initAndStartAppMaster(appMaster, conf, userName);
-      assertEquals("isLastAMRetry is correctly computed.", expectedBools[i],
-          appMaster.isLastAMRetry());
+      assertEquals(expectedBools[i],
+          appMaster.isLastAMRetry(),
+          "isLastAMRetry is correctly computed.");
     }
   }
 
@@ -407,7 +407,7 @@ public class TestMRAppMaster {
   }
 
   @Test
-  public void testMRAppMasterCredentials() throws Exception {
+  void testMRAppMasterCredentials() throws Exception {
 
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
 
@@ -438,7 +438,7 @@ public class TestMRAppMaster {
     Path tokenFilePath = new Path(testDir, "tokens-file");
     Map<String, String> newEnv = new HashMap<String, String>();
     newEnv.put(UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION, tokenFilePath
-      .toUri().getPath());
+        .toUri().getPath());
     setNewEnvironmentHack(newEnv);
     credentials.writeTokenStorageFile(tokenFilePath, conf);
 
@@ -460,49 +460,49 @@ public class TestMRAppMaster {
 
     MRAppMasterTest appMaster =
         new MRAppMasterTest(applicationAttemptId, containerId, "host", -1, -1,
-          System.currentTimeMillis(), false, true);
+            System.currentTimeMillis(), false, true);
     MRAppMaster.initAndStartAppMaster(appMaster, conf, userName);
 
     // Now validate the task credentials
     Credentials appMasterCreds = appMaster.getCredentials();
-    Assert.assertNotNull(appMasterCreds);
-    Assert.assertEquals(1, appMasterCreds.numberOfSecretKeys());
-    Assert.assertEquals(1, appMasterCreds.numberOfTokens());
+    assertNotNull(appMasterCreds);
+    assertEquals(1, appMasterCreds.numberOfSecretKeys());
+    assertEquals(1, appMasterCreds.numberOfTokens());
 
     // Validate the tokens - app token should not be present
     Token<? extends TokenIdentifier> usedToken =
         appMasterCreds.getToken(tokenAlias);
-    Assert.assertNotNull(usedToken);
-    Assert.assertEquals(storedToken, usedToken);
+    assertNotNull(usedToken);
+    assertEquals(storedToken, usedToken);
 
     // Validate the keys
     byte[] usedKey = appMasterCreds.getSecretKey(keyAlias);
-    Assert.assertNotNull(usedKey);
-    Assert.assertEquals("mySecretKey", new String(usedKey));
+    assertNotNull(usedKey);
+    assertEquals("mySecretKey", new String(usedKey));
 
     // The credentials should also be added to conf so that OuputCommitter can
     // access it - app token should not be present
     Credentials confCredentials = conf.getCredentials();
-    Assert.assertEquals(1, confCredentials.numberOfSecretKeys());
-    Assert.assertEquals(1, confCredentials.numberOfTokens());
-    Assert.assertEquals(storedToken, confCredentials.getToken(tokenAlias));
-    Assert.assertEquals("mySecretKey",
-      new String(confCredentials.getSecretKey(keyAlias)));
+    assertEquals(1, confCredentials.numberOfSecretKeys());
+    assertEquals(1, confCredentials.numberOfTokens());
+    assertEquals(storedToken, confCredentials.getToken(tokenAlias));
+    assertEquals("mySecretKey",
+        new String(confCredentials.getSecretKey(keyAlias)));
 
     // Verify the AM's ugi - app token should be present
     Credentials ugiCredentials = appMaster.getUgi().getCredentials();
-    Assert.assertEquals(1, ugiCredentials.numberOfSecretKeys());
-    Assert.assertEquals(2, ugiCredentials.numberOfTokens());
-    Assert.assertEquals(storedToken, ugiCredentials.getToken(tokenAlias));
-    Assert.assertEquals(appToken, ugiCredentials.getToken(appTokenService));
-    Assert.assertEquals("mySecretKey",
-      new String(ugiCredentials.getSecretKey(keyAlias)));
+    assertEquals(1, ugiCredentials.numberOfSecretKeys());
+    assertEquals(2, ugiCredentials.numberOfTokens());
+    assertEquals(storedToken, ugiCredentials.getToken(tokenAlias));
+    assertEquals(appToken, ugiCredentials.getToken(appTokenService));
+    assertEquals("mySecretKey",
+        new String(ugiCredentials.getSecretKey(keyAlias)));
 
 
   }
 
   @Test
-  public void testMRAppMasterShutDownJob() throws Exception,
+  void testMRAppMasterShutDownJob() throws Exception,
       InterruptedException {
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
     String containerIdStr = "container_1317529182569_0004_000002_1";
@@ -525,21 +525,19 @@ public class TestMRAppMaster {
     doNothing().when(appMaster).serviceStop();
     // Test normal shutdown.
     appMaster.shutDownJob();
-    Assert.assertTrue("Expected shutDownJob to terminate.",
-                      ExitUtil.terminateCalled());
-    Assert.assertEquals("Expected shutDownJob to exit with status code of 0.",
-        0, ExitUtil.getFirstExitException().status);
+    assertTrue(ExitUtil.terminateCalled(),
+        "Expected shutDownJob to terminate.");
+    assertEquals(0, ExitUtil.getFirstExitException().status, "Expected shutDownJob to exit with status code of 0.");
 
     // Test shutdown with exception.
     ExitUtil.resetFirstExitException();
     String msg = "Injected Exception";
     doThrow(new RuntimeException(msg))
-            .when(appMaster).notifyIsLastAMRetry(anyBoolean());
+        .when(appMaster).notifyIsLastAMRetry(anyBoolean());
     appMaster.shutDownJob();
-    assertTrue("Expected message from ExitUtil.ExitException to be " + msg,
-        ExitUtil.getFirstExitException().getMessage().contains(msg));
-    Assert.assertEquals("Expected shutDownJob to exit with status code of 1.",
-        1, ExitUtil.getFirstExitException().status);
+    assertTrue(ExitUtil.getFirstExitException().getMessage().contains(msg),
+        "Expected message from ExitUtil.ExitException to be " + msg);
+    assertEquals(1, ExitUtil.getFirstExitException().status, "Expected shutDownJob to exit with status code of 1.");
   }
 
   private void verifyFailedStatus(MRAppMasterTest appMaster,

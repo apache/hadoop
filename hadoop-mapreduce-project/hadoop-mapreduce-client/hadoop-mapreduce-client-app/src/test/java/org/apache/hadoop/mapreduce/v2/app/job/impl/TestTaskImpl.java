@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -65,9 +62,9 @@ import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -234,7 +231,7 @@ public class TestTaskImpl {
     
   }
   
-  @Before 
+  @BeforeEach 
   @SuppressWarnings("unchecked")
   public void setup() {
      dispatcher = new InlineDispatcher();
@@ -273,7 +270,7 @@ public class TestTaskImpl {
         startCount, metrics, appContext, taskType);
   }
 
-  @After 
+  @AfterEach 
   public void teardown() {
     taskAttempts.clear();
   }
@@ -397,44 +394,44 @@ public class TestTaskImpl {
     fail("There is no " + (avataar == Avataar.VIRGIN ? "virgin" : "speculative")
         + "task attempt");
   }
-  
+
   @Test
-  public void testInit() {
+  void testInit() {
     LOG.info("--- START: testInit ---");
-    mockTask = createMockTask(TaskType.MAP);        
+    mockTask = createMockTask(TaskType.MAP);
     assertTaskNewState();
     assert(taskAttempts.size() == 0);
   }
 
-  @Test
   /**
    * {@link TaskState#NEW}->{@link TaskState#SCHEDULED}
    */
-  public void testScheduleTask() {
+  @Test
+  void testScheduleTask() {
     LOG.info("--- START: testScheduleTask ---");
-    mockTask = createMockTask(TaskType.MAP);        
+    mockTask = createMockTask(TaskType.MAP);
     TaskId taskId = getNewTaskID();
     scheduleTaskAttempt(taskId);
   }
-  
-  @Test 
+
   /**
    * {@link TaskState#SCHEDULED}->{@link TaskState#KILL_WAIT}
    */
-  public void testKillScheduledTask() {
+  @Test
+  void testKillScheduledTask() {
     LOG.info("--- START: testKillScheduledTask ---");
-    mockTask = createMockTask(TaskType.MAP);        
+    mockTask = createMockTask(TaskType.MAP);
     TaskId taskId = getNewTaskID();
     scheduleTaskAttempt(taskId);
     killTask(taskId);
   }
-  
-  @Test 
+
   /**
    * Kill attempt
    * {@link TaskState#SCHEDULED}->{@link TaskState#SCHEDULED}
    */
-  public void testKillScheduledTaskAttempt() {
+  @Test
+  void testKillScheduledTaskAttempt() {
     LOG.info("--- START: testKillScheduledTaskAttempt ---");
     mockTask = createMockTask(TaskType.MAP);
     TaskId taskId = getNewTaskID();
@@ -443,26 +440,26 @@ public class TestTaskImpl {
     assertEquals(TaskAttemptEventType.TA_RESCHEDULE,
         taskAttemptEventHandler.lastTaskAttemptEvent.getType());
   }
-  
-  @Test 
+
   /**
    * Launch attempt
    * {@link TaskState#SCHEDULED}->{@link TaskState#RUNNING}
    */
-  public void testLaunchTaskAttempt() {
+  @Test
+  void testLaunchTaskAttempt() {
     LOG.info("--- START: testLaunchTaskAttempt ---");
-    mockTask = createMockTask(TaskType.MAP);        
+    mockTask = createMockTask(TaskType.MAP);
     TaskId taskId = getNewTaskID();
     scheduleTaskAttempt(taskId);
     launchTaskAttempt(getLastAttempt().getAttemptId());
   }
 
-  @Test
   /**
    * Kill running attempt
    * {@link TaskState#RUNNING}->{@link TaskState#RUNNING} 
    */
-  public void testKillRunningTaskAttempt() {
+  @Test
+  void testKillRunningTaskAttempt() {
     LOG.info("--- START: testKillRunningTaskAttempt ---");
     mockTask = createMockTask(TaskType.MAP);
     TaskId taskId = getNewTaskID();
@@ -474,7 +471,7 @@ public class TestTaskImpl {
   }
 
   @Test
-  public void testKillSuccessfulTask() {
+  void testKillSuccessfulTask() {
     LOG.info("--- START: testKillSuccesfulTask ---");
     mockTask = createMockTask(TaskType.MAP);
     TaskId taskId = getNewTaskID();
@@ -488,12 +485,12 @@ public class TestTaskImpl {
     assertTaskSucceededState();
   }
 
-  @Test
   /**
    * Kill map attempt for succeeded map task
    * {@link TaskState#SUCCEEDED}->{@link TaskState#SCHEDULED}
    */
-  public void testKillAttemptForSuccessfulTask() {
+  @Test
+  void testKillAttemptForSuccessfulTask() {
     LOG.info("--- START: testKillAttemptForSuccessfulTask ---");
     mockTask = createMockTask(TaskType.MAP);
     TaskId taskId = getNewTaskID();
@@ -510,18 +507,18 @@ public class TestTaskImpl {
     assertTaskScheduledState();
   }
 
-  @Test 
-  public void testTaskProgress() {
+  @Test
+  void testTaskProgress() {
     LOG.info("--- START: testTaskProgress ---");
-    mockTask = createMockTask(TaskType.MAP);        
-        
+    mockTask = createMockTask(TaskType.MAP);
+
     // launch task
     TaskId taskId = getNewTaskID();
     scheduleTaskAttempt(taskId);
     float progress = 0f;
     assert(mockTask.getProgress() == progress);
-    launchTaskAttempt(getLastAttempt().getAttemptId());    
-    
+    launchTaskAttempt(getLastAttempt().getAttemptId());
+
     // update attempt1 
     progress = 50f;
     updateLastAttemptProgress(progress);
@@ -529,7 +526,7 @@ public class TestTaskImpl {
     progress = 100f;
     updateLastAttemptProgress(progress);
     assert(mockTask.getProgress() == progress);
-    
+
     progress = 0f;
     // mark first attempt as killed
     updateLastAttemptState(TaskAttemptState.KILLED);
@@ -540,22 +537,22 @@ public class TestTaskImpl {
     // as no successful attempts 
     killRunningTaskAttempt(getLastAttempt().getAttemptId());
     assert(taskAttempts.size() == 2);
-    
+
     assert(mockTask.getProgress() == 0f);
     launchTaskAttempt(getLastAttempt().getAttemptId());
     progress = 50f;
     updateLastAttemptProgress(progress);
     assert(mockTask.getProgress() == progress);
-        
+
   }
 
-  
+
   @Test
-  public void testKillDuringTaskAttemptCommit() {
-    mockTask = createMockTask(TaskType.REDUCE);        
+  void testKillDuringTaskAttemptCommit() {
+    mockTask = createMockTask(TaskType.REDUCE);
     TaskId taskId = getNewTaskID();
     scheduleTaskAttempt(taskId);
-    
+
     launchTaskAttempt(getLastAttempt().getAttemptId());
     updateLastAttemptState(TaskAttemptState.COMMIT_PENDING);
     commitTaskAttempt(getLastAttempt().getAttemptId());
@@ -568,8 +565,8 @@ public class TestTaskImpl {
   }
 
   @Test
-  public void testFailureDuringTaskAttemptCommit() {
-    mockTask = createMockTask(TaskType.MAP);        
+  void testFailureDuringTaskAttemptCommit() {
+    mockTask = createMockTask(TaskType.MAP);
     TaskId taskId = getNewTaskID();
     scheduleTaskAttempt(taskId);
     launchTaskAttempt(getLastAttempt().getAttemptId());
@@ -584,13 +581,13 @@ public class TestTaskImpl {
     assertEquals(2, taskAttempts.size());
     updateLastAttemptState(TaskAttemptState.SUCCEEDED);
     commitTaskAttempt(getLastAttempt().getAttemptId());
-    mockTask.handle(new TaskTAttemptEvent(getLastAttempt().getAttemptId(), 
+    mockTask.handle(new TaskTAttemptEvent(getLastAttempt().getAttemptId(),
         TaskEventType.T_ATTEMPT_SUCCEEDED));
-    
-    assertFalse("First attempt should not commit",
-        mockTask.canCommit(taskAttempts.get(0).getAttemptId()));
-    assertTrue("Second attempt should commit",
-        mockTask.canCommit(getLastAttempt().getAttemptId()));
+
+    assertFalse(mockTask.canCommit(taskAttempts.get(0).getAttemptId()),
+        "First attempt should not commit");
+    assertTrue(mockTask.canCommit(getLastAttempt().getAttemptId()),
+        "Second attempt should commit");
 
     assertTaskSucceededState();
   }
@@ -628,45 +625,45 @@ public class TestTaskImpl {
     // The task should contain speculative a task attempt
     assertTaskAttemptAvataar(Avataar.SPECULATIVE);
   }
-  
+
   @Test
-  public void testMapSpeculativeTaskAttemptSucceedsEvenIfFirstFails() {
-    mockTask = createMockTask(TaskType.MAP);        
+  void testMapSpeculativeTaskAttemptSucceedsEvenIfFirstFails() {
+    mockTask = createMockTask(TaskType.MAP);
     runSpeculativeTaskAttemptSucceeds(TaskEventType.T_ATTEMPT_FAILED);
   }
 
   @Test
-  public void testReduceSpeculativeTaskAttemptSucceedsEvenIfFirstFails() {
-    mockTask = createMockTask(TaskType.REDUCE);        
+  void testReduceSpeculativeTaskAttemptSucceedsEvenIfFirstFails() {
+    mockTask = createMockTask(TaskType.REDUCE);
     runSpeculativeTaskAttemptSucceeds(TaskEventType.T_ATTEMPT_FAILED);
   }
-  
+
   @Test
-  public void testMapSpeculativeTaskAttemptSucceedsEvenIfFirstIsKilled() {
-    mockTask = createMockTask(TaskType.MAP);        
+  void testMapSpeculativeTaskAttemptSucceedsEvenIfFirstIsKilled() {
+    mockTask = createMockTask(TaskType.MAP);
     runSpeculativeTaskAttemptSucceeds(TaskEventType.T_ATTEMPT_KILLED);
   }
 
   @Test
-  public void testReduceSpeculativeTaskAttemptSucceedsEvenIfFirstIsKilled() {
-    mockTask = createMockTask(TaskType.REDUCE);        
+  void testReduceSpeculativeTaskAttemptSucceedsEvenIfFirstIsKilled() {
+    mockTask = createMockTask(TaskType.REDUCE);
     runSpeculativeTaskAttemptSucceeds(TaskEventType.T_ATTEMPT_KILLED);
   }
 
   @Test
-  public void testMultipleTaskAttemptsSucceed() {
+  void testMultipleTaskAttemptsSucceed() {
     mockTask = createMockTask(TaskType.MAP);
     runSpeculativeTaskAttemptSucceeds(TaskEventType.T_ATTEMPT_SUCCEEDED);
   }
 
   @Test
-  public void testCommitAfterSucceeds() {
+  void testCommitAfterSucceeds() {
     mockTask = createMockTask(TaskType.REDUCE);
     runSpeculativeTaskAttemptSucceeds(TaskEventType.T_ATTEMPT_COMMIT_PENDING);
   }
 
   @Test
-  public void testSpeculativeMapFetchFailure() {
+  void testSpeculativeMapFetchFailure() {
     // Setup a scenario where speculative task wins, first attempt killed
     mockTask = createMockTask(TaskType.MAP);
     runSpeculativeTaskAttemptSucceeds(TaskEventType.T_ATTEMPT_KILLED);
@@ -681,7 +678,7 @@ public class TestTaskImpl {
   }
 
   @Test
-  public void testSpeculativeMapMultipleSucceedFetchFailure() {
+  void testSpeculativeMapMultipleSucceedFetchFailure() {
     // Setup a scenario where speculative task wins, first attempt succeeds
     mockTask = createMockTask(TaskType.MAP);
     runSpeculativeTaskAttemptSucceeds(TaskEventType.T_ATTEMPT_SUCCEEDED);
@@ -696,7 +693,7 @@ public class TestTaskImpl {
   }
 
   @Test
-  public void testSpeculativeMapFailedFetchFailure() {
+  void testSpeculativeMapFailedFetchFailure() {
     // Setup a scenario where speculative task wins, first attempt succeeds
     mockTask = createMockTask(TaskType.MAP);
     runSpeculativeTaskAttemptSucceeds(TaskEventType.T_ATTEMPT_FAILED);
@@ -711,14 +708,14 @@ public class TestTaskImpl {
   }
 
   @Test
-  public void testFailedTransitions() {
+  void testFailedTransitions() {
     mockTask = new MockTaskImpl(jobId, partition, dispatcher.getEventHandler(),
         remoteJobConfFile, conf, taskAttemptListener, jobToken,
         credentials, clock, startCount, metrics, appContext, TaskType.MAP) {
-          @Override
-          protected int getMaxAttempts() {
-            return 1;
-          }
+      @Override
+      protected int getMaxAttempts() {
+        return 1;
+      }
     };
     TaskId taskId = getNewTaskID();
     scheduleTaskAttempt(taskId);
@@ -789,7 +786,7 @@ public class TestTaskImpl {
   }
 
   @Test
-  public void testFailedTransitionWithHangingSpeculativeMap() {
+  void testFailedTransitionWithHangingSpeculativeMap() {
     mockTask = new MockTaskImpl(jobId, partition, new PartialAttemptEventHandler(),
         remoteJobConfFile, conf, taskAttemptListener, jobToken,
         credentials, clock, startCount, metrics, appContext, TaskType.MAP) {
@@ -840,14 +837,14 @@ public class TestTaskImpl {
   }
 
   @Test
-  public void testCountersWithSpeculation() {
+  void testCountersWithSpeculation() {
     mockTask = new MockTaskImpl(jobId, partition, dispatcher.getEventHandler(),
         remoteJobConfFile, conf, taskAttemptListener, jobToken,
         credentials, clock, startCount, metrics, appContext, TaskType.MAP) {
-          @Override
-          protected int getMaxAttempts() {
-            return 1;
-          }
+      @Override
+      protected int getMaxAttempts() {
+        return 1;
+      }
     };
     TaskId taskId = getNewTaskID();
     scheduleTaskAttempt(taskId);
@@ -879,7 +876,7 @@ public class TestTaskImpl {
     baseAttempt.setProgress(1.0f);
 
     Counters taskCounters = mockTask.getCounters();
-    assertEquals("wrong counters for task", specAttemptCounters, taskCounters);
+    assertEquals(specAttemptCounters, taskCounters, "wrong counters for task");
   }
 
   public static class MockTaskAttemptEventHandler implements EventHandler {

@@ -24,17 +24,15 @@ import org.apache.hadoop.mapreduce.v2.app.MockJobs;
 import org.apache.hadoop.mapreduce.v2.proto.MRProtos;
 import org.apache.hadoop.yarn.util.Records;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestTaskAttemptReport {
 
   @Test
-  public void testSetRawCounters() {
+  void testSetRawCounters() {
     TaskAttemptReport report = Records.newRecord(TaskAttemptReport.class);
     org.apache.hadoop.mapreduce.Counters rCounters = MockJobs.newCounters();
     report.setRawCounters(rCounters);
@@ -43,7 +41,7 @@ public class TestTaskAttemptReport {
   }
 
   @Test
-  public void testBuildImplicitRawCounters() {
+  void testBuildImplicitRawCounters() {
     TaskAttemptReportPBImpl report = new TaskAttemptReportPBImpl();
     org.apache.hadoop.mapreduce.Counters rCounters = MockJobs.newCounters();
     report.setRawCounters(rCounters);
@@ -53,7 +51,7 @@ public class TestTaskAttemptReport {
   }
 
   @Test
-  public void testCountersOverRawCounters() {
+  void testCountersOverRawCounters() {
     TaskAttemptReport report = Records.newRecord(TaskAttemptReport.class);
     org.apache.hadoop.mapreduce.Counters rCounters = MockJobs.newCounters();
     Counters altCounters = TypeConverter.toYarn(rCounters);
@@ -66,7 +64,7 @@ public class TestTaskAttemptReport {
   }
 
   @Test
-  public void testUninitializedCounters() {
+  void testUninitializedCounters() {
     // Create basic class
     TaskAttemptReport report = Records.newRecord(TaskAttemptReport.class);
     // Verify properties initialized to null
@@ -75,7 +73,7 @@ public class TestTaskAttemptReport {
   }
 
   @Test
-  public void testSetRawCountersToNull() {
+  void testSetRawCountersToNull() {
     // Create basic class
     TaskAttemptReport report = Records.newRecord(TaskAttemptReport.class);
     // Set raw counters to null
@@ -87,7 +85,7 @@ public class TestTaskAttemptReport {
   }
 
   @Test
-  public void testSetCountersToNull() {
+  void testSetCountersToNull() {
     // Create basic class
     TaskAttemptReport report = Records.newRecord(TaskAttemptReport.class);
     // Set raw counters to null
@@ -98,7 +96,7 @@ public class TestTaskAttemptReport {
   }
 
   @Test
-  public void testSetNonNullCountersToNull() {
+  void testSetNonNullCountersToNull() {
     // Create basic class
     TaskAttemptReport report = Records.newRecord(TaskAttemptReport.class);
     // Set raw counters
@@ -114,7 +112,7 @@ public class TestTaskAttemptReport {
   }
 
   @Test
-  public void testSetNonNullRawCountersToNull() {
+  void testSetNonNullRawCountersToNull() {
     // Create basic class
     TaskAttemptReport report = Records.newRecord(TaskAttemptReport.class);
     // Set raw counters

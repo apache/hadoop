@@ -19,9 +19,7 @@
 package org.apache.hadoop.mapreduce.jobhistory;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -40,18 +38,21 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestEvents {
 
   private static final String taskId = "task_1_2_r_3";
+
   /**
    * test a getters of TaskAttemptFinishedEvent and TaskAttemptFinished
    * 
    * @throws Exception
    */
-  @Test(timeout = 10000)
-  public void testTaskAttemptFinishedEvent() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testTaskAttemptFinishedEvent() throws Exception {
 
     JobID jid = new JobID("001", 1);
     TaskID tid = new TaskID(jid, TaskType.REDUCE, 2);
@@ -79,8 +80,9 @@ public class TestEvents {
    * @throws Exception
    */
 
-  @Test(timeout = 10000)
-  public void testJobPriorityChange() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testJobPriorityChange() throws Exception {
     org.apache.hadoop.mapreduce.JobID jid = new JobID("001", 1);
     JobPriorityChangeEvent test = new JobPriorityChangeEvent(jid,
         JobPriority.LOW);
@@ -88,9 +90,10 @@ public class TestEvents {
     assertThat(test.getPriority()).isEqualTo(JobPriority.LOW);
 
   }
-  
-  @Test(timeout = 10000)
-  public void testJobQueueChange() throws Exception {
+
+  @Test
+  @Timeout(10000)
+  void testJobQueueChange() throws Exception {
     org.apache.hadoop.mapreduce.JobID jid = new JobID("001", 1);
     JobQueueChangeEvent test = new JobQueueChangeEvent(jid,
         "newqueue");
@@ -103,8 +106,9 @@ public class TestEvents {
    * 
    * @throws Exception
    */
-  @Test(timeout = 10000)
-  public void testTaskUpdated() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testTaskUpdated() throws Exception {
     JobID jid = new JobID("001", 1);
     TaskID tid = new TaskID(jid, TaskType.REDUCE, 2);
     TaskUpdatedEvent test = new TaskUpdatedEvent(tid, 1234L);
@@ -118,70 +122,71 @@ public class TestEvents {
    * instance of HistoryEvent Different HistoryEvent should have a different
    * datum.
    */
-  @Test(timeout = 10000)
-  public void testEvents() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testEvents() throws Exception {
 
     EventReader reader = new EventReader(new DataInputStream(
         new ByteArrayInputStream(getEvents())));
     HistoryEvent e = reader.getNextEvent();
-    assertTrue(e.getEventType().equals(EventType.JOB_PRIORITY_CHANGED));
+    assertEquals(e.getEventType(), EventType.JOB_PRIORITY_CHANGED);
     assertEquals("ID", ((JobPriorityChange) e.getDatum()).getJobid().toString());
 
     e = reader.getNextEvent();
-    assertTrue(e.getEventType().equals(EventType.JOB_STATUS_CHANGED));
+    assertEquals(e.getEventType(), EventType.JOB_STATUS_CHANGED);
     assertEquals("ID", ((JobStatusChanged) e.getDatum()).getJobid().toString());
 
     e = reader.getNextEvent();
-    assertTrue(e.getEventType().equals(EventType.TASK_UPDATED));
+    assertEquals(e.getEventType(), EventType.TASK_UPDATED);
     assertEquals("ID", ((TaskUpdated) e.getDatum()).getTaskid().toString());
 
     e = reader.getNextEvent();
-    assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_KILLED));
+    assertEquals(e.getEventType(), EventType.REDUCE_ATTEMPT_KILLED);
     assertEquals(taskId,
         ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).getTaskid().toString());
 
     e = reader.getNextEvent();
-    assertTrue(e.getEventType().equals(EventType.JOB_KILLED));
+    assertEquals(e.getEventType(), EventType.JOB_KILLED);
     assertEquals("ID",
         ((JobUnsuccessfulCompletion) e.getDatum()).getJobid().toString());
 
     e = reader.getNextEvent();
-    assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_STARTED));
+    assertEquals(e.getEventType(), EventType.REDUCE_ATTEMPT_STARTED);
     assertEquals(taskId,
         ((TaskAttemptStarted) e.getDatum()).getTaskid().toString());
 
     e = reader.getNextEvent();
-    assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_FINISHED));
+    assertEquals(e.getEventType(), EventType.REDUCE_ATTEMPT_FINISHED);
     assertEquals(taskId,
         ((TaskAttemptFinished) e.getDatum()).getTaskid().toString());
 
     e = reader.getNextEvent();
-    assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_KILLED));
+    assertEquals(e.getEventType(), EventType.REDUCE_ATTEMPT_KILLED);
     assertEquals(taskId,
         ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).getTaskid().toString());
 
     e = reader.getNextEvent();
-    assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_KILLED));
+    assertEquals(e.getEventType(), EventType.REDUCE_ATTEMPT_KILLED);
     assertEquals(taskId,
         ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).getTaskid().toString());
 
     e = reader.getNextEvent();
-    assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_STARTED));
+    assertEquals(e.getEventType(), EventType.REDUCE_ATTEMPT_STARTED);
     assertEquals(taskId,
         ((TaskAttemptStarted) e.getDatum()).getTaskid().toString());
 
     e = reader.getNextEvent();
-    assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_FINISHED));
+    assertEquals(e.getEventType(), EventType.REDUCE_ATTEMPT_FINISHED);
     assertEquals(taskId,
         ((TaskAttemptFinished) e.getDatum()).getTaskid().toString());
 
     e = reader.getNextEvent();
-    assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_KILLED));
+    assertEquals(e.getEventType(), EventType.REDUCE_ATTEMPT_KILLED);
     assertEquals(taskId,
         ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).getTaskid().toString());
 
     e = reader.getNextEvent();
-    assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_KILLED));
+    assertEquals(e.getEventType(), EventType.REDUCE_ATTEMPT_KILLED);
     assertEquals(taskId,
         ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).getTaskid().toString());
 

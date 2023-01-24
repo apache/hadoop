@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -30,7 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import java.util.function.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -68,7 +69,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 /**
@@ -78,35 +79,35 @@ import org.mockito.Mockito;
 public class TestMRApp {
 
   @Test
-  public void testMapReduce() throws Exception {
+  void testMapReduce() throws Exception {
     MRApp app = new MRApp(2, 2, true, this.getClass().getName(), true);
     Job job = app.submit(new Configuration());
     app.waitForState(job, JobState.SUCCEEDED);
     app.verifyCompleted();
-    Assert.assertEquals(System.getProperty("user.name"),job.getUserName());
+    assertEquals(System.getProperty("user.name"), job.getUserName());
   }
 
   @Test
-  public void testZeroMaps() throws Exception {
+  void testZeroMaps() throws Exception {
     MRApp app = new MRApp(0, 1, true, this.getClass().getName(), true);
     Job job = app.submit(new Configuration());
     app.waitForState(job, JobState.SUCCEEDED);
     app.verifyCompleted();
   }
-  
+
   @Test
-  public void testZeroMapReduces() throws Exception{
+  void testZeroMapReduces() throws Exception {
     MRApp app = new MRApp(0, 0, true, this.getClass().getName(), true);
     Job job = app.submit(new Configuration());
     app.waitForState(job, JobState.SUCCEEDED);
   }
-  
+
   @Test
-  public void testCommitPending() throws Exception {
+  void testCommitPending() throws Exception {
     MRApp app = new MRApp(1, 0, false, this.getClass().getName(), true);
     Job job = app.submit(new Configuration());
     app.waitForState(job, JobState.RUNNING);
-    Assert.assertEquals("Num tasks not correct", 1, job.getTasks().size());
+    assertEquals(1, job.getTasks().size(), "Num tasks not correct");
     Iterator<Task> it = job.getTasks().values().iterator();
     Task task = it.next();
     app.waitForState(task, TaskState.RUNNING);
@@ -151,7 +152,7 @@ public class TestMRApp {
     Job job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
     //all maps would be running
-    Assert.assertEquals("Num tasks not correct", 3, job.getTasks().size());
+    assertEquals(3, job.getTasks().size(), "Num tasks not correct");
     Iterator<Task> it = job.getTasks().values().iterator();
     Task mapTask1 = it.next();
     Task mapTask2 = it.next();
@@ -170,8 +171,7 @@ public class TestMRApp {
     app.waitForState(task2Attempt, TaskAttemptState.RUNNING);
     
     // reduces must be in NEW state
-    Assert.assertEquals("Reduce Task state not correct",
-        TaskState.NEW, reduceTask.getReport().getTaskState());
+    assertEquals(TaskState.NEW, reduceTask.getReport().getTaskState(), "Reduce Task state not correct");
     
     //send the done signal to the 1st map task
     app.getContext().getEventHandler().handle(
@@ -198,7 +198,7 @@ public class TestMRApp {
     
     app.waitForState(job, JobState.SUCCEEDED);
   }
-  
+
   /**
    * The test verifies that the AM re-runs maps that have run on bad nodes. It
    * also verifies that the AM records all success/killed events so that reduces
@@ -206,7 +206,7 @@ public class TestMRApp {
    * re-run information is preserved across AM restart
    */
   @Test
-  public void testUpdatedNodes() throws Exception {
+  void testUpdatedNodes() throws Exception {
     int runCount = 0;
     AsyncDispatcher dispatcher = new AsyncDispatcher();
     dispatcher.init(new Configuration());
@@ -224,7 +224,7 @@ public class TestMRApp {
 
     final Job job1 = app.submit(conf);
     app.waitForState(job1, JobState.RUNNING);
-    Assert.assertEquals("Num tasks not correct", 4, job1.getTasks().size());
+    assertEquals(4, job1.getTasks().size(), "Num tasks not correct");
     Iterator<Task> it = job1.getTasks().values().iterator();
     Task mapTask1 = it.next();
     Task mapTask2 = it.next();
@@ -239,7 +239,7 @@ public class TestMRApp {
         .next();
     NodeId node1 = task1Attempt.getNodeId();
     NodeId node2 = task2Attempt.getNodeId();
-    Assert.assertEquals(node1, node2);
+    assertEquals(node1, node2);
 
     // send the done signal to the task
     app.getContext()
@@ -271,8 +271,9 @@ public class TestMRApp {
 
     TaskAttemptCompletionEvent[] events = job1.getTaskAttemptCompletionEvents
         (0, 100);
-    Assert.assertEquals("Expecting 2 completion events for success", 2,
-        events.length);
+    assertEquals(2,
+        events.length,
+        "Expecting 2 completion events for success");
 
     // send updated nodes info
     ArrayList<NodeReport> updatedNodes = new ArrayList<NodeReport>();
@@ -297,8 +298,9 @@ public class TestMRApp {
     }, checkIntervalMillis, waitForMillis);
 
     events = job1.getTaskAttemptCompletionEvents(0, 100);
-    Assert.assertEquals("Expecting 2 more completion events for killed", 4,
-        events.length);
+    assertEquals(4,
+        events.length,
+        "Expecting 2 more completion events for killed");
     // 2 map task attempts which were killed above should be requested from
     // container allocator with the previous map task marked as failed. If
     // this happens allocator will request the container for this mapper from
@@ -335,8 +337,9 @@ public class TestMRApp {
     }, checkIntervalMillis, waitForMillis);
 
     events = job1.getTaskAttemptCompletionEvents(0, 100);
-    Assert.assertEquals("Expecting 1 more completion events for success", 5,
-        events.length);
+    assertEquals(5,
+        events.length,
+        "Expecting 1 more completion events for success");
 
     // Crash the app again.
     app.stop();
@@ -344,14 +347,14 @@ public class TestMRApp {
     // rerun
     // in rerun the 1st map will be recovered from previous run
     app = new MRAppWithHistory(2, 2, false, this.getClass().getName(), false,
-        ++runCount, (Dispatcher)new AsyncDispatcher());
+        ++runCount, (Dispatcher) new AsyncDispatcher());
     conf = new Configuration();
     conf.setBoolean(MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE, true);
     conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
 
     final Job job2 = app.submit(conf);
     app.waitForState(job2, JobState.RUNNING);
-    Assert.assertEquals("No of tasks not correct", 4, job2.getTasks().size());
+    assertEquals(4, job2.getTasks().size(), "No of tasks not correct");
     it = job2.getTasks().values().iterator();
     mapTask1 = it.next();
     mapTask2 = it.next();
@@ -372,9 +375,10 @@ public class TestMRApp {
     }, checkIntervalMillis, waitForMillis);
 
     events = job2.getTaskAttemptCompletionEvents(0, 100);
-    Assert.assertEquals(
-        "Expecting 2 completion events for killed & success of map1", 2,
-        events.length);
+    assertEquals(
+        2,
+        events.length,
+        "Expecting 2 completion events for killed & success of map1");
 
     task2Attempt = mapTask2.getAttempts().values().iterator().next();
     app.getContext()
@@ -394,8 +398,9 @@ public class TestMRApp {
     }, checkIntervalMillis, waitForMillis);
 
     events = job2.getTaskAttemptCompletionEvents(0, 100);
-    Assert.assertEquals("Expecting 1 more completion events for success", 3,
-        events.length);
+    assertEquals(3,
+        events.length,
+        "Expecting 1 more completion events for success");
 
     app.waitForState(reduceTask1, TaskState.RUNNING);
     app.waitForState(reduceTask2, TaskState.RUNNING);
@@ -409,12 +414,12 @@ public class TestMRApp {
                 TaskAttemptEventType.TA_DONE));
     app.waitForState(reduceTask1, TaskState.SUCCEEDED);
     app.getContext()
-    .getEventHandler()
-    .handle(
-        new TaskAttemptEvent(task3Attempt.getID(),
-            TaskAttemptEventType.TA_KILL));
+        .getEventHandler()
+        .handle(
+            new TaskAttemptEvent(task3Attempt.getID(),
+                TaskAttemptEventType.TA_KILL));
     app.waitForState(reduceTask1, TaskState.SUCCEEDED);
-    
+
     TaskAttempt task4Attempt = reduceTask2.getAttempts().values().iterator()
         .next();
     app.getContext()
@@ -433,8 +438,7 @@ public class TestMRApp {
       }
     }, checkIntervalMillis, waitForMillis);
     events = job2.getTaskAttemptCompletionEvents(0, 100);
-    Assert.assertEquals("Expecting 2 more completion events for reduce success",
-        5, events.length);
+    assertEquals(5, events.length, "Expecting 2 more completion events for reduce success");
 
     // job succeeds
     app.waitForState(job2, JobState.SUCCEEDED);
@@ -468,11 +472,11 @@ public class TestMRApp {
   }
 
   @Test
-  public void testJobError() throws Exception {
+  void testJobError() throws Exception {
     MRApp app = new MRApp(1, 0, false, this.getClass().getName(), true);
     Job job = app.submit(new Configuration());
     app.waitForState(job, JobState.RUNNING);
-    Assert.assertEquals("Num tasks not correct", 1, job.getTasks().size());
+    assertEquals(1, job.getTasks().size(), "Num tasks not correct");
     Iterator<Task> it = job.getTasks().values().iterator();
     Task task = it.next();
     app.waitForState(task, TaskState.RUNNING);
@@ -488,31 +492,31 @@ public class TestMRApp {
 
   @SuppressWarnings("resource")
   @Test
-  public void testJobSuccess() throws Exception {
+  void testJobSuccess() throws Exception {
     MRApp app = new MRApp(2, 2, true, this.getClass().getName(), true, false);
     JobImpl job = (JobImpl) app.submit(new Configuration());
     app.waitForInternalState(job, JobStateInternal.SUCCEEDED);
     // AM is not unregistered
-    Assert.assertEquals(JobState.RUNNING, job.getState());
+    assertEquals(JobState.RUNNING, job.getState());
     // imitate that AM is unregistered
     app.successfullyUnregistered.set(true);
     app.waitForState(job, JobState.SUCCEEDED);
   }
 
   @Test
-  public void testJobRebootNotLastRetryOnUnregistrationFailure()
+  void testJobRebootNotLastRetryOnUnregistrationFailure()
       throws Exception {
     MRApp app = new MRApp(1, 0, false, this.getClass().getName(), true);
     Job job = app.submit(new Configuration());
     app.waitForState(job, JobState.RUNNING);
-    Assert.assertEquals("Num tasks not correct", 1, job.getTasks().size());
+    assertEquals(1, job.getTasks().size(), "Num tasks not correct");
     Iterator<Task> it = job.getTasks().values().iterator();
     Task task = it.next();
     app.waitForState(task, TaskState.RUNNING);
 
     //send an reboot event
     app.getContext().getEventHandler().handle(new JobEvent(job.getID(),
-      JobEventType.JOB_AM_REBOOT));
+        JobEventType.JOB_AM_REBOOT));
 
     // return exteranl state as RUNNING since otherwise the JobClient will
     // prematurely exit.
@@ -520,7 +524,7 @@ public class TestMRApp {
   }
 
   @Test
-  public void testJobRebootOnLastRetryOnUnregistrationFailure()
+  void testJobRebootOnLastRetryOnUnregistrationFailure()
       throws Exception {
     // make startCount as 2 since this is last retry which equals to
     // DEFAULT_MAX_AM_RETRY
@@ -530,14 +534,14 @@ public class TestMRApp {
     Configuration conf = new Configuration();
     Job job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
-    Assert.assertEquals("Num tasks not correct", 1, job.getTasks().size());
+    assertEquals(1, job.getTasks().size(), "Num tasks not correct");
     Iterator<Task> it = job.getTasks().values().iterator();
     Task task = it.next();
     app.waitForState(task, TaskState.RUNNING);
 
     //send an reboot event
     app.getContext().getEventHandler().handle(new JobEvent(job.getID(),
-      JobEventType.JOB_AM_REBOOT));
+        JobEventType.JOB_AM_REBOOT));
 
     app.waitForInternalState((JobImpl) job, JobStateInternal.REBOOT);
     // return exteranl state as RUNNING if this is the last retry while
@@ -563,10 +567,10 @@ public class TestMRApp {
   }
 
   @Test
-  public void testCountersOnJobFinish() throws Exception {
+  void testCountersOnJobFinish() throws Exception {
     MRAppWithSpiedJob app =
         new MRAppWithSpiedJob(1, 1, true, this.getClass().getName(), true);
-    JobImpl job = (JobImpl)app.submit(new Configuration());
+    JobImpl job = (JobImpl) app.submit(new Configuration());
     app.waitForState(job, JobState.SUCCEEDED);
     app.verifyCompleted();
     System.out.println(job.getAllCounters());
@@ -578,7 +582,7 @@ public class TestMRApp {
   }
 
   @Test
-  public void checkJobStateTypeConversion() {
+  void checkJobStateTypeConversion() {
     //verify that all states can be converted without 
     // throwing an exception
     for (JobState state : JobState.values()) {
@@ -587,7 +591,7 @@ public class TestMRApp {
   }
 
   @Test
-  public void checkTaskStateTypeConversion() {
+  void checkTaskStateTypeConversion() {
     //verify that all states can be converted without 
     // throwing an exception
     for (TaskState state : TaskState.values()) {
@@ -596,8 +600,9 @@ public class TestMRApp {
   }
 
   private Container containerObtainedByContainerLauncher;
+
   @Test
-  public void testContainerPassThrough() throws Exception {
+  void testContainerPassThrough() throws Exception {
     MRApp app = new MRApp(0, 1, true, this.getClass().getName(), true) {
       @Override
       protected ContainerLauncher createContainerLauncher(AppContext context) {
@@ -611,7 +616,7 @@ public class TestMRApp {
             super.handle(event);
           }
         };
-      };
+      }
     };
     Job job = app.submit(new Configuration());
     app.waitForState(job, JobState.SUCCEEDED);
@@ -624,8 +629,8 @@ public class TestMRApp {
         (TaskAttemptImpl) taskAttempts.iterator().next();
     // Container from RM should pass through to the launcher. Container object
     // should be the same.
-   Assert.assertTrue(taskAttempt.container 
-     == containerObtainedByContainerLauncher);
+   assertTrue(taskAttempt.container
+        == containerObtainedByContainerLauncher);
   }
 
   private final class MRAppWithHistory extends MRApp {
