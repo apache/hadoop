@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.client.cli;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
@@ -46,12 +47,13 @@ public class TestRouterCLI {
 
   @Before
   public void setup() throws Exception {
+
     admin = mock(ResourceManagerAdministrationProtocol.class);
     when(admin.deregisterSubCluster(any(DeregisterSubClusterRequest.class)))
         .thenAnswer((Answer<DeregisterSubClusterResponse>) invocationOnMock -> {
           // Step1. parse subClusterId.
           Object obj = invocationOnMock.getArgument(0);
-          DeregisterSubClusterRequest request = DeregisterSubClusterRequest.class.cast(obj);
+          DeregisterSubClusterRequest request = (DeregisterSubClusterRequest) obj;
           String subClusterId = request.getSubClusterId();
 
           if (StringUtils.isNotBlank(subClusterId)) {
@@ -61,13 +63,15 @@ public class TestRouterCLI {
           }
         });
 
-      rmAdminCLI = new RouterCLI(new Configuration()) {
-          @Override
-          protected ResourceManagerAdministrationProtocol createAdminProtocol()
-              throws IOException {
-              return admin;
-          }
-      };
+    Configuration config = new Configuration();
+    config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
+
+    rmAdminCLI = new RouterCLI(config) {
+      @Override
+      protected ResourceManagerAdministrationProtocol createAdminProtocol() throws IOException {
+        return admin;
+      }
+    };
   }
 
   private DeregisterSubClusterResponse generateSubClusterDataBySCId(String subClusterId) {
@@ -80,9 +84,7 @@ public class TestRouterCLI {
     deregisterSubClusterList.add(deregisterSubClusters);
 
     // Step3. return data.
-    DeregisterSubClusterResponse response =
-        DeregisterSubClusterResponse.newInstance(deregisterSubClusterList);
-    return response;
+    return DeregisterSubClusterResponse.newInstance(deregisterSubClusterList);
   }
 
   private DeregisterSubClusterResponse generateAllSubClusterData() {
@@ -96,9 +98,7 @@ public class TestRouterCLI {
       deregisterSubClusterList.add(deregisterSubClusters);
     }
 
-    DeregisterSubClusterResponse response =
-        DeregisterSubClusterResponse.newInstance(deregisterSubClusterList);
-    return response;
+    return DeregisterSubClusterResponse.newInstance(deregisterSubClusterList);
   }
 
   @Test
@@ -126,7 +126,19 @@ public class TestRouterCLI {
 
   @Test
   public void testDeregisterSubClusters() throws Exception {
-    String[] args = {"-deregisterSubCluster", "-c", ""};
+
+    PrintStream oldOutPrintStream = System.out;
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(dataOut));
+    oldOutPrintStream.println(dataOut);
+
+    String[] args = {"-deregisterSubCluster"};
+    assertEquals(0, rmAdminCLI.run(args));
+
+    args = new String[]{"-deregisterSubCluster", "-c"};
+    assertEquals(0, rmAdminCLI.run(args));
+
+    args = new String[]{"-deregisterSubCluster", "-c", ""};
     assertEquals(0, rmAdminCLI.run(args));
   }
 }

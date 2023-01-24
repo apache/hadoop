@@ -930,7 +930,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   }
 
   @Override
-  public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request) throws YarnException, IOException {
+  public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request)
+      throws YarnException, IOException {
     return null;
   }
 

@@ -158,15 +158,15 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
 
   /**
    * In YARN Federation mode, We allow users to mark subClusters
-   * with no heartbeat for a long time as SC_LOST state.
+   * With no heartbeat for a long time as SC_LOST state.
    *
    * If we include a specific subClusterId in the request, check for the specified subCluster.
    * If subClusterId is empty, all subClusters are checked.
    *
    * @param request deregisterSubCluster request.
    * The request contains the id of to deregister sub-cluster.
-   * @return
-   * @throws YarnException
+   * @return Response from deregisterSubCluster.
+   * @throws YarnException exceptions from yarn servers.
    */
   @Private
   @Idempotent

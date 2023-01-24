@@ -128,8 +128,8 @@ public class PassThroughRMAdminRequestInterceptor
   }
 
   @Override
-  public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request) throws YarnException, IOException {
-    return null;
+  public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request)
+      throws YarnException, IOException {
+    return getNextInterceptor().deregisterSubCluster(request);
   }
-
 }

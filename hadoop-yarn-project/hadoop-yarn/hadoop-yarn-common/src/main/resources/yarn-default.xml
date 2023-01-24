@@ -5117,4 +5117,21 @@
     </description>
   </property>
 
+  <property>
+    <name>yarn.router.submit.interval.time</name>
+    <value>10ms</value>
+    <description>
+      The interval Time between calling different subCluster requests.
+      Default is 10ms.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.subcluster.heartbeat.expiration.time</name>
+    <value>30m</value>
+    <description>
+      subCluster heartbeat timeout. Default is 30mins.
+    </description>
+  </property>
+
 </configuration>

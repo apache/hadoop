@@ -91,6 +91,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenReque
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterResponse;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1162,10 +1163,15 @@ public final class FederationStateStoreFacade {
    * @param subClusterState The state of the subCluster to be updated.
    * @throws YarnException yarn exception.
    */
-  public void deregisterSubCluster(SubClusterId subClusterId,
+  public boolean deregisterSubCluster(SubClusterId subClusterId,
       SubClusterState subClusterState) throws YarnException {
     SubClusterDeregisterRequest deregisterRequest =
         SubClusterDeregisterRequest.newInstance(subClusterId, subClusterState);
-    stateStore.deregisterSubCluster(deregisterRequest);
+    SubClusterDeregisterResponse response = stateStore.deregisterSubCluster(deregisterRequest);
+    // If the response is not empty, deregisterSubCluster is successful.
+    if (response != null) {
+      return true;
+    }
+    return false;
   }
 }

@@ -116,8 +116,8 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
 
   private ResourceManagerAdministrationProtocolPB proxy;
   
-  public ResourceManagerAdministrationProtocolPBClientImpl(long clientVersion, InetSocketAddress addr,
-      Configuration conf) throws IOException {
+  public ResourceManagerAdministrationProtocolPBClientImpl(
+      long clientVersion, InetSocketAddress addr, Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, ResourceManagerAdministrationProtocolPB.class, 
         ProtobufRpcEngine2.class);
     proxy = (ResourceManagerAdministrationProtocolPB)RPC.getProxy(

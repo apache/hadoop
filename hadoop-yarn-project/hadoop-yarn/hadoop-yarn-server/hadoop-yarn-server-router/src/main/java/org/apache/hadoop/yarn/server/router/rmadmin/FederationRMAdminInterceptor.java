@@ -46,9 +46,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Date;
-import java.util.Map;
-import java.util.Collection;
+import java.util.*;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.BlockingQueue;
@@ -89,8 +87,8 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     routerMetrics = RouterMetrics.getMetrics();
 
     this.heartbeatExpirationMillis =
-        this.conf.getLong(YarnConfiguration.ROUTER_SUBCLUSTER_EXPIRATION_MS,
-        YarnConfiguration.DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_MS);
+        this.conf.getTimeDuration(YarnConfiguration.ROUTER_SUBCLUSTER_EXPIRATION_TIME,
+        YarnConfiguration.DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME, TimeUnit.MINUTES);
   }
 
   @VisibleForTesting
@@ -417,56 +415,110 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     throw new NotImplementedException();
   }
 
+  /**
+   * In YARN Federation mode, We allow users to mark subClusters
+   * With no heartbeat for a long time as SC_LOST state.
+   *
+   * If we include a specific subClusterId in the request, check for the specified subCluster.
+   * If subClusterId is empty, all subClusters are checked.
+   *
+   * @param request deregisterSubCluster request.
+   * The request contains the id of to deregister sub-cluster.
+   * @return Response from deregisterSubCluster.
+   * @throws YarnException exceptions from yarn servers.
+   */
   @Override
   public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request)
       throws YarnException {
 
     if (request == null) {
+      routerMetrics.incrDeregisterSubClusterFailedRetrieved();
       RouterServerUtil.logAndThrowException("Missing DeregisterSubCluster request.", null);
     }
 
-    String reqSubClusterId = request.getSubClusterId();
-    if (StringUtils.isNotBlank(reqSubClusterId)) {
-      // If subCluster is not empty, process the specified subCluster.
-      deregisterSubCluster(reqSubClusterId);
-    } else {
-      // Traversing all Active SubClusters,
-      // for subCluster whose heartbeat times out, update the status to SC_LOST.
-      Map<SubClusterId, SubClusterInfo> subClusterInfo = federationFacade.getSubClusters(true);
-      for (Map.Entry<SubClusterId, SubClusterInfo> entry : subClusterInfo.entrySet()) {
-        SubClusterId subClusterId = entry.getKey();
-        deregisterSubCluster(subClusterId.getId());
+    try {
+      long startTime = clock.getTime();
+      List<DeregisterSubClusters> deregisterSubClusterList = new ArrayList<>();
+      String reqSubClusterId = request.getSubClusterId();
+      if (StringUtils.isNotBlank(reqSubClusterId)) {
+        // If subCluster is not empty, process the specified subCluster.
+        DeregisterSubClusters deregisterSubClusters = deregisterSubCluster(reqSubClusterId);
+        deregisterSubClusterList.add(deregisterSubClusters);
+      } else {
+        // Traversing all Active SubClusters,
+        // for subCluster whose heartbeat times out, update the status to SC_LOST.
+        Map<SubClusterId, SubClusterInfo> subClusterInfo = federationFacade.getSubClusters(true);
+        for (Map.Entry<SubClusterId, SubClusterInfo> entry : subClusterInfo.entrySet()) {
+          SubClusterId subClusterId = entry.getKey();
+          DeregisterSubClusters deregisterSubClusters = deregisterSubCluster(subClusterId.getId());
+          deregisterSubClusterList.add(deregisterSubClusters);
+        }
       }
+      long stopTime = clock.getTime();
+      routerMetrics.succeededDeregisterSubClusterRetrieved(stopTime - startTime);
+      return DeregisterSubClusterResponse.newInstance(deregisterSubClusterList);
+    } catch (Exception e) {
+      routerMetrics.incrDeregisterSubClusterFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to deregisterSubCluster due to exception. " + e.getMessage());
     }
-    return null;
-    // return DeregisterSubClusterResponse.newInstance("", 200);
+
+    routerMetrics.incrDeregisterSubClusterFailedRetrieved();
+    throw new YarnException("Unable to deregisterSubCluster.");
   }
 
   /**
+   * deregisterSubCluster by SubClusterId.
    *
    * @param reqSubClusterId subClusterId.
    * @throws YarnException indicates exceptions from yarn servers.
    */
-  private void deregisterSubCluster(String reqSubClusterId) throws YarnException {
-    // Step1. Get subCluster information.
-    SubClusterId subClusterId = SubClusterId.newInstance(reqSubClusterId);
-    SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
-    SubClusterState subClusterState = subClusterInfo.getState();
-    long lastHeartBeat = subClusterInfo.getLastHeartBeat();
-    Date lastHeartBeatDate = new Date(lastHeartBeat);
+  private DeregisterSubClusters deregisterSubCluster(String reqSubClusterId) {
 
-    // Step2. Deregister subCluster.
-    if (subClusterState.isUsable()) {
-      LOG.warn("Deregister SubCluster {} in State {} last heartbeat at {}.",
-          subClusterId, subClusterState, lastHeartBeatDate);
-      // heartbeat interval time.
-      long heartBearTimeInterval = Time.now() - lastHeartBeat;
-      if (heartBearTimeInterval - heartbeatExpirationMillis < 0) {
-        federationFacade.deregisterSubCluster(subClusterId, SubClusterState.SC_LOST);
+    DeregisterSubClusters deregisterSubClusters = null;
+
+    try {
+      // Step1. Get subCluster information.
+      SubClusterId subClusterId = SubClusterId.newInstance(reqSubClusterId);
+      SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
+      SubClusterState subClusterState = subClusterInfo.getState();
+      long lastHeartBeat = subClusterInfo.getLastHeartBeat();
+      Date lastHeartBeatDate = new Date(lastHeartBeat);
+
+      deregisterSubClusters = DeregisterSubClusters.newInstance(
+          reqSubClusterId, "UNKNOWN", lastHeartBeatDate.toString(), "", subClusterState.name());
+
+      // Step2. Deregister subCluster.
+      if (subClusterState.isUsable()) {
+        LOG.warn("Deregister SubCluster {} in State {} last heartbeat at {}.",
+            subClusterId, subClusterState, lastHeartBeatDate);
+        // heartbeat interval time.
+        long heartBearTimeInterval = Time.now() - lastHeartBeat;
+        if (heartBearTimeInterval - heartbeatExpirationMillis < 0) {
+          boolean deregisterSubClusterFlag =
+              federationFacade.deregisterSubCluster(subClusterId, SubClusterState.SC_LOST);
+          if (deregisterSubClusterFlag) {
+            deregisterSubClusters.setDeregisterState("SUCCESS");
+            deregisterSubClusters.setSubClusterState("SC_LOST");
+            deregisterSubClusters.setInformation("Heartbeat Time >= 30 minutes.");
+          } else {
+            deregisterSubClusters.setDeregisterState("FAILED");
+            deregisterSubClusters.setInformation("DeregisterSubClusters Failed.");
+          }
+        }
+      } else {
+        deregisterSubClusters.setDeregisterState("FAILED");
+        deregisterSubClusters.setInformation("Heartbeat Time < 30 minutes. " +
+            "DeregisterSubCluster does not need to be executed");
+        LOG.warn("SubCluster {} in State {} does not need to update state.",
+            subClusterId, subClusterState);
       }
-    } else {
-      LOG.warn("SubCluster {} in State {} does not need to update state.",
-          subClusterId, subClusterState);
+      return deregisterSubClusters;
+    } catch (YarnException e) {
+      LOG.error("SubCluster {} DeregisterSubCluster Failed", reqSubClusterId, e);
+      deregisterSubClusters = DeregisterSubClusters.newInstance(
+          reqSubClusterId, "FAILED", "UNKNOWN", e.getMessage(), "UNKNOWN");
+      return deregisterSubClusters;
     }
   }
 

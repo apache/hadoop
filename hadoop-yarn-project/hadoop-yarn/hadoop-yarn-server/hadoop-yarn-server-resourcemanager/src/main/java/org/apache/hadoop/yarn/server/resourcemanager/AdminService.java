@@ -1002,6 +1002,20 @@ public class AdminService extends CompositeService implements
         .newRecordInstance(NodesToAttributesMappingResponse.class);
   }
 
+  /**
+   * In YARN Federation mode, We allow users to mark subClusters
+   * With no heartbeat for a long time as SC_LOST state.
+   *
+   * RM does not support deregisterSubCluster, deregisterSubCluster is supported by Router.
+   *
+   * If we include a specific subClusterId in the request, check for the specified subCluster.
+   * If subClusterId is empty, all subClusters are checked.
+   *
+   * @param request deregisterSubCluster request.
+   * The request contains the id of to deregister sub-cluster.
+   * @return Response from deregisterSubCluster.
+   * @throws YarnException exceptions from yarn servers.
+   */
   @Override
   public DeregisterSubClusterResponse deregisterSubCluster(
       DeregisterSubClusterRequest request) throws YarnException {

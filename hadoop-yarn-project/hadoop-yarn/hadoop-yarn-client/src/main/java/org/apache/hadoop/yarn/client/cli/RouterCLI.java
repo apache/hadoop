@@ -56,7 +56,6 @@ public class RouterCLI extends Configured implements Tool {
   private final static String LAST_HEARTBEAT_TIME = "LastHeartBeatTime";
   private final static String INFORMATION = "Information";
   private final static String SUB_CLUSTER_STATE = "SubClusterState";
-
   private static final String DEREGISTER_SUBCLUSTER_PATTERN = "%30s\t%20s\t%30s\t%30s\t%20s";
 
   public RouterCLI() {
@@ -72,12 +71,13 @@ public class RouterCLI extends Configured implements Tool {
     if (usageInfo == null) {
       return;
     }
-    if (usageInfo.args == null) {
-      builder.append("   " + cmd + ": " + usageInfo.help);
-    } else {
+
+    if (usageInfo.args != null) {
       String space = (usageInfo.args == "") ? "" : " ";
       builder.append("   " + cmd + space + usageInfo.args + ": "
           + usageInfo.help);
+    } else {
+      builder.append("   " + cmd + ": " + usageInfo.help);
     }
   }
 
@@ -87,15 +87,16 @@ public class RouterCLI extends Configured implements Tool {
       return;
     }
     if (usageInfo.args == null) {
-      builder.append("Usage: router rmadmin [" + cmd + "]\n");
+      builder.append("Usage: routeradmin [" + cmd + "]\n");
     } else {
       String space = (usageInfo.args == "") ? "" : " ";
-      builder.append("Usage: router rmadmin [" + cmd + space + usageInfo.args + "]\n");
+      builder.append("Usage: routeradmin [" + cmd + space + usageInfo.args + "]\n");
     }
   }
 
   private static void buildUsageMsg(StringBuilder builder) {
-    builder.append("Usage: router rmadmin\n");
+    builder.append("routeradmin is only used in Yarn Federation mode.\n");
+    builder.append("Usage: routeradmin\n");
     for (Map.Entry<String, UsageInfo> cmdEntry : ADMIN_USAGE.entrySet()) {
       UsageInfo usageInfo = cmdEntry.getValue();
       builder.append("   " + cmdEntry.getKey() + " " + usageInfo.args + "\n");
@@ -103,11 +104,12 @@ public class RouterCLI extends Configured implements Tool {
     builder.append("   -help" + " [cmd]\n");
   }
 
-  private static void printHelp(String cmd, boolean isHAEnabled) {
+  private static void printHelp() {
     StringBuilder summary = new StringBuilder();
-    summary.append("router rmadmin is the command to execute YARN Federation administrative commands.\n");
+    summary.append("routeradmin is the command to execute " +
+        "YARN Federation administrative commands.\n");
     summary.append("The full syntax is: \n\n"
-        + "router rmadmin"
+        + "routeradmin"
         + " [-deregisterSubCluster [-c|clusterId [subClusterId]]");
     summary.append(" [-help [cmd]]").append("\n");
     StringBuilder helpBuilder = new StringBuilder();
@@ -123,7 +125,7 @@ public class RouterCLI extends Configured implements Tool {
     ToolRunner.printGenericCommandUsage(System.out);
   }
 
-  private static void printUsage(String cmd, boolean isFederationEnabled) {
+  private static void printUsage(String cmd) {
     StringBuilder usageBuilder = new StringBuilder();
     if (ADMIN_USAGE.containsKey(cmd)) {
       buildIndividualUsageMsg(cmd, usageBuilder);
@@ -141,32 +143,31 @@ public class RouterCLI extends Configured implements Tool {
     return ClientRMProxy.createRMProxy(conf, ResourceManagerAdministrationProtocol.class);
   }
 
-  private int handleDeregisterSubCluster(String[] args, String cmd)
+  private int handleDeregisterSubCluster(String[] args)
           throws IOException, YarnException, ParseException {
+
     Options opts = new Options();
     opts.addOption("deregisterSubCluster", false,
-            "Refresh the hosts information at the ResourceManager.");
+        "Refresh the hosts information at the ResourceManager.");
     Option gracefulOpt = new Option("c", "clusterId", true,
-            "Wait for timeout before marking the NodeManager as decommissioned.");
+        "Wait for timeout before marking the NodeManager as decommissioned.");
     gracefulOpt.setOptionalArg(true);
     opts.addOption(gracefulOpt);
 
-    int exitCode = -1;
-    CommandLine cliParser = null;
+    CommandLine cliParser;
     try {
       cliParser = new GnuParser().parse(opts, args);
     } catch (MissingArgumentException ex) {
       System.out.println("Missing argument for options");
-      // printUsage(args[0], isHAEnabled);
-      return exitCode;
+      printUsage(args[0]);
+      return -1;
     }
 
     if (cliParser.hasOption("c")) {
       String subClusterId = cliParser.getOptionValue("c");
       return deregisterSubCluster(subClusterId);
     } else {
-      // return refreshNodes();
-      return -1;
+      return deregisterSubCluster();
     }
   }
 
@@ -191,6 +192,11 @@ public class RouterCLI extends Configured implements Tool {
     return 0;
   }
 
+  private int deregisterSubCluster() throws IOException, YarnException {
+    deregisterSubCluster("");
+    return 0;
+  }
+
   @Override
   public int run(String[] args) throws Exception {
     YarnConfiguration yarnConf = getConf() == null ?
@@ -198,27 +204,27 @@ public class RouterCLI extends Configured implements Tool {
     boolean isFederationEnabled = yarnConf.getBoolean(YarnConfiguration.FEDERATION_ENABLED,
         YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
 
-    if (args.length < 1) {
-      printUsage("", isFederationEnabled);
-      return -1;
+    int exitCode = -1;
+    if (args.length < 1 || !isFederationEnabled) {
+      printUsage("");
+      return exitCode;
     }
 
-    int exitCode = -1;
+    exitCode = 0;
     int i = 0;
     String cmd = args[i++];
 
-    exitCode = 0;
     if ("-help".equals(cmd)) {
       if (i < args.length) {
-        printUsage(args[i], isFederationEnabled);
+        printUsage(args[i]);
       } else {
-        printHelp("", isFederationEnabled);
+        printHelp();
       }
       return exitCode;
     }
 
     if ("-deregisterSubCluster".equals(cmd)) {
-      exitCode = handleDeregisterSubCluster(args, cmd);
+      exitCode = handleDeregisterSubCluster(args);
     }
 
     return exitCode;

@@ -533,6 +533,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed renewDelegationToken call");
       metrics.incrRenewDelegationTokenFailedRetrieved();
     }
+
+    public void getDeregisterSubClusterFailed() {
+      LOG.info("Mocked: failed deregisterSubCluster call");
+      metrics.incrDeregisterSubClusterFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -762,6 +767,11 @@ public class TestRouterMetrics {
     public void getRenewDelegationTokenRetrieved(long duration) {
       LOG.info("Mocked: successful RenewDelegationToken call with duration {}", duration);
       metrics.succeededRenewDelegationTokenRetrieved(duration);
+    }
+
+    public void getDeregisterSubClusterRetrieved(long duration) {
+      LOG.info("Mocked: successful DeregisterSubCluster call with duration {}", duration);
+      metrics.succeededDeregisterSubClusterRetrieved(duration);
     }
   }
 
@@ -1596,5 +1606,28 @@ public class TestRouterMetrics {
     badSubCluster.getRenewDelegationTokenFailed();
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getRenewDelegationTokenFailedRetrieved());
+  }
+
+  @Test
+  public void testDeregisterSubClusterRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededDeregisterSubClusterRetrieved();
+    goodSubCluster.getDeregisterSubClusterRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededDeregisterSubClusterRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededDeregisterSubClusterRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getDeregisterSubClusterRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededDeregisterSubClusterRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededDeregisterSubClusterRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testDeregisterSubClusterRetrievedFailed() {
+    long totalBadBefore = metrics.getDeregisterSubClusterFailedRetrieved();
+    badSubCluster.getDeregisterSubClusterFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getDeregisterSubClusterFailedRetrieved());
   }
 }

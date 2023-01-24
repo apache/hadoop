@@ -265,6 +265,11 @@ goto :eof
   )
   goto :eof
 
+:routeradmin
+  set CLASS=org.apache.hadoop.yarn.client.cli.RouterCLI
+  set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
+  goto :eof
+
 :nodemanager
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\nm-config\log4j.properties
   set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\*

@@ -4300,9 +4300,9 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED = false;
 
   /** Subcluster timeout allowed by Router.  **/
-  public static final String ROUTER_SUBCLUSTER_EXPIRATION_MS =
-      ROUTER_PREFIX + "subcluster.heartbeat.expiration-ms";
-  public static final long DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_MS = 1800000;
+  public static final String ROUTER_SUBCLUSTER_EXPIRATION_TIME =
+      ROUTER_PREFIX + "subcluster.heartbeat.expiration.time";
+  public static final long DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME = 1800000;
 
   ////////////////////////////////
   // CSI Volume configs
