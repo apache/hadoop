@@ -330,7 +330,7 @@ public class TestRouterNamenodeHeartbeat {
       // Start Namenodes and routers
       testCluster.startCluster(conf);
       testCluster.startRouters();
-      
+
       // Register Namenodes to generate a NamenodeStatusReport
       testCluster.registerNamenodes();
       testCluster.waitNamenodeRegistration();
