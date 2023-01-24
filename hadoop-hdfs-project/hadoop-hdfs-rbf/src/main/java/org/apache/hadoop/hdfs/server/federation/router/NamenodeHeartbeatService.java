@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -45,6 +46,7 @@ import org.apache.hadoop.hdfs.tools.DFSHAAdmin;
 import org.apache.hadoop.hdfs.tools.NNHAServiceTarget;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -339,8 +341,11 @@ public class NamenodeHeartbeatService extends PeriodicService {
       // should be required at some point for QoS
       updateSafeModeParameters(serviceURI, report);
 
-      // Read the stats from JMX (optional)
-      updateJMXParameters(webAddress, report);
+      // Read the stats from JMX (optional) using the login user credentials
+      SecurityUtil.doAsLoginUser((PrivilegedExceptionAction<Void>) () -> {
+        updateJMXParameters(webAddress, report);
+        return null;
+      });
 
       // Try to get the HA status
       updateHAStatusParameters(report);
