@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.yarn.server.api.protocolrecords.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -66,35 +67,6 @@ import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.security.ConfiguredYarnAuthorizer;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
-import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
@@ -1028,6 +1000,14 @@ public class AdminService extends CompositeService implements
         "AdminService");
     return recordFactory
         .newRecordInstance(NodesToAttributesMappingResponse.class);
+  }
+
+  @Override
+  public DeregisterSubClusterResponse deregisterSubCluster(
+      DeregisterSubClusterRequest request) throws YarnException {
+    throw new YarnException("It is not allowed to call the RM's deregisterSubCluster to " +
+        "set the subCluster(s) state to SC_LOST, " +
+        "Please call Router's deregisterSubCluster to set.");
   }
 
   private void validateAttributesExists(

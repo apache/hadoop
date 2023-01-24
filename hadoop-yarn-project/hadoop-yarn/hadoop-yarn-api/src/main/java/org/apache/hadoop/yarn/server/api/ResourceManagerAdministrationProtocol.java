@@ -56,6 +56,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
 
 @Private
 public interface ResourceManagerAdministrationProtocol extends GetUserMappingsProtocol {
@@ -153,4 +155,21 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   NodesToAttributesMappingResponse mapAttributesToNodes(
       NodesToAttributesMappingRequest request) throws YarnException,
       IOException;
+
+  /**
+   * In YARN Federation mode, We allow users to mark subClusters
+   * with no heartbeat for a long time as SC_LOST state.
+   *
+   * If we include a specific subClusterId in the request, check for the specified subCluster.
+   * If subClusterId is empty, all subClusters are checked.
+   *
+   * @param request deregisterSubCluster request.
+   * The request contains the id of to deregister sub-cluster.
+   * @return
+   * @throws YarnException
+   */
+  @Private
+  @Idempotent
+  DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request)
+      throws YarnException, IOException;
 }

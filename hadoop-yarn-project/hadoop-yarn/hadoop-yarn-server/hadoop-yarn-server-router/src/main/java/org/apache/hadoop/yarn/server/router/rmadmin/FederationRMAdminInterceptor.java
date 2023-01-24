@@ -20,46 +20,23 @@ package org.apache.hadoop.yarn.server.router.rmadmin;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.*;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
@@ -69,6 +46,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.Map;
 import java.util.Collection;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -89,6 +67,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
   private RouterMetrics routerMetrics;
   private ThreadPoolExecutor executorService;
   private Configuration conf;
+  private long heartbeatExpirationMillis;
 
   @Override
   public void init(String userName) {
@@ -108,6 +87,10 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     this.conf = this.getConf();
     this.adminRMProxies = new ConcurrentHashMap<>();
     routerMetrics = RouterMetrics.getMetrics();
+
+    this.heartbeatExpirationMillis =
+        this.conf.getLong(YarnConfiguration.ROUTER_SUBCLUSTER_EXPIRATION_MS,
+        YarnConfiguration.DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_MS);
   }
 
   @VisibleForTesting
@@ -432,6 +415,59 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       NodesToAttributesMappingRequest request)
       throws YarnException, IOException {
     throw new NotImplementedException();
+  }
+
+  @Override
+  public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request)
+      throws YarnException {
+
+    if (request == null) {
+      RouterServerUtil.logAndThrowException("Missing DeregisterSubCluster request.", null);
+    }
+
+    String reqSubClusterId = request.getSubClusterId();
+    if (StringUtils.isNotBlank(reqSubClusterId)) {
+      // If subCluster is not empty, process the specified subCluster.
+      deregisterSubCluster(reqSubClusterId);
+    } else {
+      // Traversing all Active SubClusters,
+      // for subCluster whose heartbeat times out, update the status to SC_LOST.
+      Map<SubClusterId, SubClusterInfo> subClusterInfo = federationFacade.getSubClusters(true);
+      for (Map.Entry<SubClusterId, SubClusterInfo> entry : subClusterInfo.entrySet()) {
+        SubClusterId subClusterId = entry.getKey();
+        deregisterSubCluster(subClusterId.getId());
+      }
+    }
+    return null;
+    // return DeregisterSubClusterResponse.newInstance("", 200);
+  }
+
+  /**
+   *
+   * @param reqSubClusterId subClusterId.
+   * @throws YarnException indicates exceptions from yarn servers.
+   */
+  private void deregisterSubCluster(String reqSubClusterId) throws YarnException {
+    // Step1. Get subCluster information.
+    SubClusterId subClusterId = SubClusterId.newInstance(reqSubClusterId);
+    SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
+    SubClusterState subClusterState = subClusterInfo.getState();
+    long lastHeartBeat = subClusterInfo.getLastHeartBeat();
+    Date lastHeartBeatDate = new Date(lastHeartBeat);
+
+    // Step2. Deregister subCluster.
+    if (subClusterState.isUsable()) {
+      LOG.warn("Deregister SubCluster {} in State {} last heartbeat at {}.",
+          subClusterId, subClusterState, lastHeartBeatDate);
+      // heartbeat interval time.
+      long heartBearTimeInterval = Time.now() - lastHeartBeat;
+      if (heartBearTimeInterval - heartbeatExpirationMillis < 0) {
+        federationFacade.deregisterSubCluster(subClusterId, SubClusterState.SC_LOST);
+      }
+    } else {
+      LOG.warn("SubCluster {} in State {} does not need to update state.",
+          subClusterId, subClusterState);
+    }
   }
 
   @Override

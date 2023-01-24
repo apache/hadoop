@@ -432,6 +432,14 @@ enum ExecutionTypeProto {
   OPPORTUNISTIC = 2;
 }
 
+message DeregisterSubClustersProto {
+  optional string subClusterId = 1;
+  optional string deregisterState = 2;
+  optional string lastHeartBeatTime = 3;
+  optional string information = 4;
+  optional string subClusterState = 5;
+}
+
 ////////////////////////////////////////////////////////////////////////
 ////// From AM_RM_Protocol /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////

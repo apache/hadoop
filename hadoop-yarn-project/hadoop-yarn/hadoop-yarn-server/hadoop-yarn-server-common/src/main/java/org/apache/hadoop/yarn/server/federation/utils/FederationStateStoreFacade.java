@@ -89,6 +89,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1150,5 +1152,20 @@ public final class FederationStateStoreFacade {
       updateReservationHomeSubCluster(subClusterId, reservationId,
           reservationHomeSubCluster);
     }
+  }
+
+  /**
+   * Deregister subCluster, Update the subCluster state to
+   * SC_LOST、SC_DECOMMISSIONED etc.
+   *
+   * @param subClusterId subClusterId.
+   * @param subClusterState The state of the subCluster to be updated.
+   * @throws YarnException yarn exception.
+   */
+  public void deregisterSubCluster(SubClusterId subClusterId,
+      SubClusterState subClusterState) throws YarnException {
+    SubClusterDeregisterRequest deregisterRequest =
+        SubClusterDeregisterRequest.newInstance(subClusterId, subClusterState);
+    stateStore.deregisterSubCluster(deregisterRequest);
   }
 }
