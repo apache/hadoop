@@ -1196,11 +1196,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     // Step1. We will check the time parameter to
     // ensure that the time parameter is not empty and greater than 0.
-    try {
-      if (StringUtils.isBlank(time)) {
-        throw new IllegalArgumentException("Parameter error, the time is empty or null.");
-      }
 
+    if (StringUtils.isBlank(time)) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the time is empty or null.");
+    }
+
+    try {
       int period = Integer.parseInt(time);
       if (period <= 0) {
         throw new IllegalArgumentException("time must be greater than 0.");
