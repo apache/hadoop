@@ -197,6 +197,15 @@ public class DFSInputStream extends FSInputStream
     deadNodes.clear();
   }
 
+  /**
+   * clear list of ignored nodes used for hedged reads
+   */
+  private void clearIgnoredNodes(Collection<DatanodeInfo> ignoredNodes) {
+    if (ignoredNodes != null) {
+      ignoredNodes.clear();
+    }
+  }
+
   protected DFSClient getDFSClient() {
     return dfsClient;
   }
@@ -1000,6 +1009,7 @@ public class DFSInputStream extends FSInputStream
           "Interrupted while choosing DataNode for read.");
     }
     clearLocalDeadNodes(); //2nd option is to remove only nodes[blockId]
+    clearIgnoredNodes(ignoredNodes);
     openInfo(true);
     block = refreshLocatedBlock(block);
     failures++;
