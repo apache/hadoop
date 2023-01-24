@@ -102,7 +102,7 @@ public class TestSQLDelegationTokenSecretManagerImpl {
           tokenManager1.createToken(UserGroupInformation.getCurrentUser(), "foo");
       Token<? extends AbstractDelegationTokenIdentifier> token2 =
           tokenManager2.createToken(UserGroupInformation.getCurrentUser(), "foo");
-  
+
       validateToken(tokenManager1, token2);
       validateToken(tokenManager2, token1);
     } finally {
@@ -140,7 +140,7 @@ public class TestSQLDelegationTokenSecretManagerImpl {
           tokensPerManager, sequenceNums2.size());
       Assert.assertEquals("Verify that tokenManager3 generated unique sequence numbers",
           tokensPerManager, sequenceNums3.size());
-  
+
       // Validate sequence number batches allocated in order to each token manager
       int batchSize = SQLDelegationTokenSecretManagerImpl.DEFAULT_SEQ_NUM_BATCH_SIZE;
       for (int seqNum = 1; seqNum < tokensPerManager;) {
@@ -157,7 +157,7 @@ public class TestSQLDelegationTokenSecretManagerImpl {
           Assert.assertTrue(sequenceNums3.contains(seqNum));
         }
       }
-  
+
       SQLDelegationTokenSecretManagerImpl secretManager =
           (SQLDelegationTokenSecretManagerImpl) tokenManager1.getDelegationTokenSecretManager();
       Assert.assertEquals("Verify that the counter is set to the highest sequence number",
@@ -180,13 +180,13 @@ public class TestSQLDelegationTokenSecretManagerImpl {
       SQLDelegationTokenSecretManagerImpl secretManager =
           (SQLDelegationTokenSecretManagerImpl) tokenManager.getDelegationTokenSecretManager();
       secretManager.setDelegationTokenSeqNum(Integer.MAX_VALUE - tokenBatch);
-  
+
       // Allocate sequence numbers before they are rolled over
       for (int seqNum = Integer.MAX_VALUE - tokenBatch; seqNum < Integer.MAX_VALUE; seqNum++) {
         allocateSequenceNum(tokenManager, sequenceNums);
         Assert.assertTrue(sequenceNums.contains(seqNum + 1));
       }
-  
+
       // Allocate sequence numbers after they are rolled over
       for (int seqNum = 0; seqNum < tokenBatch; seqNum++) {
         allocateSequenceNum(tokenManager, sequenceNums);
@@ -208,12 +208,12 @@ public class TestSQLDelegationTokenSecretManagerImpl {
       // between the keys generated and the active keys in the database.
       ((TestDelegationTokenSecretManager) secretManager1).lockKeyRoll();
       int keyId1 = secretManager1.getCurrentKeyId();
-  
+
       // Validate that latest key1 is assigned to tokenManager1 tokens
       Token<? extends AbstractDelegationTokenIdentifier> token1 =
           tokenManager1.createToken(UserGroupInformation.getCurrentUser(), "foo");
       validateKeyId(token1, keyId1);
-  
+
       DelegationTokenManager tokenManager2 = createTokenManager();
       try {
         SQLDelegationTokenSecretManagerImpl secretManager2 =
@@ -221,18 +221,18 @@ public class TestSQLDelegationTokenSecretManagerImpl {
         // Prevent delegation keys to roll for the rest of the test
         ((TestDelegationTokenSecretManager) secretManager2).lockKeyRoll();
         int keyId2 = secretManager2.getCurrentKeyId();
-    
+
         Assert.assertNotEquals("Each secret manager has its own key", keyId1, keyId2);
-    
+
         // Validate that latest key2 is assigned to tokenManager2 tokens
         Token<? extends AbstractDelegationTokenIdentifier> token2 =
             tokenManager2.createToken(UserGroupInformation.getCurrentUser(), "foo");
         validateKeyId(token2, keyId2);
-    
+
         // Validate that key1 is still assigned to tokenManager1 tokens
         token1 = tokenManager1.createToken(UserGroupInformation.getCurrentUser(), "foo");
         validateKeyId(token1, keyId1);
-    
+
         // Validate that key2 is still assigned to tokenManager2 tokens
         token2 = tokenManager2.createToken(UserGroupInformation.getCurrentUser(), "foo");
         validateKeyId(token2, keyId2);
