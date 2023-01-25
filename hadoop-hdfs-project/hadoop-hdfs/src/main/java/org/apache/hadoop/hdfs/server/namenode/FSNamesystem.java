@@ -413,7 +413,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throws IOException {
     logAuditEvent(succeeded, cmd, src, null, null);
   }
-
+  
   private void logAuditEvent(boolean succeeded, String cmd, String src,
       String dst, FileStatus stat) throws IOException {
     if (isAuditEnabled() && isExternalInvocation()) {
@@ -554,7 +554,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   private volatile boolean needRollbackFsImage;
 
-  final LeaseManager leaseManager = new LeaseManager(this);
+  final LeaseManager leaseManager = new LeaseManager(this); 
 
   Daemon nnrmthread = null; // NamenodeResourceMonitor thread
 
@@ -581,7 +581,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   private final long editLogRollerThreshold;
   /**
-   * Check interval of an active namenode's edit log roller thread
+   * Check interval of an active namenode's edit log roller thread 
    */
   private final int editLogRollerInterval;
 
@@ -593,7 +593,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private volatile boolean hasResourcesAvailable = false;
   private volatile boolean fsRunning = true;
-
+  
   /** The start time of the namesystem. */
   private final long startTime = now();
 
@@ -619,11 +619,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /** Lock to protect FSNamesystem. */
   private final FSNamesystemLock fsLock;
 
-  /**
+  /** 
    * Checkpoint lock to protect FSNamesystem modification on standby NNs.
    * Unlike fsLock, it does not affect block updates. On active NNs, this lock
    * does not provide proper protection, because there are operations that
-   * modify both block and name system state.  Even on standby, fsLock is
+   * modify both block and name system state.  Even on standby, fsLock is 
    * used when block state changes need to be blocked.
    */
   private final ReentrantLock cpLock;
@@ -641,7 +641,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /**
    * Reference to the NN's HAContext object. This is only set once
-   * {@link #startCommonServices(Configuration, HAContext)} is called.
+   * {@link #startCommonServices(Configuration, HAContext)} is called. 
    */
   private HAContext haContext;
 
@@ -841,14 +841,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     namesystem.getFSDirectory().createReservedStatuses(namesystem.getCTime());
     return namesystem;
   }
-
+  
   FSNamesystem(Configuration conf, FSImage fsImage) throws IOException {
     this(conf, fsImage, false);
   }
-
+  
   /**
    * Create an FSNamesystem associated with the specified image.
-   *
+   * 
    * Note that this does not load any data off of disk -- if you would
    * like that behavior, use {@link #loadFromDisk(Configuration)}
    *
@@ -884,7 +884,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT);
 
       this.fsOwner = UserGroupInformation.getCurrentUser();
-      this.supergroup = conf.get(DFS_PERMISSIONS_SUPERUSERGROUP_KEY,
+      this.supergroup = conf.get(DFS_PERMISSIONS_SUPERUSERGROUP_KEY, 
                                  DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
       this.isPermissionEnabled = conf.getBoolean(DFS_PERMISSIONS_ENABLED_KEY,
                                                  DFS_PERMISSIONS_ENABLED_DEFAULT);
@@ -908,8 +908,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // block allocation has to be persisted in HA using a shared edits directory
       // so that the standby has up-to-date namespace information
       nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
-      this.haEnabled = HAUtil.isHAEnabled(conf, nameserviceId);
-
+      this.haEnabled = HAUtil.isHAEnabled(conf, nameserviceId);  
+      
       // Sanity check the HA-related config.
       if (nameserviceId != null) {
         LOG.info("Determined nameservice ID: " + nameserviceId);
@@ -960,7 +960,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           blockManager.getStoragePolicySuite().getDefaultPolicy().getId(),
           isSnapshotTrashRootEnabled);
 
-      this.maxFsObjects = conf.getLong(DFS_NAMENODE_MAX_OBJECTS_KEY,
+      this.maxFsObjects = conf.getLong(DFS_NAMENODE_MAX_OBJECTS_KEY, 
                                        DFS_NAMENODE_MAX_OBJECTS_DEFAULT);
 
       this.minBlockSize = conf.getLongBytes(
@@ -984,10 +984,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           DFSConfigKeys.DFS_NAMENODE_MAX_CORRUPT_FILE_BLOCKS_RETURNED_DEFAULT);
 
       this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
-
+      
       this.standbyShouldCheckpoint = conf.getBoolean(
           DFS_HA_STANDBY_CHECKPOINTS_KEY, DFS_HA_STANDBY_CHECKPOINTS_DEFAULT);
-      // # edit autoroll threshold is a multiple of the checkpoint threshold
+      // # edit autoroll threshold is a multiple of the checkpoint threshold 
       this.editLogRollerThreshold = (long)
           (conf.getFloat(
               DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD,
@@ -1124,13 +1124,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   boolean hasRetryCache() {
     return retryCache != null;
   }
-
+  
   void addCacheEntryWithPayload(byte[] clientId, int callId, Object payload) {
     if (retryCache != null) {
       retryCache.addCacheEntryWithPayload(clientId, callId, payload);
     }
   }
-
+  
   void addCacheEntry(byte[] clientId, int callId) {
     if (retryCache != null) {
       retryCache.addCacheEntry(clientId, callId);
@@ -1267,7 +1267,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (RollingUpgradeStartupOption.ROLLBACK.matches(startOpt)) {
         rollingUpgradeInfo = null;
       }
-      final boolean needToSave = staleImage && !haEnabled && !isRollingUpgrade();
+      final boolean needToSave = staleImage && !haEnabled && !isRollingUpgrade(); 
       LOG.info("Need to save fs image? " + needToSave
           + " (staleImage=" + staleImage + ", haEnabled=" + haEnabled
           + ", isRollingUpgrade=" + isRollingUpgrade() + ")");
@@ -1306,7 +1306,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
     }
   }
-
+  
   @Override
   public void startSecretManagerIfNecessary() {
     assert hasWriteLock() : "Starting secret manager needs write lock";
@@ -1323,8 +1323,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       dtSecretManager.stopThreads();
     }
   }
-
-  /**
+  
+  /** 
    * Start services common to both active and standby states
    */
   void startCommonServices(Configuration conf, HAContext haContext) throws IOException {
@@ -1344,7 +1344,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } finally {
       writeUnlock("startCommonServices");
     }
-
+    
     registerMXBean();
     DefaultMetricsSystem.instance().register(this);
     if (inodeAttributeProvider != null) {
@@ -1356,8 +1356,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     this.nameNodeHostName = (serviceAddress != null) ?
         serviceAddress.getHostName() : "";
   }
-
-  /**
+  
+  /** 
    * Stop services common to both active and standby states
    */
   void stopCommonServices() {
@@ -1373,7 +1373,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     RetryCache.clear(retryCache);
   }
-
+  
   /**
    * Start services required in active state
    * @throws IOException
@@ -1384,17 +1384,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     writeLock();
     try {
       FSEditLog editLog = getFSImage().getEditLog();
-
+      
       if (!editLog.isOpenForWrite()) {
         // During startup, we're already open for write during initialization.
         editLog.initJournalsForWrite();
         // May need to recover
         editLog.recoverUnclosedStreams(true);
-
+        
         LOG.info("Catching up to latest edits from old active before " +
             "taking over writer role in edits logs");
         editLogTailer.catchupDuringFailover();
-
+        
         blockManager.setPostponeBlocksFromFuture(false);
         blockManager.getDatanodeManager().markAllDatanodesStale();
         blockManager.clearQueues();
@@ -1414,7 +1414,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         }
 
         long nextTxId = getFSImage().getLastAppliedTxId() + 1;
-        LOG.info("Will take over writing edit logs at txnid " +
+        LOG.info("Will take over writing edit logs at txnid " + 
             nextTxId);
         editLog.setNextTxId(nextTxId);
 
@@ -1493,7 +1493,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       alwaysUseDelegationTokensForTests;
   }
 
-  /**
+  /** 
    * Stop services required in active state
    */
   void stopActiveServices() {
@@ -1549,10 +1549,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       writeUnlock("stopActiveServices");
     }
   }
-
+  
   /**
    * Start services required in standby or observer state
-   *
+   * 
    * @throws IOException
    */
   void startStandbyServices(final Configuration conf, boolean isObserver)
@@ -1625,7 +1625,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       getSnapshotManager().initThreadLocals();
     }
   }
-
+  
   /**
    * @throws RetriableException
    *           If 1) The NameNode is in SafeMode, 2) HA is enabled, and 3)
@@ -1663,7 +1663,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Get all edits dirs which are required. If any shared edits dirs are
    * configured, these are also included in the set of required dirs.
-   *
+   * 
    * @param conf the HDFS configuration.
    * @return all required dirs.
    */
@@ -1679,7 +1679,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     Collection<String> dirNames = conf.getTrimmedStringCollection(propertyName);
     StartupOption startOpt = NameNode.getStartupOption(conf);
     if(startOpt == StartupOption.IMPORT) {
-      // In case of IMPORT this will get rid of default directories
+      // In case of IMPORT this will get rid of default directories 
       // but will retain directories specified in hdfs-site.xml
       // When importing image from a checkpoint, the name-node can
       // start with empty set of storage directories.
@@ -1694,7 +1694,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           "\n\tThe NameNode currently runs without persistent storage." +
           "\n\tAny changes to the file system meta-data may be lost." +
           "\n\tRecommended actions:" +
-          "\n\t\t- shutdown and restart NameNode with configured \""
+          "\n\t\t- shutdown and restart NameNode with configured \"" 
           + propertyName + "\" in hdfs-site.xml;" +
           "\n\t\t- use Backup Node as a persistent and up-to-date storage " +
           "of the file system meta-data.");
@@ -1718,38 +1718,38 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throws IOException {
     return getNamespaceEditsDirs(conf, true);
   }
-
+  
   public static List<URI> getNamespaceEditsDirs(Configuration conf,
       boolean includeShared)
       throws IOException {
     // Use a LinkedHashSet so that order is maintained while we de-dup
     // the entries.
     LinkedHashSet<URI> editsDirs = new LinkedHashSet<URI>();
-
+    
     if (includeShared) {
       List<URI> sharedDirs = getSharedEditsDirs(conf);
-
+  
       // Fail until multiple shared edits directories are supported (HDFS-2782)
       if (sharedDirs.size() > 1) {
         throw new IOException(
             "Multiple shared edits directories are not yet supported");
       }
-
+  
       // First add the shared edits dirs. It's critical that the shared dirs
       // are added first, since JournalSet syncs them in the order they are listed,
       // and we need to make sure all edits are in place in the shared storage
       // before they are replicated locally. See HDFS-2874.
       for (URI dir : sharedDirs) {
         if (!editsDirs.add(dir)) {
-          LOG.warn("Edits URI " + dir + " listed multiple times in " +
+          LOG.warn("Edits URI " + dir + " listed multiple times in " + 
               DFS_NAMENODE_SHARED_EDITS_DIR_KEY + ". Ignoring duplicates.");
         }
       }
-    }
+    }    
     // Now add the non-shared dirs.
     for (URI dir : getStorageDirs(conf, DFS_NAMENODE_EDITS_DIR_KEY)) {
       if (!editsDirs.add(dir)) {
-        LOG.warn("Edits URI " + dir + " listed multiple times in " +
+        LOG.warn("Edits URI " + dir + " listed multiple times in " + 
             DFS_NAMENODE_SHARED_EDITS_DIR_KEY + " and " +
             DFS_NAMENODE_EDITS_DIR_KEY + ". Ignoring duplicates.");
       }
@@ -1763,7 +1763,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       return Lists.newArrayList(editsDirs);
     }
   }
-
+  
   /**
    * Returns edit directories that are shared between primary and secondary.
    * @param conf configuration
@@ -1862,7 +1862,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public void cpUnlock() {
     this.cpLock.unlock();
   }
-
+    
 
   NamespaceInfo getNamespaceInfo() {
     readLock();
@@ -2273,7 +2273,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Moves all the blocks from {@code srcs} and appends them to {@code target}
    * To avoid rollbacks we will verify validity of ALL of the args
    * before we start actual move.
-   *
+   * 
    * This does not support ".inodes" relative path
    * @param target target to concat into
    * @param srcs file that will be concatenated
@@ -2306,7 +2306,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * stores the modification and access time for this inode.
+   * stores the modification and access time for this inode. 
    * The access time is precise up to an hour. The transaction, if needed, is
    * written to the edits log but is not flushed.
    */
@@ -2421,15 +2421,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /**
    * Set replication for an existing file.
-   *
-   * The NameNode sets new replication and schedules either replication of
-   * under-replicated data blocks or removal of the excessive block copies
+   * 
+   * The NameNode sets new replication and schedules either replication of 
+   * under-replicated data blocks or removal of the excessive block copies 
    * if the blocks are over-replicated.
-   *
+   * 
    * @see ClientProtocol#setReplication(String, short)
    * @param src file name
    * @param replication new replication
-   * @return true if successful;
+   * @return true if successful; 
    *         false if file does not exist or is a directory
    * @throws  IOException
    */
@@ -2649,7 +2649,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * If the file is within an encryption zone, select the appropriate
+   * If the file is within an encryption zone, select the appropriate 
    * CryptoProtocolVersion from the list provided by the client. Since the
    * client may be newer, we need to handle unknown versions.
    *
@@ -2687,7 +2687,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /**
    * Create a new file entry in the namespace.
-   *
+   * 
    * For description of parameters and exceptions thrown see
    * {@link ClientProtocol#create}, except it returns valid file status upon
    * success
@@ -2836,7 +2836,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Recover lease;
    * Immediately revoke the lease of the current lease holder and start lease
    * recovery so that the file can be forced to be closed.
-   *
+   * 
    * @param src the path of the file to start lease recovery
    * @param holder the lease holder's name
    * @param clientMachine the client machine's name
@@ -2863,7 +2863,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (isPermissionEnabled) {
         dir.checkPathAccess(pc, iip, FsAction.WRITE);
       }
-
+  
       return recoverLeaseInternal(RecoverLeaseOp.RECOVER_LEASE,
           iip, src, holder, clientMachine, true);
     } catch (StandbyException se) {
@@ -2884,7 +2884,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     APPEND_FILE,
     TRUNCATE_FILE,
     RECOVER_LEASE;
-
+    
     public String getExceptionMessage(String src, String holder,
         String clientMachine, String reason) {
       return "Failed to " + this + " " + src + " for " + holder +
@@ -2926,7 +2926,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                 "the file is under construction but no leases found."));
       }
       if (force) {
-        // close now: no need to wait for soft lease expiration and
+        // close now: no need to wait for soft lease expiration and 
         // close only the file src
         LOG.info("recoverLease: " + lease + ", src=" + src +
           " from client " + clientName);
@@ -2936,7 +2936,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           "Current lease holder " + lease.getHolder() +
           " does not match file creator " + clientName;
         //
-        // If the original holder has not renewed in the last SOFTLIMIT
+        // If the original holder has not renewed in the last SOFTLIMIT 
         // period, then start lease recovery.
         //
         if (lease.expiredSoftLimit()) {
@@ -3018,7 +3018,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   ExtendedBlock getExtendedBlock(Block blk) {
     return new ExtendedBlock(getBlockPoolId(), blk);
   }
-
+  
   void setBlockPoolId(String bpid) {
     blockManager.setBlockPoolId(bpid);
   }
@@ -3132,7 +3132,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     // choose new datanodes.
     final DatanodeStorageInfo[] targets = blockManager.chooseTarget4AdditionalDatanode(
-        src, numAdditionalNodes, clientnode, chosen,
+        src, numAdditionalNodes, clientnode, chosen, 
         excludes, preferredblocksize, storagePolicyID, blockType);
     final LocatedBlock lb = BlockManager.newLocatedBlock(
         blk, targets, -1, false);
@@ -3201,7 +3201,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     return file;
   }
-
+ 
   /**
    * Complete in-progress write to the given file.
    * @return true if successful, false if the client should continue to retry
@@ -3283,7 +3283,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Change the indicated filename.
+   * Change the indicated filename. 
    * @deprecated Use {@link #renameTo(String, String, boolean,
    * Options.Rename...)} instead.
    */
@@ -3358,8 +3358,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /**
    * Remove the indicated file from namespace.
-   *
-   * @see ClientProtocol#delete(String, boolean) for detailed description and
+   * 
+   * @see ClientProtocol#delete(String, boolean) for detailed description and 
    * description of exceptions
    */
   boolean delete(String src, boolean recursive, boolean logRetryCache)
@@ -3609,7 +3609,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Set the namespace quota and storage space quota for a directory.
    * See {@link ClientProtocol#setQuota(String, long, long, StorageType)} for the
    * contract.
-   *
+   * 
    * Note: This does not support ".inodes" relative path.
    */
   void setQuota(String src, long nsQuota, long ssQuota, StorageType type)
@@ -3650,7 +3650,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param fileId The inode ID that we're fsyncing.  Older clients will pass
    *               INodeId.GRANDFATHER_INODE_ID here.
    * @param clientName The string representation of the client
-   * @param lastBlockLength The length of the last block
+   * @param lastBlockLength The length of the last block 
    *                        under construction reported from client.
    * @throws IOException if path does not exist
    */
@@ -3688,7 +3688,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    *         replication;<br>
    *         RecoveryInProgressException if lease recovery is in progress.<br>
    *         IOException in case of an error.
-   * @return true  if file has been successfully finalized and closed or
+   * @return true  if file has been successfully finalized and closed or 
    *         false if block recovery has been initiated. Since the lease owner
    *         has been changed and logged, caller should call logSync().
    */
@@ -3761,7 +3761,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             " replicated, lease removed, file" + src + " closed.");
         return true;  // closed!
       }
-      // Cannot close file right now, since some blocks
+      // Cannot close file right now, since some blocks 
       // are not yet minimally replicated.
       // This may potentially cause infinite loop in lease recovery
       // if there are no valid replicas on data-nodes.
@@ -3847,7 +3847,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     logReassignLease(lease.getHolder(), src, newHolder);
     return reassignLeaseInternal(lease, newHolder, pendingFile);
   }
-
+  
   Lease reassignLeaseInternal(Lease lease, String newHolder, INodeFile pendingFile) {
     assert hasWriteLock();
     pendingFile.getFileUnderConstructionFeature().setClientName(newHolder);
@@ -3933,9 +3933,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     /*
      * 1. if bc is under construction and also with snapshot, and
      * bc is not in the current fsdirectory tree, bc must represent a snapshot
-     * file.
-     * 2. if fullName is not an absolute path, bc cannot be existent in the
-     * current fsdirectory tree.
+     * file. 
+     * 2. if fullName is not an absolute path, bc cannot be existent in the 
+     * current fsdirectory tree. 
      * 3. if bc is not the current node associated with fullName, bc must be a
      * snapshot inode.
      */
@@ -3973,7 +3973,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkOperation(OperationCategory.WRITE);
       // If a DN tries to commit to the standby, the recovery will
       // fail, and the next retry will succeed on the new NN.
-
+  
       checkNameNodeSafeMode(
           "Cannot commitBlockSynchronization while in safe mode");
       final BlockInfo storedBlock = getStoredBlock(
@@ -4152,13 +4152,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param startAfter the name to start after
    * @param needLocation if blockLocations need to be returned
    * @return a partial listing starting after startAfter
-   *
+   * 
    * @throws AccessControlException if access is denied
    * @throws UnresolvedLinkException if symbolic link is encountered
    * @throws IOException if other I/O error occurred
    */
   DirectoryListing getListing(String src, byte[] startAfter,
-      boolean needLocation)
+      boolean needLocation) 
       throws IOException {
     checkOperation(OperationCategory.READ);
     final String operationName = "listStatus";
@@ -4350,15 +4350,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * data storage is reported the namenode issues a new unique storageID.
    * <p>
    * Finally, the namenode returns its namespaceID as the registrationID
-   * for the datanodes.
+   * for the datanodes. 
    * namespaceID is a persistent attribute of the name space.
    * The registrationID is checked every time the datanode is communicating
-   * with the namenode.
+   * with the namenode. 
    * Datanodes with inappropriate registrationID are rejected.
-   * If the namenode stops, and then restarts it can restore its
+   * If the namenode stops, and then restarts it can restore its 
    * namespaceID and will continue serving the datanodes that has previously
    * registered with the namenode without restarting the whole cluster.
-   *
+   * 
    * @see org.apache.hadoop.hdfs.server.datanode.DataNode
    */
   void registerDatanode(DatanodeRegistration nodeReg) throws IOException {
@@ -4369,10 +4369,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       writeUnlock("registerDatanode");
     }
   }
-
+  
   /**
    * Get registrationID for datanodes based on the namespaceID.
-   *
+   * 
    * @see #registerDatanode(DatanodeRegistration)
    * @return registration ID
    */
@@ -4691,20 +4691,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // not locking
     return blockManager.getMissingReplOneBlocksCount();
   }
-
+  
   @Metric(value = {"ExpiredHeartbeats", "Number of expired heartbeats"},
       type = Metric.Type.COUNTER)
   public int getExpiredHeartbeats() {
     return datanodeStatistics.getExpiredHeartbeats();
   }
-
+  
   @Metric({"TransactionsSinceLastCheckpoint",
       "Number of transactions since last checkpoint"})
   public long getTransactionsSinceLastCheckpoint() {
     return getFSImage().getLastAppliedOrWrittenTxId() -
         getNNStorage().getMostRecentCheckpointTxId();
   }
-
+  
   @Metric({"TransactionsSinceLastLogRoll",
       "Number of transactions since last edit log roll"})
   public long getTransactionsSinceLastLogRoll() {
@@ -4733,7 +4733,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public long getLastWrittenTransactionId() {
     return getEditLog().getLastWrittenTxIdWithoutLock();
   }
-
+  
   @Metric({"LastCheckpointTime",
       "Time in milliseconds since the epoch of the last checkpoint"})
   public long getLastCheckpointTime() {
@@ -4843,7 +4843,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public int getTotalLoad() {
     return datanodeStatistics.getXceiverCount();
   }
-
+  
   @Metric({ "SnapshottableDirectories", "Number of snapshottable directories" })
   public int getNumSnapshottableDirs() {
     return this.snapshotManager.getNumSnapshottableDirs();
@@ -4914,7 +4914,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       return getBlockManager().getDatanodeManager().getDatanodeListForReport(
-          type).size();
+          type).size(); 
     } finally {
       readUnlock("getNumberOfDatanodes");
     }
@@ -4955,7 +4955,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.UNCHECKED);
-      final DatanodeManager dm = getBlockManager().getDatanodeManager();
+      final DatanodeManager dm = getBlockManager().getDatanodeManager();      
       final List<DatanodeDescriptor> results = dm.getDatanodeListForReport(type);
       arr = getDatanodeInfoFromDescriptors(results);
     } finally {
@@ -4974,7 +4974,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.UNCHECKED);
-      final DatanodeManager dm = getBlockManager().getDatanodeManager();
+      final DatanodeManager dm = getBlockManager().getDatanodeManager();      
       reports = dm.getDatanodeStorageReport(type);
     } finally {
       readUnlock(operationName, getLockReportInfoSupplier(null));
@@ -5015,11 +5015,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     logAuditEvent(true, operationName, null);
     return saved;
   }
-
+  
   /**
    * Enables/Disables/Checks restoring failed storage replicas if the storage becomes available again.
    * Requires superuser privilege.
-   *
+   * 
    * @throws AccessControlException if superuser privilege is violated.
    */
   boolean restoreFailedStorage(String arg) throws IOException {
@@ -5031,7 +5031,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     writeLock();
     try {
       checkOperation(OperationCategory.UNCHECKED);
-
+      
       // if it is disabled - enable it and vice versa.
       if(arg.equals("check")) {
         val = getNNStorage().getRestoreFailedStorage();
@@ -5048,9 +5048,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   Date getStartTime() {
-    return new Date(startTime);
+    return new Date(startTime); 
   }
-
+    
   void finalizeUpgrade() throws IOException {
     String operationName = "finalizeUpgrade";
     checkSuperuserPrivilege(operationName);
@@ -5110,7 +5110,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Get the total number of blocks in the system.
+   * Get the total number of blocks in the system. 
    */
   @Override // FSNamesystemMBean
   @Metric
@@ -5199,7 +5199,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     writeLock();
     try {
       if (!isInSafeMode()) {
-        NameNode.stateChangeLog.info("STATE* Safe mode is already OFF");
+        NameNode.stateChangeLog.info("STATE* Safe mode is already OFF"); 
         return;
       }
       if (blockManager.leaveSafeMode(force)) {
@@ -5267,7 +5267,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.CHECKPOINT);
       checkNameNodeSafeMode("Checkpoint not started");
-
+      
       LOG.info("Start checkpoint for " + backupNode.getAddress());
       NamenodeCommand cmd = getFSImage().startCheckpoint(backupNode,
           activeNamenode, getEffectiveLayoutVersion());
@@ -5288,7 +5288,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       writeUnlock("processIncrementalBlockReport");
     }
   }
-
+  
   void endCheckpoint(NamenodeRegistration registration,
                             CheckpointSignature sig) throws IOException {
     checkOperation(OperationCategory.CHECKPOINT);
@@ -5531,7 +5531,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public long getNumTimedOutPendingReconstructions() {
     return blockManager.getNumTimedOutPendingReconstructions();
   }
-
+  
   // HA-only metric
   @Metric
   public long getPostponedMisreplicatedBlocks() {
@@ -5543,7 +5543,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public int getPendingDataNodeMessageCount() {
     return blockManager.getPendingDataNodeMessageCount();
   }
-
+  
   // HA-only metric
   @Metric
   public String getHAState() {
@@ -5573,7 +5573,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public String getFSState() {
     return isInSafeMode() ? "safeMode" : "Operational";
   }
-
+  
   private ObjectName namesystemMBeanName, replicatedBlocksMBeanName,
       ecBlockGroupsMBeanName, namenodeMXBeanName;
 
@@ -5660,7 +5660,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public int getNumDeadDataNodes() {
     return getBlockManager().getDatanodeManager().getNumDeadDataNodes();
   }
-
+  
   @Override // FSNamesystemMBean
   @Metric({"NumDecomLiveDataNodes",
       "Number of datanodes which have been decommissioned and are now live"})
@@ -5739,7 +5739,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   @Override // FSNamesystemMBean
-  @Metric({"StaleDataNodes",
+  @Metric({"StaleDataNodes", 
     "Number of datanodes marked stale due to delayed heartbeat"})
   public int getNumStaleDataNodes() {
     return getBlockManager().getDatanodeManager().getNumStaleNodes();
@@ -5852,7 +5852,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     assert hasWriteLock();
     checkNameNodeSafeMode("Cannot get a new generation stamp and an "
         + "access token for block " + block);
-
+    
     // check stored block state
     BlockInfo storedBlock = getStoredBlock(ExtendedBlock.getLocalBlock(block));
     if (storedBlock == null) {
@@ -5863,25 +5863,25 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           + " is " + storedBlock.getBlockUCState()
           + " but not " + BlockUCState.UNDER_CONSTRUCTION);
     }
-
+    
     // check file inode
     final INodeFile file = getBlockCollection(storedBlock);
     if (file == null || !file.isUnderConstruction() || isFileDeleted(file)) {
-      throw new IOException("The file " + storedBlock +
+      throw new IOException("The file " + storedBlock + 
           " belonged to does not exist or it is not under construction.");
     }
-
+    
     // check lease
     if (clientName == null
         || !clientName.equals(file.getFileUnderConstructionFeature()
             .getClientName())) {
-      throw new LeaseExpiredException("Lease mismatch: " + block +
-          " is accessed by a non lease holder " + clientName);
+      throw new LeaseExpiredException("Lease mismatch: " + block + 
+          " is accessed by a non lease holder " + clientName); 
     }
 
     return file;
   }
-
+  
   /**
    * Client is reporting some bad block locations.
    */
@@ -5908,12 +5908,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Get a new generation stamp together with an access token for
+   * Get a new generation stamp together with an access token for 
    * a block under construction.
-   *
+   * 
    * This method is called for recovering a failed write or setting up
    * a block for appended.
-   *
+   * 
    * @param block a block
    * @param clientName the name of a client
    * @return a located block with a new generation stamp and an access token
@@ -5929,7 +5929,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
       // check vadility of parameters
       final INodeFile file = checkUCBlock(block, clientName);
-
+  
       // get a new generation stamp and an access token
       block.setGenerationStamp(nextGenerationStamp(
           blockManager.isLegacyBlock(block.getLocalBlock())));
@@ -5945,10 +5945,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     getEditLog().logSync();
     return locatedBlock;
   }
-
+  
   /**
    * Update a pipeline for a block under construction.
-   *
+   * 
    * @param clientName the name of the client
    * @param oldBlock and old block
    * @param newBlock a new block with a new generation stamp and length
@@ -6027,7 +6027,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Register a Backup name-node, verifying that it belongs
    * to the correct namespace, and adding it to the set of
    * active journals if necessary.
-   *
+   * 
    * @param bnReg registration of the new BackupNode
    * @param nnReg registration of this NameNode
    * @throws IOException if the namespace IDs do not match
@@ -6080,12 +6080,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   static class CorruptFileBlockInfo {
     final String path;
     final Block block;
-
+    
     public CorruptFileBlockInfo(String p, Block b) {
       path = p;
       block = b;
     }
-
+    
     @Override
     public String toString() {
       return block.getBlockName() + "\t" + path;
@@ -6250,7 +6250,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   *
+   * 
    * @param token token to renew
    * @return new expiryTime of the token
    * @throws InvalidToken if {@code token} is invalid
@@ -6294,7 +6294,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   *
+   * 
    * @param token token to cancel
    * @throws IOException on error
    */
@@ -6356,11 +6356,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /**
    * Log the updateMasterKey operation to edit logs.
-   *
+   * 
    * @param key new delegation key.
    */
   public void logUpdateMasterKey(DelegationKey key) {
-
+    
     assert !isInSafeMode() :
       "this should never be called while in safemode, since we stop " +
       "the DT manager before entering safemode!";
@@ -6370,10 +6370,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     getEditLog().logUpdateMasterKey(key);
     getEditLog().logSync();
   }
-
+  
   /**
    * Log the cancellation of expired tokens to edit logs.
-   *
+   * 
    * @param id token identifier to cancel
    */
   public void logExpireDelegationToken(DelegationTokenIdentifier id) {
@@ -6385,16 +6385,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     assert hasReadLock();
     // do not logSync so expiration edits are batched
     getEditLog().logCancelDelegationToken(id);
-  }
-
+  }  
+  
   private void logReassignLease(String leaseHolder, String src,
       String newHolder) {
     assert hasWriteLock();
     getEditLog().logReassignLease(leaseHolder, src, newHolder);
   }
-
+  
   /**
-   *
+   * 
    * @return true if delegation token operation is allowed
    */
   private boolean isAllowedDelegationTokenOp() throws IOException {
@@ -6407,7 +6407,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     return true;
   }
-
+  
   /**
    * Returns authentication method used to establish the connection.
    * @return AuthenticationMethod used to establish connection
@@ -6422,9 +6422,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     return authMethod;
   }
-
+  
   /**
-   * Client invoked methods are invoked over RPC and will be in
+   * Client invoked methods are invoked over RPC and will be in 
    * RPC call context even if the client exits.
    */
   boolean isExternalInvocation() {
@@ -6545,7 +6545,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public long getNumberOfMissingBlocks() {
     return getMissingBlocksCount();
   }
-
+  
   @Override // NameNodeMXBean
   public long getNumberOfMissingBlocksWithReplicationFactorOne() {
     return getMissingReplOneBlocksCount();
@@ -6562,7 +6562,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   @Override // NameNodeMXBean
   public String getLiveNodes() {
-    final Map<String, Map<String,Object>> info =
+    final Map<String, Map<String,Object>> info = 
       new HashMap<String, Map<String,Object>>();
     final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     blockManager.getDatanodeManager().fetchDatanodes(live, null, false);
@@ -6616,7 +6616,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   @Override // NameNodeMXBean
   public String getDeadNodes() {
-    final Map<String, Map<String, Object>> info =
+    final Map<String, Map<String, Object>> info = 
       new HashMap<String, Map<String, Object>>();
     final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
     blockManager.getDatanodeManager().fetchDatanodes(null, dead, false);
@@ -6640,7 +6640,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   @Override // NameNodeMXBean
   public String getDecomNodes() {
-    final Map<String, Map<String, Object>> info =
+    final Map<String, Map<String, Object>> info = 
       new HashMap<String, Map<String, Object>>();
     final List<DatanodeDescriptor> decomNodeList = blockManager.getDatanodeManager(
         ).getDecommissioningNodes();
@@ -6705,17 +6705,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public String getClusterId() {
     return getNNStorage().getClusterID();
   }
-
+  
   @Override  // NameNodeMXBean
   public String getBlockPoolId() {
     return getBlockManager().getBlockPoolId();
   }
-
+  
   @Override  // NameNodeMXBean
   public String getNameDirStatuses() {
     Map<String, Map<File, StorageDirType>> statusMap =
       new HashMap<String, Map<File, StorageDirType>>();
-
+    
     Map<File, StorageDirType> activeDirs = new HashMap<File, StorageDirType>();
     for (Iterator<StorageDirectory> it
         = getNNStorage().dirIterator(); it.hasNext();) {
@@ -6723,7 +6723,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       activeDirs.put(st.getRoot(), st.getStorageDirType());
     }
     statusMap.put("active", activeDirs);
-
+    
     List<Storage.StorageDirectory> removedStorageDirs
         = getNNStorage().getRemovedStorageDirs();
     Map<File, StorageDirType> failedDirs = new HashMap<File, StorageDirType>();
@@ -6731,7 +6731,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       failedDirs.put(st.getRoot(), st.getStorageDirType());
     }
     statusMap.put("failed", failedDirs);
-
+    
     return JSON.toString(statusMap);
   }
 
@@ -6826,7 +6826,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         Long.toString(this.getFSImage().getMostRecentCheckpointTxId()));
     return JSON.toString(txnIdMap);
   }
-
+  
   @Override // NameNodeMXBean
   public long getNNStartedTimeInMillis() {
     return startTime;
@@ -7000,27 +7000,27 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public EditLogTailer getEditLogTailer() {
     return editLogTailer;
   }
-
+  
   @VisibleForTesting
   public void setEditLogTailerForTests(EditLogTailer tailer) {
     this.editLogTailer = tailer;
   }
-
+  
   @VisibleForTesting
   void setFsLockForTests(ReentrantReadWriteLock lock) {
     this.fsLock.coarseLock = lock;
   }
-
+  
   @VisibleForTesting
   public ReentrantReadWriteLock getFsLockForTests() {
     return fsLock.coarseLock;
   }
-
+  
   @VisibleForTesting
   public ReentrantLock getCpLockForTests() {
     return cpLock;
   }
-
+  
   @VisibleForTesting
   public void setNNResourceChecker(NameNodeResourceChecker nnResourceChecker) {
     this.nnResourceChecker = nnResourceChecker;
@@ -7029,7 +7029,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public SnapshotManager getSnapshotManager() {
     return snapshotManager;
   }
-
+  
   /** Allow snapshot on a directory. */
   void allowSnapshot(String path) throws IOException {
     checkOperation(OperationCategory.WRITE);
@@ -7046,7 +7046,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     getEditLog().logSync();
     logAuditEvent(true, operationName, path, null, null);
   }
-
+  
   /** Disallow snapshot on a directory. */
   void disallowSnapshot(String path) throws IOException {
     checkOperation(OperationCategory.WRITE);
@@ -7063,7 +7063,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     getEditLog().logSync();
     logAuditEvent(true, operationName, path, null, null);
   }
-
+  
   /**
    * Create a snapshot
    * @param snapshotRoot The directory path where the snapshot is taken
@@ -7095,14 +7095,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         snapshotPath, null);
     return snapshotPath;
   }
-
+  
   /**
    * Rename a snapshot
    * @param path The directory path where the snapshot was taken
    * @param snapshotOldName Old snapshot name
    * @param snapshotNewName New snapshot name
    * @throws SafeModeException
-   * @throws IOException
+   * @throws IOException 
    */
   void renameSnapshot(
       String path, String snapshotOldName, String snapshotNewName,
@@ -7135,8 +7135,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Get the list of snapshottable directories that are owned
-   * by the current user. Return all the snapshottable directories if the
+   * Get the list of snapshottable directories that are owned 
+   * by the current user. Return all the snapshottable directories if the 
    * current user is a super user.
    * @return The list of all the current snapshottable directories.
    * @throws IOException If an I/O error occurred.
@@ -7319,7 +7319,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         null);
     return diffs;
   }
-
+  
   /**
    * Delete a snapshot of a snapshottable directory
    * @param snapshotRoot The snapshottable directory
@@ -7462,7 +7462,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Update internal state to indicate that a rolling upgrade is in progress for
    * non-HA setup. This requires the namesystem is in SafeMode and after doing a
-   * checkpoint for rollback the namesystem will quit the safemode automatically
+   * checkpoint for rollback the namesystem will quit the safemode automatically 
    */
   private void startRollingUpgradeInternalForNonHA(long startTime)
       throws IOException {
@@ -8882,7 +8882,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         logger.removeAppender(appender);
         asyncAppender.addAppender(appender);
       }
-      logger.addAppender(asyncAppender);
+      logger.addAppender(asyncAppender);        
     }
   }
   /**

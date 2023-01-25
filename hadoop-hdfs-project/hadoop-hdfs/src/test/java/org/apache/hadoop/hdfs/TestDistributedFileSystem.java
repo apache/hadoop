@@ -141,9 +141,9 @@ public class TestDistributedFileSystem {
   }
 
   private boolean dualPortTesting = false;
-
+  
   private boolean noXmlDefaults = false;
-
+  
   HdfsConfiguration getTestConfiguration() {
     HdfsConfiguration conf;
     if (noXmlDefaults) {
@@ -199,9 +199,9 @@ public class TestDistributedFileSystem {
       if (cluster != null) {cluster.shutdown();}
     }
   }
-
+  
   /**
-   * Tests DFSClient.close throws no ConcurrentModificationException if
+   * Tests DFSClient.close throws no ConcurrentModificationException if 
    * multiple files are open.
    * Also tests that any cached sockets are closed. (HDFS-3359)
    * Also tests deprecated listOpenFiles(EnumSet<>). (HDFS-14595)
@@ -402,7 +402,7 @@ public class TestDistributedFileSystem {
     inOrder.verify(fs.dfs).delete(eq(path.toString()), eq(true));
     inOrder.verify(fs.dfs).close();
   }
-
+  
   private static class MyDistributedFileSystem extends DistributedFileSystem {
     MyDistributedFileSystem() {
       dfs = mock(DFSClient.class);
@@ -481,7 +481,7 @@ public class TestDistributedFileSystem {
             .getDeclaredMethod("isRunning");
         checkMethod.setAccessible(true);
         assertFalse((boolean) checkMethod.invoke(dfs.dfs.getLeaseRenewer()));
-
+  
         {
           //create a file
           final FSDataOutputStream out = dfs.create(filepaths[0]);
@@ -593,11 +593,11 @@ public class TestDistributedFileSystem {
         assertFalse((boolean)checkMethod.invoke(dfs.dfs.getLeaseRenewer()));
         dfs.close();
       }
-
+      
       { // test accessing DFS with ip address. should work with any hostname
         // alias or ip address that points to the interface that NameNode
         // is listening on. In this case, it is localhost.
-        String uri = "hdfs://127.0.0.1:" + cluster.getNameNodePort() +
+        String uri = "hdfs://127.0.0.1:" + cluster.getNameNodePort() + 
                       "/test/ipAddress/file";
         Path path = new Path(uri);
         FileSystem fs = FileSystem.get(path.toUri(), conf);
@@ -605,7 +605,7 @@ public class TestDistributedFileSystem {
         byte[] buf = new byte[1024];
         out.write(buf);
         out.close();
-
+        
         FSDataInputStream in = fs.open(path);
         in.readFully(buf);
         in.close();
@@ -699,7 +699,7 @@ public class TestDistributedFileSystem {
       fs.mkdirs(dir);
       checkStatistics(fs, readOps, ++writeOps, largeReadOps);
       checkOpStatistics(OpType.MKDIRS, opCount + 1);
-
+      
       opCount = getOpStatistics(OpType.CREATE);
       FSDataOutputStream out = fs.create(file, (short)1);
       out.close();
@@ -710,7 +710,7 @@ public class TestDistributedFileSystem {
       FileStatus status = fs.getFileStatus(file);
       checkStatistics(fs, ++readOps, writeOps, largeReadOps);
       checkOpStatistics(OpType.GET_FILE_STATUS, opCount + 1);
-
+      
       opCount = getOpStatistics(OpType.GET_FILE_BLOCK_LOCATIONS);
       fs.getFileBlockLocations(file, 0, 0);
       checkStatistics(fs, ++readOps, writeOps, largeReadOps);
@@ -718,30 +718,30 @@ public class TestDistributedFileSystem {
       fs.getFileBlockLocations(status, 0, 0);
       checkStatistics(fs, ++readOps, writeOps, largeReadOps);
       checkOpStatistics(OpType.GET_FILE_BLOCK_LOCATIONS, opCount + 2);
-
+      
       opCount = getOpStatistics(OpType.OPEN);
       FSDataInputStream in = fs.open(file);
       in.close();
       checkStatistics(fs, ++readOps, writeOps, largeReadOps);
       checkOpStatistics(OpType.OPEN, opCount + 1);
-
+      
       opCount = getOpStatistics(OpType.SET_REPLICATION);
       fs.setReplication(file, (short)2);
       checkStatistics(fs, readOps, ++writeOps, largeReadOps);
       checkOpStatistics(OpType.SET_REPLICATION, opCount + 1);
-
+      
       opCount = getOpStatistics(OpType.RENAME);
       Path file1 = new Path(dir, "file1");
       fs.rename(file, file1);
       checkStatistics(fs, readOps, ++writeOps, largeReadOps);
       checkOpStatistics(OpType.RENAME, opCount + 1);
-
+      
       opCount = getOpStatistics(OpType.GET_CONTENT_SUMMARY);
       fs.getContentSummary(file1);
       checkStatistics(fs, ++readOps, writeOps, largeReadOps);
       checkOpStatistics(OpType.GET_CONTENT_SUMMARY, opCount + 1);
-
-
+      
+      
       // Iterative ls test
       long mkdirOp = getOpStatistics(OpType.MKDIRS);
       long listStatusOp = getOpStatistics(OpType.LIST_STATUS);
@@ -752,7 +752,7 @@ public class TestDistributedFileSystem {
         mkdirOp++;
         FileStatus[] list = fs.listStatus(dir);
         if (list.length > lsLimit) {
-          // if large directory, then count readOps and largeReadOps by
+          // if large directory, then count readOps and largeReadOps by 
           // number times listStatus iterates
           int iterations = (int)Math.ceil((double)list.length/lsLimit);
           largeReadOps += iterations;
@@ -763,7 +763,7 @@ public class TestDistributedFileSystem {
           readOps++;
           listStatusOp++;
         }
-
+        
         // writeOps incremented by 1 for mkdirs
         // readOps and largeReadOps incremented by 1 or more
         checkStatistics(fs, readOps, ++writeOps, largeReadOps);
@@ -776,7 +776,7 @@ public class TestDistributedFileSystem {
         checkStatistics(fs, readOps, writeOps, largeReadOps);
         checkOpStatistics(OpType.LIST_LOCATED_STATUS, locatedListStatusOP);
       }
-
+      
       opCount = getOpStatistics(OpType.GET_STATUS);
       fs.getStatus(file1);
       checkStatistics(fs, ++readOps, writeOps, largeReadOps);
@@ -786,12 +786,12 @@ public class TestDistributedFileSystem {
       fs.getFileChecksum(file1);
       checkStatistics(fs, ++readOps, writeOps, largeReadOps);
       checkOpStatistics(OpType.GET_FILE_CHECKSUM, opCount + 1);
-
+      
       opCount = getOpStatistics(OpType.SET_PERMISSION);
       fs.setPermission(file1, new FsPermission((short)0777));
       checkStatistics(fs, readOps, ++writeOps, largeReadOps);
       checkOpStatistics(OpType.SET_PERMISSION, opCount + 1);
-
+      
       opCount = getOpStatistics(OpType.SET_TIMES);
       fs.setTimes(file1, 0L, 0L);
       checkStatistics(fs, readOps, ++writeOps, largeReadOps);
@@ -807,7 +807,7 @@ public class TestDistributedFileSystem {
       fs.delete(dir, true);
       checkStatistics(fs, readOps, ++writeOps, largeReadOps);
       checkOpStatistics(OpType.DELETE, opCount + 1);
-
+      
     } finally {
       if (cluster != null) cluster.shutdown();
     }
@@ -1216,7 +1216,7 @@ public class TestDistributedFileSystem {
     final UserGroupInformation current = UserGroupInformation.getCurrentUser();
     final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
         current.getShortUserName() + "x", new String[]{"user"});
-
+    
     try {
       hdfs.getFileChecksum(new Path(
           "/test/TestNonExistingFile"));
@@ -1259,7 +1259,7 @@ public class TestDistributedFileSystem {
       final byte[] data = new byte[RAN.nextInt(block_size/2-1)+n*block_size+1];
       RAN.nextBytes(data);
       System.out.println("data.length=" + data.length);
-
+  
       //write data to a file
       final Path foo = new Path(dir, "foo" + n);
       {
@@ -1268,7 +1268,7 @@ public class TestDistributedFileSystem {
         out.write(data);
         out.close();
       }
-
+      
       //compute checksum
       final FileChecksum hdfsfoocs = hdfs.getFileChecksum(foo);
       System.out.println("hdfsfoocs=" + hdfsfoocs);
@@ -1326,7 +1326,7 @@ public class TestDistributedFileSystem {
 
       hdfs.setPermission(dir, new FsPermission((short)0));
 
-      { //test permission error on webhdfs
+      { //test permission error on webhdfs 
         try {
           webhdfs.getFileChecksum(webhdfsqualified);
           fail();
@@ -1338,7 +1338,7 @@ public class TestDistributedFileSystem {
     }
     cluster.shutdown();
   }
-
+  
   @Test
   public void testAllWithDualPort() throws Exception {
     dualPortTesting = true;
@@ -1352,7 +1352,7 @@ public class TestDistributedFileSystem {
       dualPortTesting = false;
     }
   }
-
+  
   @Test
   public void testAllWithNoXmlDefaults() throws Exception {
     // Do all the tests with a configuration that ignores the defaults in
@@ -1365,7 +1365,7 @@ public class TestDistributedFileSystem {
       testDFSClient();
       testFileChecksum();
     } finally {
-     noXmlDefaults = false;
+     noXmlDefaults = false; 
     }
   }
 
@@ -1429,7 +1429,7 @@ public class TestDistributedFileSystem {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = null;
     Path testBasePath = new Path("/test/csum");
-    // create args
+    // create args 
     Path path1 = new Path(testBasePath, "file_wtih_crc1");
     Path path2 = new Path(testBasePath, "file_with_crc2");
     ChecksumOpt opt1 = new ChecksumOpt(DataChecksum.Type.CRC32C, 512);
@@ -1543,13 +1543,13 @@ public class TestDistributedFileSystem {
   public void testListFiles() throws IOException {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-
+    
     try {
       DistributedFileSystem fs = cluster.getFileSystem();
-
+  
       final Path relative = new Path("relative");
       fs.create(new Path(relative, "foo")).close();
-
+  
       final List<LocatedFileStatus> retVal = new ArrayList<>();
       final RemoteIterator<LocatedFileStatus> iter =
           fs.listFiles(relative, true);
@@ -1590,7 +1590,7 @@ public class TestDistributedFileSystem {
     // only need cluster to create a dfs client to get a peer
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
-      cluster.waitActive();
+      cluster.waitActive();     
       DistributedFileSystem dfs = cluster.getFileSystem();
       // use a dummy socket to ensure the read timesout
       ServerSocket socket = new ServerSocket(0);
