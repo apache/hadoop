@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -70,7 +70,7 @@ public class TestContainerSchedulerBehaviorCompatibility
     // on the RM side it won't check vcores at all.
     list.add(StartContainerRequest.newInstance(containerLaunchContext,
         createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
-            context.getNodeId(), user, BuilderUtils.newResource(2048, 4),
+            context.getNodeId(), user, Resources.createResource(2048, 4),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.GUARANTEED)));
 

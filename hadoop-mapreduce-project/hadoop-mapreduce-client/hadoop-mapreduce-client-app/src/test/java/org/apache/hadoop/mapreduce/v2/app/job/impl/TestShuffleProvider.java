@@ -53,8 +53,8 @@ import org.apache.hadoop.yarn.server.api.AuxiliaryService;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Test;
-import org.junit.Assert;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
 
 public class TestShuffleProvider {
 
@@ -110,9 +110,12 @@ public class TestShuffleProvider {
             credentials);
 
     Map<String, ByteBuffer> serviceDataMap = launchCtx.getServiceData();
-    Assert.assertNotNull("TestShuffleHandler1 is missing", serviceDataMap.get(TestShuffleHandler1.MAPREDUCE_TEST_SHUFFLE_SERVICEID));
-    Assert.assertNotNull("TestShuffleHandler2 is missing", serviceDataMap.get(TestShuffleHandler2.MAPREDUCE_TEST_SHUFFLE_SERVICEID));
-    Assert.assertTrue("mismatch number of services in map", serviceDataMap.size() == 3); // 2 that we entered + 1 for the built-in shuffle-provider
+    Assertions.assertNotNull(serviceDataMap.get(TestShuffleHandler1.MAPREDUCE_TEST_SHUFFLE_SERVICEID),
+        "TestShuffleHandler1 is missing");
+    Assertions.assertNotNull(serviceDataMap.get(TestShuffleHandler2.MAPREDUCE_TEST_SHUFFLE_SERVICEID),
+        "TestShuffleHandler2 is missing");
+    Assertions.assertTrue(serviceDataMap.size() == 3,
+        "mismatch number of services in map"); // 2 that we entered + 1 for the built-in shuffle-provider
   }
 
   static public class StubbedFS extends RawLocalFileSystem {
