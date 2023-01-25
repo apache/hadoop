@@ -29,7 +29,7 @@ a secure registry:
 1. Allow the RM to create per-user regions of the registration space
 1. Allow applications belonging to a user to write registry entries
 into their part of the space. These may be short-lived or long-lived
-YARN applications,  or they may be be static applications.
+YARN applications, or they may be static applications.
 1. Prevent other users from writing into another user's part of the registry.
 1. Allow system services to register to a `/services` section of the registry.
 1. Provide read access to clients of a registry.

@@ -741,7 +741,6 @@ class BPOfferService {
         // Exceptions caught here are not expected to be disk-related.
         throw e;
       }
-      dn.metrics.incrBlocksRemoved(toDelete.length);
       break;
     case DatanodeProtocol.DNA_CACHE:
       LOG.info("DatanodeCommand action: DNA_CACHE for " +

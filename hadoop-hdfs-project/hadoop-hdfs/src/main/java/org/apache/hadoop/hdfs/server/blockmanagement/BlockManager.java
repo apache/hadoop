@@ -1067,6 +1067,26 @@ public class BlockManager implements BlockStatsMXBean {
     blocksReplWorkMultiplier = newVal;
   }
 
+  /**
+   * Updates the value used for pendingReconstruction timeout, which is set by
+   * {@code DFSConfigKeys.
+   *     DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY} initially.
+   *
+   * @param newVal - Must be a positive non-zero integer.
+   */
+  public void setReconstructionPendingTimeout(int newVal) {
+    ensurePositiveInt(newVal,
+        DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY);
+    pendingReconstruction.setTimeout(newVal * 1000L);
+  }
+
+  /** Returns the current setting for pendingReconstruction timeout, set by
+   * {@code DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY}.
+   */
+  public int getReconstructionPendingTimeout() {
+    return (int)(pendingReconstruction.getTimeout() / 1000L);
+  }
+
   public int getDefaultStorageNum(BlockInfo block) {
     switch (block.getBlockType()) {
     case STRIPED: return ((BlockInfoStriped) block).getRealTotalBlockNum();
@@ -1097,7 +1117,7 @@ public class BlockManager implements BlockStatsMXBean {
     return minReplicationToBeInMaintenance;
   }
 
-  private short getMinMaintenanceStorageNum(BlockInfo block) {
+  short getMinMaintenanceStorageNum(BlockInfo block) {
     if (block.isStriped()) {
       return ((BlockInfoStriped) block).getRealDataBlockNum();
     } else {
@@ -2579,7 +2599,8 @@ public class BlockManager implements BlockStatsMXBean {
 
       if (priority != LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY
           && (!node.isDecommissionInProgress() && !node.isEnteringMaintenance())
-          && node.getNumberOfBlocksToBeReplicated() >= maxReplicationStreams) {
+          && node.getNumberOfBlocksToBeReplicated() +
+          node.getNumberOfBlocksToBeErasureCoded() >= maxReplicationStreams) {
         if (isStriped && (state == StoredReplicaState.LIVE
             || state == StoredReplicaState.DECOMMISSIONING)) {
           liveBusyBlockIndices.add(blockIndex);
@@ -2589,7 +2610,8 @@ public class BlockManager implements BlockStatsMXBean {
         continue; // already reached replication limit
       }
 
-      if (node.getNumberOfBlocksToBeReplicated() >= replicationStreamsHardLimit) {
+      if (node.getNumberOfBlocksToBeReplicated() +
+          node.getNumberOfBlocksToBeErasureCoded() >= replicationStreamsHardLimit) {
         if (isStriped && (state == StoredReplicaState.LIVE
             || state == StoredReplicaState.DECOMMISSIONING)) {
           liveBusyBlockIndices.add(blockIndex);
@@ -3596,7 +3618,7 @@ public class BlockManager implements BlockStatsMXBean {
     if (storedBlock == null || storedBlock.isDeleted()) {
       // If this block does not belong to anyfile, then we are done.
       blockLog.debug("BLOCK* addStoredBlock: {} on {} size {} but it does not belong to any file",
-          block, node, block.getNumBytes());
+          reportedBlock, node, reportedBlock.getNumBytes());
       // we could add this block to invalidate set of this datanode.
       // it will happen in next block report otherwise.
       return block;
@@ -3611,12 +3633,12 @@ public class BlockManager implements BlockStatsMXBean {
           (node.isDecommissioned() || node.isDecommissionInProgress()) ? 0 : 1;
       if (logEveryBlock) {
         blockLog.info("BLOCK* addStoredBlock: {} is added to {} (size={})",
-            node, storedBlock, storedBlock.getNumBytes());
+            node, reportedBlock, reportedBlock.getNumBytes());
       }
     } else if (result == AddBlockResult.REPLACED) {
       curReplicaDelta = 0;
       blockLog.warn("BLOCK* addStoredBlock: block {} moved to storageType " +
-          "{} on node {}", storedBlock, storageInfo.getStorageType(), node);
+          "{} on node {}", reportedBlock, storageInfo.getStorageType(), node);
     } else {
       // if the same block is added again and the replica was corrupt
       // previously because of a wrong gen stamp, remove it from the
@@ -3626,8 +3648,8 @@ public class BlockManager implements BlockStatsMXBean {
       curReplicaDelta = 0;
       if (blockLog.isDebugEnabled()) {
         blockLog.debug("BLOCK* addStoredBlock: Redundant addStoredBlock request"
-                + " received for {} on node {} size {}", storedBlock, node,
-            storedBlock.getNumBytes());
+                + " received for {} on node {} size {}", reportedBlock, node,
+            reportedBlock.getNumBytes());
       }
     }
 

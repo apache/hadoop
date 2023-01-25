@@ -208,7 +208,8 @@ The following table lists the configuration property names that are deprecated i
 | mapred.task.profile.params | mapreduce.task.profile.params |
 | mapred.task.profile.reduces | mapreduce.task.profile.reduces |
 | mapred.task.timeout | mapreduce.task.timeout |
-| mapred.tasktracker.indexcache.mb | mapreduce.tasktracker.indexcache.mb |
+| mapred.tasktracker.indexcache.mb | mapreduce.reduce.shuffle.indexcache.mb |
+| mapreduce.tasktracker.indexcache.mb | mapreduce.reduce.shuffle.indexcache.mb |
 | mapred.tasktracker.map.tasks.maximum | mapreduce.tasktracker.map.tasks.maximum |
 | mapred.tasktracker.memory\_calculator\_plugin | mapreduce.tasktracker.resourcecalculatorplugin |
 | mapred.tasktracker.memorycalculatorplugin | mapreduce.tasktracker.resourcecalculatorplugin |

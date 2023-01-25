@@ -74,6 +74,42 @@ public final class ZKFederationStateStoreOpDurations implements MetricsSource {
   @Metric("Duration for a get PolicyConfigurations call")
   private MutableRate getPoliciesConfigurations;
 
+  @Metric("Duration for a add reservation homeSubCluster call")
+  private MutableRate addReservationHomeSubCluster;
+
+  @Metric("Duration for a get reservation homeSubCluster call")
+  private MutableRate getReservationHomeSubCluster;
+
+  @Metric("Duration for a get reservations homeSubCluster call")
+  private MutableRate getReservationsHomeSubCluster;
+
+  @Metric("Duration for a delete reservation homeSubCluster call")
+  private MutableRate deleteReservationHomeSubCluster;
+
+  @Metric("Duration for a update reservation homeSubCluster call")
+  private MutableRate updateReservationHomeSubCluster;
+
+  @Metric("Duration for a store new master key call")
+  private MutableRate storeNewMasterKey;
+
+  @Metric("Duration for a remove new master key call")
+  private MutableRate removeStoredMasterKey;
+
+  @Metric("Duration for a get master key by delegation key call")
+  private MutableRate getMasterKeyByDelegationKey;
+
+  @Metric("Duration for a store new token call")
+  private MutableRate storeNewToken;
+
+  @Metric("Duration for a update stored token call")
+  private MutableRate updateStoredToken;
+
+  @Metric("Duration for a remove stored token call")
+  private MutableRate removeStoredToken;
+
+  @Metric("Duration for a get token by router store token call")
+  private MutableRate getTokenByRouterStoreToken;
+
   protected static final MetricsInfo RECORD_INFO =
       info("ZKFederationStateStoreOpDurations", "Durations of ZKFederationStateStore calls");
 
@@ -151,5 +187,53 @@ public final class ZKFederationStateStoreOpDurations implements MetricsSource {
 
   public void addGetPoliciesConfigurationsDuration(long startTime, long endTime) {
     getPoliciesConfigurations.add(endTime - startTime);
+  }
+
+  public void addReservationHomeSubClusterDuration(long startTime, long endTime) {
+    addReservationHomeSubCluster.add(endTime - startTime);
+  }
+
+  public void addGetReservationHomeSubClusterDuration(long startTime, long endTime) {
+    getReservationHomeSubCluster.add(endTime - startTime);
+  }
+
+  public void addGetReservationsHomeSubClusterDuration(long startTime, long endTime) {
+    getReservationsHomeSubCluster.add(endTime - startTime);
+  }
+
+  public void addDeleteReservationHomeSubClusterDuration(long startTime, long endTime) {
+    deleteReservationHomeSubCluster.add(endTime - startTime);
+  }
+
+  public void addUpdateReservationHomeSubClusterDuration(long startTime, long endTime) {
+    updateReservationHomeSubCluster.add(endTime - startTime);
+  }
+
+  public void addStoreNewMasterKeyDuration(long startTime, long endTime) {
+    storeNewMasterKey.add(endTime - startTime);
+  }
+
+  public void removeStoredMasterKeyDuration(long startTime, long endTime) {
+    removeStoredMasterKey.add(endTime - startTime);
+  }
+
+  public void getMasterKeyByDelegationKeyDuration(long startTime, long endTime) {
+    getMasterKeyByDelegationKey.add(endTime - startTime);
+  }
+
+  public void getStoreNewTokenDuration(long startTime, long endTime) {
+    storeNewToken.add(endTime - startTime);
+  }
+
+  public void updateStoredTokenDuration(long startTime, long endTime) {
+    updateStoredToken.add(endTime - startTime);
+  }
+
+  public void removeStoredTokenDuration(long startTime, long endTime) {
+    removeStoredToken.add(endTime - startTime);
+  }
+
+  public void getTokenByRouterStoreTokenDuration(long startTime, long endTime) {
+    getTokenByRouterStoreToken.add(endTime - startTime);
   }
 }

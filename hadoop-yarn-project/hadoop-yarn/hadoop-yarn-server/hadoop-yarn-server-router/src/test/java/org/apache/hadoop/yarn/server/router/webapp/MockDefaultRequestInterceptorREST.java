@@ -20,27 +20,43 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Collections;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -57,10 +73,20 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
+import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
+import org.apache.hadoop.yarn.api.records.ReservationRequest;
+import org.apache.hadoop.yarn.api.records.ReservationRequests;
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -70,8 +96,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.Activi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityLevel;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
@@ -97,18 +127,42 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewReservation;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationListInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateResponseInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteResponseInfo;
+import org.apache.hadoop.yarn.server.router.RouterServerUtil;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.webapp.BadRequestException;
+import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT_FULL;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEDICATED;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEDICATED_FULL;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * This class mocks the RESTRequestInterceptor.
@@ -125,6 +179,16 @@ public class MockDefaultRequestInterceptorREST
   private boolean isRunning = true;
   private Map<ApplicationId, ApplicationReport> applicationMap = new HashMap<>();
   public static final String APP_STATE_RUNNING = "RUNNING";
+
+  // duration(milliseconds), 1mins
+  public static final long DURATION = 60*1000;
+
+  // Containers 4
+  public static final int NUM_CONTAINERS = 4;
+
+  private Map<ReservationId, SubClusterId> reservationMap = new HashMap<>();
+  private AtomicLong resCounter = new AtomicLong();
+  private MockRM mockRM = null;
 
   private void validateRunning() throws ConnectException {
     if (!isRunning) {
@@ -316,6 +380,23 @@ public class MockDefaultRequestInterceptorREST
       throw new RuntimeException("RM is stopped");
     }
 
+    // Try format conversion for app_id
+    ApplicationId applicationId = null;
+    try {
+      applicationId = ApplicationId.fromString(appId);
+    } catch (Exception e) {
+      throw new BadRequestException(e);
+    }
+
+    // Try format conversion for app_attempt_id
+    ApplicationAttemptId applicationAttemptId = null;
+    try {
+      applicationAttemptId =
+          ApplicationAttemptId.fromString(appAttemptId);
+    } catch (Exception e) {
+      throw new BadRequestException(e);
+    }
+
     // We avoid to check if the Application exists in the system because we need
     // to validate that each subCluster returns 1 container.
     ContainersInfo containers = new ContainersInfo();
@@ -426,8 +507,7 @@ public class MockDefaultRequestInterceptorREST
       throw new RuntimeException("RM is stopped");
     }
 
-    ContainerId newContainerId = ContainerId.newContainerId(
-        ApplicationAttemptId.fromString(appAttemptId), Integer.valueOf(containerId));
+    ContainerId newContainerId = ContainerId.fromString(containerId);
 
     Resource allocatedResource = Resource.newInstance(1024, 2);
 
@@ -478,15 +558,15 @@ public class MockDefaultRequestInterceptorREST
       throw new NotFoundException("app with id: " + appId + " not found");
     }
 
+    ApplicationAttemptId attemptId = ApplicationAttemptId.fromString(appAttemptId);
+
     ApplicationReport newApplicationReport = ApplicationReport.newInstance(
-        applicationId, ApplicationAttemptId.newInstance(applicationId, Integer.parseInt(appAttemptId)),
-        "user", "queue", "appname", "host", 124, null,
+        applicationId, attemptId, "user", "queue", "appname", "host", 124, null,
         YarnApplicationState.RUNNING, "diagnostics", "url", 1, 2, 3, 4,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
 
     ApplicationAttemptReport attempt = ApplicationAttemptReport.newInstance(
-        ApplicationAttemptId.newInstance(applicationId, Integer.parseInt(appAttemptId)),
-        "host", 124, "url", "oUrl", "diagnostics",
+        attemptId, "host", 124, "url", "oUrl", "diagnostics",
         YarnApplicationAttemptState.FINISHED, ContainerId.newContainerId(
         newApplicationReport.getCurrentApplicationAttemptId(), 1));
 
@@ -787,5 +867,361 @@ public class MockDefaultRequestInterceptorREST
         Integer.parseInt(limit), summarize, 3);
 
     return appActivitiesInfo;
+  }
+
+  @Override
+  public Response listReservation(String queue, String reservationId, long startTime, long endTime,
+      boolean includeResourceAllocations, HttpServletRequest hsr) throws Exception {
+
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    if (!StringUtils.equals(queue, QUEUE_DEDICATED_FULL)) {
+      throw new RuntimeException("The specified queue: " + queue +
+          " is not managed by reservation system." +
+          " Please try again with a valid reservable queue.");
+    }
+
+    ReservationId reservationID =
+        ReservationId.parseReservationId(reservationId);
+
+    if (!reservationMap.containsKey(reservationID)) {
+      throw new NotFoundException("reservationId with id: " + reservationId + " not found");
+    }
+
+    ClientRMService clientService = mockRM.getClientRMService();
+
+    // listReservations
+    ReservationListRequest request = ReservationListRequest.newInstance(
+        queue, reservationId, startTime, endTime, includeResourceAllocations);
+    ReservationListResponse resRespInfo = clientService.listReservations(request);
+    ReservationListInfo resResponse =
+        new ReservationListInfo(resRespInfo, includeResourceAllocations);
+
+    return Response.status(Status.OK).entity(resResponse).build();
+  }
+
+  @Override
+  public Response createNewReservation(HttpServletRequest hsr)
+      throws AuthorizationException, IOException, InterruptedException {
+
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ReservationId resId = ReservationId.newInstance(Time.now(), resCounter.incrementAndGet());
+    LOG.info("Allocated new reservationId: {}.", resId);
+
+    NewReservation reservationId = new NewReservation(resId.toString());
+    return Response.status(Status.OK).entity(reservationId).build();
+  }
+
+  @Override
+  public Response submitReservation(ReservationSubmissionRequestInfo resContext,
+      HttpServletRequest hsr) throws AuthorizationException, IOException, InterruptedException {
+
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ReservationId reservationId = ReservationId.parseReservationId(resContext.getReservationId());
+    ReservationDefinitionInfo definitionInfo = resContext.getReservationDefinition();
+    ReservationDefinition definition =
+            RouterServerUtil.convertReservationDefinition(definitionInfo);
+    ReservationSubmissionRequest request = ReservationSubmissionRequest.newInstance(
+            definition, resContext.getQueue(), reservationId);
+    submitReservation(request);
+
+    LOG.info("Reservation submitted: {}.", reservationId);
+
+    SubClusterId subClusterId = getSubClusterId();
+    reservationMap.put(reservationId, subClusterId);
+
+    return Response.status(Status.ACCEPTED).build();
+  }
+
+  private void submitReservation(ReservationSubmissionRequest request) {
+    try {
+      // synchronize plan
+      ReservationSystem reservationSystem = mockRM.getReservationSystem();
+      reservationSystem.synchronizePlan(QUEUE_DEDICATED_FULL, true);
+      // Generate reserved resources
+      ClientRMService clientService = mockRM.getClientRMService();
+      clientService.submitReservation(request);
+    } catch (IOException | YarnException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public Response updateReservation(ReservationUpdateRequestInfo resContext,
+      HttpServletRequest hsr) throws AuthorizationException, IOException, InterruptedException {
+
+    if (resContext == null || resContext.getReservationId() == null ||
+        resContext.getReservationDefinition() == null) {
+      return Response.status(Status.BAD_REQUEST).build();
+    }
+
+    String resId = resContext.getReservationId();
+    ReservationId reservationId = ReservationId.parseReservationId(resId);
+
+    if (!reservationMap.containsKey(reservationId)) {
+      throw new NotFoundException("reservationId with id: " + reservationId + " not found");
+    }
+
+    // Generate reserved resources
+    updateReservation(resContext);
+
+    ReservationUpdateResponseInfo resRespInfo = new ReservationUpdateResponseInfo();
+    return Response.status(Status.OK).entity(resRespInfo).build();
+  }
+
+  private void updateReservation(ReservationUpdateRequestInfo resContext) throws IOException {
+
+    if (resContext == null) {
+      throw new BadRequestException("Input ReservationSubmissionContext should not be null");
+    }
+
+    ReservationDefinitionInfo resInfo = resContext.getReservationDefinition();
+    if (resInfo == null) {
+      throw new BadRequestException("Input ReservationDefinition should not be null");
+    }
+
+    ReservationRequestsInfo resReqsInfo = resInfo.getReservationRequests();
+    if (resReqsInfo == null || resReqsInfo.getReservationRequest() == null
+        || resReqsInfo.getReservationRequest().isEmpty()) {
+      throw new BadRequestException("The ReservationDefinition should " +
+          "contain at least one ReservationRequest");
+    }
+
+    if (resContext.getReservationId() == null) {
+      throw new BadRequestException("Update operations must specify an existing ReservaitonId");
+    }
+
+    ReservationRequestInterpreter[] values = ReservationRequestInterpreter.values();
+    ReservationRequestInterpreter requestInterpreter =
+        values[resReqsInfo.getReservationRequestsInterpreter()];
+    List<ReservationRequest> list = new ArrayList<>();
+
+    for (ReservationRequestInfo resReqInfo : resReqsInfo.getReservationRequest()) {
+      ResourceInfo rInfo = resReqInfo.getCapability();
+      Resource capability = Resource.newInstance(rInfo.getMemorySize(), rInfo.getvCores());
+      int numContainers = resReqInfo.getNumContainers();
+      int minConcurrency = resReqInfo.getMinConcurrency();
+      long duration = resReqInfo.getDuration();
+      ReservationRequest rr = ReservationRequest.newInstance(
+          capability, numContainers, minConcurrency, duration);
+      list.add(rr);
+    }
+
+    ReservationRequests reqs = ReservationRequests.newInstance(list, requestInterpreter);
+    ReservationDefinition rDef = ReservationDefinition.newInstance(
+        resInfo.getArrival(), resInfo.getDeadline(), reqs,
+        resInfo.getReservationName(), resInfo.getRecurrenceExpression(),
+        Priority.newInstance(resInfo.getPriority()));
+    ReservationUpdateRequest request = ReservationUpdateRequest.newInstance(
+        rDef, ReservationId.parseReservationId(resContext.getReservationId()));
+
+    ClientRMService clientService = mockRM.getClientRMService();
+    try {
+      clientService.updateReservation(request);
+    } catch (YarnException ex) {
+      throw new RuntimeException(ex);
+    }
+  }
+
+  @Override
+  public Response deleteReservation(ReservationDeleteRequestInfo resContext, HttpServletRequest hsr)
+      throws AuthorizationException, IOException, InterruptedException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    try {
+      String resId = resContext.getReservationId();
+      ReservationId reservationId = ReservationId.parseReservationId(resId);
+
+      if (!reservationMap.containsKey(reservationId)) {
+        throw new NotFoundException("reservationId with id: " + reservationId + " not found");
+      }
+
+      ReservationDeleteRequest reservationDeleteRequest =
+          ReservationDeleteRequest.newInstance(reservationId);
+      ClientRMService clientService = mockRM.getClientRMService();
+      clientService.deleteReservation(reservationDeleteRequest);
+
+      ReservationDeleteResponseInfo resRespInfo = new ReservationDeleteResponseInfo();
+      reservationMap.remove(reservationId);
+
+      return Response.status(Status.OK).entity(resRespInfo).build();
+    } catch (YarnException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @VisibleForTesting
+  public MockRM getMockRM() {
+    return mockRM;
+  }
+
+  @VisibleForTesting
+  public void setMockRM(MockRM mockResourceManager) {
+    this.mockRM = mockResourceManager;
+  }
+
+  @Override
+  public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) {
+
+    NodeLabelInfo nodeLabelInfo = new NodeLabelInfo();
+    nodeLabelInfo.setExclusivity(true);
+    nodeLabelInfo.setName("Test-Label");
+    nodeLabelInfo.setActiveNMs(10);
+    PartitionInfo partitionInfo = new PartitionInfo();
+
+    NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
+    nodeLabelsInfo.getNodeLabelsInfo().add(nodeLabelInfo);
+
+    return nodeLabelsInfo;
+  }
+
+  private MockRM setupResourceManager() throws Exception {
+    DefaultMetricsSystem.setMiniClusterMode(true);
+
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+
+    // Define default queue
+    conf.setCapacity(QUEUE_DEFAULT_FULL, 20);
+    // Define dedicated queues
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] {QUEUE_DEFAULT,  QUEUE_DEDICATED});
+    conf.setCapacity(QUEUE_DEDICATED_FULL, 80);
+    conf.setReservable(QUEUE_DEDICATED_FULL, true);
+
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class, ResourceScheduler.class);
+    conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
+    MockRM rm = new MockRM(conf);
+    rm.start();
+    rm.registerNode("127.0.0.1:5678", 100*1024, 100);
+    return rm;
+  }
+
+  @Override
+  public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
+      String queueAclType, HttpServletRequest hsr) throws AuthorizationException {
+
+    ResourceManager mockResourceManager = mock(ResourceManager.class);
+    Configuration conf = new YarnConfiguration();
+
+    ResourceScheduler mockScheduler = new CapacityScheduler() {
+      @Override
+      public synchronized boolean checkAccess(UserGroupInformation callerUGI,
+          QueueACL acl, String queueName) {
+        if (acl == QueueACL.ADMINISTER_QUEUE) {
+          if (callerUGI.getUserName().equals("admin")) {
+            return true;
+          }
+        } else {
+          if (ImmutableSet.of("admin", "yarn").contains(callerUGI.getUserName())) {
+            return true;
+          }
+        }
+        return false;
+      }
+    };
+
+    when(mockResourceManager.getResourceScheduler()).thenReturn(mockScheduler);
+    MockRMWebServices webSvc = new MockRMWebServices(mockResourceManager, conf,
+        mock(HttpServletResponse.class));
+    return webSvc.checkUserAccessToQueue(queue, username, queueAclType, hsr);
+  }
+
+  class MockRMWebServices {
+
+    @Context
+    private HttpServletResponse httpServletResponse;
+    private ResourceManager resourceManager;
+
+    private void initForReadableEndpoints() {
+      // clear content type
+      httpServletResponse.setContentType(null);
+    }
+
+    MockRMWebServices(ResourceManager rm, Configuration conf, HttpServletResponse response) {
+      this.resourceManager = rm;
+      this.httpServletResponse = response;
+    }
+
+    private UserGroupInformation getCallerUserGroupInformation(
+        HttpServletRequest hsr, boolean usePrincipal) {
+
+      String remoteUser = hsr.getRemoteUser();
+
+      if (usePrincipal) {
+        Principal princ = hsr.getUserPrincipal();
+        remoteUser = princ == null ? null : princ.getName();
+      }
+
+      UserGroupInformation callerUGI = null;
+      if (remoteUser != null) {
+        callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+      }
+
+      return callerUGI;
+    }
+
+    public RMQueueAclInfo checkUserAccessToQueue(
+        String queue, String username, String queueAclType, HttpServletRequest hsr)
+        throws AuthorizationException {
+      initForReadableEndpoints();
+
+      // For the user who invokes this REST call, he/she should have admin access
+      // to the queue. Otherwise we will reject the call.
+      UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+      if (callerUGI != null && !this.resourceManager.getResourceScheduler().checkAccess(
+              callerUGI, QueueACL.ADMINISTER_QUEUE, queue)) {
+        throw new ForbiddenException(
+                "User=" + callerUGI.getUserName() + " doesn't haven access to queue="
+                        + queue + " so it cannot check ACLs for other users.");
+      }
+
+      // Create UGI for the to-be-checked user.
+      UserGroupInformation user = UserGroupInformation.createRemoteUser(username);
+      if (user == null) {
+        throw new ForbiddenException(
+           "Failed to retrieve UserGroupInformation for user=" + username);
+      }
+
+      // Check if the specified queue acl is valid.
+      QueueACL queueACL;
+      try {
+        queueACL = QueueACL.valueOf(queueAclType);
+      } catch (IllegalArgumentException e) {
+        throw new BadRequestException("Specified queueAclType=" + queueAclType
+            + " is not a valid type, valid queue acl types={"
+            + "SUBMIT_APPLICATIONS/ADMINISTER_QUEUE}");
+      }
+
+      if (!this.resourceManager.getResourceScheduler().checkAccess(user, queueACL, queue)) {
+        return new RMQueueAclInfo(false, user.getUserName(),
+            "User=" + username + " doesn't have access to queue=" + queue
+            + " with acl-type=" + queueAclType);
+      }
+
+      return new RMQueueAclInfo(true, user.getUserName(), "");
+    }
+  }
+
+  @Override
+  public SchedulerTypeInfo getSchedulerInfo() {
+    try {
+      ResourceManager resourceManager = CapacitySchedulerTestUtilities.createResourceManager();
+      CapacityScheduler cs = (CapacityScheduler) resourceManager.getResourceScheduler();
+      CSQueue root = cs.getRootQueue();
+      SchedulerInfo schedulerInfo = new CapacitySchedulerInfo(root, cs);
+      return new SchedulerTypeInfo(schedulerInfo);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }

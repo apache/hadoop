@@ -114,12 +114,14 @@ public class GetSubClusterInfoResponsePBImpl extends GetSubClusterInfoResponse {
   }
 
   @Override
-  public void setSubClusterInfo(SubClusterInfo subClusterInfo) {
+  public void setSubClusterInfo(SubClusterInfo paramSubClusterInfo) {
     maybeInitBuilder();
-    if (subClusterInfo == null) {
+    if (paramSubClusterInfo == null) {
       builder.clearSubClusterInfo();
+      return;
     }
-    this.subClusterInfo = subClusterInfo;
+    this.subClusterInfo = paramSubClusterInfo;
+    builder.setSubClusterInfo(convertToProtoFormat(paramSubClusterInfo));
   }
 
   private SubClusterInfo convertFromProtoFormat(

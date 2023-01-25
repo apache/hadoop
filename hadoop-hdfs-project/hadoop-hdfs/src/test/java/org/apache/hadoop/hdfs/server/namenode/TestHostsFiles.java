@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.management.ManagementFactory;
@@ -173,6 +174,40 @@ public class TestHostsFiles {
         cluster.shutdown();
       }
       hostsFileWriter.cleanup();
+    }
+  }
+
+  @Test
+  public void testNewHostAndExcludeFile() throws Exception {
+    Configuration conf = getConf();
+
+    HostsFileWriter writer1 = new HostsFileWriter();
+    writer1.initialize(conf, "old_temp/decommission");
+    writer1.initIncludeHosts(new String[]{"localhost:52", "127.0.0.1:7777"});
+
+    // Write all hosts to a new dfs.hosts file.
+    HostsFileWriter writer2 = new HostsFileWriter();
+    Configuration newConf = new Configuration(getConf());
+    writer2.initialize(newConf, "new_temp/decommission");
+    writer2.initIncludeHosts(new String[]{
+        "localhost:52", "127.0.0.1:7777", "localhost:100"});
+
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      final FSNamesystem ns = cluster.getNameNode().getNamesystem();
+      assertEquals(2, ns.getNumDeadDataNodes());
+      assertEquals(0, ns.getNumLiveDataNodes());
+
+      ns.getBlockManager().getDatanodeManager().refreshNodes(newConf);
+      assertEquals(3, ns.getNumDeadDataNodes());
+      assertEquals(0, ns.getNumLiveDataNodes());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      writer1.cleanup();
+      writer2.cleanup();
     }
   }
 }

@@ -595,7 +595,7 @@ hadoop kdiag \
   --keytab zk.service.keytab --principal zookeeper/devix.example.org@REALM
 ```
 
-This attempts to to perform all diagnostics without failing early, load in
+This attempts to perform all diagnostics without failing early, load in
 the HDFS and YARN XML resources, require a minimum key length of 1024 bytes,
 and log in as the principal `zookeeper/devix.example.org@REALM`, whose key must be in
 the keytab `zk.service.keytab`

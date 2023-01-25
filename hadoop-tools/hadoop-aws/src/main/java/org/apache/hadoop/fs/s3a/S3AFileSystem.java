@@ -138,7 +138,6 @@ import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
@@ -339,6 +338,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /** Vectored IO context. */
   private VectoredIOContext vectoredIOContext;
 
+  /**
+   * Maximum number of active range read operation a single
+   * input stream can have.
+   */
+  private int vectoredActiveRangeReads;
+
   private long readAhead;
   private ChangeDetectionPolicy changeDetectionPolicy;
   private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -453,6 +458,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     AuditSpan span = null;
     try {
       LOG.debug("Initializing S3AFileSystem for {}", bucket);
+      if (LOG.isTraceEnabled()) {
+        // log a full trace for deep diagnostics of where an object is created,
+        // for tracking down memory leak issues.
+        LOG.trace("Filesystem for {} created; fs.s3a.impl.disable.cache = {}",
+            name, originalConf.getBoolean("fs.s3a.impl.disable.cache", false),
+            new RuntimeException(super.toString()));
+      }
       // clone the configuration into one with propagated bucket options
       Configuration conf = propagateBucketOptions(originalConf, bucket);
       // HADOOP-17894. remove references to s3a stores in JCEKS credentials.
@@ -628,22 +640,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           longBytesOption(conf, ASYNC_DRAIN_THRESHOLD,
                         DEFAULT_ASYNC_DRAIN_THRESHOLD, 0),
           inputPolicy);
+      vectoredActiveRangeReads = intOption(conf,
+              AWS_S3_VECTOR_ACTIVE_RANGE_READS, DEFAULT_AWS_S3_VECTOR_ACTIVE_RANGE_READS, 1);
       vectoredIOContext = populateVectoredIOContext(conf);
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
       stopAllServices();
-      if (this.futurePool != null) {
-        this.futurePool = null;
-      }
       throw translateException("initializing ", new Path(name), e);
     } catch (IOException | RuntimeException e) {
       // other exceptions: stop the services.
       cleanupWithLogger(LOG, span);
       stopAllServices();
-      if (this.futurePool != null) {
-        this.futurePool = null;
-      }
       throw e;
     }
   }
@@ -766,9 +774,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         DEFAULT_KEEPALIVE_TIME, 0);
     int numPrefetchThreads = this.prefetchEnabled ? this.prefetchBlockCount : 0;
 
+    int activeTasksForBoundedThreadPool = maxThreads;
+    int waitingTasksForBoundedThreadPool = maxThreads + totalTasks + numPrefetchThreads;
     boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
-        maxThreads,
-        maxThreads + totalTasks + numPrefetchThreads,
+        activeTasksForBoundedThreadPool,
+        waitingTasksForBoundedThreadPool,
         keepAliveTime, TimeUnit.SECONDS,
         name + "-bounded");
     unboundedThreadPool = new ThreadPoolExecutor(
@@ -780,8 +790,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     unboundedThreadPool.allowCoreThreadTimeOut(true);
     executorCapacity = intOption(conf,
         EXECUTOR_CAPACITY, DEFAULT_EXECUTOR_CAPACITY, 1);
-    if (this.prefetchEnabled) {
-      this.futurePool = new ExecutorServiceFuturePool(boundedThreadPool);
+    if (prefetchEnabled) {
+      final S3AInputStreamStatistics s3AInputStreamStatistics =
+          statisticsContext.newInputStreamStatistics();
+      futurePool = new ExecutorServiceFuturePool(
+          new SemaphoredDelegatingExecutor(
+              boundedThreadPool,
+              activeTasksForBoundedThreadPool + waitingTasksForBoundedThreadPool,
+              true,
+              s3AInputStreamStatistics));
     }
   }
 
@@ -1558,7 +1575,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               createObjectAttributes(path, fileStatus),
               createInputStreamCallbacks(auditSpan),
                   inputStreamStats,
-                  unboundedThreadPool));
+                  new SemaphoredDelegatingExecutor(
+                          boundedThreadPool,
+                          vectoredActiveRangeReads,
+                          true,
+                          inputStreamStats)));
     }
   }
 
@@ -1619,8 +1640,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       CompletableFuture<T> result = new CompletableFuture<>();
       unboundedThreadPool.submit(() ->
           LambdaUtils.eval(result, () -> {
+            LOG.debug("Starting submitted operation in {}", auditSpan.getSpanId());
             try (AuditSpan span = auditSpan.activate()) {
               return operation.apply();
+            } finally {
+              LOG.debug("Completed submitted operation in {}", auditSpan.getSpanId());
             }
           }));
       return result;
@@ -3981,22 +4005,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
     isClosed = true;
     LOG.debug("Filesystem {} is closed", uri);
-    if (getConf() != null) {
-      String iostatisticsLoggingLevel =
-          getConf().getTrimmed(IOSTATISTICS_LOGGING_LEVEL,
-              IOSTATISTICS_LOGGING_LEVEL_DEFAULT);
-      logIOStatisticsAtLevel(LOG, iostatisticsLoggingLevel, getIOStatistics());
-    }
     try {
       super.close();
     } finally {
       stopAllServices();
-    }
-    // Log IOStatistics at debug.
-    if (LOG.isDebugEnabled()) {
-      // robust extract and convert to string
-      LOG.debug("Statistics for {}: {}", uri,
-          IOStatisticsLogging.ioStatisticsToPrettyString(getIOStatistics()));
+      // log IO statistics, including of any file deletion during
+      // superclass close
+      if (getConf() != null) {
+        String iostatisticsLoggingLevel =
+            getConf().getTrimmed(IOSTATISTICS_LOGGING_LEVEL,
+                IOSTATISTICS_LOGGING_LEVEL_DEFAULT);
+        logIOStatisticsAtLevel(LOG, iostatisticsLoggingLevel, getIOStatistics());
+      }
     }
   }
 
@@ -4026,6 +4046,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     HadoopExecutors.shutdown(unboundedThreadPool, LOG,
         THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
     unboundedThreadPool = null;
+    if (futurePool != null) {
+      futurePool.shutdown(LOG, THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
+      futurePool = null;
+    }
     // other services are shutdown.
     cleanupWithLogger(LOG,
         instrumentation,

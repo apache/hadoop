@@ -30,8 +30,8 @@ are places where HDFS diverges from the expected behaviour of a POSIX
 filesystem.
 
 The bundled S3A FileSystem clients make Amazon's S3 Object Store ("blobstore")
-accessible through the FileSystem API. The Swift FileSystem driver provides similar
-functionality for the OpenStack Swift blobstore. The Azure WASB and ADL object
+accessible through the FileSystem API. 
+The Azure ABFS, WASB and ADL object
 storage FileSystems talks to Microsoft's Azure storage. All of these
 bind to object stores, which do have different behaviors, especially regarding
 consistency guarantees, and atomicity of operations.
@@ -314,10 +314,10 @@ child entries
 
 This specification refers to *Object Stores* in places, often using the
 term *Blobstore*. Hadoop does provide FileSystem client classes for some of these
-even though they violate many of the requirements. This is why, although
-Hadoop can read and write data in an object store, the two which Hadoop ships
-with direct support for &mdash; Amazon S3 and OpenStack Swift &mdash; cannot
-be used as direct replacements for HDFS.
+even though they violate many of the requirements.
+
+Consult the documentation for a specific store to determine its compatibility
+with specific applications and services.
 
 *What is an Object Store?*
 

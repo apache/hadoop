@@ -702,8 +702,9 @@ public class RouterClientProtocol implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("truncate",
         new Class<?>[] {String.class, long.class, String.class},
         new RemoteParam(), newLength, clientName);
+    // Truncate can return true/false, so don't expect a result
     return rpcClient.invokeSequential(locations, method, Boolean.class,
-        Boolean.TRUE);
+        null);
   }
 
   @Override
@@ -1918,7 +1919,10 @@ public class RouterClientProtocol implements ClientProtocol {
 
   @Override
   public void msync() throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
+    rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
+    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    RemoteMethod method = new RemoteMethod("msync");
+    rpcClient.invokeConcurrent(nss, method);
   }
 
   @Override

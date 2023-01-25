@@ -17,24 +17,25 @@
  */
 package org.apache.hadoop.yarn.server.sharedcachemanager.metrics;
 
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Before;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestCleanerMetrics {
 
   Configuration conf = new Configuration();
   CleanerMetrics cleanerMetrics;
 
-  @Before
+  @BeforeEach
   public void init() {
     cleanerMetrics = CleanerMetrics.getInstance();
   }
 
   @Test
-  public void testMetricsOverMultiplePeriods() {
+  void testMetricsOverMultiplePeriods() {
     simulateACleanerRun();
     assertMetrics(4, 4, 1, 1);
     simulateACleanerRun();
@@ -51,14 +52,14 @@ public class TestCleanerMetrics {
 
   void assertMetrics(int proc, int totalProc, int del, int totalDel) {
     assertEquals(
-        "Processed files in the last period are not measured correctly", proc,
-        cleanerMetrics.getProcessedFiles());
-    assertEquals("Total processed files are not measured correctly",
-        totalProc, cleanerMetrics.getTotalProcessedFiles());
-    assertEquals(
-        "Deleted files in the last period are not measured correctly", del,
-        cleanerMetrics.getDeletedFiles());
-    assertEquals("Total deleted files are not measured correctly",
-        totalDel, cleanerMetrics.getTotalDeletedFiles());
+        proc,
+        cleanerMetrics.getProcessedFiles(),
+        "Processed files in the last period are not measured correctly");
+    assertEquals(totalProc, cleanerMetrics.getTotalProcessedFiles(),
+        "Total processed files are not measured correctly");
+    assertEquals(del, cleanerMetrics.getDeletedFiles(),
+        "Deleted files in the last period are not measured correctly");
+    assertEquals(totalDel, cleanerMetrics.getTotalDeletedFiles(),
+        "Total deleted files are not measured correctly");
   }
 }

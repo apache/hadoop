@@ -45,3 +45,13 @@ DROP PROCEDURE sp_setPolicyConfiguration;
 DROP PROCEDURE sp_getPolicyConfiguration;
 
 DROP PROCEDURE sp_getPoliciesConfigurations;
+
+DROP PROCEDURE sp_addReservationHomeSubCluster;
+
+DROP PROCEDURE sp_getReservationHomeSubCluster;
+
+DROP PROCEDURE sp_getReservationsHomeSubCluster;
+
+DROP PROCEDURE sp_deleteReservationHomeSubCluster;
+
+DROP PROCEDURE sp_updateReservationHomeSubCluster;

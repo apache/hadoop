@@ -91,6 +91,8 @@ public class ContainerLogAppender extends FileAppender
 
   /**
    * Getter/Setter methods for log4j.
+   *
+   * @return containerLogDir.
    */
   
   public String getContainerLogDir() {
@@ -118,6 +120,8 @@ public class ContainerLogAppender extends FileAppender
   /**
    *  Setter so that log4j can configure it from the
    *  configuration(log4j.properties).
+   *
+   * @param logSize log size.
    */
   public void setTotalLogFileSize(long logSize) {
     maxEvents = (int)(logSize / EVENT_SIZE);

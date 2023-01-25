@@ -258,7 +258,7 @@ public class TestableFederationInterceptor extends FederationInterceptor {
   }
 
   /**
-   * Wrap the handler thread so it calls from the same user.
+   * Wrap the handler thread, so it calls from the same user.
    */
   protected class TestableAMRequestHandlerThread
       extends AMHeartbeatRequestHandler {

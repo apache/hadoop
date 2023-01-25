@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.clientrm;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,8 +30,13 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.Collection;
 
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
@@ -88,6 +94,20 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesReques
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -107,19 +127,31 @@ import org.apache.hadoop.yarn.api.records.NodeToAttributeValue;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
+import org.apache.hadoop.yarn.api.records.ReservationRequest;
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
+import org.apache.hadoop.yarn.api.records.ReservationRequests;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretManagerState;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
+import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
@@ -149,8 +181,10 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   private final static int APP_PRIORITY_ZERO = 0;
 
+  private final static long DEFAULT_DURATION = 10 * 60 * 1000;
+
   @Override
-  public void setUp() {
+  public void setUp() throws IOException {
     super.setUpConfig();
     interceptor = new TestableFederationClientInterceptor();
 
@@ -161,6 +195,11 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     interceptor.setConf(this.getConf());
     interceptor.init(user);
+    RouterDelegationTokenSecretManager tokenSecretManager =
+        interceptor.createRouterRMDelegationTokenSecretManager(this.getConf());
+
+    tokenSecretManager.startThreads();
+    interceptor.setTokenSecretManager(tokenSecretManager);
 
     subClusters = new ArrayList<>();
 
@@ -175,6 +214,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
       Assert.fail();
     }
 
+    DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
   @Override
@@ -203,6 +243,13 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     // Disable StateStoreFacade cache
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
+
+    conf.setInt("yarn.scheduler.minimum-allocation-mb", 512);
+    conf.setInt("yarn.scheduler.minimum-allocation-vcores", 1);
+    conf.setInt("yarn.scheduler.maximum-allocation-mb", 100 * 1024);
+    conf.setInt("yarn.scheduler.maximum-allocation-vcores", 100);
+
+    conf.setBoolean("hadoop.security.authentication", true);
     return conf;
   }
 
@@ -554,12 +601,20 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertEquals(subClusters.size(),
         response.getClusterMetrics().getNumNodeManagers());
 
+    // Clear Membership
+    Map<SubClusterId, SubClusterInfo> membership = new HashMap<>();
+    membership.putAll(stateStore.getMembership());
+    stateStore.getMembership().clear();
+
     ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
         new Class[] {GetClusterMetricsRequest.class},
         new Object[] {GetClusterMetricsRequest.newInstance()});
-    Map<SubClusterId, GetClusterMetricsResponse> clusterMetrics = interceptor.
-        invokeConcurrent(new ArrayList<>(), remoteMethod, GetClusterMetricsResponse.class);
+    Collection<GetClusterMetricsResponse> clusterMetrics = interceptor.invokeConcurrent(
+        remoteMethod, GetClusterMetricsResponse.class);
     Assert.assertTrue(clusterMetrics.isEmpty());
+
+    // Restore membership
+    stateStore.setMembership(membership);
   }
 
   /**
@@ -1253,5 +1308,400 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     NodeAttribute gpu = NodeAttribute.newInstance(NodeAttribute.PREFIX_CENTRALIZED, "GPU",
         NodeAttributeType.STRING, "nvida");
     Assert.assertTrue(nodeAttributeMap.get("0-host1").contains(gpu));
+  }
+
+  @Test
+  public void testGetNewReservation() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Get NewReservation request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing getNewReservation request.", () -> interceptor.getNewReservation(null));
+
+    // normal request
+    GetNewReservationRequest request = GetNewReservationRequest.newInstance();
+    GetNewReservationResponse response = interceptor.getNewReservation(request);
+    Assert.assertNotNull(response);
+
+    ReservationId reservationId = response.getReservationId();
+    Assert.assertNotNull(reservationId);
+    Assert.assertTrue(reservationId.toString().contains("reservation"));
+    Assert.assertEquals(reservationId.getClusterTimestamp(), ResourceManager.getClusterTimeStamp());
+  }
+
+  @Test
+  public void testSubmitReservation() throws Exception {
+    LOG.info("Test FederationClientInterceptor : SubmitReservation request.");
+
+    // get new reservationId
+    GetNewReservationRequest request = GetNewReservationRequest.newInstance();
+    GetNewReservationResponse response = interceptor.getNewReservation(request);
+    Assert.assertNotNull(response);
+
+    // Submit Reservation
+    ReservationId reservationId = response.getReservationId();
+    ReservationDefinition rDefinition = createReservationDefinition(1024, 1);
+    ReservationSubmissionRequest rSubmissionRequest = ReservationSubmissionRequest.newInstance(
+        rDefinition, "decided", reservationId);
+
+    ReservationSubmissionResponse submissionResponse =
+        interceptor.submitReservation(rSubmissionRequest);
+    Assert.assertNotNull(submissionResponse);
+
+    SubClusterId subClusterId = stateStoreUtil.queryReservationHomeSC(reservationId);
+    Assert.assertNotNull(subClusterId);
+    Assert.assertTrue(subClusters.contains(subClusterId));
+  }
+
+  @Test
+  public void testSubmitReservationEmptyRequest() throws Exception {
+    LOG.info("Test FederationClientInterceptor : SubmitReservation request empty.");
+
+    String errorMsg =
+        "Missing submitReservation request or reservationId or reservation definition or queue.";
+
+    // null request1
+    LambdaTestUtils.intercept(YarnException.class, errorMsg,
+        () -> interceptor.submitReservation(null));
+
+    // null request2
+    ReservationSubmissionRequest request2 =
+        ReservationSubmissionRequest.newInstance(null, null, null);
+    LambdaTestUtils.intercept(YarnException.class, errorMsg,
+        () -> interceptor.submitReservation(request2));
+
+    // null request3
+    ReservationSubmissionRequest request3 =
+        ReservationSubmissionRequest.newInstance(null, "q1", null);
+    LambdaTestUtils.intercept(YarnException.class, errorMsg,
+        () -> interceptor.submitReservation(request3));
+
+    // null request4
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    ReservationSubmissionRequest request4 =
+        ReservationSubmissionRequest.newInstance(null, null,  reservationId);
+    LambdaTestUtils.intercept(YarnException.class, errorMsg,
+        () -> interceptor.submitReservation(request4));
+
+    // null request5
+    long arrival = Time.now();
+    long deadline = arrival + (int)(DEFAULT_DURATION * 1.1);
+
+    ReservationRequest rRequest = ReservationRequest.newInstance(
+        Resource.newInstance(1024, 1), 1, 1, DEFAULT_DURATION);
+    ReservationRequest[] rRequests = new ReservationRequest[] {rRequest};
+    ReservationDefinition rDefinition = createReservationDefinition(arrival, deadline, rRequests,
+        ReservationRequestInterpreter.R_ALL, "u1");
+    ReservationSubmissionRequest request5 =
+        ReservationSubmissionRequest.newInstance(rDefinition, null,  reservationId);
+    LambdaTestUtils.intercept(YarnException.class, errorMsg,
+        () -> interceptor.submitReservation(request5));
+  }
+
+  @Test
+  public void testSubmitReservationMultipleSubmission() throws Exception {
+    LOG.info("Test FederationClientInterceptor: Submit Reservation - Multiple");
+
+    // get new reservationId
+    GetNewReservationRequest request = GetNewReservationRequest.newInstance();
+    GetNewReservationResponse response = interceptor.getNewReservation(request);
+    Assert.assertNotNull(response);
+
+    // First Submit Reservation
+    ReservationId reservationId = response.getReservationId();
+    ReservationDefinition rDefinition = createReservationDefinition(1024, 1);
+    ReservationSubmissionRequest rSubmissionRequest = ReservationSubmissionRequest.newInstance(
+        rDefinition, "decided", reservationId);
+    ReservationSubmissionResponse submissionResponse =
+        interceptor.submitReservation(rSubmissionRequest);
+    Assert.assertNotNull(submissionResponse);
+
+    SubClusterId subClusterId1 = stateStoreUtil.queryReservationHomeSC(reservationId);
+    Assert.assertNotNull(subClusterId1);
+    Assert.assertTrue(subClusters.contains(subClusterId1));
+
+    // First Retry, repeat the submission
+    ReservationSubmissionResponse submissionResponse1 =
+        interceptor.submitReservation(rSubmissionRequest);
+    Assert.assertNotNull(submissionResponse1);
+
+    // Expect reserved clusters to be consistent
+    SubClusterId subClusterId2 = stateStoreUtil.queryReservationHomeSC(reservationId);
+    Assert.assertNotNull(subClusterId2);
+    Assert.assertEquals(subClusterId1, subClusterId2);
+  }
+
+  @Test
+  public void testUpdateReservation() throws Exception {
+    LOG.info("Test FederationClientInterceptor : UpdateReservation request.");
+
+    // get new reservationId
+    GetNewReservationRequest request = GetNewReservationRequest.newInstance();
+    GetNewReservationResponse response = interceptor.getNewReservation(request);
+    Assert.assertNotNull(response);
+
+    // allow plan follower to synchronize, manually trigger an assignment
+    Map<SubClusterId, MockRM> mockRMs = interceptor.getMockRMs();
+    for (MockRM mockRM : mockRMs.values()) {
+      ReservationSystem reservationSystem = mockRM.getReservationSystem();
+      reservationSystem.synchronizePlan("root.decided", true);
+    }
+
+    // Submit Reservation
+    ReservationId reservationId = response.getReservationId();
+    ReservationDefinition rDefinition = createReservationDefinition(1024, 1);
+    ReservationSubmissionRequest rSubmissionRequest = ReservationSubmissionRequest.newInstance(
+        rDefinition, "decided", reservationId);
+
+    ReservationSubmissionResponse submissionResponse =
+        interceptor.submitReservation(rSubmissionRequest);
+    Assert.assertNotNull(submissionResponse);
+
+    // Update Reservation
+    ReservationDefinition rDefinition2 = createReservationDefinition(2048, 1);
+    ReservationUpdateRequest updateRequest =
+        ReservationUpdateRequest.newInstance(rDefinition2, reservationId);
+    ReservationUpdateResponse updateResponse =
+        interceptor.updateReservation(updateRequest);
+    Assert.assertNotNull(updateResponse);
+
+    SubClusterId subClusterId = stateStoreUtil.queryReservationHomeSC(reservationId);
+    Assert.assertNotNull(subClusterId);
+  }
+
+  @Test
+  public void testDeleteReservation() throws Exception {
+    LOG.info("Test FederationClientInterceptor : DeleteReservation request.");
+
+    // get new reservationId
+    GetNewReservationRequest request = GetNewReservationRequest.newInstance();
+    GetNewReservationResponse response = interceptor.getNewReservation(request);
+    Assert.assertNotNull(response);
+
+    // allow plan follower to synchronize, manually trigger an assignment
+    Map<SubClusterId, MockRM> mockRMs = interceptor.getMockRMs();
+    for (MockRM mockRM : mockRMs.values()) {
+      ReservationSystem reservationSystem = mockRM.getReservationSystem();
+      reservationSystem.synchronizePlan("root.decided", true);
+    }
+
+    // Submit Reservation
+    ReservationId reservationId = response.getReservationId();
+    ReservationDefinition rDefinition = createReservationDefinition(1024, 1);
+    ReservationSubmissionRequest rSubmissionRequest = ReservationSubmissionRequest.newInstance(
+        rDefinition, "decided", reservationId);
+
+    ReservationSubmissionResponse submissionResponse =
+        interceptor.submitReservation(rSubmissionRequest);
+    Assert.assertNotNull(submissionResponse);
+
+    // Delete Reservation
+    ReservationDeleteRequest deleteRequest = ReservationDeleteRequest.newInstance(reservationId);
+    ReservationDeleteResponse deleteResponse = interceptor.deleteReservation(deleteRequest);
+    Assert.assertNotNull(deleteResponse);
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "Reservation " + reservationId + " does not exist",
+        () -> stateStoreUtil.queryReservationHomeSC(reservationId));
+  }
+
+
+  private ReservationDefinition createReservationDefinition(int memory, int core) {
+    // get reservationId
+    long arrival = Time.now();
+    long deadline = arrival + (int)(DEFAULT_DURATION * 1.1);
+
+    ReservationRequest rRequest = ReservationRequest.newInstance(
+        Resource.newInstance(memory, core), 1, 1, DEFAULT_DURATION);
+    ReservationRequest[] rRequests = new ReservationRequest[] {rRequest};
+
+    ReservationDefinition rDefinition = createReservationDefinition(arrival, deadline, rRequests,
+        ReservationRequestInterpreter.R_ALL, "u1");
+
+    return rDefinition;
+  }
+
+  /**
+   * This method is used to create a ReservationDefinition.
+   *
+   * @param arrival Job arrival time
+   * @param deadline Job deadline
+   * @param reservationRequests reservationRequest Array
+   * @param rType Enumeration of various types of
+   *              dependencies among multiple ReservationRequest
+   * @param username username
+   * @return ReservationDefinition
+   */
+  private ReservationDefinition createReservationDefinition(long arrival,
+      long deadline, ReservationRequest[] reservationRequests,
+      ReservationRequestInterpreter rType, String username) {
+    ReservationRequests requests = ReservationRequests
+        .newInstance(Arrays.asList(reservationRequests), rType);
+    return ReservationDefinition.newInstance(arrival, deadline,
+        requests, username, "0", Priority.UNDEFINED);
+  }
+
+  @Test
+  public void testGetNumMinThreads() {
+    // If we don't configure YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE,
+    // we expect to get 5 threads
+    int minThreads = interceptor.getNumMinThreads(this.getConf());
+    Assert.assertEquals(5, minThreads);
+
+    // If we configure YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE,
+    // we expect to get 3 threads
+    this.getConf().unset(YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE);
+    this.getConf().setInt(YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE, 3);
+    int minThreads2 = interceptor.getNumMinThreads(this.getConf());
+    Assert.assertEquals(3, minThreads2);
+  }
+
+  @Test
+  public void testGetNumMaxThreads() {
+    // If we don't configure YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE,
+    // we expect to get 5 threads
+    int minThreads = interceptor.getNumMaxThreads(this.getConf());
+    Assert.assertEquals(5, minThreads);
+
+    // If we configure YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE,
+    // we expect to get 8 threads
+    this.getConf().unset(YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE);
+    this.getConf().setInt(YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE, 8);
+    int minThreads2 = interceptor.getNumMaxThreads(this.getConf());
+    Assert.assertEquals(8, minThreads2);
+  }
+
+  @Test
+  public void testGetDelegationToken() throws IOException, YarnException {
+
+    // We design such a unit test to check
+    // that the execution of the GetDelegationToken method is as expected.
+    //
+    // 1. Apply for a DelegationToken for renewer1,
+    // the Router returns the DelegationToken of the user, and the KIND of the token is
+    // RM_DELEGATION_TOKEN
+    //
+    // 2. We maintain the compatibility with RMDelegationTokenIdentifier,
+    // we can serialize the token into RMDelegationTokenIdentifier.
+    //
+    // 3. We can get the issueDate, and compare the data in the StateStore,
+    // the data should be consistent.
+
+    // Step1. We apply for DelegationToken for renewer1
+    // Both response & delegationToken cannot be empty
+    GetDelegationTokenRequest request = mock(GetDelegationTokenRequest.class);
+    when(request.getRenewer()).thenReturn("renewer1");
+    GetDelegationTokenResponse response = interceptor.getDelegationToken(request);
+    Assert.assertNotNull(response);
+    Token delegationToken = response.getRMDelegationToken();
+    Assert.assertNotNull(delegationToken);
+    Assert.assertEquals("RM_DELEGATION_TOKEN", delegationToken.getKind());
+
+    // Step2. Serialize the returned Token as RMDelegationTokenIdentifier.
+    org.apache.hadoop.security.token.Token<RMDelegationTokenIdentifier> token =
+        ConverterUtils.convertFromYarn(delegationToken, (Text) null);
+    RMDelegationTokenIdentifier rMDelegationTokenIdentifier = token.decodeIdentifier();
+    Assert.assertNotNull(rMDelegationTokenIdentifier);
+
+    // Step3. Verify the returned data of the token.
+    String renewer = rMDelegationTokenIdentifier.getRenewer().toString();
+    long issueDate = rMDelegationTokenIdentifier.getIssueDate();
+    long maxDate = rMDelegationTokenIdentifier.getMaxDate();
+    Assert.assertEquals("renewer1", renewer);
+
+    long tokenMaxLifetime = this.getConf().getLong(
+        YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_KEY,
+        YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT);
+    Assert.assertEquals(issueDate + tokenMaxLifetime, maxDate);
+
+    RouterRMDTSecretManagerState managerState = stateStore.getRouterRMSecretManagerState();
+    Assert.assertNotNull(managerState);
+
+    Map<RMDelegationTokenIdentifier, Long> delegationTokenState = managerState.getTokenState();
+    Assert.assertNotNull(delegationTokenState);
+    Assert.assertTrue(delegationTokenState.containsKey(rMDelegationTokenIdentifier));
+
+    long tokenRenewInterval = this.getConf().getLong(
+        YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
+        YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
+    long renewDate = delegationTokenState.get(rMDelegationTokenIdentifier);
+    Assert.assertEquals(issueDate + tokenRenewInterval, renewDate);
+  }
+
+  @Test
+  public void testRenewDelegationToken() throws IOException, YarnException {
+
+    // We design such a unit test to check
+    // that the execution of the GetDelegationToken method is as expected
+    // 1. Call GetDelegationToken to apply for delegationToken.
+    // 2. Call renewDelegationToken to refresh delegationToken.
+    // By looking at the code of AbstractDelegationTokenSecretManager#renewToken,
+    // we know that renewTime is calculated as Math.min(id.getMaxDate(), now + tokenRenewInterval)
+    // so renewTime will be less than or equal to maxDate.
+    // 3. We will compare whether the expirationTime returned to the
+    // client is consistent with the renewDate in the stateStore.
+
+    // Step1. Call GetDelegationToken to apply for delegationToken.
+    GetDelegationTokenRequest request = mock(GetDelegationTokenRequest.class);
+    when(request.getRenewer()).thenReturn("renewer2");
+    GetDelegationTokenResponse response = interceptor.getDelegationToken(request);
+    Assert.assertNotNull(response);
+    Token delegationToken = response.getRMDelegationToken();
+
+    org.apache.hadoop.security.token.Token<RMDelegationTokenIdentifier> token =
+        ConverterUtils.convertFromYarn(delegationToken, (Text) null);
+    RMDelegationTokenIdentifier rMDelegationTokenIdentifier = token.decodeIdentifier();
+    String renewer = rMDelegationTokenIdentifier.getRenewer().toString();
+    long maxDate = rMDelegationTokenIdentifier.getMaxDate();
+    Assert.assertEquals("renewer2", renewer);
+
+    // Step2. Call renewDelegationToken to refresh delegationToken.
+    RenewDelegationTokenRequest renewRequest = Records.newRecord(RenewDelegationTokenRequest.class);
+    renewRequest.setDelegationToken(delegationToken);
+    RenewDelegationTokenResponse renewResponse = interceptor.renewDelegationToken(renewRequest);
+    Assert.assertNotNull(renewResponse);
+
+    long expDate = renewResponse.getNextExpirationTime();
+    Assert.assertTrue(expDate <= maxDate);
+
+    // Step3. Compare whether the expirationTime returned to
+    // the client is consistent with the renewDate in the stateStore
+    RouterRMDTSecretManagerState managerState = stateStore.getRouterRMSecretManagerState();
+    Map<RMDelegationTokenIdentifier, Long> delegationTokenState = managerState.getTokenState();
+    Assert.assertNotNull(delegationTokenState);
+    Assert.assertTrue(delegationTokenState.containsKey(rMDelegationTokenIdentifier));
+    long renewDate = delegationTokenState.get(rMDelegationTokenIdentifier);
+    Assert.assertEquals(expDate, renewDate);
+  }
+
+  @Test
+  public void testCancelDelegationToken() throws IOException, YarnException {
+
+    // We design such a unit test to check
+    // that the execution of the CancelDelegationToken method is as expected
+    // 1. Call GetDelegationToken to apply for delegationToken.
+    // 2. Call CancelDelegationToken to cancel delegationToken.
+    // 3. Query the data in the StateStore and confirm that the Delegation has been deleted.
+
+    // Step1. Call GetDelegationToken to apply for delegationToken.
+    GetDelegationTokenRequest request = mock(GetDelegationTokenRequest.class);
+    when(request.getRenewer()).thenReturn("renewer3");
+    GetDelegationTokenResponse response = interceptor.getDelegationToken(request);
+    Assert.assertNotNull(response);
+    Token delegationToken = response.getRMDelegationToken();
+
+    // Step2. Call CancelDelegationToken to cancel delegationToken.
+    CancelDelegationTokenRequest cancelTokenRequest =
+        CancelDelegationTokenRequest.newInstance(delegationToken);
+    CancelDelegationTokenResponse cancelTokenResponse =
+        interceptor.cancelDelegationToken(cancelTokenRequest);
+    Assert.assertNotNull(cancelTokenResponse);
+
+    // Step3. Query the data in the StateStore and confirm that the Delegation has been deleted.
+    // At this point, the size of delegationTokenState should be 0.
+    RouterRMDTSecretManagerState managerState = stateStore.getRouterRMSecretManagerState();
+    Map<RMDelegationTokenIdentifier, Long> delegationTokenState = managerState.getTokenState();
+    Assert.assertNotNull(delegationTokenState);
+    Assert.assertEquals(0, delegationTokenState.size());
   }
 }

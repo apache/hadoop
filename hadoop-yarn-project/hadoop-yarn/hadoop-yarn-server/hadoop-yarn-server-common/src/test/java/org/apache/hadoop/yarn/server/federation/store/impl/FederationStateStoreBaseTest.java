@@ -21,16 +21,25 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.TimeZone;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreException;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
@@ -56,6 +65,20 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegister
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.junit.After;
 import org.junit.Assert;
@@ -69,8 +92,16 @@ public abstract class FederationStateStoreBaseTest {
 
   private static final MonotonicClock CLOCK = new MonotonicClock();
   private FederationStateStore stateStore;
+  private static final int NUM_APPS_10 = 10;
+  private static final int NUM_APPS_20 = 20;
 
   protected abstract FederationStateStore createStateStore();
+
+  protected abstract void checkRouterMasterKey(DelegationKey delegationKey,
+      RouterMasterKey routerMasterKey) throws YarnException, IOException;
+
+  protected abstract void checkRouterStoreToken(RMDelegationTokenIdentifier identifier,
+      RouterStoreToken token) throws YarnException, IOException;
 
   private Configuration conf;
 
@@ -399,6 +430,89 @@ public abstract class FederationStateStoreBaseTest {
   }
 
   @Test
+  public void testGetApplicationsHomeSubClusterEmpty() throws Exception {
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing getApplicationsHomeSubCluster request",
+        () -> stateStore.getApplicationsHomeSubCluster(null));
+  }
+
+  @Test
+  public void testGetApplicationsHomeSubClusterFilter() throws Exception {
+    // Add ApplicationHomeSC - SC1
+    long now = Time.now();
+
+    Set<ApplicationHomeSubCluster> appHomeSubClusters = new HashSet<>();
+
+    for (int i = 0; i < NUM_APPS_10; i++) {
+      ApplicationId appId = ApplicationId.newInstance(now, i);
+      SubClusterId subClusterId = SubClusterId.newInstance("SC1");
+      addApplicationHomeSC(appId, subClusterId);
+      ApplicationHomeSubCluster ahsc =
+          ApplicationHomeSubCluster.newInstance(appId, subClusterId);
+      appHomeSubClusters.add(ahsc);
+    }
+
+    // Add ApplicationHomeSC - SC2
+    for (int i = 10; i < NUM_APPS_20; i++) {
+      ApplicationId appId = ApplicationId.newInstance(now, i);
+      SubClusterId subClusterId = SubClusterId.newInstance("SC2");
+      addApplicationHomeSC(appId, subClusterId);
+    }
+
+    GetApplicationsHomeSubClusterRequest getRequest =
+        GetApplicationsHomeSubClusterRequest.newInstance();
+    getRequest.setSubClusterId(SubClusterId.newInstance("SC1"));
+
+    GetApplicationsHomeSubClusterResponse result =
+        stateStore.getApplicationsHomeSubCluster(getRequest);
+    Assert.assertNotNull(result);
+
+    List<ApplicationHomeSubCluster> items = result.getAppsHomeSubClusters();
+    Assert.assertNotNull(items);
+    Assert.assertEquals(10, items.size());
+
+    for (ApplicationHomeSubCluster item : items) {
+      Assert.assertTrue(appHomeSubClusters.contains(item));
+    }
+  }
+
+  @Test
+  public void testGetApplicationsHomeSubClusterLimit() throws Exception {
+    // Add ApplicationHomeSC - SC1
+    long now = Time.now();
+
+    for (int i = 0; i < 50; i++) {
+      ApplicationId appId = ApplicationId.newInstance(now, i);
+      SubClusterId subClusterId = SubClusterId.newInstance("SC1");
+      addApplicationHomeSC(appId, subClusterId);
+    }
+
+    GetApplicationsHomeSubClusterRequest getRequest =
+        GetApplicationsHomeSubClusterRequest.newInstance();
+    getRequest.setSubClusterId(SubClusterId.newInstance("SC1"));
+    GetApplicationsHomeSubClusterResponse result =
+        stateStore.getApplicationsHomeSubCluster(getRequest);
+    Assert.assertNotNull(result);
+
+    // Write 50 records, but get 10 records because the maximum number is limited to 10
+    List<ApplicationHomeSubCluster> items = result.getAppsHomeSubClusters();
+    Assert.assertNotNull(items);
+    Assert.assertEquals(10, items.size());
+
+    GetApplicationsHomeSubClusterRequest getRequest1 =
+        GetApplicationsHomeSubClusterRequest.newInstance();
+    getRequest1.setSubClusterId(SubClusterId.newInstance("SC2"));
+    GetApplicationsHomeSubClusterResponse result1 =
+        stateStore.getApplicationsHomeSubCluster(getRequest1);
+    Assert.assertNotNull(result1);
+
+    // SC2 data does not exist, so the number of returned records is 0
+    List<ApplicationHomeSubCluster> items1 = result1.getAppsHomeSubClusters();
+    Assert.assertNotNull(items1);
+    Assert.assertEquals(0, items1.size());
+  }
+
+  @Test
   public void testUpdateApplicationHomeSubCluster() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(1, 1);
     SubClusterId subClusterId1 = SubClusterId.newInstance("SC1");
@@ -599,4 +713,336 @@ public abstract class FederationStateStoreBaseTest {
     return stateStore;
   }
 
+  SubClusterId queryReservationHomeSC(ReservationId reservationId)
+      throws YarnException {
+
+    GetReservationHomeSubClusterRequest request =
+        GetReservationHomeSubClusterRequest.newInstance(reservationId);
+
+    GetReservationHomeSubClusterResponse response =
+        stateStore.getReservationHomeSubCluster(request);
+
+    return response.getReservationHomeSubCluster().getHomeSubCluster();
+  }
+
+  @Test
+  public void testAddReservationHomeSubCluster() throws Exception {
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId subClusterId = SubClusterId.newInstance("SC");
+
+    ReservationHomeSubCluster reservationHomeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
+
+    AddReservationHomeSubClusterRequest request =
+        AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster);
+    AddReservationHomeSubClusterResponse response =
+        stateStore.addReservationHomeSubCluster(request);
+
+    Assert.assertEquals(subClusterId, response.getHomeSubCluster());
+    Assert.assertEquals(subClusterId, queryReservationHomeSC(reservationId));
+  }
+
+  private void addReservationHomeSC(ReservationId reservationId, SubClusterId subClusterId)
+      throws YarnException {
+
+    ReservationHomeSubCluster reservationHomeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
+    AddReservationHomeSubClusterRequest request =
+        AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster);
+    stateStore.addReservationHomeSubCluster(request);
+  }
+
+  @Test
+  public void testAddReservationHomeSubClusterReservationAlreadyExists() throws Exception {
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("SC1");
+    addReservationHomeSC(reservationId, subClusterId1);
+
+    SubClusterId subClusterId2 = SubClusterId.newInstance("SC2");
+    ReservationHomeSubCluster reservationHomeSubCluster2 =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId2);
+    AddReservationHomeSubClusterRequest request2 =
+        AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster2);
+    AddReservationHomeSubClusterResponse response =
+        stateStore.addReservationHomeSubCluster(request2);
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(subClusterId1, response.getHomeSubCluster());
+    Assert.assertEquals(subClusterId1, queryReservationHomeSC(reservationId));
+  }
+
+  @Test
+  public void testAddReservationHomeSubClusterAppAlreadyExistsInTheSameSC()
+      throws Exception {
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("SC1");
+    addReservationHomeSC(reservationId, subClusterId1);
+
+    ReservationHomeSubCluster reservationHomeSubCluster2 =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId1);
+    AddReservationHomeSubClusterRequest request2 =
+        AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster2);
+    AddReservationHomeSubClusterResponse response =
+        stateStore.addReservationHomeSubCluster(request2);
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(subClusterId1, response.getHomeSubCluster());
+    Assert.assertEquals(subClusterId1, queryReservationHomeSC(reservationId));
+  }
+
+  @Test
+  public void testDeleteReservationHomeSubCluster() throws Exception {
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("SC");
+    addReservationHomeSC(reservationId, subClusterId1);
+
+    DeleteReservationHomeSubClusterRequest delReservationRequest =
+        DeleteReservationHomeSubClusterRequest.newInstance(reservationId);
+    DeleteReservationHomeSubClusterResponse delReservationResponse =
+        stateStore.deleteReservationHomeSubCluster(delReservationRequest);
+
+    Assert.assertNotNull(delReservationResponse);
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "Reservation " + reservationId + " does not exist",
+        () -> queryReservationHomeSC(reservationId));
+  }
+
+  @Test
+  public void testDeleteReservationHomeSubClusterUnknownApp() throws Exception {
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+
+    DeleteReservationHomeSubClusterRequest delReservationRequest =
+        DeleteReservationHomeSubClusterRequest.newInstance(reservationId);
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "Reservation " + reservationId + " does not exist",
+        () -> stateStore.deleteReservationHomeSubCluster(delReservationRequest));
+  }
+
+  @Test
+  public void testUpdateReservationHomeSubCluster() throws Exception {
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("SC");
+    addReservationHomeSC(reservationId, subClusterId1);
+
+    SubClusterId subClusterId2 = SubClusterId.newInstance("SC2");
+    ReservationHomeSubCluster reservationHomeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId2);
+
+    UpdateReservationHomeSubClusterRequest updateReservationRequest =
+        UpdateReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster);
+
+    UpdateReservationHomeSubClusterResponse updateReservationResponse =
+        stateStore.updateReservationHomeSubCluster(updateReservationRequest);
+
+    Assert.assertNotNull(updateReservationResponse);
+    Assert.assertEquals(subClusterId2, queryReservationHomeSC(reservationId));
+  }
+
+  @Test
+  public void testUpdateReservationHomeSubClusterUnknownApp() throws Exception {
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("SC1");
+
+    ReservationHomeSubCluster reservationHomeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId1);
+
+    UpdateReservationHomeSubClusterRequest updateReservationRequest =
+        UpdateReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster);
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "Reservation " + reservationId + " does not exist",
+        () -> stateStore.updateReservationHomeSubCluster(updateReservationRequest));
+  }
+
+  @Test
+  public void testStoreNewMasterKey() throws Exception {
+    // store delegation key;
+    DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
+    Set<DelegationKey> keySet = new HashSet<>();
+    keySet.add(key);
+
+    RouterMasterKey routerMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
+        ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
+    RouterMasterKeyRequest routerMasterKeyRequest =
+        RouterMasterKeyRequest.newInstance(routerMasterKey);
+    RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
+
+    Assert.assertNotNull(response);
+    RouterMasterKey routerMasterKeyResp = response.getRouterMasterKey();
+    Assert.assertNotNull(routerMasterKeyResp);
+    Assert.assertEquals(routerMasterKey.getKeyId(), routerMasterKeyResp.getKeyId());
+    Assert.assertEquals(routerMasterKey.getKeyBytes(), routerMasterKeyResp.getKeyBytes());
+    Assert.assertEquals(routerMasterKey.getExpiryDate(), routerMasterKeyResp.getExpiryDate());
+
+    checkRouterMasterKey(key, routerMasterKey);
+  }
+
+  @Test
+  public void testGetMasterKeyByDelegationKey() throws YarnException, IOException {
+    // store delegation key;
+    DelegationKey key = new DelegationKey(5678, 8765, "keyBytes".getBytes());
+    Set<DelegationKey> keySet = new HashSet<>();
+    keySet.add(key);
+
+    RouterMasterKey routerMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
+        ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
+    RouterMasterKeyRequest routerMasterKeyRequest =
+        RouterMasterKeyRequest.newInstance(routerMasterKey);
+    RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
+    Assert.assertNotNull(response);
+
+    RouterMasterKeyResponse routerMasterKeyResponse =
+        stateStore.getMasterKeyByDelegationKey(routerMasterKeyRequest);
+
+    Assert.assertNotNull(routerMasterKeyResponse);
+
+    RouterMasterKey routerMasterKeyResp = routerMasterKeyResponse.getRouterMasterKey();
+    Assert.assertNotNull(routerMasterKeyResp);
+    Assert.assertEquals(routerMasterKey.getKeyId(), routerMasterKeyResp.getKeyId());
+    Assert.assertEquals(routerMasterKey.getKeyBytes(), routerMasterKeyResp.getKeyBytes());
+    Assert.assertEquals(routerMasterKey.getExpiryDate(), routerMasterKeyResp.getExpiryDate());
+  }
+
+  @Test
+  public void testRemoveStoredMasterKey() throws YarnException, IOException {
+    // store delegation key;
+    DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
+    Set<DelegationKey> keySet = new HashSet<>();
+    keySet.add(key);
+
+    RouterMasterKey routerMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
+        ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
+    RouterMasterKeyRequest routerMasterKeyRequest =
+        RouterMasterKeyRequest.newInstance(routerMasterKey);
+    RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
+    Assert.assertNotNull(response);
+
+    RouterMasterKeyResponse masterKeyResponse =
+        stateStore.removeStoredMasterKey(routerMasterKeyRequest);
+    Assert.assertNotNull(masterKeyResponse);
+
+    RouterMasterKey routerMasterKeyResp = masterKeyResponse.getRouterMasterKey();
+    Assert.assertEquals(routerMasterKey.getKeyId(), routerMasterKeyResp.getKeyId());
+    Assert.assertEquals(routerMasterKey.getKeyBytes(), routerMasterKeyResp.getKeyBytes());
+    Assert.assertEquals(routerMasterKey.getExpiryDate(), routerMasterKeyResp.getExpiryDate());
+  }
+
+  @Test
+  public void testStoreNewToken() throws IOException, YarnException {
+    // prepare parameters
+    RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
+        new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
+    int sequenceNumber = 1;
+    identifier.setSequenceNumber(sequenceNumber);
+    Long renewDate = Time.now();
+
+    // store new rm-token
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
+
+    // Verify the returned result to ensure that the returned Response is not empty
+    // and the returned result is consistent with the input parameters.
+    Assert.assertNotNull(routerRMTokenResponse);
+    RouterStoreToken storeTokenResp = routerRMTokenResponse.getRouterStoreToken();
+    Assert.assertNotNull(storeTokenResp);
+    Assert.assertEquals(storeToken.getRenewDate(), storeTokenResp.getRenewDate());
+    Assert.assertEquals(storeToken.getTokenIdentifier(), storeTokenResp.getTokenIdentifier());
+
+    checkRouterStoreToken(identifier, storeToken);
+    checkRouterStoreToken(identifier, storeTokenResp);
+  }
+
+  @Test
+  public void testUpdateStoredToken() throws IOException, YarnException {
+    // prepare saveToken parameters
+    RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
+        new Text("owner2"), new Text("renewer2"), new Text("realuser2"));
+    int sequenceNumber = 2;
+    identifier.setSequenceNumber(sequenceNumber);
+    Long renewDate = Time.now();
+
+    // store new rm-token
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
+    Assert.assertNotNull(routerRMTokenResponse);
+
+    // prepare updateToken parameters
+    Long renewDate2 = Time.now();
+    int sequenceNumber2 = 3;
+    identifier.setSequenceNumber(sequenceNumber2);
+
+    // update rm-token
+    RouterStoreToken updateToken = RouterStoreToken.newInstance(identifier, renewDate2);
+    RouterRMTokenRequest updateTokenRequest = RouterRMTokenRequest.newInstance(updateToken);
+    RouterRMTokenResponse updateTokenResponse = stateStore.updateStoredToken(updateTokenRequest);
+
+    Assert.assertNotNull(updateTokenResponse);
+    RouterStoreToken updateTokenResp = updateTokenResponse.getRouterStoreToken();
+    Assert.assertNotNull(updateTokenResp);
+    Assert.assertEquals(updateToken.getRenewDate(), updateTokenResp.getRenewDate());
+    Assert.assertEquals(updateToken.getTokenIdentifier(), updateTokenResp.getTokenIdentifier());
+
+    checkRouterStoreToken(identifier, updateTokenResp);
+  }
+
+  @Test
+  public void testRemoveStoredToken() throws IOException, YarnException {
+    // prepare saveToken parameters
+    RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
+        new Text("owner3"), new Text("renewer3"), new Text("realuser3"));
+    int sequenceNumber = 3;
+    identifier.setSequenceNumber(sequenceNumber);
+    Long renewDate = Time.now();
+
+    // store new rm-token
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
+    Assert.assertNotNull(routerRMTokenResponse);
+
+    // remove rm-token
+    RouterRMTokenResponse removeTokenResponse = stateStore.removeStoredToken(request);
+    Assert.assertNotNull(removeTokenResponse);
+    RouterStoreToken removeTokenResp = removeTokenResponse.getRouterStoreToken();
+    Assert.assertNotNull(removeTokenResp);
+    Assert.assertEquals(removeTokenResp.getRenewDate(), storeToken.getRenewDate());
+    Assert.assertEquals(removeTokenResp.getTokenIdentifier(), storeToken.getTokenIdentifier());
+  }
+
+  @Test
+  public void testGetTokenByRouterStoreToken() throws IOException, YarnException {
+    // prepare saveToken parameters
+    RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
+        new Text("owner4"), new Text("renewer4"), new Text("realuser4"));
+    int sequenceNumber = 4;
+    identifier.setSequenceNumber(sequenceNumber);
+    Long renewDate = Time.now();
+
+    // store new rm-token
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
+    Assert.assertNotNull(routerRMTokenResponse);
+
+    // getTokenByRouterStoreToken
+    RouterRMTokenResponse getRouterRMTokenResp = stateStore.getTokenByRouterStoreToken(request);
+    Assert.assertNotNull(getRouterRMTokenResp);
+    RouterStoreToken getStoreTokenResp = getRouterRMTokenResp.getRouterStoreToken();
+    Assert.assertNotNull(getStoreTokenResp);
+    Assert.assertEquals(getStoreTokenResp.getRenewDate(), storeToken.getRenewDate());
+    Assert.assertEquals(getStoreTokenResp.getTokenIdentifier(), storeToken.getTokenIdentifier());
+
+    checkRouterStoreToken(identifier, getStoreTokenResp);
+  }
 }

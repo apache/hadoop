@@ -19,9 +19,9 @@
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.StringReader;
 import java.util.Set;
@@ -35,6 +35,7 @@ import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockAppContext;
 import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
@@ -42,8 +43,8 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -92,7 +93,7 @@ public class TestAMWebServices extends JerseyTestBase {
         Guice.createInjector(new WebServletModule()));
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -116,7 +117,7 @@ public class TestAMWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyAMInfo(json.getJSONObject("info"), appContext);
   }
 
@@ -128,7 +129,7 @@ public class TestAMWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyAMInfo(json.getJSONObject("info"), appContext);
   }
 
@@ -140,7 +141,7 @@ public class TestAMWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyAMInfo(json.getJSONObject("info"), appContext);
   }
 
@@ -164,7 +165,7 @@ public class TestAMWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyAMInfo(json.getJSONObject("info"), appContext);
   }
 
@@ -177,7 +178,7 @@ public class TestAMWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyAMInfo(json.getJSONObject("info"), appContext);
   }
 
@@ -189,7 +190,7 @@ public class TestAMWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyAMInfo(json.getJSONObject("info"), appContext);
   }
 
@@ -263,7 +264,7 @@ public class TestAMWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyBlacklistedNodesInfo(json, appContext);
   }
   
@@ -281,7 +282,7 @@ public class TestAMWebServices extends JerseyTestBase {
 
   public void verifyAMInfo(JSONObject info, AppContext ctx)
       throws JSONException {
-    assertEquals("incorrect number of elements", 5, info.length());
+    assertEquals(5, info.length(), "incorrect number of elements");
 
     verifyAMInfoGeneric(ctx, info.getString("appId"), info.getString("user"),
         info.getString("name"), info.getLong("startedOn"),
@@ -290,13 +291,13 @@ public class TestAMWebServices extends JerseyTestBase {
 
   public void verifyAMInfoXML(String xml, AppContext ctx)
       throws JSONException, Exception {
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList nodes = dom.getElementsByTagName("info");
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
 
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
@@ -319,8 +320,8 @@ public class TestAMWebServices extends JerseyTestBase {
     WebServicesTestUtils.checkStringMatch("name", ctx.getApplicationName(),
         name);
 
-    assertEquals("startedOn incorrect", ctx.getStartTime(), startedOn);
-    assertTrue("elapsedTime not greater then 0", (elapsedTime > 0));
+    assertEquals(ctx.getStartTime(), startedOn, "startedOn incorrect");
+    assertTrue((elapsedTime > 0), "elapsedTime not greater then 0");
 
   }
   
@@ -335,17 +336,17 @@ public class TestAMWebServices extends JerseyTestBase {
   
   public void verifyBlacklistedNodesInfoXML(String xml, AppContext ctx)
       throws JSONException, Exception {
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList infonodes = dom.getElementsByTagName("blacklistednodesinfo");
-    assertEquals("incorrect number of elements", 1, infonodes.getLength());
+    assertEquals(1, infonodes.getLength(), "incorrect number of elements");
     NodeList nodes = dom.getElementsByTagName("blacklistedNodes");
     Set<String> blacklistedNodes = ctx.getBlacklistedNodes();
-    assertEquals("incorrect number of elements", blacklistedNodes.size(),
-        nodes.getLength());
+    assertEquals(blacklistedNodes.size(),
+        nodes.getLength(), "incorrect number of elements");
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
       assertTrue(

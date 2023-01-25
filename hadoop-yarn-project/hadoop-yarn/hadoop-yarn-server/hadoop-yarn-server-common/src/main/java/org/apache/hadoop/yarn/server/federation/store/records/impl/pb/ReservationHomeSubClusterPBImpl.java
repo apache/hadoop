@@ -124,6 +124,7 @@ public class ReservationHomeSubClusterPBImpl extends ReservationHomeSubCluster {
       builder.clearReservationId();
       return;
     }
+    builder.setReservationId(convertToProtoFormat(resId));
     this.reservationId = resId;
   }
 

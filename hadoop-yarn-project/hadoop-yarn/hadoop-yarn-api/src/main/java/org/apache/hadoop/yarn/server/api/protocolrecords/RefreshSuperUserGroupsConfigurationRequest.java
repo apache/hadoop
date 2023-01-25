@@ -33,4 +33,27 @@ public abstract class RefreshSuperUserGroupsConfigurationRequest {
         Records.newRecord(RefreshSuperUserGroupsConfigurationRequest.class);
     return request;
   }
+
+  @Public
+  @Stable
+  public static RefreshSuperUserGroupsConfigurationRequest newInstance(String subClusterId) {
+    RefreshSuperUserGroupsConfigurationRequest request =
+        Records.newRecord(RefreshSuperUserGroupsConfigurationRequest.class);
+    request.setSubClusterId(subClusterId);
+    return request;
+  }
+
+  /**
+   * Get the subClusterId.
+   *
+   * @return subClusterId.
+   */
+  public abstract String getSubClusterId();
+
+  /**
+   * Set the subClusterId.
+   *
+   * @param subClusterId subCluster Id.
+   */
+  public abstract void setSubClusterId(String subClusterId);
 }

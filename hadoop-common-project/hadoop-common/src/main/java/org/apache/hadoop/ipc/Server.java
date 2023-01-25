@@ -123,6 +123,7 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.tracing.Span;
 import org.apache.hadoop.tracing.SpanContext;
 import org.apache.hadoop.tracing.TraceScope;
@@ -153,6 +154,13 @@ public abstract class Server {
   private ExceptionsHandler exceptionsHandler = new ExceptionsHandler();
   private Tracer tracer;
   private AlignmentContext alignmentContext;
+
+  /**
+   * Allow server to do force Kerberos re-login once after failure irrespective
+   * of the last login time.
+   */
+  private final AtomicBoolean canTryForceLogin = new AtomicBoolean(true);
+
   /**
    * Logical name of the server used in metrics and monitor.
    */
@@ -937,6 +945,9 @@ public abstract class Server {
     // the priority level assigned by scheduler, 0 by default
     private long clientStateId;
     private boolean isCallCoordinated;
+    // Serialized RouterFederatedStateProto message to
+    // store last seen states for multiple namespaces.
+    private ByteString federatedNamespaceState;
 
     Call() {
       this(RpcConstants.INVALID_CALL_ID, RpcConstants.INVALID_RETRY_COUNT,
@@ -992,6 +1003,14 @@ public abstract class Server {
 
     public ProcessingDetails getProcessingDetails() {
       return processingDetails;
+    }
+
+    public void setFederatedNamespaceState(ByteString federatedNamespaceState) {
+      this.federatedNamespaceState = federatedNamespaceState;
+    }
+
+    public ByteString getFederatedNamespaceState() {
+      return this.federatedNamespaceState;
     }
 
     @Override
@@ -1382,8 +1401,7 @@ public abstract class Server {
       bind(acceptChannel.socket(), address, backlogLength, conf, portRangeConfig);
       //Could be an ephemeral port
       this.listenPort = acceptChannel.socket().getLocalPort();
-      Thread.currentThread().setName("Listener at " +
-          bindAddress + "/" + this.listenPort);
+      LOG.info("Listener at {}:{}", bindAddress, this.listenPort);
       // create a selector;
       selector= Selector.open();
       readers = new Reader[readThreads];
@@ -2196,7 +2214,23 @@ public abstract class Server {
           AUDITLOG.warn(AUTH_FAILED_FOR + this.toString() + ":"
               + attemptingUser + " (" + e.getLocalizedMessage()
               + ") with true cause: (" + tce.getLocalizedMessage() + ")");
-          throw tce;
+          if (!UserGroupInformation.getLoginUser().isLoginSuccess()) {
+            doKerberosRelogin();
+            try {
+              // try processing message again
+              LOG.debug("Reprocessing sasl message for {}:{} after re-login",
+                  this.toString(), attemptingUser);
+              saslResponse = processSaslMessage(saslMessage);
+              AUDITLOG.info("Retry {}{}:{} after failure", AUTH_SUCCESSFUL_FOR,
+                  this.toString(), attemptingUser);
+              canTryForceLogin.set(true);
+            } catch (IOException exp) {
+              tce = (IOException) getTrueCause(e);
+              throw tce;
+            }
+          } else {
+            throw tce;
+          }
         }
         
         if (saslServer != null && saslServer.isComplete()) {
@@ -2868,6 +2902,9 @@ public abstract class Server {
             stateId = alignmentContext.receiveRequestState(
                 header, getMaxIdleTime());
             call.setClientStateId(stateId);
+            if (header.hasRouterFederatedState()) {
+              call.setFederatedNamespaceState(header.getRouterFederatedState());
+            }
           }
         } catch (IOException ioe) {
           throw new RpcServerException("Processing RPC request caught ", ioe);
@@ -3142,6 +3179,7 @@ public abstract class Server {
         throws IOException, InterruptedException {
       try {
         internalQueueCall(call, false);
+        rpcMetrics.incrRequeueCalls();
       } catch (RpcServerException rse) {
         call.doResponse(rse.getCause(), rse.getRpcStatusProto());
       }
@@ -3306,6 +3344,26 @@ public abstract class Server {
             .build());
     this.scheduledExecutorService.scheduleWithFixedDelay(new MetricsUpdateRunner(),
         metricsUpdaterInterval, metricsUpdaterInterval, TimeUnit.MILLISECONDS);
+  }
+
+  private synchronized void doKerberosRelogin() throws IOException {
+    if(UserGroupInformation.getLoginUser().isLoginSuccess()){
+      return;
+    }
+    LOG.warn("Initiating re-login from IPC Server");
+    if (canTryForceLogin.compareAndSet(true, false)) {
+      if (UserGroupInformation.isLoginKeytabBased()) {
+        UserGroupInformation.getLoginUser().forceReloginFromKeytab();
+      } else if (UserGroupInformation.isLoginTicketBased()) {
+        UserGroupInformation.getLoginUser().forceReloginFromTicketCache();
+      }
+    } else {
+      if (UserGroupInformation.isLoginKeytabBased()) {
+        UserGroupInformation.getLoginUser().reloginFromKeytab();
+      } else if (UserGroupInformation.isLoginTicketBased()) {
+        UserGroupInformation.getLoginUser().reloginFromTicketCache();
+      }
+    }
   }
 
   public synchronized void addAuxiliaryListener(int auxiliaryPort)
@@ -4097,4 +4155,18 @@ public abstract class Server {
     }
   }
 
+  @VisibleForTesting
+  CallQueueManager<Call> getCallQueue() {
+    return callQueue;
+  }
+
+  @VisibleForTesting
+  void setCallQueue(CallQueueManager<Call> callQueue) {
+    this.callQueue = callQueue;
+  }
+
+  @VisibleForTesting
+  void setRpcRequestClass(Class<? extends Writable> rpcRequestClass) {
+    this.rpcRequestClass = rpcRequestClass;
+  }
 }
