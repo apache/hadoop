@@ -152,9 +152,18 @@ public class CopyCommitter extends FileOutputCommitter {
   }
 
   private void cleanupTempFiles(JobContext context) {
-    try {
-      Configuration conf = context.getConfiguration();
+    Configuration conf = context.getConfiguration();
 
+    final boolean directWrite = conf.getBoolean(
+        DistCpOptionSwitch.DIRECT_WRITE.getConfigLabel(), false);
+    final boolean append = conf.getBoolean(
+        DistCpOptionSwitch.APPEND.getConfigLabel(), false);
+    final boolean useTempTarget = !append && !directWrite;
+    if (!useTempTarget) {
+      return;
+    }
+
+    try {
       Path targetWorkPath = new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
       FileSystem targetFS = targetWorkPath.getFileSystem(conf);
 

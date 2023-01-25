@@ -144,7 +144,7 @@ public final class HttpServer2 implements FilterContainer {
 
   public static final String HTTP_SOCKET_BACKLOG_SIZE_KEY =
       "hadoop.http.socket.backlog.size";
-  public static final int HTTP_SOCKET_BACKLOG_SIZE_DEFAULT = 128;
+  public static final int HTTP_SOCKET_BACKLOG_SIZE_DEFAULT = 500;
   public static final String HTTP_MAX_THREADS_KEY = "hadoop.http.max.threads";
   public static final String HTTP_ACCEPTOR_COUNT_KEY =
       "hadoop.http.acceptor.count";
@@ -1967,4 +1967,8 @@ public final class HttpServer2 implements FilterContainer {
     return metrics;
   }
 
+  @VisibleForTesting
+  List<ServerConnector> getListeners() {
+    return listeners;
+  }
 }

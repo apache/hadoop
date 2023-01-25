@@ -32,8 +32,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 public class MockRMAdminRequestInterceptor
     extends DefaultRMAdminRequestInterceptor {
 
+  MockRM mockRM = null;
   public void init(String user) {
-    MockRM mockRM = new MockRM(super.getConf()) {
+    mockRM = new MockRM(super.getConf()) {
       @Override
       protected AdminService createAdminService() {
         return new AdminService(this) {
@@ -59,5 +60,13 @@ public class MockRMAdminRequestInterceptor
     mockRM.init(super.getConf());
     mockRM.start();
     super.setRMAdmin(mockRM.getAdminService());
+  }
+
+  @Override
+  public void shutdown() {
+    if (mockRM != null) {
+      mockRM.stop();
+    }
+    super.shutdown();
   }
 }

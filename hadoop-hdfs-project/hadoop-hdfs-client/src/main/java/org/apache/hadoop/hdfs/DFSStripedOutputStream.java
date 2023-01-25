@@ -293,9 +293,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
                          DataChecksum checksum, String[] favoredNodes)
                          throws IOException {
     super(dfsClient, src, stat, flag, progress, checksum, favoredNodes, false);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Creating DFSStripedOutputStream for " + src);
-    }
+    LOG.debug("Creating DFSStripedOutputStream for {}", src);
 
     ecPolicy = stat.getErasureCodingPolicy();
     final int numParityBlocks = ecPolicy.getNumParityUnits();
@@ -1055,7 +1053,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
       }
     }
 
-    dfsClient.endFileLease(fileId);
+    dfsClient.endFileLease(getUniqKey());
     final IOException ioe = b.build();
     if (ioe != null) {
       throw ioe;

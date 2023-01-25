@@ -77,7 +77,7 @@ IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
             CONSTRAINT [pk_subClusterId] PRIMARY KEY
             (
                 [subClusterId]
-            )
+            ),
             CONSTRAINT [uc_lastStartTime] UNIQUE
             (
                 [lastStartTime]
@@ -122,5 +122,37 @@ IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
     END
 ELSE
     PRINT 'Table policies exists, no operation required...'
+    GO
+GO
+
+IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
+    WHERE name = 'reservationsHomeSubCluster'
+    AND schema_id = SCHEMA_ID('dbo'))
+    BEGIN
+        PRINT 'Table reservationsHomeSubCluster does not exist, create it...'
+
+        SET ANSI_NULLS ON
+
+        SET QUOTED_IDENTIFIER ON
+
+        SET ANSI_PADDING ON
+
+        CREATE TABLE [dbo].[reservationsHomeSubCluster](
+            reservationId   VARCHAR(128) COLLATE Latin1_General_100_BIN2 NOT NULL,
+            homeSubCluster  VARCHAR(256) NOT NULL,
+            createTime      DATETIME2 NOT NULL CONSTRAINT ts_createResTime DEFAULT GETUTCDATE(),
+
+            CONSTRAINT [pk_reservationId] PRIMARY KEY
+            (
+                [reservationId]
+            )
+        )
+
+        SET ANSI_PADDING OFF
+
+        PRINT 'Table reservationsHomeSubCluster created.'
+    END
+ELSE
+    PRINT 'Table reservationsHomeSubCluster exists, no operation required...'
     GO
 GO

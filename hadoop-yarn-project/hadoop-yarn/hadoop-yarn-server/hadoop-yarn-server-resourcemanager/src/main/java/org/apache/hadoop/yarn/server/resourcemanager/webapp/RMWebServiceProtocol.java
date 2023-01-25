@@ -215,7 +215,7 @@ public interface RMWebServiceProtocol {
       String groupBy);
 
   /**
-   * This method retrieve the last n activities inside scheduler and it is
+   * This method retrieve the last n activities inside scheduler, and it is
    * reachable by using {@link RMWSConsts#SCHEDULER_BULK_ACTIVITIES}.
    *
    * @param hsr the servlet request
@@ -324,6 +324,8 @@ public interface RMWebServiceProtocol {
    * @throws IOException if an IOException happened
    */
   NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr) throws IOException;
+
+  NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) throws IOException;
 
   /**
    * This method retrieves all the node within multiple node labels in the
@@ -631,7 +633,7 @@ public interface RMWebServiceProtocol {
    * @throws IOException when a {@link ReservationDeleteRequest} cannot be
    *           created from the {@link ReservationDeleteRequestInfo}. This
    *           exception is also thrown on
-   *           {@code ClientRMService.deleteReservation} invokation failure.
+   *           {@code ClientRMService.deleteReservation} invocation failure.
    * @throws InterruptedException if doAs action throws an InterruptedException.
    */
   Response deleteReservation(ReservationDeleteRequestInfo resContext,
@@ -717,7 +719,7 @@ public interface RMWebServiceProtocol {
   AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId);
 
   /**
-   * This method verifies if an user has access to a specified queue.
+   * This method verifies if a user has access to a specified queue.
    *
    * @return Response containing the status code.
    *

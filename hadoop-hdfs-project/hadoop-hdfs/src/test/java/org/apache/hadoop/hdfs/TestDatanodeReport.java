@@ -81,21 +81,21 @@ public class TestDatanodeReport {
       datanode.setUpgradeDomain(ud1);
       hostsFileWriter.initIncludeHosts(
           new DatanodeAdminProperties[]{datanode});
-      client.refreshNodes();
+      cluster.getNamesystem().getBlockManager().getDatanodeManager().refreshNodes(conf);
       DatanodeInfo[] all = client.datanodeReport(DatanodeReportType.ALL);
       assertEquals(all[0].getUpgradeDomain(), ud1);
 
       datanode.setUpgradeDomain(null);
       hostsFileWriter.initIncludeHosts(
           new DatanodeAdminProperties[]{datanode});
-      client.refreshNodes();
+      cluster.getNamesystem().getBlockManager().getDatanodeManager().refreshNodes(conf);
       all = client.datanodeReport(DatanodeReportType.ALL);
       assertEquals(all[0].getUpgradeDomain(), null);
 
       datanode.setUpgradeDomain(ud2);
       hostsFileWriter.initIncludeHosts(
           new DatanodeAdminProperties[]{datanode});
-      client.refreshNodes();
+      cluster.getNamesystem().getBlockManager().getDatanodeManager().refreshNodes(conf);
       all = client.datanodeReport(DatanodeReportType.ALL);
       assertEquals(all[0].getUpgradeDomain(), ud2);
     } finally {

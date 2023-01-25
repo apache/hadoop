@@ -116,7 +116,7 @@ public final class FilePosition {
         readOffset,
         "readOffset",
         startOffset,
-        startOffset + bufferData.getBuffer().limit() - 1);
+        startOffset + bufferData.getBuffer().limit());
 
     data = bufferData;
     buffer = bufferData.getBuffer().duplicate();
@@ -182,7 +182,7 @@ public final class FilePosition {
    */
   public boolean isWithinCurrentBuffer(long pos) {
     throwIfInvalidBuffer();
-    long bufferEndOffset = bufferStartOffset + buffer.limit() - 1;
+    long bufferEndOffset = bufferStartOffset + buffer.limit();
     return (pos >= bufferStartOffset) && (pos <= bufferEndOffset);
   }
 

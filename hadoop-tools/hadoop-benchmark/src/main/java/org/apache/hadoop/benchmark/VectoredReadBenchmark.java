@@ -169,7 +169,7 @@ public class VectoredReadBenchmark {
 
     FileRangeCallback(AsynchronousFileChannel channel, long offset,
                       int length, Joiner joiner, ByteBuffer buffer) {
-      super(offset, length);
+      super(offset, length, null);
       this.channel = channel;
       this.joiner = joiner;
       this.buffer = buffer;

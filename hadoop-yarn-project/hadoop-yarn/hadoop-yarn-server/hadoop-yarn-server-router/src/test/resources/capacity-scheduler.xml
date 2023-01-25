@@ -53,7 +53,7 @@
 
   <property>
     <name>yarn.scheduler.capacity.root.default.capacity</name>
-    <value>90</value>
+    <value>50</value>
     <description>Default queue target capacity.</description>
   </property>
 
@@ -61,6 +61,12 @@
     <name>yarn.scheduler.capacity.root.target.capacity</name>
     <value>10</value>
     <description>target queue capacity.</description>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.capacity.root.decided.capacity</name>
+    <value>40</value>
+    <description>decided queue capacity.</description>
   </property>
 
   <property>

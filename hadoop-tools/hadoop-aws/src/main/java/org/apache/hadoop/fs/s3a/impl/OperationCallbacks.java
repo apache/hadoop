@@ -119,6 +119,7 @@ public interface OperationCallbacks {
    * There's no update of metadata, directory markers, etc.
    * Callers must implement.
    * @param srcKey source object path
+   * @param destKey destination object path
    * @param srcAttributes S3 attributes of the source object
    * @param readContext the read context
    * @return the result of the copy
