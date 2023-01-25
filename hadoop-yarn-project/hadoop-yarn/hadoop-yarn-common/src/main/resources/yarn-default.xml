@@ -5149,4 +5149,12 @@
     <value>true</value>
   </property>
 
+  <property>
+    <description>
+      Number of Router Scheduler Threads.
+    </description>
+    <name>yarn.router.scheduled.executor.threads</name>
+    <value>1</value>
+  </property>
+
 </configuration>

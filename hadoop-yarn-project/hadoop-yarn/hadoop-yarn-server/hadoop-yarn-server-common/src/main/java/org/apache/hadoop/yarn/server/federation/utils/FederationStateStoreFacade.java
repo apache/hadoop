@@ -1162,7 +1162,6 @@ public final class FederationStateStoreFacade {
    * @param subClusterId subClusterId.
    * @param subClusterState The state of the subCluster to be updated.
    * @throws YarnException yarn exception.
-   * @throws IOException if an IO error occurred.
    * @return If Deregister subCluster is successful, return true, otherwise, return false.
    */
   public boolean deregisterSubCluster(SubClusterId subClusterId,
