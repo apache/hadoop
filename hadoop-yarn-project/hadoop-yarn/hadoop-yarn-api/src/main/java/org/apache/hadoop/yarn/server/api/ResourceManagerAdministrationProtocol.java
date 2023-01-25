@@ -167,6 +167,7 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
    * The request contains the id of to deregister sub-cluster.
    * @return Response from deregisterSubCluster.
    * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
    */
   @Private
   @Idempotent
