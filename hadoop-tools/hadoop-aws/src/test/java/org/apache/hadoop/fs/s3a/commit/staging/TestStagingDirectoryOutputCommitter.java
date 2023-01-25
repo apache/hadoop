@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.*;
@@ -92,7 +93,8 @@ public class TestStagingDirectoryOutputCommitter
     // this is done by calling the preCommit method directly,
 
     final CommitContext commitContext = new CommitOperations(getWrapperFS()).
-        createCommitContext(getJob(), getOutputPath(), 0);
+        createCommitContext(getJob(), getOutputPath(), 0,
+            IOStatisticsContext.getCurrentIOStatisticsContext());
     committer.preCommitJob(commitContext, AbstractS3ACommitter.ActiveCommit.empty());
 
     reset(mockFS);

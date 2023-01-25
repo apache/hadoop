@@ -16,15 +16,16 @@
  * limitations under the License.
  */
 
+#include "RpcHeader.pb.h"
+#include "ProtobufRpcEngine.pb.h"
+#include "IpcConnectionContext.pb.h"
+
 #include <functional>
+
 #include "request.h"
 #include "rpc_engine.h"
 #include "sasl_protocol.h"
 #include "hdfspp/ioservice.h"
-
-#include "RpcHeader.pb.h"
-#include "ProtobufRpcEngine.pb.h"
-#include "IpcConnectionContext.pb.h"
 
 #include <sstream>
 

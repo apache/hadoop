@@ -47,7 +47,7 @@ public final class StreamStatisticNames {
   public static final String STREAM_READ_ABORTED = "stream_aborted";
 
   /**
-   * Bytes read from an input stream in read() calls.
+   * Bytes read from an input stream in read()/readVectored() calls.
    * Does not include bytes read and then discarded in seek/close etc.
    * These are the bytes returned to the caller.
    * Value: {@value}.
@@ -109,6 +109,34 @@ public final class StreamStatisticNames {
    */
   public static final String STREAM_READ_OPERATIONS =
       "stream_read_operations";
+
+  /**
+   * Count of readVectored() operations in an input stream.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_VECTORED_OPERATIONS =
+          "stream_read_vectored_operations";
+
+  /**
+   * Count of bytes discarded during readVectored() operation
+   * in an input stream.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_VECTORED_READ_BYTES_DISCARDED =
+          "stream_read_vectored_read_bytes_discarded";
+
+  /**
+   * Count of incoming file ranges during readVectored() operation.
+   * Value: {@value}
+   */
+  public static final String STREAM_READ_VECTORED_INCOMING_RANGES =
+          "stream_read_vectored_incoming_ranges";
+  /**
+   * Count of combined file ranges during readVectored() operation.
+   * Value: {@value}
+   */
+  public static final String STREAM_READ_VECTORED_COMBINED_RANGES =
+          "stream_read_vectored_combined_ranges";
 
   /**
    * Count of incomplete read() operations in an input stream,
@@ -386,6 +414,46 @@ public final class StreamStatisticNames {
    */
   public static final String BLOCKS_RELEASED
       = "blocks_released";
+
+  /**
+   * Total number of prefetching operations executed.
+   */
+  public static final String STREAM_READ_PREFETCH_OPERATIONS
+      = "stream_read_prefetch_operations";
+
+  /**
+   * Total number of block in disk cache.
+   */
+  public static final String STREAM_READ_BLOCKS_IN_FILE_CACHE
+      = "stream_read_blocks_in_cache";
+
+  /**
+   * Total number of active prefetch operations.
+   */
+  public static final String STREAM_READ_ACTIVE_PREFETCH_OPERATIONS
+      = "stream_read_active_prefetch_operations";
+
+  /**
+   * Total bytes of memory in use by this input stream.
+   */
+  public static final String STREAM_READ_ACTIVE_MEMORY_IN_USE
+      = "stream_read_active_memory_in_use";
+
+  /**
+   * count/duration of reading a remote block.
+   *
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_REMOTE_BLOCK_READ
+      = "stream_read_block_read";
+
+  /**
+   * count/duration of acquiring a buffer and reading to it.
+   *
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_BLOCK_ACQUIRE_AND_READ
+      = "stream_read_block_acquire_read";
 
   private StreamStatisticNames() {
   }

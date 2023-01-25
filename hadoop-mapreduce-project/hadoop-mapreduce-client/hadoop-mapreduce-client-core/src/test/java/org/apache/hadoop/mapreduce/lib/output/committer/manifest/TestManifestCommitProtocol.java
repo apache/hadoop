@@ -61,6 +61,7 @@ import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.lib.output.BindingPathOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MapFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory;
@@ -1548,6 +1549,23 @@ public class TestManifestCommitProtocol
             ReflectionUtils.newInstance(tContext.getOutputFormatClass(), conf);
     ManifestCommitter committer = (ManifestCommitter)
         outputFormat.getOutputCommitter(tContext);
+
+    // check path capabilities directly
+    Assertions.assertThat(committer.hasCapability(
+            ManifestCommitterConstants.CAPABILITY_DYNAMIC_PARTITIONING))
+        .describedAs("dynamic partitioning capability in committer %s",
+            committer)
+        .isTrue();
+    // and through a binding committer -passthrough is critical
+    // for the spark binding.
+    BindingPathOutputCommitter bindingCommitter =
+        new BindingPathOutputCommitter(outputDir, tContext);
+    Assertions.assertThat(bindingCommitter.hasCapability(
+            ManifestCommitterConstants.CAPABILITY_DYNAMIC_PARTITIONING))
+        .describedAs("dynamic partitioning capability in committer %s",
+            bindingCommitter)
+        .isTrue();
+
 
     // setup
     JobData jobData = new JobData(job, jContext, tContext, committer);

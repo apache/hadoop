@@ -60,7 +60,7 @@ public abstract class Shell {
    * {@value}
    */
   private static final String WINDOWS_PROBLEMS =
-      "https://wiki.apache.org/hadoop/WindowsProblems";
+      "https://cwiki.apache.org/confluence/display/HADOOP2/WindowsProblems";
 
   /**
    * Name of the windows utils binary: {@value}.
@@ -146,7 +146,8 @@ public abstract class Shell {
    * @param arg the argument to quote
    * @return the quoted string
    */
-  static String bashQuote(String arg) {
+  @InterfaceAudience.Private
+  public static String bashQuote(String arg) {
     StringBuilder buffer = new StringBuilder(arg.length() + 2);
     buffer.append('\'')
         .append(arg.replace("'", "'\\''"))

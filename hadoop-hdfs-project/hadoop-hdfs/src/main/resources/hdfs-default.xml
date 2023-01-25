@@ -3434,6 +3434,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.access-control-enforcer-reporting-threshold-ms</name>
+  <value>1000</value>
+  <description>
+    If an external AccessControlEnforcer runs for a long time to check permission with the FSnamesystem lock,
+    print a WARN log message. This sets how long must be run for logging to occur.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.lock.detailed-metrics.enabled</name>
   <value>false</value>
   <description>If true, the namenode will keep track of how long various
@@ -3462,30 +3471,6 @@
     mode, which will help to prevent writer threads from being starved, but can
     lower lock throughput. See java.util.concurrent.locks.ReentrantReadWriteLock
     for more information on fair/non-fair locks.
-  </description>
-</property>
-
-<property>
-  <name>dfs.datanode.lock.read.write.enabled</name>
-  <value>true</value>
-  <description>If this is true, the FsDataset lock will be a read write lock. If
-    it is false, all locks will be a write lock.
-    Enabling this should give better datanode throughput, as many read only
-    functions can run concurrently under the read lock, when they would
-    previously have required the exclusive write lock. As the feature is
-    experimental, this switch can be used to disable the shared read lock, and
-    cause all lock acquisitions to use the exclusive write lock.
-  </description>
-</property>
-
-<property>
-  <name>dfs.datanode.lock-reporting-threshold-ms</name>
-  <value>300</value>
-  <description>When thread waits to obtain a lock, or a thread holds a lock for
-    more than the threshold, a log message will be written. Note that
-    dfs.lock.suppress.warning.interval ensures a single log message is
-    emitted per interval for waiting threads and a single message for holding
-    threads to avoid excessive logging.
   </description>
 </property>
 
@@ -3749,7 +3734,7 @@
   <name>dfs.ha.nn.not-become-active-in-safemode</name>
   <value>false</value>
   <description>
-    This will prevent safe mode namenodes to become active while other standby
+    This will prevent safe mode namenodes to become active or observer while other standby
     namenodes might be ready to serve requests when it is set to true.
   </description>
 </property>
@@ -4277,14 +4262,18 @@
   <value>org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault</value>
   <description>
     Class representing block placement policy for non-striped files.
-    There are four block placement policies currently being supported:
+    There are six block placement policies currently being supported:
     BlockPlacementPolicyDefault, BlockPlacementPolicyWithNodeGroup,
-    BlockPlacementPolicyRackFaultTolerant and BlockPlacementPolicyWithUpgradeDomain.
+    BlockPlacementPolicyRackFaultTolerant, BlockPlacementPolicyWithUpgradeDomain,
+    AvailableSpaceBlockPlacementPolicy and AvailableSpaceRackFaultTolerantBlockPlacementPolicy.
     BlockPlacementPolicyDefault chooses the desired number of targets
     for placing block replicas in a default way. BlockPlacementPolicyWithNodeGroup
     places block replicas on environment with node-group layer. BlockPlacementPolicyRackFaultTolerant
     places the replicas to more racks.
     BlockPlacementPolicyWithUpgradeDomain places block replicas that honors upgrade domain policy.
+    AvailableSpaceBlockPlacementPolicy places block replicas based on space balanced policy.
+    AvailableSpaceRackFaultTolerantBlockPlacementPolicy places block replicas based on
+    space balanced rack fault tolerant policy.
     The details of placing replicas are documented in the javadoc of the corresponding policy classes.
     The default policy is BlockPlacementPolicyDefault, and the corresponding class is
     org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault.
@@ -4965,13 +4954,29 @@
 
 <property>
   <name>dfs.journalnode.edit-cache-size.bytes</name>
-  <value>1048576</value>
+  <value></value>
   <description>
     The size, in bytes, of the in-memory cache of edits to keep on the
     JournalNode. This cache is used to serve edits for tailing via the RPC-based
     mechanism, and is only enabled when dfs.ha.tail-edits.in-progress is true.
     Transactions range in size but are around 200 bytes on average, so the
     default of 1MB can store around 5000 transactions.
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.edit-cache-size.fraction</name>
+  <value>0.5f</value>
+  <description>
+    This ratio refers to the proportion of the maximum memory of the JVM.
+    Used to calculate the size of the edits cache that is kept in the JournalNode's memory.
+    This config is an alternative to the dfs.journalnode.edit-cache-size.bytes.
+    And it is used to serve edits for tailing via the RPC-based mechanism, and is only
+    enabled when dfs.ha.tail-edits.in-progress is true. Transactions range in size but
+    are around 200 bytes on average, so the default of 1MB can store around 5000 transactions.
+    So we can configure a reasonable value based on the maximum memory. The recommended value
+    is less than 0.9. If we set dfs.journalnode.edit-cache-size.bytes, this parameter will
+    not take effect.
   </description>
 </property>
 
@@ -5366,6 +5371,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.remove.dead.datanode.batchnum</name>
+  <value>10</value>
+  <description>
+    Maximum number of datanodes removed by HeartbeatManager per scan.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.snapshot.capture.openfiles</name>
   <value>false</value>
   <description>
@@ -5453,8 +5466,6 @@
 </property>
 
 <property>
-  <name>dfs.storage.policy.satisfier.enabled</name>
-  <value>false</value>
   <name>dfs.storage.policy.satisfier.mode</name>
   <value>none</value>
   <description>
@@ -6444,6 +6455,21 @@
       The amount of time the fsck client will wait to read from the namenode
       before timing out. If the namenode does not report progress more
       frequently than this time, the client will give up waiting.
+    </description>
+  </property>
+  <property>
+    <name>dfs.client.output.stream.uniq.default.key</name>
+    <value>DEFAULT</value>
+    <description>
+      The default prefix key to construct the uniqKey for one DFSOutputStream.
+      If the namespace is DEFAULT, it's best to change this conf to other value.
+    </description>
+  </property>
+  <property>
+    <name>dfs.client.rbf.observer.read.enable</name>
+    <value>false</value>
+    <description>
+      Enables observer reads for clients. This should only be enabled when clients are using routers.
     </description>
   </property>
 </configuration>

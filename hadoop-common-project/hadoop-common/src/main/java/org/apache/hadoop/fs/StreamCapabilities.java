@@ -84,7 +84,7 @@ public interface StreamCapabilities {
    * Support for vectored IO api.
    * See {@code PositionedReadable#readVectored(List, IntFunction)}.
    */
-  String VECTOREDIO = "readvectored";
+  String VECTOREDIO = "in:readvectored";
 
   /**
    * Stream abort() capability implemented by {@link Abortable#abort()}.
@@ -92,6 +92,12 @@ public interface StreamCapabilities {
    * {@link CommonPathCapabilities#ABORTABLE_STREAM}.
    */
   String ABORTABLE_STREAM =  CommonPathCapabilities.ABORTABLE_STREAM;
+
+  /**
+   * Streams that support IOStatistics context and capture thread-level
+   * IOStatistics.
+   */
+  String IOSTATISTICS_CONTEXT = "fs.capability.iocontext.supported";
 
   /**
    * Capabilities that a stream can support and be queried for.

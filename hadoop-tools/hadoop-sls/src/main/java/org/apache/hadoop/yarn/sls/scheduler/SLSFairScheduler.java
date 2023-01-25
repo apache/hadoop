@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.sls.SLSRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -40,6 +42,7 @@ public class SLSFairScheduler extends FairScheduler
     implements SchedulerWrapper, Configurable {
   private final SLSSchedulerCommons schedulerCommons;
   private SLSRunner runner;
+  private static final Logger LOG = LoggerFactory.getLogger(SLSFairScheduler.class);
 
   public SLSFairScheduler() {
     schedulerCommons = new SLSSchedulerCommons(this);
@@ -63,7 +66,12 @@ public class SLSFairScheduler extends FairScheduler
 
   @Override
   public void handle(SchedulerEvent schedulerEvent) {
-    schedulerCommons.handle(schedulerEvent);
+    try {
+      schedulerCommons.handle(schedulerEvent);
+    } catch (Exception e){
+      LOG.error("Caught exception while handling scheduler event", e);
+      throw e;
+    }
   }
 
   @Override

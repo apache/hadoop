@@ -234,6 +234,12 @@ public final class ManifestCommitterConstants {
    */
   public static final String CONTEXT_ATTR_TASK_ATTEMPT_ID = "ta";
 
+  /**
+   * Stream Capabilities probe for spark dynamic partitioning compatibility.
+   */
+  public static final String CAPABILITY_DYNAMIC_PARTITIONING =
+      "mapreduce.job.committer.dynamic.partitioning";
+
   private ManifestCommitterConstants() {
   }
 

@@ -96,7 +96,7 @@ public class CapacitySchedulerQueueInfo {
       new AutoQueueTemplatePropertiesInfo();
 
   CapacitySchedulerQueueInfo() {
-  };
+  }
 
   CapacitySchedulerQueueInfo(CapacityScheduler cs, CSQueue q) {
 

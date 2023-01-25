@@ -26,6 +26,7 @@
 #include <utility>
 #include <future>
 
+#include <boost/system/error_code.hpp>
 
 namespace hdfs {
 

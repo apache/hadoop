@@ -22,14 +22,15 @@ import org.apache.hadoop.yarn.appcatalog.model.AppEntry;
 import org.apache.hadoop.yarn.appcatalog.model.AppStoreEntry;
 import org.apache.hadoop.yarn.appcatalog.model.Application;
 import org.apache.solr.client.solrj.SolrClient;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.powermock.api.mockito.PowerMockito;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.support.membermodification.MemberMatcher.method;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
@@ -42,7 +43,7 @@ public class TestAppCatalogSolrClient {
   private static SolrClient solrClient;
   private static AppCatalogSolrClient spy;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     String targetLocation = EmbeddedSolrServerFactory.class
         .getProtectionDomain().getCodeSource().getLocation().getFile() + "/..";
@@ -55,7 +56,7 @@ public class TestAppCatalogSolrClient {
         .withNoArguments().thenReturn(solrClient);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     try {
       solrClient.close();
@@ -64,7 +65,7 @@ public class TestAppCatalogSolrClient {
   }
 
   @Test
-  public void testRegister() throws Exception {
+  void testRegister() throws Exception {
     Application example = new Application();
     example.setOrganization("jenkins-ci.org");
     example.setName("jenkins");
@@ -76,7 +77,7 @@ public class TestAppCatalogSolrClient {
   }
 
   @Test
-  public void testSearch() throws Exception {
+  void testSearch() throws Exception {
     Application example = new Application();
     example.setOrganization("jenkins-ci.org");
     example.setName("jenkins");
@@ -90,7 +91,7 @@ public class TestAppCatalogSolrClient {
   }
 
   @Test
-  public void testNotFoundSearch() throws Exception {
+  void testNotFoundSearch() throws Exception {
     Application example = new Application();
     example.setOrganization("jenkins-ci.org");
     example.setName("jenkins");
@@ -104,7 +105,7 @@ public class TestAppCatalogSolrClient {
   }
 
   @Test
-  public void testGetRecommendedApps() throws Exception {
+  void testGetRecommendedApps() throws Exception {
     AppStoreEntry example = new AppStoreEntry();
     example.setOrg("jenkins-ci.org");
     example.setName("jenkins");
@@ -121,15 +122,15 @@ public class TestAppCatalogSolrClient {
     spy.register(example2);
     List<AppStoreEntry> actual = spy.getRecommendedApps();
     long previous = 1000L;
-    for (AppStoreEntry app: actual) {
-      assertTrue("Recommend app is not sort by download count.",
-          previous > app.getDownload());
+    for (AppStoreEntry app : actual) {
+      assertTrue(previous > app.getDownload(),
+          "Recommend app is not sort by download count.");
       previous = app.getDownload();
     }
   }
 
   @Test
-  public void testUpgradeApp() throws Exception {
+  void testUpgradeApp() throws Exception {
     Application example = new Application();
     String expected = "2.0";
     String actual = "";
@@ -143,7 +144,7 @@ public class TestAppCatalogSolrClient {
     example.setVersion("2.0");
     spy.upgradeApp(example);
     List<AppEntry> appEntries = spy.listAppEntries();
-    actual = appEntries.get(appEntries.size() -1).getYarnfile().getVersion();
+    actual = appEntries.get(appEntries.size() - 1).getYarnfile().getVersion();
     assertEquals(expected, actual);
   }
 }

@@ -41,6 +41,7 @@ origin (CORS) support.
 | `yarn.timeline-service.http-cross-origin.enabled` | true | Enable CORS support for Timeline Server  |
 | `yarn.resourcemanager.webapp.cross-origin.enabled` | true | Enable CORS support for Resource Manager  |
 | `yarn.nodemanager.webapp.cross-origin.enabled` | true | Enable CORS support for Node Manager  |
+| `yarn.router.webapp.cross-origin.enabled` | true | Enable CORS support for Yarn Router  |
 
 Also please ensure that CORS related configurations are enabled in `core-site.xml`.
 Kindly refer [here](../../hadoop-project-dist/hadoop-common/HttpAuthentication.html)

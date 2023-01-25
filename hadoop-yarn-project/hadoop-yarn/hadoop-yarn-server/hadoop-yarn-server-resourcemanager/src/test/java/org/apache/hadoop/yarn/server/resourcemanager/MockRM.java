@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.token.Token;
@@ -64,6 +65,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -1009,6 +1011,31 @@ public class MockRM extends ResourceManager {
     LOG.info("app is removed from scheduler, " + appId);
   }
 
+  /**
+   * Wait until a container has reached a completion state.
+   * The timeout is 20 seconds.
+   * @param nm A mock nodemanager
+   * @param rm A mock resourcemanager
+   * @param amContainerId The id of an am container
+   * @param container A container
+   * @throws Exception
+   *         if interrupted while waiting for the completion transition
+   *         or an unexpected error while MockNM is hearbeating.
+   */
+  public static void waitForContainerCompletion(MockRM rm, MockNM nm,
+    ContainerId amContainerId, RMContainer container) throws Exception {
+    ContainerId containerId = container.getContainerId();
+    if (null != rm.scheduler.getRMContainer(containerId)) {
+      if (containerId.equals(amContainerId)) {
+        rm.waitForState(nm, containerId, RMContainerState.COMPLETED);
+      } else {
+        rm.waitForState(nm, containerId, RMContainerState.KILLED);
+      }
+    } else {
+      rm.drainEvents();
+    }
+  }
+
   private void drainEventsImplicitly() {
     if (!disableDrainEventsImplicitly) {
       drainEvents();
@@ -1034,5 +1061,10 @@ public class MockRM extends ResourceManager {
 
   public RMStateStore getRMStateStore() {
     return getRMContext().getStateStore();
+  }
+
+  @VisibleForTesting
+  public ReservationSystem getReservationSystem(){
+    return this.reservationSystem;
   }
 }

@@ -28,6 +28,8 @@ import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.api.ACLProvider;
+import org.apache.curator.framework.api.CreateBuilder;
+import org.apache.curator.framework.api.ProtectACLCreateModeStatPathAndBytesable;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
@@ -38,9 +40,12 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
+import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 import org.junit.After;
 import org.junit.Assert;
@@ -506,5 +511,66 @@ public class TestZKDelegationTokenSecretManager {
         return zksm1.getTokenInfo(id1) == null;
       }
     }, 1000, 5000);
+  }
+
+  @Test
+  public void testCreatingParentContainersIfNeeded() throws Exception {
+
+    String connectString = zkServer.getConnectString();
+    RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
+    Configuration conf = getSecretConf(connectString);
+    CuratorFramework curatorFramework =
+        CuratorFrameworkFactory.builder()
+        .connectString(connectString)
+        .retryPolicy(retryPolicy)
+        .build();
+    curatorFramework.start();
+    ZKDelegationTokenSecretManager.setCurator(curatorFramework);
+    DelegationTokenManager tm1 = new DelegationTokenManager(conf, new Text("foo"));
+
+    // When the init method is called,
+    // the ZKDelegationTokenSecretManager#startThread method will be called,
+    // and the creatingParentContainersIfNeeded will be called to create the nameSpace.
+    tm1.init();
+
+    String workingPath = "/" + conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH,
+        ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT) + "/ZKDTSMRoot";
+
+    // Check if the created NameSpace exists.
+    Stat stat = curatorFramework.checkExists().forPath(workingPath);
+    Assert.assertNotNull(stat);
+
+    tm1.destroy();
+    curatorFramework.close();
+  }
+
+  @Test
+  public void testCreateNameSpaceRepeatedly() throws Exception {
+
+    String connectString = zkServer.getConnectString();
+    RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
+    Configuration conf = getSecretConf(connectString);
+    CuratorFramework curatorFramework =
+        CuratorFrameworkFactory.builder().
+        connectString(connectString).
+        retryPolicy(retryPolicy).
+        build();
+    curatorFramework.start();
+
+    String workingPath = "/" + conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH,
+        ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT) + "/ZKDTSMRoot-Test";
+    CreateBuilder createBuilder = curatorFramework.create();
+    ProtectACLCreateModeStatPathAndBytesable<String> createModeStat =
+        createBuilder.creatingParentContainersIfNeeded();
+    createModeStat.forPath(workingPath);
+
+    // Check if the created NameSpace exists.
+    Stat stat = curatorFramework.checkExists().forPath(workingPath);
+    Assert.assertNotNull(stat);
+
+    // Repeated creation will throw NodeExists exception
+    LambdaTestUtils.intercept(KeeperException.class,
+        "KeeperErrorCode = NodeExists for "+workingPath,
+        () -> createModeStat.forPath(workingPath));
   }
 }

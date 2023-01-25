@@ -45,6 +45,7 @@ public class FairSchedulerInfo extends SchedulerInfo {
     scheduler = fs;
     rootQueue = new FairSchedulerQueueInfo(scheduler.getQueueManager().
         getRootQueue(), scheduler);
+    schedulerName = "Fair Scheduler";
   }
 
   /**

@@ -18,15 +18,11 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
-import com.sun.jersey.api.client.Client;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.commons.lang3.time.DateFormatUtils;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.router.Router;
-import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+import org.apache.hadoop.yarn.server.router.webapp.dao.RouterInfo;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
 import com.google.inject.Inject;
@@ -34,62 +30,57 @@ import com.google.inject.Inject;
 /**
  * About block for the Router Web UI.
  */
-public class AboutBlock extends HtmlBlock {
-
-  private static final long BYTES_IN_MB = 1024 * 1024;
+public class AboutBlock extends RouterBlock {
 
   private final Router router;
 
   @Inject
   AboutBlock(Router router, ViewContext ctx) {
-    super(ctx);
+    super(router, ctx);
     this.router = router;
   }
 
   @Override
   protected void render(Block html) {
-    Configuration conf = this.router.getConfig();
-    String webAppAddress = WebAppUtils.getRouterWebAppURLWithScheme(conf);
-    Client client = RouterWebServiceUtil.createJerseyClient(conf);
 
-    ClusterMetricsInfo metrics = RouterWebServiceUtil
-        .genericForward(webAppAddress, null, ClusterMetricsInfo.class,
-            HTTPMethods.GET,
-            RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
-            conf, client);
-    boolean isEnabled = conf.getBoolean(
-        YarnConfiguration.FEDERATION_ENABLED,
-        YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
-    info("Cluster Status").
-        __("Federation Enabled", isEnabled).
-        __("Applications Submitted", metrics.getAppsSubmitted()).
-        __("Applications Pending", metrics.getAppsPending()).
-        __("Applications Running", metrics.getAppsRunning()).
-        __("Applications Failed", metrics.getAppsFailed()).
-        __("Applications Killed", metrics.getAppsKilled()).
-        __("Applications Completed", metrics.getAppsCompleted()).
-        __("Containers Allocated", metrics.getContainersAllocated()).
-        __("Containers Reserved", metrics.getReservedContainers()).
-        __("Containers Pending", metrics.getPendingContainers()).
-        __("Available Memory",
-            StringUtils.byteDesc(metrics.getAvailableMB() * BYTES_IN_MB)).
-        __("Allocated Memory",
-            StringUtils.byteDesc(metrics.getAllocatedMB() * BYTES_IN_MB)).
-        __("Reserved Memory",
-            StringUtils.byteDesc(metrics.getReservedMB() * BYTES_IN_MB)).
-        __("Total Memory",
-            StringUtils.byteDesc(metrics.getTotalMB() * BYTES_IN_MB)).
-        __("Available VirtualCores", metrics.getAvailableVirtualCores()).
-        __("Allocated VirtualCores", metrics.getAllocatedVirtualCores()).
-        __("Reserved VirtualCores", metrics.getReservedVirtualCores()).
-        __("Total VirtualCores", metrics.getTotalVirtualCores()).
-        __("Active Nodes", metrics.getActiveNodes()).
-        __("Lost Nodes", metrics.getLostNodes()).
-        __("Available Nodes", metrics.getDecommissionedNodes()).
-        __("Unhealthy Nodes", metrics.getUnhealthyNodes()).
-        __("Rebooted Nodes", metrics.getRebootedNodes()).
-        __("Total Nodes", metrics.getTotalNodes());
+    boolean isEnabled = isYarnFederationEnabled();
 
+    // If Yarn Federation is not enabled, the user needs to be prompted.
+    initUserHelpInformationDiv(html, isEnabled);
+
+    // Metrics Overview Table
+    html.__(MetricsOverviewTable.class);
+
+    // Init Yarn Router Basic Information
+    initYarnRouterBasicInformation(isEnabled);
+
+    // InfoBlock
     html.__(InfoBlock.class);
+  }
+
+  /**
+   * Init Yarn Router Basic Infomation.
+   * @param isEnabled true, federation is enabled; false, federation is not enabled.
+   */
+  private void initYarnRouterBasicInformation(boolean isEnabled) {
+    FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+    RouterInfo routerInfo = new RouterInfo(router);
+    String lastStartTime =
+        DateFormatUtils.format(routerInfo.getStartedOn(), DATE_PATTERN);
+    try {
+      info("Yarn Router Overview").
+          __("Federation Enabled:", String.valueOf(isEnabled)).
+          __("Router ID:", routerInfo.getClusterId()).
+          __("Router state:", routerInfo.getState()).
+          __("Router SubCluster Count:", facade.getSubClusters(true).size()).
+          __("Router RMStateStore:", routerInfo.getRouterStateStore()).
+          __("Router started on:", lastStartTime).
+          __("Router version:", routerInfo.getRouterBuildVersion() +
+             " on " + routerInfo.getRouterVersionBuiltOn()).
+          __("Hadoop version:", routerInfo.getHadoopBuildVersion() +
+             " on " + routerInfo.getHadoopVersionBuiltOn());
+    } catch (YarnException e) {
+      LOG.error("initYarnRouterBasicInformation error.", e);
+    }
   }
 }

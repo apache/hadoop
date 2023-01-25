@@ -67,6 +67,22 @@ public class TestAutoCreatedQueueTemplate {
   }
 
   @Test
+  public void testTwoLevelWildcardTemplate() {
+    conf.set(getTemplateKey("root.*", "capacity"), "6w");
+    conf.set(getTemplateKey("root.*.*", "capacity"), "5w");
+
+    new AutoCreatedQueueTemplate(conf, TEST_QUEUE_A)
+            .setTemplateEntriesForChild(conf, TEST_QUEUE_AB.getFullPath());
+    new AutoCreatedQueueTemplate(conf, TEST_QUEUE_AB)
+            .setTemplateEntriesForChild(conf, TEST_QUEUE_ABC.getFullPath());
+
+    Assert.assertEquals("weight is not set", 6f,
+            conf.getNonLabeledQueueWeight(TEST_QUEUE_AB.getFullPath()), 10e-6);
+    Assert.assertEquals("weight is not set", 5f,
+            conf.getNonLabeledQueueWeight(TEST_QUEUE_ABC.getFullPath()), 10e-6);
+  }
+
+  @Test
   public void testIgnoredWhenRootWildcarded() {
     conf.set(getTemplateKey("*", "capacity"), "6w");
     AutoCreatedQueueTemplate template =

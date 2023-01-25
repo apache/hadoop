@@ -738,7 +738,7 @@ at org.apache.hadoop.mapreduce.lib.input.LineRecordReader.nextKeyValue(LineRecor
 ```
 
 The underlying problem is that the gzip decompressor is automatically enabled
-when the the source file ends with the ".gz" extension. Because S3 Select
+when the source file ends with the ".gz" extension. Because S3 Select
 returns decompressed data, the codec fails.
 
 The workaround here is to declare that the job should add the "Passthrough Codec"
@@ -932,6 +932,21 @@ Caused by: com.amazonaws.services.s3.model.AmazonS3Exception: GZIP is not applic
   Service: Amazon S3; Status Code: 400; Error Code: InvalidCompressionFormat;
   at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse
   ...
+```
+
+
+### AWSBadRequestException  `UnsupportedStorageClass`
+
+S3 Select doesn't work with some storage classes like Glacier or Reduced Redundancy.
+Make sure you've set `fs.s3a.create.storage.class` to a supported storage class for S3 Select.
+
+```
+org.apache.hadoop.fs.s3a.AWSBadRequestException:
+    Select on s3a://example/dataset.csv.gz:
+    com.amazonaws.services.s3.model.AmazonS3Exception:
+     We do not support REDUCED_REDUNDANCY storage class.
+     Please check the service documentation and try again.
+     (Service: Amazon S3; Status Code: 400; Error Code: UnsupportedStorageClass
 ```
 
 ### `PathIOException`: "seek() not supported"

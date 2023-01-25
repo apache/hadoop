@@ -93,6 +93,7 @@ import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecret
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -439,7 +440,7 @@ public abstract class BaseContainerManagerTest {
       NMContainerTokenSecretManager containerTokenSecretManager,
       LogAggregationContext logAggregationContext)
       throws IOException {
-    Resource r = BuilderUtils.newResource(1024, 1);
+    Resource r = Resources.createResource(1024);
     return createContainerToken(cId, rmIdentifier, nodeId, user, r,
         containerTokenSecretManager, logAggregationContext);
   }
@@ -449,7 +450,7 @@ public abstract class BaseContainerManagerTest {
       NMContainerTokenSecretManager containerTokenSecretManager,
       LogAggregationContext logAggregationContext, ContainerType containerType)
       throws IOException {
-    Resource r = BuilderUtils.newResource(1024, 1);
+    Resource r = Resources.createResource(1024);
     return createContainerToken(cId, rmIdentifier, nodeId, user, r,
         containerTokenSecretManager, logAggregationContext, containerType);
   }

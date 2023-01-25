@@ -57,6 +57,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -310,7 +311,7 @@ public class TestRMWebServices extends JerseyTestBase {
   }
 
   public void verifyClusterInfoXML(String xml) throws JSONException, Exception {
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
@@ -436,7 +437,7 @@ public class TestRMWebServices extends JerseyTestBase {
 
   public void verifyClusterMetricsXML(String xml) throws JSONException,
       Exception {
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
@@ -607,7 +608,7 @@ public class TestRMWebServices extends JerseyTestBase {
 
   public void verifySchedulerFifoXML(String xml) throws JSONException,
       Exception {
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
@@ -1099,4 +1100,61 @@ public class TestRMWebServices extends JerseyTestBase {
     return  webService;
   }
 
+  @Test
+  public void testClusterSchedulerOverviewFifo() throws JSONException, Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler-overview").accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    JSONObject json = response.getEntity(JSONObject.class);
+    verifyClusterSchedulerOverView(json, "Fifo Scheduler");
+  }
+
+  public static void verifyClusterSchedulerOverView(
+      JSONObject json, String expectedSchedulerType) throws Exception {
+
+    // why json contains 8 elements because we defined 8 fields
+    assertEquals("incorrect number of elements in: " + json, 8, json.length());
+
+    // 1.Verify that the schedulerType is as expected
+    String schedulerType = json.getString("schedulerType");
+    assertEquals(expectedSchedulerType, schedulerType);
+
+    // 2.Verify that schedulingResourceType is as expected
+    String schedulingResourceType = json.getString("schedulingResourceType");
+    assertEquals("memory-mb (unit=Mi),vcores", schedulingResourceType);
+
+    // 3.Verify that minimumAllocation is as expected
+    JSONObject minimumAllocation = json.getJSONObject("minimumAllocation");
+    String minMemory = minimumAllocation.getString("memory");
+    String minVCores = minimumAllocation.getString("vCores");
+    assertEquals("1024", minMemory);
+    assertEquals("1", minVCores);
+
+    // 4.Verify that maximumAllocation is as expected
+    JSONObject maximumAllocation = json.getJSONObject("maximumAllocation");
+    String maxMemory = maximumAllocation.getString("memory");
+    String maxVCores = maximumAllocation.getString("vCores");
+    assertEquals("8192", maxMemory);
+    assertEquals("4", maxVCores);
+
+    // 5.Verify that schedulerBusy is as expected
+    int schedulerBusy = json.getInt("schedulerBusy");
+    assertEquals(-1, schedulerBusy);
+
+    // 6.Verify that rmDispatcherEventQueueSize is as expected
+    int rmDispatcherEventQueueSize = json.getInt("rmDispatcherEventQueueSize");
+    assertEquals(0, rmDispatcherEventQueueSize);
+
+    // 7.Verify that schedulerDispatcherEventQueueSize is as expected
+    int schedulerDispatcherEventQueueSize = json.getInt("schedulerDispatcherEventQueueSize");
+    assertEquals(0, schedulerDispatcherEventQueueSize);
+
+    // 8.Verify that applicationPriority is as expected
+    int applicationPriority = json.getInt("applicationPriority");
+    assertEquals(0, applicationPriority);
+  }
 }

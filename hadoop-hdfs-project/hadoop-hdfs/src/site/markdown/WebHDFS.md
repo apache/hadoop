@@ -517,6 +517,7 @@ See also: [`newlength`](#New_Length), [FileSystem](../../api/org/apache/hadoop/f
             "replication"     : 0,
             "snapshotEnabled" : true
             "type"            : "DIRECTORY"    //enum {FILE, DIRECTORY, SYMLINK}
+            "ecPolicy"        : "RS-6-3-1024k"
           }
         }
 
@@ -2311,6 +2312,26 @@ var fileStatusProperties =
       "description": "The type of the path object.",
       "enum"       : ["FILE", "DIRECTORY", "SYMLINK"],
       "required"   : true
+    },
+    "aclBit":
+    {
+       "description": "Has ACLs set or not.",
+       "type"       : "boolean",
+    },
+    "encBit":
+    {
+       "description": "Is Encrypted or not.",
+       "type"       : "boolean",
+    },
+    "ecBit":
+    {
+       "description": "Is ErasureCoded or not.",
+       "type"       : "boolean",
+    },
+    "ecPolicy":
+    {
+       "description": "The namenode of ErasureCodePolicy.",
+       "type"       : "String",
     }
   }
 };

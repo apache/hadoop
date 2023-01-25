@@ -19,11 +19,13 @@
 package org.apache.hadoop.fs.azurebfs.commit;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestRenameStageFailure;
-
 /**
  * Rename failure logic on ABFS.
  * This will go through the resilient rename operation.
@@ -39,6 +41,11 @@ public class ITestAbfsRenameStageFailure extends TestRenameStageFailure {
 
   public ITestAbfsRenameStageFailure() throws Exception {
     binding = new ABFSContractTestBinding();
+  }
+
+  protected boolean isNamespaceEnabled() throws AzureBlobFileSystemException {
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) getFileSystem();
+    return fs.getAbfsStore().getIsNamespaceEnabled(AbstractAbfsIntegrationTest.getSampleTracingContext(fs, false));
   }
 
   @Override
@@ -58,8 +65,8 @@ public class ITestAbfsRenameStageFailure extends TestRenameStageFailure {
   }
 
   @Override
-  protected boolean requireRenameResilience() {
-    return true;
+  protected boolean requireRenameResilience() throws AzureBlobFileSystemException {
+    return isNamespaceEnabled();
   }
 
   @Override

@@ -438,6 +438,8 @@ public class TestMetricsSystemImpl {
     r = recs.get(1);
     assertTrue("NumActiveSinks should be 3", Iterables.contains(r.metrics(),
                new MetricGaugeInt(MsInfo.NumActiveSinks, 3)));
+    assertTrue("NumAllSinks should be 3",
+        Iterables.contains(r.metrics(), new MetricGaugeInt(MsInfo.NumAllSinks, 3)));
   }
 
   @Test

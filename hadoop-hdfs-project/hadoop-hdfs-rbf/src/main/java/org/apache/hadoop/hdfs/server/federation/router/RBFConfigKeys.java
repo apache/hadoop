@@ -96,6 +96,10 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "heartbeat.interval";
   public static final long DFS_ROUTER_HEARTBEAT_INTERVAL_MS_DEFAULT =
       TimeUnit.SECONDS.toMillis(5);
+  public static final String DFS_ROUTER_HEALTH_MONITOR_TIMEOUT =
+      FEDERATION_ROUTER_PREFIX + "health.monitor.timeout";
+  public static final long DFS_ROUTER_HEALTH_MONITOR_TIMEOUT_DEFAULT =
+      TimeUnit.SECONDS.toMillis(30);
   public static final String DFS_ROUTER_MONITOR_NAMENODE =
       FEDERATION_ROUTER_PREFIX + "monitor.namenode";
   public static final String DFS_ROUTER_MONITOR_NAMENODE_RESOLUTION_ENABLED =
@@ -135,6 +139,12 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "connection.clean.ms";
   public static final long DFS_ROUTER_NAMENODE_CONNECTION_CLEAN_MS_DEFAULT =
       TimeUnit.SECONDS.toMillis(10);
+  public static final String DFS_ROUTER_NAMENODE_ENABLE_MULTIPLE_SOCKET_KEY =
+      FEDERATION_ROUTER_PREFIX + "enable.multiple.socket";
+  public static final boolean DFS_ROUTER_NAMENODE_ENABLE_MULTIPLE_SOCKET_DEFAULT = false;
+  public static final String DFS_ROUTER_MAX_CONCURRENCY_PER_CONNECTION_KEY =
+      FEDERATION_ROUTER_PREFIX + "max.concurrency.per.connection";
+  public static final int DFS_ROUTER_MAX_CONCURRENCY_PER_CONNECTION_DEFAULT = 1;
 
   // HDFS Router RPC client
   public static final String DFS_ROUTER_CLIENT_THREADS_SIZE =
@@ -180,6 +190,16 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_STORE_ENABLE =
       FEDERATION_STORE_PREFIX + "enable";
   public static final boolean DFS_ROUTER_STORE_ENABLE_DEFAULT = true;
+
+  public static final String DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY =
+      FEDERATION_ROUTER_PREFIX + "observer.read.default";
+  public static final boolean DFS_ROUTER_OBSERVER_READ_DEFAULT_VALUE = false;
+  public static final String DFS_ROUTER_OBSERVER_READ_OVERRIDES =
+      FEDERATION_ROUTER_PREFIX + "observer.read.overrides";
+
+  public static final String DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE =
+      FEDERATION_ROUTER_PREFIX + "observer.federated.state.propagation.maxsize";
+  public static final int DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE_DEFAULT = 5;
 
   public static final String FEDERATION_STORE_SERIALIZER_CLASS =
       FEDERATION_STORE_PREFIX + "serializer";
@@ -315,6 +335,9 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "dn-report.cache-expire";
   public static final long DN_REPORT_CACHE_EXPIRE_MS_DEFAULT =
       TimeUnit.SECONDS.toMillis(10);
+  public static final String DFS_ROUTER_ENABLE_GET_DN_USAGE_KEY =
+      FEDERATION_ROUTER_PREFIX + "enable.get.dn.usage";
+  public static final boolean DFS_ROUTER_ENABLE_GET_DN_USAGE_DEFAULT = true;
 
   // HDFS Router-based federation quota
   public static final String DFS_ROUTER_QUOTA_ENABLE =
@@ -354,6 +377,10 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       NoRouterRpcFairnessPolicyController.class;
   public static final String DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX =
       FEDERATION_ROUTER_FAIRNESS_PREFIX + "handler.count.";
+  public static final String DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT =
+      FEDERATION_ROUTER_FAIRNESS_PREFIX + "acquire.timeout";
+  public static final long   DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT_DEFAULT =
+      TimeUnit.SECONDS.toMillis(1);
 
   // HDFS Router Federation Rename.
   public static final String DFS_ROUTER_FEDERATION_RENAME_PREFIX =
