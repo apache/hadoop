@@ -605,8 +605,8 @@ on the filesystem.
 
 ###  `Path getEnclosingRoot(Path p)`
 
-This method is used to find a root directory for a path given. This is useful for creating 
-staging and temp directories in the same enclosing root directory. There are constraints around how 
+This method is used to find a root directory for a path given. This is useful for creating
+staging and temp directories in the same enclosing root directory. There are constraints around how
 renames are allowed to atomically occur (ex. across hdfs volumes or across encryption zones).
 
 For any two paths p1 and p2 that do not have the same enclosing root, `rename(p1, p2)` is expected to fail or will not
@@ -617,7 +617,7 @@ The following statement is always true:
 
 #### Preconditions
 
-The path does not have to exist, but the path does need to be valid and reconcilable by the filesystem 
+The path does not have to exist, but the path does need to be valid and reconcilable by the filesystem
 * if a linkfallback is used all paths are reconcilable
 * if a linkfallback is not used there must be a mount point covering the path
 
