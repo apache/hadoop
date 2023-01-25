@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Test;
 
@@ -291,7 +291,7 @@ public abstract class QueueACLsTestBase extends ACLsTestBase {
     ApplicationId applicationId =
         submitterClient.getNewApplication(newAppRequest).getApplicationId();
 
-    Resource resource = BuilderUtils.newResource(1024, 1);
+    Resource resource = Resources.createResource(1024);
     Map<ApplicationAccessType, String> acls = createACLs(submitter, setupACLs);
     ContainerLaunchContext amContainerSpec =
         ContainerLaunchContext.newInstance(null, null, null, null, null, acls);
