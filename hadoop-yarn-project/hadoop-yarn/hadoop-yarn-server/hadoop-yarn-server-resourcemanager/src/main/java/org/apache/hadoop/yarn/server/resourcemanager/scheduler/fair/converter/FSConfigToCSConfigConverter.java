@@ -501,7 +501,7 @@ public class FSConfigToCSConfigConverter {
   }
 
   @VisibleForTesting
-  Configuration getCapacitySchedulerConfig() {
+  CapacitySchedulerConfiguration getCapacitySchedulerConfig() {
     return capacitySchedulerConfig;
   }
 
