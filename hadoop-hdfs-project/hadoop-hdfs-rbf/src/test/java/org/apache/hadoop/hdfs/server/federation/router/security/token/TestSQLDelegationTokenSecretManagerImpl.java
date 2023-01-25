@@ -43,7 +43,7 @@ import org.junit.Test;
 public class TestSQLDelegationTokenSecretManagerImpl {
   private static final String CONNECTION_URL = "jdbc:derby:memory:TokenStore";
   private static final int TEST_MAX_RETRIES = 3;
-  private static Configuration CONF;
+  private static Configuration conf;
 
   @Before
   public void init() throws SQLException {
@@ -59,13 +59,13 @@ public class TestSQLDelegationTokenSecretManagerImpl {
   public static void initDatabase() throws SQLException {
     DriverManager.getConnection(CONNECTION_URL + ";create=true");
 
-    CONF = new Configuration();
-    CONF.set(SQLConnectionFactory.CONNECTION_URL, CONNECTION_URL);
-    CONF.set(SQLConnectionFactory.CONNECTION_USERNAME, "testuser");
-    CONF.set(SQLConnectionFactory.CONNECTION_PASSWORD, "testpassword");
-    CONF.set(SQLConnectionFactory.CONNECTION_DRIVER, "org.apache.derby.jdbc.EmbeddedDriver");
-    CONF.setInt(SQLSecretManagerRetriableHandlerImpl.MAX_RETRIES, TEST_MAX_RETRIES);
-    CONF.setInt(SQLSecretManagerRetriableHandlerImpl.RETRY_SLEEP_TIME_MS, 10);
+    conf = new Configuration();
+    conf.set(SQLConnectionFactory.CONNECTION_URL, CONNECTION_URL);
+    conf.set(SQLConnectionFactory.CONNECTION_USERNAME, "testuser");
+    conf.set(SQLConnectionFactory.CONNECTION_PASSWORD, "testpassword");
+    conf.set(SQLConnectionFactory.CONNECTION_DRIVER, "org.apache.derby.jdbc.EmbeddedDriver");
+    conf.setInt(SQLSecretManagerRetriableHandlerImpl.MAX_RETRIES, TEST_MAX_RETRIES);
+    conf.setInt(SQLSecretManagerRetriableHandlerImpl.RETRY_SLEEP_TIME_MS, 10);
   }
 
   @AfterClass
@@ -123,14 +123,14 @@ public class TestSQLDelegationTokenSecretManagerImpl {
     DelegationTokenManager tokenManager3 = createTokenManager();
 
     try {
-    for (int i = 0; i < tokensPerManager; i++) {
-      allocateSequenceNum(tokenManager1, sequenceNums1);
-      allocateSequenceNum(tokenManager2, sequenceNums2);
-      allocateSequenceNum(tokenManager3, sequenceNums3);
-      sequenceNums.addAll(sequenceNums1);
-      sequenceNums.addAll(sequenceNums2);
-      sequenceNums.addAll(sequenceNums3);
-    }
+      for (int i = 0; i < tokensPerManager; i++) {
+        allocateSequenceNum(tokenManager1, sequenceNums1);
+        allocateSequenceNum(tokenManager2, sequenceNums2);
+        allocateSequenceNum(tokenManager3, sequenceNums3);
+        sequenceNums.addAll(sequenceNums1);
+        sequenceNums.addAll(sequenceNums2);
+        sequenceNums.addAll(sequenceNums3);
+      }
 
       Assert.assertEquals("Verify that all tokens were created with unique sequence numbers",
           tokensPerManager * 3, sequenceNums.size());
@@ -246,17 +246,17 @@ public class TestSQLDelegationTokenSecretManagerImpl {
 
   @Test
   public void testHikariConfigs() {
-    HikariDataSourceConnectionFactory factory1 = new HikariDataSourceConnectionFactory(CONF);
+    HikariDataSourceConnectionFactory factory1 = new HikariDataSourceConnectionFactory(conf);
     int defaultMaximumPoolSize = factory1.getDataSource().getMaximumPoolSize();
     factory1.shutdown();
 
     // Changing default maximumPoolSize
-    Configuration conf = new Configuration(CONF);
-    conf.setInt(HikariDataSourceConnectionFactory.HIKARI_PROPS + "maximumPoolSize",
+    Configuration hikariConf = new Configuration(conf);
+    hikariConf.setInt(HikariDataSourceConnectionFactory.HIKARI_PROPS + "maximumPoolSize",
         defaultMaximumPoolSize + 1);
 
     // Verifying property is correctly set in datasource
-    HikariDataSourceConnectionFactory factory2 = new HikariDataSourceConnectionFactory(conf);
+    HikariDataSourceConnectionFactory factory2 = new HikariDataSourceConnectionFactory(hikariConf);
     Assert.assertEquals(factory2.getDataSource().getMaximumPoolSize(),
         defaultMaximumPoolSize + 1);
     factory2.shutdown();
@@ -401,9 +401,9 @@ public class TestSQLDelegationTokenSecretManagerImpl {
       return keyRollLock;
     }
 
-    public TestDelegationTokenSecretManager() {
-      super(CONF, new TestConnectionFactory(CONF),
-          SQLSecretManagerRetriableHandlerImpl.getInstance(CONF, new TestRetryHandler()));
+    TestDelegationTokenSecretManager() {
+      super(conf, new TestConnectionFactory(conf),
+          SQLSecretManagerRetriableHandlerImpl.getInstance(conf, new TestRetryHandler()));
     }
 
     // Tests can call this method to prevent delegation keys from
@@ -435,7 +435,7 @@ public class TestSQLDelegationTokenSecretManagerImpl {
 
   static class TestConnectionFactory extends HikariDataSourceConnectionFactory {
     private boolean readOnly = false;
-    public TestConnectionFactory(Configuration conf) {
+    TestConnectionFactory(Configuration conf) {
       super(conf);
     }
 

@@ -30,7 +30,7 @@ import org.apache.hadoop.security.token.delegation.SQLDelegationTokenSecretManag
 
 
 /**
- * Interface to provide SQL connections to the {@link SQLDelegationTokenSecretManagerImpl}
+ * Interface to provide SQL connections to the {@link SQLDelegationTokenSecretManagerImpl}.
  */
 public interface SQLConnectionFactory {
   String CONNECTION_URL = SQLDelegationTokenSecretManager.SQL_DTSM_CONF_PREFIX
@@ -58,7 +58,7 @@ public interface SQLConnectionFactory {
 class MysqlDataSourceConnectionFactory implements SQLConnectionFactory {
   private final MysqlDataSource dataSource;
 
-  public MysqlDataSourceConnectionFactory(Configuration conf) {
+  MysqlDataSourceConnectionFactory(Configuration conf) {
     this.dataSource = new MysqlDataSource();
     this.dataSource.setUrl(conf.get(CONNECTION_URL));
     this.dataSource.setUser(conf.get(CONNECTION_USERNAME));
@@ -84,7 +84,7 @@ class HikariDataSourceConnectionFactory implements SQLConnectionFactory {
       + "connection.hikari.";
   private final HikariDataSource dataSource;
 
-  public HikariDataSourceConnectionFactory(Configuration conf) {
+  HikariDataSourceConnectionFactory(Configuration conf) {
     Properties properties = new Properties();
     properties.setProperty("jdbcUrl", conf.get(CONNECTION_URL));
     properties.setProperty("username", conf.get(CONNECTION_USERNAME));

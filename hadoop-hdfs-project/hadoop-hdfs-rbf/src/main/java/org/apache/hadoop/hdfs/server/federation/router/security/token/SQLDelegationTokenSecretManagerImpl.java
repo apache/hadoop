@@ -95,7 +95,7 @@ public class SQLDelegationTokenSecretManagerImpl
     retryHandler.execute(() -> {
       try (Connection connection = connectionFactory.getConnection(true);
           PreparedStatement statement = connection.prepareStatement(
-            "INSERT INTO Tokens (sequenceNum, tokenIdentifier, tokenInfo) VALUES (?, ?, ?)")) {
+              "INSERT INTO Tokens (sequenceNum, tokenIdentifier, tokenInfo) VALUES (?, ?, ?)")) {
         statement.setInt(1, sequenceNum);
         statement.setBytes(2, tokenIdentifier);
         statement.setBytes(3, tokenInfo);

@@ -108,7 +108,7 @@ class SQLSecretManagerRetriableHandlerImpl implements SQLSecretManagerRetriableH
    * Class used to identify errors that can be retried.
    */
   static class SQLSecretManagerRetriableException extends SQLException {
-    public SQLSecretManagerRetriableException(Throwable cause) {
+    SQLSecretManagerRetriableException(Throwable cause) {
       super(cause);
     }
   }
