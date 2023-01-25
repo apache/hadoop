@@ -21,87 +21,102 @@
 USE [FederationStateStore]
 GO
 
-IF OBJECT_ID ( '[sp_addApplicationHomeSubCluster]', 'P' ) IS NOT NULL
+IF OBJECT_ID ('[sp_addApplicationHomeSubCluster]', 'P') IS NOT NULL
   DROP PROCEDURE [sp_addApplicationHomeSubCluster];
 GO
 
-IF OBJECT_ID ( '[sp_updateApplicationHomeSubCluster]', 'P' ) IS NOT NULL
+IF OBJECT_ID ('[sp_updateApplicationHomeSubCluster]', 'P') IS NOT NULL
   DROP PROCEDURE [sp_updateApplicationHomeSubCluster];
 GO
 
-IF OBJECT_ID ( '[sp_getApplicationsHomeSubCluster]', 'P' ) IS NOT NULL
+IF OBJECT_ID ('[sp_getApplicationsHomeSubCluster]', 'P') IS NOT NULL
   DROP PROCEDURE [sp_getApplicationsHomeSubCluster];
 GO
 
-IF OBJECT_ID ( '[sp_getApplicationHomeSubCluster]', 'P' ) IS NOT NULL
+IF OBJECT_ID ('[sp_getApplicationHomeSubCluster]', 'P') IS NOT NULL
   DROP PROCEDURE [sp_getApplicationHomeSubCluster];
 GO
 
-IF OBJECT_ID ( '[sp_deleteApplicationHomeSubCluster]', 'P' ) IS NOT NULL
+IF OBJECT_ID ('[sp_deleteApplicationHomeSubCluster]', 'P') IS NOT NULL
   DROP PROCEDURE [sp_deleteApplicationHomeSubCluster];
 GO
 
-IF OBJECT_ID ( '[sp_registerSubCluster]', 'P' ) IS NOT NULL
+IF OBJECT_ID ('[sp_registerSubCluster]', 'P') IS NOT NULL
   DROP PROCEDURE [sp_registerSubCluster];
 GO
 
-IF OBJECT_ID ( '[sp_getSubClusters]', 'P' ) IS NOT NULL
+IF OBJECT_ID ('[sp_getSubClusters]', 'P') IS NOT NULL
   DROP PROCEDURE [sp_getSubClusters];
 GO
 
-IF OBJECT_ID ( '[sp_getSubCluster]', 'P' ) IS NOT NULL
+IF OBJECT_ID ('[sp_getSubCluster]', 'P') IS NOT NULL
   DROP PROCEDURE [sp_getSubCluster];
 GO
 
-IF OBJECT_ID ( '[sp_subClusterHeartbeat]', 'P' ) IS NOT NULL
-  DROP PROCEDURE IF EXISTS [sp_subClusterHeartbeat];
+IF OBJECT_ID ('[sp_subClusterHeartbeat]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_subClusterHeartbeat];
 GO
 
-IF OBJECT_ID ( '[sp_deregisterSubCluster]', 'P' ) IS NOT NULL
-  DROP PROCEDURE IF EXISTS [sp_deregisterSubCluster];
+IF OBJECT_ID ('[sp_deregisterSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_deregisterSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_setPolicyConfiguration];
+IF OBJECT_ID ('[sp_setPolicyConfiguration]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_setPolicyConfiguration];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getPolicyConfiguration];
+IF OBJECT_ID ('[sp_getPolicyConfiguration]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getPolicyConfiguration];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getPoliciesConfigurations];
+IF OBJECT_ID ('[sp_getPoliciesConfigurations]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getPoliciesConfigurations];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_addApplicationHomeSubCluster];
+IF OBJECT_ID ('[sp_addReservationHomeSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_addReservationHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_updateReservationHomeSubCluster];
+IF OBJECT_ID ('[sp_updateReservationHomeSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_updateReservationHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getReservationsHomeSubCluster];
+IF OBJECT_ID ('[sp_getReservationsHomeSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getReservationsHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getReservationHomeSubCluster];
+IF OBJECT_ID ('[sp_getReservationHomeSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getReservationHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_deleteReservationHomeSubCluster];
+IF OBJECT_ID ('[sp_deleteReservationHomeSubCluster]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_deleteReservationHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_addMasterKey];
+IF OBJECT_ID ('[sp_addMasterKey]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_addMasterKey];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getMasterKey];
+IF OBJECT_ID ('[sp_getMasterKey]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getMasterKey];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_deleteMasterKey];
+IF OBJECT_ID ('[sp_deleteMasterKey]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_deleteMasterKey];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_addDelegationToken];
+IF OBJECT_ID ('[sp_addDelegationToken]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_addDelegationToken];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getDelegationToken];
+IF OBJECT_ID ('[sp_getDelegationToken]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getDelegationToken];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_updateDelegationToken];
+IF OBJECT_ID ('[sp_updateDelegationToken]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_updateDelegationToken];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_deleteDelegationToken];
+IF OBJECT_ID ('[sp_deleteDelegationToken]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_deleteDelegationToken];
 GO

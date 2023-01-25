@@ -33,6 +33,10 @@ IF OBJECT_ID ( '[policies]', 'U' ) IS NOT NULL
   DROP TABLE [policies];
 GO
 
+IF OBJECT_ID ( '[applicationsHomeSubCluster]', 'U' ) IS NOT NULL
+  DROP TABLE [applicationsHomeSubCluster];
+GO
+
 IF OBJECT_ID ( '[reservationsHomeSubCluster]', 'U' ) IS NOT NULL
   DROP TABLE [reservationsHomeSubCluster];
 GO
