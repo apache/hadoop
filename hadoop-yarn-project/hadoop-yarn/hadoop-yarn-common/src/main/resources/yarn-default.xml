@@ -5117,4 +5117,36 @@
     </description>
   </property>
 
+  <property>
+    <description>
+      The number of threads to use for the Router scheduled executor service.
+    </description>
+    <name>yarn.router.subcluster.cleaner.interval.time</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+      The interval at which the subClusterCleaner runs. Default is 1mins.
+    </description>
+    <name>yarn.router.subcluster.cleaner.interval.time</name>
+    <value>1m</value>
+  </property>
+
+  <property>
+    <description>
+      SubCluster heartbeat timeout. Default is 30mins.
+    </description>
+    <name>yarn.router.subcluster.heartbeat.expiration.time</name>
+    <value>30m</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to enable deregisterSubCluster. Default is true.
+    </description>
+    <name>yarn.router.deregister.subcluster.enabled</name>
+    <value>true</value>
+  </property>
+
 </configuration>
