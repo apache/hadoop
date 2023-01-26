@@ -205,7 +205,7 @@ public class TestDFSInputStreamBlockLocations {
   }
 
   /**
-   * If the ignoreList contains all datanodes, the ignoredList should be cleared to take advantage 
+   * If the ignoreList contains all datanodes, the ignoredList should be cleared to take advantage
    * of retries built into chooseDataNode. This is needed for hedged reads
    * @throws IOException
    */
