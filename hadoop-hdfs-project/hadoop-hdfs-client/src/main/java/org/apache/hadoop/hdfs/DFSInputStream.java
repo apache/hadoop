@@ -949,7 +949,8 @@ public class DFSInputStream extends FSInputStream
    * @return Returns chosen DNAddrPair; Can be null if refetchIfRequired is
    * false.
    */
-  private DNAddrPair chooseDataNode(LocatedBlock block,
+  @VisibleForTesting
+  DNAddrPair chooseDataNode(LocatedBlock block,
       Collection<DatanodeInfo> ignoredNodes, boolean refetchIfRequired)
       throws IOException {
     while (true) {
