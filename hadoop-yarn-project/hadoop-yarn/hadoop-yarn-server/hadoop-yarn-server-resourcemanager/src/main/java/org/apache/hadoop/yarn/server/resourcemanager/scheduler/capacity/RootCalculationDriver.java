@@ -39,14 +39,18 @@ public final class RootCalculationDriver extends ResourceCalculationDriver {
   @Override
   public void calculateResources() {
     for (String label : queue.getConfiguredNodeLabels()) {
-      for (QueueCapacityVector.QueueCapacityVectorEntry capacityVectorEntry : queue.getConfiguredCapacityVector(label)) {
+      for (QueueCapacityVector.QueueCapacityVectorEntry capacityVectorEntry :
+          queue.getConfiguredCapacityVector(label)) {
         String resourceName = capacityVectorEntry.getResourceName();
 
         CalculationContext context = new CalculationContext(resourceName, PERCENTAGE, queue);
         double minimumResource = rootCalculator.calculateMinimumResource(this, context, label);
         double maximumResource = rootCalculator.calculateMaximumResource(this, context, label);
-        long roundedMinResource = (long) roundingStrategy.getRoundedResource(minimumResource, capacityVectorEntry);
-        long roundedMaxResource = (long) roundingStrategy.getRoundedResource(maximumResource, queue.getConfiguredMaxCapacityVector(label).getResource(resourceName));
+        long roundedMinResource = (long) roundingStrategy
+            .getRoundedResource(minimumResource, capacityVectorEntry);
+        long roundedMaxResource = (long) roundingStrategy
+            .getRoundedResource(maximumResource,
+                queue.getConfiguredMaxCapacityVector(label).getResource(resourceName));
         queue.getQueueResourceQuotas().getEffectiveMinResource(label).setResourceValue(
             resourceName, roundedMinResource);
         queue.getQueueResourceQuotas().getEffectiveMaxResource(label).setResourceValue(

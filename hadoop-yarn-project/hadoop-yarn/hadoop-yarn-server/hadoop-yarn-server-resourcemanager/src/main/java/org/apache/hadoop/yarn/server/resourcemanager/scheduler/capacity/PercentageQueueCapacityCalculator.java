@@ -24,25 +24,29 @@ public class PercentageQueueCapacityCalculator extends AbstractQueueCapacityCalc
 
   @Override
   public double calculateMinimumResource(
-      ResourceCalculationDriver resourceCalculationDriver, CalculationContext context, String label) {
+      ResourceCalculationDriver resourceCalculationDriver, CalculationContext context,
+      String label) {
     String resourceName = context.getResourceName();
 
-    double parentAbsoluteCapacity = resourceCalculationDriver.getParentAbsoluteMinCapacity(label, resourceName);
-    double remainingPerEffectiveResourceRatio = resourceCalculationDriver.getRemainingRatioOfResource(
-        label, resourceName);
+    double parentAbsoluteCapacity = resourceCalculationDriver.getParentAbsoluteMinCapacity(label,
+        resourceName);
+    double remainingPerEffectiveResourceRatio =
+        resourceCalculationDriver.getRemainingRatioOfResource(label, resourceName);
     double absoluteCapacity = parentAbsoluteCapacity * remainingPerEffectiveResourceRatio
         * context.getCurrentMinimumCapacityEntry(label).getResourceValue() / 100;
 
     return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label)
         .getResourceValue(resourceName) * absoluteCapacity;
-}
+  }
 
   @Override
   public double calculateMaximumResource(
-      ResourceCalculationDriver resourceCalculationDriver, CalculationContext context, String label) {
+      ResourceCalculationDriver resourceCalculationDriver, CalculationContext context,
+      String label) {
     String resourceName = context.getResourceName();
 
-    double parentAbsoluteMaxCapacity = resourceCalculationDriver.getParentAbsoluteMaxCapacity(label, resourceName);
+    double parentAbsoluteMaxCapacity =
+        resourceCalculationDriver.getParentAbsoluteMaxCapacity(label, resourceName);
     double absoluteMaxCapacity = parentAbsoluteMaxCapacity
         * context.getCurrentMaximumCapacityEntry(label).getResourceValue() / 100;
 
@@ -56,7 +60,8 @@ public class PercentageQueueCapacityCalculator extends AbstractQueueCapacityCalc
   }
 
   @Override
-  public void updateCapacitiesAfterCalculation(ResourceCalculationDriver resourceCalculationDriver, CSQueue queue, String label) {
+  public void updateCapacitiesAfterCalculation(ResourceCalculationDriver resourceCalculationDriver,
+      CSQueue queue, String label) {
     ((AbstractCSQueue) queue).updateAbsoluteCapacities();
   }
 

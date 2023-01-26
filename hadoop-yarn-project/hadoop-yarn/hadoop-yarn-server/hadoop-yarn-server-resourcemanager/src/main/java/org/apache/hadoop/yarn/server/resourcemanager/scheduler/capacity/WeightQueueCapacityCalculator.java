@@ -33,8 +33,8 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
       for (String label : childQueue.getConfiguredNodeLabels()) {
         for (String resourceName : childQueue.getConfiguredCapacityVector(label)
             .getResourceNamesByCapacityType(getCapacityType())) {
-              resourceCalculationDriver.incrementWeight(label, resourceName, childQueue
-                  .getConfiguredCapacityVector(label).getResource(resourceName).getResourceValue());
+          resourceCalculationDriver.incrementWeight(label, resourceName, childQueue
+              .getConfiguredCapacityVector(label).getResource(resourceName).getResourceValue());
         }
       }
     }
@@ -45,11 +45,11 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
                                         CalculationContext context,
                                         String label) {
     String resourceName = context.getResourceName();
-    double normalizedWeight = context.getCurrentMinimumCapacityEntry(label)
-        .getResourceValue() / resourceCalculationDriver.getSumWeightsByResource(label, resourceName);
+    double normalizedWeight = context.getCurrentMinimumCapacityEntry(label).getResourceValue() /
+        resourceCalculationDriver.getSumWeightsByResource(label, resourceName);
 
-    double remainingResource = resourceCalculationDriver.getBatchRemainingResource(label).getValue(
-        resourceName);
+    double remainingResource = resourceCalculationDriver.getBatchRemainingResource(label)
+        .getValue(resourceName);
 
     // Due to rounding loss it is better to use all remaining resources if no other resource uses
     // weight
@@ -73,7 +73,8 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
                                         CalculationContext context,
                                         String label) {
     throw new IllegalStateException("Resource " + context.getCurrentMinimumCapacityEntry(
-        label).getResourceName() + " has " + "WEIGHT maximum capacity type, which is not supported");
+        label).getResourceName() +
+        " has " + "WEIGHT maximum capacity type, which is not supported");
   }
 
   @Override
@@ -88,13 +89,15 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
 
     Collection<String> resourceNames = getResourceNames(queue, label);
     for (String resourceName : resourceNames) {
-      double sumBranchWeight = resourceCalculationDriver.getSumWeightsByResource(label, resourceName);
+      double sumBranchWeight = resourceCalculationDriver.getSumWeightsByResource(label,
+          resourceName);
       double capacity =  queue.getConfiguredCapacityVector(
           label).getResource(resourceName).getResourceValue() / sumBranchWeight;
       sumCapacityPerResource += capacity;
     }
 
-    queue.getQueueCapacities().setNormalizedWeight(label, (float) (sumCapacityPerResource / resourceNames.size()));
+    queue.getQueueCapacities().setNormalizedWeight(label,
+        (float) (sumCapacityPerResource / resourceNames.size()));
     ((AbstractCSQueue) queue).updateAbsoluteCapacities();
   }
 }

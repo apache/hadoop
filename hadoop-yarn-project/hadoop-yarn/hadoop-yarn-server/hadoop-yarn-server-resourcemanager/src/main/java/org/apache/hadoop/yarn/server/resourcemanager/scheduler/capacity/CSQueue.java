@@ -458,14 +458,14 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   QueueCapacityVector getConfiguredMaxCapacityVector(String label);
 
   /**
-   * Sets the configured minimum capacity vector to a specific value
+   * Sets the configured minimum capacity vector to a specific value.
    * @param label node label (partition)
    * @param minCapacityVector capacity vector
    */
   void setConfiguredMinCapacityVector(String label, QueueCapacityVector minCapacityVector);
 
   /**
-   * Sets the configured maximum capacity vector to a specific value
+   * Sets the configured maximum capacity vector to a specific value.
    * @param label node label (partition)
    * @param maxCapacityVector capacity vector
    */

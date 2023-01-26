@@ -2732,7 +2732,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       String propertyName = CapacitySchedulerConfiguration.getNodeLabelPrefix(
           queuePath, label) + CapacitySchedulerConfiguration.MAXIMUM_CAPACITY;
       String capacityString = get(propertyName);
-      QueueCapacityVector capacityVector = queueCapacityConfigParser.parse(capacityString, queuePath);
+      QueueCapacityVector capacityVector = queueCapacityConfigParser.parse(capacityString,
+          queuePath);
       if (capacityVector.isEmpty()) {
         capacityVector = defaultVector;
       }

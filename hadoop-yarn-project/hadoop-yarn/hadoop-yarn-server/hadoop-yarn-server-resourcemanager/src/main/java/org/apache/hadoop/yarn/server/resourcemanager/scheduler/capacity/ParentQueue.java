@@ -1212,7 +1212,8 @@ public class ParentQueue extends AbstractCSQueue {
   }
 
   @Override
-  public void refreshAfterResourceCalculation(Resource clusterResource, ResourceLimits resourceLimits) {
+  public void refreshAfterResourceCalculation(Resource clusterResource,
+      ResourceLimits resourceLimits) {
     CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
         this, labelManager, null);
     // Update configured capacity/max-capacity for default partition only

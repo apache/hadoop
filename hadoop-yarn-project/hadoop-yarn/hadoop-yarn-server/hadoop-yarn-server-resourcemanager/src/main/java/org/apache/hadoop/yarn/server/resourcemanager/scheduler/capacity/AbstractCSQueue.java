@@ -381,7 +381,9 @@ public abstract class AbstractCSQueue implements CSQueue {
           .parseConfiguredResourceVector(queuePath.getFullPath(),
               this.queueNodeLabelsSettings.getConfiguredNodeLabels());
       this.configuredMaxCapacityVectors = configuration
-          .parseConfiguredMaximumCapacityVector(queuePath.getFullPath(), this.queueNodeLabelsSettings.getConfiguredNodeLabels(), QueueCapacityVector.newInstance());
+          .parseConfiguredMaximumCapacityVector(queuePath.getFullPath(),
+              this.queueNodeLabelsSettings.getConfiguredNodeLabels(),
+              QueueCapacityVector.newInstance());
       // Update metrics
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
           this, labelManager, null);

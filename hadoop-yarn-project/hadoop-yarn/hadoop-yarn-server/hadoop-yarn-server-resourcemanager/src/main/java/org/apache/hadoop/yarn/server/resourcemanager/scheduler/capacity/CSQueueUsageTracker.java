@@ -21,9 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class CSQueueUsageTracker {
   private final CSQueueMetrics metrics;
   private int numContainers;

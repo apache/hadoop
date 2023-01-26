@@ -30,7 +30,7 @@ public class TestUniformQueueResourceCalculation extends CapacitySchedulerQueueC
 
   private static final Resource QUEUE_A_RES = Resource.newInstance(80 * GB,
       10);
-  private static final Resource QUEUE_B_RES = Resource.newInstance( 170 * GB,
+  private static final Resource QUEUE_B_RES = Resource.newInstance(170 * GB,
       30);
   private static final Resource QUEUE_A1_RES = Resource.newInstance(50 * GB,
       4);
