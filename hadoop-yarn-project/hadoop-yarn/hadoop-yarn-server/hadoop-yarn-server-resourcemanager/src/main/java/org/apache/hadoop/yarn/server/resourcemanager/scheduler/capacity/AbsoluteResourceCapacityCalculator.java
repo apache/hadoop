@@ -36,7 +36,8 @@ public class AbsoluteResourceCapacityCalculator extends AbstractQueueCapacityCal
 
   @Override
   public double calculateMinimumResource(
-      ResourceCalculationDriver resourceCalculationDriver, CalculationContext context, String label) {
+      ResourceCalculationDriver resourceCalculationDriver, CalculationContext context,
+      String label) {
     String resourceName = context.getResourceName();
     double normalizedRatio = resourceCalculationDriver.getNormalizedResourceRatios().getOrDefault(
         label, ResourceVector.of(1)).getValue(resourceName);
@@ -49,7 +50,8 @@ public class AbsoluteResourceCapacityCalculator extends AbstractQueueCapacityCal
 
   @Override
   public double calculateMaximumResource(
-       ResourceCalculationDriver resourceCalculationDriver, CalculationContext context, String label) {
+      ResourceCalculationDriver resourceCalculationDriver, CalculationContext context,
+      String label) {
     return context.getCurrentMaximumCapacityEntry(label).getResourceValue();
   }
 

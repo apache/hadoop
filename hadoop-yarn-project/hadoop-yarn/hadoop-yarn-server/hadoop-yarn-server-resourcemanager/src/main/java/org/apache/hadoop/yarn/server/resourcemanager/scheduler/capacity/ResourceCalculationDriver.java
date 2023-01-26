@@ -188,8 +188,10 @@ public class ResourceCalculationDriver {
   public void calculateResources() {
     // Reset both remaining resource storage to the parent's available resource
     for (String label : queue.getConfiguredNodeLabels()) {
-      overallRemainingResourcePerLabel.put(label, ResourceVector.of(queue.getEffectiveCapacity(label)));
-      batchRemainingResourcePerLabel.put(label, ResourceVector.of(queue.getEffectiveCapacity(label)));
+      overallRemainingResourcePerLabel.put(label,
+          ResourceVector.of(queue.getEffectiveCapacity(label)));
+      batchRemainingResourcePerLabel.put(label,
+          ResourceVector.of(queue.getEffectiveCapacity(label)));
     }
 
     for (AbstractQueueCapacityCalculator capacityCalculator : calculators.values()) {
@@ -199,13 +201,15 @@ public class ResourceCalculationDriver {
     for (String resourceName : definedResources) {
       for (ResourceUnitCapacityType capacityType : CALCULATOR_PRECEDENCE) {
         for (CSQueue childQueue : getChildQueues()) {
-          CalculationContext context = new CalculationContext(resourceName, capacityType, childQueue);
+          CalculationContext context = new CalculationContext(resourceName, capacityType,
+              childQueue);
           calculateResourceOnChild(context);
         }
 
         // Flush aggregated used resource by labels at the end of a calculator phase
         for (Map.Entry<String, Double> entry : usedResourceByCurrentCalculatorPerLabel.entrySet()) {
-          batchRemainingResourcePerLabel.get(entry.getKey()).decrement(resourceName, entry.getValue());
+          batchRemainingResourcePerLabel.get(entry.getKey()).decrement(resourceName,
+              entry.getValue());
         }
 
         usedResourceByCurrentCalculatorPerLabel = new HashMap<>();
@@ -219,8 +223,8 @@ public class ResourceCalculationDriver {
     context.getQueue().getWriteLock().lock();
     try {
       for (String label : context.getQueue().getConfiguredNodeLabels()) {
-        if (!context.getQueue().getConfiguredCapacityVector(label).isResourceOfType(context.getResourceName(),
-            context.getCapacityType())) {
+        if (!context.getQueue().getConfiguredCapacityVector(label).isResourceOfType(
+            context.getResourceName(), context.getCapacityType())) {
           continue;
         }
 
@@ -233,7 +237,8 @@ public class ResourceCalculationDriver {
             0d);
         double resourceUsedByLabel = aggregatedUsedResource + usedResourceByChild;
 
-        overallRemainingResourcePerLabel.get(label).decrement(context.getResourceName(), usedResourceByChild);
+        overallRemainingResourcePerLabel.get(label).decrement(context.getResourceName(),
+            usedResourceByChild);
         usedResourceByCurrentCalculatorPerLabel.put(label, resourceUsedByLabel);
       }
     } finally {
@@ -249,13 +254,16 @@ public class ResourceCalculationDriver {
     AbstractQueueCapacityCalculator maximumCapacityCalculator = calculators.get(
         maximumCapacityVectorEntry.getVectorResourceType());
 
-    double minimumResource = calculators.get(context.getCapacityType()).calculateMinimumResource(this, context, label);
-    double maximumResource = maximumCapacityCalculator.calculateMaximumResource(this, context, label);
+    double minimumResource =
+        calculators.get(context.getCapacityType()).calculateMinimumResource(this, context, label);
+    double maximumResource = maximumCapacityCalculator.calculateMaximumResource(this, context,
+        label);
 
     minimumResource = roundingStrategy.getRoundedResource(minimumResource, capacityVectorEntry);
     maximumResource = roundingStrategy.getRoundedResource(maximumResource,
         maximumCapacityVectorEntry);
-    Pair<Double, Double> resources = validateCalculatedResources(context, label, new ImmutablePair<>(
+    Pair<Double, Double> resources = validateCalculatedResources(context, label,
+        new ImmutablePair<>(
         minimumResource, maximumResource));
     minimumResource = resources.getLeft();
     maximumResource = resources.getRight();
@@ -271,8 +279,8 @@ public class ResourceCalculationDriver {
   private Pair<Double, Double> validateCalculatedResources(CalculationContext context,
       String label, Pair<Double, Double> calculatedResources) {
     double minimumResource = calculatedResources.getLeft();
-    long minimumMemoryResource = context.getQueue().getQueueResourceQuotas().getEffectiveMinResource(label)
-        .getMemorySize();
+    long minimumMemoryResource =
+        context.getQueue().getQueueResourceQuotas().getEffectiveMinResource(label).getMemorySize();
 
     double remainingResourceUnderParent = overallRemainingResourcePerLabel.get(label).getValue(
         context.getResourceName());
@@ -287,8 +295,8 @@ public class ResourceCalculationDriver {
     }
 
     if (maximumResource != 0 && maximumResource > parentMaximumResource) {
-      updateContext.addUpdateWarning(QueueUpdateWarningType.QUEUE_MAX_RESOURCE_EXCEEDS_PARENT.ofQueue(
-          context.getQueue().getQueuePath()));
+      updateContext.addUpdateWarning(QueueUpdateWarningType.QUEUE_MAX_RESOURCE_EXCEEDS_PARENT
+          .ofQueue(context.getQueue().getQueuePath()));
     }
     maximumResource = maximumResource == 0 ? parentMaximumResource : Math.min(maximumResource,
         parentMaximumResource);
@@ -305,15 +313,18 @@ public class ResourceCalculationDriver {
         minimumResource = 0;
       } else {
         updateContext.addUpdateWarning(
-            QueueUpdateWarningType.QUEUE_OVERUTILIZED.ofQueue(context.getQueue().getQueuePath()).withInfo(
-                "Resource name: " + context.getResourceName() + " resource value: " + minimumResource));
+            QueueUpdateWarningType.QUEUE_OVERUTILIZED.ofQueue(
+                context.getQueue().getQueuePath()).withInfo(
+                    "Resource name: " + context.getResourceName() +
+                        " resource value: " + minimumResource));
         minimumResource = remainingResourceUnderParent;
       }
     }
 
     if (minimumResource == 0) {
       updateContext.addUpdateWarning(QueueUpdateWarningType.QUEUE_ZERO_RESOURCE.ofQueue(
-          context.getQueue().getQueuePath()).withInfo("Resource name: " + context.getResourceName()));
+          context.getQueue().getQueuePath())
+          .withInfo("Resource name: " + context.getResourceName()));
     }
 
     return new ImmutablePair<>(minimumResource, maximumResource);

@@ -112,7 +112,7 @@ public class NullRMNodeLabelsManager extends RMNodeLabelsManager {
 
   private static class FakeLabel extends RMNodeLabel {
 
-   FakeLabel(String label, Resource resource) {
+    FakeLabel(String label, Resource resource) {
       super(label, resource, 1, false);
     }
 

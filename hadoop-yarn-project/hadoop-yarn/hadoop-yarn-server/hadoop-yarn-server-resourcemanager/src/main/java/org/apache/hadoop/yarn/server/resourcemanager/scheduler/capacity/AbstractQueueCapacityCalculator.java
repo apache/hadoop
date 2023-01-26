@@ -75,8 +75,8 @@ public abstract class AbstractQueueCapacityCalculator {
   /**
    * Executes all logic that must be called prior to the effective resource value calculations.
    *
-   * @param resourceCalculationDriver driver that contains the parent queue on which the prerequisite
-   *                                  calculation should be made
+   * @param resourceCalculationDriver driver that contains the parent queue on which the
+   *                                  prerequisite calculation should be made
    */
   public abstract void calculateResourcePrerequisites(
       ResourceCalculationDriver resourceCalculationDriver);

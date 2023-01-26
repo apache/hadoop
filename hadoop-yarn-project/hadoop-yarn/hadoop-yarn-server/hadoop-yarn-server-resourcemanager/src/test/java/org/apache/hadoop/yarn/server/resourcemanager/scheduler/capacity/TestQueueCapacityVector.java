@@ -78,8 +78,10 @@ public class TestQueueCapacityVector {
     capacityVector.setResource(CUSTOM_RESOURCE, 3, ResourceUnitCapacityType.ABSOLUTE);
 
     Assert.assertTrue(capacityVector.isResourceOfType(MEMORY_URI, ResourceUnitCapacityType.WEIGHT));
-    Assert.assertTrue(capacityVector.isResourceOfType(VCORES_URI, ResourceUnitCapacityType.PERCENTAGE));
-    Assert.assertTrue(capacityVector.isResourceOfType(CUSTOM_RESOURCE, ResourceUnitCapacityType.ABSOLUTE));
+    Assert.assertTrue(capacityVector.isResourceOfType(VCORES_URI,
+        ResourceUnitCapacityType.PERCENTAGE));
+    Assert.assertTrue(capacityVector.isResourceOfType(CUSTOM_RESOURCE,
+        ResourceUnitCapacityType.ABSOLUTE));
   }
 
   @Test

@@ -98,10 +98,12 @@ public class CapacitySchedulerQueueCapacityHandler {
     QueueCapacityUpdateContext updateContext =
         new QueueCapacityUpdateContext(clusterResource, labelsManager);
 
-    RootCalculationDriver rootCalculationDriver = new RootCalculationDriver(rootQueue, updateContext,
+    RootCalculationDriver rootCalculationDriver = new RootCalculationDriver(rootQueue,
+        updateContext,
         rootCalculator, definedResources);
     rootCalculationDriver.calculateResources();
-    rootQueue.refreshAfterResourceCalculation(updateContext.getUpdatedClusterResource(), resourceLimits);
+    rootQueue.refreshAfterResourceCalculation(updateContext.getUpdatedClusterResource(),
+        resourceLimits);
   }
 
   private void update(

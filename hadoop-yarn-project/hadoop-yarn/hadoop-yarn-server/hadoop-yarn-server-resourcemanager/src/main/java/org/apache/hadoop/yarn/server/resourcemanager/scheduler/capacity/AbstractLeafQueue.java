@@ -1940,7 +1940,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   }
 
   @Override
-  public void refreshAfterResourceCalculation(Resource clusterResource, ResourceLimits resourceLimits) {
+  public void refreshAfterResourceCalculation(Resource clusterResource,
+      ResourceLimits resourceLimits) {
     lastClusterResource = clusterResource;
     // Update maximum applications for the queue and for users
     updateMaximumApplications();
