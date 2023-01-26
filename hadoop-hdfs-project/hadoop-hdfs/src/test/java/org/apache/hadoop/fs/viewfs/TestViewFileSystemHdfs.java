@@ -573,7 +573,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     try {
       final Path zone = new Path("/data/EZ");
       fsTarget.mkdirs(zone);
-      final Path zone1 = new Path("/data/EZ/zone1");
+      final Path zone1 = new Path("/data/EZ/testZone1");
       fsTarget.mkdirs(zone1);
 
       DFSTestUtil.createKey("test_key", cluster, 0, CONF);
