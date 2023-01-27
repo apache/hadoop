@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.router.cleaner;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
@@ -31,6 +32,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
 public class TestSubClusterCleaner {
 
@@ -68,10 +71,29 @@ public class TestSubClusterCleaner {
   }
 
   @Test
-  public void testSubClusterRegisterHeartBeatTime() throws YarnException, InterruptedException {
-    Thread.sleep(1000);
-    cleaner.run();
-    Map<SubClusterId, SubClusterInfo> activeSubClusterMapping = facade.getSubClusters(true);
-    Assert.assertEquals(0, activeSubClusterMapping.size());
+  public void testSubClusterRegisterHeartBeatTime()
+    throws InterruptedException, TimeoutException, YarnException {
+    // We set up such a unit test, We set the status of all subClusters to RUNNING,
+    // and set the SubClusterCleaner Check Heartbeat timeout to 1s.
+    // After 1s, the status of all subClusters should be SC_LOST.
+    // At this time, the size of the Active SubCluster is 0.
+    GenericTestUtils.waitFor(() -> {
+      cleaner.run();
+      try {
+        int count = facade.getActiveSubClustersCount();
+        if(count == 0) {
+          return true;
+        }
+      } catch (YarnException e) {
+      }
+      return false;
+    }, 1000, 1 * 1000);
+
+    // Check Active SubCluster Status.
+    Map<SubClusterId, SubClusterInfo> subClustersMap = facade.getSubClusters(false);
+    subClustersMap.values().forEach(subClusterInfo -> {
+      SubClusterState subClusterState = subClusterInfo.getState();
+      Assert.assertEquals(SubClusterState.SC_LOST, subClusterState.SC_LOST);
+    });
   }
 }
