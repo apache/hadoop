@@ -159,13 +159,11 @@ class MockApplications {
     Map<String, ResourceUsage> userResourceUsage =
         userResourceUsagePerLabel.get(label).get(queueName);
     for (String userName : users) {
-      // TODO = use usersmanager.getUserAndAddIfAbsent()
 //      User user = new User(userName);
 //      if (userResourceUsage != null) {
 //        user.setResourceUsage(userResourceUsage.get(userName));
 //      }
 //      when(queue.getUser(eq(userName))).thenReturn(user);
-//      when(queue.getOrCreateUser(eq(userName))).thenReturn(user);
       when(queue.getResourceLimitForAllUsers(eq(userName),
           any(Resource.class), anyString(), any(SchedulingMode.class)))
           .thenReturn(userLimit);

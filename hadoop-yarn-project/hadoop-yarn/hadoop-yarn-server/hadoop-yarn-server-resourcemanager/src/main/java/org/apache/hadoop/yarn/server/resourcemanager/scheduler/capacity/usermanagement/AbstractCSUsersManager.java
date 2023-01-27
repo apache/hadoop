@@ -255,6 +255,9 @@ abstract public class AbstractCSUsersManager implements AbstractUsersManager {
   // Get consumed resources for the given node partition (filtered based on active users or for all users)
   abstract Resource getConsumedResources(String label, boolean forActiveUsersOnly);
 
+  // Get consumed resources for the given node partition considering dominant resource fairness
+  abstract Resource getConsumedResourcesWithDRF(Resource partitionResource, String label);
+
   // Get sum total of user weights (filtered based on active users or for all users)
   abstract float getTotalUserWeight(boolean forActiveUsersOnly);
 
@@ -317,7 +320,7 @@ abstract public class AbstractCSUsersManager implements AbstractUsersManager {
      * larger than 100% but for the purposes of making sure all users are
      * getting their fair share, it works.
      */
-    Resource consumed = getConsumedResources(nodePartition, false);
+    Resource consumed = getConsumedResourcesWithDRF(partitionResource, nodePartition);
     Resource currentCapacity = Resources.lessThan(resourceCalculator,
         partitionResource, consumed, queueCapacity)
         ? queueCapacity

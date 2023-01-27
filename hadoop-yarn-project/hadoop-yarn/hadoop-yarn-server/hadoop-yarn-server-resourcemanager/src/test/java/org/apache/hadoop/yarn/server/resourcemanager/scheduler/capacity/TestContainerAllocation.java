@@ -1156,8 +1156,6 @@ public class TestContainerAllocation {
     UsersManager um = (UsersManager) lq.getAbstractUsersManager();
 
     Assert.assertEquals(4, um.getNumActiveUsers());
-    // TODO - assert right condition
-//    Assert.assertEquals(2, um.getNumActiveUsersWithOnlyPendingApps());
     Assert.assertEquals(2, lq.getMetrics().getAppsPending());
     rm1.close();
   }

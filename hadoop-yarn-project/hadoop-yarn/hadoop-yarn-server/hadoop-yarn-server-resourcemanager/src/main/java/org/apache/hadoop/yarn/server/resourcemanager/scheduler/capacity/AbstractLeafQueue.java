@@ -119,7 +119,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
 
-  private final AbstractCSUsersManager usersManager;
+  // TODO - can this be made final ? Requires initialising usersManager without 'this' reference & refactoring SpyHook
+  private volatile AbstractCSUsersManager usersManager;
 
   // cache last cluster resource to compute actual capacity
   private Resource lastClusterResource = Resources.none();
@@ -162,10 +163,6 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       IOException {
     super(queueContext, queueName, parent, old);
     setDynamicQueue(isDynamic);
-
-    this.usersManager = AbstractCSUsersManager.createUsersManager(usageTracker.getMetrics(), this, labelManager,
-        resourceCalculator);
-
     // One time initialization is enough since it is static ordering policy
     this.pendingOrderingPolicy = new FifoOrderingPolicyForPendingApps();
   }
@@ -175,6 +172,11 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       IOException {
     writeLock.lock();
     try {
+      if (this.usersManager == null) {
+        this.usersManager = AbstractCSUsersManager.createUsersManager(usageTracker.getMetrics(), this, labelManager,
+            resourceCalculator);
+      }
+
       CapacitySchedulerConfiguration configuration = queueContext.getConfiguration();
       super.setupQueueConfigs(clusterResource);
 
@@ -314,6 +316,20 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     } finally {
       writeLock.unlock();
     }
+  }
+
+  /**
+   * Used only for tests.
+   * TODO - Figure out a way to avoid this method
+   */
+  @Private
+  public void reinitializeUsersManager() {
+    this.usersManager = AbstractCSUsersManager.createUsersManager(usageTracker.getMetrics(), this, labelManager,
+        resourceCalculator);
+    CapacitySchedulerConfiguration configuration = queueContext.getConfiguration();
+    usersManager.setUserLimit(configuration.getUserLimit(getQueuePath()));
+    usersManager.setUserLimitFactor(configuration.getUserLimitFactor(getQueuePath()));
+    usersManager.queueConfigUpdated();
   }
 
   private String getDefaultNodeLabelExpressionStr() {

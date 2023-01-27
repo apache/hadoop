@@ -21,14 +21,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.userman
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.UsersManager;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
@@ -37,6 +35,7 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+// TODO - Refactor TestLeafQueue test cases by moving UsersManager specific test cases to here
 @RunWith(MockitoJUnitRunner.class)
 public class TestUsersManager {
   private static final Resource CLUSTER_RESOURCE =
@@ -72,7 +71,6 @@ public class TestUsersManager {
         .thenReturn(MAX_RESOURCE_LIMIT);
     when(labelMgr.getResourceByLabel(anyString(), any(Resource.class)))
         .thenReturn(CLUSTER_RESOURCE);
-    // TODO - set right variables
 //    usersManager.setUsageRatio(CommonNodeLabelsManager.NO_LABEL, 0.5f);
     usersManager.setUserLimit(
         CapacitySchedulerConfiguration.DEFAULT_USER_LIMIT);

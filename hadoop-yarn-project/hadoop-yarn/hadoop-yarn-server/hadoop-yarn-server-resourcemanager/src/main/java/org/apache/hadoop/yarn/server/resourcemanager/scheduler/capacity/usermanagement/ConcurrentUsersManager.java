@@ -352,6 +352,12 @@ class ConcurrentUsersManager extends AbstractCSUsersManager {
     return consumed;
   }
 
+  // It doesn't support DRF and will return absolute resource utilisation of all users
+  @Override
+  Resource getConsumedResourcesWithDRF(Resource partitionResource, String label) {
+    return getConsumedResources(label, false);
+  }
+
   // It doesn't have atomic visibility for all users -
   // i.e User weights can get updated concurrently along with this method or users can be added / removed or marked active / inactive
   @Override

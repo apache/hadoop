@@ -486,7 +486,7 @@ public class TestLeafQueue {
   }
 
   @Test
-  public void testAppAttemptMetrics() throws Exception {
+  public void testAppAttemptMetrics() {
     CSMaxRunningAppsEnforcer enforcer = mock(CSMaxRunningAppsEnforcer.class);
     cs.setMaxRunningAppsEnforcer(enforcer);
     ApplicationSubmissionContext applicationSubmissionContext =
@@ -495,8 +495,12 @@ public class TestLeafQueue {
     when(rmApp.getApplicationSubmissionContext())
         .thenReturn(applicationSubmissionContext);
     when(rmApp.getCurrentAppAttempt()).thenReturn(mock(RMAppAttempt.class));
-    // Manipulate queue 'a'
-    LeafQueue a = stubLeafQueue((LeafQueue) queues.get(B));
+
+    LeafQueue a = (LeafQueue) cs.getQueue(B);
+
+    Resource clusterResource = Resource.newInstance(50 * GB, 50);
+    cs.getRootQueue().updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     // Users
     final String user_0 = "user_0";
@@ -537,11 +541,11 @@ public class TestLeafQueue {
     assertEquals(app1.getAMResource().getVirtualCores(), a.getMetrics()
         .getUsedAMResourceVCores());
 
-    event = new AppAttemptRemovedSchedulerEvent(appAttemptId_0,
+    event = new AppAttemptRemovedSchedulerEvent(appAttemptId_1,
         RMAppAttemptState.FINISHED, false);
     cs.handle(event);
     AppRemovedSchedulerEvent rEvent = new AppRemovedSchedulerEvent(
-        appAttemptId_0.getApplicationId(), RMAppState.FINISHED);
+        appAttemptId_1.getApplicationId(), RMAppState.FINISHED);
     cs.handle(rEvent);
 
     assertEquals(1, a.getMetrics().getAppsSubmitted());
@@ -554,11 +558,15 @@ public class TestLeafQueue {
   }
 
   @Test
-  public void testUnmanagedAppAttemptMetrics() throws Exception {
+  public void testUnmanagedAppAttemptMetrics() {
     CSMaxRunningAppsEnforcer enforcer = mock(CSMaxRunningAppsEnforcer.class);
     cs.setMaxRunningAppsEnforcer(enforcer);
-    // Manipulate queue 'a'
-    LeafQueue a = stubLeafQueue((LeafQueue) queues.get(B));
+    LeafQueue a = (LeafQueue) cs.getQueue(B);
+
+    Resource clusterResource = Resource.newInstance(50 * GB, 50);
+
+    cs.getRootQueue().updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     // Users
     final String user0 = "user_0";
@@ -605,11 +613,11 @@ public class TestLeafQueue {
     assertEquals(app1.getAMResource().getVirtualCores(), a.getMetrics()
         .getUsedAMResourceVCores());
 
-    event = new AppAttemptRemovedSchedulerEvent(appAttemptId0,
+    event = new AppAttemptRemovedSchedulerEvent(appAttemptId1,
         RMAppAttemptState.FINISHED, false);
     cs.handle(event);
     AppRemovedSchedulerEvent rEvent = new AppRemovedSchedulerEvent(
-        appAttemptId0.getApplicationId(), RMAppState.FINISHED);
+        appAttemptId1.getApplicationId(), RMAppState.FINISHED);
     cs.handle(rEvent);
 
     assertEquals(1, a.getMetrics().getUnmanagedAppsSubmitted());
@@ -1038,16 +1046,18 @@ public class TestLeafQueue {
         "Expected AbsoluteUsedCapacity > 0.95, got: "
             + b.getAbsoluteUsedCapacity(), b.getAbsoluteUsedCapacity() > 0.95);
 
-    // Verify consumedRatio is based on dominant resources
+    /*
+    TODO - write test cases to validate user limits (in users manager) rather than usage ratios which is an impl detail
+
+    Verify consumedRatio is based on dominant resources
     float expectedRatio =
         queueUser0.getUsedCloned().getVirtualCores()
             / (numNodes * 100.0f)
             + queueUser1.getUsedCloned().getMemorySize()
             / (numNodes * 8.0f * GB);
-    // TODO - avoid depending on impl detail - usage ratio
-//    assertEquals(expectedRatio, b.getUsersManager().getUsageRatio(""), 0.001);
-    // Add another node and make sure consumedRatio is adjusted
-    // accordingly.
+    assertEquals(expectedRatio, b.getUsersManager().getUsageRatio(""), 0.001);
+    Add another node and make sure consumedRatio is adjusted
+    accordingly.
     numNodes = 3;
     clusterResource =
         Resources.createResource(numNodes * (8 * GB), numNodes * 100);
@@ -1059,7 +1069,8 @@ public class TestLeafQueue {
             / (numNodes * 100.0f)
             + queueUser1.getUsedCloned().getMemorySize()
             / (numNodes * 8.0f * GB);
-//    assertEquals(expectedRatio, b.getUsersManager().getUsageRatio(""), 0.001);
+    assertEquals(expectedRatio, b.getUsersManager().getUsageRatio(""), 0.001);
+     */
   }
 
   @Test
@@ -1281,6 +1292,7 @@ public class TestLeafQueue {
     assertTrue(leafQueue.currentUserLimitCacheVersion > 0);
   }
 
+  // TODO - add performance tests to validate cache rather than explicitly testing cache values
   @Test
   public void testUserLimitCacheActiveUsersChanged() throws Exception {
     // Setup some nodes
@@ -1336,11 +1348,6 @@ public class TestLeafQueue {
 
     // initial check
     assertEquals(0, leafQueue.userLimitsCache.size());
-    // TODO - not depend on cache implementation
-//    assertEquals(0,
-//        leafQueue.getUsersManager().preComputedAllUserLimit.size());
-//    assertEquals(0,
-//        leafQueue.getUsersManager().preComputedActiveUserLimit.size());
 
     // 4 users
     final String user_0 = "user_0";
@@ -1406,13 +1413,8 @@ public class TestLeafQueue {
     assertNotEquals(leafQueue.currentUserLimitCacheVersion,
         leafQueue.getUsersManager().getLatestVersionOfUsersState());
     // Have not made any calls to fill up the all user limit in UsersManager
-    // TODO - not depend on cache implementation
-//    assertEquals(0,
-//        leafQueue.getUsersManager().preComputedAllUserLimit.size());
-//    // But the user limit cache in leafQueue got filled up using the active
-//    // user limit in UsersManager
-//    assertEquals(1,
-//            leafQueue.getUsersManager().preComputedActiveUserLimit.size());
+    // But the user limit cache in leafQueue got filled up using the active
+    // user limit in UsersManager
 
     // submit 3 applications for now
     final ApplicationAttemptId appAttemptId_0 =
@@ -1503,19 +1505,9 @@ public class TestLeafQueue {
     assertEquals(leafQueue.currentUserLimitCacheVersion,
         leafQueue.getUsersManager().getLatestVersionOfUsersState());
     // Have not made any calls to fill up the all user limit in UsersManager
-    // TODO - not depend on cache implementation
-//    assertEquals(0,
-//        leafQueue.getUsersManager().preComputedAllUserLimit.size());
     // But the user limit cache in leafQueue got filled up using the active
     // user limit in UsersManager with 4GB limit (since there are three users
     // so 12/3 = 4GB each)
-//    assertEquals(1, leafQueue.getUsersManager()
-//        .preComputedActiveUserLimit.size());
-//    assertEquals(1, leafQueue.getUsersManager()
-//        .preComputedActiveUserLimit.get(RMNodeLabelsManager.NO_LABEL).size());
-//    assertEquals(4*GB, leafQueue.getUsersManager()
-//        .preComputedActiveUserLimit.get(RMNodeLabelsManager.NO_LABEL)
-//        .get(SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY).getMemorySize());
 
     // submit the 4th application
     final ApplicationAttemptId appAttemptId_3 =
@@ -1584,19 +1576,9 @@ public class TestLeafQueue {
     assertEquals(leafQueue.currentUserLimitCacheVersion,
         leafQueue.getUsersManager().getLatestVersionOfUsersState());
     // Have not made any calls to fill up the all user limit in UsersManager
-    // TODO - not depend on cache implementation
-//    assertEquals(0,
-//        leafQueue.getUsersManager().preComputedAllUserLimit.size());
     // But the user limit cache in leafQueue got filled up using the active
     // user limit in UsersManager with 3GB limit (since there are four users
     // so 12/4 = 3GB each)
-//    assertEquals(1, leafQueue.getUsersManager()
-//        .preComputedActiveUserLimit.size());
-//    assertEquals(1, leafQueue.getUsersManager()
-//        .preComputedActiveUserLimit.get(RMNodeLabelsManager.NO_LABEL).size());
-//    assertEquals(3*GB, leafQueue.getUsersManager()
-//        .preComputedActiveUserLimit.get(RMNodeLabelsManager.NO_LABEL)
-//        .get(SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY).getMemorySize());
   }
 
   @Test
@@ -1958,10 +1940,6 @@ public class TestLeafQueue {
     final String user_0 = "user_0";
     final String user_1 = "user_1";
 
-    // Set user_0's weight to 1.5 in the a queue's object.
-    // TODO - call a.getUsersManager().submitapplication
-//    a.getUsersManager().getUserAndAddIfAbsent(user_0).setWeight(1.5f);
-
     // Submit applications
     final ApplicationAttemptId appAttemptId_0 =
         TestUtils.getMockApplicationAttemptId(0, 0);
@@ -1991,7 +1969,7 @@ public class TestLeafQueue {
         new ResourceLimits(clusterResource));
 
     // Setup resource-requests
-    // app_0 asks for 3 3-GB containers
+    // app_0 asks for 3 4-GB containers
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
             TestUtils.createResourceRequest(ResourceRequest.ANY, 4*GB, 3, true,

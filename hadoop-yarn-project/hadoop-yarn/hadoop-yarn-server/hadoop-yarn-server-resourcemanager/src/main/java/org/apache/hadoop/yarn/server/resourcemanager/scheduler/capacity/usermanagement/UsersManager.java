@@ -270,6 +270,13 @@ public class UsersManager extends AbstractCSUsersManager {
   }
 
   @Override
+  Resource getConsumedResourcesWithDRF(Resource partitionResource, String label) {
+    return Resources.multiplyAndNormalizeUp(resourceCalculator,
+        partitionResource, getUsageRatio(label),
+        lQueue.getMinimumAllocation());
+  }
+
+  @Override
   float getTotalUserWeight(boolean forActiveUsersOnly) {
     return forActiveUsersOnly ? activeUsersTimesWeights : allUsersTimesWeights;
   }

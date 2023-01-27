@@ -1275,8 +1275,6 @@ public class TestCapacitySchedulerApps {
         (UsersManager) scheduler.getQueue("a1").getAbstractUsersManager();
 
     assertEquals(4, um.getNumActiveUsers());
-    // TODO - assert right condition
-//    assertEquals(2, um.getNumActiveUsersWithOnlyPendingApps());
 
     // now move the app
     scheduler.moveAllApps("a1", "b1");
@@ -1311,8 +1309,6 @@ public class TestCapacitySchedulerApps {
         (UsersManager) scheduler.getQueue("b1").getAbstractUsersManager();
 
     assertEquals(2, umB1.getNumActiveUsers());
-    // TODO - assert right condition
-//    assertEquals(2, umB1.getNumActiveUsersWithOnlyPendingApps());
 
     rm.close();
   }
