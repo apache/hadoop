@@ -533,10 +533,20 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed renewDelegationToken call");
       metrics.incrRenewDelegationTokenFailedRetrieved();
     }
-
+    
     public void getDumpSchedulerLogsFailed() {
       LOG.info("Mocked: failed DumpSchedulerLogs call");
       metrics.incrDumpSchedulerLogsFailedRetrieved();
+    }
+    
+    public void getActivitiesFailed() {
+      LOG.info("Mocked: failed getBulkActivitie call");
+      metrics.incrGetActivitiesFailedRetrieved();
+    }
+
+    public void getBulkActivitiesFailed() {
+      LOG.info("Mocked: failed getBulkActivitie call");
+      metrics.incrGetBulkActivitiesFailedRetrieved();
     }
   }
 
@@ -772,6 +782,16 @@ public class TestRouterMetrics {
     public void getDumpSchedulerLogsRetrieved(long duration) {
       LOG.info("Mocked: successful DumpSchedulerLogs call with duration {}", duration);
       metrics.succeededDumpSchedulerLogsRetrieved(duration);
+    }
+    
+    public void getActivitiesRetrieved(long duration) {
+      LOG.info("Mocked: successful GetActivities call with duration {}", duration);
+      metrics.succeededGetActivitiesLatencyRetrieved(duration);
+    }
+
+    public void getBulkActivitiesRetrieved(long duration) {
+      LOG.info("Mocked: successful GetBulkActivities call with duration {}", duration);
+      metrics.succeededGetBulkActivitiesRetrieved(duration);
     }
   }
 
@@ -1629,5 +1649,51 @@ public class TestRouterMetrics {
     badSubCluster.getDumpSchedulerLogsFailed();
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getDumpSchedulerLogsFailedRetrieved());
+  }
+  
+  @Test
+  public void testGetActivitiesRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetActivitiesRetrieved();
+    goodSubCluster.getActivitiesRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetActivitiesRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetActivitiesRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getActivitiesRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetActivitiesRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetActivitiesRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetActivitiesRetrievedFailed() {
+    long totalBadBefore = metrics.getActivitiesFailedRetrieved();
+    badSubCluster.getActivitiesFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getActivitiesFailedRetrieved());
+  }
+
+  @Test
+  public void testGetBulkActivitiesRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetBulkActivitiesRetrieved();
+    goodSubCluster.getBulkActivitiesRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetBulkActivitiesRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetBulkActivitiesRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getBulkActivitiesRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetBulkActivitiesRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetBulkActivitiesRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetBulkActivitiesRetrievedFailed() {
+    long totalBadBefore = metrics.getBulkActivitiesFailedRetrieved();
+    badSubCluster.getBulkActivitiesFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getBulkActivitiesFailedRetrieved());
   }
 }
