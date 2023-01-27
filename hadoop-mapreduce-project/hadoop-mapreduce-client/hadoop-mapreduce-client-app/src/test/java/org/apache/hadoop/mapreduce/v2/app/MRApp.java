@@ -98,7 +98,7 @@ import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -326,8 +326,8 @@ public class MRApp extends MRAppMaster {
       iState = job.getInternalState();
     }
     LOG.info("Job {} Internal State is : {}", job.getID(), iState);
-    Assert.assertEquals("Task Internal state is not correct (timedout)",
-        finalState, iState);
+    Assertions.assertEquals(finalState, iState,
+        "Task Internal state is not correct (timedout)");
   }
 
   public void waitForInternalState(TaskImpl task,
@@ -339,8 +339,8 @@ public class MRApp extends MRAppMaster {
       iState = task.getInternalState();
     }
     LOG.info("Task {} Internal State is : {}", task.getID(), iState);
-    Assert.assertEquals("Task Internal state is not correct (timedout)",
-        finalState, iState);
+    Assertions.assertEquals(finalState, iState,
+        "Task Internal state is not correct (timedout)");
   }
 
   public void waitForInternalState(TaskAttemptImpl attempt,
@@ -352,8 +352,8 @@ public class MRApp extends MRAppMaster {
       iState = attempt.getInternalState();
     }
     LOG.info("TaskAttempt {} Internal State is : {}", attempt.getID(), iState);
-    Assert.assertEquals("TaskAttempt Internal state is not correct (timedout)",
-        finalState, iState);
+    Assertions.assertEquals(finalState, iState,
+        "TaskAttempt Internal state is not correct (timedout)");
   }
 
   public void waitForState(TaskAttempt attempt, 
@@ -367,9 +367,8 @@ public class MRApp extends MRAppMaster {
     }
     LOG.info("TaskAttempt {} State is : {}", attempt.getID(),
         report.getTaskAttemptState());
-    Assert.assertEquals("TaskAttempt state is not correct (timedout)",
-        finalState,
-        report.getTaskAttemptState());
+    Assertions.assertEquals(finalState, report.getTaskAttemptState(),
+        "TaskAttempt state is not correct (timedout)");
   }
 
   public void waitForState(Task task, TaskState finalState) throws Exception {
@@ -381,8 +380,8 @@ public class MRApp extends MRAppMaster {
       report = task.getReport();
     }
     LOG.info("Task {} State is : {}", task.getID(), report.getTaskState());
-    Assert.assertEquals("Task state is not correct (timedout)", finalState,
-        report.getTaskState());
+    Assertions.assertEquals(finalState, report.getTaskState(),
+        "Task state is not correct (timedout)");
   }
 
   public void waitForState(Job job, JobState finalState) throws Exception {
@@ -394,14 +393,14 @@ public class MRApp extends MRAppMaster {
       Thread.sleep(WAIT_FOR_STATE_INTERVAL);
     }
     LOG.info("Job {} State is : {}", job.getID(), report.getJobState());
-    Assert.assertEquals("Job state is not correct (timedout)", finalState, 
-        job.getState());
+    Assertions.assertEquals(finalState, job.getState(),
+        "Job state is not correct (timedout)");
   }
 
   public void waitForState(Service.STATE finalState) throws Exception {
     if (finalState == Service.STATE.STOPPED) {
-       Assert.assertTrue("Timeout while waiting for MRApp to stop",
-           waitForServiceToStop(20 * 1000));
+      Assertions.assertTrue(waitForServiceToStop(20 * 1000),
+          "Timeout while waiting for MRApp to stop");
     } else {
       int timeoutSecs = 0;
       while (!finalState.equals(getServiceState())
@@ -409,8 +408,8 @@ public class MRApp extends MRAppMaster {
         Thread.sleep(WAIT_FOR_STATE_INTERVAL);
       }
       LOG.info("MRApp State is : {}", getServiceState());
-      Assert.assertEquals("MRApp state is not correct (timedout)", finalState,
-          getServiceState());
+      Assertions.assertEquals(finalState, getServiceState(),
+          "MRApp state is not correct (timedout)");
     }
   }
 
@@ -419,22 +418,23 @@ public class MRApp extends MRAppMaster {
       JobReport jobReport = job.getReport();
       LOG.info("Job start time :{}", jobReport.getStartTime());
       LOG.info("Job finish time :", jobReport.getFinishTime());
-      Assert.assertTrue("Job start time is not less than finish time",
-          jobReport.getStartTime() <= jobReport.getFinishTime());
-      Assert.assertTrue("Job finish time is in future",
-          jobReport.getFinishTime() <= System.currentTimeMillis());
+      Assertions.assertTrue(jobReport.getStartTime() <= jobReport.getFinishTime(),
+          "Job start time is not less than finish time");
+      Assertions.assertTrue(jobReport.getFinishTime() <= System.currentTimeMillis(),
+          "Job finish time is in future");
       for (Task task : job.getTasks().values()) {
         TaskReport taskReport = task.getReport();
         LOG.info("Task {} start time : {}", task.getID(),
             taskReport.getStartTime());
         LOG.info("Task {} finish time : {}", task.getID(),
             taskReport.getFinishTime());
-        Assert.assertTrue("Task start time is not less than finish time",
-            taskReport.getStartTime() <= taskReport.getFinishTime());
+        Assertions.assertTrue(taskReport.getStartTime() <= taskReport.getFinishTime(),
+            "Task start time is not less than finish time");
         for (TaskAttempt attempt : task.getAttempts().values()) {
           TaskAttemptReport attemptReport = attempt.getReport();
-          Assert.assertTrue("Attempt start time is not less than finish time",
-              attemptReport.getStartTime() <= attemptReport.getFinishTime());
+          Assertions.assertTrue(attemptReport.getStartTime() <=
+                  attemptReport.getFinishTime(),
+              "Attempt start time is not less than finish time");
         }
       }
     }

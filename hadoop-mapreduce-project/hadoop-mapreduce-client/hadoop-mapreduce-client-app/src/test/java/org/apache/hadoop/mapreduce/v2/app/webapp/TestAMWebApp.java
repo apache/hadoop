@@ -19,7 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
 import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.APP_ID;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -39,7 +39,7 @@ import javax.net.ssl.SSLException;
 
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig.Policy;
@@ -65,14 +65,17 @@ import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.http.HttpStatus;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import com.google.inject.Injector;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
+import org.junit.jupiter.api.extension.ExtendWith;
+import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
+import uk.org.webcompere.systemstubs.jupiter.SystemStub;
+import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
+@ExtendWith(SystemStubsExtension.class)
 public class TestAMWebApp {
 
   private static final File TEST_DIR = new File(
@@ -80,12 +83,13 @@ public class TestAMWebApp {
           System.getProperty("java.io.tmpdir")),
       TestAMWebApp.class.getName());
 
-  @After
+  @AfterEach
   public void tearDown() {
     TEST_DIR.delete();
   }
 
-  @Test public void testAppControllerIndex() {
+  @Test
+  public void testAppControllerIndex() {
     AppContext ctx = new MockAppContext(0, 1, 1, 1);
     Injector injector = WebAppTests.createMockInjector(AppContext.class, ctx);
     AppController controller = injector.getInstance(AppController.class);
@@ -93,25 +97,29 @@ public class TestAMWebApp {
     assertEquals(ctx.getApplicationID().toString(), controller.get(APP_ID,""));
   }
 
-  @Test public void testAppView() {
+  @Test
+  public void testAppView() {
     WebAppTests.testPage(AppView.class, AppContext.class, new MockAppContext(0, 1, 1, 1));
   }
 
 
   
-  @Test public void testJobView() {
+  @Test
+  public void testJobView() {
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = getJobParams(appContext);
     WebAppTests.testPage(JobPage.class, AppContext.class, appContext, params);
   }
 
-  @Test public void testTasksView() {
+  @Test
+  public void testTasksView() {
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = getTaskParams(appContext);
     WebAppTests.testPage(TasksPage.class, AppContext.class, appContext, params);
   }
 
-  @Test public void testTaskView() {
+  @Test
+  public void testTaskView() {
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = getTaskParams(appContext);
     App app = new App(appContext);
@@ -138,19 +146,22 @@ public class TestAMWebApp {
     return params;
   }
 
-  @Test public void testConfView() {
+  @Test
+  public void testConfView() {
     WebAppTests.testPage(JobConfPage.class, AppContext.class,
                          new MockAppContext(0, 1, 1, 1));
   }
 
-  @Test public void testCountersView() {
+  @Test
+  public void testCountersView() {
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = getJobParams(appContext);
     WebAppTests.testPage(CountersPage.class, AppContext.class,
                          appContext, params);
   }
   
-  @Test public void testSingleCounterView() {
+  @Test
+  public void testSingleCounterView() {
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Job job = appContext.getAllJobs().values().iterator().next();
     // add a failed task to the job without any counters
@@ -165,14 +176,16 @@ public class TestAMWebApp {
                          appContext, params);
   }
 
-  @Test public void testTaskCountersView() {
+  @Test
+  public void testTaskCountersView() {
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = getTaskParams(appContext);
     WebAppTests.testPage(CountersPage.class, AppContext.class,
                          appContext, params);
   }
 
-  @Test public void testSingleTaskCounterView() {
+  @Test
+  public void testSingleTaskCounterView() {
     AppContext appContext = new MockAppContext(0, 1, 1, 2);
     Map<String, String> params = getTaskParams(appContext);
     params.put(AMParams.COUNTER_GROUP, 
@@ -213,7 +226,7 @@ public class TestAMWebApp {
     InputStream in = conn.getInputStream();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     IOUtils.copyBytes(in, out, 1024);
-    Assert.assertTrue(out.toString().contains("MapReduce Application"));
+    Assertions.assertTrue(out.toString().contains("MapReduce Application"));
 
     // https:// is not accessible.
     URL httpsUrl = new URL("https://" + hostPort);
@@ -221,7 +234,7 @@ public class TestAMWebApp {
       HttpURLConnection httpsConn =
           (HttpURLConnection) httpsUrl.openConnection();
       httpsConn.getInputStream();
-      Assert.fail("https:// is not accessible, expected to fail");
+      Assertions.fail("https:// is not accessible, expected to fail");
     } catch (SSLException e) {
       // expected
     }
@@ -230,9 +243,8 @@ public class TestAMWebApp {
     app.verifyCompleted();
   }
 
-  @Rule
-  public final EnvironmentVariables environmentVariables
-      = new EnvironmentVariables();
+  @SystemStub
+  public EnvironmentVariables environmentVariables;
 
   @Test
   public void testMRWebAppSSLEnabled() throws Exception {
@@ -270,7 +282,7 @@ public class TestAMWebApp {
     InputStream in = httpsConn.getInputStream();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     IOUtils.copyBytes(in, out, 1024);
-    Assert.assertTrue(out.toString().contains("MapReduce Application"));
+    Assertions.assertTrue(out.toString().contains("MapReduce Application"));
 
     // http:// is not accessible.
     URL httpUrl = new URL("http://" + hostPort);
@@ -278,7 +290,7 @@ public class TestAMWebApp {
       HttpURLConnection httpConn =
           (HttpURLConnection) httpUrl.openConnection();
       httpConn.getResponseCode();
-      Assert.fail("http:// is not accessible, expected to fail");
+      Assertions.fail("http:// is not accessible, expected to fail");
     } catch (SocketException e) {
       // expected
     }
@@ -337,7 +349,7 @@ public class TestAMWebApp {
     InputStream in = httpsConn.getInputStream();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     IOUtils.copyBytes(in, out, 1024);
-    Assert.assertTrue(out.toString().contains("MapReduce Application"));
+    Assertions.assertTrue(out.toString().contains("MapReduce Application"));
 
     // Try with wrong client cert
     KeyPair otherClientKeyPair = KeyStoreTestUtil.generateKeyPair("RSA");
@@ -349,7 +361,7 @@ public class TestAMWebApp {
       HttpURLConnection httpConn =
           (HttpURLConnection) httpsUrl.openConnection();
       httpConn.getResponseCode();
-      Assert.fail("Wrong client certificate, expected to fail");
+      Assertions.fail("Wrong client certificate, expected to fail");
     } catch (SSLException e) {
       // expected
     }
@@ -404,9 +416,9 @@ public class TestAMWebApp {
       String expectedURL = scheme + conf.get(YarnConfiguration.PROXY_ADDRESS)
           + ProxyUriUtils.getPath(app.getAppID(), "/mapreduce", true);
 
-      Assert.assertEquals(expectedURL,
+      Assertions.assertEquals(expectedURL,
         conn.getHeaderField(HttpHeaders.LOCATION));
-      Assert.assertEquals(HttpStatus.SC_MOVED_TEMPORARILY,
+      Assertions.assertEquals(HttpStatus.SC_MOVED_TEMPORARILY,
         conn.getResponseCode());
       app.waitForState(job, JobState.SUCCEEDED);
       app.verifyCompleted();
