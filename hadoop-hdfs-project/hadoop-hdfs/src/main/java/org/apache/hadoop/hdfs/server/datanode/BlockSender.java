@@ -655,7 +655,7 @@ class BlockSender implements java.io.Closeable {
           if (ioem.startsWith(EIO_ERROR)) {
             throw new DiskFileCorruptException("A disk IO error occurred", e);
           }
-          if (!ioem.startsWith("Broken pipe")
+          if (!ioem.contains("Broken pipe")
               && !ioem.startsWith("Connection reset")) {
             LOG.error("BlockSender.sendChunks() exception: ", e);
             datanode.getBlockScanner().markSuspectBlock(
