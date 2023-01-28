@@ -43,6 +43,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -1586,7 +1587,44 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public Response removeFromClusterNodeLabels(Set<String> oldNodeLabels,
       HttpServletRequest hsr) throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (CollectionUtils.isEmpty(oldNodeLabels)) {
+      routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the oldNodeLabels is null or empty.");
+    }
+
+    try {
+      long startTime = clock.getTime();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{Set.class, HttpServletRequest.class};
+      Object[] args = new Object[]{oldNodeLabels, hsrCopy};
+      ClientMethod remoteMethod =
+          new ClientMethod("removeFromClusterNodeLabels", argsClasses, args);
+      Map<SubClusterInfo, Response> responseInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, Response.class);
+      StringBuffer buffer = new StringBuffer();
+      responseInfoMap.forEach((subClusterInfo, response) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        if (response != null) {
+          buffer.append("SubCluster=" + subClusterId.getId() + ",SUCCESS#");
+        } else {
+          buffer.append("SubCluster=" + subClusterId.getId() + ",FAILED#");
+        }
+      });
+      long stopTime = clock.getTime();
+      routerMetrics.succeededRemoveFromClusterNodeLabelsRetrieved(stopTime - startTime);
+      return Response.status(Status.OK).entity(buffer.toString()).build();
+    } catch (NotFoundException e) {
+      routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowIOException("removeFromClusterNodeLabels with yarn error.", e);
+    }
+
+    routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+    throw new RuntimeException("removeFromClusterNodeLabels Failed.");
   }
 
   @Override
