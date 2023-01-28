@@ -72,6 +72,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.RouterPolicyFacade;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
@@ -1520,12 +1521,68 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     throw new RuntimeException("getClusterNodeLabels Failed.");
   }
 
+  /**
+   * This method adds specific node labels for specific nodes, and it is
+   * reachable by using {@link RMWSConsts#ADD_NODE_LABELS}.
+   *
+   * @see ResourceManagerAdministrationProtocol#addToClusterNodeLabels
+   * @param newNodeLabels the node labels to add. It is a content param.
+   * @param hsr the servlet request
+   * @return Response containing the status code
+   * @throws Exception in case of bad request
+   */
   @Override
   public Response addToClusterNodeLabels(NodeLabelsInfo newNodeLabels,
       HttpServletRequest hsr) throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (newNodeLabels == null) {
+      routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the newNodeLabels null.");
+    }
+
+    try {
+      long startTime = clock.getTime();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{NodeLabelsInfo.class, HttpServletRequest.class};
+      Object[] args = new Object[]{newNodeLabels, hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("addToClusterNodeLabels", argsClasses, args);
+      Map<SubClusterInfo, Response> responseInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, Response.class);
+      StringBuffer buffer = new StringBuffer();
+      responseInfoMap.forEach((subClusterInfo, response) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        if (response != null) {
+          buffer.append("SubCluster=" + subClusterId.getId() + ",SUCCESS#");
+        } else {
+          buffer.append("SubCluster=" + subClusterId.getId() + ",FAILED#");
+        }
+      });
+      long stopTime = clock.getTime();
+      routerMetrics.succeededAddToClusterNodeLabelsRetrieved((stopTime - startTime));
+      return Response.status(Status.OK).entity(buffer.toString()).build();
+    } catch (NotFoundException e) {
+      routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowIOException("addToClusterNodeLabels with yarn error.", e);
+    }
+
+    routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+    throw new RuntimeException("addToClusterNodeLabels Failed.");
   }
 
+  /**
+   * This method removes all the node labels for specific nodes, and it is
+   * reachable by using {@link RMWSConsts#REMOVE_NODE_LABELS}.
+   *
+   * @see ResourceManagerAdministrationProtocol#removeFromClusterNodeLabels
+   * @param oldNodeLabels the node labels to remove. It is a QueryParam.
+   * @param hsr the servlet request
+   * @return Response containing the status code
+   * @throws Exception in case of bad request
+   */
   @Override
   public Response removeFromClusterNodeLabels(Set<String> oldNodeLabels,
       HttpServletRequest hsr) throws Exception {

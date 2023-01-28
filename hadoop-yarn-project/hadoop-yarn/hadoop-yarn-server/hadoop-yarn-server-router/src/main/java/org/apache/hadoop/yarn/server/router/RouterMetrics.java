@@ -145,6 +145,8 @@ public final class RouterMetrics {
   private MutableGaugeInt numRefreshSuperUserGroupsConfigurationFailedRetrieved;
   @Metric("# of refreshUserToGroupsMappings failed to be retrieved")
   private MutableGaugeInt numRefreshUserToGroupsMappingsFailedRetrieved;
+  @Metric("# of addToClusterNodeLabels failed to be retrieved")
+  private MutableGaugeInt numAddToClusterNodeLabelsFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -249,9 +251,10 @@ public final class RouterMetrics {
   private MutableRate totalSucceededRefreshSuperUserGroupsConfigurationRetrieved;
   @Metric("Total number of successful Retrieved RefreshUserToGroupsMappings and latency(ms)")
   private MutableRate totalSucceededRefreshUserToGroupsMappingsRetrieved;
-
   @Metric("Total number of successful Retrieved GetSchedulerInfo and latency(ms)")
   private MutableRate totalSucceededGetSchedulerInfoRetrieved;
+  @Metric("Total number of successful Retrieved AddToClusterNodeLabels and latency(ms)")
+  private MutableRate totalSucceededAddToClusterNodeLabelsRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -308,6 +311,7 @@ public final class RouterMetrics {
   private MutableQuantiles getSchedulerInfoRetrievedLatency;
   private MutableQuantiles refreshSuperUserGroupsConfLatency;
   private MutableQuantiles refreshUserToGroupsMappingsLatency;
+  private MutableQuantiles addToClusterNodeLabelsLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
@@ -496,6 +500,9 @@ public final class RouterMetrics {
 
     refreshUserToGroupsMappingsLatency = registry.newQuantiles("refreshUserToGroupsMappingsLatency",
         "latency of refresh user to groups mappings timeouts", "ops", "latency", 10);
+
+    addToClusterNodeLabelsLatency = registry.newQuantiles("addToClusterNodeLabelsLatency",
+        "latency of add cluster nodelabels timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -768,6 +775,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededAddToClusterNodeLabelsRetrieved() {
+    return totalSucceededAddToClusterNodeLabelsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public long getNumSucceededRefreshSuperUserGroupsConfigurationRetrieved() {
     return totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.lastStat().numSamples();
   }
@@ -1023,6 +1035,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededAddToClusterNodeLabelsRetrieved() {
+    return totalSucceededAddToClusterNodeLabelsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededRefreshSuperUserGroupsConfigurationRetrieved() {
     return totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.lastStat().mean();
   }
@@ -1231,6 +1248,10 @@ public final class RouterMetrics {
 
   public int getNumRefreshUserToGroupsMappingsFailedRetrieved() {
     return numRefreshUserToGroupsMappingsFailedRetrieved.value();
+  }
+
+  public int getNumAddToClusterNodeLabelsFailedRetrieved() {
+    return numAddToClusterNodeLabelsFailedRetrieved.value();
   }
 
   public int getDelegationTokenFailedRetrieved() {
@@ -1507,6 +1528,11 @@ public final class RouterMetrics {
     getSchedulerInfoRetrievedLatency.add(duration);
   }
 
+  public void succeededAddToClusterNodeLabelsRetrieved(long duration) {
+    totalSucceededAddToClusterNodeLabelsRetrieved.add(duration);
+    addToClusterNodeLabelsLatency.add(duration);
+  }
+
   public void succeededRefreshSuperUserGroupsConfRetrieved(long duration) {
     totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.add(duration);
     refreshSuperUserGroupsConfLatency.add(duration);
@@ -1699,6 +1725,10 @@ public final class RouterMetrics {
 
   public void incrRefreshUserToGroupsMappingsFailedRetrieved() {
     numRefreshUserToGroupsMappingsFailedRetrieved.incr();
+  }
+
+  public void incrAddToClusterNodeLabelsFailedRetrieved() {
+    numAddToClusterNodeLabelsFailedRetrieved.incr();
   }
 
   public void incrGetDelegationTokenFailedRetrieved() {
