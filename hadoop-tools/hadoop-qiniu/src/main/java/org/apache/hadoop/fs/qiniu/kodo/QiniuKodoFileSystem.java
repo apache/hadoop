@@ -1,11 +1,9 @@
 package org.apache.hadoop.fs.qiniu.kodo;
 
-import com.qiniu.common.QiniuException;
 import com.qiniu.storage.model.FileInfo;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.download.EmptyInputStream;
 import org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoBlockReader;
@@ -16,7 +14,6 @@ import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -91,7 +88,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         int len;
         try {
             len = kodoClient.getLength(key);
-        }catch(FileNotFoundException e1) {
+        } catch (FileNotFoundException e1) {
             // 有可能是文件夹路径但是不存在末尾/
             // 添加尾部/后再次获取
             String newKey = QiniuKodoUtils.keyToDirKey(key);
@@ -101,7 +98,7 @@ public class QiniuKodoFileSystem extends FileSystem {
             try {
                 kodoClient.getLength(newKey);
                 throw fnfeDir;
-            }catch(IOException e2) {
+            } catch (IOException e2) {
                 // 还是有异常，说明文件不存在
                 throw new FileNotFoundException(path.toString());
             }
@@ -165,6 +162,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     @Override
     public boolean rename(Path srcPath, Path dstPath) throws IOException {
+        // TODO: 需要考虑重命名本地缓存池中的缓存
         if (srcPath.isRoot()) {
             // Cannot rename root of file system
             LOG.debug("Cannot rename the root of a filesystem");
@@ -178,9 +176,9 @@ public class QiniuKodoFileSystem extends FileSystem {
             return false;
         }
         FileStatus srcStatus;
-        try{
+        try {
             srcStatus = getFileStatus(srcPath);
-        }catch (FileNotFoundException fnde) {
+        } catch (FileNotFoundException fnde) {
             srcStatus = null;
         }
 
@@ -262,6 +260,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     @Override
     public boolean delete(Path path, boolean recursive) throws IOException {
+        // TODO 同时删除本地缓存
         LOG.debug("== delete, path:" + path + " recursive:" + recursive);
 
         // 判断是否是文件

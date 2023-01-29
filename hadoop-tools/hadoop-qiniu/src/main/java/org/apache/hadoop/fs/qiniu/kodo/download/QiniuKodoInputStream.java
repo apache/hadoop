@@ -46,7 +46,7 @@ public class QiniuKodoInputStream extends FSInputStream {
         if (remaining > Integer.MAX_VALUE) {
             return Integer.MAX_VALUE;
         }
-        return (int)remaining;
+        return (int) remaining;
     }
 
     @Override
@@ -66,7 +66,7 @@ public class QiniuKodoInputStream extends FSInputStream {
      * 根据当前的 position 刷新缓存的 block 块
      */
     private void refreshCurrentBlock() {
-        int blockId = (int)(position / (long) blockSize);
+        int blockId = (int) (position / (long) blockSize);
 
         // 单块缓存, blockId不变直接走缓存
         if (currentBlockData == null || blockId != currentBlockId) {
@@ -84,7 +84,7 @@ public class QiniuKodoInputStream extends FSInputStream {
         checkNotClosed();
 
         refreshCurrentBlock();
-        int offset = (int)(position % (long) blockSize);
+        int offset = (int) (position % (long) blockSize);
         if (currentBlockData.length < blockSize && offset >= currentBlockData.length) {
             LOG.debug("read position: {} eof", position);
             return -1;
@@ -117,7 +117,7 @@ public class QiniuKodoInputStream extends FSInputStream {
         }
 
 
-        int offset = (int)(position % (long) blockSize);
+        int offset = (int) (position % (long) blockSize);
         refreshCurrentBlock();
         if (currentBlockData.length < blockSize && offset >= currentBlockData.length) {
             return -1;
@@ -125,11 +125,11 @@ public class QiniuKodoInputStream extends FSInputStream {
         position++;
         int c = currentBlockData[offset];
 
-        buf[off] = (byte)c;
+        buf[off] = (byte) c;
 
         int i = 1;
         while (i < len) {
-            offset = (int)(position % (long) blockSize);
+            offset = (int) (position % (long) blockSize);
             refreshCurrentBlock();
             if (currentBlockData.length < blockSize && offset >= currentBlockData.length) {
                 break;
@@ -137,7 +137,7 @@ public class QiniuKodoInputStream extends FSInputStream {
             position++;
             c = currentBlockData[offset];
 
-            buf[off + i] = (byte)c;
+            buf[off + i] = (byte) c;
             i++;
         }
 

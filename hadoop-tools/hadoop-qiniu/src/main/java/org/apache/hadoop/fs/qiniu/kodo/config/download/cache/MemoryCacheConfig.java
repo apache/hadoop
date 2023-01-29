@@ -6,6 +6,7 @@ import org.apache.hadoop.fs.qiniu.kodo.config.AConfigBase;
 
 public class MemoryCacheConfig extends AConfigBase {
     public final int blocks;
+
     public MemoryCacheConfig(Configuration conf, String namespace) {
         super(conf, namespace);
         this.blocks = blocks();

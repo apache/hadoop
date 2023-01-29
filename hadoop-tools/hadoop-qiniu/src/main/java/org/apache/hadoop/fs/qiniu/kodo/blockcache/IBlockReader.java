@@ -4,5 +4,6 @@ import java.io.Closeable;
 
 public interface IBlockReader extends Closeable {
     int getBlockSize();
+
     byte[] readBlock(String key, int blockId);
 }

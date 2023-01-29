@@ -36,7 +36,7 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
         Files.createDirectories(bufferDir);
         LOG.debug("constructed: {}", this);
         if (Files.exists(metaFilePath)) {
-            try(Reader re = Files.newBufferedReader(metaFilePath)) {
+            try (Reader re = Files.newBufferedReader(metaFilePath)) {
                 StringWriter sr = new StringWriter();
                 IOUtils.copy(re, sr);
                 loadCacheMetaFromJson(sr.toString());
@@ -46,7 +46,7 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
 
     @Override
     public void deleteBlocks(String key) {
-        for(KeyBlockIdCacheKey kbck: lruCache.keySet()) {
+        for (KeyBlockIdCacheKey kbck : lruCache.keySet()) {
             if (kbck.key.equals(key)) {
                 Path needRemoveBlockFile = lruCache.remove(kbck);
                 if (needRemoveBlockFile == null) continue;
@@ -69,6 +69,7 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
                 return new PersistentEntity(e.getKey(), e.getValue().toString());
             }
         }
+
         // 块数据条目
         public List<PersistentEntity> items;
         // 当前缓存块大小
@@ -89,14 +90,14 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
 
         public LRUCache<KeyBlockIdCacheKey, Path> toLRUCache(int maxCacheBlocks) {
             LRUCache<KeyBlockIdCacheKey, Path> cache = new LRUCache<>(maxCacheBlocks);
-            for (PersistentEntity item: items) {
+            for (PersistentEntity item : items) {
                 cache.put(item.key, Paths.get(item.value));
             }
             return cache;
         }
 
         public void addToMap(Map<KeyBlockIdCacheKey, Path> m) {
-            for (PersistentEntity item: items) {
+            for (PersistentEntity item : items) {
                 m.put(item.key, Paths.get(item.value));
             }
         }
@@ -136,7 +137,7 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
         LOG.debug("read file: {}", path);
 
         int bs = getBlockSize();
-        try(InputStream is = Files.newInputStream(path)) {
+        try (InputStream is = Files.newInputStream(path)) {
             ByteArrayOutputStream os = new ByteArrayOutputStream(bs);
             IOUtils.copy(is, os);
             return os.toByteArray();
@@ -146,12 +147,12 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
     private void writeFile(Path path, byte[] data) throws IOException {
         LOG.debug("write file: {}", path);
         Path parentPath = path.getParent();
-        if(parentPath.toFile().mkdirs()) {
+        if (parentPath.toFile().mkdirs()) {
             LOG.debug("mkdirs: {}", parentPath);
         }
         int bs = getBlockSize();
         if (data.length > bs) throw new IOException("Cache block size error!!!");
-        try(OutputStream f = Files.newOutputStream(path)) {
+        try (OutputStream f = Files.newOutputStream(path)) {
             f.write(data);
         }
         // 刷新元数据存储
@@ -169,24 +170,24 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
      * 若缓存不存在，则返回null
      */
     private byte[] readBlockFromCache(KeyBlockIdCacheKey kbck) throws IOException {
-            if (lruCache.containsKey(kbck)) {
-                Path blockFile = lruCache.get(kbck);
-                long now = Instant.now().getEpochSecond();
-                long lastModifiedTime = Files.getLastModifiedTime(blockFile).toInstant().getEpochSecond();
-                int duration = (int)(now - lastModifiedTime);
-                if (duration > expires) {
-                    // 过期了，删除缓存块, 返回null
-                    Files.deleteIfExists(blockFile);
-                    lruCache.remove(kbck);
-                    // 需要刷新缓存元数据文件
-                    saveBlockCacheMetaFile();
-                    return null;
-                }else {
-                    // 没过期，可以直接返回数据块
-                    return readFile(blockFile);
-                }
+        if (lruCache.containsKey(kbck)) {
+            Path blockFile = lruCache.get(kbck);
+            long now = Instant.now().getEpochSecond();
+            long lastModifiedTime = Files.getLastModifiedTime(blockFile).toInstant().getEpochSecond();
+            int duration = (int) (now - lastModifiedTime);
+            if (duration > expires) {
+                // 过期了，删除缓存块, 返回null
+                Files.deleteIfExists(blockFile);
+                lruCache.remove(kbck);
+                // 需要刷新缓存元数据文件
+                saveBlockCacheMetaFile();
+                return null;
+            } else {
+                // 没过期，可以直接返回数据块
+                return readFile(blockFile);
             }
-            return null;
+        }
+        return null;
     }
 
     /**
@@ -199,13 +200,14 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
         lruCache.put(kbck, cachedBlockFile);
         return blockData;
     }
+
     @Override
     public byte[] readBlock(String key, int blockId) {
         LOG.debug("readBlockId: {}", blockId);
         KeyBlockIdCacheKey kbck = KeyBlockIdCacheKey.get(key, blockId);
 
         IOException exception = null;
-        for(int i=0;i<3;i++) {
+        for (int i = 0; i < 3; i++) {
             try {
                 if (expires > 0) {
                     byte[] cachedBlockData = readBlockFromCache(kbck);
@@ -228,18 +230,19 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
         boolean success = path.toFile().delete();
         if (success) {
             LOG.debug("deleted file successful: {}", path);
-        }else {
+        } else {
             LOG.warn("deleted file failed: {}", path);
         }
     }
+
     @Override
     public void onRemove(Map.Entry<KeyBlockIdCacheKey, Path> entry) {
         deleteFile(entry.getValue());
     }
 
-    private void saveBlockCacheMetaFile() throws IOException{
+    private void saveBlockCacheMetaFile() throws IOException {
         String json = serializeCacheMetaToJson();
-        try(Writer wr = Files.newBufferedWriter(metaFilePath)) {
+        try (Writer wr = Files.newBufferedWriter(metaFilePath)) {
             wr.write(json);
             LOG.debug("Disk cache meta file has been saved in: {}", metaFilePath);
         }

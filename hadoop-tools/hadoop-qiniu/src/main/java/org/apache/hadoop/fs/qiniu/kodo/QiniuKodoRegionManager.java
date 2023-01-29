@@ -15,6 +15,7 @@ public class QiniuKodoRegionManager {
             this.regionId = regionId;
             this.region = region;
         }
+
         /**
          * 获取源站域名
          */
@@ -60,6 +61,7 @@ public class QiniuKodoRegionManager {
             super(String.format("RegionId: %s not found.", regionId));
         }
     }
+
     public static QiniuKodoRegion getRegionById(String regionId) throws QiniuException {
         QiniuKodoRegion region = regionMap.get(regionId);
         if (region != null) return region;

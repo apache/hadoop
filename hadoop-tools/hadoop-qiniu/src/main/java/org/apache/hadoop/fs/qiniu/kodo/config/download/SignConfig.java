@@ -6,6 +6,7 @@ import org.apache.hadoop.fs.qiniu.kodo.config.AConfigBase;
 public class SignConfig extends AConfigBase {
     public final boolean enable;
     public final int expires;
+
     public SignConfig(Configuration conf, String namespace) {
         super(conf, namespace);
         this.enable = enable();

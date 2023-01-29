@@ -7,6 +7,7 @@ import java.util.Map;
 public class LRUCache<K, V> extends LinkedHashMap<K, V> {
     private OnLRUCacheRemoveListener<K, V> onLRUCacheRemoveListener;
     private final int maxCapacity;
+
     public LRUCache(int maxCapacity) {
         super((int) Math.ceil(maxCapacity / 0.75f) + 1,
                 0.75f,  // HashMap默认负载因子 0.75

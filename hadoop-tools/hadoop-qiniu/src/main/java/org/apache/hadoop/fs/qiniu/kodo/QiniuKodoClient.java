@@ -17,7 +17,6 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -68,10 +67,12 @@ public class QiniuKodoClient {
         this.bucketManager = new BucketManager(auth, configuration, this.client);
 
         // 如果找不到区域配置，那就发起请求获取区域信息
-        if (region == null) region = QiniuKodoRegionManager.getRegionById(bucketManager.getBucketInfo(bucket).getRegion());
+        if (region == null)
+            region = QiniuKodoRegionManager.getRegionById(bucketManager.getBucketInfo(bucket).getRegion());
 
         // 设置下载域名，若未配置，则走源站
-        if ((downloadDomain = fsConfig.download.domain) == null) downloadDomain = bucket + "." + region.getRegionEndpoint();
+        if ((downloadDomain = fsConfig.download.domain) == null)
+            downloadDomain = bucket + "." + region.getRegionEndpoint();
 
         this.useSign = fsConfig.download.sign.enable;
         this.signExpires = fsConfig.download.sign.expires;
@@ -118,7 +119,7 @@ public class QiniuKodoClient {
     public int getLength(String key) throws IOException {
         Request.Builder requestBuilder = new Request.Builder().url(getFileUrlByKey(key)).head();
 
-        try{
+        try {
             Response response = client.send(requestBuilder, null);
             String len = response.header("content-length", null);
             if (len == null) {
@@ -126,9 +127,9 @@ public class QiniuKodoClient {
             }
 
             return Integer.parseInt(len);
-        }catch (QiniuException e) {
+        } catch (QiniuException e) {
             if (e.response != null && e.response.statusCode == 612) {
-                throw new FileNotFoundException("key: "+key);
+                throw new FileNotFoundException("key: " + key);
             }
             throw e;
         }
@@ -302,7 +303,7 @@ public class QiniuKodoClient {
 
         do {
             fileListing = bucketManager.listFilesV2(bucket, prefix, marker, 100, "");
-            for (FileInfo file: fileListing.items) {
+            for (FileInfo file : fileListing.items) {
                 // 略过自身
                 if (file.key.equals(prefix)) continue;
                 // 除去自身外还有子文件文件，但未 recursive 抛出异常

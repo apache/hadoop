@@ -8,7 +8,7 @@ import com.qiniu.storage.model.FileListing;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-public class ObjectListingProducer implements Runnable{
+public class ObjectListingProducer implements Runnable {
     private final BlockingQueue<FileInfo> queue;
     private final BucketManager bucketManager;
     private final String keyPrefix;
@@ -47,12 +47,12 @@ public class ObjectListingProducer implements Runnable{
                     continue;
                 }
 
-                try{
+                try {
                     boolean success;
-                    do{
+                    do {
                         success = queue.offer(file, 1, TimeUnit.SECONDS);
                     } while (!success);
-                }catch (InterruptedException e) {
+                } catch (InterruptedException e) {
                     break;
                 }
 

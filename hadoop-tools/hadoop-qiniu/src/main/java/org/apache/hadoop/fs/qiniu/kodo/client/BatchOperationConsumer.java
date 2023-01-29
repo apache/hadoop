@@ -1,14 +1,14 @@
 package org.apache.hadoop.fs.qiniu.kodo.client;
 
 import com.qiniu.common.QiniuException;
-import com.qiniu.storage.BucketManager.BatchOperations;
 import com.qiniu.storage.BucketManager;
+import com.qiniu.storage.BucketManager.BatchOperations;
 import org.apache.hadoop.fs.qiniu.kodo.client.operator.BatchOperator;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-public class BatchOperationConsumer implements Runnable{
+public class BatchOperationConsumer implements Runnable {
     private final BlockingQueue<BatchOperator> queue;
     private final BucketManager bucketManager;
     private final int singleBatchRequestLimit;
@@ -16,6 +16,7 @@ public class BatchOperationConsumer implements Runnable{
     private BatchOperations batchOperations = null;
     private int batchOperationsSize = 0;
     private boolean isRunning = true;
+
     public BatchOperationConsumer(
             BlockingQueue<BatchOperator> queue,
             BucketManager bucketManager,
@@ -44,7 +45,7 @@ public class BatchOperationConsumer implements Runnable{
             operator.addTo(batchOperations);
             batchOperationsSize++;
 
-            // 批处理到100个的时候提交
+            // 批处理到到达一定数目时提交
             if (batchOperationsSize >= singleBatchRequestLimit) {
                 submitBatchOperations();
             }
@@ -57,6 +58,14 @@ public class BatchOperationConsumer implements Runnable{
     public void run() {
         while (isRunning) {
             loop();
+        }
+        // 提交剩余的批处理
+        if (batchOperationsSize > 0) {
+            try {
+                submitBatchOperations();
+            } catch (QiniuException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 

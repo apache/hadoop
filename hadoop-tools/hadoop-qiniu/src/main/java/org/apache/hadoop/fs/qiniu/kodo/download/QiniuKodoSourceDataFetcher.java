@@ -10,6 +10,7 @@ import java.util.Arrays;
 
 public class QiniuKodoSourceDataFetcher extends DataFetcherBlockReader {
     private final QiniuKodoClient client;
+
     public QiniuKodoSourceDataFetcher(
             int blockSize,
             QiniuKodoClient client) {
@@ -19,7 +20,7 @@ public class QiniuKodoSourceDataFetcher extends DataFetcherBlockReader {
 
     @Override
     public byte[] fetch(String key, long offset, int size) {
-        try(InputStream is = client.fetch(key, offset, size)) {
+        try (InputStream is = client.fetch(key, offset, size)) {
             byte[] buf = new byte[size];
             int cnt = IOUtils.read(is, buf);
             return Arrays.copyOf(buf, cnt);

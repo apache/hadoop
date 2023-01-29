@@ -4,7 +4,7 @@ import org.apache.hadoop.conf.Configuration;
 
 import java.util.Map;
 
-public class AuthConfig extends AConfigBase{
+public class AuthConfig extends AConfigBase {
     public final String ACCESS_KEY = namespace + ".accessKey";
     public final String SECRET_KEY = namespace + ".secretKey";
 

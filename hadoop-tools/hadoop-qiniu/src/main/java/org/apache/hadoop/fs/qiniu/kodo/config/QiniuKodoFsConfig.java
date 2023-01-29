@@ -4,7 +4,7 @@ package org.apache.hadoop.fs.qiniu.kodo.config;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.qiniu.kodo.config.download.DownloadConfig;
 
-public class QiniuKodoFsConfig extends AConfigBase{
+public class QiniuKodoFsConfig extends AConfigBase {
     public final String regionId;
     public final boolean useHttps;
 

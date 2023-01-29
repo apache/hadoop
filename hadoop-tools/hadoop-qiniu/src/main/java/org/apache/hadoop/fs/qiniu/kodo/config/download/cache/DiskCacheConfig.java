@@ -11,6 +11,7 @@ public class DiskCacheConfig extends AConfigBase {
     public final int blocks;
     public final Path dir;
     public final int expires;
+
     public DiskCacheConfig(Configuration conf, String namespace) {
         super(conf, namespace);
         this.enable = enable();
@@ -48,7 +49,7 @@ public class DiskCacheConfig extends AConfigBase {
      * 磁盘缓存过期时间
      */
     private int expires() {
-        return conf.getInt(namespace + ".expires", 24*3600);
+        return conf.getInt(namespace + ".expires", 24 * 3600);
     }
 
     @Override

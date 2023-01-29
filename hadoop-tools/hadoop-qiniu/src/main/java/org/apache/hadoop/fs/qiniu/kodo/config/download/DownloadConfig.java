@@ -9,6 +9,7 @@ public class DownloadConfig extends AConfigBase {
     public final int blockSize;
     public final String domain;
     public final SignConfig sign;
+
     public DownloadConfig(Configuration conf, String namespace) {
         super(conf, namespace);
         this.cache = cache();

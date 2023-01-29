@@ -19,6 +19,7 @@ public class QiniuKodoBlockReader implements IBlockReader, IBlockManager {
 
     private IBlockReader finalReader = null;
     private final int blockSize;
+
     public QiniuKodoBlockReader(
             QiniuKodoFsConfig fsConfig,
             QiniuKodoClient client
@@ -42,7 +43,7 @@ public class QiniuKodoBlockReader implements IBlockReader, IBlockManager {
 
         // 必须添加内存缓存层，否则单字节读取可能将不断读取文件块
         this.memoryCacheReader = new MemoryCacheBlockReader(
-                diskCacheReader == null? sourceReader:diskCacheReader,
+                diskCacheReader == null ? sourceReader : diskCacheReader,
                 memoryCache.blocks
         );
         this.finalReader = memoryCacheReader;
