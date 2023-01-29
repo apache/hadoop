@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListener<KeyBlockIdCacheKey, Path> {
+public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListener<KeyBlockIdCacheKey, Path>, IBlockManager {
     private static final Logger LOG = LoggerFactory.getLogger(DiskCacheBlockReader.class);
     private static final String META_FILE_NAME = ".BUFFER_META.json";
     private final IBlockReader source;
@@ -40,6 +40,17 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
                 StringWriter sr = new StringWriter();
                 IOUtils.copy(re, sr);
                 loadCacheMetaFromJson(sr.toString());
+            }
+        }
+    }
+
+    @Override
+    public void deleteBlocks(String key) {
+        for(KeyBlockIdCacheKey kbck: lruCache.keySet()) {
+            if (kbck.key.equals(key)) {
+                Path needRemoveBlockFile = lruCache.remove(kbck);
+                if (needRemoveBlockFile == null) continue;
+                deleteFile(needRemoveBlockFile);
             }
         }
     }
@@ -212,15 +223,18 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
         throw new RuntimeException(exception);
     }
 
+    private void deleteFile(Path path) {
+        LOG.debug("delete file: {}", path);
+        boolean success = path.toFile().delete();
+        if (success) {
+            LOG.debug("deleted file successful: {}", path);
+        }else {
+            LOG.warn("deleted file failed: {}", path);
+        }
+    }
     @Override
     public void onRemove(Map.Entry<KeyBlockIdCacheKey, Path> entry) {
-        LOG.debug("delete file: {}", entry.getValue());
-        boolean success = entry.getValue().toFile().delete();
-        if (success) {
-            LOG.debug("deleted file successful: {}", entry.getValue());
-        }else {
-            LOG.warn("deleted file failed: {}", entry.getValue());
-        }
+        deleteFile(entry.getValue());
     }
 
     private void saveBlockCacheMetaFile() throws IOException{

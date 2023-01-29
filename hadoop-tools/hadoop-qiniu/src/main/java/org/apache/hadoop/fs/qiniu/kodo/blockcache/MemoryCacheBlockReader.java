@@ -2,7 +2,7 @@ package org.apache.hadoop.fs.qiniu.kodo.blockcache;
 
 import java.io.IOException;
 
-public class MemoryCacheBlockReader implements IBlockReader{
+public class MemoryCacheBlockReader implements IBlockReader, IBlockManager{
     private final IBlockReader source;
     private final LRUCache<KeyBlockIdCacheKey, byte[]> lruCache;
     private final int blockSize;
@@ -31,5 +31,14 @@ public class MemoryCacheBlockReader implements IBlockReader{
     @Override
     public void close() throws IOException {
         lruCache.clear();
+    }
+
+    @Override
+    public void deleteBlocks(String key) {
+        for(KeyBlockIdCacheKey kbck: lruCache.keySet()) {
+            if (kbck.key.equals(key)) {
+                lruCache.remove(kbck);
+            }
+        }
     }
 }

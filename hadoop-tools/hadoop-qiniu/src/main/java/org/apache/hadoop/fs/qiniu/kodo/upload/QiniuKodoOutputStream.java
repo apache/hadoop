@@ -3,6 +3,7 @@ package org.apache.hadoop.fs.qiniu.kodo.upload;
 import com.qiniu.common.QiniuException;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoClient;
+import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,14 +24,17 @@ public class QiniuKodoOutputStream extends OutputStream {
 
     private volatile QiniuException uploadException;
 
-    public QiniuKodoOutputStream(QiniuKodoClient client, String key, String token) {
+    private final IBlockManager blockManager;
+
+    public QiniuKodoOutputStream(QiniuKodoClient client, String key, boolean overwrite, IBlockManager blockManager) {
         this.key = key;
+        this.blockManager = blockManager;
         this.pos = new PipedOutputStream();
         try {
             this.pis = new PipedInputStream(pos);
             this.thread = new Thread(() -> {
                 try {
-                    client.upload(pis, key, token);
+                    client.upload(pis, key, overwrite);
                 } catch (QiniuException e) {
                     this.uploadException = e;
                 }
@@ -52,6 +56,8 @@ public class QiniuKodoOutputStream extends OutputStream {
         try {
             thread.join();
             if (uploadException == null) {
+                // 无异常退出
+                blockManager.deleteBlocks(key); // 上传完毕，清理旧缓存
                 return;
             }
             if (uploadException.response.statusCode == 614) {

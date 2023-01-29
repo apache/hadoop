@@ -43,7 +43,7 @@ public class QiniuKodoClientTest {
 
     @Test
     public void testDeleteKeys() throws IOException {
-        client.deleteKeys("");
+        client.deleteKeys("", true);
     }
 
     @Test

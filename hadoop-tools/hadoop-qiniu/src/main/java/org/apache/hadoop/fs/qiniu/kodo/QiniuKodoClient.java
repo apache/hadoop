@@ -10,6 +10,7 @@ import com.qiniu.storage.model.FileListing;
 import com.qiniu.util.Auth;
 import com.qiniu.util.StringMap;
 import com.qiniu.util.StringUtils;
+import okhttp3.Request;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -17,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -105,10 +107,32 @@ public class QiniuKodoClient {
     /**
      * 给定一个输入流将读取并上传对应文件
      */
-    public Response upload(InputStream stream, String key, String token) throws QiniuException {
-        return uploadManager.put(stream, key, token, null, null);
+    public Response upload(InputStream stream, String key, boolean overwrite) throws QiniuException {
+        return uploadManager.put(stream, key, getUploadToken(key, overwrite), null, null);
     }
 
+
+    /**
+     * 通过HEAD来获取指定的key大小
+     */
+    public int getLength(String key) throws IOException {
+        Request.Builder requestBuilder = new Request.Builder().url(getFileUrlByKey(key)).head();
+
+        try{
+            Response response = client.send(requestBuilder, null);
+            String len = response.header("content-length", null);
+            if (len == null) {
+                throw new IOException(String.format("Cannot get object length by key: %s", key));
+            }
+
+            return Integer.parseInt(len);
+        }catch (QiniuException e) {
+            if (e.response != null && e.response.statusCode == 612) {
+                throw new FileNotFoundException("key: "+key);
+            }
+            throw e;
+        }
+    }
 
     /**
      * 根据指定的key和文件大小获取一个输入流
@@ -118,6 +142,7 @@ public class QiniuKodoClient {
             StringMap header = new StringMap();
             header.put("Range", String.format("bytes=%d-%d", offset, offset + size - 1));
             String url = getFileUrlByKey(key);
+            LOG.debug("fetch content by url: {}", url);
             Response response = this.client.get(url, header);
             return response.bodyStream();
         } catch (QiniuException e) {

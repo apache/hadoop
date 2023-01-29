@@ -1,11 +1,13 @@
 package org.apache.hadoop.fs.qiniu.kodo;
 
+import com.qiniu.common.QiniuException;
 import com.qiniu.storage.model.FileInfo;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
+import org.apache.hadoop.fs.qiniu.kodo.download.EmptyInputStream;
 import org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoInputStream;
 import org.apache.hadoop.fs.qiniu.kodo.upload.QiniuKodoOutputStream;
@@ -34,7 +36,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     private QiniuKodoClient kodoClient;
 
     private QiniuKodoFsConfig fsConfig;
-    private IBlockReader blockReader;
+    private QiniuKodoBlockReader blockReader;
 
     @Override
     public void initialize(URI name, Configuration conf) throws IOException {
@@ -76,25 +78,43 @@ public class QiniuKodoFileSystem extends FileSystem {
      */
     @Override
     public FSDataInputStream open(Path path, int bufferSize) throws IOException {
-        LOG.debug("== open, path:" + path);
+        IOException fnfeDir = new FileNotFoundException("Can't open " + path +
+                " because it is a directory");
+        LOG.debug("open, path:" + path);
 
-        final FileStatus fileStatus = getFileStatus(path);
-        if (fileStatus.isDirectory()) {
-            throw new FileNotFoundException("Can't open " + path +
-                    " because it is a directory");
+        Path qualifiedPath = path.makeQualified(uri, workingDir);
+        String key = QiniuKodoUtils.pathToKey(workingDir, qualifiedPath);
+
+        // root
+        if (key.length() == 0) throw fnfeDir;
+
+        int len;
+        try {
+            len = kodoClient.getLength(key);
+        }catch(FileNotFoundException e1) {
+            // 有可能是文件夹路径但是不存在末尾/
+            // 添加尾部/后再次获取
+            String newKey = QiniuKodoUtils.keyToDirKey(key);
+            if (newKey.equals(key)) {
+                throw new FileNotFoundException(path.toString());
+            }
+            try {
+                kodoClient.getLength(newKey);
+                throw fnfeDir;
+            }catch(IOException e2) {
+                // 还是有异常，说明文件不存在
+                throw new FileNotFoundException(path.toString());
+            }
         }
-
-        if (fileStatus.getLen() == 0) {
-            return new FSDataInputStream(new ByteArrayInputStream(new byte[0]));
+        // 空文件内容
+        if (len == 0) {
+            return new FSDataInputStream(new EmptyInputStream());
         }
-        String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        LOG.debug("== open, key:" + key);
-
         return new FSDataInputStream(
                 new QiniuKodoInputStream(
-                    key,
-                    blockReader,
-                    fileStatus.getLen(), statistics
+                        key,
+                        blockReader,
+                        len, statistics
                 )
         );
     }
@@ -118,8 +138,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         LOG.debug("== create, key:" + key + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
 
-        return new FSDataOutputStream(new QiniuKodoOutputStream(kodoClient, key, kodoClient.getUploadToken(key, overwrite)), statistics);
-
+        return new FSDataOutputStream(new QiniuKodoOutputStream(kodoClient, key, overwrite, blockReader), statistics);
     }
 
     @Override
@@ -134,7 +153,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         LOG.debug("== create, key:" + key + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
 
-        return new FSDataOutputStream(new QiniuKodoOutputStream(kodoClient, key, kodoClient.getUploadToken(key, overwrite)), statistics);
+        return new FSDataOutputStream(new QiniuKodoOutputStream(kodoClient, key, overwrite, blockReader), statistics);
 
     }
 
@@ -373,12 +392,18 @@ public class QiniuKodoFileSystem extends FileSystem {
         // 能查找到, 直接返回文件信息
         if (file != null) return fileInfoToFileStatus(file);
 
-        // 2. 非路径 key，转路径
-        key = QiniuKodoUtils.keyToDirKey(key);
-        LOG.debug("== getFileStatus 02, key:" + key);
+        // 2. 有可能是文件夹路径但是不存在末尾/
+        // 添加尾部/后再次获取
+        String newKey = QiniuKodoUtils.keyToDirKey(key);
+        if (!newKey.equals(key)) {
+            // key 改变了
+            LOG.debug("== getFileStatus 02, key:" + newKey);
 
-        file = kodoClient.getFileStatus(key);
-        if (file != null) return fileInfoToFileStatus(file);
+            file = kodoClient.getFileStatus(newKey);
+            if (file != null) {
+                return fileInfoToFileStatus(file);
+            }
+        }
 
         throw new FileNotFoundException("can't find file:" + path);
     }
