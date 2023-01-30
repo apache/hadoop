@@ -357,8 +357,9 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
     boolean sameLength = target.getLen() == source.getLen();
     boolean sameBlockSize = source.getBlockSize() == target.getBlockSize()
         || !preserve.contains(FileAttribute.BLOCKSIZE);
-    if (source.getLen() == 0) {
-      return false;
+    // Skip the copy if a 0 size file is being copied.
+    if (sameLength && source.getLen() == 0) {
+      return true;
     }
     // if both the source and target have the same length, then check if the
     // config to use modification time is set to true, then use the
