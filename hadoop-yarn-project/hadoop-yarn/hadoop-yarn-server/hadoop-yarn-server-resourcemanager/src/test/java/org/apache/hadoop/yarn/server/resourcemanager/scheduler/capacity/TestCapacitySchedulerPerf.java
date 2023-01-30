@@ -62,6 +62,7 @@ import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.DEFAULT_QUEUE_PATH;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT_QUEUE_PATH;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -451,7 +452,7 @@ public class TestCapacitySchedulerPerf {
     csconf.setResourceComparator(DominantResourceCalculator.class);
     csconf.setMaximumApplicationMasterResourcePerQueuePercent(ROOT_QUEUE_PATH, 100.0f);
     csconf.setMaximumAMResourcePercentPerPartition("root", "", 100.0f);
-    csconf.setCapacity("root.default", 0.0f);
+    csconf.setCapacity(DEFAULT_QUEUE_PATH, 0.0f);
     csconf.setOffSwitchPerHeartbeatLimit(numQueues);
 
     float capacity = 100.0f / numQueues;
@@ -463,9 +464,9 @@ public class TestCapacitySchedulerPerf {
       csconf.setMaximumApplicationMasterResourcePerQueuePercent(
           queuePath, 100.0f);
       csconf.setMaximumAMResourcePercentPerPartition(queuePath.getFullPath(), "", 100.0f);
-      csconf.setCapacity(queuePath.getFullPath(), capacity);
+      csconf.setCapacity(queuePath, capacity);
       csconf.setUserLimitFactor(queuePath.getFullPath(), 100.0f);
-      csconf.setMaximumCapacity(queuePath.getFullPath(), 100.0f);
+      csconf.setMaximumCapacity(queuePath, 100.0f);
     }
 
     csconf.setQueues("root", subQueues);

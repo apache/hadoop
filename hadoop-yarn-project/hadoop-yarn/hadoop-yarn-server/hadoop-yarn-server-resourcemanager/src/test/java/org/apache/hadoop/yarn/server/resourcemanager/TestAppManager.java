@@ -152,6 +152,8 @@ public class TestAppManager extends AppManagerTestBase{
 
   private static final String USER_ID_PREFIX = "userid=";
   private static final String ROOT_PARENT =  PREFIX + "root.parent.";
+  private static final QueuePath TEST_QUEUE_PATH =  new QueuePath("root.test");
+  private static final QueuePath MANAGED_PARENT_QUEUE_PATH =  new QueuePath("root.managedparent");
 
   public synchronized RMAppEventType getAppEventType() {
     return appEventType;
@@ -326,8 +328,8 @@ public class TestAppManager extends AppManagerTestBase{
     csConf.setCapacity(DEFAULT_QUEUE_PATH, 50.0f);
     csConf.setMaximumCapacity(DEFAULT_QUEUE_PATH, 100.0f);
 
-    csConf.setCapacity("root.test", 50.0f);
-    csConf.setMaximumCapacity("root.test", 100.0f);
+    csConf.setCapacity(TEST_QUEUE_PATH, 50.0f);
+    csConf.setMaximumCapacity(TEST_QUEUE_PATH, 100.0f);
 
     csConf.set(PREFIX + "root.acl_submit_applications", " ");
     csConf.set(PREFIX + "root.acl_administer_queue", " ");
@@ -365,11 +367,11 @@ public class TestAppManager extends AppManagerTestBase{
         conf, false);
     csConf.set(PREFIX + "root.queues", "default,managedparent");
 
-    csConf.setCapacity("root.default", 50.0f);
-    csConf.setMaximumCapacity("root.default", 100.0f);
+    csConf.setCapacity(DEFAULT_QUEUE_PATH, 50.0f);
+    csConf.setMaximumCapacity(DEFAULT_QUEUE_PATH, 100.0f);
 
-    csConf.setCapacity("root.managedparent", 50.0f);
-    csConf.setMaximumCapacity("root.managedparent", 100.0f);
+    csConf.setCapacity(MANAGED_PARENT_QUEUE_PATH, 50.0f);
+    csConf.setMaximumCapacity(MANAGED_PARENT_QUEUE_PATH, 100.0f);
 
     csConf.set(PREFIX + "root.acl_submit_applications", " ");
     csConf.set(PREFIX + "root.acl_administer_queue", " ");

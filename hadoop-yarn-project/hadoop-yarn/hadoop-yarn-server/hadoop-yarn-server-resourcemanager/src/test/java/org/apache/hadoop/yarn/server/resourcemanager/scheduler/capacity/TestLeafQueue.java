@@ -26,6 +26,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.CapacitySchedulerConfiguration.ROOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT_QUEUE_PATH;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -274,7 +275,7 @@ public class TestLeafQueue {
     
     // Define top-level queues
     conf.setQueues(ROOT, new String[] {newRoot});
-    conf.setMaximumCapacity(ROOT, 100);
+    conf.setMaximumCapacity(ROOT_QUEUE_PATH, 100);
     conf.setAcl(ROOT,
       QueueACL.SUBMIT_APPLICATIONS, " ");
     if (withNodeLabels) {
@@ -284,9 +285,10 @@ public class TestLeafQueue {
     }
     
     final String Q_newRoot = ROOT + "." + newRoot;
+    final QueuePath qNewRootPath = new QueuePath(Q_newRoot);
     conf.setQueues(Q_newRoot, new String[] {A, B, C, D, E});
-    conf.setCapacity(Q_newRoot, 100);
-    conf.setMaximumCapacity(Q_newRoot, 100);
+    conf.setCapacity(qNewRootPath, 100);
+    conf.setMaximumCapacity(qNewRootPath, 100);
     conf.setAcl(Q_newRoot, QueueACL.SUBMIT_APPLICATIONS, " ");
     if (withNodeLabels) {
       conf.setAccessibleNodeLabels(Q_newRoot, Collections.singleton(LABEL));

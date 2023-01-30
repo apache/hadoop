@@ -60,6 +60,12 @@ public class TestCapacitySchedulerWeightMode {
   private static final String B1 = B + ".b1";
   private static final String B2 = B + ".b2";
 
+  private static final QueuePath A_QUEUE_PATH = new QueuePath(A);
+  private static final QueuePath B_QUEUE_PATH = new QueuePath(B);
+  private static final QueuePath A1_QUEUE_PATH = new QueuePath(A1);
+  private static final QueuePath B1_QUEUE_PATH = new QueuePath(B1);
+  private static final QueuePath B2_QUEUE_PATH = new QueuePath(B2);
+
   private YarnConfiguration conf;
 
   RMNodeLabelsManager mgr;
@@ -123,13 +129,13 @@ public class TestCapacitySchedulerWeightMode {
     conf.setLabeledQueueWeight(ROOT_QUEUE_PATH, "z", 100);
 
     conf.setLabeledQueueWeight(A_QUEUE_PATH, RMNodeLabelsManager.NO_LABEL, 1);
-    conf.setMaximumCapacity(A, 10);
+    conf.setMaximumCapacity(A_QUEUE_PATH, 10);
     conf.setAccessibleNodeLabels(A, toSet("x", "y"));
     conf.setLabeledQueueWeight(A_QUEUE_PATH, "x", 100);
     conf.setLabeledQueueWeight(A_QUEUE_PATH, "y", 50);
 
     conf.setLabeledQueueWeight(B_QUEUE_PATH, RMNodeLabelsManager.NO_LABEL, 9);
-    conf.setMaximumCapacity(B, 100);
+    conf.setMaximumCapacity(B_QUEUE_PATH, 100);
     conf.setAccessibleNodeLabels(B, toSet("y", "z"));
     conf.setLabeledQueueWeight(B_QUEUE_PATH, "y", 50);
     conf.setLabeledQueueWeight(B_QUEUE_PATH, "z", 100);
@@ -137,7 +143,7 @@ public class TestCapacitySchedulerWeightMode {
     // Define 2nd-level queues
     conf.setQueues(A, new String[] { "a1" });
     conf.setLabeledQueueWeight(A1_QUEUE_PATH, RMNodeLabelsManager.NO_LABEL, 100);
-    conf.setMaximumCapacity(A1, 100);
+    conf.setMaximumCapacity(A1_QUEUE_PATH, 100);
     conf.setAccessibleNodeLabels(A1, toSet("x", "y"));
     conf.setDefaultNodeLabelExpression(A1, "x");
     conf.setLabeledQueueWeight(A1_QUEUE_PATH, "x", 100);
@@ -145,11 +151,11 @@ public class TestCapacitySchedulerWeightMode {
 
     conf.setQueues(B, new String[] { "b1", "b2" });
     conf.setLabeledQueueWeight(B1_QUEUE_PATH, RMNodeLabelsManager.NO_LABEL, 50);
-    conf.setMaximumCapacity(B1, 50);
+    conf.setMaximumCapacity(B1_QUEUE_PATH, 50);
     conf.setAccessibleNodeLabels(B1, RMNodeLabelsManager.EMPTY_STRING_SET);
 
     conf.setLabeledQueueWeight(B2_QUEUE_PATH, RMNodeLabelsManager.NO_LABEL, 50);
-    conf.setMaximumCapacity(B2, 50);
+    conf.setMaximumCapacity(B2_QUEUE_PATH, 50);
     conf.setAccessibleNodeLabels(B2, toSet("y", "z"));
     conf.setLabeledQueueWeight(B2_QUEUE_PATH, "y", 100);
     conf.setLabeledQueueWeight(B2_QUEUE_PATH, "z", 100);
@@ -182,13 +188,13 @@ public class TestCapacitySchedulerWeightMode {
     conf.setLabeledQueueWeight(ROOT_QUEUE_PATH, "z", 100);
 
     conf.setLabeledQueueWeight(A_QUEUE_PATH, RMNodeLabelsManager.NO_LABEL, 1);
-    conf.setMaximumCapacity(A, 10);
+    conf.setMaximumCapacity(A_QUEUE_PATH, 10);
     conf.setAccessibleNodeLabels(A, toSet("x", "y"));
     conf.setLabeledQueueWeight(A_QUEUE_PATH, "x", 100);
     conf.setLabeledQueueWeight(A_QUEUE_PATH, "y", 50);
 
     conf.setLabeledQueueWeight(B_QUEUE_PATH, RMNodeLabelsManager.NO_LABEL, 9);
-    conf.setMaximumCapacity(B, 100);
+    conf.setMaximumCapacity(B_QUEUE_PATH, 100);
     conf.setAccessibleNodeLabels(B, toSet("y", "z"));
     conf.setLabeledQueueWeight(B_QUEUE_PATH, "y", 50);
     conf.setLabeledQueueWeight(B_QUEUE_PATH, "z", 100);
@@ -196,7 +202,7 @@ public class TestCapacitySchedulerWeightMode {
     // Define 2nd-level queues
     conf.setQueues(A, new String[] { "a1" });
     conf.setCapacityByLabel(A1, RMNodeLabelsManager.NO_LABEL, 100);
-    conf.setMaximumCapacity(A1, 100);
+    conf.setMaximumCapacity(A1_QUEUE_PATH, 100);
     conf.setAccessibleNodeLabels(A1, toSet("x", "y"));
     conf.setDefaultNodeLabelExpression(A1, "x");
     conf.setCapacityByLabel(A1, "x", 100);
@@ -204,11 +210,11 @@ public class TestCapacitySchedulerWeightMode {
 
     conf.setQueues(B, new String[] { "b1", "b2" });
     conf.setCapacityByLabel(B1, RMNodeLabelsManager.NO_LABEL, 50);
-    conf.setMaximumCapacity(B1, 50);
+    conf.setMaximumCapacity(B1_QUEUE_PATH, 50);
     conf.setAccessibleNodeLabels(B1, RMNodeLabelsManager.EMPTY_STRING_SET);
 
     conf.setCapacityByLabel(B2, RMNodeLabelsManager.NO_LABEL, 50);
-    conf.setMaximumCapacity(B2, 50);
+    conf.setMaximumCapacity(B2_QUEUE_PATH, 50);
     conf.setAccessibleNodeLabels(B2, toSet("y", "z"));
     conf.setCapacityByLabel(B2, "y", 100);
     conf.setCapacityByLabel(B2, "z", 100);
@@ -241,13 +247,13 @@ public class TestCapacitySchedulerWeightMode {
     conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "z", 100);
 
     conf.setCapacityByLabel(A, RMNodeLabelsManager.NO_LABEL, 10);
-    conf.setMaximumCapacity(A, 10);
+    conf.setMaximumCapacity(A_QUEUE_PATH, 10);
     conf.setAccessibleNodeLabels(A, toSet("x", "y"));
     conf.setCapacityByLabel(A, "x", 100);
     conf.setCapacityByLabel(A, "y", 50);
 
     conf.setCapacityByLabel(B, RMNodeLabelsManager.NO_LABEL, 90);
-    conf.setMaximumCapacity(B, 100);
+    conf.setMaximumCapacity(B_QUEUE_PATH, 100);
     conf.setAccessibleNodeLabels(B, toSet("y", "z"));
     conf.setCapacityByLabel(B, "y", 50);
     conf.setCapacityByLabel(B, "z", 100);
@@ -255,7 +261,7 @@ public class TestCapacitySchedulerWeightMode {
     // Define 2nd-level queues
     conf.setQueues(A, new String[] { "a1" });
     conf.setLabeledQueueWeight(A1_QUEUE_PATH, RMNodeLabelsManager.NO_LABEL, 1);
-    conf.setMaximumCapacity(A1, 100);
+    conf.setMaximumCapacity(A1_QUEUE_PATH, 100);
     conf.setAccessibleNodeLabels(A1, toSet("x", "y"));
     conf.setDefaultNodeLabelExpression(A1, "x");
     conf.setLabeledQueueWeight(A1_QUEUE_PATH, "x", 1);
@@ -263,11 +269,11 @@ public class TestCapacitySchedulerWeightMode {
 
     conf.setQueues(B, new String[] { "b1", "b2" });
     conf.setLabeledQueueWeight(B1_QUEUE_PATH, RMNodeLabelsManager.NO_LABEL, 1);
-    conf.setMaximumCapacity(B1, 50);
+    conf.setMaximumCapacity(B1_QUEUE_PATH, 50);
     conf.setAccessibleNodeLabels(B1, RMNodeLabelsManager.EMPTY_STRING_SET);
 
     conf.setLabeledQueueWeight(B2_QUEUE_PATH, RMNodeLabelsManager.NO_LABEL, 1);
-    conf.setMaximumCapacity(B2, 50);
+    conf.setMaximumCapacity(B2_QUEUE_PATH, 50);
     conf.setAccessibleNodeLabels(B2, toSet("y", "z"));
     conf.setLabeledQueueWeight(B2_QUEUE_PATH, "y", 1);
     conf.setLabeledQueueWeight(B2_QUEUE_PATH, "z", 1);

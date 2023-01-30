@@ -81,6 +81,8 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
 
   private static final String A_QUEUE = CapacitySchedulerConfiguration.ROOT + ".a";
   private static final String B_QUEUE = CapacitySchedulerConfiguration.ROOT + ".b";
+  private static final QueuePath A_QUEUE_PATH = new QueuePath(A_QUEUE);
+  private static final QueuePath B_QUEUE_PATH = new QueuePath(B_QUEUE);
   private static float A_CAPACITY = 50.0f;
   private static float B_CAPACITY = 50.0f;
 
@@ -287,9 +289,9 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
         new String[] {"a", "b"});
 
     // Set each queue to consider 50% each.
-    csConf.setCapacity(A_QUEUE, A_CAPACITY);
-    csConf.setCapacity(B_QUEUE, B_CAPACITY);
-    csConf.setMaximumCapacity(A_QUEUE, 100.0f);
+    csConf.setCapacity(A_QUEUE_PATH, A_CAPACITY);
+    csConf.setCapacity(B_QUEUE_PATH, B_CAPACITY);
+    csConf.setMaximumCapacity(A_QUEUE_PATH, 100.0f);
     csConf.setUserLimitFactor(A_QUEUE, 2);
 
     YarnConfiguration conf = new YarnConfiguration(csConf);
@@ -418,9 +420,9 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
         new String[] {"a", "b"});
 
     // Set each queue to contain 50% each.
-    csconf.setCapacity(A_QUEUE, A_CAPACITY);
-    csconf.setCapacity(B_QUEUE, B_CAPACITY);
-    csconf.setMaximumCapacity(A_QUEUE, 100.0f);
+    csconf.setCapacity(A_QUEUE_PATH, A_CAPACITY);
+    csconf.setCapacity(B_QUEUE_PATH, B_CAPACITY);
+    csconf.setMaximumCapacity(A_QUEUE_PATH, 100.0f);
     csconf.setUserLimitFactor(A_QUEUE, 2);
 
     YarnConfiguration yarnConf = new YarnConfiguration(csconf);

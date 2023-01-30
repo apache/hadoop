@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 
@@ -331,6 +332,10 @@ public class ReservationSystemTestUtil {
   public static String getFullReservationQueueName() {
     return CapacitySchedulerConfiguration.ROOT
         + CapacitySchedulerConfiguration.DOT + RESERVATION_Q_SHORT;
+  }
+
+  public static QueuePath getFullReservationQueuePath() {
+    return new QueuePath(getFullReservationQueueName());
   }
 
   public static String getReservationQueueName() {

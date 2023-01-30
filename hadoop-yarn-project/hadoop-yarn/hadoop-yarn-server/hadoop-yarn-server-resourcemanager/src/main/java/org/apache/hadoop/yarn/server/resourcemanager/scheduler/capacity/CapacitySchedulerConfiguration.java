@@ -2532,9 +2532,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   @Private
   @VisibleForTesting
-  public void setAutoCreatedLeafQueueConfigMaxCapacity(String queuePath,
+  public void setAutoCreatedLeafQueueConfigMaxCapacity(QueuePath queuePath,
       float val) {
-    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+    QueuePath leafQueueConfPrefix = getAutoCreatedQueueObjectTemplateConfPrefix(
         queuePath);
     setMaximumCapacity(leafQueueConfPrefix, val);
   }

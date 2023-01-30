@@ -576,9 +576,9 @@ public class TestCapacityScheduler {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     assertEquals(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE,
             conf.getNonLabeledQueueMaximumCapacity(queuePathA), delta);
-    conf.setMaximumCapacity(A, 50.0f);
+    conf.setMaximumCapacity(A_QUEUE_PATH, 50.0f);
     assertEquals(50.0f, conf.getNonLabeledQueueMaximumCapacity(queuePathA), delta);
-    conf.setMaximumCapacity(A, -1);
+    conf.setMaximumCapacity(A_QUEUE_PATH, -1);
     assertEquals(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE,
             conf.getNonLabeledQueueMaximumCapacity(queuePathA), delta);
   }
@@ -627,7 +627,7 @@ public class TestCapacityScheduler {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
 
     conf.setQueues("root", new String[] {childQueue});
-    conf.setCapacity("root." + childQueue, "[memory=20480,vcores=200]");
+    conf.setCapacity(new QueuePath("root." + childQueue), "[memory=20480,vcores=200]");
     conf.setAccessibleNodeLabels("root." + childQueue,
         Sets.newHashSet(labelName));
     conf.setCapacityByLabel("root", labelName, "[memory=10240,vcores=100]");
@@ -1529,17 +1529,17 @@ public class TestCapacityScheduler {
      */
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
-    csConf.setCapacity(A, 50);
-    csConf.setMaximumCapacity(A, 50);
-    csConf.setCapacity(B, 50);
+    csConf.setCapacity(A_QUEUE_PATH, 50);
+    csConf.setMaximumCapacity(A_QUEUE_PATH, 50);
+    csConf.setCapacity(B_QUEUE_PATH, 50);
 
     // Define 2nd-level queues
     csConf.setQueues(A, new String[] {"a1", "a2"});
-    csConf.setCapacity(A1, 50);
+    csConf.setCapacity(A1_QUEUE_PATH, 50);
     csConf.setUserLimitFactor(A1, 100.0f);
-    csConf.setCapacity(A2, 50);
+    csConf.setCapacity(A2_QUEUE_PATH, 50);
     csConf.setUserLimitFactor(A2, 100.0f);
-    csConf.setCapacity(B1, B1_CAPACITY);
+    csConf.setCapacity(B1_QUEUE_PATH, B1_CAPACITY);
     csConf.setUserLimitFactor(B1, 100.0f);
 
     YarnConfiguration conf = new YarnConfiguration(csConf);
@@ -2528,7 +2528,7 @@ public class TestCapacityScheduler {
         new CapacitySchedulerConfiguration();
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[] {"default"});
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".default", 100);
+    csConf.setCapacity(DEFAULT_QUEUE_PATH, 100);
     csConf.setMaximumLifetimePerQueue(
         CapacitySchedulerConfiguration.ROOT + ".default", maxLifetime);
     csConf.setDefaultLifetimePerQueue(
@@ -2867,9 +2867,9 @@ public class TestCapacityScheduler {
     // Add child queue to a, and reinitialize. Metrics should be updated
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT + ".a",
         new String[] {"a1", "a2", "a3"});
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".a.a2", 29.5f);
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".a.a3", 40.5f);
-    csConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + ".a.a3",
+    csConf.setCapacity(A2_QUEUE_PATH, 29.5f);
+    csConf.setCapacity(A3_QUEUE_PATH, 40.5f);
+    csConf.setMaximumCapacity(A3_QUEUE_PATH,
         50.0f);
 
     cs.reinitialize(csConf, new RMContextImpl(null, null, null, null, null,
@@ -2916,11 +2916,11 @@ public class TestCapacityScheduler {
         = new CapacitySchedulerConfiguration();
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[] {"a", "b"});
-    csConf.setCapacity("root.a", 50);
-    csConf.setMaximumCapacity("root.a", 100);
+    csConf.setCapacity(A_QUEUE_PATH, 50);
+    csConf.setMaximumCapacity(A_QUEUE_PATH, 100);
     csConf.setUserLimitFactor("root.a", 100);
-    csConf.setCapacity("root.b", 50);
-    csConf.setMaximumCapacity("root.b", 100);
+    csConf.setCapacity(B_QUEUE_PATH, 50);
+    csConf.setMaximumCapacity(B_QUEUE_PATH, 100);
     csConf.setUserLimitFactor("root.b", 100);
 
     YarnConfiguration conf=new YarnConfiguration(csConf);

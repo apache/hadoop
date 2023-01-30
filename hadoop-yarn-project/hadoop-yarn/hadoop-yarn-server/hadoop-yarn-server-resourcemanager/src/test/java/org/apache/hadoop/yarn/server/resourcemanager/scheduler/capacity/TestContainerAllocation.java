@@ -73,6 +73,7 @@ import org.junit.Test;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_MB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAX_ASSIGN_PER_HEARTBEAT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.*;
 
 public class TestContainerAllocation {
 
@@ -722,7 +723,7 @@ public class TestContainerAllocation {
         (CapacitySchedulerConfiguration) TestUtils
             .getConfigurationWithMultipleQueues(conf);
     // Set maximum capacity of A to 10
-    newConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + ".a", 10);
+    newConf.setMaximumCapacity(A_QUEUE_PATH, 10);
     MockRM rm1 = new MockRM(newConf);
 
     rm1.getRMContext().setNodeLabelManager(mgr);
@@ -894,7 +895,7 @@ public class TestContainerAllocation {
         CapacitySchedulerConfiguration.QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY);
 
     // Set maximum capacity of A to 20
-    newConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + ".a", 20);
+    newConf.setMaximumCapacity(A_QUEUE_PATH, 20);
     newConf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".c", 1);
     newConf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".b", 2);
     newConf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".a", 3);
@@ -1185,7 +1186,7 @@ public class TestContainerAllocation {
     newConf
         .setBoolean(TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES, false);
     // Set maximum capacity of queue "a" to 50
-    newConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + ".a", 50);
+    newConf.setMaximumCapacity(A_QUEUE_PATH, 50);
     MockRM rm1 = new MockRM(newConf);
 
     RMNodeLabelsManager nodeLabelsManager = new NullRMNodeLabelsManager();
@@ -1274,12 +1275,12 @@ public class TestContainerAllocation {
     CapacitySchedulerConfiguration newConf =
         (CapacitySchedulerConfiguration) TestUtils
             .getConfigurationWithMultipleQueues(conf);
-    newConf.setQueues(CapacitySchedulerConfiguration.ROOT + ".c",
+    newConf.setQueues(C,
         new String[] { "c1", "c2" });
-    newConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".c.c1", 10);
+    newConf.setCapacity(C1_QUEUE_PATH, 10);
     newConf
-        .setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + ".c.c1", 10);
-    newConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".c.c2", 90);
+        .setMaximumCapacity(C1_QUEUE_PATH, 10);
+    newConf.setCapacity(C2_QUEUE_PATH, 90);
     newConf.setClass(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
         DominantResourceCalculator.class, ResourceCalculator.class);
 
@@ -1343,7 +1344,7 @@ public class TestContainerAllocation {
             .getConfigurationWithMultipleQueues(conf);
     newConf.setClass(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
         DominantResourceCalculator.class, ResourceCalculator.class);
-    newConf.set(QueuePrefixes.getQueuePrefix("root.a")
+    newConf.set(QueuePrefixes.getQueuePrefix(A_QUEUE_PATH)
         + MAXIMUM_ALLOCATION_MB, "4096");
 
     MockRM rm1 = new MockRM(newConf);
