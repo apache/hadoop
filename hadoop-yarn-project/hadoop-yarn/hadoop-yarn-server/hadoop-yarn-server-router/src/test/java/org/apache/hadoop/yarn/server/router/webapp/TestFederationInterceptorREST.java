@@ -20,13 +20,7 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
 import java.security.Principal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Collections;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.concurrent.TimeUnit;
 
@@ -1864,5 +1858,32 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     LambdaTestUtils.intercept(IllegalArgumentException.class,
         "'groupBy' must not be empty.",
         () -> interceptor.getBulkActivities(null, "", 1));
+  }
+
+  @Test
+  public void testAddToClusterNodeLabels() throws Exception {
+    // In this test, we try to add ALL label, all subClusters will return success.
+    NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
+    NodeLabelInfo nodeLabelInfo = new NodeLabelInfo("ALL", true);
+    nodeLabelsInfo.getNodeLabelsInfo().add(nodeLabelInfo);
+
+    Response response = interceptor.addToClusterNodeLabels(nodeLabelsInfo, null);
+    Assert.assertNotNull(response);
+
+    Object entity = response.getEntity();
+    Assert.assertNotNull(entity);
+
+    String entityMsg = String.valueOf(entity);
+    String[] entityMsgs = StringUtils.split(entityMsg, "#");
+    Assert.assertNotNull(entityMsgs);
+    Assert.assertEquals(4, entityMsgs.length);
+
+    // The order in which the cluster returns messages is uncertain,
+    // we confirm the result by contains
+    String expectedMsg =
+        "SubCluster=0,SUCCESS#SubCluster=1,SUCCESS#SubCluster=2,SUCCESS#SubCluster=3,SUCCESS#";
+    Arrays.stream(entityMsgs).forEach(msg -> {
+      Assert.assertTrue(expectedMsg.contains(msg));
+    });
   }
 }

@@ -1287,4 +1287,27 @@ public class MockDefaultRequestInterceptorREST
       throw new RuntimeException(e);
     }
   }
+
+  @Override
+  public Response addToClusterNodeLabels(NodeLabelsInfo newNodeLabels, HttpServletRequest hsr)
+      throws Exception {
+    List<NodeLabelInfo> nodeLabelInfoList = newNodeLabels.getNodeLabelsInfo();
+    NodeLabelInfo nodeLabelInfo = nodeLabelInfoList.get(0);
+    String nodeLabelName = nodeLabelInfo.getName();
+
+    // If nodeLabelName is ALL, we let all subclusters pass
+    if (StringUtils.equals("ALL", nodeLabelName)) {
+      return Response.status(Status.OK).build();
+    } else if (StringUtils.equals("A0", nodeLabelName)) {
+      SubClusterId subClusterId = getSubClusterId();
+      String id = subClusterId.getId();
+      if (StringUtils.contains("A0", id)) {
+        return Response.status(Status.OK).build();
+      } else {
+        return null;
+      }
+    }
+
+    throw new YarnException("addToClusterNodeLabels Error");
+  }
 }
