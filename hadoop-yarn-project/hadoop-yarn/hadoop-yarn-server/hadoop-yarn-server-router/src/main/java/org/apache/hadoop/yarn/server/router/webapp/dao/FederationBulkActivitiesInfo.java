@@ -6,57 +6,44 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.server.router.webapp.dao;
 
-package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
-
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.List;
 import java.util.ArrayList;
 
-/**
- * DAO object to display allocation activities.
- */
-@XmlRootElement(name = "bulkActivities")
+@XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
-public class BulkActivitiesInfo {
+public class FederationBulkActivitiesInfo extends BulkActivitiesInfo {
 
-  private ArrayList<ActivitiesInfo> activities = new ArrayList<>();
+  @XmlElement(name = "subCluster")
+  private ArrayList<BulkActivitiesInfo> list = new ArrayList<>();
 
-  private String subClusterId;
+  public FederationBulkActivitiesInfo() {
+  } // JAXB needs this
 
-  public BulkActivitiesInfo() {
-    // JAXB needs this
+  public FederationBulkActivitiesInfo(ArrayList<BulkActivitiesInfo> list) {
+    this.list = list;
   }
 
-  public void add(ActivitiesInfo activitiesInfo) {
-    activities.add(activitiesInfo);
+  public ArrayList<BulkActivitiesInfo> getList() {
+    return list;
   }
 
-  public ArrayList<ActivitiesInfo> getActivities() {
-    return activities;
-  }
-
-  public void addAll(List<ActivitiesInfo> activitiesInfoList) {
-    activities.addAll(activitiesInfoList);
-  }
-
-  public String getSubClusterId() {
-    return subClusterId;
-  }
-
-  public void setSubClusterId(String subClusterId) {
-    this.subClusterId = subClusterId;
+  public void setList(ArrayList<BulkActivitiesInfo> list) {
+    this.list = list;
   }
 }

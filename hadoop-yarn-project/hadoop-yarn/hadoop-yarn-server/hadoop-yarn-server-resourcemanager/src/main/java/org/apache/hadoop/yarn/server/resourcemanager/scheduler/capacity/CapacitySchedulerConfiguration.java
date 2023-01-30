@@ -423,6 +423,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   private static final QueueCapacityConfigParser queueCapacityConfigParser
       = new QueueCapacityConfigParser();
+  private static final String LEGACY_QUEUE_MODE_ENABLED = PREFIX + "legacy-queue-mode.enabled";
+  public static final boolean DEFAULT_LEGACY_QUEUE_MODE = true;
 
   private ConfigurationProperties configurationProperties;
 
@@ -572,8 +574,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     String configuredCapacity = get(getQueuePrefix(queue.getFullPath()) + CAPACITY);
     boolean absoluteResourceConfigured = (configuredCapacity != null)
         && RESOURCE_PATTERN.matcher(configuredCapacity).find();
+    boolean isCapacityVectorFormat = queueCapacityConfigParser
+        .isCapacityVectorFormat(configuredCapacity);
     if (absoluteResourceConfigured || configuredWeightAsCapacity(
-        configuredCapacity)) {
+        configuredCapacity) || isCapacityVectorFormat) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
       // root.From AbstractCSQueue, absolute resource will be parsed and
       // updated. Once nodes are added/removed in cluster, capacity in
@@ -623,7 +627,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public float getNonLabeledQueueMaximumCapacity(QueuePath queue) {
     String configuredCapacity = get(getQueuePrefix(queue.getFullPath()) + MAXIMUM_CAPACITY);
     boolean matcher = (configuredCapacity != null)
-        && RESOURCE_PATTERN.matcher(configuredCapacity).find();
+        && RESOURCE_PATTERN.matcher(configuredCapacity).find()
+        || queueCapacityConfigParser.isCapacityVectorFormat(configuredCapacity);
     if (matcher) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
       // root.From AbstractCSQueue, absolute resource will be parsed and
@@ -819,6 +824,16 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return Collections.unmodifiableSet(set);
   }
 
+  public void setCapacityVector(String queuePath, String label, String capacityVector) {
+    String capacityPropertyName = getNodeLabelPrefix(queuePath, label) + CAPACITY;
+    set(capacityPropertyName, capacityVector);
+  }
+
+  public void setMaximumCapacityVector(String queuePath, String label, String capacityVector) {
+    String capacityPropertyName = getNodeLabelPrefix(queuePath, label) + MAXIMUM_CAPACITY;
+    set(capacityPropertyName, capacityVector);
+  }
+
   private boolean configuredWeightAsCapacity(String configureValue) {
     if (configureValue == null) {
       return false;
@@ -843,7 +858,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         (configuredCapacity != null) && RESOURCE_PATTERN.matcher(
             configuredCapacity).find();
     if (absoluteResourceConfigured || configuredWeightAsCapacity(
-        configuredCapacity)) {
+        configuredCapacity) || queueCapacityConfigParser.isCapacityVectorFormat(configuredCapacity)) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
       // root.From AbstractCSQueue, absolute resource, and weight will be parsed
       // and updated separately. Once nodes are added/removed in cluster,
@@ -2701,7 +2716,28 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       String queuePath, Set<String> labels) {
     Map<String, QueueCapacityVector> queueResourceVectors = new HashMap<>();
     for (String label : labels) {
-      queueResourceVectors.put(label, queueCapacityConfigParser.parse(this, queuePath, label));
+      String propertyName = CapacitySchedulerConfiguration.getNodeLabelPrefix(
+          queuePath, label) + CapacitySchedulerConfiguration.CAPACITY;
+      String capacityString = get(propertyName);
+      queueResourceVectors.put(label, queueCapacityConfigParser.parse(capacityString, queuePath));
+    }
+
+    return queueResourceVectors;
+  }
+
+  public Map<String, QueueCapacityVector> parseConfiguredMaximumCapacityVector(
+      String queuePath, Set<String> labels, QueueCapacityVector defaultVector) {
+    Map<String, QueueCapacityVector> queueResourceVectors = new HashMap<>();
+    for (String label : labels) {
+      String propertyName = CapacitySchedulerConfiguration.getNodeLabelPrefix(
+          queuePath, label) + CapacitySchedulerConfiguration.MAXIMUM_CAPACITY;
+      String capacityString = get(propertyName);
+      QueueCapacityVector capacityVector = queueCapacityConfigParser.parse(capacityString,
+          queuePath);
+      if (capacityVector.isEmpty()) {
+        capacityVector = defaultVector;
+      }
+      queueResourceVectors.put(label, capacityVector);
     }
 
     return queueResourceVectors;
@@ -2806,6 +2842,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
 
     String units = getUnits(splits[1]);
+
+    if (!UnitsConversionUtil.KNOWN_UNITS.contains(units)) {
+      return;
+    }
+
     Long resourceValue = Long
         .valueOf(splits[1].substring(0, splits[1].length() - units.length()));
 
@@ -2886,6 +2927,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
 
     return normalizePolicyName(policyClassName.trim());
+  }
+
+  public boolean isLegacyQueueMode() {
+    return getBoolean(LEGACY_QUEUE_MODE_ENABLED, DEFAULT_LEGACY_QUEUE_MODE);
+  }
+
+  public void setLegacyQueueModeEnabled(boolean value) {
+    setBoolean(LEGACY_QUEUE_MODE_ENABLED, value);
   }
 
   public boolean getMultiNodePlacementEnabled() {
