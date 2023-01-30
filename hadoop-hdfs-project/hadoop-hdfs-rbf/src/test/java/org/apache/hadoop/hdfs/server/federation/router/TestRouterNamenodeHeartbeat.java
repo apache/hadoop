@@ -322,7 +322,7 @@ public class TestRouterNamenodeHeartbeat {
   }
 
   @Test
-  public void testNamendodeHeartbeatWithSecurity() throws Exception {
+  public void testNamenodeHeartbeatWithSecurity() throws Exception {
     Configuration conf = SecurityConfUtil.initSecurity();
     MiniRouterDFSCluster testCluster = null;
     try {
