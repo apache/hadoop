@@ -764,7 +764,7 @@ public final class RouterMetrics {
   public long getNumSucceededDumpSchedulerLogsRetrieved() {
     return totalSucceededDumpSchedulerLogsRetrieved.lastStat().numSamples();
   }
-  
+
   @VisibleForTesting
   public long getNumSucceededGetActivitiesRetrieved() {
     return totalSucceededGetActivitiesRetrieved.lastStat().numSamples();
@@ -1024,7 +1024,7 @@ public final class RouterMetrics {
   public double getLatencySucceededDumpSchedulerLogsRetrieved() {
     return totalSucceededDumpSchedulerLogsRetrieved.lastStat().mean();
   }
-  
+
   @VisibleForTesting
   public double getLatencySucceededGetActivitiesRetrieved() {
     return totalSucceededGetActivitiesRetrieved.lastStat().mean();
@@ -1518,7 +1518,7 @@ public final class RouterMetrics {
     totalSucceededDumpSchedulerLogsRetrieved.add(duration);
     dumpSchedulerLogsLatency.add(duration);
   }
-  
+
   public void succeededGetActivitiesLatencyRetrieved(long duration) {
     totalSucceededGetActivitiesRetrieved.add(duration);
     getActivitiesLatency.add(duration);
@@ -1743,7 +1743,7 @@ public final class RouterMetrics {
   public void incrDumpSchedulerLogsFailedRetrieved() {
     numDumpSchedulerLogsFailedRetrieved.incr();
   }
-  
+
   public void incrGetActivitiesFailedRetrieved() {
     numGetActivitiesFailedRetrieved.incr();
   }

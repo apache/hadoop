@@ -1818,7 +1818,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
         "time must be a number.",
         () -> interceptor.dumpSchedulerLogs("abc", mockHsr));
   }
-  
+
   @Test
   public void testGetActivitiesNormal() {
     ActivitiesInfo activitiesInfo = interceptor.getActivities(null, "1", "DIAGNOSTIC");

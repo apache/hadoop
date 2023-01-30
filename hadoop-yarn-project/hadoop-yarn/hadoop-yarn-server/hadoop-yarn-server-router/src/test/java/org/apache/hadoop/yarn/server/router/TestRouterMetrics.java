@@ -533,12 +533,12 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed renewDelegationToken call");
       metrics.incrRenewDelegationTokenFailedRetrieved();
     }
-    
+
     public void getDumpSchedulerLogsFailed() {
       LOG.info("Mocked: failed DumpSchedulerLogs call");
       metrics.incrDumpSchedulerLogsFailedRetrieved();
     }
-    
+
     public void getActivitiesFailed() {
       LOG.info("Mocked: failed getBulkActivitie call");
       metrics.incrGetActivitiesFailedRetrieved();
@@ -783,7 +783,7 @@ public class TestRouterMetrics {
       LOG.info("Mocked: successful DumpSchedulerLogs call with duration {}", duration);
       metrics.succeededDumpSchedulerLogsRetrieved(duration);
     }
-    
+
     public void getActivitiesRetrieved(long duration) {
       LOG.info("Mocked: successful GetActivities call with duration {}", duration);
       metrics.succeededGetActivitiesLatencyRetrieved(duration);
@@ -1650,7 +1650,7 @@ public class TestRouterMetrics {
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getDumpSchedulerLogsFailedRetrieved());
   }
-  
+
   @Test
   public void testGetActivitiesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetActivitiesRetrieved();
