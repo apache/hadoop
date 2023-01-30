@@ -51,6 +51,11 @@ public class QiniuKodoOutputStream extends OutputStream {
     }
 
     @Override
+    public void write(byte[] b, int off, int len) throws IOException {
+        pos.write(b, off, len);
+    }
+
+    @Override
     public void close() throws IOException {
         pos.close();
         try {
