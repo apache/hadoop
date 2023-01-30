@@ -150,4 +150,12 @@ public class QiniuKodoFileSystemTest {
         long et = System.currentTimeMillis();
         System.out.printf("%f\n", (double)(et - st) / 1000f);
     }
+
+    @Test
+    public void testListSmallFiles() throws Exception {
+        FileStatus[] fileStatuses = fs.listStatus(new Path("/smallFile"));
+        for (FileStatus status : fileStatuses) {
+            System.out.println(status);
+        }
+    }
 }
