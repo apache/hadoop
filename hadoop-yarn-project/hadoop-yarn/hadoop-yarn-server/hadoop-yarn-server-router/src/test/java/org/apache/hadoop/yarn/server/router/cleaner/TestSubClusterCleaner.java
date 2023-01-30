@@ -33,7 +33,6 @@ import org.junit.Test;
 
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Supplier;
 
 public class TestSubClusterCleaner {
 
@@ -72,7 +71,7 @@ public class TestSubClusterCleaner {
 
   @Test
   public void testSubClusterRegisterHeartBeatTime()
-    throws InterruptedException, TimeoutException, YarnException {
+      throws InterruptedException, TimeoutException, YarnException {
     // We set up such a unit test, We set the status of all subClusters to RUNNING,
     // and set the SubClusterCleaner Check Heartbeat timeout to 1s.
     // After 1s, the status of all subClusters should be SC_LOST.
