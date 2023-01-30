@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -65,9 +65,9 @@ import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -234,7 +234,7 @@ public class TestTaskImpl {
     
   }
   
-  @Before 
+  @BeforeEach
   @SuppressWarnings("unchecked")
   public void setup() {
      dispatcher = new InlineDispatcher();
@@ -273,7 +273,7 @@ public class TestTaskImpl {
         startCount, metrics, appContext, taskType);
   }
 
-  @After 
+  @AfterEach
   public void teardown() {
     taskAttempts.clear();
   }
@@ -510,7 +510,7 @@ public class TestTaskImpl {
     assertTaskScheduledState();
   }
 
-  @Test 
+  @Test
   public void testTaskProgress() {
     LOG.info("--- START: testTaskProgress ---");
     mockTask = createMockTask(TaskType.MAP);        
@@ -587,10 +587,10 @@ public class TestTaskImpl {
     mockTask.handle(new TaskTAttemptEvent(getLastAttempt().getAttemptId(), 
         TaskEventType.T_ATTEMPT_SUCCEEDED));
     
-    assertFalse("First attempt should not commit",
-        mockTask.canCommit(taskAttempts.get(0).getAttemptId()));
-    assertTrue("Second attempt should commit",
-        mockTask.canCommit(getLastAttempt().getAttemptId()));
+    assertFalse(mockTask.canCommit(taskAttempts.get(0).getAttemptId()),
+        "First attempt should not commit");
+    assertTrue(mockTask.canCommit(getLastAttempt().getAttemptId()),
+        "Second attempt should commit");
 
     assertTaskSucceededState();
   }
@@ -879,7 +879,8 @@ public class TestTaskImpl {
     baseAttempt.setProgress(1.0f);
 
     Counters taskCounters = mockTask.getCounters();
-    assertEquals("wrong counters for task", specAttemptCounters, taskCounters);
+    assertEquals(specAttemptCounters, taskCounters,
+        "wrong counters for task");
   }
 
   public static class MockTaskAttemptEventHandler implements EventHandler {
