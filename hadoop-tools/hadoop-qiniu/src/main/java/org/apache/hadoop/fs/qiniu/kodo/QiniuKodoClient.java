@@ -43,8 +43,10 @@ public class QiniuKodoClient {
 
     private String downloadDomain;
     private final FileSystem.Statistics statistics;
-    private final boolean useSign;
-    private final int signExpires;
+    private final boolean downloadUseSign;
+    private final int downloadSignExpires;
+
+    private final int uploadSignExpires;
 
     public QiniuKodoClient(String bucket, QiniuKodoFsConfig fsConfig, FileSystem.Statistics statistics) throws QiniuException, AuthorizationException {
         this.bucket = bucket;
@@ -74,8 +76,10 @@ public class QiniuKodoClient {
         if ((downloadDomain = fsConfig.download.domain) == null)
             downloadDomain = bucket + "." + region.getRegionEndpoint();
 
-        this.useSign = fsConfig.download.sign.enable;
-        this.signExpires = fsConfig.download.sign.expires;
+        this.downloadUseSign = fsConfig.download.sign.enable;
+        this.downloadSignExpires = fsConfig.download.sign.expires;
+
+        this.uploadSignExpires = fsConfig.upload.sign.expires;
     }
 
     private static Auth getAuth(QiniuKodoFsConfig fsConfig) throws AuthorizationException {
@@ -102,7 +106,7 @@ public class QiniuKodoClient {
     public String getUploadToken(String key, boolean overwrite) {
         StringMap policy = new StringMap();
         policy.put("insertOnly", overwrite ? 0 : 1);
-        return auth.uploadToken(bucket, key, 7 * 24 * 3600, policy);
+        return auth.uploadToken(bucket, key, uploadSignExpires, policy);
     }
 
     /**
@@ -348,7 +352,7 @@ public class QiniuKodoClient {
      */
     public boolean makeEmptyObject(String key) throws IOException {
         byte[] content = new byte[]{};
-        String token = auth.uploadToken(bucket, null, 3 * 3600L, null);
+        String token = auth.uploadToken(bucket, null, uploadSignExpires, null);
         Response response = uploadManager.put(content, key, token);
         return response.isOK();
     }
@@ -378,9 +382,9 @@ public class QiniuKodoClient {
     private String getFileUrlByKey(String key) throws IOException {
         DownloadUrl downloadUrl = new DownloadUrl(downloadDomain, useHttps, key);
         String url = downloadUrl.buildURL();
-        if (!useSign) {
+        if (!downloadUseSign) {
             return url;
         }
-        return auth.privateDownloadUrl(url, signExpires);
+        return auth.privateDownloadUrl(url, downloadSignExpires);
     }
 }
