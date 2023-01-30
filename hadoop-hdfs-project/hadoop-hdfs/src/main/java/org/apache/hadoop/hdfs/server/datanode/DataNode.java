@@ -358,8 +358,7 @@ public class DataNode extends ReconfigurableBase
               FS_GETSPACEUSED_JITTER_KEY,
               FS_GETSPACEUSED_CLASSNAME));
 
-  public static final org.apache.log4j.Logger METRICS_LOG =
-      org.apache.log4j.Logger.getLogger("DataNodeMetricsLog");
+  public static final String METRICS_LOG_NAME = "DataNodeMetricsLog";
 
   private static final String DATANODE_HTRACE_PREFIX = "datanode.htrace.";
   private final FileIoProvider fileIoProvider;
@@ -4032,12 +4031,12 @@ public class DataNode extends ReconfigurableBase
       return;
     }
 
-    MetricsLoggerTask.makeMetricsLoggerAsync(METRICS_LOG);
+    MetricsLoggerTask.makeMetricsLoggerAsync(METRICS_LOG_NAME);
 
     // Schedule the periodic logging.
     metricsLoggerTimer = new ScheduledThreadPoolExecutor(1);
     metricsLoggerTimer.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
-    metricsLoggerTimer.scheduleWithFixedDelay(new MetricsLoggerTask(METRICS_LOG,
+    metricsLoggerTimer.scheduleWithFixedDelay(new MetricsLoggerTask(METRICS_LOG_NAME,
         "DataNode", (short) 0), metricsLoggerPeriodSec, metricsLoggerPeriodSec,
         TimeUnit.SECONDS);
   }

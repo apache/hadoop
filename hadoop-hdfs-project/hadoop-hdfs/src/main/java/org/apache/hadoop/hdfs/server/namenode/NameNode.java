@@ -425,8 +425,7 @@ public class NameNode extends ReconfigurableBase implements
 
   private static final String NAMENODE_HTRACE_PREFIX = "namenode.htrace.";
 
-  public static final org.apache.log4j.Logger METRICS_LOG =
-      org.apache.log4j.Logger.getLogger("NameNodeMetricsLog");
+  public static final String METRICS_LOG_NAME = "NameNodeMetricsLog";
 
   protected FSNamesystem namesystem; 
   protected final NamenodeRole role;
@@ -947,13 +946,13 @@ public class NameNode extends ReconfigurableBase implements
       return;
     }
 
-    MetricsLoggerTask.makeMetricsLoggerAsync(METRICS_LOG);
+    MetricsLoggerTask.makeMetricsLoggerAsync(METRICS_LOG_NAME);
 
     // Schedule the periodic logging.
     metricsLoggerTimer = new ScheduledThreadPoolExecutor(1);
     metricsLoggerTimer.setExecuteExistingDelayedTasksAfterShutdownPolicy(
         false);
-    metricsLoggerTimer.scheduleWithFixedDelay(new MetricsLoggerTask(METRICS_LOG,
+    metricsLoggerTimer.scheduleWithFixedDelay(new MetricsLoggerTask(METRICS_LOG_NAME,
         "NameNode", (short) 128),
         metricsLoggerPeriodSec,
         metricsLoggerPeriodSec,

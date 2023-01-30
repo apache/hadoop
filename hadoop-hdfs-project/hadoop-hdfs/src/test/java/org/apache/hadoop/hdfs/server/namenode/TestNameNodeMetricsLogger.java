@@ -68,7 +68,7 @@ public class TestNameNodeMetricsLogger {
   @Test
   public void testMetricsLoggerIsAsync() throws IOException {
     makeNameNode(true);
-    org.apache.log4j.Logger logger = NameNode.METRICS_LOG;
+    org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(NameNode.METRICS_LOG_NAME);
     @SuppressWarnings("unchecked")
     List<Appender> appenders = Collections.list(logger.getAllAppenders());
     assertTrue(appenders.get(0) instanceof AsyncAppender);
@@ -87,7 +87,7 @@ public class TestNameNodeMetricsLogger {
     makeNameNode(true);     // Log metrics early and often.
     final PatternMatchingAppender appender =
         new PatternMatchingAppender("^.*FakeMetric42.*$");
-    addAppender(NameNode.METRICS_LOG, appender);
+    addAppender(org.apache.log4j.Logger.getLogger(NameNode.METRICS_LOG_NAME), appender);
 
     // Ensure that the supplied pattern was matched.
     GenericTestUtils.waitFor(new Supplier<Boolean>() {

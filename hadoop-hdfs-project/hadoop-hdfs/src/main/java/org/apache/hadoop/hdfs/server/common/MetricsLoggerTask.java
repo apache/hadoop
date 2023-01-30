@@ -60,9 +60,8 @@ public class MetricsLoggerTask implements Runnable {
   private String nodeName;
   private short maxLogLineLength;
 
-  public MetricsLoggerTask(org.apache.log4j.Logger metricsLog, String nodeName,
-      short maxLogLineLength) {
-    this.metricsLog = metricsLog;
+  public MetricsLoggerTask(String metricsLog, String nodeName, short maxLogLineLength) {
+    this.metricsLog = org.apache.log4j.Logger.getLogger(metricsLog);
     this.nodeName = nodeName;
     this.maxLogLineLength = maxLogLineLength;
   }
@@ -143,8 +142,8 @@ public class MetricsLoggerTask implements Runnable {
    * Make the metrics logger async and add all pre-existing appenders to the
    * async appender.
    */
-  public static void makeMetricsLoggerAsync(org.apache.log4j.Logger metricsLog) {
-    org.apache.log4j.Logger logger = metricsLog;
+  public static void makeMetricsLoggerAsync(String metricsLog) {
+    org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(metricsLog);
     logger.setAdditivity(false); // Don't pollute actual logs with metrics dump
 
     @SuppressWarnings("unchecked")

@@ -47,6 +47,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 /**
@@ -360,14 +361,14 @@ public class LogLevel {
         + "<input type='submit' value='Set Log Level' />"
         + "</form>";
 
-    private static void process(org.apache.log4j.Logger log, String level,
+    private static void process(Logger log, String level,
         PrintWriter out) throws IOException {
       if (level != null) {
-        if (!level.equalsIgnoreCase(org.apache.log4j.Level.toLevel(level)
+        if (!level.equalsIgnoreCase(Level.toLevel(level)
             .toString())) {
           out.println(MARKER + "Bad Level : <b>" + level + "</b><br />");
         } else {
-          log.setLevel(org.apache.log4j.Level.toLevel(level));
+          log.setLevel(Level.toLevel(level));
           out.println(MARKER + "Setting Level to " + level + " ...<br />");
         }
       }

@@ -133,7 +133,7 @@ public class TestDataNodeMetricsLogger {
   public void testMetricsLoggerIsAsync() throws IOException {
     startDNForTest(true);
     assertNotNull(dn);
-    org.apache.log4j.Logger logger = DataNode.METRICS_LOG;
+    org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(DataNode.METRICS_LOG_NAME);
     @SuppressWarnings("unchecked")
     List<Appender> appenders = Collections.list(logger.getAllAppenders());
     assertTrue(appenders.get(0) instanceof AsyncAppender);
@@ -153,7 +153,7 @@ public class TestDataNodeMetricsLogger {
     assertNotNull(dn);
     final PatternMatchingAppender appender = new PatternMatchingAppender(
         "^.*FakeMetric.*$");
-    addAppender(DataNode.METRICS_LOG, appender);
+    addAppender(org.apache.log4j.Logger.getLogger(DataNode.METRICS_LOG_NAME), appender);
 
     // Ensure that the supplied pattern was matched.
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
