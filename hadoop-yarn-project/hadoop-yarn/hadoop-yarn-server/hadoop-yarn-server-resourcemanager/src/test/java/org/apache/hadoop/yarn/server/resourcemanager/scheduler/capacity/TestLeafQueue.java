@@ -54,6 +54,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.AbstractCSUser;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.UsersManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -105,7 +107,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicyWithExclusivePartitions;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.UsersManager.User;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -1015,8 +1016,8 @@ public class TestLeafQueue {
     // Set user-limit
     b.setUserLimit(50);
     b.setUserLimitFactor(2);
-    User queueUser0 = b.getUser(user0);
-    User queueUser1 = b.getUser(user1);
+    AbstractCSUser queueUser0 = b.getUser(user0);
+    AbstractCSUser queueUser1 = b.getUser(user1);
 
     assertEquals("There should 2 active users!", 2, b
         .getAbstractUsersManager().getNumActiveUsers());
@@ -1287,7 +1288,7 @@ public class TestLeafQueue {
     }
 
     // check the current version in the user limits cache
-    assertEquals(leafQueue.getUsersManager().getLatestVersionOfUsersState(),
+    assertEquals(((UsersManager) leafQueue.getUsersManager()).getLatestVersionOfUsersState(),
         leafQueue.currentUserLimitCacheVersion);
     assertTrue(leafQueue.currentUserLimitCacheVersion > 0);
   }
@@ -1411,7 +1412,7 @@ public class TestLeafQueue {
         .size());
     // But the cache is stale because an allocation was made
     assertNotEquals(leafQueue.currentUserLimitCacheVersion,
-        leafQueue.getUsersManager().getLatestVersionOfUsersState());
+        ((UsersManager)leafQueue.getUsersManager()).getLatestVersionOfUsersState());
     // Have not made any calls to fill up the all user limit in UsersManager
     // But the user limit cache in leafQueue got filled up using the active
     // user limit in UsersManager
@@ -1503,7 +1504,7 @@ public class TestLeafQueue {
         .get(user_2).userLimit.getMemorySize());
     // And the cache is NOT stale because no allocation was made
     assertEquals(leafQueue.currentUserLimitCacheVersion,
-        leafQueue.getUsersManager().getLatestVersionOfUsersState());
+        ((UsersManager)leafQueue.getUsersManager()).getLatestVersionOfUsersState());
     // Have not made any calls to fill up the all user limit in UsersManager
     // But the user limit cache in leafQueue got filled up using the active
     // user limit in UsersManager with 4GB limit (since there are three users
@@ -1536,7 +1537,7 @@ public class TestLeafQueue {
     assertEquals(4, leafQueue.getUsersManager().getNumActiveUsers());
     // Check that the user limits cache has become stale
     assertNotEquals(leafQueue.currentUserLimitCacheVersion,
-        leafQueue.getUsersManager().getLatestVersionOfUsersState());
+        ((UsersManager)leafQueue.getUsersManager()).getLatestVersionOfUsersState());
 
     // Even though there are no allocations, user limit cache is repopulated
     assignment = leafQueue.assignContainers(clusterResource, node_1,
@@ -1574,7 +1575,7 @@ public class TestLeafQueue {
         .get(user_3).userLimit.getMemorySize());
     // And the cache is NOT stale because no allocation was made
     assertEquals(leafQueue.currentUserLimitCacheVersion,
-        leafQueue.getUsersManager().getLatestVersionOfUsersState());
+        ((UsersManager)leafQueue.getUsersManager()).getLatestVersionOfUsersState());
     // Have not made any calls to fill up the all user limit in UsersManager
     // But the user limit cache in leafQueue got filled up using the active
     // user limit in UsersManager with 3GB limit (since there are four users

@@ -142,7 +142,7 @@ public class UsersManager extends AbstractCSUsersManager {
    */
   @VisibleForTesting
   // TODO - make User private
-  public static class User extends AbstractCSUser {
+  private static class User extends AbstractCSUser {
 
     private UsageRatios userUsageRatios = new UsageRatios();
     private WriteLock writeLock;

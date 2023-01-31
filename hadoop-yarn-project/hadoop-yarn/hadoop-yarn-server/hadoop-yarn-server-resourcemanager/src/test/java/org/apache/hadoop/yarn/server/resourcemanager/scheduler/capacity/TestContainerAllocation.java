@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.AbstractCSUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.UsersManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1153,7 +1154,7 @@ public class TestContainerAllocation {
       Thread.sleep(1000);
     }
     LeafQueue lq = (LeafQueue) cs.getQueue("default");
-    UsersManager um = (UsersManager) lq.getAbstractUsersManager();
+    AbstractCSUsersManager um = (AbstractCSUsersManager) lq.getAbstractUsersManager();
 
     Assert.assertEquals(4, um.getNumActiveUsers());
     Assert.assertEquals(2, lq.getMetrics().getAppsPending());

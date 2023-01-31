@@ -170,7 +170,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   private static final String CONCURRENT_SCHEDULER_PREFIX = PREFIX + "concurrent-scheduler";
 
-  private static final String CONCURRENT_SCHEDULER_ENABLED = CONCURRENT_SCHEDULER_PREFIX + ".enable";
+  public static final String CONCURRENT_SCHEDULER_ENABLED = CONCURRENT_SCHEDULER_PREFIX + ".enable";
 
   private static final boolean DEFAULT_CONCURRENT_SCHEDULER_ENABLED = false;
 

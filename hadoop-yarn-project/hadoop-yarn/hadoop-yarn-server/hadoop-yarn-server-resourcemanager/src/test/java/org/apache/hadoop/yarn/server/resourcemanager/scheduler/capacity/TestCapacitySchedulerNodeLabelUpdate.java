@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.AbstractCSUser;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.UserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.UsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -190,7 +191,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
       String userName, String partition, int memory) {
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
     LeafQueue queue = (LeafQueue) scheduler.getQueue(queueName);
-    UsersManager.User user = queue.getUser(userName);
+    AbstractCSUser user = queue.getUser(userName);
     Assert.assertEquals(memory,
         user.getUsedCloned(partition).getMemorySize());
   }

@@ -377,15 +377,9 @@ class ConcurrentUsersManager extends AbstractCSUsersManager {
   private void computeUserLimits() {
     Resource clusterResource = this.lQueue.getClusterResource();
 
-    // or should we be using union of (queue.getQueueCapacities().getExistingNodeLabels(), queue.queueResourceUsage.getExistingNodeLabels())
-    // similar to queue.recalculateQueueUsageRatio() ?
-    for (String nodeLabel : this.lQueue.getAccessibleNodeLabels()) {
-      if (!this.preComputedActiveUserLimit.containsKey(nodeLabel)) {
-        this.preComputedActiveUserLimit.put(nodeLabel, new ConcurrentHashMap<>());
-      }
-      if (!this.preComputedAllUserLimit.containsKey(nodeLabel)) {
-        this.preComputedAllUserLimit.put(nodeLabel, new ConcurrentHashMap<>());
-      }
+    for (String nodeLabel : this.lQueue.getAllNodeLabels()) {
+      this.preComputedActiveUserLimit.putIfAbsent(nodeLabel, new ConcurrentHashMap<>());
+      this.preComputedAllUserLimit.putIfAbsent(nodeLabel, new ConcurrentHashMap<>());
       for (SchedulingMode schedulingMode : schedulingModes) {
         Resource activeUserLimit = computeUserLimit(clusterResource, nodeLabel, schedulingMode, true);
         this.preComputedActiveUserLimit.get(nodeLabel).put(schedulingMode, activeUserLimit);
