@@ -1075,9 +1075,6 @@
         <artifactId>jetty-servlet-tester</artifactId>
         <version>${jetty.version}</version>
       </dependency>
-      <!-- Hadoop's own codebase is not supposed to use commons-logging but some of the
-           dependencies still have dependency on it, like commons-configuration2.
-           Let commons-logging dependency only be listed by hadoop-client-runtime pom.  -->
       <dependency>
         <groupId>commons-logging</groupId>
         <artifactId>commons-logging</artifactId>
@@ -1196,12 +1193,6 @@
         <artifactId>junit-platform-launcher</artifactId>
         <version>${junit.platform.version}</version>
         <scope>test</scope>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
         <groupId>com.github.stefanbirkner</groupId>
@@ -1227,12 +1218,6 @@
         <groupId>commons-beanutils</groupId>
         <artifactId>commons-beanutils</artifactId>
         <version>${commons-beanutils.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
@@ -1608,10 +1593,6 @@
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils</artifactId>
           </exclusion>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
         </exclusions>
      </dependency>
 
@@ -1756,10 +1737,6 @@
             <artifactId>jdk.tools</artifactId>
             <groupId>jdk.tools</groupId>
           </exclusion>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -1815,10 +1792,6 @@
           <exclusion>
             <artifactId>jdk.tools</artifactId>
             <groupId>jdk.tools</groupId>
-          </exclusion>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
           </exclusion>
         </exclusions>
         </dependency>
