@@ -14,8 +14,6 @@ public class QiniuKodoFileSystemContractBaseTest extends FileSystemContractBaseT
         conf.addResource("core-site.xml");
         conf.addResource("contract-test-options.xml");
 
-        conf.setIfUnset("fs.contract.test.fs.kodo", "kodo://qshell-hadoop");
-
         fs = new QiniuKodoFileSystem();
         fs.initialize(URI.create(conf.get("fs.contract.test.fs.kodo")), conf);
 
