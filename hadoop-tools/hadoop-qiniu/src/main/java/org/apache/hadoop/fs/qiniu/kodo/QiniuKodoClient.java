@@ -180,6 +180,18 @@ public class QiniuKodoClient {
     }
 
     /**
+     * 获取一个指定前缀的对象
+     */
+    public FileInfo listOneStatus(String keyPrefix) throws IOException {
+        FileListing list = bucketManager.listFilesV2(bucket, keyPrefix, null, 1, "");
+        if (list.items.length == 0) {
+            return null;
+        } else {
+            return list.items[0];
+        }
+    }
+
+    /**
      * 若 withDelimiter 为 true, 则列举出分级的目录效果
      * 否则，将呈现出所有前缀为key的对象
      */
@@ -189,7 +201,7 @@ public class QiniuKodoClient {
         String marker = null;
         FileListing fileListing;
         do {
-            fileListing = bucketManager.listFilesV2(bucket, key, marker, 100, useDirectory ? QiniuKodoUtils.PATH_SEPARATOR : "");
+            fileListing = bucketManager.listFilesV2(bucket, key, marker, 500, useDirectory ? QiniuKodoUtils.PATH_SEPARATOR : "");
             if (statistics != null) statistics.incrementReadOps(1);
 
             // 列举出除自身外的所有对象
@@ -198,8 +210,6 @@ public class QiniuKodoClient {
                     if (key.equals(file.key)) continue;
                     retFiles.add(file);
                 }
-                fileListing = bucketManager.listFilesV2(bucket, key, marker, 100, useDirectory ? QiniuKodoUtils.PATH_SEPARATOR : "");
-                if (statistics != null) statistics.incrementReadOps(1);
             }
 
             // 列举出目录

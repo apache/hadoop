@@ -381,7 +381,9 @@ public class QiniuKodoFileSystem extends FileSystem {
         Path qualifiedPath = path.makeQualified(uri, workingDir);
         String key = QiniuKodoUtils.pathToKey(workingDir, qualifiedPath);
         // Root always exists
-        if (key.length() == 0) return new FileStatus(0, true, 1, 0, 0, 0, null, username, username, qualifiedPath);
+        if (key.length() == 0) {
+            return new FileStatus(0, true, 1, 0, 0, 0, null, username, username, qualifiedPath);
+        }
 
         // 1. key 可能是实际文件或文件夹, 也可能是中间路径
 
@@ -389,21 +391,26 @@ public class QiniuKodoFileSystem extends FileSystem {
         FileInfo file = kodoClient.getFileStatus(key);
 
         // 能查找到, 直接返回文件信息
-        if (file != null) return fileInfoToFileStatus(file);
+        if (file != null) {
+            return fileInfoToFileStatus(file);
+        }
 
         // 2. 有可能是文件夹路径但是不存在末尾/
         // 添加尾部/后再次获取
         String newKey = QiniuKodoUtils.keyToDirKey(key);
-        if (!newKey.equals(key)) {
-            // key 改变了
-            LOG.debug("== getFileStatus 02, key:" + newKey);
-
-            file = kodoClient.getFileStatus(newKey);
-            if (file != null) {
-                return fileInfoToFileStatus(file);
-            }
+        file = kodoClient.getFileStatus(newKey);
+        if (file != null) {
+            return fileInfoToFileStatus(file);
         }
 
+        // 找不到表示文件夹的空对象，故只能列举是否有该前缀的对象
+        file = kodoClient.listOneStatus(newKey);
+        if (file != null) {
+            FileInfo newDir = new FileInfo();
+            newDir.key = newKey;
+            kodoClient.makeEmptyObject(newKey);
+            return fileInfoToFileStatus(newDir);
+        }
         throw new FileNotFoundException("can't find file:" + path);
     }
 
@@ -426,7 +433,7 @@ public class QiniuKodoFileSystem extends FileSystem {
                 fsConfig.download.blockSize,
                 putTime, // modification time
                 putTime, // access time
-                isDir ? new FsPermission(0715) : null,   // permission
+                isDir ? new FsPermission(461) : null,   // permission
                 username,   // owner
                 username,   // group
                 null,   // symlink
