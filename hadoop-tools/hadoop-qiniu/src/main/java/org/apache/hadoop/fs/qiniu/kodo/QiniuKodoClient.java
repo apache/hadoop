@@ -12,7 +12,10 @@ import com.qiniu.util.StringMap;
 import com.qiniu.util.StringUtils;
 import okhttp3.Request;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.qiniu.kodo.config.MissingConfigFieldException;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
+import org.apache.hadoop.fs.qiniu.kodo.config.region.QiniuKodoPublicRegions;
+import org.apache.hadoop.fs.qiniu.kodo.config.region.QiniuKodoRegion;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,8 +40,6 @@ public class QiniuKodoClient {
     private final UploadManager uploadManager;
     public final BucketManager bucketManager;
 
-    private QiniuKodoRegionManager.QiniuKodoRegion region;
-
     private final boolean useHttps;
 
     private String downloadDomain;
@@ -56,10 +57,26 @@ public class QiniuKodoClient {
 
         Configuration configuration = new Configuration();
 
-        // 如果找不到区域配置，那就auto
-        String regionIdConfig = fsConfig.regionId;
-        if (regionIdConfig != null) region = QiniuKodoRegionManager.getRegionById(regionIdConfig);
-        configuration.region = region == null ? Region.autoRegion() : region.getRegion();
+        QiniuKodoRegion region = null;
+
+        // 配置七牛配置对象的region
+        if (fsConfig.region.id == null) {
+            // 没配置regionId默认当公有云处理，走autoRegion
+            configuration.region = Region.autoRegion();
+        } else {
+            // 先尝试公有云获取
+            region = QiniuKodoPublicRegions.getRegionById(fsConfig.region.id);
+
+            if (region == null) {
+                // 公有云找不到相应id，寻找用户自定义配置的私有云
+                try {
+                    region = fsConfig.region.custom.getCustomRegion(fsConfig.region.id);
+                } catch (MissingConfigFieldException e) {
+                    throw new QiniuException(e);
+                }
+            }
+        }
+
 
         this.useHttps = fsConfig.useHttps;
         configuration.useHttpsDomains = this.useHttps;
@@ -68,13 +85,17 @@ public class QiniuKodoClient {
         this.uploadManager = new UploadManager(configuration);
         this.bucketManager = new BucketManager(auth, configuration, this.client);
 
-        // 如果找不到区域配置，那就发起请求获取区域信息
-        if (region == null)
-            region = QiniuKodoRegionManager.getRegionById(bucketManager.getBucketInfo(bucket).getRegion());
-
         // 设置下载域名，若未配置，则走源站
-        if ((downloadDomain = fsConfig.download.domain) == null)
+        downloadDomain = fsConfig.download.domain;
+        if (downloadDomain == null) {
+            // 尝试获取下载域名
+            // 如果找不到区域配置，那就当作公有云发起请求获取区域信息, 这将用于下载域名的构造
+            if (region == null) {
+                String regionId = bucketManager.getBucketInfo(bucket).getRegion();
+                region = QiniuKodoPublicRegions.getRegionById(regionId);
+            }
             downloadDomain = bucket + "." + region.getRegionEndpoint();
+        }
 
         this.downloadUseSign = fsConfig.download.sign.enable;
         this.downloadSignExpires = fsConfig.download.sign.expires;

@@ -2,8 +2,6 @@ package org.apache.hadoop.fs.qiniu.kodo.config;
 
 import org.apache.hadoop.conf.Configuration;
 
-import java.util.Map;
-
 public class AuthConfig extends AConfigBase {
     public final String ACCESS_KEY = namespace + ".accessKey";
     public final String SECRET_KEY = namespace + ".secretKey";
@@ -13,9 +11,6 @@ public class AuthConfig extends AConfigBase {
 
     public AuthConfig(Configuration conf, String namespace) {
         super(conf, namespace);
-        Map<String, String> env = System.getenv();
-        conf.setIfUnset(ACCESS_KEY, env.get("QSHELL_AK"));
-        conf.setIfUnset(SECRET_KEY, env.get("QSHELL_SK"));
         this.accessKey = accessKey();
         this.secretKey = secretKey();
     }
