@@ -677,8 +677,8 @@ public class TestBlockManager {
    */
   @Test
   public void testHighestPriReplSrcChosenDespiteMaxReplLimit() throws Exception {
-    bm.maxReplicationStreams = 0;
-    bm.replicationStreamsHardLimit = 1;
+    bm.setMaxReplicationStreams(0, false);
+    bm.setReplicationStreamsHardLimit(1);
 
     long blockId = 42;         // arbitrary
     Block aBlock = new Block(blockId, 0, 0);
@@ -735,7 +735,7 @@ public class TestBlockManager {
 
   @Test
   public void testChooseSrcDatanodesWithDupEC() throws Exception {
-    bm.maxReplicationStreams = 4;
+    bm.setMaxReplicationStreams(4, false);
 
     long blockId = -9223372036854775776L; // real ec block id
     Block aBlock = new Block(blockId, 0, 0);
@@ -895,7 +895,7 @@ public class TestBlockManager {
     assertNotNull(work);
 
     // simulate the 2 nodes reach maxReplicationStreams
-    for(int i = 0; i < bm.maxReplicationStreams; i++){
+    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){
       ds3.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
       ds4.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
     }
@@ -939,7 +939,7 @@ public class TestBlockManager {
     assertNotNull(work);
 
     // simulate the 1 node reaches maxReplicationStreams
-    for(int i = 0; i < bm.maxReplicationStreams; i++){
+    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){
       ds2.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
     }
 
@@ -948,7 +948,7 @@ public class TestBlockManager {
     assertNotNull(work);
 
     // simulate the 1 more node reaches maxReplicationStreams
-    for(int i = 0; i < bm.maxReplicationStreams; i++){
+    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){
       ds3.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
     }
 
@@ -997,7 +997,7 @@ public class TestBlockManager {
     DatanodeDescriptor[] dummyDDArray = new DatanodeDescriptor[]{dummyDD};
     DatanodeStorageInfo[] dummyDSArray = new DatanodeStorageInfo[]{ds1};
     // Simulate the 2 nodes reach maxReplicationStreams.
-    for(int i = 0; i < bm.maxReplicationStreams; i++){ //Add some dummy EC reconstruction task.
+    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){ //Add some dummy EC reconstruction task.
       ds3.getDatanodeDescriptor().addBlockToBeErasureCoded(dummyBlock, dummyDDArray,
               dummyDSArray, new byte[0], new byte[0], ecPolicy);
       ds4.getDatanodeDescriptor().addBlockToBeErasureCoded(dummyBlock, dummyDDArray,
@@ -1011,8 +1011,8 @@ public class TestBlockManager {
 
   @Test
   public void testFavorDecomUntilHardLimit() throws Exception {
-    bm.maxReplicationStreams = 0;
-    bm.replicationStreamsHardLimit = 1;
+    bm.setMaxReplicationStreams(0, false);
+    bm.setReplicationStreamsHardLimit(1);
 
     long blockId = 42;         // arbitrary
     Block aBlock = new Block(blockId, 0, 0);
