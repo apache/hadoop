@@ -18,7 +18,7 @@
 package org.apache.hadoop.yarn.server.router.cleaner;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
@@ -26,6 +26,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterHeartbeatRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterHeartbeatResponse;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.junit.Assert;
 import org.junit.Before;
@@ -43,6 +45,7 @@ public class TestSubClusterCleaner {
   private MemoryFederationStateStore stateStore;
   private FederationStateStoreFacade facade;
   private SubClusterCleaner cleaner;
+  private int NUM_SUBCLUSTERS = 4;
 
   @Before
   public void setup() throws YarnException {
@@ -57,12 +60,12 @@ public class TestSubClusterCleaner {
     facade.reinitialize(stateStore, conf);
 
     cleaner = new SubClusterCleaner(conf);
-    for (int i = 0; i < 4; i++){
+    for (int i = 0; i < NUM_SUBCLUSTERS; i++){
       // Create sub cluster id and info
       SubClusterId subClusterId = SubClusterId.newInstance("SC-" + i);
       SubClusterInfo subClusterInfo = SubClusterInfo.newInstance(subClusterId,
           "127.0.0.1:1", "127.0.0.1:2", "127.0.0.1:3", "127.0.0.1:4",
-           SubClusterState.SC_RUNNING, System.currentTimeMillis(), "");
+           SubClusterState.SC_RUNNING, Time.now(), "");
       // Register the subCluster
       stateStore.registerSubCluster(
           SubClusterRegisterRequest.newInstance(subClusterInfo));
@@ -70,29 +73,82 @@ public class TestSubClusterCleaner {
   }
 
   @Test
-  public void testSubClusterRegisterHeartBeatTime()
+  public void testSubClustersWithOutHeartBeat()
       throws InterruptedException, TimeoutException, YarnException {
+
     // We set up such a unit test, We set the status of all subClusters to RUNNING,
     // and set the SubClusterCleaner Check Heartbeat timeout to 1s.
     // After 1s, the status of all subClusters should be SC_LOST.
     // At this time, the size of the Active SubCluster is 0.
-    GenericTestUtils.waitFor(() -> {
-      cleaner.run();
-      try {
-        int count = facade.getActiveSubClustersCount();
-        if(count == 0) {
-          return true;
-        }
-      } catch (YarnException e) {
-      }
-      return false;
-    }, 1000, 1 * 1000);
 
-    // Check Active SubCluster Status.
+    // Step1. Sleep for 1s, during this period,
+    // subCluster has no heartbeat, and all subClusters will expire.
+    Thread.sleep(1000);
+
+    // Step2. Run the Cleaner to change the status of the expired SubCluster to SC_LOST.
+    cleaner.run();
+
+    // Step3. All clusters have expired,
+    // so the current Federation has no active subClusters.
+    int count = facade.getActiveSubClustersCount();
+    Assert.assertEquals(0, count);
+
+    // Step4. Check Active SubCluster Status.
+    // We want all subClusters to be SC_LOST.
     Map<SubClusterId, SubClusterInfo> subClustersMap = facade.getSubClusters(false);
     subClustersMap.values().forEach(subClusterInfo -> {
       SubClusterState subClusterState = subClusterInfo.getState();
       Assert.assertEquals(SubClusterState.SC_LOST, subClusterState.SC_LOST);
     });
+  }
+
+  @Test
+  public void testSubClustersPartWithHeartBeat() throws YarnException, InterruptedException {
+    // In order to ensure the test results, we let all subClusters resume heartbeat.
+    for (int i = 0; i < NUM_SUBCLUSTERS; i++){
+      // Create subCluster id and info.
+      resumeSubClusterHeartbeat("SC-" + i);
+    }
+
+    // Step1. Sleep for 1s, during this period,
+    // subCluster has no heartbeat, and all subClusters will expire.
+    Thread.sleep(1000);
+
+    // Step2. Run the Cleaner to change the status of the expired SubCluster to SC_LOST.
+    cleaner.run();
+
+    // Step3. Let SC-0, SC-1 resume heartbeat.
+    resumeSubClusterHeartbeat("SC-0");
+    resumeSubClusterHeartbeat("SC-1");
+
+    // Step4. At this point we should have 2 subClusters that are surviving clusters.
+    int count = facade.getActiveSubClustersCount();
+    Assert.assertEquals(2, count);
+
+    // Step5. The result we expect is that SC-0 and SC-1 are in the RUNNING state,
+    // and SC-2 and SC-3 are in the SC_LOST state.
+    checkSubClusterState("SC-0", SubClusterState.SC_RUNNING);
+    checkSubClusterState("SC-1", SubClusterState.SC_RUNNING);
+    checkSubClusterState("SC-2", SubClusterState.SC_LOST);
+    checkSubClusterState("SC-3", SubClusterState.SC_LOST);
+  }
+
+  private void resumeSubClusterHeartbeat(String pSubClusterId) throws YarnException {
+    SubClusterId subClusterId = SubClusterId.newInstance(pSubClusterId);
+    SubClusterHeartbeatRequest request = SubClusterHeartbeatRequest.newInstance(
+        subClusterId, Time.now(), SubClusterState.SC_RUNNING, "test");
+    SubClusterHeartbeatResponse response = stateStore.subClusterHeartbeat(request);
+    Assert.assertNotNull(response);
+  }
+
+  private void checkSubClusterState(String pSubClusterId, SubClusterState expectState)
+      throws YarnException {
+    Map<SubClusterId, SubClusterInfo> subClustersMap = facade.getSubClusters(false);
+    SubClusterId subClusterId = SubClusterId.newInstance(pSubClusterId);
+    SubClusterInfo subClusterInfo = subClustersMap.get(subClusterId);
+    if (subClusterInfo == null) {
+      throw new YarnException("subClusterId=" + pSubClusterId + " does not exist.");
+    }
+    Assert.assertEquals(expectState, subClusterInfo.getState());
   }
 }

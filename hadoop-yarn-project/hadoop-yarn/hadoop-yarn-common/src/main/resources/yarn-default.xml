@@ -5127,10 +5127,10 @@
 
   <property>
     <description>
-      The interval at which the subClusterCleaner runs. Default is 1mins.
+      The interval at which the subClusterCleaner runs. Default is 60s.
     </description>
     <name>yarn.router.subcluster.cleaner.interval.time</name>
-    <value>1m</value>
+    <value>60s</value>
   </property>
 
   <property>

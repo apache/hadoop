@@ -4302,12 +4302,14 @@ public class YarnConfiguration extends Configuration {
   /** Router SubCluster Cleaner Thread Clean Interval Time. **/
   public static final String ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME =
       ROUTER_PREFIX + "subcluster.cleaner.interval.time";
-  public static final long DEFAULT_ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME = 60000;
+  public static final long DEFAULT_ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME =
+      TimeUnit.SECONDS.toMillis(60);
 
   /** Router SubCluster Timeout Allowed by Router. **/
   public static final String ROUTER_SUBCLUSTER_EXPIRATION_TIME =
       ROUTER_PREFIX + "subcluster.heartbeat.expiration.time";
-  public static final long DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME = 1800000;
+  public static final long DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME =
+      TimeUnit.MINUTES.toMillis(30);
 
   /** Router Thread Pool Schedule Thread Number. **/
   public static final String ROUTER_SCHEDULED_EXECUTOR_THREADS =
