@@ -16,7 +16,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_MAX_PARALLEL_APPLICATIONS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -89,6 +91,7 @@ public class TestFSQueueConverter {
   private ConversionOptions conversionOptions;
   private DryRunResultHolder dryRunResultHolder;
   private FSQueueConverterBuilder builder;
+  private String key;
 
   @Mock
   private FSConfigToCSConfigRuleHandler ruleHandler;
@@ -152,11 +155,11 @@ public class TestFSQueueConverter {
     converter.convertQueueHierarchy(rootQueue);
 
     // root children
-    assertEquals("root children", new String[]{"admins", "users", "misc", "default"},
+    assertArrayEquals("root children", new String[]{"admins", "users", "misc", "default"},
         capacitySchedulerConfig.getQueues("root"));
 
     // root.admins children
-    assertEquals("root.admins children", new String[]{"bob", "alice"},
+    assertArrayEquals("root.admins children", new String[]{"bob", "alice"},
         capacitySchedulerConfig.getQueues("root.admins"));
 
     // root.default children - none
@@ -164,7 +167,7 @@ public class TestFSQueueConverter {
         capacitySchedulerConfig.getQueues("root.default"));
 
     // root.users children
-    assertEquals("root.users children", new String[]{"john", "joe"},
+    assertArrayEquals("root.users children", new String[]{"john", "joe"},
         capacitySchedulerConfig.getQueues("root.users"));
 
     Set<String> leafs = Sets.difference(ALL_QUEUES,
@@ -174,7 +177,12 @@ public class TestFSQueueConverter {
             "root.users",
             "root.misc"));
 
-    assertNoValueForQueues(leafs, ".queues", capacitySchedulerConfig);
+    for (String queue : leafs) {
+      String key = PREFIX + queue + ".queues";
+      assertNull("Key " + key + " has value, but it should be null",
+        capacitySchedulerConfig.getQueues(queue));
+    }
+
   }
 
   @Test
@@ -195,8 +203,13 @@ public class TestFSQueueConverter {
 
     Set<String> remaining = Sets.difference(ALL_QUEUES,
         Sets.newHashSet("root.admins.bob", "root.admins.alice"));
-    assertNoValueForQueues(remaining, ".maximum-am-resource-percent",
-        capacitySchedulerConfig);
+
+    for (String queue : remaining) {
+      key = PREFIX + queue + ".maximum-am-resource-percent";
+      assertEquals("Key " + key + " has different value",
+          0.1f, capacitySchedulerConfig
+              .getMaximumApplicationMasterResourcePerQueuePercent(queue), 0.0f);
+    }
   }
 
   @Test
@@ -210,8 +223,13 @@ public class TestFSQueueConverter {
 
     Set<String> remaining = Sets.difference(ALL_QUEUES,
         Sets.newHashSet("root.admins.alice"));
-    assertNoValueForQueues(remaining, ".max-parallel-apps",
-        capacitySchedulerConfig);
+
+    for (String queue : remaining) {
+      key = PREFIX + queue + ".max-parallel-apps";
+      assertEquals("Key " + key + " has different value",
+          DEFAULT_MAX_PARALLEL_APPLICATIONS, capacitySchedulerConfig
+              .getMaxParallelAppsForQueue(queue), 0);
+    }
   }
 
   @Test
@@ -234,10 +252,18 @@ public class TestFSQueueConverter {
 
     Set<String> remaining = Sets.difference(ALL_QUEUES,
         Sets.newHashSet("root.admins", "root.users.john"));
-    assertNoValueForQueues(remaining, ".maximum-allocation-vcores",
-        capacitySchedulerConfig);
-    assertNoValueForQueues(remaining, ".maximum-allocation-mb",
-        capacitySchedulerConfig);
+
+    for (String queue : remaining) {
+      key = PREFIX + queue + ".maximum-allocation-vcores";
+      assertEquals("Key " + key + " has different value",
+          -1.0, capacitySchedulerConfig
+              .getQueueMaximumAllocationVcores(queue), 0.0f);
+
+      key = PREFIX + queue + ".maximum-allocation-mb";
+      assertEquals("Key " + key + " has different value",
+          -1.0, capacitySchedulerConfig
+              .getQueueMaximumAllocationMb(queue), 0.0f);
+    }
   }
 
   @Test
@@ -255,8 +281,13 @@ public class TestFSQueueConverter {
 
     Set<String> remaining = Sets.difference(ALL_QUEUES,
         Sets.newHashSet("root.admins.alice", "root.users.joe"));
-    assertNoValueForQueues(remaining, ".disable_preemption",
-        capacitySchedulerConfig);
+
+    for (String queue : remaining) {
+      key = PREFIX + queue + ".disable_preemption";
+      assertEquals("Key " + key + " has different value",
+          false, capacitySchedulerConfig
+              .getPreemptionDisabled(queue, false));
+    }
   }
 
   @Test
@@ -265,8 +296,12 @@ public class TestFSQueueConverter {
 
     converter.convertQueueHierarchy(rootQueue);
 
-    assertNoValueForQueues(ALL_QUEUES, ".disable_preemption",
-        capacitySchedulerConfig);
+    for (String queue : ALL_QUEUES) {
+      key = PREFIX + queue + ".disable_preemption";
+      assertEquals("Key " + key + " has different value",
+          false, capacitySchedulerConfig
+              .getPreemptionDisabled(queue, false));
+    }
   }
 
   @Test
@@ -370,8 +405,14 @@ public class TestFSQueueConverter {
             "root.admins",
             "root.users",
             "root.misc"));
-    assertNoValueForQueues(leafs, "auto-queue-creation-v2.enabled",
-        capacitySchedulerConfig);
+
+    for (String queue : leafs) {
+      key = PREFIX + queue + ".auto-queue-creation-v2.enabled";
+      assertEquals("Key " + key + " has different value",
+          false, capacitySchedulerConfig
+              .isAutoQueueCreationV2Enabled(queue));
+    }
+
   }
 
   @Test
@@ -382,8 +423,13 @@ public class TestFSQueueConverter {
 
     Set<String> noZeroSumAllowedQueues = Sets.difference(ALL_QUEUES,
         Sets.newHashSet("root.misc"));
-    assertNoValueForQueues(noZeroSumAllowedQueues, ".allow-zero-capacity-sum",
-        capacitySchedulerConfig);
+
+    for (String queue : noZeroSumAllowedQueues) {
+      key = PREFIX + queue + ".allow-zero-capacity-sum";
+      assertEquals("Key " + key + " has different value",
+          false, capacitySchedulerConfig
+              .getAllowZeroCapacitySum(queue));
+    }
 
     assertTrue("root.misc allow zero capacities",
         capacitySchedulerConfig.getAllowZeroCapacitySum("root.misc"));
@@ -395,8 +441,12 @@ public class TestFSQueueConverter {
 
     converter.convertQueueHierarchy(rootQueue);
 
-    assertValueForQueues(ALL_QUEUES, ".maximum-capacity",
-        capacitySchedulerConfig, "100");
+    for (String queue : ALL_QUEUES) {
+      key = PREFIX + queue + ".maximum-capacity";
+      assertEquals("Key " + key + " has different value",
+          100.0, capacitySchedulerConfig
+              .getNonLabeledQueueMaximumCapacity(new QueuePath(queue)), 0.0f);
+    }
     verify(ruleHandler, times(3)).handleMaxResources();
   }
 
@@ -417,8 +467,12 @@ public class TestFSQueueConverter {
 
     converter.convertQueueHierarchy(rootQueue);
 
-    assertNoValueForQueues(ALL_QUEUES, ".auto-create-child-queue.enabled",
-        capacitySchedulerConfig);
+    for (String queue : ALL_QUEUES) {
+      key = PREFIX + queue + ".auto-create-child-queue.enabled";
+      assertEquals("Key " + key + " has different value",
+          false, capacitySchedulerConfig
+              .isAutoCreateChildQueueEnabled(queue));
+    }
   }
 
   @Test
@@ -427,8 +481,12 @@ public class TestFSQueueConverter {
 
     converter.convertQueueHierarchy(rootQueue);
 
-    assertTrueForQueues(ALL_QUEUES, ".ordering-policy.fair.enable-size-based-weight",
-        capacitySchedulerConfig);
+    for (String queue : ALL_QUEUES) {
+      key = PREFIX + queue + ".ordering-policy.fair.enable-size-based-weight";
+      assertTrue("Key " + key + " has different value",
+           capacitySchedulerConfig
+                .getOrderingPolicy(queue, "fair", "enable-size-based-weight"));
+    }
   }
 
   @Test
@@ -437,8 +495,12 @@ public class TestFSQueueConverter {
 
     converter.convertQueueHierarchy(rootQueue);
 
-    assertNoValueForQueues(ALL_QUEUES, ".ordering-policy.fair.enable-size-based-weight",
-        capacitySchedulerConfig);
+    for (String queue : ALL_QUEUES) {
+      key = PREFIX + queue + ".ordering-policy.fair.enable-size-based-weight";
+      assertEquals("Key " + key + " has different value", false,
+           capacitySchedulerConfig
+                .getOrderingPolicy(queue, "fair", "enable-size-based-weight"));
+    }
   }
 
   @Test
@@ -455,26 +517,26 @@ public class TestFSQueueConverter {
 
     converter.convertQueueHierarchy(rootQueue);
     // root
-    assertEquals("root ordering policy", null,
-        capacitySchedulerConfig.get(PREFIX + "root.ordering-policy"));
+    assertEquals("root ordering policy", "fifo",
+        capacitySchedulerConfig.getAppOrderingPolicy("root").getConfigName());
     assertEquals("root.default ordering policy", "fair",
-        capacitySchedulerConfig.get(PREFIX + "root.default.ordering-policy"));
-    assertEquals("root.admins ordering policy", null,
-        capacitySchedulerConfig.get(PREFIX + "root.admins.ordering-policy"));
-    assertEquals("root.users ordering policy", null,
-        capacitySchedulerConfig.get(PREFIX + "root.users.ordering-policy"));
+        capacitySchedulerConfig.getAppOrderingPolicy("root.default").getConfigName());
+    assertEquals("root.admins ordering policy", "fifo",
+        capacitySchedulerConfig.getAppOrderingPolicy("root.admins").getConfigName());
+    assertEquals("root.users ordering policy", "fifo",
+        capacitySchedulerConfig.getAppOrderingPolicy("root.users").getConfigName());
 
     // root.users
     assertEquals("root.users.joe ordering policy", "fair",
-        capacitySchedulerConfig.get(PREFIX + "root.users.joe.ordering-policy"));
+        capacitySchedulerConfig.getAppOrderingPolicy("root.users.joe").getConfigName());
     assertEquals("root.users.john ordering policy", "fifo",
-        capacitySchedulerConfig.get(PREFIX + "root.users.john.ordering-policy"));
+        capacitySchedulerConfig.getAppOrderingPolicy("root.users.john").getConfigName());
 
     // root.admins
     assertEquals("root.admins.alice ordering policy", "fifo",
-        capacitySchedulerConfig.get(PREFIX + "root.admins.alice.ordering-policy"));
+        capacitySchedulerConfig.getAppOrderingPolicy("root.admins.alice.").getConfigName());
     assertEquals("root.admins.bob ordering policy", "fair",
-        capacitySchedulerConfig.get(PREFIX + "root.admins.bob.ordering-policy"));
+        capacitySchedulerConfig.getAppOrderingPolicy("root.admins.bob").getConfigName());
   }
 
   @Test
@@ -518,32 +580,5 @@ public class TestFSQueueConverter {
         true);
 
     converter.convertQueueHierarchy(rootQueue);
-  }
-
-  private void assertNoValueForQueues(Set<String> queues, String postfix,
-      CapacitySchedulerConfiguration capacitySchedulerConfig) {
-    for (String queue : queues) {
-      String key = PREFIX + queue + postfix;
-      assertNull("Key " + key + " has value, but it should be null",
-          capacitySchedulerConfig.get(key));
-    }
-  }
-
-  private void assertValueForQueues(Set<String> queues, String postfix,
-      CapacitySchedulerConfiguration capacitySchedulerConfig, String expectedValue) {
-    for (String queue : queues) {
-      String key = PREFIX + queue + postfix;
-      assertEquals("Key " + key + " has different value",
-          expectedValue, capacitySchedulerConfig.get(key));
-    }
-  }
-
-  private void assertTrueForQueues(Set<String> queues, String postfix,
-      CapacitySchedulerConfiguration capacitySchedulerConfig) {
-    for (String queue : queues) {
-      String key = PREFIX + queue + postfix;
-      assertTrue("Key " + key + " is false, should be true",
-          capacitySchedulerConfig.getBoolean(key, false));
-    }
   }
 }

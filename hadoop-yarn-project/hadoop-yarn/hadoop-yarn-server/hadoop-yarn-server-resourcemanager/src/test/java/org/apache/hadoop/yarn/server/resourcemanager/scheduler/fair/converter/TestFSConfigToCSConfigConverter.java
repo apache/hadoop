@@ -16,7 +16,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.DYNAMIC_MAX_ASSIGN;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.MAX_CAPACITY_PERCENTAGE;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.MAX_CHILD_CAPACITY;
@@ -47,6 +46,7 @@ import java.util.Map;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.ServiceStateException;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
@@ -171,11 +171,10 @@ public class TestFSConfigToCSConfigConverter {
     converter.convert(config);
 
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
-    String maxAmShare =
-        conf.get(CapacitySchedulerConfiguration.
-            MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT);
+    Float maxAmShare =
+        conf.getMaximumApplicationMasterResourcePercent();
 
-    assertEquals("Default max AM share", "0.16", maxAmShare);
+    assertEquals("Default max AM share", 0.16f, maxAmShare, 0.0f);
 
     assertEquals("root.admins.alice max-am-resource-percent", 0.15f,
         conf.getMaximumApplicationMasterResourcePerQueuePercent("root.admins.alice"),
@@ -219,9 +218,8 @@ public class TestFSConfigToCSConfigConverter {
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
 
     // -1.0 means disabled ==> 1.0 in CS
-    assertEquals("Default max-am-resource-percent", "1.0",
-        conf.get(CapacitySchedulerConfiguration.
-            MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT));
+    assertEquals("Default max-am-resource-percent", 1.0f,
+        conf.getMaximumApplicationMasterResourcePercent(), 0.0f);
 
     // root.admins.bob is unset,so falling back to the global value
     assertEquals("root.admins.bob maximum-am-resource-percent", 1.0f,
@@ -244,33 +242,33 @@ public class TestFSConfigToCSConfigConverter {
 
     // root
     assertEquals("root submit ACL", "alice,bob,joe,john hadoop_users",
-        conf.get(PREFIX + "root.acl_submit_applications"));
+        conf.getAcl("root", QueueACL.SUBMIT_APPLICATIONS).getAclString());
     assertEquals("root admin ACL", "alice,bob,joe,john hadoop_users",
-        conf.get(PREFIX + "root.acl_administer_queue"));
+        conf.getAcl("root", QueueACL.ADMINISTER_QUEUE).getAclString());
 
     // root.admins.bob
     assertEquals("root.admins.bob submit ACL", "bob ",
-        conf.get(PREFIX + "root.admins.bob.acl_submit_applications"));
+        conf.getAcl("root.admins.bob", QueueACL.SUBMIT_APPLICATIONS).getAclString());
     assertEquals("root.admins.bob admin ACL", "bob ",
-        conf.get(PREFIX + "root.admins.bob.acl_administer_queue"));
+        conf.getAcl("root.admins.bob", QueueACL.ADMINISTER_QUEUE).getAclString());
 
     // root.admins.alice
     assertEquals("root.admins.alice submit ACL", "alice ",
-        conf.get(PREFIX + "root.admins.alice.acl_submit_applications"));
+        conf.getAcl("root.admins.alice", QueueACL.SUBMIT_APPLICATIONS).getAclString());
     assertEquals("root.admins.alice admin ACL", "alice ",
-        conf.get(PREFIX + "root.admins.alice.acl_administer_queue"));
+        conf.getAcl("root.admins.alice", QueueACL.ADMINISTER_QUEUE).getAclString());
 
     // root.users.john
     assertEquals("root.users.john submit ACL", "john ",
-        conf.get(PREFIX + "root.users.john.acl_submit_applications"));
+        conf.getAcl("root.users.john", QueueACL.SUBMIT_APPLICATIONS).getAclString());
     assertEquals("root.users.john admin ACL", "john ",
-        conf.get(PREFIX + "root.users.john.acl_administer_queue"));
+        conf.getAcl("root.users.john", QueueACL.ADMINISTER_QUEUE).getAclString());
 
     // root.users.joe
     assertEquals("root.users.joe submit ACL", "joe ",
-        conf.get(PREFIX + "root.users.joe.acl_submit_applications"));
+        conf.getAcl("root.users.joe", QueueACL.SUBMIT_APPLICATIONS).getAclString());
     assertEquals("root.users.joe admin ACL", "joe ",
-        conf.get(PREFIX + "root.users.joe.acl_administer_queue"));
+        conf.getAcl("root.users.joe", QueueACL.ADMINISTER_QUEUE).getAclString());
   }
 
   @Test
@@ -280,7 +278,7 @@ public class TestFSConfigToCSConfigConverter {
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
 
     assertEquals("Default max parallel apps", 15,
-        conf.getInt(PREFIX + "max-parallel-apps", -1));
+        conf.getMaxParallelAppsForQueue(), 0);
   }
 
   @Test
@@ -300,7 +298,7 @@ public class TestFSConfigToCSConfigConverter {
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
 
     assertEquals("Default user max parallel apps", 10,
-        conf.getMaxParallelAppsForQueue("user"), 0);
+        conf.getMaxParallelAppsForUser(), 0);
   }
 
   @Test
@@ -310,16 +308,16 @@ public class TestFSConfigToCSConfigConverter {
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
 
     assertEquals("Max parallel apps for alice", 30,
-        conf.getMaxParallelAppsForQueue("user.alice"), 0);
+        conf.getMaxParallelAppsForUser("alice"), 0);
 
     //users.bob, user.joe, user.john  don’t have max-parallel-app set
-    // so falling back to the global value
-    assertEquals("Max parallel apps for user bob", 15,
-        conf.getMaxParallelAppsForQueue("user.bob"), 0);
-    assertEquals("Max parallel apps for user joe", 15,
-        conf.getMaxParallelAppsForQueue("user.joe"), 0);
-    assertEquals("Max parallel apps for user john", 15,
-        conf.getMaxParallelAppsForQueue("user.john"), 0);
+    // so falling back to the global value for .user to 10
+    assertEquals("Max parallel apps for user bob", 10,
+        conf.getMaxParallelAppsForUser("bob"), 0);
+    assertEquals("Max parallel apps for user joe", 10,
+        conf.getMaxParallelAppsForUser("joe"), 0);
+    assertEquals("Max parallel apps for user john", 10,
+        conf.getMaxParallelAppsForUser("john"), 0);
   }
 
   @Test
@@ -720,8 +718,7 @@ public class TestFSConfigToCSConfigConverter {
     converter.convert(params);
     assertTrue("The observe only should be true",
         converter.getCapacitySchedulerConfig().
-            getBoolean(CapacitySchedulerConfiguration.
-                PREEMPTION_OBSERVE_ONLY, false));
+            getDisablePreemptionForObserveOnly());
   }
 
   private boolean testConversionWithAsyncSchedulingOption(boolean enabled) throws Exception {

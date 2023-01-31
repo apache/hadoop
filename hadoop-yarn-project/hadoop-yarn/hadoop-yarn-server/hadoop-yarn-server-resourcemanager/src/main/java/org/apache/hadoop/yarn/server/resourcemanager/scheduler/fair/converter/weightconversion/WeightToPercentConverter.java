@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.weightconversion;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Comparator;
@@ -29,8 +27,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 
 public class WeightToPercentConverter
@@ -41,7 +39,7 @@ public class WeightToPercentConverter
 
   @Override
   public void convertWeightsForChildQueues(FSQueue queue,
-      Configuration csConfig) {
+      CapacitySchedulerConfiguration csConfig) {
     List<FSQueue> children = queue.getChildQueues();
 
     int totalWeight = getTotalWeight(children);
@@ -52,13 +50,11 @@ public class WeightToPercentConverter
     boolean shouldAllowZeroSumCapacity = result.getRight();
 
     capacities
-        .forEach((key, value) -> csConfig.set(PREFIX + key +
-                ".capacity", value.toString()));
+        .forEach((key, value) -> csConfig.setCapacity(key, value.toString()));
 
     if (shouldAllowZeroSumCapacity) {
       String queueName = queue.getName();
-      csConfig.setBoolean(
-          PREFIX + queueName + ".allow-zero-capacity-sum", true);
+      csConfig.setAllowZeroCapacitySum(queueName, true);
     }
   }
 
