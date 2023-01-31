@@ -1307,7 +1307,24 @@ public class MockDefaultRequestInterceptorREST
         return null;
       }
     }
-
     throw new YarnException("addToClusterNodeLabels Error");
+  }
+
+  @Override
+  public Response removeFromClusterNodeLabels(Set<String> oldNodeLabels, HttpServletRequest hsr)
+      throws Exception {
+    // If oldNodeLabels contains ALL, we let all subclusters pass
+    if (oldNodeLabels.contains("ALL")) {
+      return Response.status(Status.OK).build();
+    } else if (oldNodeLabels.contains("A0")) {
+      SubClusterId subClusterId = getSubClusterId();
+      String id = subClusterId.getId();
+      if (StringUtils.contains("A0", id)) {
+        return Response.status(Status.OK).build();
+      } else {
+        return null;
+      }
+    }
+    throw new YarnException("removeFromClusterNodeLabels Error");
   }
 }
