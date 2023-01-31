@@ -238,7 +238,15 @@ public class NamenodeHeartbeatService extends PeriodicService {
 
   @Override
   public void periodicInvoke() {
-    updateState();
+    try {
+      // Run using the login user credentials
+      SecurityUtil.doAsLoginUser((PrivilegedExceptionAction<Void>) () -> {
+        updateState();
+        return null;
+      });
+    } catch (IOException e) {
+      LOG.error("Cannot update namenode state", e);
+    }
   }
 
   /**
@@ -341,11 +349,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
       // should be required at some point for QoS
       updateSafeModeParameters(serviceURI, report);
 
-      // Read the stats from JMX (optional) using the login user credentials
-      SecurityUtil.doAsLoginUser((PrivilegedExceptionAction<Void>) () -> {
-        updateJMXParameters(webAddress, report);
-        return null;
-      });
+      // Read the stats from JMX (optional)
+      updateJMXParameters(webAddress, report);
 
       // Try to get the HA status
       updateHAStatusParameters(report);
