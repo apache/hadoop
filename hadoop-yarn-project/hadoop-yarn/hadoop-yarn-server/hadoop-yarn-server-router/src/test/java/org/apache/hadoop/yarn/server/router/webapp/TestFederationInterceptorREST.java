@@ -20,7 +20,14 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
 import java.security.Principal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Collections;
 import java.util.stream.Collectors;
 import java.util.concurrent.TimeUnit;
 
@@ -1861,7 +1868,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   @Test
-  public void testAddToClusterNodeLabels() throws Exception {
+  public void testAddToClusterNodeLabels1() throws Exception {
     // In this test, we try to add ALL label, all subClusters will return success.
     NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
     NodeLabelInfo nodeLabelInfo = new NodeLabelInfo("ALL", true);
@@ -1870,20 +1877,60 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Response response = interceptor.addToClusterNodeLabels(nodeLabelsInfo, null);
     Assert.assertNotNull(response);
 
-    Object entity = response.getEntity();
-    Assert.assertNotNull(entity);
+    Object entityObj = response.getEntity();
+    Assert.assertNotNull(entityObj);
 
-    String entityMsg = String.valueOf(entity);
-    String[] entityMsgs = StringUtils.split(entityMsg, "#");
-    Assert.assertNotNull(entityMsgs);
-    Assert.assertEquals(4, entityMsgs.length);
+    String entity = String.valueOf(entityObj);
+    String[] entities = StringUtils.split(entity, "#");
+    Assert.assertNotNull(entities);
+    Assert.assertEquals(4, entities.length);
 
     // The order in which the cluster returns messages is uncertain,
     // we confirm the result by contains
     String expectedMsg =
         "SubCluster=0,SUCCESS#SubCluster=1,SUCCESS#SubCluster=2,SUCCESS#SubCluster=3,SUCCESS#";
-    Arrays.stream(entityMsgs).forEach(msg -> {
-      Assert.assertTrue(expectedMsg.contains(msg));
+    Arrays.stream(entities).forEach(item -> {
+      Assert.assertTrue(expectedMsg.contains(item));
     });
+  }
+
+  @Test
+  public void testAddToClusterNodeLabels2() throws Exception {
+    // In this test, we try to add A0 label,
+    // subCluster0 will return success, and other subClusters will return null
+    NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
+    NodeLabelInfo nodeLabelInfo = new NodeLabelInfo("A0", true);
+    nodeLabelsInfo.getNodeLabelsInfo().add(nodeLabelInfo);
+
+    Response response = interceptor.addToClusterNodeLabels(nodeLabelsInfo, null);
+    Assert.assertNotNull(response);
+
+    Object entityObj = response.getEntity();
+    Assert.assertNotNull(entityObj);
+
+    String expectedValue = "SubCluster=0,SUCCESS#";
+    String entity = String.valueOf(entityObj);
+    Assert.assertEquals(expectedValue, entity);
+  }
+
+  @Test
+  public void testAddToClusterNodeLabelsError() throws Exception {
+    // the newNodeLabels is null
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the newNodeLabels is null.",
+        () -> interceptor.addToClusterNodeLabels(null, null));
+
+    // the nodeLabelsInfo is null
+    NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the nodeLabelsInfo is null or empty.",
+        () -> interceptor.addToClusterNodeLabels(nodeLabelsInfo, null));
+
+    // error nodeLabelsInfo
+    NodeLabelsInfo nodeLabelsInfo1 = new NodeLabelsInfo();
+    NodeLabelInfo nodeLabelInfo1 = new NodeLabelInfo("A", true);
+    nodeLabelsInfo1.getNodeLabelsInfo().add(nodeLabelInfo1);
+    LambdaTestUtils.intercept(YarnRuntimeException.class, "addToClusterNodeLabels Error",
+        () -> interceptor.addToClusterNodeLabels(nodeLabelsInfo1, null));
   }
 }

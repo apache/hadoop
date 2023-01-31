@@ -1538,7 +1538,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     if (newNodeLabels == null) {
       routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the newNodeLabels null.");
+      throw new IllegalArgumentException("Parameter error, the newNodeLabels is null.");
+    }
+
+    List<NodeLabelInfo> nodeLabelInfos = newNodeLabels.getNodeLabelsInfo();
+    if (CollectionUtils.isEmpty(nodeLabelInfos)) {
+      routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the nodeLabelsInfo is null or empty.");
     }
 
     try {
