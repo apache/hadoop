@@ -54,13 +54,13 @@ public class CreateSmallFileConcurrentlyTest extends QiniuKodoPerformanceBaseTes
     }
 
     @Test
-    public void testCreateLargeAmountSmallS3A() throws Exception {
+    public void testS3A() throws Exception {
         long time = createLargeAmountSmall(s3aTestDir, s3a);
         LOG.info("time: " + time);
     }
 
     @Test
-    public void testCreateLargeAmountSmallKodo() throws Exception {
+    public void testKodo() throws Exception {
         long time = createLargeAmountSmall(kodoTestDir, kodo);
         LOG.info("time: " + time);
     }
