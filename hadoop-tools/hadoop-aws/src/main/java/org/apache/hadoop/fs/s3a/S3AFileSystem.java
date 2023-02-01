@@ -992,7 +992,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     S3ClientFactory clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
     s3Client = clientFactory.createS3ClientV2(getUri(), parameters);
     s3AsyncClient = clientFactory.createS3AsyncClient(getUri(), parameters);
-    transferManager =  clientFactory.createS3TransferManager(s3AsyncClient);
+    transferManager =  clientFactory.createS3TransferManager(getUri(), parameters);
   }
 
   /**

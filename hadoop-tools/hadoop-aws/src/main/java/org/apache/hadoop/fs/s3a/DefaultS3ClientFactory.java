@@ -218,9 +218,26 @@ public class DefaultS3ClientFactory extends Configured
   }
 
   @Override
-  public S3TransferManager createS3TransferManager(final S3AsyncClient s3AsyncClient)
-      throws IOException {
-    // TODO: Can't set minimum part size on the async client.
+  public S3TransferManager createS3TransferManager(final URI uri,
+      final S3ClientCreationParameters parameters) {
+
+    Configuration conf = getConf();
+    String bucket = uri.getHost();
+
+    URI endpoint = getS3Endpoint(parameters.getEndpoint(), conf);
+    Region region = getS3Region(conf.getTrimmed(AWS_REGION), bucket, parameters.getCredentialSet());
+    LOG.debug("Using endpoint {}; and region {} for S3AsyncCRTClient", endpoint, region);
+
+    // TODO: There is some configuration missing in the CRT client currently. Proxy support,
+    //  configurable signers, user agent.
+    S3AsyncClient s3AsyncClient =
+        S3AsyncClient.crtBuilder()
+            .credentialsProvider(parameters.getCredentialSet())
+            .region(region)
+            .endpointOverride(endpoint)
+            .minimumPartSizeInBytes(parameters.getMinimumPartSize())
+            .build();
+
     return S3TransferManager.builder()
         .s3Client(s3AsyncClient)
         .build();

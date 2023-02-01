@@ -18,35 +18,31 @@
 
 package org.apache.hadoop.fs.s3a.auth;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.signer.Aws4Signer;
 import software.amazon.awssdk.auth.signer.Aws4UnsignedPayloadSigner;
 import software.amazon.awssdk.auth.signer.AwsS3V4Signer;
-import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.signer.NoOpSigner;
 import software.amazon.awssdk.core.signer.Signer;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.apache.hadoop.fs.s3a.S3AUtils.getConstructor;
-import static org.apache.hadoop.fs.s3a.S3AUtils.getFactoryMethod;
-import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
+import org.apache.hadoop.fs.s3a.S3AUtils;
+
 
 /**
  * Signer factory used to register and create signers.
  */
 public final class SignerFactory {
 
+  private static final Logger LOG = LoggerFactory.getLogger(SignerFactory.class);
   public static final String VERSION_FOUR_SIGNER = "AWS4SignerType";
   public static final String VERSION_FOUR_UNSIGNED_PAYLOAD_SIGNER = "AWS4UnsignedPayloadSignerType";
   public static final String NO_OP_SIGNER = "NoOpSignerType";
   private static final String S3_V4_SIGNER = "AWSS3V4SignerType";
-  static final String INSTANTIATION_EXCEPTION
-      = "instantiation exception";
 
   private static final Map<String, Class<? extends Signer>> SIGNERS
       = new HashMap<>();
@@ -99,52 +95,20 @@ public final class SignerFactory {
    * Create an instance of the given signer.
    *
    * @param signerType The signer type.
+   * @param configKey Config key used to configure the signer.
    *
    * @return The new signer instance.
    */
-  public static Signer createSigner(String signerType) throws IOException {
-    Class<? extends Signer> signerClass = SIGNERS.get(signerType);
-    Signer signer = null;
+  public static Signer createSigner(String signerType, String configKey) throws IOException {
+    Class<?> signerClass = SIGNERS.get(signerType);
     String className = signerClass.getName();
-    try {
-      // X.getInstance()
-      Method factory = getFactoryMethod(signerClass, Signer.class,
-          "create");
-      if (factory != null) {
-        signer = (Signer) factory.invoke(null);
-        return signer;
-      }
 
-      // new X()
-      Constructor cons = getConstructor(signerClass);
-      if (cons != null) {
-        signer = (Signer) cons.newInstance();
-        return signer;
-      }
-    } catch (InvocationTargetException e) {
-      // TODO: Can probably be moved to a common method, but before doing this, check if we still
-      //  want to extend V2 providers the same way v1 providers are.
-      Throwable targetException = e.getTargetException();
-      if (targetException == null) {
-        targetException =  e;
-      }
-      if (targetException instanceof IOException) {
-        throw (IOException) targetException;
-      } else if (targetException instanceof SdkException) {
-        throw translateException("Instantiate " + className, "",
-            (SdkException) targetException);
-      } else {
-        // supported constructor or factory method found, but the call failed
-        throw new IOException(className + " " + INSTANTIATION_EXCEPTION
-            + ": " + targetException,
-            targetException);
-      }
-    } catch (ReflectiveOperationException | IllegalArgumentException e) {
-      // supported constructor or factory method found, but the call failed
-      throw new IOException(className + " " + INSTANTIATION_EXCEPTION
-          + ": " + e,
-          e);
-    }
+    LOG.debug("Signer class is {}", className);
+
+    Signer signer =
+        S3AUtils.getInstanceFromReflection(signerClass, null, null, Signer.class, "create",
+            configKey);
+
     return signer;
   }
 }

@@ -88,7 +88,7 @@ public final class AWSClientConfig {
     if (!signer.isEmpty()) {
       LOG.debug("Signer override = {}", signer);
       overrideConfigBuilder.putAdvancedOption(SdkAdvancedClientOption.SIGNER,
-          SignerFactory.createSigner(signer));
+          SignerFactory.createSigner(signer, SIGNING_ALGORITHM));
     }
 
     initSigner(conf, overrideConfigBuilder, awsServiceIdentifier);
@@ -345,7 +345,7 @@ public final class AWSClientConfig {
       if (!signerOverride.isEmpty()) {
         LOG.debug("Signer override for {}} = {}", awsServiceIdentifier, signerOverride);
         clientConfig.putAdvancedOption(SdkAdvancedClientOption.SIGNER,
-            SignerFactory.createSigner(signerOverride));
+            SignerFactory.createSigner(signerOverride, configKey));
       }
     }
   }

@@ -707,10 +707,8 @@ public final class S3AUtils {
    * @return the instantiated class
    * @throws IOException on any instantiation failure.
    */
-  private static AWSCredentialsProvider createAWSV1CredentialProvider(
-      Configuration conf,
-      Class<?> credClass,
-      @Nullable URI uri) throws IOException {
+  private static AWSCredentialsProvider createAWSV1CredentialProvider(Configuration conf,
+      Class<?> credClass, @Nullable URI uri) throws IOException {
     AWSCredentialsProvider credentials = null;
     String className = credClass.getName();
     if (!AWSCredentialsProvider.class.isAssignableFrom(credClass)) {
@@ -721,64 +719,11 @@ public final class S3AUtils {
     }
     LOG.debug("Credential provider class is {}", className);
 
-    try {
-      // new X(uri, conf)
-      Constructor cons = getConstructor(credClass, URI.class,
-          Configuration.class);
-      if (cons != null) {
-        credentials = (AWSCredentialsProvider)cons.newInstance(uri, conf);
-        return credentials;
-      }
-      // new X(conf)
-      cons = getConstructor(credClass, Configuration.class);
-      if (cons != null) {
-        credentials = (AWSCredentialsProvider)cons.newInstance(conf);
-        return credentials;
-      }
+    credentials =
+        getInstanceFromReflection(credClass, conf, uri, AWSCredentialsProvider.class, "getInstance",
+            AWS_CREDENTIALS_PROVIDER);
+    return credentials;
 
-      // X.getInstance()
-      Method factory = getFactoryMethod(credClass, AWSCredentialsProvider.class,
-          "getInstance");
-      if (factory != null) {
-        credentials = (AWSCredentialsProvider)factory.invoke(null);
-        return credentials;
-      }
-
-      // new X()
-      cons = getConstructor(credClass);
-      if (cons != null) {
-        credentials = (AWSCredentialsProvider)cons.newInstance();
-        return credentials;
-      }
-
-      // no supported constructor or factory method found
-      throw new IOException(String.format("%s " + CONSTRUCTOR_EXCEPTION
-          + ".  A class specified in %s must provide a public constructor "
-          + "of a supported signature, or a public factory method named "
-          + "getInstance that accepts no arguments.",
-          className, AWS_CREDENTIALS_PROVIDER));
-    } catch (InvocationTargetException e) {
-      Throwable targetException = e.getTargetException();
-      if (targetException == null) {
-        targetException =  e;
-      }
-      if (targetException instanceof IOException) {
-        throw (IOException) targetException;
-      } else if (targetException instanceof SdkException) {
-        throw translateException("Instantiate " + className, "",
-            (SdkException) targetException);
-      } else {
-        // supported constructor or factory method found, but the call failed
-        throw new IOException(className + " " + INSTANTIATION_EXCEPTION
-            + ": " + targetException,
-            targetException);
-      }
-    } catch (ReflectiveOperationException | IllegalArgumentException e) {
-      // supported constructor or factory method found, but the call failed
-      throw new IOException(className + " " + INSTANTIATION_EXCEPTION
-          + ": " + e,
-          e);
-    }
   }
 
   /**
@@ -803,10 +748,8 @@ public final class S3AUtils {
    * @return the instantiated class
    * @throws IOException on any instantiation failure.
    */
-  private static AwsCredentialsProvider createAWSV2CredentialProvider(
-      Configuration conf,
-      Class<?> credClass,
-      @Nullable URI uri) throws IOException {
+  private static AwsCredentialsProvider createAWSV2CredentialProvider(Configuration conf,
+      Class<?> credClass, @Nullable URI uri) throws IOException {
     AwsCredentialsProvider credentials = null;
     String className = credClass.getName();
     if (!AwsCredentialsProvider.class.isAssignableFrom(credClass)) {
@@ -816,66 +759,80 @@ public final class S3AUtils {
       throw new IOException("Class " + credClass + " " + ABSTRACT_PROVIDER);
     }
     LOG.debug("Credential provider class is {}", className);
+    credentials =
+        getInstanceFromReflection(credClass, conf, uri, AwsCredentialsProvider.class, "create",
+            AWS_CREDENTIALS_PROVIDER);
+    return credentials;
+  }
+
+  /***
+   * Creates an instance of a class using reflection.
+   *
+   * @param instanceClass Class for which instance is to be created
+   * @param conf configuration
+   * @param uri URI of the FS
+   * @param interfaceImplemented interface that this class implements
+   * @param methodName name of factory method to be invoked
+   * @param configKey config key under which this class is specified
+   * @return instance of the specified class
+   * @throws IOException
+   */
+  public static <InstanceT> InstanceT getInstanceFromReflection(Class<?> instanceClass,
+      Configuration conf, @Nullable URI uri, Class<?> interfaceImplemented, String methodName,
+      String configKey) throws IOException {
+
+    String className = instanceClass.getName();
 
     try {
-      // new X(uri, conf)
-      Constructor cons = getConstructor(credClass, URI.class,
-          Configuration.class);
-      if (cons != null) {
-        credentials = (AwsCredentialsProvider)cons.newInstance(uri, conf);
-        return credentials;
-      }
-      // new X(conf)
-      cons = getConstructor(credClass, Configuration.class);
-      if (cons != null) {
-        credentials = (AwsCredentialsProvider)cons.newInstance(conf);
-        return credentials;
+      Constructor cons = null;
+      if (conf != null) {
+        // new X(uri, conf)
+        cons = getConstructor(instanceClass, URI.class, Configuration.class);
+
+        if (cons != null) {
+          return (InstanceT) cons.newInstance(uri, conf);
+        }
+        // new X(conf)
+        cons = getConstructor(instanceClass, Configuration.class);
+        if (cons != null) {
+          return (InstanceT) cons.newInstance(conf);
+        }
       }
 
       // X.getInstance()
-      Method factory = getFactoryMethod(credClass, AwsCredentialsProvider.class,
-          "create");
+      Method factory = getFactoryMethod(instanceClass, interfaceImplemented, methodName);
       if (factory != null) {
-        credentials = (AwsCredentialsProvider)factory.invoke(null);
-        return credentials;
+        return (InstanceT) factory.invoke(null);
       }
 
       // new X()
-      cons = getConstructor(credClass);
+      cons = getConstructor(instanceClass);
       if (cons != null) {
-        credentials = (AwsCredentialsProvider)cons.newInstance();
-        return credentials;
+        return (InstanceT) cons.newInstance();
       }
 
       // no supported constructor or factory method found
       throw new IOException(String.format("%s " + CONSTRUCTOR_EXCEPTION
-              + ".  A class specified in %s must provide a public constructor "
-              + "of a supported signature, or a public factory method named "
-              + "create that accepts no arguments.",
-          className, AWS_CREDENTIALS_PROVIDER));
+          + ".  A class specified in %s must provide a public constructor "
+          + "of a supported signature, or a public factory method named "
+          + "create that accepts no arguments.", className, configKey));
     } catch (InvocationTargetException e) {
-      // TODO: Can probably be moved to a common method, but before doing this, check if we still
-      //  want to extend V2 providers the same way v1 providers are.
       Throwable targetException = e.getTargetException();
       if (targetException == null) {
-        targetException =  e;
+        targetException = e;
       }
       if (targetException instanceof IOException) {
         throw (IOException) targetException;
       } else if (targetException instanceof SdkException) {
-        throw translateException("Instantiate " + className, "",
-            (SdkException) targetException);
+        throw translateException("Instantiate " + className, "", (SdkException) targetException);
       } else {
         // supported constructor or factory method found, but the call failed
-        throw new IOException(className + " " + INSTANTIATION_EXCEPTION
-            + ": " + targetException,
+        throw new IOException(className + " " + INSTANTIATION_EXCEPTION + ": " + targetException,
             targetException);
       }
     } catch (ReflectiveOperationException | IllegalArgumentException e) {
       // supported constructor or factory method found, but the call failed
-      throw new IOException(className + " " + INSTANTIATION_EXCEPTION
-          + ": " + e,
-          e);
+      throw new IOException(className + " " + INSTANTIATION_EXCEPTION + ": " + e, e);
     }
   }
 
@@ -1183,7 +1140,7 @@ public final class S3AUtils {
    * @param args constructor argument types
    * @return constructor or null
    */
-  public static Constructor<?> getConstructor(Class<?> cl, Class<?>... args) {
+  private static Constructor<?> getConstructor(Class<?> cl, Class<?>... args) {
     try {
       Constructor cons = cl.getDeclaredConstructor(args);
       return Modifier.isPublic(cons.getModifiers()) ? cons : null;
@@ -1202,7 +1159,7 @@ public final class S3AUtils {
    * @param methodName method name
    * @return method or null
    */
-  public static Method getFactoryMethod(Class<?> cl, Class<?> returnType,
+  private static Method getFactoryMethod(Class<?> cl, Class<?> returnType,
       String methodName) {
     try {
       Method m = cl.getDeclaredMethod(methodName);

@@ -68,8 +68,8 @@ public class MockS3ClientFactory implements S3ClientFactory {
   }
 
   @Override
-  public S3TransferManager createS3TransferManager(S3AsyncClient s3AsyncClient)
-      throws IOException {
+  public S3TransferManager createS3TransferManager(URI uri,
+      final S3ClientCreationParameters parameters) {
     S3TransferManager tm = mock(S3TransferManager.class);
     return tm;
   }
