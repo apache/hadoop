@@ -464,7 +464,7 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Override
   public String toString() {
-    return getFormattedString(String.valueOf(getMemorySize()));
+    return getFormattedString();
   }
 
   public String toFormattedString() {
