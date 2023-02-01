@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.azurebfs.services.RenameAtomicityUtils;
 import org.apache.hadoop.fs.azurebfs.services.RenameNonAtomicUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -154,6 +155,7 @@ public class AzureBlobFileSystem extends FileSystem
   private int blockOutputActiveBlocks;
   private PrefixMode prefixMode = PrefixMode.DFS;
   private boolean isNamespaceEnabled;
+  private NativeAzureFileSystem nativeFs;
 
   @Override
   public void initialize(URI uri, Configuration configuration)
@@ -243,7 +245,22 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     AbfsClientThrottlingIntercept.initializeSingleton(abfsConfiguration.isAutoThrottlingEnabled());
-
+    String abfsUrl = uri.toString();
+    URI wasbUri = null;
+    try {
+      wasbUri = new URI(abfsUrlToWasbUrl(abfsUrl, abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
+    } catch (URISyntaxException e) {
+      e.printStackTrace();
+    }
+    nativeFs = new NativeAzureFileSystem();
+    Configuration config = getConf();
+    config.setInt("fs.azure.rename.threads", 5);
+    try {
+      nativeFs.initialize(wasbUri, config);
+    } catch (IOException e) {
+      LOG.debug("Initializing  NativeAzureBlobFileSystem failed ", e);
+      throw e;
+    }
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
   }
 
@@ -270,6 +287,37 @@ public class AzureBlobFileSystem extends FileSystem
 
   public void registerListener(Listener listener1) {
     listener = listener1;
+  }
+
+  private static String convertTestUrls(
+      final String url,
+      final String fromNonSecureScheme,
+      final String fromSecureScheme,
+      final String fromDnsPrefix,
+      final String toNonSecureScheme,
+      final String toSecureScheme,
+      final String toDnsPrefix,
+      final boolean isAlwaysHttpsUsed) {
+    String data = null;
+    if (url.startsWith(fromNonSecureScheme + "://") && isAlwaysHttpsUsed) {
+      data = url.replace(fromNonSecureScheme + "://", toSecureScheme + "://");
+    } else if (url.startsWith(fromNonSecureScheme + "://")) {
+      data = url.replace(fromNonSecureScheme + "://", toNonSecureScheme + "://");
+    } else if (url.startsWith(fromSecureScheme + "://")) {
+      data = url.replace(fromSecureScheme + "://", toSecureScheme + "://");
+    }
+
+    if (data != null) {
+      data = data.replace("." + fromDnsPrefix + ".",
+          "." + toDnsPrefix + ".");
+    }
+    return data;
+  }
+
+  protected static String abfsUrlToWasbUrl(final String abfsUrl, final boolean isAlwaysHttpsUsed) {
+    return convertTestUrls(
+        abfsUrl, FileSystemUriSchemes.ABFS_SCHEME, FileSystemUriSchemes.ABFS_SECURE_SCHEME, FileSystemUriSchemes.ABFS_DNS_PREFIX,
+        FileSystemUriSchemes.WASB_SCHEME, FileSystemUriSchemes.WASB_SECURE_SCHEME, FileSystemUriSchemes.WASB_DNS_PREFIX, isAlwaysHttpsUsed);
   }
 
   @Override
@@ -325,6 +373,22 @@ public class AzureBlobFileSystem extends FileSystem
               PATH_EXISTS,
               null);
     }
+  }
+
+  private boolean shouldRedirect(FSOperationType type, TracingContext context)
+          throws AzureBlobFileSystemException {
+    if (getIsNamespaceEnabled(context)) {
+      return false;
+    }
+
+    switch (type) {
+      case DELETE:
+        return abfsStore.getAbfsConfiguration().shouldRedirectDelete();
+      case RENAME:
+        return abfsStore.getAbfsConfiguration().shouldRedirectRename();
+    }
+
+    return false;
   }
 
   @Override

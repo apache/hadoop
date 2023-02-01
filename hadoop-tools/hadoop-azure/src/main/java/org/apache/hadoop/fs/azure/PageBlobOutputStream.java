@@ -148,7 +148,7 @@ final class PageBlobOutputStream extends OutputStream implements Syncable, Strea
    */
   public PageBlobOutputStream(final CloudPageBlobWrapper blob,
       final OperationContext opContext,
-      final Configuration conf) throws StorageException {
+      final Configuration conf) throws StorageException, IOException {
     this.blob = blob;
     this.outBuffer = new ByteArrayOutputStream();
     this.opContext = opContext;
@@ -270,12 +270,14 @@ final class PageBlobOutputStream extends OutputStream implements Syncable, Strea
         LOG.debug("before runInternal()");
         runInternal();
         LOG.debug("after runInternal()");
+      } catch (IOException e) {
+        e.printStackTrace();
       } finally {
         doneSignal.countDown();
       }
     }
 
-    private void runInternal() {
+    private void runInternal() throws IOException {
       if (lastError != null) {
         // We're already in an error state, no point doing anything.
         return;
@@ -410,7 +412,7 @@ final class PageBlobOutputStream extends OutputStream implements Syncable, Strea
   /**
    * Extend the page blob file if we are close to the end.
    */
-  private void conditionalExtendFile() {
+  private void conditionalExtendFile() throws IOException {
 
     // maximum allowed size of an Azure page blob (1 terabyte)
     final long MAX_PAGE_BLOB_SIZE = 1024L * 1024L * 1024L * 1024L;

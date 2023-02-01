@@ -1420,14 +1420,18 @@ public class NativeAzureFileSystem extends FileSystem {
         instrumentation);
     }
 
-    store.initialize(uri, conf, instrumentation);
+    try {
+      store.initialize(uri, conf, instrumentation);
+    } catch (URISyntaxException e) {
+      e.printStackTrace();
+    }
     setConf(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.workingDir = new Path("/user", UserGroupInformation.getCurrentUser()
         .getShortUserName()).makeQualified(getUri(), getWorkingDirectory());
 
-    this.appendSupportEnabled = conf.getBoolean(APPEND_SUPPORT_ENABLE_PROPERTY_NAME, false);
+    this.appendSupportEnabled = conf.getBoolean(APPEND_SUPPORT_ENABLE_PROPERTY_NAME, true);
     LOG.debug("NativeAzureFileSystem. Initializing.");
     LOG.debug("  blockSize  = {}", store.getHadoopBlockSize());
 
@@ -2264,7 +2268,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // corresponding directory blob a) and that would implicitly delete
       // the directory as well, which is not correct.
 
-      if (parentPath.getParent() != null) {// Not root
+      if (parentPath != null && parentPath.getParent() != null) {// Not root
         String parentKey = pathToKey(parentPath);
 
         FileMetadata parentMetadata = null;
@@ -2339,7 +2343,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // The path specifies a folder. Recursively delete all entries under the
       // folder.
       LOG.debug("Directory Delete encountered: {}", f);
-      if (parentPath.getParent() != null) {
+      if (parentPath != null && parentPath.getParent() != null) {
         String parentKey = pathToKey(parentPath);
         FileMetadata parentMetadata = null;
 
