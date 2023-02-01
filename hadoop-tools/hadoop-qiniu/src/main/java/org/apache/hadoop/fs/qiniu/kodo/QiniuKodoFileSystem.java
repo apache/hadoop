@@ -324,16 +324,17 @@ public class QiniuKodoFileSystem extends FileSystem {
     }
 
     /**
-     * 线程安全的递归式创建文件夹
+     * 线程安全的递归地创建文件夹
      */
     @Override
     public synchronized boolean mkdirs(Path path, FsPermission permission) throws IOException {
         Stack<Path> stack = new Stack<>();
         while (path != null) {
-            LOG.debug("== mkdirs, path:" + path + " permission:" + permission);
+            LOG.debug("== mkdirs, path:" + path);
             stack.push(path);
             path = path.getParent();
         }
+        // 从顶层文件夹开始循环创建
         while (!stack.isEmpty()) {
             mkdir(stack.pop());
         }
