@@ -159,5 +159,11 @@
             <scope>test</scope>
             <type>jar</type>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-aws</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
