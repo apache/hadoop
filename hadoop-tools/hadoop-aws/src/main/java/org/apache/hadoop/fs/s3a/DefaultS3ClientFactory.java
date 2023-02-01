@@ -260,7 +260,12 @@ public class DefaultS3ClientFactory extends Configured
 
     URI endpoint = getS3Endpoint(parameters.getEndpoint(), conf);
     Region region = getS3Region(conf.getTrimmed(AWS_REGION), bucket, parameters.getCredentialSet());
-    LOG.debug("Using endpoint {}; and region {}", endpoint, region);
+    LOG.debug("Using region {}", region);
+
+    if (endpoint != null) {
+      builder.endpointOverride(endpoint);
+      LOG.debug("Using endpoint {}", endpoint);
+    }
 
     // TODO: Some configuration done in configureBasicParams is not done yet.
     S3Configuration serviceConfiguration = S3Configuration.builder()
@@ -273,7 +278,6 @@ public class DefaultS3ClientFactory extends Configured
     return builder
         .overrideConfiguration(createClientOverrideConfiguration(parameters, conf))
         .credentialsProvider(parameters.getCredentialSet())
-        .endpointOverride(endpoint)
         .region(region)
         .serviceConfiguration(serviceConfiguration);
   }
@@ -559,8 +563,8 @@ public class DefaultS3ClientFactory extends Configured
     String protocol = secureConnections ? "https" : "http";
 
     if (endpoint == null || endpoint.isEmpty()) {
-      // the default endpoint
-      endpoint = CENTRAL_ENDPOINT;
+      // don't set an endpoint if none is configured, instead let the SDK figure it out.
+      return null;
     }
 
     if (!endpoint.contains("://")) {
