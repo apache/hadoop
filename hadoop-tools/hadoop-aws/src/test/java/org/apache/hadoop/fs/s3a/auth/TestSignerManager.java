@@ -19,8 +19,6 @@ package org.apache.hadoop.fs.s3a.auth;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
@@ -28,12 +26,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.DefaultRequest;
-import com.amazonaws.SignableRequest;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.Signer;
-import com.amazonaws.auth.SignerFactory;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.core.signer.Signer;
+import software.amazon.awssdk.http.SdkHttpFullRequest;
+import software.amazon.awssdk.http.SdkHttpMethod;
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Rule;
@@ -284,7 +280,7 @@ public class TestSignerManager {
       throws IOException, InterruptedException {
     ugi.doAs((PrivilegedExceptionAction<Void>) () -> {
       Signer signer = new SignerForInitializerTest();
-      SignableRequest<?> signableRequest = constructSignableRequest(bucket);
+      SdkHttpFullRequest signableRequest = constructSignableRequest(bucket);
       signer.sign(signableRequest, null);
       verifyStoreValueInSigner(expectNullStoreInfo, bucket, identifier);
       return null;
@@ -336,8 +332,10 @@ public class TestSignerManager {
     private static boolean initialized = false;
 
     @Override
-    public void sign(SignableRequest<?> request, AWSCredentials credentials) {
+    public SdkHttpFullRequest sign(SdkHttpFullRequest sdkHttpFullRequest,
+        ExecutionAttributes executionAttributes) {
       initialized = true;
+      return sdkHttpFullRequest;
     }
 
     public static void reset() {
@@ -354,8 +352,10 @@ public class TestSignerManager {
     private static boolean initialized = false;
 
     @Override
-    public void sign(SignableRequest<?> request, AWSCredentials credentials) {
+    public SdkHttpFullRequest sign(SdkHttpFullRequest sdkHttpFullRequest,
+        ExecutionAttributes executionAttributes) {
       initialized = true;
+      return sdkHttpFullRequest;
     }
 
     public static void reset() {
@@ -472,11 +472,15 @@ public class TestSignerManager {
     private static StoreValue retrievedStoreValue;
 
     @Override
-    public void sign(SignableRequest<?> request, AWSCredentials credentials) {
-      String bucketName = request.getEndpoint().getHost();
+    public SdkHttpFullRequest sign(SdkHttpFullRequest sdkHttpFullRequest,
+        ExecutionAttributes executionAttributes) {
+      String bucket = sdkHttpFullRequest.host().split("//")[1];
+      // remove trailing slash
+      String bucketName = bucket.substring(0, bucket.length() - 1);
       try {
         retrievedStoreValue = SignerInitializerForTest
             .getStoreInfo(bucketName, UserGroupInformation.getCurrentUser());
+        return sdkHttpFullRequest;
       } catch (IOException e) {
         throw new RuntimeException("Failed to get current ugi", e);
       }
@@ -579,12 +583,9 @@ public class TestSignerManager {
     return identifier + "_" + bucketName + "_" + user;
   }
 
-  private SignableRequest<?> constructSignableRequest(String bucketName)
-      throws URISyntaxException {
-    DefaultRequest signableRequest = new DefaultRequest(
-        AmazonWebServiceRequest.NOOP, "fakeservice");
-    URI uri = new URI("s3://" + bucketName + "/");
-    signableRequest.setEndpoint(uri);
-    return signableRequest;
+  private SdkHttpFullRequest constructSignableRequest(String bucketName) {
+    String host = "s3://" + bucketName + "/";
+    return SdkHttpFullRequest.builder().host(host).protocol("https").method(SdkHttpMethod.GET)
+        .build();
   }
 }
