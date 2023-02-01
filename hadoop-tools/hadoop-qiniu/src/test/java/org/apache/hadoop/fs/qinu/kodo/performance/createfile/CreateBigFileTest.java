@@ -4,7 +4,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.qinu.kodo.performance.QiniuKodoPerformanceBaseTest;
-import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,15 +27,9 @@ public class CreateBigFileTest extends QiniuKodoPerformanceBaseTest {
         return System.currentTimeMillis() - ms;
     }
 
-    @Test
-    public void testS3A() throws Exception {
-        long time = createBigFile(s3aTestDir, s3a, 4 * 1024 * 1024, 2);
-        LOG.info("time: " + time);
+    @Override
+    protected long testImpl(String testDir, FileSystem fs) throws Exception {
+        return createBigFile(testDir, fs, 4 * 1024 * 1024, 2);
     }
 
-    @Test
-    public void testKodo() throws Exception {
-        long time = createBigFile(kodoTestDir, kodo, 4 * 1024 * 1024, 2);
-        LOG.info("time: " + time);
-    }
 }

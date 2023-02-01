@@ -3,7 +3,6 @@ package org.apache.hadoop.fs.qinu.kodo.performance.createfile;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.qinu.kodo.performance.QiniuKodoPerformanceBaseTest;
-import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,10 +15,10 @@ public class CreateSmallFileConcurrentlyTest extends QiniuKodoPerformanceBaseTes
     private static final ExecutorService service = Executors.newCachedThreadPool();
 
 
-    private static long createLargeAmountSmall(String workDir, FileSystem fs) throws Exception {
+    private static long createLargeAmountSmall(String workDir, FileSystem fs, int files, int consumers) throws Exception {
         final String dir = workDir + "/testCreateLargeAmountSmallFilesConcurrently/";
 
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < consumers; i++) {
             service.submit(() -> {
                 while (true) {
                     try {
@@ -43,7 +42,7 @@ public class CreateSmallFileConcurrentlyTest extends QiniuKodoPerformanceBaseTes
         // 生产
         long ms = System.currentTimeMillis();
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < files; i++) {
             boolean success;
             do {
                 success = queue.offer(i, 1, TimeUnit.SECONDS);
@@ -53,15 +52,8 @@ public class CreateSmallFileConcurrentlyTest extends QiniuKodoPerformanceBaseTes
         return System.currentTimeMillis() - ms;
     }
 
-    @Test
-    public void testS3A() throws Exception {
-        long time = createLargeAmountSmall(s3aTestDir, s3a);
-        LOG.info("time: " + time);
-    }
-
-    @Test
-    public void testKodo() throws Exception {
-        long time = createLargeAmountSmall(kodoTestDir, kodo);
-        LOG.info("time: " + time);
+    @Override
+    protected long testImpl(String testDir, FileSystem fs) throws Exception {
+        return createLargeAmountSmall(testDir, fs, 100, 8);
     }
 }
