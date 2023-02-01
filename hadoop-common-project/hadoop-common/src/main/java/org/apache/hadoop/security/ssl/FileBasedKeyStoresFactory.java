@@ -319,8 +319,10 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
    */
   @Override
   public synchronized void destroy() {
-    if (trustManager != null) {
+    if (fileMonitoringTimer != null) {
       fileMonitoringTimer.cancel();
+    }
+    if (trustManager != null) {
       trustManager = null;
       keyManagers = null;
       trustManagers = null;
