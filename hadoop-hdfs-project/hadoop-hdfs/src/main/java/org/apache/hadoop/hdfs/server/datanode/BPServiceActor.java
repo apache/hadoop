@@ -202,6 +202,7 @@ class BPServiceActor implements Runnable {
   Map<String, String> getActorInfoMap() {
     final Map<String, String> info = new HashMap<String, String>();
     info.put("NamenodeAddress", getNameNodeAddress());
+    info.put("NamenodeState", state.toString());
     info.put("BlockPoolID", bpos.getBlockPoolId());
     info.put("ActorState", getRunningState());
     info.put("LastHeartbeat",
@@ -697,6 +698,8 @@ class BPServiceActor implements Runnable {
         // Every so often, send heartbeat or block-report
         //
         final boolean sendHeartbeat = scheduler.isHeartbeatDue(startTime);
+        LOG.debug("BP offer service run start time: {}, sendHeartbeat: {}", startTime,
+            sendHeartbeat);
         HeartbeatResponse resp = null;
         if (sendHeartbeat) {
           //
@@ -794,6 +797,7 @@ class BPServiceActor implements Runnable {
       long sleepTime = Math.min(1000, dnConf.heartBeatInterval);
       Thread.sleep(sleepTime);
     } catch (InterruptedException ie) {
+      LOG.info("BPServiceActor {} is interrupted", this);
       Thread.currentThread().interrupt();
     }
   }
@@ -995,6 +999,8 @@ class BPServiceActor implements Runnable {
     while (!duplicateQueue.isEmpty()) {
       BPServiceActorAction actionItem = duplicateQueue.remove();
       try {
+        LOG.debug("BPServiceActor ( {} ) processing queued messages. Action item: {}", this,
+            actionItem);
         actionItem.reportTo(bpNamenode, bpRegistration);
       } catch (BPServiceActorActionException baae) {
         LOG.warn(baae.getMessage() + nnAddr , baae);
