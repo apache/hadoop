@@ -543,7 +543,7 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed refreshServiceAcls call");
       metrics.incrRefreshServiceAclsFailedRetrieved();
     }
-    
+
     public void getActivitiesFailed() {
       LOG.info("Mocked: failed getBulkActivitie call");
       metrics.incrGetActivitiesFailedRetrieved();
@@ -793,7 +793,7 @@ public class TestRouterMetrics {
       LOG.info("Mocked: successful RefreshServiceAcls call with duration {}", duration);
       metrics.succeededRefreshServiceAclsRetrieved(duration);
     }
-    
+
     public void getActivitiesRetrieved(long duration) {
       LOG.info("Mocked: successful GetActivities call with duration {}", duration);
       metrics.succeededGetActivitiesLatencyRetrieved(duration);
@@ -1683,7 +1683,7 @@ public class TestRouterMetrics {
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getNumRefreshServiceAclsFailedRetrieved());
   }
-  
+
   @Test
   public void testGetActivitiesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetActivitiesRetrieved();
