@@ -5,7 +5,7 @@ import java.util.concurrent.Executors;
 
 public class MkdirDeeplySeriallyTest extends AMkdirDeeplyTest {
     @Override
-    protected ExecutorService getExecutorService() {
+    protected ExecutorService buildExecutorService() {
         return Executors.newSingleThreadExecutor();
     }
 }

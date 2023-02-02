@@ -5,7 +5,7 @@ import java.util.concurrent.Executors;
 
 public class CreateSmallFileConcurrentlyTest extends ACreateSmallFileTest {
     @Override
-    protected ExecutorService getExecutorService() {
+    protected ExecutorService buildExecutorService() {
         return Executors.newFixedThreadPool(8);
     }
 }

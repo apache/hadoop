@@ -20,7 +20,6 @@ public abstract class QiniuKodoPerformanceBaseTest {
     private static final String DEFAULT_S3A_TEST_DIR = "/testS3A";
     private final FileSystem kodoFs = new QiniuKodoFileSystem();
     private final FileSystem s3aFs = new S3AFileSystem();
-    private ExecutorService service;
 
     @Before
     public void setup() throws Exception {
@@ -35,23 +34,17 @@ public abstract class QiniuKodoPerformanceBaseTest {
     /**
      * 构造测试任务的执行器
      */
-    abstract protected ExecutorService getExecutorService();
+    abstract protected ExecutorService buildExecutorService();
 
     // 需要用户实现该方法
     abstract protected long testImpl(String testDir, FileSystem fs, ExecutorService executorService) throws Exception;
 
     protected long testS3AImpl(String testDir, FileSystem fs) throws Exception {
-        if (service == null) {
-            service = getExecutorService();
-        }
-        return testImpl(testDir, fs, service);
+        return testImpl(testDir, fs, buildExecutorService());
     }
 
     protected long testKodoImpl(String testDir, FileSystem fs) throws Exception {
-        if (service == null) {
-            service = getExecutorService();
-        }
-        return testImpl(testDir, fs, service);
+        return testImpl(testDir, fs, buildExecutorService());
     }
 
     protected long timeoutN() {
