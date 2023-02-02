@@ -517,8 +517,17 @@ public abstract class FileSystem extends Configured
    * @throws IOException if the FileSystem cannot be instantiated.
    */
   public static FileSystem get(URI uri, Configuration conf) throws IOException {
-    String scheme = uri.getScheme();
-    String authority = uri.getAuthority();
+      String scheme = uri.getScheme();
+      String authority = uri.getAuthority();
+      if (conf.get("user") != null) {
+          FileSystem fs;
+          try {
+              fs = FileSystem.get(uri, conf, conf.get("user"));
+          } catch (InterruptedException e) {
+              throw new IOException(e);
+          }
+          return fs;
+      }
 
     if (scheme == null && authority == null) {     // use default FS
       return get(conf);
