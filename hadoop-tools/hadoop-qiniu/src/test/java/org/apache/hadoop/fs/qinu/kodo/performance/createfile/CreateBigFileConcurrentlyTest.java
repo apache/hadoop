@@ -9,15 +9,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class CreateBigFileConcurrentlyTest extends QiniuKodoPerformanceBaseTest {
     private static final Logger LOG = LoggerFactory.getLogger(CreateBigFileConcurrentlyTest.class);
     private static final BlockingQueue<Integer> queue = new LinkedBlockingQueue<>(10);
-    private static final ExecutorService service = Executors.newCachedThreadPool();
 
-
-    private static long createBigFile(String workDir, FileSystem fs, int files, int blockSize, int blocks, int consumers) throws Exception {
+    private long createBigFile(String workDir, FileSystem fs, int files, int blockSize, int blocks, int consumers) throws Exception {
         final String dir = workDir + "/testCreateBigFileConcurrently/";
         byte[] bs = new byte[blockSize];
         for (int i = 0; i < consumers; i++) {

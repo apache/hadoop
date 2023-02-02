@@ -7,13 +7,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class MkdirLargelyConcurrentlyTest extends QiniuKodoPerformanceBaseTest {
     private static final Logger LOG = LoggerFactory.getLogger(MkdirLargelyConcurrentlyTest.class);
     private static final BlockingQueue<Path> queue = new LinkedBlockingQueue<>(10);
-    private static final ExecutorService service = Executors.newCachedThreadPool();
-
 
     private long testMkdirLargely(String workDir, FileSystem fs, int dirs, int consumers) throws Exception {
         final String dir = workDir + "/testMkdirLargelyConcurrently/";

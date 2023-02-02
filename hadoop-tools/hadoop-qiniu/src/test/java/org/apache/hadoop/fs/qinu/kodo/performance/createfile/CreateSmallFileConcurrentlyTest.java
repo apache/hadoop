@@ -7,15 +7,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class CreateSmallFileConcurrentlyTest extends QiniuKodoPerformanceBaseTest {
     private static final Logger LOG = LoggerFactory.getLogger(CreateSmallFileTest.class);
     private static final BlockingQueue<Integer> queue = new LinkedBlockingQueue<>(10);
-    private static final ExecutorService service = Executors.newCachedThreadPool();
 
 
-    private static long createLargeAmountSmall(String workDir, FileSystem fs, int files, int consumers) throws Exception {
+    private long createLargeAmountSmall(String workDir, FileSystem fs, int files, int consumers) throws Exception {
         final String dir = workDir + "/testCreateLargeAmountSmallFilesConcurrently/";
 
         for (int i = 0; i < consumers; i++) {
