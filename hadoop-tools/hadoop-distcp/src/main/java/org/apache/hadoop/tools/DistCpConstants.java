@@ -150,6 +150,7 @@ public final class DistCpConstants {
    * The check would verify if the target file is perceived as older than the
    * source then it indicates that the source has been recently updated and it
    * is a newer version than what was synced, so we should not skip the copy.
+   * {@value}
    */
   public static final String CONF_LABEL_UPDATE_MOD_TIME =
       "distcp.update.modification.time";

@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -50,7 +49,6 @@ import org.apache.hadoop.tools.SimpleCopyListing;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 import org.apache.hadoop.tools.util.DistCpTestUtils;
 import org.apache.hadoop.util.functional.RemoteIterators;
-import org.apache.http.annotation.Contract;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
@@ -893,10 +891,10 @@ public abstract class AbstractContractDistCpTest
     Path source = new Path(remoteDir, "file");
     Path dest = new Path(localDir, "file");
 
-    Path source_0byte = new Path(remoteDir, "file_0byte");
-    Path dest_0byte = new Path(localDir, "file_0byte");
+    Path source0byte = new Path(remoteDir, "file_0byte");
+    Path dest0byte = new Path(localDir, "file_0byte");
     dest = localFS.makeQualified(dest);
-    dest_0byte = localFS.makeQualified(dest_0byte);
+    dest0byte = localFS.makeQualified(dest0byte);
 
     // Creating a source file with certain dataset.
     byte[] sourceBlock = dataset(10, 'a', 'z');
@@ -908,16 +906,16 @@ public abstract class AbstractContractDistCpTest
             1024, true);
 
     // Create 0 byte source and target files.
-    ContractTestUtils.createFile(remoteFS, source_0byte, true, new byte[0]);
-    ContractTestUtils.createFile(localFS, dest_0byte, true, new byte[0]);
+    ContractTestUtils.createFile(remoteFS, source0byte, true, new byte[0]);
+    ContractTestUtils.createFile(localFS, dest0byte, true, new byte[0]);
 
     // Execute the distcp -update job.
     Job job = distCpUpdateWithFs(remoteDir, localDir, remoteFS, localFS);
 
     // First distcp -update would normally copy the source to dest.
     verifyFileContents(localFS, dest, sourceBlock);
-    // Verify 1 file was skipped in the distcp -update(They 0 byte files).
-    // Verify 1 file was copied in the distcp -update(The new source file).
+    // Verify 1 file was skipped in the distcp -update (The 0 byte file).
+    // Verify 1 file was copied in the distcp -update (The new source file).
     verifySkipAndCopyCounter(job, 1, 1);
 
     // Remove the source file and replace with a file with same name and size
@@ -952,7 +950,7 @@ public abstract class AbstractContractDistCpTest
     // newer than the updatedSource which indicates that the sync happened
     // more recently and there is no update.
     verifyFileContents(localFS, dest, sourceBlock);
-    // Skipped both 0 byte file and sourceFile(since mod time of target is
+    // Skipped both 0 byte file and sourceFile (since mod time of target is
     // older than the source it is perceived that source is of older version
     // and we can skip it's copy).
     verifySkipAndCopyCounter(updatedSourceJobOldSrc, 2, 0);
