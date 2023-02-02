@@ -211,13 +211,16 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
             try {
                 if (expires > 0) {
                     byte[] cachedBlockData = readBlockFromCache(kbck);
-                    if (cachedBlockData != null) return cachedBlockData;
+                    if (cachedBlockData != null) {
+                        return cachedBlockData;
+                    }
                 }
                 // 可能没有缓存, 缓存过期, 缓存有效期为0，直接穿透至下一层数据源获取数据
                 return readBlockFromSourceAndCache(kbck);
             } catch (IOException e) {
                 exception = e;
                 // 缓存可能有问题，删了
+                LOG.warn("IO", e);
                 LOG.info("delete cache: {}", kbck);
                 lruCache.remove(kbck);
             }

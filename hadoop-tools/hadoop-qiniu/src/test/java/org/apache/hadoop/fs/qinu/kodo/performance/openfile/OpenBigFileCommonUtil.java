@@ -9,7 +9,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 public class OpenBigFileCommonUtil {
-    public static Path makeBigFile(String testDir, FileSystem fs, int blockSize, int blocks) throws IOException {
+    public static Path makeSureExistsBigFile(String testDir, FileSystem fs, int blockSize, int blocks) throws IOException {
         byte[] bs = new byte[blockSize];
 
         Path p = new Path(testDir + "/bigFile");
