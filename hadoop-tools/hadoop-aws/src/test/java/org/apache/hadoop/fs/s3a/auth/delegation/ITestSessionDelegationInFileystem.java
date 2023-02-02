@@ -332,7 +332,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     // TODO: Check what should happen here. Calling headObject() on the root path fails in V2,
     // with the error that key cannot be empty.
    // fs.getObjectMetadata(new Path("/"));
-    readLandsatMetadata(fs);
+   readLandsatMetadata(fs);
 
     URI uri = fs.getUri();
     // create delegation tokens from the test suites FS.
@@ -586,13 +586,15 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     URI landsat = new URI(DEFAULT_CSVTEST_FILE);
     DefaultS3ClientFactory factory
         = new DefaultS3ClientFactory();
-    factory.setConf(new Configuration(delegatedFS.getConf()));
+    Configuration conf = delegatedFS.getConf();
+    removeBaseAndBucketOverrides(conf, AWS_REGION);
+    conf.set(AWS_REGION, "us-west-2");
+    factory.setConf(conf);
     String host = landsat.getHost();
     S3ClientFactory.S3ClientCreationParameters parameters = null;
     parameters = new S3ClientFactory.S3ClientCreationParameters()
         .withCredentialSet(testingCreds)
         .withPathUri(new URI("s3a://localhost/"))
-        .withEndpoint(DEFAULT_ENDPOINT)
         .withMetrics(new EmptyS3AStatisticsContext()
             .newStatisticsFromAwsSdk())
         .withUserAgentSuffix("ITestSessionDelegationInFileystem");

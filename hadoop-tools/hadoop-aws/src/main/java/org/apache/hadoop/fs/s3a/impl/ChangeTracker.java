@@ -207,15 +207,13 @@ public class ChangeTracker {
     // be the same on the copy.  As such, there isn't really anything that
     // can be verified on the response, except that a revision ID is present
     // if required.
-    // TODO: Commenting out temporarily, due to the TM not returning copyObjectResult
-    //  in the response.
-//    String newRevisionId = policy.getRevisionId(copyObjectResponse);
-//    LOG.debug("Copy result {}: {}", policy.getSource(), newRevisionId);
-//    if (newRevisionId == null && policy.isRequireVersion()) {
-//      throw new NoVersionAttributeException(uri, String.format(
-//          "Change detection policy requires %s",
-//          policy.getSource()));
-//    }
+    String newRevisionId = policy.getRevisionId(copyObjectResponse);
+    LOG.debug("Copy result {}: {}", policy.getSource(), newRevisionId);
+    if (newRevisionId == null && policy.isRequireVersion()) {
+      throw new NoVersionAttributeException(uri, String.format(
+          "Change detection policy requires %s",
+          policy.getSource()));
+    }
   }
 
   /**
