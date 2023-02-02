@@ -37,7 +37,7 @@ public abstract class QiniuKodoPerformanceBaseTest {
     abstract protected ExecutorService buildExecutorService();
 
     // 需要用户实现该方法
-    abstract protected long testImpl(String testDir, FileSystem fs, ExecutorService executorService) throws Exception;
+    abstract protected long testImpl(String testDir, FileSystem fs, ExecutorService service) throws Exception;
 
     protected long testS3AImpl(String testDir, FileSystem fs) throws Exception {
         return testImpl(testDir, fs, buildExecutorService());
@@ -85,13 +85,13 @@ public abstract class QiniuKodoPerformanceBaseTest {
 
     @Test
     public void testS3A() throws Exception {
-        long time = testS3AImpl(String.format("/%s/%s", getS3ATestDir(), getSceneWorkDirName()), s3aFs);
+        long time = testS3AImpl(String.format("%s/%s", getS3ATestDir(), getSceneWorkDirName()), s3aFs);
         LOG.info(getSceneString() + " (S3A) " + "cost time: " + time);
     }
 
     @Test
     public void testKodo() throws Exception {
-        long time = testKodoImpl(String.format("/%s/%s", getKodoTestDir(), getSceneWorkDirName()), kodoFs);
+        long time = testKodoImpl(String.format("%s/%s", getKodoTestDir(), getSceneWorkDirName()), kodoFs);
         LOG.info(getSceneString() + " (Kodo) " + "cost time: " + time);
     }
 }
