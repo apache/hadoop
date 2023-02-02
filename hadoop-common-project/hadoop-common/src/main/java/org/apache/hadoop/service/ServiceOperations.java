@@ -74,6 +74,27 @@ public final class ServiceOperations {
    * @param log the log to warn at
    * @param service a service; may be null
    * @return any exception that was caught; null if none was.
+   * @deprecated to be removed with 3.4.0. Use {@link #stopQuietly(Logger, Service)} instead.
+   */
+  @Deprecated
+  public static Exception stopQuietly(org.apache.commons.logging.Log log, Service service) {
+    try {
+      stop(service);
+    } catch (Exception e) {
+      log.warn("When stopping the service " + service.getName(), e);
+      return e;
+    }
+    return null;
+  }
+
+  /**
+   * Stop a service; if it is null do nothing. Exceptions are caught and
+   * logged at warn level. (but not Throwables). This operation is intended to
+   * be used in cleanup operations
+   *
+   * @param log the log to warn at
+   * @param service a service; may be null
+   * @return any exception that was caught; null if none was.
    * @see ServiceOperations#stopQuietly(Service)
    */
   public static Exception stopQuietly(Logger log, Service service) {

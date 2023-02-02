@@ -221,7 +221,38 @@ public class ReflectionUtils {
   }
     
   private static long previousLogTime = 0;
-    
+
+  /**
+   * Log the current thread stacks at INFO level.
+   * @param log the logger that logs the stack trace
+   * @param title a descriptive title for the call stacks
+   * @param minInterval the minimum time from the last
+   * @deprecated to be removed with 3.4.0. Use {@link #logThreadInfo(Logger, String, long)} instead.
+   */
+  @Deprecated
+  public static void logThreadInfo(org.apache.commons.logging.Log log,
+      String title,
+      long minInterval) {
+    boolean dumpStack = false;
+    if (log.isInfoEnabled()) {
+      synchronized (ReflectionUtils.class) {
+        long now = Time.monotonicNow();
+        if (now - previousLogTime >= minInterval * 1000) {
+          previousLogTime = now;
+          dumpStack = true;
+        }
+      }
+      if (dumpStack) {
+        try {
+          ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+          printThreadInfo(new PrintStream(buffer, false, "UTF-8"), title);
+          log.info(buffer.toString(StandardCharsets.UTF_8.name()));
+        } catch (UnsupportedEncodingException ignored) {
+        }
+      }
+    }
+  }
+
   /**
    * Log the current thread stacks at INFO level.
    * @param log the logger that logs the stack trace
