@@ -10,13 +10,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public abstract class ACreateSmallFileTest extends QiniuKodoPerformanceBaseTest {
-    protected int files = 100;
+    abstract protected int files();
 
     @Override
     protected long testImpl(String testDir, FileSystem fs, ExecutorService executorService) throws Exception {
         long ms = System.currentTimeMillis();
 
-        for (int i = 0; i < files; i++) {
+        for (int i = 0; i < files(); i++) {
             final Path p = new Path(testDir + "/" + i);
             executorService.submit(() -> {
                 try {

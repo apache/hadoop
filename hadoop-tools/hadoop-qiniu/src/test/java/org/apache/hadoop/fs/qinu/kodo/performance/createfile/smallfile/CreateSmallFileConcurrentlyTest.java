@@ -8,4 +8,9 @@ public class CreateSmallFileConcurrentlyTest extends ACreateSmallFileTest {
     protected ExecutorService buildExecutorService() {
         return Executors.newFixedThreadPool(8);
     }
+
+    @Override
+    protected int files() {
+        return 100;
+    }
 }

@@ -8,4 +8,15 @@ public class MkdirDeeplySeriallyTest extends AMkdirDeeplyTest {
     protected ExecutorService buildExecutorService() {
         return Executors.newSingleThreadExecutor();
     }
+
+
+    @Override
+    protected int dirs() {
+        return 10;
+    }
+
+    @Override
+    protected int deep() {
+        return 10;
+    }
 }

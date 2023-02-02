@@ -8,4 +8,9 @@ public class MkdirLargelySeriallyTest extends AMkdirLargelyTest {
     protected ExecutorService buildExecutorService() {
         return Executors.newSingleThreadExecutor();
     }
+
+    @Override
+    protected int dirs() {
+        return 100;
+    }
 }

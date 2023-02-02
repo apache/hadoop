@@ -8,4 +8,9 @@ public class CreateSmallFileSeriallyTest extends ACreateSmallFileTest {
     protected ExecutorService buildExecutorService() {
         return Executors.newSingleThreadExecutor();
     }
+
+    @Override
+    protected int files() {
+        return 100;
+    }
 }

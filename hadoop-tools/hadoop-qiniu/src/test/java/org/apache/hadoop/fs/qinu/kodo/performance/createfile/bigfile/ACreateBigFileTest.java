@@ -14,14 +14,17 @@ import java.util.concurrent.ExecutorService;
 public abstract class ACreateBigFileTest extends QiniuKodoPerformanceBaseTest {
     private static final Logger LOG = LoggerFactory.getLogger(ACreateBigFileTest.class);
 
-    protected int files = 5;
-    protected int blockSize = 4 * 1024 * 1024;
-    protected int blocks = 2;
+    abstract protected int files();
+
+    abstract protected int blockSize();
+
+    abstract protected int blocks();
+
 
     @Override
     protected long testImpl(String testDir, FileSystem fs, ExecutorService service) throws Exception {
         // 总计20 * 4MB * 2 = 160MB
-        byte[] bs = new byte[blockSize];
+        byte[] bs = new byte[blockSize()];
 
         // 建立父目录
         fs.mkdirs(new Path(testDir));
@@ -29,12 +32,12 @@ public abstract class ACreateBigFileTest extends QiniuKodoPerformanceBaseTest {
         // 生产
         long ms = System.currentTimeMillis();
 
-        for (int i = 0; i < files; i++) {
+        for (int i = 0; i < files(); i++) {
             final Path p = new Path(testDir + "/" + i);
             service.submit(() -> {
                 try {
                     FSDataOutputStream fos = fs.create(p);
-                    for (int j = 0; j < blocks; j++) {
+                    for (int j = 0; j < blocks(); j++) {
                         fos.write(bs);
                     }
                     fos.close();

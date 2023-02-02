@@ -8,15 +8,16 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
 public abstract class AMkdirDeeplyTest extends QiniuKodoPerformanceBaseTest {
-    protected int dirs = 10;
-    protected int deep = 10;
+    abstract protected int dirs();
+
+    abstract protected int deep();
 
     @Override
     protected long testImpl(String testDir, FileSystem fs, ExecutorService service) throws Exception {
         long ms = System.currentTimeMillis();
-        for (int i = 0; i < dirs; i++) {
+        for (int i = 0; i < dirs(); i++) {
             StringBuilder d1 = new StringBuilder(testDir + "/" + i);
-            for (int j = 0; j < deep; j++) {
+            for (int j = 0; j < deep(); j++) {
                 d1.append("/").append(j);
             }
             final Path p = new Path(d1.toString());

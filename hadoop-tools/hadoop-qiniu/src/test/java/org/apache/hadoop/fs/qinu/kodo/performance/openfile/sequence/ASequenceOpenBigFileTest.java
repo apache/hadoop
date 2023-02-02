@@ -13,24 +13,31 @@ import java.util.concurrent.ExecutorService;
 
 public abstract class ASequenceOpenBigFileTest extends QiniuKodoPerformanceBaseTest {
     private static final Logger LOG = LoggerFactory.getLogger(ASequenceOpenBigFileTest.class);
-    protected int blockSize = 4 * 1024 * 1024;
-    protected int blocks = 10;
-    protected int readers = 1;
-    protected int readerBufferSize = 4 * 1024 * 1024;
+
+
+    abstract protected int blockSize();
+
+    abstract protected int blocks();
+
+    abstract protected int readers();
+
+    protected int readerBufferSize() {
+        return 4 * 1024 * 1024;
+    }
 
 
     @Override
     protected long testImpl(String testDir, FileSystem fs, ExecutorService service) throws Exception {
         // 总计20 * 4MB * 2 = 160MB
-        Path p = OpenBigFileCommonUtil.makeSureExistsBigFile(testDir, fs, blockSize, blocks);
+        Path p = OpenBigFileCommonUtil.makeSureExistsBigFile(testDir, fs, blockSize(), blocks());
 
         long ms = System.currentTimeMillis();
 
-        for (int i = 0; i < readers; i++) {
+        for (int i = 0; i < readers(); i++) {
             service.submit(() -> {
                 try {
                     FSDataInputStream fis = fs.open(p);
-                    byte[] buf = new byte[readerBufferSize];
+                    byte[] buf = new byte[readerBufferSize()];
 
                     boolean eof;
                     do {

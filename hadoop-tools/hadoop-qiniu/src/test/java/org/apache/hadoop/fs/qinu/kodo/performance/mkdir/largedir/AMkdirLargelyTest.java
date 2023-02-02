@@ -8,13 +8,13 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
 public abstract class AMkdirLargelyTest extends QiniuKodoPerformanceBaseTest {
-    protected int dirs = 100;
+    abstract protected int dirs();
 
     @Override
     protected long testImpl(String testDir, FileSystem fs, ExecutorService service) throws Exception {
         long ms = System.currentTimeMillis();
 
-        for (int i = 0; i < dirs; i++) {
+        for (int i = 0; i < dirs(); i++) {
             final Path p = new Path(testDir + "/" + i);
             service.submit(() -> {
                 try {

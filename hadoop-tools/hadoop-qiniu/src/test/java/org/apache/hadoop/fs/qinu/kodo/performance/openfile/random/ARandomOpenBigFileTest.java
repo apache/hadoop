@@ -13,24 +13,27 @@ import java.util.concurrent.ExecutorService;
 
 public abstract class ARandomOpenBigFileTest extends QiniuKodoPerformanceBaseTest {
     private static final Logger LOG = LoggerFactory.getLogger(ARandomOpenBigFileTest.class);
-    protected int blockSize = 4 * 1024 * 1024;
-    protected int blocks = 10;
 
-    protected int readers = 3;
-    protected int randomReadCount = 100;
+    abstract protected int blockSize();
+
+    abstract protected int blocks();
+
+    abstract protected int readers();
+
+    abstract protected int randomReadCount();
 
     @Override
     protected long testImpl(String testDir, FileSystem fs, ExecutorService service) throws Exception {
-        Path p = OpenBigFileCommonUtil.makeSureExistsBigFile(testDir, fs, blockSize, blocks);
+        Path p = OpenBigFileCommonUtil.makeSureExistsBigFile(testDir, fs, blockSize(), blocks());
         long ms = System.currentTimeMillis();
 
-        for (int i = 0; i < readers; i++) {
+        for (int i = 0; i < readers(); i++) {
             service.submit(() -> {
                 try {
                     FSDataInputStream fis = fs.open(p);
                     int len = fis.available();
 
-                    for (int j = 0; j < randomReadCount; j++) {
+                    for (int j = 0; j < randomReadCount(); j++) {
                         int pos = (int) (Math.random() * len);
                         fis.seek(pos);
                         int b = fis.read();

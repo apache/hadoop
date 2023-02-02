@@ -8,4 +8,14 @@ public class MkdirDeeplyConcurrentlyTest extends AMkdirDeeplyTest {
     protected ExecutorService buildExecutorService() {
         return Executors.newFixedThreadPool(8);
     }
+
+    @Override
+    protected int dirs() {
+        return 10;
+    }
+
+    @Override
+    protected int deep() {
+        return 10;
+    }
 }

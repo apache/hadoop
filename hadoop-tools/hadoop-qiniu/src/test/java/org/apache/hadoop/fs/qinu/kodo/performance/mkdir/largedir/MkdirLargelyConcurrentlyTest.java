@@ -8,4 +8,9 @@ public class MkdirLargelyConcurrentlyTest extends AMkdirLargelyTest {
     protected ExecutorService buildExecutorService() {
         return Executors.newFixedThreadPool(8);
     }
+
+    @Override
+    protected int dirs() {
+        return 100;
+    }
 }
