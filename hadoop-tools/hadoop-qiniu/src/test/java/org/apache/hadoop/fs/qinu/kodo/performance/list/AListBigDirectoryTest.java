@@ -42,7 +42,9 @@ public abstract class AListBigDirectoryTest extends QiniuKodoPerformanceBaseTest
 
 
     // 列举次数
-    abstract protected int count();
+    protected int count() {
+        return 10;
+    }
 
     // 列举者并发列举的读者数
     abstract protected int readers();

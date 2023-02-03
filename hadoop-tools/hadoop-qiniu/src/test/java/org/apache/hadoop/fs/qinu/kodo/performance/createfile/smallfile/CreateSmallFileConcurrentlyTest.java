@@ -6,11 +6,11 @@ import java.util.concurrent.Executors;
 public class CreateSmallFileConcurrentlyTest extends ACreateSmallFileTest {
     @Override
     protected ExecutorService buildExecutorService() {
-        return Executors.newFixedThreadPool(8);
+        return Executors.newFixedThreadPool(consumers());
     }
 
     @Override
-    protected int files() {
-        return 100;
+    protected int consumers() {
+        return 8;
     }
 }

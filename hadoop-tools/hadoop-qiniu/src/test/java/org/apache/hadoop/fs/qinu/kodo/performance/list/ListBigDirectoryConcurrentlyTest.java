@@ -9,12 +9,6 @@ public class ListBigDirectoryConcurrentlyTest extends AListBigDirectoryTest {
         return Executors.newFixedThreadPool(readers());
     }
 
-
-    @Override
-    protected int count() {
-        return 10;
-    }
-
     @Override
     protected int readers() {
         return 4;

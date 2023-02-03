@@ -10,12 +10,18 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 public abstract class AMkdirLargelyTest extends QiniuKodoPerformanceBaseTest {
-    abstract protected int dirs();
+    protected int dirs() {
+        return 100;
+    }
+
+    abstract protected int consumers();
 
     @Override
     protected Map<String, Object> testInputData() {
         Map<String, Object> data = new HashMap<>();
         data.put("dirs", dirs());
+        data.put("consumers", consumers());
+        
         return data;
     }
 

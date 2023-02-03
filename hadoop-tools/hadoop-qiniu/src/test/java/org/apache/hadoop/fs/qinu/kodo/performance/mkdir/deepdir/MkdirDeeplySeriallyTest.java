@@ -9,14 +9,8 @@ public class MkdirDeeplySeriallyTest extends AMkdirDeeplyTest {
         return Executors.newSingleThreadExecutor();
     }
 
-
     @Override
-    protected int dirs() {
-        return 10;
-    }
-
-    @Override
-    protected int deep() {
-        return 10;
+    protected int consumers() {
+        return 1;
     }
 }

@@ -17,11 +17,17 @@ public abstract class ASequenceOpenBigFileTest extends QiniuKodoPerformanceBaseT
     private static final Logger LOG = LoggerFactory.getLogger(ASequenceOpenBigFileTest.class);
 
 
-    abstract protected int blockSize();
+    protected int blockSize() {
+        return 4 * 1024 * 1024;
+    }
+    
+    protected int blocks() {
+        return 10;
+    }
 
-    abstract protected int blocks();
-
-    abstract protected int readers();
+    protected int readers() {
+        return 1;
+    }
 
     protected int readerBufferSize() {
         return 4 * 1024 * 1024;

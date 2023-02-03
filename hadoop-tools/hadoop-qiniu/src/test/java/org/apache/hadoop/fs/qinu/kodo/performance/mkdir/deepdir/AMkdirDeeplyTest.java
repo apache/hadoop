@@ -10,15 +10,23 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 public abstract class AMkdirDeeplyTest extends QiniuKodoPerformanceBaseTest {
-    abstract protected int dirs();
+    protected int dirs() {
+        return 10;
+    }
 
-    abstract protected int deep();
+    protected int deep() {
+        return 10;
+    }
+
+    abstract protected int consumers();
 
     @Override
     protected Map<String, Object> testInputData() {
         Map<String, Object> data = new HashMap<>();
         data.put("dirs", dirs());
         data.put("deep", deep());
+        data.put("consumers", consumers());
+        
         return data;
     }
 

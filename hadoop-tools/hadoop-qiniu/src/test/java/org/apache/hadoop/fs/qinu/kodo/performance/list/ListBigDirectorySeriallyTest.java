@@ -9,12 +9,6 @@ public class ListBigDirectorySeriallyTest extends AListBigDirectoryTest {
         return Executors.newSingleThreadExecutor();
     }
 
-
-    @Override
-    protected int count() {
-        return 10;
-    }
-
     @Override
     protected int readers() {
         return 1;

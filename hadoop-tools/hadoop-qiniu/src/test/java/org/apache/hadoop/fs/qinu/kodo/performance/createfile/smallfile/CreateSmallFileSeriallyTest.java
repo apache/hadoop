@@ -10,7 +10,7 @@ public class CreateSmallFileSeriallyTest extends ACreateSmallFileTest {
     }
 
     @Override
-    protected int files() {
-        return 100;
+    protected int consumers() {
+        return 1;
     }
 }

@@ -10,12 +10,17 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 public abstract class ACreateSmallFileTest extends QiniuKodoPerformanceBaseTest {
-    abstract protected int files();
+    protected int files() {
+        return 100;
+    }
+
+    abstract protected int consumers();
 
     @Override
     protected Map<String, Object> testInputData() {
         Map<String, Object> data = new HashMap<>();
         data.put("files", files());
+        data.put("consumers", consumers());
         return data;
     }
 

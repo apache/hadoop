@@ -6,11 +6,11 @@ import java.util.concurrent.Executors;
 public class MkdirLargelyConcurrentlyTest extends AMkdirLargelyTest {
     @Override
     protected ExecutorService buildExecutorService() {
-        return Executors.newFixedThreadPool(8);
+        return Executors.newFixedThreadPool(consumers());
     }
 
     @Override
-    protected int dirs() {
-        return 100;
+    protected int consumers() {
+        return 8;
     }
 }

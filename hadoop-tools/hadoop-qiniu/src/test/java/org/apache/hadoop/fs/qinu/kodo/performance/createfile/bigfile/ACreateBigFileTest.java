@@ -16,11 +16,29 @@ import java.util.concurrent.ExecutorService;
 public abstract class ACreateBigFileTest extends QiniuKodoPerformanceBaseTest {
     private static final Logger LOG = LoggerFactory.getLogger(ACreateBigFileTest.class);
 
-    abstract protected int files();
 
-    abstract protected int blockSize();
+    abstract protected int consumers();
 
-    abstract protected int blocks();
+
+    protected int files() {
+        // 创建5个文件
+        return 5;
+    }
+
+    protected int blockSize() {
+        // 每块4MB
+        return 4 * 1024 * 1024;
+    }
+
+    protected int blocks() {
+        // 每个文件2块，预计耗费上传流量 40MB
+        return 2;
+    }
+
+    @Override
+    protected long timeoutN() {
+        return 2;
+    }
 
     @Override
     protected Map<String, Object> testInputData() {
@@ -28,6 +46,7 @@ public abstract class ACreateBigFileTest extends QiniuKodoPerformanceBaseTest {
         data.put("files", files());
         data.put("blockSize", blocks());
         data.put("blocks", blocks());
+        data.put("consumers", consumers());
         return data;
     }
 

@@ -16,13 +16,22 @@ import java.util.concurrent.ExecutorService;
 public abstract class ARandomOpenBigFileTest extends QiniuKodoPerformanceBaseTest {
     private static final Logger LOG = LoggerFactory.getLogger(ARandomOpenBigFileTest.class);
 
-    abstract protected int blockSize();
 
-    abstract protected int blocks();
+    protected int blockSize() {
+        return 4 * 1024 * 1024;
+    }
 
-    abstract protected int readers();
+    protected int blocks() {
+        return 10;
+    }
 
-    abstract protected int randomReadCount();
+    protected int readers() {
+        return 3;
+    }
+
+    protected int randomReadCount() {
+        return 100;
+    }
 
     @Override
     protected Map<String, Object> testInputData() {

@@ -10,7 +10,7 @@ public class MkdirLargelySeriallyTest extends AMkdirLargelyTest {
     }
 
     @Override
-    protected int dirs() {
-        return 100;
+    protected int consumers() {
+        return 1;
     }
 }

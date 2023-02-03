@@ -93,6 +93,11 @@ public abstract class QiniuKodoPerformanceBaseTest {
         return getSceneString();
     }
 
+    // 测试场景描述
+    protected String getSceneDescription() {
+        return null;
+    }
+
     @Test
     public void testS3A() throws Exception {
         long time = testS3AImpl(String.format("%s/%s", getS3ATestDir(), getSceneWorkDirName()), s3aFs);
@@ -105,6 +110,7 @@ public abstract class QiniuKodoPerformanceBaseTest {
         testResult.get(getSceneString()).put("data", testInputData());
     }
 
+
     @Test
     public void testKodo() throws Exception {
         long time = testKodoImpl(String.format("%s/%s", getKodoTestDir(), getSceneWorkDirName()), kodoFs);
@@ -115,6 +121,9 @@ public abstract class QiniuKodoPerformanceBaseTest {
         }
         testResult.get(getSceneString()).put("kodoTime", time);
         testResult.get(getSceneString()).put("data", testInputData());
+        if (getSceneDescription() != null) {
+            testResult.get(getSceneString()).put("description", getSceneDescription());
+        }
     }
 
     @After
