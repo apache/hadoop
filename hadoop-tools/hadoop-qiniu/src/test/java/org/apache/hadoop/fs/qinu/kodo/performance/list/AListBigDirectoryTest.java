@@ -58,6 +58,7 @@ public abstract class AListBigDirectoryTest extends QiniuKodoPerformanceBaseTest
     @Override
     protected long testImpl(String testDir, FileSystem fs, ExecutorService service) throws Exception {
         makeSureExistsBigDir(testDir, fs);
+        long ms = System.currentTimeMillis();
         for (int i = 0; i < count(); i++) {
             service.submit(() -> {
                 try {
@@ -70,6 +71,6 @@ public abstract class AListBigDirectoryTest extends QiniuKodoPerformanceBaseTest
         }
         service.shutdown();
         awaitAllExecutors(service);
-        return 0;
+        return System.currentTimeMillis() - ms;
     }
 }
