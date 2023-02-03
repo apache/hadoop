@@ -26,4 +26,9 @@ public class CreateBigFileSeriallyTest extends ACreateBigFileTest {
         // 每个文件2块，预计耗费上传流量 40MB
         return 2;
     }
+
+    @Override
+    protected long timeoutN() {
+        return 2;
+    }
 }

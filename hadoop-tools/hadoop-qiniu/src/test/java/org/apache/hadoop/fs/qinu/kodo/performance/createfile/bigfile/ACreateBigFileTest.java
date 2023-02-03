@@ -9,6 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 public abstract class ACreateBigFileTest extends QiniuKodoPerformanceBaseTest {
@@ -20,6 +22,14 @@ public abstract class ACreateBigFileTest extends QiniuKodoPerformanceBaseTest {
 
     abstract protected int blocks();
 
+    @Override
+    protected Map<String, Object> testInputData() {
+        Map<String, Object> data = new HashMap<>();
+        data.put("files", files());
+        data.put("blockSize", blocks());
+        data.put("blocks", blocks());
+        return data;
+    }
 
     @Override
     protected long testImpl(String testDir, FileSystem fs, ExecutorService service) throws Exception {

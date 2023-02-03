@@ -1,15 +1,19 @@
 package org.apache.hadoop.fs.qinu.kodo.performance;
 
+import com.google.gson.Gson;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -20,6 +24,8 @@ public abstract class QiniuKodoPerformanceBaseTest {
     private static final String DEFAULT_S3A_TEST_DIR = "/testS3A";
     private final FileSystem kodoFs = new QiniuKodoFileSystem();
     private final FileSystem s3aFs = new S3AFileSystem();
+
+    private static final Map<String, Map<String, Object>> testResult = new HashMap<>();
 
     @Before
     public void setup() throws Exception {
@@ -38,6 +44,10 @@ public abstract class QiniuKodoPerformanceBaseTest {
 
     // 需要用户实现该方法
     abstract protected long testImpl(String testDir, FileSystem fs, ExecutorService service) throws Exception;
+
+    protected Map<String, Object> testInputData() {
+        return new HashMap<>();
+    }
 
     protected long testS3AImpl(String testDir, FileSystem fs) throws Exception {
         return testImpl(testDir, fs, buildExecutorService());
@@ -87,11 +97,30 @@ public abstract class QiniuKodoPerformanceBaseTest {
     public void testS3A() throws Exception {
         long time = testS3AImpl(String.format("%s/%s", getS3ATestDir(), getSceneWorkDirName()), s3aFs);
         LOG.info(getSceneString() + " (S3A) " + "cost time: " + time);
+
+        if (!testResult.containsKey(getSceneString())) {
+            testResult.put(getSceneString(), new HashMap<>());
+        }
+        testResult.get(getSceneString()).put("s3aTime", time);
+        testResult.get(getSceneString()).put("data", testInputData());
     }
 
     @Test
     public void testKodo() throws Exception {
         long time = testKodoImpl(String.format("%s/%s", getKodoTestDir(), getSceneWorkDirName()), kodoFs);
         LOG.info(getSceneString() + " (Kodo) " + "cost time: " + time);
+
+        if (!testResult.containsKey(getSceneString())) {
+            testResult.put(getSceneString(), new HashMap<>());
+        }
+        testResult.get(getSceneString()).put("kodoTime", time);
+        testResult.get(getSceneString()).put("data", testInputData());
+    }
+
+    @After
+    public void exportTestData() {
+        Gson gson = new Gson();
+        String json = gson.toJson(testResult);
+        LOG.info(json);
     }
 }

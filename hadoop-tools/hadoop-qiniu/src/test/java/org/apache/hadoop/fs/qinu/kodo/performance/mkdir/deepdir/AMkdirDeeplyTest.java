@@ -5,12 +5,22 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.qinu.kodo.performance.QiniuKodoPerformanceBaseTest;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 public abstract class AMkdirDeeplyTest extends QiniuKodoPerformanceBaseTest {
     abstract protected int dirs();
 
     abstract protected int deep();
+
+    @Override
+    protected Map<String, Object> testInputData() {
+        Map<String, Object> data = new HashMap<>();
+        data.put("dirs", dirs());
+        data.put("deep", deep());
+        return data;
+    }
 
     @Override
     protected long testImpl(String testDir, FileSystem fs, ExecutorService service) throws Exception {

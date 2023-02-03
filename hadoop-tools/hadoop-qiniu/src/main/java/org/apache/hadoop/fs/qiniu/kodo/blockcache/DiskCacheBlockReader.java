@@ -46,11 +46,13 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
 
     @Override
     public void deleteBlocks(String key) {
-        for (KeyBlockIdCacheKey kbck : lruCache.keySet()) {
-            if (kbck.key.equals(key)) {
-                Path needRemoveBlockFile = lruCache.remove(kbck);
-                if (needRemoveBlockFile == null) continue;
-                deleteFile(needRemoveBlockFile);
+        synchronized (lruCache) {
+            for (KeyBlockIdCacheKey kbck : lruCache.keySet()) {
+                if (kbck.key.equals(key)) {
+                    Path needRemoveBlockFile = lruCache.remove(kbck);
+                    if (needRemoveBlockFile == null) continue;
+                    deleteFile(needRemoveBlockFile);
+                }
             }
         }
     }
