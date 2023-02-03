@@ -202,6 +202,7 @@ class BPServiceActor implements Runnable {
   Map<String, String> getActorInfoMap() {
     final Map<String, String> info = new HashMap<String, String>();
     info.put("NamenodeAddress", getNameNodeAddress());
+    info.put("NamenodeHaState", state != null ? state.toString() : "Unknown");
     info.put("BlockPoolID", bpos.getBlockPoolId());
     info.put("ActorState", getRunningState());
     info.put("LastHeartbeat",
@@ -697,6 +698,8 @@ class BPServiceActor implements Runnable {
         // Every so often, send heartbeat or block-report
         //
         final boolean sendHeartbeat = scheduler.isHeartbeatDue(startTime);
+        LOG.debug("BP offer service run start time: {}, sendHeartbeat: {}", startTime,
+            sendHeartbeat);
         HeartbeatResponse resp = null;
         if (sendHeartbeat) {
           //
@@ -709,6 +712,8 @@ class BPServiceActor implements Runnable {
           boolean requestBlockReportLease = (fullBlockReportLeaseId == 0) &&
                   scheduler.isBlockReportDue(startTime);
           if (!dn.areHeartbeatsDisabledForTests()) {
+            LOG.debug("Before sending heartbeat to namenode {}, the state of the namenode known"
+                + " to datanode so far is {}", this.getNameNodeAddress(), state);
             resp = sendHeartBeat(requestBlockReportLease);
             assert resp != null;
             if (resp.getFullBlockReportLeaseId() != 0) {
@@ -733,7 +738,12 @@ class BPServiceActor implements Runnable {
             // that we should actually process.
             bpos.updateActorStatesFromHeartbeat(
                 this, resp.getNameNodeHaState());
-            state = resp.getNameNodeHaState().getState();
+            HAServiceState stateFromResp = resp.getNameNodeHaState().getState();
+            if (state != stateFromResp) {
+              LOG.info("After receiving heartbeat response, updating state of namenode {} to {}",
+                  this.getNameNodeAddress(), stateFromResp);
+            }
+            state = stateFromResp;
 
             if (state == HAServiceState.ACTIVE) {
               handleRollingUpgradeStatus(resp);
@@ -794,6 +804,7 @@ class BPServiceActor implements Runnable {
       long sleepTime = Math.min(1000, dnConf.heartBeatInterval);
       Thread.sleep(sleepTime);
     } catch (InterruptedException ie) {
+      LOG.info("BPServiceActor {} is interrupted", this);
       Thread.currentThread().interrupt();
     }
   }
@@ -995,6 +1006,8 @@ class BPServiceActor implements Runnable {
     while (!duplicateQueue.isEmpty()) {
       BPServiceActorAction actionItem = duplicateQueue.remove();
       try {
+        LOG.debug("BPServiceActor ( {} ) processing queued messages. Action item: {}", this,
+            actionItem);
         actionItem.reportTo(bpNamenode, bpRegistration);
       } catch (BPServiceActorActionException baae) {
         LOG.warn(baae.getMessage() + nnAddr , baae);
