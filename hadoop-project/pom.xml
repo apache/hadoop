@@ -37,7 +37,7 @@
     <!--Whether to proceed to next module if any test failures exist-->
     <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>9.4.48.v20220622</jetty.version>
+    <jetty.version>9.4.49.v20220914</jetty.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -97,8 +97,8 @@
     <hadoop-thirdparty-shaded-protobuf-prefix>${hadoop-thirdparty-shaded-prefix}.protobuf</hadoop-thirdparty-shaded-protobuf-prefix>
     <hadoop-thirdparty-shaded-guava-prefix>${hadoop-thirdparty-shaded-prefix}.com.google.common</hadoop-thirdparty-shaded-guava-prefix>
 
-    <zookeeper.version>3.6.3</zookeeper.version>
-    <curator.version>5.2.0</curator.version>
+    <zookeeper.version>3.8.1</zookeeper.version>
+    <curator.version>5.4.0</curator.version>
     <findbugs.version>3.0.5</findbugs.version>
     <dnsjava.version>3.4.0</dnsjava.version>
 
@@ -1392,6 +1392,14 @@
             <artifactId>junit</artifactId>
           </exclusion>
           <exclusion>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>com.sun.jdmk</groupId>
             <artifactId>jmxtools</artifactId>
           </exclusion>
@@ -1410,6 +1418,10 @@
           <exclusion>
             <groupId>commons-cli</groupId>
             <artifactId>commons-cli</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.dropwizard.metrics</groupId>
+            <artifactId>metrics-core</artifactId>
           </exclusion>
           <exclusion>
             <groupId>io.netty</groupId>
