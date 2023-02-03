@@ -347,7 +347,7 @@ public class TestRouterNamenodeHeartbeat {
         testCluster.shutdown();
       }
       UserGroupInformation.reset();
-      SecurityConfUtil.destroy();   
+      SecurityConfUtil.destroy();
     }
   }
 }
