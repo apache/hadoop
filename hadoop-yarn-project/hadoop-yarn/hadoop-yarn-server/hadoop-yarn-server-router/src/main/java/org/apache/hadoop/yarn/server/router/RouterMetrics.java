@@ -135,6 +135,10 @@ public final class RouterMetrics {
   private MutableGaugeInt numRenewDelegationTokenFailedRetrieved;
   @Metric("# of renewDelegationToken failed to be retrieved")
   private MutableGaugeInt numCancelDelegationTokenFailedRetrieved;
+  @Metric("# of getActivities failed to be retrieved")
+  private MutableGaugeInt numGetActivitiesFailedRetrieved;
+  @Metric("# of getBulkActivities failed to be retrieved")
+  private MutableGaugeInt numGetBulkActivitiesFailedRetrieved;
   @Metric("# of getSchedulerInfo failed to be retrieved")
   private MutableGaugeInt numGetSchedulerInfoFailedRetrieved;
   @Metric("# of refreshSuperUserGroupsConfiguration failed to be retrieved")
@@ -237,6 +241,10 @@ public final class RouterMetrics {
   private MutableRate totalSucceededRenewDelegationTokenRetrieved;
   @Metric("Total number of successful Retrieved CancelDelegationToken and latency(ms)")
   private MutableRate totalSucceededCancelDelegationTokenRetrieved;
+  @Metric("Total number of successful Retrieved GetActivities and latency(ms)")
+  private MutableRate totalSucceededGetActivitiesRetrieved;
+  @Metric("Total number of successful Retrieved GetBulkActivities and latency(ms)")
+  private MutableRate totalSucceededGetBulkActivitiesRetrieved;
   @Metric("Total number of successful Retrieved RefreshSuperUserGroupsConfig and latency(ms)")
   private MutableRate totalSucceededRefreshSuperUserGroupsConfigurationRetrieved;
   @Metric("Total number of successful Retrieved RefreshUserToGroupsMappings and latency(ms)")
@@ -295,6 +303,8 @@ public final class RouterMetrics {
   private MutableQuantiles getDelegationTokenLatency;
   private MutableQuantiles renewDelegationTokenLatency;
   private MutableQuantiles cancelDelegationTokenLatency;
+  private MutableQuantiles getActivitiesLatency;
+  private MutableQuantiles getBulkActivitiesLatency;
   private MutableQuantiles getSchedulerInfoRetrievedLatency;
   private MutableQuantiles refreshSuperUserGroupsConfLatency;
   private MutableQuantiles refreshUserToGroupsMappingsLatency;
@@ -471,6 +481,12 @@ public final class RouterMetrics {
 
     cancelDelegationTokenLatency = registry.newQuantiles("cancelDelegationTokenLatency",
         "latency of cancel delegation token timeouts", "ops", "latency", 10);
+
+    getActivitiesLatency = registry.newQuantiles("getActivitiesLatency",
+        "latency of get activities timeouts", "ops", "latency", 10);
+
+    getBulkActivitiesLatency = registry.newQuantiles("getBulkActivitiesLatency",
+         "latency of get bulk activities timeouts", "ops", "latency", 10);
 
     getSchedulerInfoRetrievedLatency = registry.newQuantiles("getSchedulerInfoRetrievedLatency",
         "latency of get scheduler info timeouts", "ops", "latency", 10);
@@ -737,6 +753,16 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededGetActivitiesRetrieved() {
+    return totalSucceededGetActivitiesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetBulkActivitiesRetrieved() {
+    return totalSucceededGetBulkActivitiesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public long getNumSucceededGetSchedulerInfoRetrieved() {
     return totalSucceededGetSchedulerInfoRetrieved.lastStat().numSamples();
   }
@@ -982,6 +1008,16 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededGetActivitiesRetrieved() {
+    return totalSucceededGetActivitiesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetBulkActivitiesRetrieved() {
+    return totalSucceededGetBulkActivitiesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededGetSchedulerInfoRetrieved() {
     return totalSucceededGetSchedulerInfoRetrieved.lastStat().mean();
   }
@@ -1207,6 +1243,14 @@ public final class RouterMetrics {
 
   public int getCancelDelegationTokenFailedRetrieved() {
     return numCancelDelegationTokenFailedRetrieved.value();
+  }
+
+  public int getActivitiesFailedRetrieved() {
+    return numGetActivitiesFailedRetrieved.value();
+  }
+
+  public int getBulkActivitiesFailedRetrieved(){
+    return numGetBulkActivitiesFailedRetrieved.value();
   }
 
   public int getSchedulerInfoFailedRetrieved() {
@@ -1448,6 +1492,16 @@ public final class RouterMetrics {
     cancelDelegationTokenLatency.add(duration);
   }
 
+  public void succeededGetActivitiesLatencyRetrieved(long duration) {
+    totalSucceededGetActivitiesRetrieved.add(duration);
+    getActivitiesLatency.add(duration);
+  }
+
+  public void succeededGetBulkActivitiesRetrieved(long duration) {
+    totalSucceededGetBulkActivitiesRetrieved.add(duration);
+    getBulkActivitiesLatency.add(duration);
+  }
+
   public void succeededGetSchedulerInfoRetrieved(long duration) {
     totalSucceededGetSchedulerInfoRetrieved.add(duration);
     getSchedulerInfoRetrievedLatency.add(duration);
@@ -1657,6 +1711,14 @@ public final class RouterMetrics {
 
   public void incrCancelDelegationTokenFailedRetrieved() {
     numCancelDelegationTokenFailedRetrieved.incr();
+  }
+
+  public void incrGetActivitiesFailedRetrieved() {
+    numGetActivitiesFailedRetrieved.incr();
+  }
+
+  public void incrGetBulkActivitiesFailedRetrieved() {
+    numGetBulkActivitiesFailedRetrieved.incr();
   }
 
   public void incrGetSchedulerInfoFailedRetrieved() {
