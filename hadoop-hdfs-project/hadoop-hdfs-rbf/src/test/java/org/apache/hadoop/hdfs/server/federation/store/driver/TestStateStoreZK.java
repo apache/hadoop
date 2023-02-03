@@ -157,6 +157,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
   public void testGetNullRecord() throws Exception {
     StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
     testGetNullRecord(stateStoreDriver);
+
     // test async mode
     stateStoreDriver.setEnableConcurrent(true);
     testGetNullRecord(stateStoreDriver);
@@ -178,6 +179,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
       IOException, SecurityException {
     StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
     testPut(stateStoreDriver);
+
     // test async mode
     stateStoreDriver.setEnableConcurrent(true);
     testPut(stateStoreDriver);
@@ -188,6 +190,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
       throws IllegalArgumentException, IllegalAccessException, IOException {
     StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
     testRemove(stateStoreDriver);
+
     // test async mode
     stateStoreDriver.setEnableConcurrent(true);
     testRemove(stateStoreDriver);
@@ -198,6 +201,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
       throws IllegalArgumentException, IllegalAccessException, IOException {
     StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
     testFetchErrors(stateStoreDriver);
+
     // test async mode
     stateStoreDriver.setEnableConcurrent(true);
     testFetchErrors(stateStoreDriver);
