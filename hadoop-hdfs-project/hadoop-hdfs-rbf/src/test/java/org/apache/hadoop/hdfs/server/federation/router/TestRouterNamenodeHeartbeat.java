@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeCon
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
 import org.apache.hadoop.net.MockDomainNameResolver;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -345,6 +346,8 @@ public class TestRouterNamenodeHeartbeat {
       if (testCluster != null) {
         testCluster.shutdown();
       }
+      UserGroupInformation.reset();
+      SecurityConfUtil.destroy();   
     }
   }
 }
