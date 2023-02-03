@@ -298,18 +298,28 @@ public class QiniuKodoFileSystem extends FileSystem {
     public FileStatus[] listStatus(Path path) throws IOException {
         LOG.debug("== listStatus, path:" + path);
 
-        if (!path.isRoot() && getFileStatus(path.getParent()) == null) throw new FileNotFoundException(path.toString());
-
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         key = QiniuKodoUtils.keyToDirKey(key);
         LOG.debug("== listStatus, key:" + key);
 
+        // 尝试列举
         List<FileInfo> files = kodoClient.listStatus(key, true);
+        if (!files.isEmpty()) {
+            // 列举成功
+            return files.stream()
+                    .filter(Objects::nonNull)
+                    .map(this::fileInfoToFileStatus)
+                    .toArray(FileStatus[]::new);
+        }
+        // 列举为空
 
-        return files.stream()
-                .filter(Objects::nonNull)
-                .map(this::fileInfoToFileStatus)
-                .toArray(FileStatus[]::new);
+        // 可能文件夹本身就不存在
+        if (getFileStatus(path) == null) {
+            throw new FileNotFoundException(path.toString());
+        }
+
+        // 文件夹存在，的确是空文件夹
+        return new FileStatus[0];
     }
 
     @Override
