@@ -201,13 +201,21 @@ public class QiniuKodoClient {
         String marker = null;
         FileListing fileListing;
         do {
-            fileListing = bucketManager.listFilesV2(bucket, key, marker, 500, useDirectory ? QiniuKodoUtils.PATH_SEPARATOR : "");
-            if (statistics != null) statistics.incrementReadOps(1);
+            long ms = System.currentTimeMillis();
+            fileListing = bucketManager.listFiles(bucket, key, marker, 1000, useDirectory ? QiniuKodoUtils.PATH_SEPARATOR : "");
+
+            LOG.info("time: {}", System.currentTimeMillis() - ms);
+
+            if (statistics != null) {
+                statistics.incrementReadOps(1);
+            }
 
             // 列举出除自身外的所有对象
             if (fileListing.items != null) {
                 for (FileInfo file : fileListing.items) {
-                    if (key.equals(file.key)) continue;
+                    if (key.equals(file.key)) {
+                        continue;
+                    }
                     retFiles.add(file);
                 }
             }
@@ -248,14 +256,20 @@ public class QiniuKodoClient {
             if (fileListing.items != null) {
                 BucketManager.BatchOperations operations = null;
                 for (FileInfo file : fileListing.items) {
-                    if (operations == null) operations = new BucketManager.BatchOperations();
+                    if (operations == null) {
+                        operations = new BucketManager.BatchOperations();
+                    }
                     String destKey = file.key.replaceFirst(oldPrefix, newPrefix);
                     LOG.debug(" == copy old: {} new: {}", file.key, destKey);
                     operations.addCopyOp(bucket, file.key, bucket, destKey);
                 }
-                if (operations == null) continue;
+                if (operations == null) {
+                    continue;
+                }
                 Response response = bucketManager.batch(operations);
-                if (!response.isOK()) return false;
+                if (!response.isOK()) {
+                    return false;
+                }
             }
             marker = fileListing.marker;
         } while (!fileListing.isEOF());
@@ -266,9 +280,13 @@ public class QiniuKodoClient {
      * 重命名指定 key 的对象
      */
     public boolean renameKey(String oldKey, String newKey) throws IOException {
-        if (Objects.equals(oldKey, newKey)) return true;
+        if (Objects.equals(oldKey, newKey)) {
+            return true;
+        }
         Response response = bucketManager.rename(bucket, oldKey, newKey);
-        if (statistics != null) statistics.incrementReadOps(1);
+        if (statistics != null) {
+            statistics.incrementReadOps(1);
+        }
         return response.isOK();
     }
 
@@ -285,7 +303,9 @@ public class QiniuKodoClient {
 
         do {
             fileListing = bucketManager.listFilesV2(bucket, oldPrefix, marker, 100, "");
-            if (statistics != null) statistics.incrementReadOps(1);
+            if (statistics != null) {
+                statistics.incrementReadOps(1);
+            }
 
             if (fileListing.items != null) {
                 BucketManager.BatchOperations operations = null;
@@ -295,16 +315,24 @@ public class QiniuKodoClient {
                         hasPrefixObject = true;
                         continue;
                     }
-                    if (operations == null) operations = new BucketManager.BatchOperations();
+                    if (operations == null) {
+                        operations = new BucketManager.BatchOperations();
+                    }
                     String destKey = file.key.replaceFirst(oldPrefix, newPrefix);
                     LOG.debug(" == rename old: {} new: {}", file.key, destKey);
                     operations.addRenameOp(bucket, file.key, destKey);
                 }
-                if (operations == null) continue;
+                if (operations == null) {
+                    continue;
+                }
                 Response response = bucketManager.batch(operations);
-                if (statistics != null) statistics.incrementReadOps(1);
+                if (statistics != null) {
+                    statistics.incrementReadOps(1);
+                }
 
-                if (!response.isOK()) return false;
+                if (!response.isOK()) {
+                    return false;
+                }
             }
             marker = fileListing.marker;
         } while (!fileListing.isEOF());
@@ -321,7 +349,9 @@ public class QiniuKodoClient {
      */
     public boolean deleteKey(String key) throws IOException {
         Response response = bucketManager.delete(bucket, key);
-        if (statistics != null) statistics.incrementReadOps(1);
+        if (statistics != null) {
+            statistics.incrementReadOps(1);
+        }
         return response.isOK();
     }
 
@@ -340,12 +370,18 @@ public class QiniuKodoClient {
             fileListing = bucketManager.listFilesV2(bucket, prefix, marker, 100, "");
             for (FileInfo file : fileListing.items) {
                 // 略过自身
-                if (file.key.equals(prefix)) continue;
+                if (file.key.equals(prefix)) {
+                    continue;
+                }
                 // 除去自身外还有子文件文件，但未 recursive 抛出异常
-                if (!recursive) throw new IOException("file" + prefix + "is not empty");
+                if (!recursive) {
+                    throw new IOException("file" + prefix + "is not empty");
+                }
             }
 
-            if (statistics != null) statistics.incrementReadOps(1);
+            if (statistics != null) {
+                statistics.incrementReadOps(1);
+            }
 
             if (fileListing.items != null) {
                 BucketManager.BatchOperations operations = new BucketManager.BatchOperations();
@@ -359,18 +395,26 @@ public class QiniuKodoClient {
                     shouldExecBatch = true;
                     operations.addDeleteOp(bucket, file.key);
                 }
-                if (!shouldExecBatch) continue;
+                if (!shouldExecBatch) {
+                    continue;
+                }
                 Response response = bucketManager.batch(operations);
-                if (statistics != null) statistics.incrementReadOps(1);
+                if (statistics != null) {
+                    statistics.incrementReadOps(1);
+                }
 
-                if (!response.isOK()) return false;
+                if (!response.isOK()) {
+                    return false;
+                }
             }
             marker = fileListing.marker;
         } while (!fileListing.isEOF());
 
         if (hasPrefixObject) {
             Response response = bucketManager.delete(bucket, prefix);
-            if (statistics != null) statistics.incrementReadOps(1);
+            if (statistics != null) {
+                statistics.incrementReadOps(1);
+            }
 
             return response.isOK();
         }
@@ -413,9 +457,9 @@ public class QiniuKodoClient {
     private String getFileUrlByKey(String key) throws IOException {
         DownloadUrl downloadUrl = new DownloadUrl(downloadDomain, useHttps, key);
         String url = downloadUrl.buildURL();
-        if (!downloadUseSign) {
-            return url;
+        if (downloadUseSign) {
+            return auth.privateDownloadUrl(url, downloadSignExpires);
         }
-        return auth.privateDownloadUrl(url, downloadSignExpires);
+        return url;
     }
 }
