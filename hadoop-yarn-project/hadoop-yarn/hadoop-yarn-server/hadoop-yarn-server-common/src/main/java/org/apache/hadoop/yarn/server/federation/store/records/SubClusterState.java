@@ -55,10 +55,6 @@ public enum SubClusterState {
     return (this != SC_RUNNING && this != SC_NEW);
   }
 
-  public boolean isUsable() {
-    return !isUnusable();
-  }
-
   public boolean isActive() {
     return this == SC_RUNNING;
   }

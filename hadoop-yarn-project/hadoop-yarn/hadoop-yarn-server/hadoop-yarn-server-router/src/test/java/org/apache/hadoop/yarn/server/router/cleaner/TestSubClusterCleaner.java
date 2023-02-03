@@ -46,6 +46,7 @@ public class TestSubClusterCleaner {
   private FederationStateStoreFacade facade;
   private SubClusterCleaner cleaner;
   private int NUM_SUBCLUSTERS = 4;
+  private long EXPIRATION_TIME = Time.now() - 5000;
 
   @Before
   public void setup() throws YarnException {
@@ -77,13 +78,15 @@ public class TestSubClusterCleaner {
       throws InterruptedException, TimeoutException, YarnException {
 
     // We set up such a unit test, We set the status of all subClusters to RUNNING,
-    // and set the SubClusterCleaner Check Heartbeat timeout to 1s.
-    // After 1s, the status of all subClusters should be SC_LOST.
+    // and Manually set subCluster heartbeat expiration.
     // At this time, the size of the Active SubCluster is 0.
+    Map<SubClusterId, SubClusterInfo> subClustersMap = facade.getSubClusters(false);
 
-    // Step1. Sleep for 1s, during this period,
+    // Step1. Manually set subCluster heartbeat expiration.
     // subCluster has no heartbeat, and all subClusters will expire.
-    Thread.sleep(1000);
+    subClustersMap.keySet().forEach(subClusterId -> {
+      stateStore.setExpiredHeartbeat(subClusterId, EXPIRATION_TIME);
+    });
 
     // Step2. Run the Cleaner to change the status of the expired SubCluster to SC_LOST.
     cleaner.run();
@@ -95,7 +98,6 @@ public class TestSubClusterCleaner {
 
     // Step4. Check Active SubCluster Status.
     // We want all subClusters to be SC_LOST.
-    Map<SubClusterId, SubClusterInfo> subClustersMap = facade.getSubClusters(false);
     subClustersMap.values().forEach(subClusterInfo -> {
       SubClusterState subClusterState = subClusterInfo.getState();
       Assert.assertEquals(SubClusterState.SC_LOST, subClusterState.SC_LOST);
@@ -104,15 +106,12 @@ public class TestSubClusterCleaner {
 
   @Test
   public void testSubClustersPartWithHeartBeat() throws YarnException, InterruptedException {
-    // In order to ensure the test results, we let all subClusters resume heartbeat.
-    for (int i = 0; i < NUM_SUBCLUSTERS; i++){
-      // Create subCluster id and info.
-      resumeSubClusterHeartbeat("SC-" + i);
-    }
 
-    // Step1. Sleep for 1s, during this period,
-    // subCluster has no heartbeat, and all subClusters will expire.
-    Thread.sleep(1000);
+    // Step1. Manually set subCluster heartbeat expiration.
+    for (int i = 0; i < NUM_SUBCLUSTERS; i++) {
+      // Create subCluster id and info.
+      expiredSubcluster("SC-" + i);
+    }
 
     // Step2. Run the Cleaner to change the status of the expired SubCluster to SC_LOST.
     cleaner.run();
@@ -133,12 +132,18 @@ public class TestSubClusterCleaner {
     checkSubClusterState("SC-3", SubClusterState.SC_LOST);
   }
 
-  private void resumeSubClusterHeartbeat(String pSubClusterId) throws YarnException {
+  private void resumeSubClusterHeartbeat(String pSubClusterId)
+      throws YarnException {
     SubClusterId subClusterId = SubClusterId.newInstance(pSubClusterId);
     SubClusterHeartbeatRequest request = SubClusterHeartbeatRequest.newInstance(
         subClusterId, Time.now(), SubClusterState.SC_RUNNING, "test");
     SubClusterHeartbeatResponse response = stateStore.subClusterHeartbeat(request);
     Assert.assertNotNull(response);
+  }
+
+  private void expiredSubcluster(String pSubClusterId) {
+    SubClusterId subClusterId = SubClusterId.newInstance(pSubClusterId);
+    stateStore.setExpiredHeartbeat(subClusterId, EXPIRATION_TIME);
   }
 
   private void checkSubClusterState(String pSubClusterId, SubClusterState expectState)
