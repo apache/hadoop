@@ -35,10 +35,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferTestCase;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
@@ -294,4 +297,107 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
       if (cluster != null) {cluster.shutdown();}
     }
   }
+
+  @Test
+  public void testDataNodeMXBeanLastHeartbeats() throws Exception {
+    Configuration conf = new Configuration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster
+        .Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleHATopology(2))
+        .numDataNodes(1)
+        .build()) {
+      cluster.waitActive();
+      cluster.transitionToActive(0);
+      cluster.transitionToStandby(1);
+
+      DataNode datanode = cluster.getDataNodes().get(0);
+
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName = new ObjectName(
+          "Hadoop:service=DataNode,name=DataNodeInfo");
+
+      // Verify and wait until one of the BP service actor identifies active namenode as active
+      // and another as standby.
+      GenericTestUtils.waitFor(() -> {
+        List<Map<String, String>> bpServiceActorInfo = datanode.getBPServiceActorInfoMap();
+        Map<String, String> bpServiceActorInfo1 = bpServiceActorInfo.get(0);
+        Map<String, String> bpServiceActorInfo2 = bpServiceActorInfo.get(1);
+        return (HAServiceProtocol.HAServiceState.ACTIVE.toString()
+            .equals(bpServiceActorInfo1.get("NamenodeHaState"))
+            && HAServiceProtocol.HAServiceState.STANDBY.toString()
+            .equals(bpServiceActorInfo2.get("NamenodeHaState")))
+            || (HAServiceProtocol.HAServiceState.ACTIVE.toString()
+            .equals(bpServiceActorInfo2.get("NamenodeHaState"))
+            && HAServiceProtocol.HAServiceState.STANDBY.toString()
+            .equals(bpServiceActorInfo1.get("NamenodeHaState")));
+      },
+          500,
+          8000,
+          "No namenode is reported active");
+
+      // basic metrics validation
+      String clusterId = (String) mbs.getAttribute(mxbeanName, "ClusterId");
+      Assert.assertEquals(datanode.getClusterId(), clusterId);
+      String version = (String)mbs.getAttribute(mxbeanName, "Version");
+      Assert.assertEquals(datanode.getVersion(),version);
+      String bpActorInfo = (String) mbs.getAttribute(mxbeanName, "BPServiceActorInfo");
+      Assert.assertEquals(datanode.getBPServiceActorInfo(), bpActorInfo);
+
+      // Verify that last heartbeat sent to both namenodes in last 5 sec.
+      assertLastHeartbeatSentTime(datanode, "LastHeartbeat");
+      // Verify that last heartbeat response from both namenodes have been received within
+      // last 5 sec.
+      assertLastHeartbeatSentTime(datanode, "LastHeartbeatResponseTime");
+
+
+      NameNode sbNameNode = cluster.getNameNode(1);
+
+      // Stopping standby namenode
+      sbNameNode.stop();
+
+      // Verify that last heartbeat response time from one of the namenodes would stay much higher
+      // after stopping one namenode.
+      GenericTestUtils.waitFor(() -> {
+        List<Map<String, String>> bpServiceActorInfo = datanode.getBPServiceActorInfoMap();
+        Map<String, String> bpServiceActorInfo1 = bpServiceActorInfo.get(0);
+        Map<String, String> bpServiceActorInfo2 = bpServiceActorInfo.get(1);
+
+        long lastHeartbeatResponseTime1 =
+            Long.parseLong(bpServiceActorInfo1.get("LastHeartbeatResponseTime"));
+        long lastHeartbeatResponseTime2 =
+            Long.parseLong(bpServiceActorInfo2.get("LastHeartbeatResponseTime"));
+
+        LOG.info("Last heartbeat response from namenode 1: {}", lastHeartbeatResponseTime1);
+        LOG.info("Last heartbeat response from namenode 2: {}", lastHeartbeatResponseTime2);
+
+        return (lastHeartbeatResponseTime1 < 5L && lastHeartbeatResponseTime2 > 5L) || (
+            lastHeartbeatResponseTime1 > 5L && lastHeartbeatResponseTime2 < 5L);
+
+      },
+          200,
+          15000,
+          "Last heartbeat response should be higher than 5s for at least one namenode");
+
+      // Verify that last heartbeat sent to both namenodes in last 5 sec even though
+      // the last heartbeat received from one of the namenodes is greater than 5 sec ago.
+      assertLastHeartbeatSentTime(datanode, "LastHeartbeat");
+    }
+  }
+
+  private static void assertLastHeartbeatSentTime(DataNode datanode, String lastHeartbeat) {
+    List<Map<String, String>> bpServiceActorInfo = datanode.getBPServiceActorInfoMap();
+    Map<String, String> bpServiceActorInfo1 = bpServiceActorInfo.get(0);
+    Map<String, String> bpServiceActorInfo2 = bpServiceActorInfo.get(1);
+
+    long lastHeartbeatSent1 =
+        Long.parseLong(bpServiceActorInfo1.get(lastHeartbeat));
+    long lastHeartbeatSent2 =
+        Long.parseLong(bpServiceActorInfo2.get(lastHeartbeat));
+
+    Assert.assertTrue(lastHeartbeat + " for first bp service actor is higher than 5s",
+        lastHeartbeatSent1 < 5L);
+    Assert.assertTrue(lastHeartbeat + " for second bp service actor is higher than 5s",
+        lastHeartbeatSent2 < 5L);
+  }
+
 }

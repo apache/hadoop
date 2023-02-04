@@ -3621,8 +3621,12 @@ public class DataNode extends ReconfigurableBase
    */
   @Override // DataNodeMXBean
   public String getBPServiceActorInfo() {
-    final ArrayList<Map<String, String>> infoArray =
-        new ArrayList<Map<String, String>>();
+    return JSON.toString(getBPServiceActorInfoMap());
+  }
+
+  @VisibleForTesting
+  public List<Map<String, String>> getBPServiceActorInfoMap() {
+    final List<Map<String, String>> infoArray = new ArrayList<>();
     for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
       if (bpos != null) {
         for (BPServiceActor actor : bpos.getBPServiceActors()) {
@@ -3630,7 +3634,7 @@ public class DataNode extends ReconfigurableBase
         }
       }
     }
-    return JSON.toString(infoArray);
+    return infoArray;
   }
 
   /**
