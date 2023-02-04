@@ -2529,6 +2529,13 @@ public class MiniDFSCluster implements AutoCloseable {
     return restartDataNode(dnprop, false);
   }
 
+  public void waitDatanodeConnectedToActive(DataNode dn, int timeout)
+      throws InterruptedException, TimeoutException {
+    GenericTestUtils.waitFor(() -> dn.isDatanodeFullyStarted(true),
+        100, timeout, "Datanode is not connected to active namenode even after "
+            + timeout + " ms of waiting");
+  }
+
   public void waitDatanodeFullyStarted(DataNode dn, int timeout)
       throws TimeoutException, InterruptedException {
     GenericTestUtils.waitFor(dn::isDatanodeFullyStarted, 100, timeout,

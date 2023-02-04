@@ -35,7 +35,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -317,8 +316,7 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
 
       // Verify and wait until one of the BP service actor identifies active namenode as active
       // and another as standby.
-      Assert.assertTrue("Datanode could not be connected to active namenode in 5s",
-          datanode.isDatanodeHealthy(5000));
+      cluster.waitDatanodeConnectedToActive(datanode, 5000);
 
       // Verify that last heartbeat sent to both namenodes in last 5 sec.
       assertLastHeartbeatSentTime(datanode, "LastHeartbeat");

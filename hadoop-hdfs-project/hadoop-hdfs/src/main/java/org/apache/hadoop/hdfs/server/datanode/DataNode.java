@@ -3830,39 +3830,31 @@ public class DataNode extends ReconfigurableBase
    * @return true - if the data node is fully started
    */
   public boolean isDatanodeFullyStarted() {
-    for (BPOfferService bp : blockPoolManager.getAllNamenodeThreads()) {
-      if (!bp.isInitialized() || !bp.isAlive()) {
-        return false;
-      }
-    }
-    return true;
+    return isDatanodeFullyStarted(false);
   }
 
   /**
-   * Wait for the datanode to be fully started and also connected to active namenode. This means
-   * wait until the given time duration for all the BP threads to come alive and all the block
-   * pools to be initialized. Wait until any one of the BP service actor is connected to active
-   * namenode.
+   * A datanode is considered to be fully started if all the BP threads are
+   * alive and all the block pools are initialized. If checkConnectionToActiveNamenode is true,
+   * the datanode is considered to be fully started if it is also heartbeating to
+   * active namenode in addition to the above-mentioned conditions.
    *
-   * @param waitTimeMs Wait time in millis for this method to return the datanode probes. If
-   * datanode stays unhealthy or not connected to any active namenode even after the given wait
-   * time elapses, it returns false.
-   * @return true - if the data node is fully started and connected to active namenode within
-   * the given time internal, false otherwise.
+   * @param checkConnectionToActiveNamenode if true, performs additional check of whether datanode
+   * is heartbeating to active namenode.
+   * @return true if the datanode is fully started and also conditionally connected to active
+   * namenode, false otherwise.
    */
-  public boolean isDatanodeHealthy(long waitTimeMs) {
-    long startTime = monotonicNow();
-    while (monotonicNow() - startTime <= waitTimeMs) {
-      if (isDatanodeFullyStartedAndConnectedToActiveNN()) {
-        return true;
+  public boolean isDatanodeFullyStarted(boolean checkConnectionToActiveNamenode) {
+    if (checkConnectionToActiveNamenode) {
+      for (BPOfferService bp : blockPoolManager.getAllNamenodeThreads()) {
+        if (!bp.isInitialized() || !bp.isAlive() || bp.getActiveNN() == null) {
+          return false;
+        }
       }
+      return true;
     }
-    return false;
-  }
-
-  private boolean isDatanodeFullyStartedAndConnectedToActiveNN() {
     for (BPOfferService bp : blockPoolManager.getAllNamenodeThreads()) {
-      if (!bp.isInitialized() || !bp.isAlive() || bp.getActiveNN() == null) {
+      if (!bp.isInitialized() || !bp.isAlive()) {
         return false;
       }
     }
