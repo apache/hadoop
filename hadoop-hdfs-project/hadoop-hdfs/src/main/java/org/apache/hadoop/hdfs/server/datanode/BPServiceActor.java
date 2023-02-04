@@ -1207,7 +1207,7 @@ class BPServiceActor implements Runnable {
     volatile long lastHeartbeatTime = monotonicNow();
 
     @VisibleForTesting
-    volatile long lastHeartbeatResponseTime = -1;
+    private volatile long lastHeartbeatResponseTime = -1;
 
     @VisibleForTesting
     boolean resetBlockReportTime = true;
@@ -1257,8 +1257,8 @@ class BPServiceActor implements Runnable {
       lastHeartbeatTime = heartbeatTime;
     }
 
-    void updateLastHeartbeatResponseTime(long lastHeartbeatResponseTime) {
-      this.lastHeartbeatResponseTime = lastHeartbeatResponseTime;
+    void updateLastHeartbeatResponseTime(long heartbeatTime) {
+      this.lastHeartbeatResponseTime = heartbeatTime;
     }
 
     void updateLastBlockReportTime(long blockReportTime) {
@@ -1273,7 +1273,7 @@ class BPServiceActor implements Runnable {
       return (monotonicNow() - lastHeartbeatTime)/1000;
     }
 
-    long getLastHeartbeatResponseTime() {
+    private long getLastHeartbeatResponseTime() {
       return (monotonicNow() - lastHeartbeatResponseTime) / 1000;
     }
 
