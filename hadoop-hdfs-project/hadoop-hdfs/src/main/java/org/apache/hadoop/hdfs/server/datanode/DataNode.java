@@ -86,7 +86,6 @@ import static org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStag
 import static org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage.PIPELINE_SETUP_STREAMING_RECOVERY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
-import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.apache.hadoop.util.Time.now;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
