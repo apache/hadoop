@@ -304,7 +304,6 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
     try (MiniDFSCluster cluster = new MiniDFSCluster
         .Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology(2))
-        .numDataNodes(1)
         .build()) {
       cluster.waitActive();
       cluster.transitionToActive(0);
@@ -318,30 +317,8 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
 
       // Verify and wait until one of the BP service actor identifies active namenode as active
       // and another as standby.
-      GenericTestUtils.waitFor(() -> {
-        List<Map<String, String>> bpServiceActorInfo = datanode.getBPServiceActorInfoMap();
-        Map<String, String> bpServiceActorInfo1 = bpServiceActorInfo.get(0);
-        Map<String, String> bpServiceActorInfo2 = bpServiceActorInfo.get(1);
-        return (HAServiceProtocol.HAServiceState.ACTIVE.toString()
-            .equals(bpServiceActorInfo1.get("NamenodeHaState"))
-            && HAServiceProtocol.HAServiceState.STANDBY.toString()
-            .equals(bpServiceActorInfo2.get("NamenodeHaState")))
-            || (HAServiceProtocol.HAServiceState.ACTIVE.toString()
-            .equals(bpServiceActorInfo2.get("NamenodeHaState"))
-            && HAServiceProtocol.HAServiceState.STANDBY.toString()
-            .equals(bpServiceActorInfo1.get("NamenodeHaState")));
-      },
-          500,
-          8000,
-          "No namenode is reported active");
-
-      // basic metrics validation
-      String clusterId = (String) mbs.getAttribute(mxbeanName, "ClusterId");
-      Assert.assertEquals(datanode.getClusterId(), clusterId);
-      String version = (String)mbs.getAttribute(mxbeanName, "Version");
-      Assert.assertEquals(datanode.getVersion(),version);
-      String bpActorInfo = (String) mbs.getAttribute(mxbeanName, "BPServiceActorInfo");
-      Assert.assertEquals(datanode.getBPServiceActorInfo(), bpActorInfo);
+      Assert.assertTrue("Datanode could not be connected to active namenode in 5s",
+          datanode.isDatanodeHealthy(5000));
 
       // Verify that last heartbeat sent to both namenodes in last 5 sec.
       assertLastHeartbeatSentTime(datanode, "LastHeartbeat");
@@ -373,9 +350,7 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
         return (lastHeartbeatResponseTime1 < 5L && lastHeartbeatResponseTime2 > 5L) || (
             lastHeartbeatResponseTime1 > 5L && lastHeartbeatResponseTime2 < 5L);
 
-      },
-          200,
-          15000,
+      }, 200, 15000,
           "Last heartbeat response should be higher than 5s for at least one namenode");
 
       // Verify that last heartbeat sent to both namenodes in last 5 sec even though

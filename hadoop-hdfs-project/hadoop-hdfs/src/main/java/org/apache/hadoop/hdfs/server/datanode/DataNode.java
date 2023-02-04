@@ -86,6 +86,7 @@ import static org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStag
 import static org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage.PIPELINE_SETUP_STREAMING_RECOVERY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.apache.hadoop.util.Time.now;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -3836,7 +3837,38 @@ public class DataNode extends ReconfigurableBase
     }
     return true;
   }
-  
+
+  /**
+   * Wait for the datanode to be fully started and also connected to active namenode. This means
+   * wait until the given time duration for all the BP threads to come alive and all the block
+   * pools to be initialized. Wait until any one of the BP service actor is connected to active
+   * namenode.
+   *
+   * @param waitTimeMs Wait time in millis for this method to return the datanode probes. If
+   * datanode stays unhealthy or not connected to any active namenode even after the given wait
+   * time elapses, it returns false.
+   * @return true - if the data node is fully started and connected to active namenode within
+   * the given time internal, false otherwise.
+   */
+  public boolean isDatanodeHealthy(long waitTimeMs) {
+    long startTime = monotonicNow();
+    while (monotonicNow() - startTime <= waitTimeMs) {
+      if (isDatanodeFullyStartedAndConnectedToActiveNN()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean isDatanodeFullyStartedAndConnectedToActiveNN() {
+    for (BPOfferService bp : blockPoolManager.getAllNamenodeThreads()) {
+      if (!bp.isInitialized() || !bp.isAlive() || bp.getActiveNN() == null) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   @VisibleForTesting
   public DatanodeID getDatanodeId() {
     return id;
