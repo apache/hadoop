@@ -149,7 +149,7 @@ class IncrementalBlockReportManager {
   }
 
   boolean sendImmediately() {
-    return readyToSend && monotonicNow() - ibrInterval >= lastIBR;
+    return readyToSend || monotonicNow() - ibrInterval >= lastIBR;
   }
 
   synchronized void waitTillNextIBR(long waitTime) {
