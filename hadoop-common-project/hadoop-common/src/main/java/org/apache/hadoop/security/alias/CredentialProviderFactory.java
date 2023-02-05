@@ -72,8 +72,16 @@ public abstract class CredentialProviderFactory {
 
   public static List<CredentialProvider> getProviders(Configuration conf
                                                ) throws IOException {
+    return getProviders(conf, CREDENTIAL_PROVIDER_PATH);
+  }
+
+  public static List<CredentialProvider> getProviders(Configuration conf,
+      String providerKey) throws IOException {
     List<CredentialProvider> result = new ArrayList<>();
-    for(String path: conf.getStringCollection(CREDENTIAL_PROVIDER_PATH)) {
+    if (providerKey == null || conf.getStringCollection(providerKey) == null) {
+      providerKey = CREDENTIAL_PROVIDER_PATH;
+    }
+    for(String path: conf.getStringCollection(providerKey)) {
       try {
         URI uri = new URI(path);
         boolean found = false;

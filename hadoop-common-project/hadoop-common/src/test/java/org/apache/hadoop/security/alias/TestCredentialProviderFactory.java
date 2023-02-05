@@ -20,6 +20,7 @@ package org.apache.hadoop.security.alias;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -256,6 +257,51 @@ public class TestCredentialProviderFactory {
     Exception exception = assertThrows(IOException.class,
         () -> CredentialProviderFactory.getProviders(conf));
     assertEquals("Can't create keystore", exception.getMessage());
+  }
+
+  @Test
+  public void testCustomKeyProviderProperty() throws Exception {
+    Configuration conf = new Configuration();
+    final String DEFAULT_CREDENTIAL_KEY = "default.credential.key";
+    final char[] DEFAULT_CREDENTIAL_PASSWORD = { 'p', 'a', 's', 's', 'w', 'o',
+        'r', 'd', '1', '2', '3' };
+
+    final String CUSTOM_CREDENTIAL_PROVIDER_KEY =
+        "fs.cloud.storage.account.key.provider.path";
+    final String CUSTOM_CREDENTIAL_KEY = "custom.credential.key";
+    final char[] CUSTOM_CREDENTIAL_PASSWORD = { 'c', 'u', 's', 't', 'o', 'm', '.',
+        'p', 'a', 's', 's', 'w', 'o', 'r', 'd' };
+
+    // Set provider in default credential path property
+    createCredentialProviderPath(conf, "default.jks",
+        CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
+        DEFAULT_CREDENTIAL_KEY, DEFAULT_CREDENTIAL_PASSWORD);
+    // Set provider in custom credential path property
+    createCredentialProviderPath(conf, "custom.jks",
+        CUSTOM_CREDENTIAL_PROVIDER_KEY, CUSTOM_CREDENTIAL_KEY,
+        CUSTOM_CREDENTIAL_PASSWORD);
+
+    assertTrue("Password should match for default provider path", Arrays.equals(
+        conf.getPassword(DEFAULT_CREDENTIAL_KEY), DEFAULT_CREDENTIAL_PASSWORD));
+
+    assertTrue("Password should match for custom provider path", Arrays.equals(
+        conf.getPassword(CUSTOM_CREDENTIAL_KEY, CUSTOM_CREDENTIAL_PROVIDER_KEY),
+        CUSTOM_CREDENTIAL_PASSWORD));
+  }
+
+  private void createCredentialProviderPath(Configuration conf, String jksName,
+      String credentialProvider, String key, char[] value) throws IOException {
+    final Path jksPath = new Path(tmpDir.toString(), jksName);
+    final String ourUrl = LocalJavaKeyStoreProvider.SCHEME_NAME + "://file"
+        + jksPath.toUri();
+
+    File file = new File(tmpDir, jksName);
+    file.delete();
+    conf.set(credentialProvider, ourUrl);
+    CredentialProvider provider = CredentialProviderFactory
+        .getProviders(conf, credentialProvider).get(0);
+    provider.createCredentialEntry(key, value);
+    provider.flush();
   }
 
   public void checkPermissionRetention(Configuration conf, String ourUrl,

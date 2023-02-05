@@ -2406,6 +2406,30 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
+   * Get the value for a known password configuration element.
+   * In order to enable the elimination of clear text passwords in config,
+   * this method attempts to resolve the property name as an alias through
+   * the CredentialProvider API and conditionally fallsback to config. This
+   * method accept external provider property name.
+   * @param name property name
+   * @param providerKey provider property name
+   * @return password
+   * @throws IOException when error in fetching password
+   */
+  public char[] getPassword(String name, String providerKey)
+      throws IOException {
+    char[] pass = null;
+
+    pass = getPasswordFromCredentialProviders(name, providerKey);
+
+    if (pass == null) {
+      pass = getPasswordFromConfig(name);
+    }
+
+    return pass;
+  }
+
+  /**
    * Get the credential entry by name from a credential provider.
    *
    * Handle key deprecation.
@@ -2455,10 +2479,23 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public char[] getPasswordFromCredentialProviders(String name)
       throws IOException {
+      return getPasswordFromCredentialProviders(name, null);
+  }
+ 
+  /**
+   * Try and resolve the provided element name as a credential provider
+   * alias from given provider.
+   * @param name alias of the provisioned credential
+   * @param providerKey external credential provider
+   * @return password or null if not found
+   * @throws IOException
+   */
+  public char[] getPasswordFromCredentialProviders(String name,
+      String providerKey) throws IOException {
     char[] pass = null;
     try {
       List<CredentialProvider> providers =
-          CredentialProviderFactory.getProviders(this);
+          CredentialProviderFactory.getProviders(this, providerKey);
 
       if (providers != null) {
         for (CredentialProvider provider : providers) {
