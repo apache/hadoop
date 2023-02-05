@@ -546,7 +546,7 @@ public abstract class Resource implements Comparable<Resource> {
   }
 
   @VisibleForTesting
-  public void setResources(ResourceInformation[] resources) {
+  protected void setResources(ResourceInformation[] resources) {
     this.resources = resources;
   }
 
