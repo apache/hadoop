@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.api.records;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 /**
  * The class to test {@link Resource}.
@@ -45,67 +47,24 @@ class TestResource {
 
   @Test
   public void testResourceFormatted() {
+    Resource resource = spy(Resource.class);
+    resource.setResources(new ResourceInformation[0]);
+    when(resource.getVirtualCores()).thenReturn(1);
+
     // We set 10MB
     String expectedResult1 = "<memory:10 MB, vCores:1>";
-    MockResource capability1 = new MockResource();
-    capability1.setMemory(10);
-    capability1.setVirtualCores(1);
-    assertEquals(capability1.toFormattedString(), expectedResult1);
+    assertEquals(expectedResult1, resource.getFormattedString(10));
 
     // We set 1024 MB = 1GB
     String expectedResult2 = "<memory:1 GB, vCores:1>";
-    MockResource capability2 = new MockResource();
-    capability2.setMemory(1024);
-    capability2.setVirtualCores(1);
-    assertEquals(capability2.toFormattedString(), expectedResult2);
+    assertEquals(expectedResult2, resource.getFormattedString(1024));
 
     // We set 1024 * 1024 MB = 1024 GB = 1TB
     String expectedResult3 = "<memory:1 TB, vCores:1>";
-    MockResource capability3 = new MockResource();
-    capability3.setMemory(1024 * 1024);
-    capability3.setVirtualCores(1);
-    assertEquals(capability3.toFormattedString(), expectedResult3);
+    assertEquals(expectedResult3, resource.getFormattedString(1024 * 1024));
 
     // We set 1024 * 1024 * 1024 MB = 1024 * 1024 GB = 1 * 1024 TB = 1 PB
     String expectedResult4 = "<memory:1 PB, vCores:1>";
-    MockResource capability4 = new MockResource();
-    capability4.setMemory(1024 * 1024 * 1024);
-    capability4.setVirtualCores(1);
-    assertEquals(capability4.toFormattedString(), expectedResult4);
-  }
-
-  class MockResource extends Resource {
-
-    public MockResource(){
-      this.resources = new ResourceInformation[0];
-    }
-
-    int memory;
-    int virtualCores;
-
-    @Override
-    public int getMemory() {
-      return memory;
-    }
-
-    @Override
-    public void setMemory(int pMemory) {
-      this.memory = pMemory;
-    }
-
-    @Override
-    public int getVirtualCores() {
-      return virtualCores;
-    }
-
-    @Override
-    public void setVirtualCores(int pVCores) {
-      this.virtualCores = pVCores;
-    }
-
-    @Override
-    public long getMemorySize() {
-      return memory;
-    }
+    assertEquals(expectedResult4, resource.getFormattedString(1024 * 1024 * 1024));
   }
 }
