@@ -409,20 +409,23 @@ public class QiniuKodoFileSystem extends FileSystem {
         // 2. 有可能是文件夹路径但是不存在末尾/
         // 添加尾部/后再次获取
         String newKey = QiniuKodoUtils.keyToDirKey(key);
-        file = kodoClient.getFileStatus(newKey);
-        if (file != null) {
-            return fileInfoToFileStatus(file);
-        }
 
         // 找不到表示文件夹的空对象，故只能列举是否有该前缀的对象
         file = kodoClient.listOneStatus(newKey);
-        if (file != null) {
-            FileInfo newDir = new FileInfo();
-            newDir.key = newKey;
-            kodoClient.makeEmptyObject(newKey);
-            return fileInfoToFileStatus(newDir);
+        if (file == null) {
+            throw new FileNotFoundException("can't find file:" + path);
         }
-        throw new FileNotFoundException("can't find file:" + path);
+
+        // 是文件夹本身
+        if (file.key.equals(newKey)) {
+            return fileInfoToFileStatus(file);
+        }
+
+        // 是文件夹前缀
+        FileInfo newDir = new FileInfo();
+        newDir.key = newKey;
+        kodoClient.makeEmptyObject(newKey);
+        return fileInfoToFileStatus(newDir);
     }
 
 
