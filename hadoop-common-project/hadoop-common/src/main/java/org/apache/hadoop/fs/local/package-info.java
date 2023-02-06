@@ -15,6 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * Filesystem implementations that allow Hadoop to read directly from
+ * the local file system.
+ */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Unstable
 package org.apache.hadoop.fs.local;
