@@ -1246,7 +1246,8 @@ public class TestShuffleHandler {
       }
       shuffleHandler.stop();
     }
-    assertEquals(Collections.emptyList(), shuffleHandler.failures, "Should have no caught exceptions");
+    assertEquals(Collections.emptyList(), shuffleHandler.failures,
+        "Should have no caught exceptions");
   }
 
   /**
@@ -1403,21 +1404,22 @@ public class TestShuffleHandler {
         String.format("Expected only %s and %s response",
             OK_STATUS, ShuffleHandler.TOO_MANY_REQ_STATUS));
 
-    List<HttpURLConnection> successfulConnections =
-        mapOfConnections.get(HttpURLConnection.HTTP_OK);
-    assertEquals(maxAllowedConnections, successfulConnections.size(), String.format("Expected exactly %d requests " +
-        "with %s response", maxAllowedConnections, OK_STATUS));
+    List<HttpURLConnection> successfulConnections = mapOfConnections.get(HttpURLConnection.HTTP_OK);
+    assertEquals(maxAllowedConnections, successfulConnections.size(),
+        String.format("Expected exactly %d requests " + "with %s response", maxAllowedConnections,
+            OK_STATUS));
 
     //Ensure exactly one connection is HTTP 429 (TOO MANY REQUESTS)
     List<HttpURLConnection> closedConnections =
         mapOfConnections.get(ShuffleHandler.TOO_MANY_REQ_STATUS.code());
-    assertEquals(notAcceptedConnections, closedConnections.size(), String.format("Expected exactly %d %s response",
-        notAcceptedConnections, ShuffleHandler.TOO_MANY_REQ_STATUS));
+    assertEquals(notAcceptedConnections, closedConnections.size(),
+        String.format("Expected exactly %d %s response", notAcceptedConnections,
+            ShuffleHandler.TOO_MANY_REQ_STATUS));
 
     // This connection should be closed because it is above the maximum limit
     HttpURLConnection conn = closedConnections.get(0);
-    assertEquals(ShuffleHandler.TOO_MANY_REQ_STATUS.code(), conn.getResponseCode(), String.format("Expected a %s response",
-        ShuffleHandler.TOO_MANY_REQ_STATUS));
+    assertEquals(ShuffleHandler.TOO_MANY_REQ_STATUS.code(), conn.getResponseCode(),
+        String.format("Expected a %s response", ShuffleHandler.TOO_MANY_REQ_STATUS));
     long backoff = Long.parseLong(
         conn.getHeaderField(ShuffleHandler.RETRY_AFTER_HEADER));
     assertTrue(backoff > 0, "The backoff value cannot be negative.");
