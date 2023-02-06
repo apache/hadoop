@@ -395,12 +395,12 @@ public class BlockManager implements BlockStatsMXBean {
    * The maximum number of outgoing replication streams a given node should have
    * at one time considering all but the highest priority replications needed.
     */
-  int maxReplicationStreams;
+  private volatile int maxReplicationStreams;
   /**
    * The maximum number of outgoing replication streams a given node should have
    * at one time.
    */
-  int replicationStreamsHardLimit;
+  private volatile int replicationStreamsHardLimit;
   /** Minimum copies needed or else write is disallowed */
   public final short minReplication;
   /** Default number of replicas */
@@ -409,7 +409,7 @@ public class BlockManager implements BlockStatsMXBean {
   final int maxCorruptFilesReturned;
 
   final float blocksInvalidateWorkPct;
-  private int blocksReplWorkMultiplier;
+  private volatile int blocksReplWorkMultiplier;
 
   // whether or not to issue block encryption keys.
   final boolean encryptDataTransfer;
@@ -1017,10 +1017,17 @@ public class BlockManager implements BlockStatsMXBean {
    *
    * @param newVal - Must be a positive non-zero integer.
    */
-  public void setMaxReplicationStreams(int newVal) {
-    ensurePositiveInt(newVal,
-        DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY);
+  @VisibleForTesting
+  public void setMaxReplicationStreams(int newVal, boolean ensurePositiveInt) {
+    if (ensurePositiveInt) {
+      ensurePositiveInt(newVal,
+          DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY);
+    }
     maxReplicationStreams = newVal;
+  }
+
+  public void setMaxReplicationStreams(int newVal) {
+    setMaxReplicationStreams(newVal, true);
   }
 
   /** Returns the current setting for maxReplicationStreamsHardLimit, set by
@@ -1117,7 +1124,7 @@ public class BlockManager implements BlockStatsMXBean {
     return minReplicationToBeInMaintenance;
   }
 
-  private short getMinMaintenanceStorageNum(BlockInfo block) {
+  short getMinMaintenanceStorageNum(BlockInfo block) {
     if (block.isStriped()) {
       return ((BlockInfoStriped) block).getRealDataBlockNum();
     } else {
@@ -2599,7 +2606,8 @@ public class BlockManager implements BlockStatsMXBean {
 
       if (priority != LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY
           && (!node.isDecommissionInProgress() && !node.isEnteringMaintenance())
-          && node.getNumberOfBlocksToBeReplicated() >= maxReplicationStreams) {
+          && node.getNumberOfBlocksToBeReplicated() +
+          node.getNumberOfBlocksToBeErasureCoded() >= maxReplicationStreams) {
         if (isStriped && (state == StoredReplicaState.LIVE
             || state == StoredReplicaState.DECOMMISSIONING)) {
           liveBusyBlockIndices.add(blockIndex);
@@ -2609,7 +2617,8 @@ public class BlockManager implements BlockStatsMXBean {
         continue; // already reached replication limit
       }
 
-      if (node.getNumberOfBlocksToBeReplicated() >= replicationStreamsHardLimit) {
+      if (node.getNumberOfBlocksToBeReplicated() +
+          node.getNumberOfBlocksToBeErasureCoded() >= replicationStreamsHardLimit) {
         if (isStriped && (state == StoredReplicaState.LIVE
             || state == StoredReplicaState.DECOMMISSIONING)) {
           liveBusyBlockIndices.add(blockIndex);
@@ -3616,7 +3625,7 @@ public class BlockManager implements BlockStatsMXBean {
     if (storedBlock == null || storedBlock.isDeleted()) {
       // If this block does not belong to anyfile, then we are done.
       blockLog.debug("BLOCK* addStoredBlock: {} on {} size {} but it does not belong to any file",
-          block, node, block.getNumBytes());
+          reportedBlock, node, reportedBlock.getNumBytes());
       // we could add this block to invalidate set of this datanode.
       // it will happen in next block report otherwise.
       return block;
@@ -3631,12 +3640,12 @@ public class BlockManager implements BlockStatsMXBean {
           (node.isDecommissioned() || node.isDecommissionInProgress()) ? 0 : 1;
       if (logEveryBlock) {
         blockLog.info("BLOCK* addStoredBlock: {} is added to {} (size={})",
-            node, storedBlock, storedBlock.getNumBytes());
+            node, reportedBlock, reportedBlock.getNumBytes());
       }
     } else if (result == AddBlockResult.REPLACED) {
       curReplicaDelta = 0;
       blockLog.warn("BLOCK* addStoredBlock: block {} moved to storageType " +
-          "{} on node {}", storedBlock, storageInfo.getStorageType(), node);
+          "{} on node {}", reportedBlock, storageInfo.getStorageType(), node);
     } else {
       // if the same block is added again and the replica was corrupt
       // previously because of a wrong gen stamp, remove it from the
@@ -3646,8 +3655,8 @@ public class BlockManager implements BlockStatsMXBean {
       curReplicaDelta = 0;
       if (blockLog.isDebugEnabled()) {
         blockLog.debug("BLOCK* addStoredBlock: Redundant addStoredBlock request"
-                + " received for {} on node {} size {}", storedBlock, node,
-            storedBlock.getNumBytes());
+                + " received for {} on node {} size {}", reportedBlock, node,
+            reportedBlock.getNumBytes());
       }
     }
 

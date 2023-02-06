@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.router.clientrm;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -40,7 +41,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -116,14 +116,20 @@ import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRespo
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.RouterPolicyFacade;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
+import org.apache.hadoop.yarn.server.federation.retry.FederationActionRetry;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -134,6 +140,7 @@ import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
+import org.apache.hadoop.yarn.util.Records;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -176,6 +183,7 @@ public class FederationClientInterceptor
   private ThreadPoolExecutor executorService;
   private final Clock clock = new MonotonicClock();
   private boolean returnPartialReport;
+  private long submitIntervalTime;
 
   @Override
   public void init(String userName) {
@@ -184,15 +192,20 @@ public class FederationClientInterceptor
     federationFacade = FederationStateStoreFacade.getInstance();
     rand = new Random(System.currentTimeMillis());
 
-    int numThreads = getConf().getInt(
-        YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
-        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREADS_SIZE);
+    int numMinThreads = getNumMinThreads(getConf());
+
+    int numMaxThreads = getNumMaxThreads(getConf());
+
+    long keepAliveTime = getConf().getTimeDuration(
+        YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME,
+        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME, TimeUnit.SECONDS);
+
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
         .setNameFormat("RPC Router Client-" + userName + "-%d ").build();
 
-    BlockingQueue workQueue = new LinkedBlockingQueue<>();
-    this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
-        0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
+    BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>();
+    this.executorService = new ThreadPoolExecutor(numMinThreads, numMaxThreads,
+        keepAliveTime, TimeUnit.MILLISECONDS, workQueue, threadFactory);
 
     final Configuration conf = this.getConf();
 
@@ -206,6 +219,10 @@ public class FederationClientInterceptor
     numSubmitRetries = conf.getInt(
         YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_RETRY,
         YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY);
+
+    submitIntervalTime = conf.getTimeDuration(
+        YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_INTERVAL_TIME,
+        YarnConfiguration.DEFAULT_CLIENTRM_SUBMIT_INTERVAL_TIME, TimeUnit.MILLISECONDS);
 
     clientRMProxies = new ConcurrentHashMap<>();
     routerMetrics = RouterMetrics.getMetrics();
@@ -293,25 +310,25 @@ public class FederationClientInterceptor
     Map<SubClusterId, SubClusterInfo> subClustersActive =
         federationFacade.getSubClusters(true);
 
-    for (int i = 0; i < numSubmitRetries; ++i) {
-      SubClusterId subClusterId = getRandomActiveSubCluster(subClustersActive);
-      LOG.info("getNewApplication try #{} on SubCluster {}.", i, subClusterId);
-      ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
-      GetNewApplicationResponse response = null;
-      try {
-        response = clientRMProxy.getNewApplication(request);
-      } catch (Exception e) {
-        LOG.warn("Unable to create a new ApplicationId in SubCluster {}.", subClusterId.getId(), e);
-        subClustersActive.remove(subClusterId);
-      }
+    // Try calling the getNewApplication method
+    List<SubClusterId> blacklist = new ArrayList<>();
+    int activeSubClustersCount = federationFacade.getActiveSubClustersCount();
+    int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries);
+
+    try {
+      GetNewApplicationResponse response =
+          ((FederationActionRetry<GetNewApplicationResponse>) (retryCount) ->
+          invokeGetNewApplication(subClustersActive, blacklist, request, retryCount)).
+          runWithRetries(actualRetryNums, submitIntervalTime);
 
       if (response != null) {
         long stopTime = clock.getTime();
         routerMetrics.succeededAppsCreated(stopTime - startTime);
-        RouterAuditLogger.logSuccess(user.getShortUserName(), GET_NEW_APP,
-            TARGET_CLIENT_RM_SERVICE, response.getApplicationId());
         return response;
       }
+    } catch (Exception e) {
+      routerMetrics.incrAppsFailedCreated();
+      RouterServerUtil.logAndThrowException(e.getMessage(), e);
     }
 
     routerMetrics.incrAppsFailedCreated();
@@ -319,6 +336,46 @@ public class FederationClientInterceptor
     RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_APP, UNKNOWN,
         TARGET_CLIENT_RM_SERVICE, errMsg);
     throw new YarnException(errMsg);
+  }
+
+  /**
+   * Invoke GetNewApplication to different subClusters.
+   *
+   * @param subClustersActive Active SubClusters
+   * @param blackList Blacklist avoid repeated calls to unavailable subCluster.
+   * @param request getNewApplicationRequest.
+   * @param retryCount number of retries.
+   * @return Get NewApplicationResponse response, If the response is empty, the request fails,
+   * if the response is not empty, the request is successful.
+   * @throws YarnException yarn exception.
+   * @throws IOException io error.
+   */
+  private GetNewApplicationResponse invokeGetNewApplication(
+      Map<SubClusterId, SubClusterInfo> subClustersActive,
+      List<SubClusterId> blackList, GetNewApplicationRequest request, int retryCount)
+      throws YarnException, IOException {
+    SubClusterId subClusterId =
+        federationFacade.getRandomActiveSubCluster(subClustersActive, blackList);
+    LOG.info("getNewApplication try #{} on SubCluster {}.", retryCount, subClusterId);
+    ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+    try {
+      GetNewApplicationResponse response = clientRMProxy.getNewApplication(request);
+      if (response != null) {
+        RouterAuditLogger.logSuccess(user.getShortUserName(), GET_NEW_APP,
+            TARGET_CLIENT_RM_SERVICE, response.getApplicationId(), subClusterId);
+        return response;
+      }
+    } catch (Exception e) {
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_APP, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, e.getMessage(), subClusterId);
+      LOG.warn("Unable to create a new ApplicationId in SubCluster {}.", subClusterId.getId(), e);
+      blackList.add(subClusterId);
+      throw e;
+    }
+    // If SubmitApplicationResponse is empty, the request fails.
+    String msg = String.format("Unable to create a new ApplicationId in SubCluster %s.",
+        subClusterId.getId());
+    throw new YarnException(msg);
   }
 
   /**
@@ -400,88 +457,35 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException(errMsg, null);
     }
 
-    SubmitApplicationResponse response = null;
-
     long startTime = clock.getTime();
-
     ApplicationId applicationId =
         request.getApplicationSubmissionContext().getApplicationId();
-
     List<SubClusterId> blacklist = new ArrayList<>();
 
-    for (int i = 0; i < numSubmitRetries; ++i) {
+    try {
 
-      SubClusterId subClusterId = policyFacade.getHomeSubcluster(
-          request.getApplicationSubmissionContext(), blacklist);
+      // We need to handle this situation,
+      // the user will provide us with an expected submitRetries,
+      // but if the number of Active SubClusters is less than this number at this time,
+      // we should provide a high number of retry according to the number of Active SubClusters.
+      int activeSubClustersCount = federationFacade.getActiveSubClustersCount();
+      int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries);
 
-      LOG.info("submitApplication appId {} try #{} on SubCluster {}.",
-           applicationId, i, subClusterId);
-
-      ApplicationHomeSubCluster appHomeSubCluster =
-          ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
-
-      if (i == 0) {
-        try {
-          // persist the mapping of applicationId and the subClusterId which has
-          // been selected as its home
-          subClusterId =
-              federationFacade.addApplicationHomeSubCluster(appHomeSubCluster);
-        } catch (YarnException e) {
-          routerMetrics.incrAppsFailedSubmitted();
-          String message =
-              String.format("Unable to insert the ApplicationId %s into the FederationStateStore.",
-              applicationId);
-          RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
-              TARGET_CLIENT_RM_SERVICE, message, applicationId, subClusterId);
-          RouterServerUtil.logAndThrowException(message, e);
-        }
-      } else {
-        try {
-          // update the mapping of applicationId and the home subClusterId to
-          // the new subClusterId we have selected
-          federationFacade.updateApplicationHomeSubCluster(appHomeSubCluster);
-        } catch (YarnException e) {
-          String message =
-              String.format("Unable to update the ApplicationId %s into the FederationStateStore.",
-              applicationId);
-          SubClusterId subClusterIdInStateStore =
-              federationFacade.getApplicationHomeSubCluster(applicationId);
-          if (subClusterId == subClusterIdInStateStore) {
-            LOG.info("Application {} already submitted on SubCluster {}.",
-                applicationId, subClusterId);
-          } else {
-            routerMetrics.incrAppsFailedSubmitted();
-            RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
-                TARGET_CLIENT_RM_SERVICE, message, applicationId, subClusterId);
-            RouterServerUtil.logAndThrowException(message, e);
-          }
-        }
-      }
-
-      ApplicationClientProtocol clientRMProxy =
-          getClientRMProxyForSubCluster(subClusterId);
-
-      try {
-        response = clientRMProxy.submitApplication(request);
-      } catch (Exception e) {
-        LOG.warn("Unable to submit the application {} to SubCluster {} error = {}.",
-            applicationId, subClusterId.getId(), e);
-      }
+      // Try calling the SubmitApplication method
+      SubmitApplicationResponse response =
+          ((FederationActionRetry<SubmitApplicationResponse>) (retryCount) ->
+          invokeSubmitApplication(blacklist, request, retryCount)).
+          runWithRetries(actualRetryNums, submitIntervalTime);
 
       if (response != null) {
-        LOG.info("Application {} with appId {} submitted on {}.",
-            request.getApplicationSubmissionContext().getApplicationName(),
-            applicationId, subClusterId);
         long stopTime = clock.getTime();
         routerMetrics.succeededAppsSubmitted(stopTime - startTime);
-        RouterAuditLogger.logSuccess(user.getShortUserName(), SUBMIT_NEW_APP,
-            TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
         return response;
-      } else {
-        // Empty response from the ResourceManager.
-        // Blacklist this subcluster for this request.
-        blacklist.add(subClusterId);
       }
+
+    } catch (Exception e) {
+      routerMetrics.incrAppsFailedSubmitted();
+      RouterServerUtil.logAndThrowException(e.getMessage(), e);
     }
 
     routerMetrics.incrAppsFailedSubmitted();
@@ -489,6 +493,78 @@ public class FederationClientInterceptor
         request.getApplicationSubmissionContext().getApplicationName(), applicationId);
     RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
         TARGET_CLIENT_RM_SERVICE, msg, applicationId);
+    throw new YarnException(msg);
+  }
+
+  /**
+   * Invoke SubmitApplication to different subClusters.
+   *
+   * Step1. Select homeSubCluster for Application according to Policy.
+   *
+   * Step2. Query homeSubCluster according to ApplicationId,
+   * if homeSubCluster does not exist or first attempt(consider repeated submissions), write;
+   * if homeSubCluster exists, update.
+   *
+   * Step3. Find the clientRMProxy of the corresponding cluster according to homeSubCluster,
+   * and then call the SubmitApplication method.
+   *
+   * Step4. If SubmitApplicationResponse is empty, the request fails,
+   * if SubmitApplicationResponse is not empty, the request is successful.
+   *
+   * @param blackList Blacklist avoid repeated calls to unavailable subCluster.
+   * @param request submitApplicationRequest.
+   * @param retryCount number of retries.
+   * @return submitApplication response, If the response is empty, the request fails,
+   *      if the response is not empty, the request is successful.
+   * @throws YarnException yarn exception.
+   */
+  private SubmitApplicationResponse invokeSubmitApplication(
+      List<SubClusterId> blackList, SubmitApplicationRequest request, int retryCount)
+      throws YarnException, IOException {
+
+    // The request is not checked here,
+    // because the request has been checked before the method is called.
+    // We get applicationId and subClusterId from context.
+    ApplicationSubmissionContext appSubmissionContext = request.getApplicationSubmissionContext();
+    ApplicationId applicationId = appSubmissionContext.getApplicationId();
+    SubClusterId subClusterId = null;
+
+    try {
+
+      // Step1. Select homeSubCluster for Application according to Policy.
+      subClusterId = policyFacade.getHomeSubcluster(appSubmissionContext, blackList);
+      LOG.info("submitApplication appId {} try #{} on SubCluster {}.",
+          applicationId, retryCount, subClusterId);
+
+      // Step2. We Store the mapping relationship
+      // between Application and HomeSubCluster in stateStore.
+      federationFacade.addOrUpdateApplicationHomeSubCluster(
+          applicationId, subClusterId, retryCount);
+
+      // Step3. SubmitApplication to the subCluster
+      ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+      SubmitApplicationResponse response = clientRMProxy.submitApplication(request);
+
+      // Step4. if SubmitApplicationResponse is not empty, the request is successful.
+      if (response != null) {
+        LOG.info("Application {} submitted on subCluster {}.", applicationId, subClusterId);
+        RouterAuditLogger.logSuccess(user.getShortUserName(), SUBMIT_NEW_APP,
+            TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
+        return response;
+      }
+    } catch (Exception e) {
+      RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, e.getMessage(), applicationId, subClusterId);
+      LOG.warn("Unable to submitApplication appId {} try #{} on SubCluster {}.",
+          applicationId, retryCount, subClusterId, e);
+      if (subClusterId != null) {
+        blackList.add(subClusterId);
+      }
+      throw e;
+    }
+
+    // If SubmitApplicationResponse is empty, the request fails.
+    String msg = String.format("Application %s failed to be submitted.", applicationId);
     throw new YarnException(msg);
   }
 
@@ -855,7 +931,7 @@ public class FederationClientInterceptor
     try {
       response = clientRMProxy.moveApplicationAcrossQueues(request);
     } catch (Exception e) {
-      routerMetrics.incrAppAttemptsFailedRetrieved();
+      routerMetrics.incrMoveApplicationAcrossQueuesFailedRetrieved();
       RouterServerUtil.logAndThrowException("Unable to moveApplicationAcrossQueues for " +
           applicationId + " to SubCluster " + subClusterId.getId(), e);
     }
@@ -1174,7 +1250,7 @@ public class FederationClientInterceptor
     try {
       response = clientRMProxy.getApplicationAttemptReport(request);
     } catch (Exception e) {
-      routerMetrics.incrAppAttemptsFailedRetrieved();
+      routerMetrics.incrAppAttemptReportFailedRetrieved();
       String msg = String.format(
           "Unable to get the applicationAttempt report for %s to SubCluster %s.",
           request.getApplicationAttemptId(), subClusterId.getId());
@@ -1237,7 +1313,7 @@ public class FederationClientInterceptor
   public GetContainerReportResponse getContainerReport(
       GetContainerReportRequest request) throws YarnException, IOException {
     if(request == null || request.getContainerId() == null){
-      routerMetrics.incrContainerReportFailedRetrieved();
+      routerMetrics.incrGetContainerReportFailedRetrieved();
       RouterServerUtil.logAndThrowException("Missing getContainerReport request " +
           "or containerId", null);
     }
@@ -1249,7 +1325,7 @@ public class FederationClientInterceptor
     try {
       subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (YarnException ex) {
-      routerMetrics.incrContainerReportFailedRetrieved();
+      routerMetrics.incrGetContainerReportFailedRetrieved();
       RouterServerUtil.logAndThrowException("Application " + applicationId +
           " does not exist in FederationStateStore.", ex);
     }
@@ -1260,7 +1336,7 @@ public class FederationClientInterceptor
     try {
       response = clientRMProxy.getContainerReport(request);
     } catch (Exception ex) {
-      routerMetrics.incrContainerReportFailedRetrieved();
+      routerMetrics.incrGetContainerReportFailedRetrieved();
       LOG.error("Unable to get the container report for {} from SubCluster {}.",
           applicationId, subClusterId.getId(), ex);
     }
@@ -1280,7 +1356,7 @@ public class FederationClientInterceptor
   public GetContainersResponse getContainers(GetContainersRequest request)
       throws YarnException, IOException {
     if (request == null || request.getApplicationAttemptId() == null) {
-      routerMetrics.incrContainerFailedRetrieved();
+      routerMetrics.incrGetContainersFailedRetrieved();
       RouterServerUtil.logAndThrowException(
           "Missing getContainers request or ApplicationAttemptId.", null);
     }
@@ -1291,7 +1367,7 @@ public class FederationClientInterceptor
     try {
       subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (YarnException ex) {
-      routerMetrics.incrContainerFailedRetrieved();
+      routerMetrics.incrGetContainersFailedRetrieved();
       RouterServerUtil.logAndThrowException("Application " + applicationId +
           " does not exist in FederationStateStore.", ex);
     }
@@ -1302,7 +1378,7 @@ public class FederationClientInterceptor
     try {
       response = clientRMProxy.getContainers(request);
     } catch (Exception ex) {
-      routerMetrics.incrContainerFailedRetrieved();
+      routerMetrics.incrGetContainersFailedRetrieved();
       RouterServerUtil.logAndThrowException("Unable to get the containers for " +
           applicationId + " from SubCluster " + subClusterId.getId(), ex);
     }
@@ -1321,19 +1397,103 @@ public class FederationClientInterceptor
   @Override
   public GetDelegationTokenResponse getDelegationToken(
       GetDelegationTokenRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (request == null || request.getRenewer() == null) {
+      routerMetrics.incrGetDelegationTokenFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing getDelegationToken request or Renewer.", null);
+    }
+
+    try {
+      // Verify that the connection is kerberos authenticated
+      if (!RouterServerUtil.isAllowedDelegationTokenOp()) {
+        routerMetrics.incrGetDelegationTokenFailedRetrieved();
+        throw new IOException(
+            "Delegation Token can be issued only with kerberos authentication.");
+      }
+
+      long startTime = clock.getTime();
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      Text owner = new Text(ugi.getUserName());
+      Text realUser = null;
+      if (ugi.getRealUser() != null) {
+        realUser = new Text(ugi.getRealUser().getUserName());
+      }
+
+      RMDelegationTokenIdentifier tokenIdentifier =
+          new RMDelegationTokenIdentifier(owner, new Text(request.getRenewer()), realUser);
+      Token<RMDelegationTokenIdentifier> realRMDToken =
+          new Token<>(tokenIdentifier, this.getTokenSecretManager());
+
+      org.apache.hadoop.yarn.api.records.Token routerRMDTToken =
+          BuilderUtils.newDelegationToken(realRMDToken.getIdentifier(),
+              realRMDToken.getKind().toString(),
+              realRMDToken.getPassword(), realRMDToken.getService().toString());
+
+      long stopTime = clock.getTime();
+      routerMetrics.succeededGetDelegationTokenRetrieved((stopTime - startTime));
+      return GetDelegationTokenResponse.newInstance(routerRMDTToken);
+    } catch(IOException e) {
+      routerMetrics.incrGetDelegationTokenFailedRetrieved();
+      throw new YarnException(e);
+    }
   }
 
   @Override
   public RenewDelegationTokenResponse renewDelegationToken(
       RenewDelegationTokenRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+
+      if (!RouterServerUtil.isAllowedDelegationTokenOp()) {
+        routerMetrics.incrRenewDelegationTokenFailedRetrieved();
+        throw new IOException(
+            "Delegation Token can be renewed only with kerberos authentication");
+      }
+
+      long startTime = clock.getTime();
+      org.apache.hadoop.yarn.api.records.Token protoToken = request.getDelegationToken();
+      Token<RMDelegationTokenIdentifier> token = new Token<>(
+          protoToken.getIdentifier().array(), protoToken.getPassword().array(),
+          new Text(protoToken.getKind()), new Text(protoToken.getService()));
+      String user = RouterServerUtil.getRenewerForToken(token);
+      long nextExpTime = this.getTokenSecretManager().renewToken(token, user);
+      RenewDelegationTokenResponse renewResponse =
+          Records.newRecord(RenewDelegationTokenResponse.class);
+      renewResponse.setNextExpirationTime(nextExpTime);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededRenewDelegationTokenRetrieved((stopTime - startTime));
+      return renewResponse;
+
+    } catch (IOException e) {
+      routerMetrics.incrRenewDelegationTokenFailedRetrieved();
+      throw new YarnException(e);
+    }
   }
 
   @Override
   public CancelDelegationTokenResponse cancelDelegationToken(
       CancelDelegationTokenRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      if (!RouterServerUtil.isAllowedDelegationTokenOp()) {
+        routerMetrics.incrCancelDelegationTokenFailedRetrieved();
+        throw new IOException(
+            "Delegation Token can be cancelled only with kerberos authentication");
+      }
+
+      long startTime = clock.getTime();
+      org.apache.hadoop.yarn.api.records.Token protoToken = request.getDelegationToken();
+      Token<RMDelegationTokenIdentifier> token = new Token<>(
+          protoToken.getIdentifier().array(), protoToken.getPassword().array(),
+          new Text(protoToken.getKind()), new Text(protoToken.getService()));
+      String user = UserGroupInformation.getCurrentUser().getUserName();
+      this.getTokenSecretManager().cancelToken(token, user);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededCancelDelegationTokenRetrieved((stopTime - startTime));
+      return Records.newRecord(CancelDelegationTokenResponse.class);
+    } catch (IOException e) {
+      routerMetrics.incrCancelDelegationTokenFailedRetrieved();
+      throw new YarnException(e);
+    }
   }
 
   @Override
@@ -1799,5 +1959,50 @@ public class FederationClientInterceptor
             reservationId);
       }
     }
+  }
+
+  protected int getNumMinThreads(Configuration conf) {
+
+    String threadSize = conf.get(YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE);
+
+    // If the user configures YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
+    // we will still get the number of threads from this configuration.
+    if (StringUtils.isNotBlank(threadSize)) {
+      LOG.warn("{} is a deprecated property, " +
+          "please remove it, use {} to configure the minimum number of thread pool.",
+          YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
+          YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE);
+      return Integer.parseInt(threadSize);
+    }
+
+    int numMinThreads = conf.getInt(
+        YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE,
+        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE);
+    return numMinThreads;
+  }
+
+  protected int getNumMaxThreads(Configuration conf) {
+
+    String threadSize = conf.get(YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE);
+
+    // If the user configures YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
+    // we will still get the number of threads from this configuration.
+    if (StringUtils.isNotBlank(threadSize)) {
+      LOG.warn("{} is a deprecated property, " +
+          "please remove it, use {} to configure the maximum number of thread pool.",
+          YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
+          YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE);
+      return Integer.parseInt(threadSize);
+    }
+
+    int numMaxThreads = conf.getInt(
+        YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE,
+        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE);
+    return numMaxThreads;
+  }
+
+  @VisibleForTesting
+  public void setNumSubmitRetries(int numSubmitRetries) {
+    this.numSubmitRetries = numSubmitRetries;
   }
 }

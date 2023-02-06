@@ -162,6 +162,29 @@ public final class FederationStateStoreUtils {
     throw new FederationStateStoreException(errMsg);
   }
 
+
+  /**
+   * Throws an <code>FederationStateStoreException</code> due to an error in
+   * <code>FederationStateStore</code>.
+   *
+   * @param t the throwable raised in the called class.
+   * @param log the logger interface.
+   * @param errMsgFormat the error message format string.
+   * @param args referenced by the format specifiers in the format string.
+   * @throws YarnException on failure
+   */
+  public static void logAndThrowStoreException(
+      Throwable t, Logger log, String errMsgFormat, Object... args) throws YarnException {
+    String errMsg = String.format(errMsgFormat, args);
+    if (t != null) {
+      log.error(errMsg, t);
+      throw new FederationStateStoreException(errMsg, t);
+    } else {
+      log.error(errMsg);
+      throw new FederationStateStoreException(errMsg);
+    }
+  }
+
   /**
    * Throws an <code>FederationStateStoreInvalidInputException</code> due to an
    * error in <code>FederationStateStore</code>.

@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.util;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.util.XMLUtils;
+
 import org.w3c.dom.Node;
 import org.w3c.dom.Text;
 import org.w3c.dom.Element;
@@ -87,13 +89,8 @@ public class ECPolicyLoader {
     LOG.info("Loading EC policy file " + policyFile);
 
     // Read and parse the EC policy file.
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     dbf.setIgnoringComments(true);
-    dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-    dbf.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-    dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
-    dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-    dbf.setFeature("http://apache.org/xml/features/dom/create-entity-ref-nodes", false);
     DocumentBuilder builder = dbf.newDocumentBuilder();
     Document doc = builder.parse(policyFile);
     Element root = doc.getDocumentElement();

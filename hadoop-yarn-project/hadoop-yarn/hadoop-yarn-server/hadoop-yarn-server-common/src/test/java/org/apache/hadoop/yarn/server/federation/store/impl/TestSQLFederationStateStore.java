@@ -18,12 +18,14 @@
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.metrics.FederationStateStoreClientMetrics;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -33,6 +35,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSub
 import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -447,7 +451,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
     SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
-    Connection conn =  sqlFederationStateStore.conn;
+    Connection conn =  sqlFederationStateStore.getConn();
     conn.prepareStatement(SP_DROP_ADDRESERVATIONHOMESUBCLUSTER).execute();
     conn.prepareStatement(SP_ADDRESERVATIONHOMESUBCLUSTER2).execute();
 
@@ -484,7 +488,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
     SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
-    Connection conn =  sqlFederationStateStore.conn;
+    Connection conn =  sqlFederationStateStore.getConn();
     conn.prepareStatement(SP_DROP_UPDATERESERVATIONHOMESUBCLUSTER).execute();
     conn.prepareStatement(SP_UPDATERESERVATIONHOMESUBCLUSTER2).execute();
 
@@ -530,7 +534,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
     SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
-    Connection conn =  sqlFederationStateStore.conn;
+    Connection conn =  sqlFederationStateStore.getConn();
     conn.prepareStatement(SP_DROP_DELETERESERVATIONHOMESUBCLUSTER).execute();
     conn.prepareStatement(SP_DELETERESERVATIONHOMESUBCLUSTER2).execute();
 
@@ -571,5 +575,39 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
   @Test(expected = NotImplementedException.class)
   public void testRemoveStoredMasterKey() throws YarnException, IOException {
     super.testRemoveStoredMasterKey();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testStoreNewToken() throws IOException, YarnException {
+    super.testStoreNewToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testUpdateStoredToken() throws IOException, YarnException {
+    super.testUpdateStoredToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testRemoveStoredToken() throws IOException, YarnException {
+    super.testRemoveStoredToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testGetTokenByRouterStoreToken() throws IOException, YarnException {
+    super.testGetTokenByRouterStoreToken();
+  }
+
+  @Override
+  protected void checkRouterMasterKey(DelegationKey delegationKey,
+      RouterMasterKey routerMasterKey) throws YarnException, IOException {
+    // TODO: This part of the code will be completed in YARN-11349 and
+    // will be used to verify whether the RouterMasterKey stored in the DB is as expected.
+  }
+
+  @Override
+  protected void checkRouterStoreToken(RMDelegationTokenIdentifier identifier,
+      RouterStoreToken token) throws YarnException, IOException {
+    // TODO: This part of the code will be completed in YARN-11349 and
+    // will be used to verify whether the RouterStoreToken stored in the DB is as expected.
   }
 }

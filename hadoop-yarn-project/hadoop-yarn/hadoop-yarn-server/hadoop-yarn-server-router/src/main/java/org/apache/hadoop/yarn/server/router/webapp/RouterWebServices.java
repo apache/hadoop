@@ -81,6 +81,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
+import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
@@ -208,6 +209,8 @@ public class RouterWebServices implements RMWebServiceProtocol {
         RESTRequestInterceptor interceptorChain =
             this.createRequestInterceptorChain();
         interceptorChain.init(user);
+        RouterClientRMService routerClientRMService = router.getClientRMProxyService();
+        interceptorChain.setRouterClientRMService(routerClientRMService);
         chainWrapper.init(interceptorChain);
       } catch (Exception e) {
         LOG.error("Init RESTRequestInterceptor error for user: {}", user, e);
@@ -942,5 +945,20 @@ public class RouterWebServices implements RMWebServiceProtocol {
     RequestInterceptorChainWrapper pipeline = getInterceptorChain(req);
     return pipeline.getRootInterceptor()
         .signalToContainer(containerId, command, req);
+  }
+
+  @GET
+  @Path(RMWSConsts.GET_RM_NODE_LABELS)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public NodeLabelsInfo getRMNodeLabels(@Context HttpServletRequest hsr)
+      throws IOException {
+    init();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
+    return pipeline.getRootInterceptor().getRMNodeLabels(hsr);
+  }
+
+  public Router getRouter() {
+    return router;
   }
 }

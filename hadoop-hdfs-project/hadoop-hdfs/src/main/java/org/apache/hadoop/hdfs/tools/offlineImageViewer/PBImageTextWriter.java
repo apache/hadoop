@@ -85,7 +85,7 @@ import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_ERA
 /**
  * This class reads the protobuf-based fsimage and generates text output
  * for each inode to {@link PBImageTextWriter#out}. The sub-class can override
- * {@link getEntry()} to generate formatted string for each inode.
+ * {@link #getEntry(String, INode)} to generate formatted string for each inode.
  *
  * Since protobuf-based fsimage does not guarantee the order of inodes and
  * directories, PBImageTextWriter runs two-phase scans:

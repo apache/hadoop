@@ -212,6 +212,8 @@ public final class Constants {
   public static final String PROXY_PASSWORD = "fs.s3a.proxy.password";
   public static final String PROXY_DOMAIN = "fs.s3a.proxy.domain";
   public static final String PROXY_WORKSTATION = "fs.s3a.proxy.workstation";
+  /** Is the proxy secured(proxyProtocol = HTTPS)? */
+  public static final String PROXY_SECURED = "fs.s3a.proxy.ssl.enabled";
 
   /**
    * Number of times the AWS client library should retry errors before
@@ -249,12 +251,12 @@ public final class Constants {
   public static final boolean EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT =
       true;
 
-  // seconds until we give up trying to establish a connection to s3
+  // milliseconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT =
       "fs.s3a.connection.establish.timeout";
   public static final int DEFAULT_ESTABLISH_TIMEOUT = 50000;
 
-  // seconds until we give up on a connection to s3
+  // milliseconds until we give up on a connection to s3
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
   public static final int DEFAULT_SOCKET_TIMEOUT = 200000;
 

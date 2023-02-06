@@ -239,6 +239,18 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final long
       FEDERATION_STORE_ROUTER_EXPIRATION_DELETION_MS_DEFAULT = -1;
 
+  // HDFS Router-based federation State Store ZK DRIVER
+  public static final String FEDERATION_STORE_ZK_DRIVER_PREFIX =
+      RBFConfigKeys.FEDERATION_STORE_PREFIX + "driver.zk.";
+  public static final String FEDERATION_STORE_ZK_PARENT_PATH =
+      FEDERATION_STORE_ZK_DRIVER_PREFIX + "parent-path";
+  public static final String FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT =
+      "/hdfs-federation";
+  public static final String FEDERATION_STORE_ZK_ASYNC_MAX_THREADS =
+      FEDERATION_STORE_ZK_DRIVER_PREFIX + "async.max.threads";
+  public static final int FEDERATION_STORE_ZK_ASYNC_MAX_THREADS_DEFAULT =
+      -1;
+
   // HDFS Router safe mode
   public static final String DFS_ROUTER_SAFEMODE_ENABLE =
       FEDERATION_ROUTER_PREFIX + "safemode.enable";

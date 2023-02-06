@@ -55,6 +55,7 @@ import org.apache.hadoop.test.MockitoUtil;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -62,13 +63,16 @@ import org.slf4j.event.Level;
 import javax.net.SocketFactory;
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InterruptedIOException;
+import java.io.OutputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
@@ -89,6 +93,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
@@ -990,6 +995,196 @@ public class TestRPC extends TestRpcBase {
       assertTrue("rpc got exception " + error.get(), error.get() == null);
     } finally {
       server.stop();
+    }
+  }
+
+  /**
+   * This tests the case where the server isn't receiving new data and
+   * multiple threads queue up to send rpc requests. Only one of the requests
+   * should be written and all of the calling threads should be interrupted.
+   *
+   * We use a mock SocketFactory so that we can control when the input and
+   * output streams are frozen.
+   */
+  @Test(timeout=30000)
+  public void testSlowConnection() throws Exception {
+    SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
+    Socket mockSocket = Mockito.mock(Socket.class);
+    Mockito.when(mockFactory.createSocket()).thenReturn(mockSocket);
+    Mockito.when(mockSocket.getPort()).thenReturn(1234);
+    Mockito.when(mockSocket.getLocalPort()).thenReturn(2345);
+    MockOutputStream mockOutputStream = new MockOutputStream();
+    Mockito.when(mockSocket.getOutputStream()).thenReturn(mockOutputStream);
+    // Use an input stream that always blocks
+    Mockito.when(mockSocket.getInputStream()).thenReturn(new InputStream() {
+      @Override
+      public int read() throws IOException {
+        // wait forever
+        while (true) {
+          try {
+            Thread.sleep(TimeUnit.DAYS.toMillis(1));
+          } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new InterruptedIOException("test");
+          }
+        }
+      }
+    });
+    Configuration clientConf = new Configuration();
+    // disable ping & timeout to minimize traffic
+    clientConf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY, false);
+    clientConf.setInt(CommonConfigurationKeys.IPC_CLIENT_RPC_TIMEOUT_KEY, 0);
+    RPC.setProtocolEngine(clientConf, TestRpcService.class, ProtobufRpcEngine.class);
+    // set async mode so that we don't need to implement the input stream
+    final boolean wasAsync = Client.isAsynchronousMode();
+    TestRpcService client = null;
+    try {
+      Client.setAsynchronousMode(true);
+      client = RPC.getProtocolProxy(
+          TestRpcService.class,
+          0,
+          new InetSocketAddress("localhost", 1234),
+          UserGroupInformation.getCurrentUser(),
+          clientConf,
+          mockFactory).getProxy();
+      // The connection isn't actually made until the first call.
+      client.ping(null, newEmptyRequest());
+      mockOutputStream.waitForFlush(1);
+      final long headerAndFirst = mockOutputStream.getBytesWritten();
+      client.ping(null, newEmptyRequest());
+      mockOutputStream.waitForFlush(2);
+      final long second = mockOutputStream.getBytesWritten() - headerAndFirst;
+      // pause the writer thread
+      mockOutputStream.pause();
+      // create a set of threads to create calls that will back up
+      ExecutorService pool = Executors.newCachedThreadPool();
+      Future[] futures = new Future[numThreads];
+      final AtomicInteger doneThreads = new AtomicInteger(0);
+      for(int thread = 0; thread < numThreads; ++thread) {
+        final TestRpcService finalClient = client;
+        futures[thread] = pool.submit(new Callable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            finalClient.ping(null, newEmptyRequest());
+            doneThreads.incrementAndGet();
+            return null;
+          }
+        });
+      }
+      // wait until the threads have started writing
+      mockOutputStream.waitForWriters();
+      // interrupt all the threads
+      for(int thread=0; thread < numThreads; ++thread) {
+        assertTrue("cancel thread " + thread,
+            futures[thread].cancel(true));
+      }
+      // wait until all the writers are cancelled
+      pool.shutdown();
+      pool.awaitTermination(10, TimeUnit.SECONDS);
+      mockOutputStream.resume();
+      // wait for the in flight rpc request to be flushed
+      mockOutputStream.waitForFlush(3);
+      // All the threads should have been interrupted
+      assertEquals(0, doneThreads.get());
+      // make sure that only one additional rpc request was sent
+      assertEquals(headerAndFirst + second * 2,
+          mockOutputStream.getBytesWritten());
+    } finally {
+      Client.setAsynchronousMode(wasAsync);
+      if (client != null) {
+        RPC.stopProxy(client);
+      }
+    }
+  }
+
+  private static final class MockOutputStream extends OutputStream {
+    private long bytesWritten = 0;
+    private AtomicInteger flushCount = new AtomicInteger(0);
+    private ReentrantLock lock = new ReentrantLock(true);
+
+    @Override
+    public synchronized void write(int b) throws IOException {
+      lock.lock();
+      bytesWritten += 1;
+      lock.unlock();
+    }
+
+    @Override
+    public void flush() {
+      flushCount.incrementAndGet();
+    }
+
+    public synchronized long getBytesWritten() {
+      return bytesWritten;
+    }
+
+    public void pause() {
+      lock.lock();
+    }
+
+    public void resume() {
+      lock.unlock();
+    }
+
+    private static final int DELAY_MS = 250;
+
+    /**
+     * Wait for the Nth flush, which we assume will happen exactly when the
+     * Nth RPC request is sent.
+     * @param flush the total flush count to wait for
+     * @throws InterruptedException
+     */
+    public void waitForFlush(int flush) throws InterruptedException {
+      while (flushCount.get() < flush) {
+        Thread.sleep(DELAY_MS);
+      }
+    }
+
+    public void waitForWriters() throws InterruptedException {
+      while (!lock.hasQueuedThreads()) {
+        Thread.sleep(DELAY_MS);
+      }
+    }
+  }
+
+  /**
+   * This test causes an exception in the RPC connection setup to make
+   * sure that threads aren't leaked.
+   */
+  @Test(timeout=30000)
+  public void testBadSetup() throws Exception {
+    SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
+    Mockito.when(mockFactory.createSocket())
+        .thenThrow(new IOException("can't connect"));
+    Configuration clientConf = new Configuration();
+    // Set an illegal value to cause an exception in the constructor
+    clientConf.set(CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH,
+        "xxx");
+    RPC.setProtocolEngine(clientConf, TestRpcService.class,
+        ProtobufRpcEngine.class);
+    TestRpcService client = null;
+    int threadCount = Thread.getAllStackTraces().size();
+    try {
+      try {
+        client = RPC.getProtocolProxy(
+            TestRpcService.class,
+            0,
+            new InetSocketAddress("localhost", 1234),
+            UserGroupInformation.getCurrentUser(),
+            clientConf,
+            mockFactory).getProxy();
+        client.ping(null, newEmptyRequest());
+        assertTrue("Didn't throw exception!", false);
+      } catch (ServiceException nfe) {
+        // ensure no extra threads are running.
+        assertEquals(threadCount, Thread.getAllStackTraces().size());
+      } catch (Throwable t) {
+        assertTrue("wrong exception: " + t, false);
+      }
+    } finally {
+      if (client != null) {
+        RPC.stopProxy(client);
+      }
     }
   }
 
