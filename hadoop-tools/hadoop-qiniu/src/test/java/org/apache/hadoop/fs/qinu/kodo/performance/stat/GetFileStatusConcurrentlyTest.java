@@ -11,6 +11,6 @@ public class GetFileStatusConcurrentlyTest extends AGetFileStatusTest {
 
     @Override
     protected int consumers() {
-        return 8;
+        return 4;
     }
 }

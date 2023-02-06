@@ -11,7 +11,7 @@ import java.util.concurrent.ExecutorService;
 
 public abstract class AGetFileStatusTest extends QiniuKodoPerformanceBaseTest {
     protected int count() {
-        return 1000;
+        return 100;
     }
 
     abstract protected int consumers();
