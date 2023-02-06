@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css"
+<svg xmlns="http://www.w3.org/2000/svg" contentStyleType="text/css"
      height="729px" preserveAspectRatio="none" style="width:1838px;height:729px;background:#FFFFFF;" version="1.1"
      viewBox="0 0 1838 729" width="1838px" zoomAndPan="magnify">
     <defs/>
@@ -35,9 +35,9 @@
             <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
                   textLength="149" x="10" y="392.5352">org.apache.hadoop.fs
             </text>
-        </g><!--class org.apache.hadoop.fs.qiniu.kodo.blockcache.LRUCache-->
-        <g id="elem_org.apache.hadoop.fs.qiniu.kodo.blockcache.LRUCache">
-            <rect codeLine="1" fill="#F1F1F1" height="97.4648" id="org.apache.hadoop.fs.qiniu.kodo.blockcache.LRUCache"
+        </g><!--class org.apache.hadoop.fs.qiniu.kodo.util.LRUCache-->
+        <g id="elem_org.apache.hadoop.fs.qiniu.kodo.util.LRUCache">
+            <rect codeLine="1" fill="#F1F1F1" height="97.4648" id="org.apache.hadoop.fs.qiniu.kodo.util.LRUCache"
                   rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="525" x="1289.5" y="189"/>
             <ellipse cx="1513.75" cy="205" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/>
             <path d="M1516.7231,210.6431 Q1516.1421,210.9419 1515.5029,211.0913 Q1514.8638,211.2407 1514.1582,211.2407 Q1511.6514,211.2407 1510.3315,209.5889 Q1509.0117,207.937 1509.0117,204.8159 Q1509.0117,201.6865 1510.3315,200.0347 Q1511.6514,198.3828 1514.1582,198.3828 Q1514.8638,198.3828 1515.5112,198.5322 Q1516.1587,198.6816 1516.7231,198.9805 L1516.7231,201.7031 Q1516.0923,201.1221 1515.4988,200.8523 Q1514.9053,200.5825 1514.2744,200.5825 Q1512.9297,200.5825 1512.2449,201.6492 Q1511.5601,202.7158 1511.5601,204.8159 Q1511.5601,206.9077 1512.2449,207.9744 Q1512.9297,209.041 1514.2744,209.041 Q1514.9053,209.041 1515.4988,208.7712 Q1516.0923,208.5015 1516.7231,207.9204 Z "
@@ -173,10 +173,10 @@
             <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="110" x="520"
                   y="303.9766">String toString()
             </text>
-        </g><!--class org.apache.hadoop.fs.qiniu.kodo.blockcache.OnLRUCacheRemoveListener-->
-        <g id="elem_org.apache.hadoop.fs.qiniu.kodo.blockcache.OnLRUCacheRemoveListener">
+        </g><!--class org.apache.hadoop.fs.qiniu.kodo.util.OnLRUCacheRemoveListener-->
+        <g id="elem_org.apache.hadoop.fs.qiniu.kodo.util.OnLRUCacheRemoveListener">
             <rect codeLine="44" fill="#F1F1F1" height="64.4883"
-                  id="org.apache.hadoop.fs.qiniu.kodo.blockcache.OnLRUCacheRemoveListener" rx="2.5" ry="2.5"
+                  id="org.apache.hadoop.fs.qiniu.kodo.util.OnLRUCacheRemoveListener" rx="2.5" ry="2.5"
                   style="stroke:#181818;stroke-width:0.5;" width="253" x="211.5" y="205.5"/>
             <ellipse cx="237.75" cy="221.5" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/>
             <path d="M233.6777,217.2651 L233.6777,215.1069 L241.0571,215.1069 L241.0571,217.2651 L238.5918,217.2651 L238.5918,225.3418 L241.0571,225.3418 L241.0571,227.5 L233.6777,227.5 L233.6777,225.3418 L236.1431,225.3418 L236.1431,217.2651 Z "
@@ -348,10 +348,10 @@
             </text>
             <line style="stroke:#181818;stroke-width:0.5;" x1="24" x2="154" y1="444" y2="444"/>
             <line style="stroke:#181818;stroke-width:0.5;" x1="24" x2="154" y1="452" y2="452"/>
-        </g><!--reverse link java.util.LinkedHashMap to org.apache.hadoop.fs.qiniu.kodo.blockcache.LRUCache-->
-        <g id="link_java.util.LinkedHashMap_org.apache.hadoop.fs.qiniu.kodo.blockcache.LRUCache">
+        </g><!--reverse link java.util.LinkedHashMap to org.apache.hadoop.fs.qiniu.kodo.util.LRUCache-->
+        <g id="link_java.util.LinkedHashMap_org.apache.hadoop.fs.qiniu.kodo.util.LRUCache">
             <path codeLine="60" d="M1552,110.66 C1552,134.63 1552,164.18 1552,188.62 " fill="none"
-                  id="java.util.LinkedHashMap-backto-org.apache.hadoop.fs.qiniu.kodo.blockcache.LRUCache"
+                  id="java.util.LinkedHashMap-backto-org.apache.hadoop.fs.qiniu.kodo.util.LRUCache"
                   style="stroke:#181818;stroke-width:1.0;"/>
             <polygon fill="none" points="1545,110.86,1552,90.86,1559,110.86,1545,110.86"
                      style="stroke:#181818;stroke-width:1.0;"/>
@@ -412,7 +412,7 @@
                   style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/>
             <polygon fill="none" points="820.02,283.07,840.83,279.1,827.04,295.18,820.02,283.07"
                      style="stroke:#181818;stroke-width:1.0;"/>
-        </g><!--reverse link org.apache.hadoop.fs.qiniu.kodo.blockcache.OnLRUCacheRemoveListener to org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader-->
+        </g><!--reverse link org.apache.hadoop.fs.qiniu.kodo.util.OnLRUCacheRemoveListener to org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader-->
         <g id="link_org.apache.hadoop.fs.qiniu.kodo.blockcache.OnLRUCacheRemoveListener_org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader">
             <path codeLine="68" d="M357.47,289.52 C367.9,316.85 380.78,350.58 391.5,378.68 " fill="none"
                   id="org.apache.hadoop.fs.qiniu.kodo.blockcache.OnLRUCacheRemoveListener-backto-org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader"

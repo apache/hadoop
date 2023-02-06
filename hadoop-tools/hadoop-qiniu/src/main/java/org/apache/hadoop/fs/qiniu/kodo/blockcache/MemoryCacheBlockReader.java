@@ -1,5 +1,7 @@
 package org.apache.hadoop.fs.qiniu.kodo.blockcache;
 
+import org.apache.hadoop.fs.qiniu.kodo.util.LRUCache;
+
 import java.io.IOException;
 
 public class MemoryCacheBlockReader implements IBlockReader, IBlockManager {

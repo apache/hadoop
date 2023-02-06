@@ -3,6 +3,8 @@ package org.apache.hadoop.fs.qiniu.kodo.blockcache;
 import com.google.gson.Gson;
 import org.apache.commons.io.FileDeleteStrategy;
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.qiniu.kodo.util.LRUCache;
+import org.apache.hadoop.fs.qiniu.kodo.util.OnLRUCacheRemoveListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

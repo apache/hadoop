@@ -1,4 +1,4 @@
-package org.apache.hadoop.fs.qiniu.kodo.blockcache;
+package org.apache.hadoop.fs.qiniu.kodo.util;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

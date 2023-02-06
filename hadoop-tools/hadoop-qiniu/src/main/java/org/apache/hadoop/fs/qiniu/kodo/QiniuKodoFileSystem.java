@@ -338,7 +338,7 @@ public class QiniuKodoFileSystem extends FileSystem {
      */
     @Override
     public boolean mkdirs(Path path, FsPermission permission) throws IOException {
-        // 如果创建该文件夹发现已存在，那么直接返回
+        // 如果创建该文件夹发现已存在，那么直接返回结果
         if (null != kodoClient.getFileStatus(
                 QiniuKodoUtils.keyToDirKey(
                         QiniuKodoUtils.pathToKey(workingDir, path)

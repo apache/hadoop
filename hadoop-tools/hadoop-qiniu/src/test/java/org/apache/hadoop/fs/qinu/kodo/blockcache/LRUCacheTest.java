@@ -3,7 +3,7 @@ package org.apache.hadoop.fs.qinu.kodo.blockcache;
 import com.google.gson.Gson;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.KeyBlockIdCacheKey;
-import org.apache.hadoop.fs.qiniu.kodo.blockcache.LRUCache;
+import org.apache.hadoop.fs.qiniu.kodo.util.LRUCache;
 import org.junit.Test;
 
 import java.nio.file.Path;
@@ -19,7 +19,7 @@ public class LRUCacheTest {
         cache.put(KeyBlockIdCacheKey.get("key4", 3), Paths.get("p3"));
         cache.put(KeyBlockIdCacheKey.get("key3", 4), Paths.get("p4"));
         System.out.println(cache);
-        for(Map.Entry<KeyBlockIdCacheKey, Path> e : cache.entrySet()) {
+        for (Map.Entry<KeyBlockIdCacheKey, Path> e : cache.entrySet()) {
             System.out.println(e);
         }
         Gson gson = new Gson();
