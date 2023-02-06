@@ -2,7 +2,7 @@ package org.apache.hadoop.fs.qiniu.kodo.upload;
 
 import com.qiniu.common.QiniuException;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoClient;
+import org.apache.hadoop.fs.qiniu.kodo.IQiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +26,7 @@ public class QiniuKodoOutputStream extends OutputStream {
 
     private final IBlockManager blockManager;
 
-    public QiniuKodoOutputStream(QiniuKodoClient client, String key, boolean overwrite, IBlockManager blockManager) {
+    public QiniuKodoOutputStream(IQiniuKodoClient client, String key, boolean overwrite, IBlockManager blockManager) {
         this.key = key;
         this.blockManager = blockManager;
         this.pos = new PipedOutputStream();

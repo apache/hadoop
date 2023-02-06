@@ -30,7 +30,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     private String username;
     private Path workingDir;
 
-    private QiniuKodoClient kodoClient;
+    private IQiniuKodoClient kodoClient;
 
     private QiniuKodoFsConfig fsConfig;
     private QiniuKodoBlockReader blockReader;
@@ -77,6 +77,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     public FSDataInputStream open(Path path, int bufferSize) throws IOException {
         IOException fnfeDir = new FileNotFoundException("Can't open " + path +
                 " because it is a directory");
+
         LOG.debug("open, path:" + path);
 
         Path qualifiedPath = path.makeQualified(uri, workingDir);
@@ -85,24 +86,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         // root
         if (key.length() == 0) throw fnfeDir;
 
-        int len;
-        try {
-            len = kodoClient.getLength(key);
-        } catch (FileNotFoundException e1) {
-            // 有可能是文件夹路径但是不存在末尾/
-            // 添加尾部/后再次获取
-            String newKey = QiniuKodoUtils.keyToDirKey(key);
-            if (newKey.equals(key)) {
-                throw new FileNotFoundException(path.toString());
-            }
-            try {
-                kodoClient.getLength(newKey);
-                throw fnfeDir;
-            } catch (IOException e2) {
-                // 还是有异常，说明文件不存在
-                throw new FileNotFoundException(path.toString());
-            }
-        }
+        long len = kodoClient.getLength(key);
         // 空文件内容
         if (len == 0) {
             return new FSDataInputStream(new EmptyInputStream());
@@ -344,7 +328,7 @@ public class QiniuKodoFileSystem extends FileSystem {
                         QiniuKodoUtils.pathToKey(workingDir, path)
                 )
         )) {
-            return false;
+            return true;
         }
         Stack<Path> stack = new Stack<>();
         while (path != null) {
@@ -363,26 +347,32 @@ public class QiniuKodoFileSystem extends FileSystem {
      * 仅仅只创建当前路径文件夹
      */
     private boolean mkdir(Path path) throws IOException {
-        if (path.isRoot()) return true;
         LOG.debug("== mkdir, path:" + path);
 
+        // 根目录
+        if (path.isRoot()) {
+            return true;
+        }
+
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
+        String dirKey = QiniuKodoUtils.keyToDirKey(key);
+        String fileKey = QiniuKodoUtils.keyToFileKey(key);
 
         // 列举第一条
         FileInfo file = kodoClient.listOneStatus(key);
 
-        // 找不到则创建路径
+        // 找不到则创建文件夹
         if (file == null) {
-            return kodoClient.makeEmptyObject(key);
+            return kodoClient.makeEmptyObject(dirKey);
         }
 
         // 找到了，是已存在的文件夹
-        if (QiniuKodoUtils.keyToDirKey(key).equals(file.key)) {
-            return false;
+        if (dirKey.equals(file.key)) {
+            return true;
         }
 
         // 找到了，但是是已存在的文件
-        if (QiniuKodoUtils.keyToFileKey(key).equals(file.key)) {
+        if (fileKey.equals(file.key)) {
             throw new FileAlreadyExistsException(path.toString());
         }
 
@@ -400,6 +390,8 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         Path qualifiedPath = path.makeQualified(uri, workingDir);
         String key = QiniuKodoUtils.pathToKey(workingDir, qualifiedPath);
+
+
         // Root always exists
         if (key.length() == 0) {
             return new FileStatus(0, true, 1, 0, 0, 0, null, username, username, qualifiedPath);

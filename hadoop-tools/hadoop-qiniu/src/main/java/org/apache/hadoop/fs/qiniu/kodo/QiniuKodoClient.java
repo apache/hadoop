@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class QiniuKodoClient {
+public class QiniuKodoClient implements IQiniuKodoClient {
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoClient.class);
 
     // 仅有一个 bucket
@@ -133,6 +133,7 @@ public class QiniuKodoClient {
     /**
      * 给定一个输入流将读取并上传对应文件
      */
+    @Override
     public Response upload(InputStream stream, String key, boolean overwrite) throws QiniuException {
         return uploadManager.put(stream, key, getUploadToken(key, overwrite), null, null);
     }
@@ -141,7 +142,8 @@ public class QiniuKodoClient {
     /**
      * 通过HEAD来获取指定的key大小
      */
-    public int getLength(String key) throws IOException {
+    @Override
+    public long getLength(String key) throws IOException {
         Request.Builder requestBuilder = new Request.Builder().url(getFileUrlByKey(key)).head();
 
         try {
@@ -163,6 +165,7 @@ public class QiniuKodoClient {
     /**
      * 根据指定的key和文件大小获取一个输入流
      */
+    @Override
     public InputStream fetch(String key, long offset, int size) throws IOException {
         try {
             StringMap header = new StringMap();
@@ -182,6 +185,7 @@ public class QiniuKodoClient {
     /**
      * 获取一个指定前缀的对象
      */
+    @Override
     public FileInfo listOneStatus(String keyPrefix) throws IOException {
         FileListing list = bucketManager.listFilesV2(bucket, keyPrefix, null, 1, "");
         if (list.items.length == 0) {
@@ -195,6 +199,7 @@ public class QiniuKodoClient {
      * 若 withDelimiter 为 true, 则列举出分级的目录效果
      * 否则，将呈现出所有前缀为key的对象
      */
+    @Override
     public List<FileInfo> listStatus(String key, boolean useDirectory) throws IOException {
         List<FileInfo> retFiles = new ArrayList<>();
 
@@ -237,6 +242,7 @@ public class QiniuKodoClient {
     /**
      * 复制对象
      */
+    @Override
     public boolean copyKey(String oldKey, String newKey) throws IOException {
         Response response = bucketManager.copy(bucket, oldKey, bucket, newKey);
         return response.isOK();
@@ -245,6 +251,7 @@ public class QiniuKodoClient {
     /**
      * 批量复制对象
      */
+    @Override
     public boolean copyKeys(String oldPrefix, String newPrefix) throws IOException {
         FileListing fileListing;
 
@@ -279,6 +286,7 @@ public class QiniuKodoClient {
     /**
      * 重命名指定 key 的对象
      */
+    @Override
     public boolean renameKey(String oldKey, String newKey) throws IOException {
         if (Objects.equals(oldKey, newKey)) {
             return true;
@@ -293,6 +301,7 @@ public class QiniuKodoClient {
     /**
      * 批量重命名 key 为指定前缀的对象
      */
+    @Override
     public boolean renameKeys(String oldPrefix, String newPrefix) throws IOException {
         boolean hasPrefixObject = false;
 
@@ -347,6 +356,7 @@ public class QiniuKodoClient {
     /**
      * 仅删除一层 key
      */
+    @Override
     public boolean deleteKey(String key) throws IOException {
         Response response = bucketManager.delete(bucket, key);
         if (statistics != null) {
@@ -358,6 +368,7 @@ public class QiniuKodoClient {
     /**
      * 删除该前缀的所有文件夹
      */
+    @Override
     public boolean deleteKeys(String prefix, boolean recursive) throws IOException {
         boolean hasPrefixObject = false;
 
@@ -425,6 +436,7 @@ public class QiniuKodoClient {
      * 使用对象存储模拟文件系统，文件夹只是作为一个空白文件，仅用于表示文件夹的存在性与元数据的存储
      * 该 makeEmptyObject 仅创建一层空文件
      */
+
     public boolean makeEmptyObject(String key, boolean overwrite) throws IOException {
         byte[] content = new byte[]{};
         StringMap policy = new StringMap();
@@ -434,6 +446,7 @@ public class QiniuKodoClient {
         return response.isOK();
     }
 
+    @Override
     public boolean makeEmptyObject(String key) throws IOException {
         return this.makeEmptyObject(key, false);
     }
@@ -441,6 +454,7 @@ public class QiniuKodoClient {
     /**
      * 不存在不抛异常，返回为空，只有在其他错误时抛异常
      */
+    @Override
     public FileInfo getFileStatus(String key) throws IOException {
         try {
             FileInfo fileInfo = bucketManager.stat(bucket, key);

@@ -1,6 +1,6 @@
 package org.apache.hadoop.fs.qiniu.kodo.download;
 
-import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoClient;
+import org.apache.hadoop.fs.qiniu.kodo.IQiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockManager;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader;
@@ -22,7 +22,7 @@ public class QiniuKodoBlockReader implements IBlockReader, IBlockManager {
 
     public QiniuKodoBlockReader(
             QiniuKodoFsConfig fsConfig,
-            QiniuKodoClient client
+            IQiniuKodoClient client
     ) throws IOException {
         int blockSize = fsConfig.download.blockSize;
         DiskCacheConfig diskCache = fsConfig.download.cache.disk;
