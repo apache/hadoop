@@ -334,10 +334,18 @@ public class QiniuKodoFileSystem extends FileSystem {
     }
 
     /**
-     * 线程安全的递归地创建文件夹
+     * 递归地创建文件夹
      */
     @Override
-    public synchronized boolean mkdirs(Path path, FsPermission permission) throws IOException {
+    public boolean mkdirs(Path path, FsPermission permission) throws IOException {
+        // 如果创建该文件夹发现已存在，那么直接返回
+        if (null != kodoClient.getFileStatus(
+                QiniuKodoUtils.keyToDirKey(
+                        QiniuKodoUtils.pathToKey(workingDir, path)
+                )
+        )) {
+            return false;
+        }
         Stack<Path> stack = new Stack<>();
         while (path != null) {
             LOG.debug("== mkdirs, path:" + path);
@@ -359,26 +367,27 @@ public class QiniuKodoFileSystem extends FileSystem {
         LOG.debug("== mkdir, path:" + path);
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        LOG.debug("== mkdir 01, key:" + key);
 
-        // 1. 检查是否存在同名文件
-        key = QiniuKodoUtils.keyToFileKey(key);
-        LOG.debug("== mkdir file, key:" + key);
+        // 列举第一条
+        FileInfo file = kodoClient.listOneStatus(key);
 
-        FileInfo file = kodoClient.getFileStatus(key);
-        if (file != null) throw new FileAlreadyExistsException(path.toString());
+        // 找不到则创建路径
+        if (file == null) {
+            return kodoClient.makeEmptyObject(key);
+        }
 
-        // 2. 检查是否存在同名路径
-        key = QiniuKodoUtils.keyToDirKey(key);
-        LOG.debug("== mkdir dir, key:" + key);
-
-        file = kodoClient.getFileStatus(key);
-        if (file != null) {
+        // 找到了，是已存在的文件夹
+        if (QiniuKodoUtils.keyToDirKey(key).equals(file.key)) {
             return false;
         }
 
-        // 3. 创建路径
-        return kodoClient.makeEmptyObject(key);
+        // 找到了，但是是已存在的文件
+        if (QiniuKodoUtils.keyToFileKey(key).equals(file.key)) {
+            throw new FileAlreadyExistsException(path.toString());
+        }
+
+        // TODO 是属于一个前缀，属于文件系统不一致的情景，需要修复依次创建出其各级父目录
+        throw new UnsupportedFileSystemException("unimplementation");
     }
 
 
