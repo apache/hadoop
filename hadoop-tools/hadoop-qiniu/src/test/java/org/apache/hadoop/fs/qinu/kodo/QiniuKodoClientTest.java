@@ -2,7 +2,7 @@ package org.apache.hadoop.fs.qinu.kodo;
 
 import com.qiniu.common.QiniuException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoClient;
+import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.junit.Before;
@@ -14,6 +14,7 @@ import java.net.URI;
 
 public class QiniuKodoClientTest {
     QiniuKodoClient client;
+
     @Before
     public void setup() throws AuthorizationException, QiniuException {
         Configuration conf = new Configuration();
@@ -31,7 +32,7 @@ public class QiniuKodoClientTest {
 
     @Test
     public void testListStatus() throws IOException {
-        client.listStatus("", false).forEach((e)->{
+        client.listStatus("", false).forEach((e) -> {
             System.out.println(e.key);
         });
     }
@@ -48,10 +49,10 @@ public class QiniuKodoClientTest {
 
     @Test
     public void testFetch() throws IOException {
-        int blockSize = 4*1024*1024;
+        int blockSize = 4 * 1024 * 1024;
         byte[] buf = new byte[blockSize];
-        for (int i=0;;i++) {
-            InputStream is = client.fetch("vscode2.zip", (long) blockSize *i, blockSize);
+        for (int i = 0; ; i++) {
+            InputStream is = client.fetch("vscode2.zip", (long) blockSize * i, blockSize);
             int total = 0;
             int sz = 0;
             while ((sz = is.read(buf)) != -1) {

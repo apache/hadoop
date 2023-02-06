@@ -1,4 +1,4 @@
-package org.apache.hadoop.fs.qiniu.kodo;
+package org.apache.hadoop.fs.qiniu.kodo.client;
 
 
 import com.qiniu.common.QiniuException;
@@ -12,6 +12,7 @@ import com.qiniu.util.StringMap;
 import com.qiniu.util.StringUtils;
 import okhttp3.Request;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoUtils;
 import org.apache.hadoop.fs.qiniu.kodo.config.MissingConfigFieldException;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.region.QiniuKodoPublicRegions;
@@ -187,7 +188,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      */
     @Override
     public FileInfo listOneStatus(String keyPrefix) throws IOException {
-        FileListing list = bucketManager.listFilesV2(bucket, keyPrefix, null, 1, "");
+        FileListing list = bucketManager.listFiles(bucket, keyPrefix, null, 1, "");
         if (list.items.length == 0) {
             return null;
         } else {
@@ -201,15 +202,13 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      */
     @Override
     public List<FileInfo> listStatus(String key, boolean useDirectory) throws IOException {
+        LOG.info("key: {}, useDirectory: {}", key, useDirectory);
         List<FileInfo> retFiles = new ArrayList<>();
 
         String marker = null;
         FileListing fileListing;
         do {
-            long ms = System.currentTimeMillis();
             fileListing = bucketManager.listFiles(bucket, key, marker, 1000, useDirectory ? QiniuKodoUtils.PATH_SEPARATOR : "");
-
-            LOG.info("time: {}", System.currentTimeMillis() - ms);
 
             if (statistics != null) {
                 statistics.incrementReadOps(1);
@@ -259,7 +258,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         String marker = null;
 
         do {
-            fileListing = bucketManager.listFilesV2(bucket, oldPrefix, marker, 100, "");
+            fileListing = bucketManager.listFiles(bucket, oldPrefix, marker, 100, "");
             if (fileListing.items != null) {
                 BucketManager.BatchOperations operations = null;
                 for (FileInfo file : fileListing.items) {
@@ -311,7 +310,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         String marker = null;
 
         do {
-            fileListing = bucketManager.listFilesV2(bucket, oldPrefix, marker, 100, "");
+            fileListing = bucketManager.listFiles(bucket, oldPrefix, marker, 100, "");
             if (statistics != null) {
                 statistics.incrementReadOps(1);
             }
@@ -378,7 +377,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         String marker = null;
 
         do {
-            fileListing = bucketManager.listFilesV2(bucket, prefix, marker, 100, "");
+            fileListing = bucketManager.listFiles(bucket, prefix, marker, 100, "");
             for (FileInfo file : fileListing.items) {
                 // 略过自身
                 if (file.key.equals(prefix)) {

@@ -4,6 +4,9 @@ import com.qiniu.storage.model.FileInfo;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
+import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoCachedClient;
+import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.download.EmptyInputStream;
 import org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoBlockReader;
@@ -58,6 +61,9 @@ public class QiniuKodoFileSystem extends FileSystem {
         LOG.debug("== workingDir:" + workingDir);
 
         kodoClient = new QiniuKodoClient(bucket, fsConfig, statistics);
+        if (fsConfig.client.cache.enable) {
+            kodoClient = new QiniuKodoCachedClient(kodoClient);
+        }
 
         // 工作目录为相对路径使用的目录，其必须得存在，故需要预创建
         mkdirs(workingDir);
@@ -322,7 +328,7 @@ public class QiniuKodoFileSystem extends FileSystem {
      */
     @Override
     public boolean mkdirs(Path path, FsPermission permission) throws IOException {
-        // 如果创建该文件夹发现已存在，那么直接返回结果
+        // 如果该文件夹发现已存在，那么直接返回结果
         if (null != kodoClient.getFileStatus(
                 QiniuKodoUtils.keyToDirKey(
                         QiniuKodoUtils.pathToKey(workingDir, path)

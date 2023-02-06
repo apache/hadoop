@@ -1,4 +1,4 @@
-package org.apache.hadoop.fs.qiniu.kodo;
+package org.apache.hadoop.fs.qiniu.kodo.client;
 
 import com.qiniu.common.QiniuException;
 import com.qiniu.http.Response;

@@ -1,8 +1,9 @@
-package org.apache.hadoop.fs.qiniu.kodo;
+package org.apache.hadoop.fs.qiniu.kodo.client;
 
 import com.qiniu.common.QiniuException;
 import com.qiniu.http.Response;
 import com.qiniu.storage.model.FileInfo;
+import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoUtils;
 import org.apache.hadoop.fs.qiniu.kodo.util.LRUCache;
 
 import java.io.IOException;

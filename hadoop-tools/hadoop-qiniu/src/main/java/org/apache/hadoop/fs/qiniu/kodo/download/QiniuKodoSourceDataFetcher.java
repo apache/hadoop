@@ -1,8 +1,8 @@
 package org.apache.hadoop.fs.qiniu.kodo.download;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.fs.qiniu.kodo.IQiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.DataFetcherBlockReader;
+import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
 
 import java.io.IOException;
 import java.io.InputStream;
