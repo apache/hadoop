@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.Fai
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
+
 /**
  * Converts a Fair Schedule queue hierarchy to Capacity Scheduler
  * configuration.
@@ -139,7 +141,7 @@ public class FSQueueConverter {
   private void emitMaxParallelApps(String queueName, FSQueue queue) {
     if (queue.getMaxRunningApps() != MAX_RUNNING_APPS_UNSET
         && queue.getMaxRunningApps() != queueMaxAppsDefault) {
-      capacitySchedulerConfig.setQueueMaxParallelApplications(queueName,
+      capacitySchedulerConfig.setMaxParallelAppsForQueue(queueName,
           String.valueOf(queue.getMaxRunningApps()));
     }
   }
@@ -226,8 +228,8 @@ public class FSQueueConverter {
    */
   private void emitSizeBasedWeight(String queueName) {
     if (sizeBasedWeight) {
-      capacitySchedulerConfig.setOrderingPolicy(
-          queueName, "fair", "enable-size-based-weight", true);
+      capacitySchedulerConfig.setBoolean(PREFIX + queueName +
+          ".ordering-policy.fair.enable-size-based-weight", true);
     }
   }
 

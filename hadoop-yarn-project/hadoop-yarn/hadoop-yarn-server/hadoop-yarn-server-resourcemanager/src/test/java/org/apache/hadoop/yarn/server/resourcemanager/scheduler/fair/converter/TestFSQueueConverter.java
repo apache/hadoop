@@ -484,8 +484,7 @@ public class TestFSQueueConverter {
     for (String queue : ALL_QUEUES) {
       key = PREFIX + queue + ".ordering-policy.fair.enable-size-based-weight";
       assertTrue("Key " + key + " has different value",
-           capacitySchedulerConfig
-                .getOrderingPolicy(queue, "fair", "enable-size-based-weight"));
+          capacitySchedulerConfig.getBoolean(key, false));
     }
   }
 
@@ -497,9 +496,8 @@ public class TestFSQueueConverter {
 
     for (String queue : ALL_QUEUES) {
       key = PREFIX + queue + ".ordering-policy.fair.enable-size-based-weight";
-      assertEquals("Key " + key + " has different value", false,
-           capacitySchedulerConfig
-                .getOrderingPolicy(queue, "fair", "enable-size-based-weight"));
+      assertNull("Key " + key + " has different value",
+          capacitySchedulerConfig.get(key));
     }
   }
 

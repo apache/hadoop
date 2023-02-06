@@ -278,7 +278,7 @@ public class TestFSConfigToCSConfigConverter {
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
 
     assertEquals("Default max parallel apps", 15,
-        conf.getMaxParallelAppsForQueue(), 0);
+        conf.getDefaultMaxParallelAppsPerQueue(), 0);
   }
 
   @Test
@@ -298,7 +298,7 @@ public class TestFSConfigToCSConfigConverter {
     CapacitySchedulerConfiguration conf = converter.getCapacitySchedulerConfig();
 
     assertEquals("Default user max parallel apps", 10,
-        conf.getMaxParallelAppsForUser(), 0);
+        conf.getDefaultMaxParallelAppsPerUser(), 0);
   }
 
   @Test
@@ -718,7 +718,7 @@ public class TestFSConfigToCSConfigConverter {
     converter.convert(params);
     assertTrue("The observe only should be true",
         converter.getCapacitySchedulerConfig().
-            getDisablePreemptionForObserveOnly());
+            getPreemptionObserveOnly());
   }
 
   private boolean testConversionWithAsyncSchedulingOption(boolean enabled) throws Exception {

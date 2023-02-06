@@ -495,8 +495,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return maxApplications;
   }
 
+  public void setMaximumApplicationMasterResourcePercent(float percent) {
+    setFloat(PREFIX + MAXIMUM_AM_RESOURCE_SUFFIX, percent);
+  }
+
   public float getMaximumApplicationMasterResourcePercent() {
-    return getFloat(MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
+    return getFloat(PREFIX + MAXIMUM_AM_RESOURCE_SUFFIX,
         DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT);
   }
 
@@ -534,10 +538,6 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public void setMaximumApplicationMasterResourcePerQueuePercent(String queue,
       float percent) {
     setFloat(getQueuePrefix(queue) + MAXIMUM_AM_RESOURCE_SUFFIX, percent);
-  }
-
-  public void setMaximumApplicationMasterResourcePercent(float percent) {
-    setFloat(PREFIX + MAXIMUM_AM_RESOURCE_SUFFIX, percent);
   }
 
   private void throwExceptionForUnexpectedWeight(float weight, String queue,
@@ -725,17 +725,6 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
     orderingPolicy.configure(config);
     return orderingPolicy;
-  }
-
-  public void setOrderingPolicy(String queue,
-                 String appOrderingPolicy, String postfix, boolean value) {
-    setBoolean(getQueuePrefix(queue) +
-        "ordering-policy" + DOT + appOrderingPolicy + DOT + postfix, value);
-  }
-
-  public boolean getOrderingPolicy(String queue, String appOrderingPolicy, String postfix) {
-    return getBoolean(getQueuePrefix(queue) +
-        "ordering-policy" + DOT + appOrderingPolicy + DOT + postfix, false);
   }
 
   public void setUserLimit(String queue, float userLimit) {
@@ -1220,12 +1209,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public void setQueueMaximumAllocationMb(String queue, String value) {
     String queuePrefix = getQueuePrefix(queue);
-    set(queuePrefix + "maximum-allocation-mb", value);
+    set(queuePrefix + MAXIMUM_ALLOCATION_MB, value);
   }
 
   public void setQueueMaximumAllocationVcores(String queue, String value) {
     String queuePrefix = getQueuePrefix(queue);
-    set(queuePrefix + "maximum-allocation-vcores", value);
+    set(queuePrefix + MAXIMUM_ALLOCATION_VCORES, value);
   }
 
   public long getQueueMaximumAllocationMb(String queue) {
@@ -1726,11 +1715,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
             + QUEUE_PREEMPTION_DISABLED, defaultVal);
   }
 
-  public void setDisablePreemptionForPreemtionModes(String preemptionType, boolean value) {
-    setBoolean(PREEMPTION_CONFIG_PREFIX + preemptionType, value);
+  public void setPreemptionObserveOnly(boolean value) {
+    setBoolean(PREEMPTION_OBSERVE_ONLY, value);
   }
 
-  public boolean getDisablePreemptionForObserveOnly() {
+  public boolean getPreemptionObserveOnly() {
     return getBoolean(PREEMPTION_OBSERVE_ONLY, DEFAULT_PREEMPTION_OBSERVE_ONLY);
   }
 
@@ -1835,34 +1824,26 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return conf.getBoolean(APP_FAIL_FAST, DEFAULT_APP_FAIL_FAST);
   }
 
-  public void setQueueMaxParallelApplications(String value) {
+  public void setDefaultMaxParallelAppsPerQueue(String value) {
     set(PREFIX + MAX_PARALLEL_APPLICATIONS, value);
   }
 
-  public void setQueueMaxParallelApplications(String queue, String value) {
-    set(getQueuePrefix(queue) + MAX_PARALLEL_APPLICATIONS, value);
+  public Integer getDefaultMaxParallelAppsPerQueue() {
+    return getInt(PREFIX + MAX_PARALLEL_APPLICATIONS,
+        DEFAULT_MAX_PARALLEL_APPLICATIONS);
   }
 
-  public void setUserMaxParallelApplications(String value) {
+  public void setDefaultMaxParallelAppsPerUser(String value) {
     set(PREFIX + "user." + MAX_PARALLEL_APPLICATIONS, value);
   }
 
-  public void setUserMaxParallelApplications(String user, int value) {
-    setInt(getUserPrefix(user) + MAX_PARALLEL_APPLICATIONS, value);
-  }
-
-  public Integer getMaxParallelAppsForQueue(String queue) {
-    String maxParallelAppsForQueue = get(getQueuePrefix(queue)
-        + MAX_PARALLEL_APPLICATIONS);
-
-    return (maxParallelAppsForQueue != null) ?
-        Integer.parseInt(maxParallelAppsForQueue)
-        : getMaxParallelAppsForQueue();
-  }
-
-  public Integer getMaxParallelAppsForQueue() {
-    return getInt(PREFIX + MAX_PARALLEL_APPLICATIONS,
+  public Integer getDefaultMaxParallelAppsPerUser() {
+    return getInt(PREFIX + "user." + MAX_PARALLEL_APPLICATIONS,
         DEFAULT_MAX_PARALLEL_APPLICATIONS);
+  }
+
+  public void setMaxParallelAppsForUser(String user, int value) {
+    setInt(getUserPrefix(user) + MAX_PARALLEL_APPLICATIONS, value);
   }
 
   public Integer getMaxParallelAppsForUser(String user) {
@@ -1871,12 +1852,20 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
     return (maxParallelAppsForUser != null) ?
         Integer.parseInt(maxParallelAppsForUser)
-        : getMaxParallelAppsForUser();
+        : getDefaultMaxParallelAppsPerUser();
   }
 
-  public Integer getMaxParallelAppsForUser() {
-    return getInt(PREFIX + "user." + MAX_PARALLEL_APPLICATIONS,
-        DEFAULT_MAX_PARALLEL_APPLICATIONS);
+  public void setMaxParallelAppsForQueue(String queue, String value) {
+    set(getQueuePrefix(queue) + MAX_PARALLEL_APPLICATIONS, value);
+  }
+
+  public Integer getMaxParallelAppsForQueue(String queue) {
+    String maxParallelAppsForQueue = get(getQueuePrefix(queue)
+        + MAX_PARALLEL_APPLICATIONS);
+
+    return (maxParallelAppsForQueue != null) ?
+        Integer.parseInt(maxParallelAppsForQueue)
+        : getDefaultMaxParallelAppsPerQueue();
   }
 
   public boolean getAllowZeroCapacitySum(String queue) {

@@ -376,14 +376,14 @@ public class FSConfigToCSConfigConverter {
 
   private void emitDefaultQueueMaxParallelApplications() {
     if (queueMaxAppsDefault != Integer.MAX_VALUE) {
-      capacitySchedulerConfig.setQueueMaxParallelApplications(
+      capacitySchedulerConfig.setDefaultMaxParallelAppsPerQueue(
           String.valueOf(queueMaxAppsDefault));
     }
   }
 
   private void emitDefaultUserMaxParallelApplications() {
     if (userMaxAppsDefault != Integer.MAX_VALUE) {
-      capacitySchedulerConfig.setUserMaxParallelApplications(
+      capacitySchedulerConfig.setDefaultMaxParallelAppsPerUser(
           String.valueOf(userMaxAppsDefault));
     }
   }
@@ -391,7 +391,7 @@ public class FSConfigToCSConfigConverter {
   private void emitUserMaxParallelApplications() {
     userMaxApps
         .forEach((user, apps) -> {
-          capacitySchedulerConfig.setUserMaxParallelApplications(user, apps);
+          capacitySchedulerConfig.setMaxParallelAppsForUser(user, apps);
         });
   }
 
@@ -408,7 +408,7 @@ public class FSConfigToCSConfigConverter {
     if (preemptionMode == FSConfigToCSConfigConverterParams
             .PreemptionMode.OBSERVE_ONLY) {
       capacitySchedulerConfig.
-          setDisablePreemptionForPreemtionModes("observe_only", true);
+          setPreemptionObserveOnly(true);
     }
   }
 
