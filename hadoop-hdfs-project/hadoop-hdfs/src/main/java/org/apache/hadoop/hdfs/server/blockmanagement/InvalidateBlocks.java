@@ -61,7 +61,7 @@ class InvalidateBlocks {
    * The period of pending time for block invalidation since the NameNode
    * startup
    */
-  private final long pendingPeriodInMs;
+  private long pendingPeriodInMs;
   /** the startup time */
   private final long startupTime = Time.monotonicNow();
 
@@ -250,6 +250,16 @@ class InvalidateBlocks {
   @VisibleForTesting
   long getInvalidationDelay() {
     return pendingPeriodInMs - (Time.monotonicNow() - startupTime);
+  }
+
+  @VisibleForTesting
+  public void setPendingPeriodInMs(long newVal) {
+    this.pendingPeriodInMs = newVal;
+  }
+
+  @VisibleForTesting
+  public long getPendingPeriodInMs() {
+    return this.pendingPeriodInMs;
   }
 
   /**
