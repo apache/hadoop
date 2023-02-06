@@ -1385,7 +1385,8 @@ public class TestFileUtil {
     for (Path jar: jars) {
       URL url = jar.toUri().toURL();
       assertTrue("the jar should match either of the jars",
-          url.equals(jar1.getCanonicalFile().toURI().toURL()) || url.equals(jar2.getCanonicalFile().toURI().toURL()));
+          url.equals(jar1.getCanonicalFile().toURI().toURL()) ||
+          url.equals(jar2.getCanonicalFile().toURI().toURL()));
     }
   }
 
