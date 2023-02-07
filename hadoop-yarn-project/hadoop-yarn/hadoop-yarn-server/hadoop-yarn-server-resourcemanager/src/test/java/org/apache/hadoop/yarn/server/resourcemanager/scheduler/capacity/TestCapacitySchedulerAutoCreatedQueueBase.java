@@ -96,8 +96,6 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.CapacitySchedulerConfiguration.FAIR_APP_ORDERING_POLICY;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .capacity.CapacitySchedulerConfiguration.ROOT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -111,40 +109,43 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   public static final ContainerUpdates NULL_UPDATE_REQUESTS =
       new ContainerUpdates();
 
-  public static final String A = CapacitySchedulerConfiguration.ROOT + ".a";
-  public static final String B = CapacitySchedulerConfiguration.ROOT + ".b";
-  public static final String C = CapacitySchedulerConfiguration.ROOT + ".c";
-  public static final String D = CapacitySchedulerConfiguration.ROOT + ".d";
-  public static final String E = CapacitySchedulerConfiguration.ROOT + ".e";
+  public static final String DEFAULT_PATH = CapacitySchedulerConfiguration.ROOT + ".default";
+  public static final String A_PATH = CapacitySchedulerConfiguration.ROOT + ".a";
+  public static final String B_PATH = CapacitySchedulerConfiguration.ROOT + ".b";
+  public static final String C_PATH = CapacitySchedulerConfiguration.ROOT + ".c";
+  public static final String D_PATH = CapacitySchedulerConfiguration.ROOT + ".d";
+  public static final String E_PATH = CapacitySchedulerConfiguration.ROOT + ".e";
 
-  public static final QueuePath A_QUEUE_PATH = new QueuePath(A);
-  public static final QueuePath B_QUEUE_PATH = new QueuePath(B);
-  public static final QueuePath C_QUEUE_PATH = new QueuePath(C);
-  public static final QueuePath D_QUEUE_PATH = new QueuePath(D);
-  public static final QueuePath E_QUEUE_PATH = new QueuePath(E);
-  public static final String ESUBGROUP1 =
+  public static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  public static final QueuePath DEFAULT = new QueuePath(DEFAULT_PATH);
+  public static final QueuePath A = new QueuePath(A_PATH);
+  public static final QueuePath B = new QueuePath(B_PATH);
+  public static final QueuePath C = new QueuePath(C_PATH);
+  public static final QueuePath D = new QueuePath(D_PATH);
+  public static final QueuePath E = new QueuePath(E_PATH);
+  public static final String ESUBGROUP1_PATH =
       CapacitySchedulerConfiguration.ROOT + ".esubgroup1";
-  public static final String FGROUP =
+  public static final String FGROUP_PATH =
       CapacitySchedulerConfiguration.ROOT + ".fgroup";
-  public static final String A1 = A + ".a1";
-  public static final String A2 = A + ".a2";
-  public static final String B1 = B + ".b1";
-  public static final String B2 = B + ".b2";
-  public static final String B3 = B + ".b3";
-  public static final String B4 = B + ".b4subgroup1";
-  public static final String ESUBGROUP1_A = ESUBGROUP1 + ".e";
-  public static final String FGROUP_F = FGROUP + ".f";
+  public static final String A1_PATH = A_PATH + ".a1";
+  public static final String A2_PATH = A_PATH + ".a2";
+  public static final String B1_PATH = B_PATH + ".b1";
+  public static final String B2_PATH = B_PATH + ".b2";
+  public static final String B3_PATH = B_PATH + ".b3";
+  public static final String B4_PATH = B_PATH + ".b4subgroup1";
+  public static final String ESUBGROUP1_A_PATH = ESUBGROUP1_PATH + ".e";
+  public static final String FGROUP_F_PATH = FGROUP_PATH + ".f";
 
-  public static final QueuePath A1_QUEUE_PATH = new QueuePath(A1);
-  public static final QueuePath A2_QUEUE_PATH = new QueuePath(A2);
-  public static final QueuePath B1_QUEUE_PATH = new QueuePath(B1);
-  public static final QueuePath B2_QUEUE_PATH = new QueuePath(B2);
-  public static final QueuePath B3_QUEUE_PATH = new QueuePath(B3);
-  public static final QueuePath B4_QUEUE_PATH = new QueuePath(B4);
-  public static final QueuePath E_GROUP_QUEUE_PATH = new QueuePath(ESUBGROUP1);
-  public static final QueuePath F_GROUP_QUEUE_PATH = new QueuePath(FGROUP);
-  public static final QueuePath E_SG_QUEUE_PATH = new QueuePath(ESUBGROUP1_A);
-  public static final QueuePath F_SG_QUEUE_PATH = new QueuePath(FGROUP_F);
+  public static final QueuePath A1 = new QueuePath(A1_PATH);
+  public static final QueuePath A2 = new QueuePath(A2_PATH);
+  public static final QueuePath B1 = new QueuePath(B1_PATH);
+  public static final QueuePath B2 = new QueuePath(B2_PATH);
+  public static final QueuePath B3 = new QueuePath(B3_PATH);
+  public static final QueuePath B4 = new QueuePath(B4_PATH);
+  public static final QueuePath E_GROUP = new QueuePath(ESUBGROUP1_PATH);
+  public static final QueuePath F_GROUP = new QueuePath(FGROUP_PATH);
+  public static final QueuePath E_SG = new QueuePath(ESUBGROUP1_A_PATH);
+  public static final QueuePath F_SG = new QueuePath(FGROUP_F_PATH);
 
   public static final float A_CAPACITY = 20f;
   public static final float B_CAPACITY = 20f;
@@ -389,43 +390,43 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
         new String[] {"a", "b", "c", "d", "esubgroup1", "esubgroup2", "fgroup",
             "a1group", "ggroup", "g"});
 
-    conf.setCapacity(A_QUEUE_PATH, A_CAPACITY);
-    conf.setCapacity(B_QUEUE_PATH, B_CAPACITY);
-    conf.setCapacity(C_QUEUE_PATH, C_CAPACITY);
-    conf.setCapacity(D_QUEUE_PATH, D_CAPACITY);
-    conf.setCapacity(E_GROUP_QUEUE_PATH, ESUBGROUP1_CAPACITY);
-    conf.setCapacity(F_GROUP_QUEUE_PATH, FGROUP_CAPACITY);
+    conf.setCapacity(A, A_CAPACITY);
+    conf.setCapacity(B, B_CAPACITY);
+    conf.setCapacity(C, C_CAPACITY);
+    conf.setCapacity(D, D_CAPACITY);
+    conf.setCapacity(E_GROUP, ESUBGROUP1_CAPACITY);
+    conf.setCapacity(F_GROUP, FGROUP_CAPACITY);
 
     // Define 2nd-level queues
     conf.setQueues(A, new String[] { "a1", "a2" });
-    conf.setCapacity(A1_QUEUE_PATH, A1_CAPACITY);
+    conf.setCapacity(A1, A1_CAPACITY);
     conf.setUserLimitFactor(A1, 100.0f);
-    conf.setCapacity(A2_QUEUE_PATH, A2_CAPACITY);
+    conf.setCapacity(A2, A2_CAPACITY);
     conf.setUserLimitFactor(A2, 100.0f);
 
     conf.setQueues(B, new String[] { "b1", "b2", "b3", "b4subgroup1" });
-    conf.setCapacity(B1_QUEUE_PATH, B1_CAPACITY);
+    conf.setCapacity(B1, B1_CAPACITY);
     conf.setUserLimitFactor(B1, 100.0f);
-    conf.setCapacity(B2_QUEUE_PATH, B2_CAPACITY);
+    conf.setCapacity(B2, B2_CAPACITY);
     conf.setUserLimitFactor(B2, 100.0f);
-    conf.setCapacity(B3_QUEUE_PATH, B3_CAPACITY);
+    conf.setCapacity(B3, B3_CAPACITY);
     conf.setUserLimitFactor(B3, 100.0f);
-    conf.setCapacity(B4_QUEUE_PATH, B4_CAPACITY);
+    conf.setCapacity(B4, B4_CAPACITY);
     conf.setUserLimitFactor(B4, 100.0f);
 
-    conf.setQueues(ESUBGROUP1, new String[] {"e"});
-    conf.setCapacity(E_SG_QUEUE_PATH, 100f);
-    conf.setUserLimitFactor(ESUBGROUP1_A, 100.0f);
-    conf.setQueues(FGROUP, new String[] {"f"});
-    conf.setCapacity(F_SG_QUEUE_PATH, 100f);
-    conf.setUserLimitFactor(FGROUP_F, 100.0f);
+    conf.setQueues(E_GROUP, new String[] {"e"});
+    conf.setCapacity(E_SG, 100f);
+    conf.setUserLimitFactor(E_SG, 100.0f);
+    conf.setQueues(F_GROUP, new String[] {"f"});
+    conf.setCapacity(F_SG, 100f);
+    conf.setUserLimitFactor(F_SG, 100.0f);
 
     conf.setUserLimitFactor(C, 1.0f);
     conf.setAutoCreateChildQueueEnabled(C, true);
 
     //Setup leaf queue template configs
     conf.setAutoCreatedLeafQueueConfigCapacity(C, 50.0f);
-    conf.setAutoCreatedLeafQueueConfigMaxCapacity(C_QUEUE_PATH, 100.0f);
+    conf.setAutoCreatedLeafQueueConfigMaxCapacity(C, 100.0f);
     conf.setAutoCreatedLeafQueueConfigUserLimit(C, 100);
     conf.setAutoCreatedLeafQueueConfigUserLimitFactor(C, 3.0f);
     conf.setAutoCreatedLeafQueueConfigUserLimitFactor(C, 3.0f);
@@ -454,7 +455,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
 
     //Setup leaf queue template configs
     conf.setAutoCreatedLeafQueueConfigCapacity(D, 10.0f);
-    conf.setAutoCreatedLeafQueueConfigMaxCapacity(D_QUEUE_PATH, 100.0f);
+    conf.setAutoCreatedLeafQueueConfigMaxCapacity(D, 100.0f);
     conf.setAutoCreatedLeafQueueConfigUserLimit(D, 3);
     conf.setAutoCreatedLeafQueueConfigUserLimitFactor(D, 100);
 
@@ -489,16 +490,16 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     //setup new queues with one of them auto enabled
     // Define top-level queues
     // Set childQueue for root
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT,
         new String[] {"c"});
-    conf.setCapacity(C_QUEUE_PATH, 100f);
+    conf.setCapacity(C, 100f);
 
     conf.setUserLimitFactor(C, 1.0f);
     conf.setAutoCreateChildQueueEnabled(C, true);
 
     //Setup leaf queue template configs
     conf.setAutoCreatedLeafQueueConfigCapacity(C, 100f);
-    conf.setAutoCreatedLeafQueueConfigMaxCapacity(C_QUEUE_PATH, 100.0f);
+    conf.setAutoCreatedLeafQueueConfigMaxCapacity(C, 100.0f);
     conf.setAutoCreatedLeafQueueConfigUserLimit(C, 100);
     conf.setAutoCreatedLeafQueueConfigUserLimitFactor(C, 3.0f);
 
@@ -800,7 +801,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
 
     if (expectedQueueEntitlements.get(label).getCapacity() > EPSILON) {
       if (leafQueue.getCapacityConfigType().equals(ABSOLUTE_RESOURCE)) {
-        String templatePrefix = QueuePrefixes.getAutoCreatedQueueTemplateConfPrefix(
+        QueuePath templatePrefix = QueuePrefixes.getAutoCreatedQueueObjectTemplateConfPrefix(
             parentQueue.getQueuePathObject());
         Resource resourceTemplate = parentQueue.getLeafQueueTemplate().getLeafQueueConfigs()
             .getMinimumResourceRequirement(label, templatePrefix, RESOURCE_TYPES);

@@ -40,9 +40,9 @@ public class TestAutoCreatedQueueTemplate {
   @Before
   public void setUp() throws Exception {
     conf = new CapacitySchedulerConfiguration();
-    conf.setQueues("root", new String[]{"a"});
-    conf.setQueues("a", new String[]{"b"});
-    conf.setQueues("b", new String[]{"c"});
+    conf.setQueues(ROOT, new String[]{"a"});
+    conf.setQueues(TEST_QUEUE_A, new String[]{"b"});
+    conf.setQueues(TEST_QUEUE_B, new String[]{"c"});
 
   }
 
@@ -170,11 +170,11 @@ public class TestAutoCreatedQueueTemplate {
     template.setTemplateEntriesForChild(conf, TEST_QUEUE_B, true);
 
     Assert.assertNull("default-node-label-expression is set for parent",
-        conf.getDefaultNodeLabelExpression(TEST_QUEUE_A.getFullPath()));
+        conf.getDefaultNodeLabelExpression(TEST_QUEUE_A));
     Assert.assertEquals("default-node-label-expression is not set for leaf",
-        "test", conf.getDefaultNodeLabelExpression(TEST_QUEUE_B.getFullPath()));
+        "test", conf.getDefaultNodeLabelExpression(TEST_QUEUE_B));
     Assert.assertFalse("auto queue removal is not disabled for parent",
-        conf.isAutoExpiredDeletionEnabled(TEST_QUEUE_A.getFullPath()));
+        conf.isAutoExpiredDeletionEnabled(TEST_QUEUE_A));
     Assert.assertEquals("weight should not be overridden when set by " +
             "queue type specific template",
         10f, conf.getNonLabeledQueueWeight(TEST_QUEUE_B), 10e-6);

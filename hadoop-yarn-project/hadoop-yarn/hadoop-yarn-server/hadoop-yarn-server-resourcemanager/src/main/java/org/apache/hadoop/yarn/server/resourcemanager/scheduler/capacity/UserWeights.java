@@ -43,7 +43,7 @@ public final class UserWeights {
   public static UserWeights createByConfig(
       CapacitySchedulerConfiguration conf,
       ConfigurationProperties configurationProperties,
-      String queuePath) {
+      QueuePath queuePath) {
     String queuePathPlusPrefix = getQueuePrefix(queuePath) + USER_SETTINGS;
     Map<String, String> props = configurationProperties
         .getPropertiesWithPrefix(queuePathPlusPrefix);

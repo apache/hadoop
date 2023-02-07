@@ -62,8 +62,6 @@ import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.DEFAULT_QUEUE_PATH;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT_QUEUE_PATH;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -71,6 +69,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class TestCapacitySchedulerPerf {
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath DEFAULT = new QueuePath(CapacitySchedulerConfiguration.ROOT
+          + ".default");
   private final int GB = 1024;
 
   private String getResourceName(int idx) {
@@ -450,9 +451,9 @@ public class TestCapacitySchedulerPerf {
     CapacitySchedulerConfiguration csconf =
         new CapacitySchedulerConfiguration();
     csconf.setResourceComparator(DominantResourceCalculator.class);
-    csconf.setMaximumApplicationMasterResourcePerQueuePercent(ROOT_QUEUE_PATH, 100.0f);
-    csconf.setMaximumAMResourcePercentPerPartition("root", "", 100.0f);
-    csconf.setCapacity(DEFAULT_QUEUE_PATH, 0.0f);
+    csconf.setMaximumApplicationMasterResourcePerQueuePercent(ROOT, 100.0f);
+    csconf.setMaximumAMResourcePercentPerPartition(ROOT, "", 100.0f);
+    csconf.setCapacity(DEFAULT, 0.0f);
     csconf.setOffSwitchPerHeartbeatLimit(numQueues);
 
     float capacity = 100.0f / numQueues;
@@ -463,13 +464,13 @@ public class TestCapacitySchedulerPerf {
       subQueues[i] = queueName;
       csconf.setMaximumApplicationMasterResourcePerQueuePercent(
           queuePath, 100.0f);
-      csconf.setMaximumAMResourcePercentPerPartition(queuePath.getFullPath(), "", 100.0f);
+      csconf.setMaximumAMResourcePercentPerPartition(queuePath, "", 100.0f);
       csconf.setCapacity(queuePath, capacity);
-      csconf.setUserLimitFactor(queuePath.getFullPath(), 100.0f);
+      csconf.setUserLimitFactor(queuePath, 100.0f);
       csconf.setMaximumCapacity(queuePath, 100.0f);
     }
 
-    csconf.setQueues("root", subQueues);
+    csconf.setQueues(ROOT, subQueues);
 
     return csconf;
   }

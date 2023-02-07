@@ -58,8 +58,6 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.Assert;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.DEFAULT_QUEUE_PATH;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT_QUEUE_PATH;
 import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
@@ -78,11 +76,13 @@ import java.util.Map;
  */
 public class TestCapacitySchedulerWithMultiResourceTypes {
   private static String RESOURCE_1 = "res1";
-
-  private static final String A_QUEUE = CapacitySchedulerConfiguration.ROOT + ".a";
-  private static final String B_QUEUE = CapacitySchedulerConfiguration.ROOT + ".b";
-  private static final QueuePath A_QUEUE_PATH = new QueuePath(A_QUEUE);
-  private static final QueuePath B_QUEUE_PATH = new QueuePath(B_QUEUE);
+  private static final String DEFAULT_PATH = CapacitySchedulerConfiguration.ROOT + ".default";
+  private static final String A_PATH = CapacitySchedulerConfiguration.ROOT + ".a";
+  private static final String B_PATH = CapacitySchedulerConfiguration.ROOT + ".b";
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath DEFAULT = new QueuePath(DEFAULT_PATH);
+  private static final QueuePath A = new QueuePath(A_PATH);
+  private static final QueuePath B = new QueuePath(B_PATH);
   private static float A_CAPACITY = 50.0f;
   private static float B_CAPACITY = 50.0f;
 
@@ -121,11 +121,11 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
 
     CapacitySchedulerConfiguration csconf =
         new CapacitySchedulerConfiguration();
-    csconf.setMaximumApplicationMasterResourcePerQueuePercent(ROOT_QUEUE_PATH, 100.0f);
-    csconf.setMaximumAMResourcePercentPerPartition("root", "", 100.0f);
-    csconf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT_QUEUE_PATH,
+    csconf.setMaximumApplicationMasterResourcePerQueuePercent(ROOT, 100.0f);
+    csconf.setMaximumAMResourcePercentPerPartition(ROOT, "", 100.0f);
+    csconf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT,
         100.0f);
-    csconf.setMaximumAMResourcePercentPerPartition("root.default", "", 100.0f);
+    csconf.setMaximumAMResourcePercentPerPartition(DEFAULT, "", 100.0f);
     csconf.setResourceComparator(DominantResourceCalculator.class);
     csconf.set(YarnConfiguration.RESOURCE_TYPES, RESOURCE_1);
     csconf.setInt(YarnConfiguration.RESOURCE_TYPES + "." + RESOURCE_1
@@ -276,23 +276,22 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
 
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.setMaximumApplicationMasterResourcePerQueuePercent(ROOT_QUEUE_PATH, 100.0f);
-    csConf.setMaximumAMResourcePercentPerPartition("root", "", 100.0f);
-    csConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT_QUEUE_PATH,
+    csConf.setMaximumApplicationMasterResourcePerQueuePercent(ROOT, 100.0f);
+    csConf.setMaximumAMResourcePercentPerPartition(ROOT, "", 100.0f);
+    csConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT,
         100.0f);
-    csConf.setMaximumAMResourcePercentPerPartition("root.default", "", 100.0f);
+    csConf.setMaximumAMResourcePercentPerPartition(DEFAULT, "", 100.0f);
     csConf.setResourceComparator(DominantResourceCalculator.class);
     csConf.set(YarnConfiguration.RESOURCE_TYPES, ResourceInformation.GPU_URI);
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] {"a", "b"});
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
 
     // Set each queue to consider 50% each.
-    csConf.setCapacity(A_QUEUE_PATH, A_CAPACITY);
-    csConf.setCapacity(B_QUEUE_PATH, B_CAPACITY);
-    csConf.setMaximumCapacity(A_QUEUE_PATH, 100.0f);
-    csConf.setUserLimitFactor(A_QUEUE, 2);
+    csConf.setCapacity(A, A_CAPACITY);
+    csConf.setCapacity(B, B_CAPACITY);
+    csConf.setMaximumCapacity(A, 100.0f);
+    csConf.setUserLimitFactor(A, 2);
 
     YarnConfiguration conf = new YarnConfiguration(csConf);
     // Don't reset resource types since we have already configured resource
@@ -416,14 +415,13 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     csconf.setResourceComparator(DominantResourceCalculator.class);
 
     // Define top-level queues
-    csconf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] {"a", "b"});
+    csconf.setQueues(ROOT, new String[] {"a", "b"});
 
     // Set each queue to contain 50% each.
-    csconf.setCapacity(A_QUEUE_PATH, A_CAPACITY);
-    csconf.setCapacity(B_QUEUE_PATH, B_CAPACITY);
-    csconf.setMaximumCapacity(A_QUEUE_PATH, 100.0f);
-    csconf.setUserLimitFactor(A_QUEUE, 2);
+    csconf.setCapacity(A, A_CAPACITY);
+    csconf.setCapacity(B, B_CAPACITY);
+    csconf.setMaximumCapacity(A, 100.0f);
+    csconf.setUserLimitFactor(A, 2);
 
     YarnConfiguration yarnConf = new YarnConfiguration(csconf);
     // Don't reset resource types since we have already configured resource

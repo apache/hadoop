@@ -61,8 +61,8 @@ public class PlanQueue extends AbstractManagedParentQueue {
               DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS * super
               .getAbsoluteCapacity());
     }
-    float configuredUserLimit = conf.getUserLimit(queuePath);
-    float configuredUserLimitFactor = conf.getUserLimitFactor(queuePath);
+    float configuredUserLimit = conf.getUserLimit(queuePathObject);
+    float configuredUserLimitFactor = conf.getUserLimitFactor(queuePathObject);
     int configuredMaxAppsPerUserForReservation =
         (int) (maxAppsForReservation * (configuredUserLimit / 100.0f) *
             configuredUserLimitFactor);

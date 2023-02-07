@@ -30,13 +30,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEDICATED_FULL;
-import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT_FULL;
-import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT;
-import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEDICATED;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.*;
 
 /**
  * Extends the FederationInterceptorREST and overrides methods to provide a
@@ -82,11 +80,11 @@ public class TestableFederationInterceptorREST
       CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
 
       // Define default queue
-      conf.setCapacity(QUEUE_DEFAULT_FULL, 20);
+      conf.setCapacity(DEFAULT_QUEUE_PATH, 20);
       // Define dedicated queues
       String[] queues = new String[]{QUEUE_DEFAULT, QUEUE_DEDICATED};
-      conf.setQueues(CapacitySchedulerConfiguration.ROOT, queues);
-      conf.setCapacity(QUEUE_DEDICATED_FULL, 80);
+      conf.setQueues(ROOT_QUEUE_PATH, queues);
+      conf.setCapacity(DEFAULT_QUEUE_PATH, 80);
       conf.setReservable(QUEUE_DEDICATED_FULL, true);
 
       conf.setClass(YarnConfiguration.RM_SCHEDULER,

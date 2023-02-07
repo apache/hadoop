@@ -236,45 +236,48 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       CSQueue parent, String queueName, CSQueueStore newQueues, CSQueueStore oldQueues,
       QueueHook hook) throws IOException {
     CSQueue queue;
-    String fullQueueName = (parent == null) ? queueName :
-        (QueuePath.createFromQueues(parent.getQueuePath(), queueName).getFullPath());
-    String[] staticChildQueueNames = conf.getQueues(fullQueueName);
+    QueuePath fullQueuePath = (parent == null) ? new QueuePath(queueName) :
+        (QueuePath.createFromQueues(parent.getQueuePath(), queueName));
+    String[] staticChildQueueNames = conf.getQueues(fullQueuePath);
     List<String> childQueueNames = staticChildQueueNames != null ?
         Arrays.asList(staticChildQueueNames) : Collections.emptyList();
-    CSQueue oldQueue = oldQueues.get(fullQueueName);
+    CSQueue oldQueue = oldQueues.get(fullQueuePath.getFullPath());
 
-    boolean isReservableQueue = conf.isReservable(fullQueueName);
-    boolean isAutoCreateEnabled = conf.isAutoCreateChildQueueEnabled(fullQueueName);
+    boolean isReservableQueue = conf.isReservable(fullQueuePath.getFullPath());
+    boolean isAutoCreateEnabled = conf.isAutoCreateChildQueueEnabled(fullQueuePath);
     // if a queue is eligible for auto queue creation v2 it must be a ParentQueue
     // (even if it is empty)
     final boolean isDynamicParent = oldQueue instanceof ParentQueue && oldQueue.isDynamicQueue();
     boolean isAutoQueueCreationEnabledParent = isDynamicParent || conf.isAutoQueueCreationV2Enabled(
-        fullQueueName) || isAutoCreateEnabled;
+        fullQueuePath) || isAutoCreateEnabled;
 
     if (childQueueNames.size() == 0 && !isAutoQueueCreationEnabledParent) {
       validateParent(parent, queueName);
       // Check if the queue will be dynamically managed by the Reservation system
       if (isReservableQueue) {
-        queue = new PlanQueue(queueContext, queueName, parent, oldQueues.get(fullQueueName));
+        queue = new PlanQueue(queueContext, queueName, parent,
+            oldQueues.get(fullQueuePath.getFullPath()));
         ReservationQueue defaultResQueue = ((PlanQueue) queue).initializeDefaultInternalQueue();
         newQueues.add(defaultResQueue);
       } else {
-        queue = new LeafQueue(queueContext, queueName, parent, oldQueues.get(fullQueueName));
+        queue = new LeafQueue(queueContext, queueName, parent,
+            oldQueues.get(fullQueuePath.getFullPath()));
       }
 
       queue = hook.hook(queue);
     } else {
       if (isReservableQueue) {
-        throw new IllegalStateException("Only Leaf Queues can be reservable for " + fullQueueName);
+        throw new IllegalStateException("Only Leaf Queues can be reservable for " +
+            fullQueuePath.getFullPath());
       }
 
       ParentQueue parentQueue;
       if (isAutoCreateEnabled) {
         parentQueue = new ManagedParentQueue(queueContext, queueName, parent, oldQueues.get(
-            fullQueueName));
+            fullQueuePath.getFullPath()));
       } else {
         parentQueue = new ParentQueue(queueContext, queueName, parent, oldQueues.get(
-            fullQueueName));
+            fullQueuePath.getFullPath()));
       }
 
       queue = hook.hook(parentQueue);
@@ -293,7 +296,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
 
     newQueues.add(queue);
 
-    LOG.info("Initialized queue: " + fullQueueName);
+    LOG.info("Initialized queue: " + fullQueuePath.getFullPath());
     return queue;
   }
 
@@ -319,7 +322,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       boolean isRemovable = isDanglingDynamicQueue || !isDynamicQueue(queue)
           && newQueues.get(queue.getQueuePath()) == null
           && !(queue instanceof AutoCreatedLeafQueue &&
-          conf.isAutoCreateChildQueueEnabled(queue.getParent().getQueuePath()));
+          conf.isAutoCreateChildQueueEnabled(queue.getParent().getQueuePathObject()));
 
       if (isRemovable) {
         existingQueues.remove(queue);
@@ -505,7 +508,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       CSQueue parentQueue = getQueue(parentQueueName);
 
       if (parentQueue != null && csContext.getConfiguration()
-          .isAutoCreateChildQueueEnabled(parentQueue.getQueuePath())) {
+          .isAutoCreateChildQueueEnabled(parentQueue.getQueuePathObject())) {
         return createLegacyAutoQueue(queue);
       } else {
         return createAutoQueue(queue);
@@ -621,7 +624,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       if (parentQueue instanceof AbstractManagedParentQueue) {
         // An AbstractManagedParentQueue must have been found for Legacy AQC
         permissions.add(new Permission(privilegedEntity,
-            csConf.getACLsForLegacyAutoCreatedLeafQueue(queuePath.getParent())));
+            csConf.getACLsForLegacyAutoCreatedLeafQueue(queuePath.getParentObject())));
       } else {
         // Every other case must be a Flexible Leaf Queue
         permissions.add(new Permission(privilegedEntity,

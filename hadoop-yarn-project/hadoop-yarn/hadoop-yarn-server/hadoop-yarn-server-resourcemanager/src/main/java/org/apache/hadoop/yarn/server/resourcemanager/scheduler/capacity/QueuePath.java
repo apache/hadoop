@@ -61,6 +61,16 @@ public class QueuePath implements Iterable<String> {
   }
 
   /**
+   * Static method to create Queue path from parent QueuePath object and a leaf queue name.
+   * @param parent Parent QueuePath object for the queue
+   * @param leaf Name of the leaf queue
+   * @return QueuePath object
+   */
+  public static QueuePath addQueueToPath(QueuePath parent, String leaf) {
+    return new QueuePath(parent.getFullPath(), leaf);
+  }
+
+  /**
    * Constructor to create Queue path from queue names.
    * The provided queue names will be concatenated by dots, giving a full queue path.
    * @param parts Parts of queue path
@@ -111,6 +121,14 @@ public class QueuePath implements Iterable<String> {
    */
   public String getParent() {
     return parent;
+  }
+
+  /**
+   * Getter for the parent object of the path.
+   * @return Parent QueuePath object of the queue, null if there is no parent.
+   */
+  public QueuePath getParentObject() {
+    return hasParent() ? new QueuePath(parent) : null;
   }
 
   /**

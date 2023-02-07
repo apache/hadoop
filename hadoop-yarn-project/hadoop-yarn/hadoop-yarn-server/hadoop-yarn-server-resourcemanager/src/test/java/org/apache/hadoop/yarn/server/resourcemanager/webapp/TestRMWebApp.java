@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
@@ -329,36 +330,37 @@ public class TestRMWebApp {
   static void setupQueueConfiguration(CapacitySchedulerConfiguration conf,
       boolean useDRC) {
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b", "c"});
+    QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    conf.setQueues(root, new String[] {"a", "b", "c"});
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
+    final QueuePath A = QueuePath.addQueueToPath(root, "a");
     conf.setCapacity(A, 10);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
+    final QueuePath B = QueuePath.addQueueToPath(root, "b");
     conf.setCapacity(B, 20);
 
-    final String C = CapacitySchedulerConfiguration.ROOT + ".c";
+    final QueuePath C = QueuePath.addQueueToPath(root, "v");
     conf.setCapacity(C, 70);
 
     // Define 2nd-level queues
-    final String A1 = A + ".a1";
-    final String A2 = A + ".a2";
+    final QueuePath A1 = QueuePath.addQueueToPath(A, "a1");
+    final QueuePath A2 = QueuePath.addQueueToPath(A, "a2");
     conf.setQueues(A, new String[] {"a1", "a2"});
     conf.setCapacity(A1, 30);
     conf.setCapacity(A2, 70);
 
-    final String B1 = B + ".b1";
-    final String B2 = B + ".b2";
-    final String B3 = B + ".b3";
+    final QueuePath B1 = QueuePath.addQueueToPath(B, "b1");
+    final QueuePath B2 = QueuePath.addQueueToPath(B, "b2");
+    final QueuePath B3 = QueuePath.addQueueToPath(B, "b3");
     conf.setQueues(B, new String[] {"b1", "b2", "b3"});
     conf.setCapacity(B1, 50);
     conf.setCapacity(B2, 30);
     conf.setCapacity(B3, 20);
 
-    final String C1 = C + ".c1";
-    final String C2 = C + ".c2";
-    final String C3 = C + ".c3";
-    final String C4 = C + ".c4";
+    final QueuePath C1 = QueuePath.addQueueToPath(C, "c1");
+    final QueuePath C2 = QueuePath.addQueueToPath(C, "c2");
+    final QueuePath C3 = QueuePath.addQueueToPath(C, "c3");
+    final QueuePath C4 = QueuePath.addQueueToPath(C, "c3");
     conf.setQueues(C, new String[] {"c1", "c2", "c3", "c4"});
     conf.setCapacity(C1, 50);
     conf.setCapacity(C2, 10);
@@ -366,9 +368,9 @@ public class TestRMWebApp {
     conf.setCapacity(C4, 5);
 
     // Define 3rd-level queues
-    final String C11 = C1 + ".c11";
-    final String C12 = C1 + ".c12";
-    final String C13 = C1 + ".c13";
+    final QueuePath C11 = QueuePath.addQueueToPath(C1, "c11");
+    final QueuePath C12 = QueuePath.addQueueToPath(C1, "c12");
+    final QueuePath C13 = QueuePath.addQueueToPath(C1, "c13");
     conf.setQueues(C1, new String[] {"c11", "c12", "c13"});
     conf.setCapacity(C11, 15);
     conf.setCapacity(C12, 45);
@@ -405,8 +407,8 @@ public class TestRMWebApp {
 
   static void setupFifoQueueConfiguration(CapacitySchedulerConfiguration conf) {
     // Define default queue
-    conf.setQueues("default", new String[] {"default"});
-    conf.setCapacity("default", 100);
+    conf.setQueues(new QueuePath("default"), new String[] {"default"});
+    conf.setCapacity(new QueuePath("default"), 100);
   }
 
   public static void main(String[] args) throws Exception {

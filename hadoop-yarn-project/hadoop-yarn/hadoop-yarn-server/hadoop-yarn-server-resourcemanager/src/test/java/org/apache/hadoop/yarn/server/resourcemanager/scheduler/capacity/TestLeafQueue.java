@@ -22,11 +22,6 @@ import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
     .NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.CSQueueUtils.EPSILON;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .capacity.CapacitySchedulerConfiguration.DOT;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .capacity.CapacitySchedulerConfiguration.ROOT;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT_QUEUE_PATH;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -241,7 +236,7 @@ public class TestLeafQueue {
 
     root = 
         CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
-            ROOT,
+            ROOT.getFullPath(),
             queues, queues, 
             TestUtils.spyHook);
     queueManager.setRootQueue(root);
@@ -269,67 +264,70 @@ public class TestLeafQueue {
   private static final String C1 = "c1";
   private static final String D = "d";
   private static final String E = "e";
+  final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath A_QUEUE_PATH =
+      new QueuePath(CapacitySchedulerConfiguration.ROOT + A);
   private void setupQueueConfiguration(
       CapacitySchedulerConfiguration conf, 
-      final String newRoot, boolean withNodeLabels) {
+      final String newRootName, boolean withNodeLabels) {
     
     // Define top-level queues
-    conf.setQueues(ROOT, new String[] {newRoot});
-    conf.setMaximumCapacity(ROOT_QUEUE_PATH, 100);
+    conf.setQueues(ROOT, new String[] {newRootName});
+    conf.setMaximumCapacity(ROOT, 100);
     conf.setAcl(ROOT,
       QueueACL.SUBMIT_APPLICATIONS, " ");
     if (withNodeLabels) {
-      conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, LABEL, 100);
-      conf.setMaximumCapacityByLabel(CapacitySchedulerConfiguration.ROOT,
-          LABEL, 100);
+      conf.setCapacityByLabel(ROOT, LABEL, 100);
+      conf.setMaximumCapacityByLabel(ROOT, LABEL, 100);
     }
     
-    final String Q_newRoot = ROOT + "." + newRoot;
-    final QueuePath qNewRootPath = new QueuePath(Q_newRoot);
-    conf.setQueues(Q_newRoot, new String[] {A, B, C, D, E});
-    conf.setCapacity(qNewRootPath, 100);
-    conf.setMaximumCapacity(qNewRootPath, 100);
-    conf.setAcl(Q_newRoot, QueueACL.SUBMIT_APPLICATIONS, " ");
+    final String newRootPath = CapacitySchedulerConfiguration.ROOT + "." + newRootName;
+    final QueuePath newRoot = new QueuePath(newRootPath);
+    conf.setQueues(newRoot, new String[] {A, B, C, D, E});
+    conf.setCapacity(newRoot, 100);
+    conf.setMaximumCapacity(newRoot, 100);
+    conf.setAcl(newRoot, QueueACL.SUBMIT_APPLICATIONS, " ");
     if (withNodeLabels) {
-      conf.setAccessibleNodeLabels(Q_newRoot, Collections.singleton(LABEL));
-      conf.setCapacityByLabel(Q_newRoot, LABEL, 100);
-      conf.setMaximumCapacityByLabel(Q_newRoot, LABEL, 100);
+      conf.setAccessibleNodeLabels(newRoot, Collections.singleton(LABEL));
+      conf.setCapacityByLabel(newRoot, LABEL, 100);
+      conf.setMaximumCapacityByLabel(newRoot, LABEL, 100);
     }
 
-    final String Q_A = Q_newRoot + "." + A;
-    conf.setCapacity(Q_A, 8.5f);
-    conf.setMaximumCapacity(Q_A, 20);
-    conf.setAcl(Q_A, QueueACL.SUBMIT_APPLICATIONS, "*");
+    final QueuePath a = new QueuePath(newRootPath, A);
+    conf.setCapacity(a, 8.5f);
+    conf.setMaximumCapacity(a, 20);
+    conf.setAcl(a, QueueACL.SUBMIT_APPLICATIONS, "*");
     if (withNodeLabels) {
-      conf.setAccessibleNodeLabels(Q_A, Collections.singleton(LABEL));
-      conf.setCapacityByLabel(Q_A, LABEL, 100);
-      conf.setMaximumCapacityByLabel(Q_A, LABEL, 100);
+      conf.setAccessibleNodeLabels(a, Collections.singleton(LABEL));
+      conf.setCapacityByLabel(a, LABEL, 100);
+      conf.setMaximumCapacityByLabel(a, LABEL, 100);
     }
-    
-    final String Q_B = Q_newRoot + "." + B;
-    conf.setCapacity(Q_B, 80);
-    conf.setMaximumCapacity(Q_B, 99);
-    conf.setAcl(Q_B, QueueACL.SUBMIT_APPLICATIONS, "*");
 
-    final String Q_C = Q_newRoot + "." + C;
-    conf.setCapacity(Q_C, 1.5f);
-    conf.setMaximumCapacity(Q_C, 10);
-    conf.setAcl(Q_C, QueueACL.SUBMIT_APPLICATIONS, " ");
-    
-    conf.setQueues(Q_C, new String[] {C1});
+    final QueuePath b = new QueuePath(newRootPath, B);
+    conf.setCapacity(b, 80);
+    conf.setMaximumCapacity(b, 99);
+    conf.setAcl(b, QueueACL.SUBMIT_APPLICATIONS, "*");
 
-    final String Q_C1 = Q_C + "." + C1;
-    conf.setCapacity(Q_C1, 100);
-
-    final String Q_D = Q_newRoot + "." + D;
-    conf.setCapacity(Q_D, 9);
-    conf.setMaximumCapacity(Q_D, 11);
-    conf.setAcl(Q_D, QueueACL.SUBMIT_APPLICATIONS, "user_d");
+    final String cPath = newRootPath + "." + C;
+    final QueuePath c = new QueuePath(newRootPath);
+    conf.setCapacity(c, 1.5f);
+    conf.setMaximumCapacity(c, 10);
+    conf.setAcl(c, QueueACL.SUBMIT_APPLICATIONS, " ");
     
-    final String Q_E = Q_newRoot + "." + E;
-    conf.setCapacity(Q_E, 1);
-    conf.setMaximumCapacity(Q_E, 1);
-    conf.setAcl(Q_E, QueueACL.SUBMIT_APPLICATIONS, "user_e");
+    conf.setQueues(c, new String[] {C1});
+
+    final QueuePath c1 = new QueuePath(cPath, C1);
+    conf.setCapacity(c1, 100);
+
+    final QueuePath d = new QueuePath(newRootPath, D);
+    conf.setCapacity(d, 9);
+    conf.setMaximumCapacity(d, 11);
+    conf.setAcl(d, QueueACL.SUBMIT_APPLICATIONS, "user_d");
+
+    final QueuePath e = new QueuePath(newRootPath, E);
+    conf.setCapacity(e, 1);
+    conf.setMaximumCapacity(e, 1);
+    conf.setAcl(e, QueueACL.SUBMIT_APPLICATIONS, "user_e");
 
   }
 
@@ -482,7 +480,7 @@ public class TestLeafQueue {
       "testPolicyRoot" + System.currentTimeMillis();
 
     OrderingPolicy<FiCaSchedulerApp> comPol =    
-      testConf.<FiCaSchedulerApp>getAppOrderingPolicy(tproot);
+      testConf.<FiCaSchedulerApp>getAppOrderingPolicy(new QueuePath(tproot));
     
     
   }
@@ -629,8 +627,9 @@ public class TestLeafQueue {
     CapacitySchedulerConfiguration testConf =
         new CapacitySchedulerConfiguration();
 
-    String tproot = ROOT + "." +
+    String tprootPath = ROOT + "." +
       "testPolicyRoot" + System.currentTimeMillis();
+    QueuePath tproot = new QueuePath(tprootPath);
 
     OrderingPolicy<FiCaSchedulerApp> schedOrder =
       testConf.<FiCaSchedulerApp>getAppOrderingPolicy(tproot);
@@ -1095,9 +1094,9 @@ public class TestLeafQueue {
     when(csContext.getClusterResource()).thenReturn(clusterResource);
 
     // working with just one queue
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{A});
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + A, 100);
-    csConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + "." + A,
+    csConf.setQueues(ROOT, new String[]{A});
+    csConf.setCapacity(A_QUEUE_PATH, 100);
+    csConf.setMaximumCapacity(A_QUEUE_PATH,
         100);
     queueContext.reinitialize();
 
@@ -1314,9 +1313,9 @@ public class TestLeafQueue {
     when(csContext.getClusterResource()).thenReturn(clusterResource);
 
     // working with just one queue
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A});
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + A, 100);
-    csConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + "." + A,
+    csConf.setQueues(ROOT, new String[] {A});
+    csConf.setCapacity(A_QUEUE_PATH, 100);
+    csConf.setMaximumCapacity(A_QUEUE_PATH,
         100);
     queueContext.reinitialize();
 
@@ -1921,7 +1920,7 @@ public class TestLeafQueue {
     // Mock the queue
     LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
     // Set minimum-user-limit-percent for queue "a" in the configs.
-    csConf.setUserLimit(a.getQueuePath(), 50);
+    csConf.setUserLimit(a.getQueuePathObject(), 50);
     // Set weight for "user_0" to be 1.5f for the a queue in the configs.
     csConf.setFloat("yarn.scheduler.capacity." + a.getQueuePath()
         + ".user-settings.user_0." + CapacitySchedulerConfiguration.USER_WEIGHT,
@@ -3234,7 +3233,7 @@ public class TestLeafQueue {
     queueContext.reinitialize();
     CSQueueStore newQueues = new CSQueueStore();
     CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(queueContext,
-        csConf, null, ROOT, newQueues, queues,
+        csConf, null, ROOT.getFullPath(), newQueues, queues,
         TestUtils.spyHook);
     csContext.getCapacitySchedulerQueueManager().setRootQueue(newRoot);
     root.reinitialize(newRoot, cs.getClusterResource());
@@ -3673,7 +3672,7 @@ public class TestLeafQueue {
     CSQueueStore newQueues = new CSQueueStore();
     CSQueue newRoot =
         CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
-            ROOT,
+            ROOT.getFullPath(),
             newQueues, queues,
             TestUtils.spyHook);
     queues = newQueues;
@@ -3705,7 +3704,7 @@ public class TestLeafQueue {
     CSQueueStore newQueues = new CSQueueStore();
     CSQueue newRoot =
         CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
-            ROOT,
+            ROOT.getFullPath(),
             newQueues, queues,
             TestUtils.spyHook);
     csContext.getCapacitySchedulerQueueManager().setRootQueue(newRoot);
@@ -5136,12 +5135,13 @@ public class TestLeafQueue {
 
       final String leafQueueName =
           "testSetupQueueConfigsWithSpecifiedConfiguration";
+      final QueuePath leafQueuePath = new QueuePath(ROOT.getFullPath(), leafQueueName);
 
       assertEquals(0, conf.size());
       conf.setNodeLocalityDelay(60);
-      csConf.setCapacity(ROOT + DOT + leafQueueName, 10);
-      csConf.setMaximumCapacity(ROOT + DOT + leafQueueName, 100);
-      csConf.setUserLimitFactor(ROOT + DOT +leafQueueName, 0.1f);
+      csConf.setCapacity(leafQueuePath, 10);
+      csConf.setMaximumCapacity(leafQueuePath, 100);
+      csConf.setUserLimitFactor(leafQueuePath, 0.1f);
 
       csConf.setNodeLocalityDelay(30);
       csConf.setGlobalMaximumApplicationsPerQueue(20);
@@ -5158,9 +5158,9 @@ public class TestLeafQueue {
       assertEquals(2, leafQueue.getMaxApplicationsPerUser());
 
       //check queue configs
-      conf.setMaximumAMResourcePercentPerPartition(leafQueue.getQueuePath(),
+      conf.setMaximumAMResourcePercentPerPartition(leafQueue.getQueuePathObject(),
           NO_LABEL, 10);
-      conf.setMaximumCapacity(leafQueue.getQueuePath(), 10);
+      conf.setMaximumCapacity(leafQueue.getQueuePathObject(), 10);
 
       assertEquals(0.1, leafQueue.getMaxAMResourcePerQueuePercent(),
           EPSILON);
@@ -5228,13 +5228,13 @@ public class TestLeafQueue {
     String rootChild = root.getChildQueues().get(0).getQueuePath();
 
     conf.setCapacityByLabel(ROOT, "test", 100);
-    conf.setCapacityByLabel(rootChild, "test", 100);
-    conf.setCapacityByLabel(rootChild + "." + A, "test", 20);
-    conf.setCapacityByLabel(rootChild + "." + B, "test", 40);
-    conf.setCapacityByLabel(rootChild + "." + C, "test", 10);
-    conf.setCapacityByLabel(rootChild + "." + C + "." + C1, "test", 100);
-    conf.setCapacityByLabel(rootChild + "." + D, "test", 30);
-    conf.setCapacityByLabel(rootChild + "." + E, "test", 0);
+    conf.setCapacityByLabel(new QueuePath(rootChild), "test", 100);
+    conf.setCapacityByLabel(new QueuePath(rootChild, A), "test", 20);
+    conf.setCapacityByLabel(new QueuePath(rootChild, B), "test", 40);
+    conf.setCapacityByLabel(new QueuePath(rootChild, C), "test", 10);
+    conf.setCapacityByLabel(QueuePath.createFromQueues(rootChild, C, C1), "test", 100);
+    conf.setCapacityByLabel(new QueuePath(rootChild, D), "test", 30);
+    conf.setCapacityByLabel(new QueuePath(rootChild, E), "test", 0);
     cs.getCapacitySchedulerQueueManager().reinitConfiguredNodeLabels(conf);
     cs.setMaxRunningAppsEnforcer(new CSMaxRunningAppsEnforcer(cs));
     cs.reinitialize(conf, cs.getRMContext());
@@ -5245,11 +5245,11 @@ public class TestLeafQueue {
             (int)(conf.getMaximumSystemApplications()
                 * e.getAbsoluteCapacity()), e.getMaxApplications());
 
-    conf.setCapacityByLabel(rootChild + "." + A, "test", 10);
-    conf.setCapacityByLabel(rootChild + "." + B, "test", 10);
-    conf.setCapacityByLabel(rootChild + "." + C, "test", 10);
-    conf.setCapacityByLabel(rootChild + "." + D, "test", 10);
-    conf.setCapacityByLabel(rootChild + "." + E, "test", 60);
+    conf.setCapacityByLabel(new QueuePath(rootChild, A), "test", 10);
+    conf.setCapacityByLabel(new QueuePath(rootChild, B), "test", 10);
+    conf.setCapacityByLabel(new QueuePath(rootChild, C), "test", 10);
+    conf.setCapacityByLabel(new QueuePath(rootChild, D), "test", 10);
+    conf.setCapacityByLabel(new QueuePath(rootChild, E), "test", 60);
     cs.reinitialize(conf, cs.getRMContext());
 
     e = (LeafQueue) cs.getQueue("e");
@@ -5266,21 +5266,21 @@ public class TestLeafQueue {
     CapacitySchedulerConfiguration conf = csConf;
     String rootChild = root.getChildQueues().get(0).getQueuePath();
 
-    conf.setCapacityByLabel(rootChild, "test", 100);
-    conf.setCapacityByLabel(rootChild + "." + A, "test", 20);
-    conf.setCapacityByLabel(rootChild + "." + B, "test", 40);
-    conf.setCapacityByLabel(rootChild + "." + C, "test", 10);
-    conf.setCapacityByLabel(rootChild + "." + C + "." + C1, "test", 100);
-    conf.setCapacityByLabel(rootChild + "." + D, "test", 30);
-    conf.setCapacityByLabel(rootChild + "." + E, "test", 0);
+    conf.setCapacityByLabel(new QueuePath(rootChild), "test", 100);
+    conf.setCapacityByLabel(new QueuePath(rootChild, A), "test", 20);
+    conf.setCapacityByLabel(new QueuePath(rootChild, B), "test", 40);
+    conf.setCapacityByLabel(new QueuePath(rootChild, C), "test", 10);
+    conf.setCapacityByLabel(QueuePath.createFromQueues(rootChild, C, C1), "test", 100);
+    conf.setCapacityByLabel(new QueuePath(rootChild, D), "test", 30);
+    conf.setCapacityByLabel(new QueuePath(rootChild, E), "test", 0);
 
-    conf.setCapacityByLabel(rootChild, "test2", 100);
-    conf.setCapacityByLabel(rootChild + "." + A, "test2", 20);
-    conf.setCapacityByLabel(rootChild + "." + B, "test2", 40);
-    conf.setCapacityByLabel(rootChild + "." + C, "test2", 10);
-    conf.setCapacityByLabel(rootChild + "." + C + "." + C1, "test2", 100);
-    conf.setCapacityByLabel(rootChild + "." + D, "test2", 30);
-    conf.setCapacityByLabel(rootChild + "." + E, "test2", 0);
+    conf.setCapacityByLabel(new QueuePath(rootChild), "test2", 100);
+    conf.setCapacityByLabel(new QueuePath(rootChild, A), "test2", 20);
+    conf.setCapacityByLabel(new QueuePath(rootChild, B), "test2", 40);
+    conf.setCapacityByLabel(new QueuePath(rootChild, C), "test2", 10);
+    conf.setCapacityByLabel(QueuePath.createFromQueues(rootChild, C, C1), "test2", 100);
+    conf.setCapacityByLabel(new QueuePath(rootChild, D), "test2", 30);
+    conf.setCapacityByLabel(new QueuePath(rootChild, E), "test2", 0);
 
     cs.getCapacitySchedulerQueueManager().reinitConfiguredNodeLabels(conf);
     cs.setMaxRunningAppsEnforcer(new CSMaxRunningAppsEnforcer(cs));

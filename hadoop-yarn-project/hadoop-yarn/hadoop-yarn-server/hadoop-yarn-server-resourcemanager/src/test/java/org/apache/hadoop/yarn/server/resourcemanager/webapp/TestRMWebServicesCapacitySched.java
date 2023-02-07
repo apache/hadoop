@@ -60,6 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -82,6 +83,29 @@ import static org.junit.Assert.assertEquals;
 
 public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
+  private static final String A_PATH = CapacitySchedulerConfiguration.ROOT + ".a";
+  private static final String B_PATH = CapacitySchedulerConfiguration.ROOT + ".b";
+  private static final String C_PATH = CapacitySchedulerConfiguration.ROOT + ".c";
+  private static final String A1_PATH = A_PATH + ".a1";
+  private static final String A2_PATH = A_PATH + ".a2";
+  private static final String B1_PATH = B_PATH + ".b1";
+  private static final String B2_PATH = B_PATH + ".b2";
+  private static final String B3_PATH = B_PATH + ".b3";
+  private static final String A1A_PATH = A1_PATH + ".a1a";
+  private static final String A1B_PATH = A1_PATH + ".a1b";
+  private static final String A1C_PATH = A1_PATH + ".a1c";
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath A = new QueuePath(A_PATH);
+  private static final QueuePath B = new QueuePath(B_PATH);
+  private static final QueuePath C = new QueuePath(C_PATH);
+  private static final QueuePath A1 = new QueuePath(A1_PATH);
+  private static final QueuePath A2 = new QueuePath(A2_PATH);
+  private static final QueuePath B1 = new QueuePath(B1_PATH);
+  private static final QueuePath B2 = new QueuePath(B2_PATH);
+  private static final QueuePath B3 = new QueuePath(B3_PATH);
+  private static final QueuePath A1A = new QueuePath(A1A_PATH);
+  private static final QueuePath A1B = new QueuePath(A1B_PATH);
+  private static final QueuePath A1C = new QueuePath(A1C_PATH);
   private MockRM rm;
 
   public static class WebServletModule extends ServletModule {
@@ -119,54 +143,43 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       CapacitySchedulerConfiguration config) {
 
     // Define top-level queues
-    config.setQueues(CapacitySchedulerConfiguration.ROOT,
+    config.setQueues(ROOT,
         new String[] {"a", "b", "c"});
 
-    final String a = CapacitySchedulerConfiguration.ROOT + ".a";
-    config.setCapacity(a, 10.5f);
-    config.setMaximumCapacity(a, 50);
-    config.setInt(QueuePrefixes.getQueuePrefix(a) + MAX_PARALLEL_APPLICATIONS, 42);
+    config.setCapacity(A, 10.5f);
+    config.setMaximumCapacity(A, 50);
+    config.setInt(QueuePrefixes.getQueuePrefix(A) + MAX_PARALLEL_APPLICATIONS, 42);
 
-    final String b = CapacitySchedulerConfiguration.ROOT + ".b";
-    config.setCapacity(b, 89.5f);
+    config.setCapacity(B, 89.5f);
 
-    final String c = CapacitySchedulerConfiguration.ROOT + ".c";
-    config.setCapacity(c, "[memory=1024]");
+    config.setCapacity(C, "[memory=1024]");
 
     // Define 2nd-level queues
-    final String a1 = a + ".a1";
-    final String a2 = a + ".a2";
-    config.setQueues(a, new String[] {"a1", "a2"});
-    config.setCapacity(a1, 30);
-    config.setMaximumCapacity(a1, 50);
-    config.setMaximumLifetimePerQueue(a2, 100);
-    config.setDefaultLifetimePerQueue(a2, 50);
+    config.setQueues(A, new String[] {"a1", "a2"});
+    config.setCapacity(A1, 30);
+    config.setMaximumCapacity(A1, 50);
+    config.setMaximumLifetimePerQueue(A2, 100);
+    config.setDefaultLifetimePerQueue(A2, 50);
 
-    config.setUserLimitFactor(a1, 100.0f);
-    config.setCapacity(a2, 70);
-    config.setUserLimitFactor(a2, 100.0f);
+    config.setUserLimitFactor(A1, 100.0f);
+    config.setCapacity(A2, 70);
+    config.setUserLimitFactor(A2, 100.0f);
 
-    final String b1 = b + ".b1";
-    final String b2 = b + ".b2";
-    final String b3 = b + ".b3";
-    config.setQueues(b, new String[] {"b1", "b2", "b3"});
-    config.setCapacity(b1, 60);
-    config.setUserLimitFactor(b1, 100.0f);
-    config.setCapacity(b2, 39.5f);
-    config.setUserLimitFactor(b2, 100.0f);
-    config.setCapacity(b3, 0.5f);
-    config.setUserLimitFactor(b3, 100.0f);
+    config.setQueues(B, new String[] {"b1", "b2", "b3"});
+    config.setCapacity(B1, 60);
+    config.setUserLimitFactor(B1, 100.0f);
+    config.setCapacity(B2, 39.5f);
+    config.setUserLimitFactor(B2, 100.0f);
+    config.setCapacity(B3, 0.5f);
+    config.setUserLimitFactor(B3, 100.0f);
 
-    config.setQueues(a1, new String[] {"a1a", "a1b", "a1c"});
-    final String a1A = a1 + ".a1a";
-    config.setCapacity(a1A, 65);
-    final String a1B = a1 + ".a1b";
-    config.setCapacity(a1B, 15);
-    final String a1C = a1 + ".a1c";
-    config.setCapacity(a1C, 20);
+    config.setQueues(A1, new String[] {"a1a", "a1b", "a1c"});
+    config.setCapacity(A1A, 65);
+    config.setCapacity(A1B, 15);
+    config.setCapacity(A1C, 20);
 
-    config.setAutoCreateChildQueueEnabled(a1C, true);
-    config.setInt(PREFIX + a1C + DOT + AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX
+    config.setAutoCreateChildQueueEnabled(A1C, true);
+    config.setInt(PREFIX + A1C + DOT + AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX
         + DOT + CAPACITY, 50);
   }
 
@@ -239,8 +252,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     CapacitySchedulerConfiguration config =
         ((CapacityScheduler)rm.getResourceScheduler()).getConfiguration();
 
-    config.setDefaultNodeLabelExpression("root", "ROOT-INHERITED");
-    config.setDefaultNodeLabelExpression("root.a", "root-a-default-label");
+    config.setDefaultNodeLabelExpression(ROOT, "ROOT-INHERITED");
+    config.setDefaultNodeLabelExpression(A, "root-a-default-label");
     rm.getResourceScheduler().reinitialize(config, rm.getRMContext());
 
     //Start RM so that it accepts app submissions

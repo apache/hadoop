@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -55,8 +56,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A_QUEUE_PATH;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B_QUEUE_PATH;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils.toSet;
 import static org.junit.Assert.fail;
 
@@ -262,20 +261,23 @@ public class TestApplicationMasterServiceCapacity extends
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration(config);
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "y", 100);
+    final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    conf.setQueues(ROOT, new String[] {"a", "b"});
+    conf.setCapacityByLabel(ROOT, "x", 100);
+    conf.setCapacityByLabel(ROOT, "y", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
-    conf.setCapacity(A_QUEUE_PATH, 50);
-    conf.setMaximumCapacity(A_QUEUE_PATH, 100);
+    final String A_PATH = CapacitySchedulerConfiguration.ROOT + ".a";
+    final QueuePath A = new QueuePath(A_PATH);
+    conf.setCapacity(A, 50);
+    conf.setMaximumCapacity(A, 100);
     conf.setAccessibleNodeLabels(A, toSet("x"));
     conf.setDefaultNodeLabelExpression(A, "x");
     conf.setCapacityByLabel(A, "x", 100);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
-    conf.setCapacity(B_QUEUE_PATH, 50);
-    conf.setMaximumCapacity(B_QUEUE_PATH, 100);
+    final String B_PATH = CapacitySchedulerConfiguration.ROOT + ".b";
+    final QueuePath B = new QueuePath(B_PATH);
+    conf.setCapacity(B, 50);
+    conf.setMaximumCapacity(B, 100);
     conf.setAccessibleNodeLabels(B, toSet("y"));
     conf.setDefaultNodeLabelExpression(B, "y");
     conf.setCapacityByLabel(B, "y", 100);

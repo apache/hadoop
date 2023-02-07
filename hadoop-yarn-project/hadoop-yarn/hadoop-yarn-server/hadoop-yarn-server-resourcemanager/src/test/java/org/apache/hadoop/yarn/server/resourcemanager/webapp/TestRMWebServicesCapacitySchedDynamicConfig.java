@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.junit.Test;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
@@ -146,8 +147,9 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       throws Exception {
     Configuration config = CSConfigGenerator
         .createWeightConfigWithAutoQueueCreationEnabled();
+    QueuePath autoPArent1 = new QueuePath("root.autoParent1");
     config.setInt(QueuePrefixes
-        .getQueuePrefix("root.autoParent1") +
+        .getQueuePrefix(autoPArent1) +
         AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX +
         "maximum-applications", 300);
 

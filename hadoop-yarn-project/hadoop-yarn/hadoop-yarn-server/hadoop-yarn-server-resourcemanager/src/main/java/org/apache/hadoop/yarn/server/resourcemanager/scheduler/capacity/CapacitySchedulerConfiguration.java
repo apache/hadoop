@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.QueueCapacityConfigParser;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.MappingRuleCreator;
 import org.slf4j.Logger;
@@ -427,13 +428,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   private ConfigurationProperties configurationProperties;
 
-  public int getMaximumAutoCreatedQueueDepth(QueuePath queuePath) {
-    return getInt(getQueuePrefix(queuePath) + MAXIMUM_QUEUE_DEPTH,
+  public int getMaximumAutoCreatedQueueDepth(QueuePath queue) {
+    return getInt(getQueuePrefix(queue) + MAXIMUM_QUEUE_DEPTH,
         getInt(PREFIX + MAXIMUM_QUEUE_DEPTH, DEFAULT_MAXIMUM_QUEUE_DEPTH));
   }
 
-  public void setMaximumAutoCreatedQueueDepth(QueuePath queuePath, int value) {
-    setInt(getQueuePrefix(queuePath) + MAXIMUM_QUEUE_DEPTH, value);
+  public void setMaximumAutoCreatedQueueDepth(QueuePath queue, int value) {
+    setInt(getQueuePrefix(queue) + MAXIMUM_QUEUE_DEPTH, value);
   }
 
   public void setMaximumAutoCreatedQueueDepth(int value) {
@@ -487,73 +488,73 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   /**
    * Get the maximum applications per queue setting.
-   * @param queuePath path of the queue
+   * @param queue path of the queue
    * @return setting specified or -1 if not set
    */
-  public int getMaximumApplicationsPerQueue(QueuePath queuePath) {
+  public int getMaximumApplicationsPerQueue(QueuePath queue) {
     int maxApplicationsPerQueue =
-        getInt(getQueuePrefix(queuePath) + MAXIMUM_APPLICATIONS_SUFFIX,
+        getInt(getQueuePrefix(queue) + MAXIMUM_APPLICATIONS_SUFFIX,
             (int)UNDEFINED);
     return maxApplicationsPerQueue;
   }
 
   @VisibleForTesting
-  public void setMaximumApplicationsPerQueue(QueuePath queuePath,
+  public void setMaximumApplicationsPerQueue(QueuePath queue,
       int numMaxApps) {
-    setInt(getQueuePrefix(queuePath) + MAXIMUM_APPLICATIONS_SUFFIX,
+    setInt(getQueuePrefix(queue) + MAXIMUM_APPLICATIONS_SUFFIX,
             numMaxApps);
   }
 
   /**
    * Get the maximum am resource percent per queue setting.
-   * @param queuePath path of the queue
+   * @param queue path of the queue
    * @return per queue setting or defaults to the global am-resource-percent
    *         setting if per queue setting not present
    */
-  public float getMaximumApplicationMasterResourcePerQueuePercent(QueuePath queuePath) {
-    return getFloat(getQueuePrefix(queuePath) + MAXIMUM_AM_RESOURCE_SUFFIX,
+  public float getMaximumApplicationMasterResourcePerQueuePercent(QueuePath queue) {
+    return getFloat(getQueuePrefix(queue) + MAXIMUM_AM_RESOURCE_SUFFIX,
     		getMaximumApplicationMasterResourcePercent());
   }
 
-  public void setMaximumApplicationMasterResourcePerQueuePercent(QueuePath queuePath,
+  public void setMaximumApplicationMasterResourcePerQueuePercent(QueuePath queue,
       float percent) {
-    setFloat(getQueuePrefix(queuePath) + MAXIMUM_AM_RESOURCE_SUFFIX, percent);
+    setFloat(getQueuePrefix(queue) + MAXIMUM_AM_RESOURCE_SUFFIX, percent);
   }
 
-  private void throwExceptionForUnexpectedWeight(float weight, QueuePath queuePath,
+  private void throwExceptionForUnexpectedWeight(float weight, QueuePath queue,
       String label) {
     if ((weight < -1e-6 && Math.abs(weight + 1) > 1e-6) || weight > 10000) {
       throw new IllegalArgumentException(
-          "Illegal " + "weight=" + weight + " for queue=" + queuePath.getFullPath() + "label="
+          "Illegal " + "weight=" + weight + " for queue=" + queue.getFullPath() + "label="
               + label
               + ". Acceptable values: [0, 10000], -1 is same as not set");
     }
   }
 
-  public float getNonLabeledQueueWeight(QueuePath queuePath) {
-    String configuredValue = get(getQueuePrefix(queuePath) + CAPACITY);
+  public float getNonLabeledQueueWeight(QueuePath queue) {
+    String configuredValue = get(getQueuePrefix(queue) + CAPACITY);
     float weight = extractFloatValueFromWeightConfig(configuredValue);
-    throwExceptionForUnexpectedWeight(weight, queuePath, "");
+    throwExceptionForUnexpectedWeight(weight, queue, "");
     return weight;
   }
 
-  public void setNonLabeledQueueWeight(QueuePath queuePath, float weight) {
-    set(getQueuePrefix(queuePath) + CAPACITY, weight + WEIGHT_SUFFIX);
+  public void setNonLabeledQueueWeight(QueuePath queue, float weight) {
+    set(getQueuePrefix(queue) + CAPACITY, weight + WEIGHT_SUFFIX);
   }
 
-  public void setLabeledQueueWeight(QueuePath queuePath, String label, float weight) {
-    set(getNodeLabelPrefix(queuePath, label) + CAPACITY, weight + WEIGHT_SUFFIX);
+  public void setLabeledQueueWeight(QueuePath queue, String label, float weight) {
+    set(getNodeLabelPrefix(queue, label) + CAPACITY, weight + WEIGHT_SUFFIX);
   }
 
-  public float getLabeledQueueWeight(QueuePath queuePath, String label) {
-    String configuredValue = get(getNodeLabelPrefix(queuePath, label) + CAPACITY);
+  public float getLabeledQueueWeight(QueuePath queue, String label) {
+    String configuredValue = get(getNodeLabelPrefix(queue, label) + CAPACITY);
     float weight = extractFloatValueFromWeightConfig(configuredValue);
-    throwExceptionForUnexpectedWeight(weight, queuePath, label);
+    throwExceptionForUnexpectedWeight(weight, queue, label);
     return weight;
   }
 
-  public float getNonLabeledQueueCapacity(QueuePath queuePath) {
-    String configuredCapacity = get(getQueuePrefix(queuePath) + CAPACITY);
+  public float getNonLabeledQueueCapacity(QueuePath queue) {
+    String configuredCapacity = get(getQueuePrefix(queue) + CAPACITY);
     boolean absoluteResourceConfigured = (configuredCapacity != null)
         && RESOURCE_PATTERN.matcher(configuredCapacity).find();
     if (absoluteResourceConfigured || configuredWeightAsCapacity(
@@ -562,10 +563,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       // root.From AbstractCSQueue, absolute resource will be parsed and
       // updated. Once nodes are added/removed in cluster, capacity in
       // percentage will also be re-calculated.
-      return queuePath.isRoot() ? 100.0f : 0f;
+      return queue.isRoot() ? 100.0f : 0f;
     }
 
-    float capacity = queuePath.isRoot()
+    float capacity = queue.isRoot()
         ? 100.0f
         : (configuredCapacity == null)
             ? 0f
@@ -573,39 +574,39 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     if (capacity < MINIMUM_CAPACITY_VALUE
         || capacity > MAXIMUM_CAPACITY_VALUE) {
       throw new IllegalArgumentException(
-          "Illegal " + "capacity of " + capacity + " for queue " + queuePath);
+          "Illegal " + "capacity of " + capacity + " for queue " + queue.getFullPath());
     }
     LOG.debug("CSConf - getCapacity: queuePrefix={}, capacity={}",
-        getQueuePrefix(queuePath), capacity);
+        getQueuePrefix(queue), capacity);
 
     return capacity;
   }
 
-  public void setCapacity(QueuePath queuePath, float capacity) {
-    if (queuePath.getFullPath().equals("root")) {
+  public void setCapacity(QueuePath queue, float capacity) {
+    if (queue.getFullPath().equals("root")) {
       throw new IllegalArgumentException(
           "Cannot set capacity, root queue has a fixed capacity of 100.0f");
     }
-    setFloat(getQueuePrefix(queuePath) + CAPACITY, capacity);
+    setFloat(getQueuePrefix(queue) + CAPACITY, capacity);
     LOG.debug("CSConf - setCapacity: queuePrefix={}, capacity={}",
-        getQueuePrefix(queuePath), capacity);
+        getQueuePrefix(queue), capacity);
 
   }
 
   @VisibleForTesting
-  public void setCapacity(QueuePath queuePath, String absoluteResourceCapacity) {
-    if (queuePath.getFullPath().equals("root")) {
+  public void setCapacity(QueuePath queue, String absoluteResourceCapacity) {
+    if (queue.getFullPath().equals("root")) {
       throw new IllegalArgumentException(
           "Cannot set capacity, root queue has a fixed capacity");
     }
-    set(getQueuePrefix(queuePath) + CAPACITY, absoluteResourceCapacity);
+    set(getQueuePrefix(queue) + CAPACITY, absoluteResourceCapacity);
     LOG.debug("CSConf - setCapacity: queuePrefix={}, capacity={}",
-        getQueuePrefix(queuePath), absoluteResourceCapacity);
+        getQueuePrefix(queue), absoluteResourceCapacity);
 
   }
 
-  public float getNonLabeledQueueMaximumCapacity(QueuePath queuePath) {
-    String configuredCapacity = get(getQueuePrefix(queuePath) + MAXIMUM_CAPACITY);
+  public float getNonLabeledQueueMaximumCapacity(QueuePath queue) {
+    String configuredCapacity = get(getQueuePrefix(queue) + MAXIMUM_CAPACITY);
     boolean matcher = (configuredCapacity != null)
         && RESOURCE_PATTERN.matcher(configuredCapacity).find();
     if (matcher) {
@@ -625,38 +626,38 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return maxCapacity;
   }
 
-  public void setMaximumCapacity(QueuePath queuePath, float maxCapacity) {
+  public void setMaximumCapacity(QueuePath queue, float maxCapacity) {
     if (maxCapacity > MAXIMUM_CAPACITY_VALUE) {
       throw new IllegalArgumentException("Illegal " +
-          "maximum-capacity of " + maxCapacity + " for queue " + queuePath.getFullPath());
+          "maximum-capacity of " + maxCapacity + " for queue " + queue.getFullPath());
     }
-    setFloat(getQueuePrefix(queuePath) + MAXIMUM_CAPACITY, maxCapacity);
+    setFloat(getQueuePrefix(queue) + MAXIMUM_CAPACITY, maxCapacity);
     LOG.debug("CSConf - setMaxCapacity: queuePrefix={}, maxCapacity={}",
-        getQueuePrefix(queuePath), maxCapacity);
+        getQueuePrefix(queue), maxCapacity);
   }
 
-  public void setCapacityByLabel(String queue, String label, float capacity) {
+  public void setCapacityByLabel(QueuePath queue, String label, float capacity) {
     setFloat(getNodeLabelPrefix(queue, label) + CAPACITY, capacity);
   }
 
   @VisibleForTesting
-  public void setCapacityByLabel(String queue, String label,
+  public void setCapacityByLabel(QueuePath queue, String label,
                                  String absoluteResourceCapacity) {
     set(getNodeLabelPrefix(queue, label) + CAPACITY, absoluteResourceCapacity);
   }
 
-  public void setMaximumCapacityByLabel(String queue, String label,
+  public void setMaximumCapacityByLabel(QueuePath queue, String label,
       float capacity) {
     setFloat(getNodeLabelPrefix(queue, label) + MAXIMUM_CAPACITY, capacity);
   }
 
-  public void setMaximumCapacityByLabel(String queue, String label,
+  public void setMaximumCapacityByLabel(QueuePath queue, String label,
       String absoluteResourceCapacity) {
     set(getNodeLabelPrefix(queue, label) + MAXIMUM_CAPACITY,
         absoluteResourceCapacity);
   }
 
-  public float getUserLimit(String queue) {
+  public float getUserLimit(QueuePath queue) {
     float defaultUserLimit = getFloat(PREFIX + USER_LIMIT, DEFAULT_USER_LIMIT);
     float userLimit = getFloat(getQueuePrefix(queue) + USER_LIMIT,
         defaultUserLimit);
@@ -668,7 +669,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   // if possible.
   @SuppressWarnings("unchecked")
   public <S extends SchedulableEntity> OrderingPolicy<S> getAppOrderingPolicy(
-      String queue) {
+          QueuePath queue) {
 
     String policyType = get(getQueuePrefix(queue) + ORDERING_POLICY,
         DEFAULT_APP_ORDERING_POLICY);
@@ -707,7 +708,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return orderingPolicy;
   }
 
-  public void setUserLimit(String queue, float userLimit) {
+  public void setUserLimit(QueuePath queue, float userLimit) {
     setFloat(getQueuePrefix(queue) + USER_LIMIT, userLimit);
     LOG.debug("here setUserLimit: queuePrefix={}, userLimit={}",
         getQueuePrefix(queue), getUserLimit(queue));
@@ -718,7 +719,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     setFloat(PREFIX + USER_LIMIT, defaultUserLimit);
   }
 
-  public float getUserLimitFactor(String queue) {
+  public float getUserLimitFactor(QueuePath queue) {
     float defaultUserLimitFactor = getFloat(PREFIX + USER_LIMIT_FACTOR, DEFAULT_USER_LIMIT_FACTOR);
     float userLimitFactor =
         getFloat(getQueuePrefix(queue) + USER_LIMIT_FACTOR,
@@ -726,8 +727,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return userLimitFactor;
   }
 
-  public void setUserLimitFactor(String queue, float userLimitFactor) {
-    setFloat(getQueuePrefix(queue) + USER_LIMIT_FACTOR, userLimitFactor);
+  public void setUserLimitFactor(QueuePath queuePath, float userLimitFactor) {
+    setFloat(getQueuePrefix(queuePath) + USER_LIMIT_FACTOR, userLimitFactor);
   }
 
   @VisibleForTesting
@@ -735,7 +736,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     setFloat(PREFIX + USER_LIMIT_FACTOR, defaultUserLimitFactor);
   }
 
-  public QueueState getConfiguredState(String queue) {
+  public QueueState getConfiguredState(QueuePath queue) {
     String state = get(getQueuePrefix(queue) + STATE);
     if (state == null) {
       return null;
@@ -744,18 +745,18 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
   }
 
-  public QueueState getState(String queue) {
+  public QueueState getState(QueuePath queue) {
     QueueState state = getConfiguredState(queue);
     return (state == null) ? QueueState.RUNNING : state;
   }
 
   @Private
   @VisibleForTesting
-  public void setState(String queue, QueueState state) {
+  public void setState(QueuePath queue, QueueState state) {
     set(getQueuePrefix(queue) + STATE, state.name());
   }
 
-  public void setAccessibleNodeLabels(String queue, Set<String> labels) {
+  public void setAccessibleNodeLabels(QueuePath queue, Set<String> labels) {
     if (labels == null) {
       return;
     }
@@ -763,27 +764,27 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     set(getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS, str);
   }
 
-  public Set<String> getAccessibleNodeLabels(String queue) {
+  public Set<String> getAccessibleNodeLabels(QueuePath queue) {
     String accessibleLabelStr =
         get(getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS);
 
     // When accessible-label is null,
     if (accessibleLabelStr == null) {
       // Only return null when queue is not ROOT
-      if (!queue.equals(ROOT)) {
+      if (!queue.isRoot()) {
         return null;
       }
     } else {
       // print a warning when accessibleNodeLabel specified in config and queue
       // is ROOT
-      if (queue.equals(ROOT)) {
+      if (queue.isRoot()) {
         LOG.warn("Accessible node labels for root queue will be ignored,"
             + " it will be automatically set to \"*\".");
       }
     }
 
     // always return ANY for queue root
-    if (queue.equals(ROOT)) {
+    if (queue.isRoot()) {
       return ImmutableSet.of(RMNodeLabelsManager.ANY);
     }
 
@@ -821,7 +822,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   private float internalGetLabeledQueueCapacity(QueuePath queue, String label,
       String suffix, float defaultValue) {
-    String capacityPropertyName = getNodeLabelPrefix(queue.getFullPath(), label) + suffix;
+    String capacityPropertyName = getNodeLabelPrefix(queue, label) + suffix;
     String configuredCapacity = get(capacityPropertyName);
     boolean absoluteResourceConfigured =
         (configuredCapacity != null) && RESOURCE_PATTERN.matcher(
@@ -846,7 +847,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug(
-          "CSConf - getCapacityOfLabel: prefix=" + getNodeLabelPrefix(queue.getFullPath(),
+          "CSConf - getCapacityOfLabel: prefix=" + getNodeLabelPrefix(queue,
               label) + ", capacity=" + capacity);
     }
     return capacity;
@@ -860,7 +861,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return internalGetLabeledQueueCapacity(queue, label, MAXIMUM_CAPACITY, 100f);
   }
 
-  public String getDefaultNodeLabelExpression(String queue) {
+  public String getDefaultNodeLabelExpression(QueuePath queue) {
     String defaultLabelExpression = get(getQueuePrefix(queue)
         + DEFAULT_NODE_LABEL_EXPRESSION);
     if (defaultLabelExpression == null) {
@@ -869,7 +870,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return defaultLabelExpression.trim();
   }
 
-  public void setDefaultNodeLabelExpression(String queue, String exp) {
+  public void setDefaultNodeLabelExpression(QueuePath queue, String exp) {
     set(getQueuePrefix(queue) + DEFAULT_NODE_LABEL_EXPRESSION, exp);
   }
 
@@ -877,12 +878,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       String label) {
     // If per-partition max-am-resource-percent is not configured,
     // use default value as max-am-resource-percent for this queue.
-    return getFloat(getNodeLabelPrefix(queue.getFullPath(), label)
+    return getFloat(getNodeLabelPrefix(queue, label)
         + MAXIMUM_AM_RESOURCE_SUFFIX,
-        getMaximumApplicationMasterResourcePerQueuePercent(queue.getFullPath()));
+        getMaximumApplicationMasterResourcePerQueuePercent(queue));
   }
 
-  public void setMaximumAMResourcePercentPerPartition(String queue,
+  public void setMaximumAMResourcePercentPerPartition(QueuePath queue,
       String label, float percent) {
     setFloat(getNodeLabelPrefix(queue, label)
         + MAXIMUM_AM_RESOURCE_SUFFIX, percent);
@@ -903,16 +904,16 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return "acl_" + StringUtils.toLowerCase(acl.toString());
   }
 
-  public AccessControlList getAcl(String queue, QueueACL acl) {
+  public AccessControlList getAcl(QueuePath queue, QueueACL acl) {
     String queuePrefix = getQueuePrefix(queue);
     // The root queue defaults to all access if not defined
     // Sub queues inherit access if not defined
-    String defaultAcl = queue.equals(ROOT) ? ALL_ACL : NONE_ACL;
+    String defaultAcl = queue.isRoot() ? ALL_ACL : NONE_ACL;
     String aclString = get(queuePrefix + getAclKey(acl), defaultAcl);
     return new AccessControlList(aclString);
   }
 
-  public void setAcl(String queue, QueueACL acl, String aclString) {
+  public void setAcl(QueuePath queue, QueueACL acl, String aclString) {
     String queuePrefix = getQueuePrefix(queue);
     set(queuePrefix + getAclKey(acl), aclString);
   }
@@ -932,9 +933,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * @return A mapping of the queue ACLs.
    */
   public Map<AccessType, AccessControlList> getACLsForLegacyAutoCreatedLeafQueue(
-      String parentQueuePath) {
+        QueuePath parentQueuePath) {
     final String prefix =
-        getQueuePrefix(getAutoCreatedQueueTemplateConfPrefix(
+        getQueuePrefix(getAutoCreatedQueueObjectTemplateConfPrefix(
             parentQueuePath));
 
     Map<String, String> properties = new HashMap<>();
@@ -1014,12 +1015,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         queue) {
     Map<ReservationACL, AccessControlList> resAcls = new HashMap<>();
     for (ReservationACL acl : ReservationACL.values()) {
-      resAcls.put(acl, getReservationAcl(queue, acl));
+      resAcls.put(acl, getReservationAcl(new QueuePath(queue), acl));
     }
     return resAcls;
   }
 
-  private AccessControlList getReservationAcl(String queue, ReservationACL
+  private AccessControlList getReservationAcl(QueuePath queue, ReservationACL
         acl) {
     String queuePrefix = getQueuePrefix(queue);
     // The root queue defaults to all access if not defined
@@ -1029,17 +1030,17 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return new AccessControlList(aclString);
   }
 
-  private void setAcl(String queue, ReservationACL acl, String aclString) {
+  private void setAcl(QueuePath queue, ReservationACL acl, String aclString) {
     String queuePrefix = getQueuePrefix(queue);
     set(queuePrefix + getAclKey(acl), aclString);
   }
 
-  private void setAcl(String queue, AccessType acl, String aclString) {
+  private void setAcl(QueuePath queue, AccessType acl, String aclString) {
     String queuePrefix = getQueuePrefix(queue);
     set(queuePrefix + getAclKey(acl), aclString);
   }
 
-  public Map<AccessType, AccessControlList> getAcls(String queue) {
+  public Map<AccessType, AccessControlList> getAcls(QueuePath queue) {
     Map<AccessType, AccessControlList> acls =
       new HashMap<AccessType, AccessControlList>();
     for (QueueACL acl : QueueACL.values()) {
@@ -1048,14 +1049,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return acls;
   }
 
-  public void setAcls(String queue, Map<QueueACL, AccessControlList> acls) {
+  public void setAcls(QueuePath queue, Map<QueueACL, AccessControlList> acls) {
     for (Map.Entry<QueueACL, AccessControlList> e : acls.entrySet()) {
       setAcl(queue, e.getKey(), e.getValue().getAclString());
     }
   }
 
   @VisibleForTesting
-  public void setReservationAcls(String queue,
+  public void setReservationAcls(QueuePath queue,
         Map<ReservationACL, AccessControlList> acls) {
     for (Map.Entry<ReservationACL, AccessControlList> e : acls.entrySet()) {
       setAcl(queue, e.getKey(), e.getValue().getAclString());
@@ -1063,7 +1064,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   @VisibleForTesting
-  public void setPriorityAcls(String queue, Priority priority,
+  public void setPriorityAcls(QueuePath queue, Priority priority,
       Priority defaultPriority, String[] acls) {
     StringBuilder aclString = new StringBuilder();
 
@@ -1080,7 +1081,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     setAcl(queue, AccessType.APPLICATION_MAX_PRIORITY, aclString.toString());
   }
 
-  public List<AppPriorityACLGroup> getPriorityAcls(String queue,
+  public List<AppPriorityACLGroup> getPriorityAcls(QueuePath queue,
       Priority clusterMaxPriority) {
     String queuePrefix = getQueuePrefix(queue);
     String defaultAcl = ALL_ACL;
@@ -1091,7 +1092,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return priorityACLConfig.getPriorityAcl(clusterMaxPriority, aclString);
   }
 
-  public String[] getQueues(String queue) {
+  public String[] getQueues(QueuePath queue) {
     LOG.debug("CSConf - getQueues called for: queuePrefix={}",
         getQueuePrefix(queue));
     String[] queues = getStrings(getQueuePrefix(queue) + QUEUES);
@@ -1110,7 +1111,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return queues;
   }
 
-  public void setQueues(String queue, String[] subQueues) {
+  public void setQueues(QueuePath queue, String[] subQueues) {
     set(getQueuePrefix(queue) + QUEUES, StringUtils.arrayToString(subQueues));
     LOG.debug("CSConf - setQueues: qPrefix={}, queues={}",
         getQueuePrefix(queue), StringUtils.arrayToString(subQueues));
@@ -1127,7 +1128,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   @Private
-  public Priority getQueuePriority(String queue) {
+  public Priority getQueuePriority(QueuePath queue) {
     String queuePolicyPrefix = getQueuePrefix(queue);
     Priority pri = Priority.newInstance(
         getInt(queuePolicyPrefix + "priority", 0));
@@ -1135,7 +1136,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   @Private
-  public void setQueuePriority(String queue, int priority) {
+  public void setQueuePriority(QueuePath queue, int priority) {
     String queuePolicyPrefix = getQueuePrefix(queue);
     setInt(queuePolicyPrefix + "priority", priority);
   }
@@ -1148,7 +1149,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    *          name of the queue
    * @return Resource object or Resource.none if not set
    */
-  public Resource getQueueMaximumAllocation(String queue) {
+  public Resource getQueueMaximumAllocation(QueuePath queue) {
     String queuePrefix = getQueuePrefix(queue);
     String rawQueueMaxAllocation = get(queuePrefix + MAXIMUM_ALLOCATION, null);
     if (Strings.isNullOrEmpty(rawQueueMaxAllocation)) {
@@ -1159,7 +1160,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
   }
 
-  public void setQueueMaximumAllocation(String queue, String maximumAllocation) {
+  public void setQueueMaximumAllocation(QueuePath queue, String maximumAllocation) {
     String queuePrefix = getQueuePrefix(queue);
     set(queuePrefix + MAXIMUM_ALLOCATION, maximumAllocation);
   }
@@ -1187,12 +1188,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     configurationProperties = new ConfigurationProperties(props);
   }
 
-  public long getQueueMaximumAllocationMb(String queue) {
+  public long getQueueMaximumAllocationMb(QueuePath queue) {
     String queuePrefix = getQueuePrefix(queue);
     return getInt(queuePrefix + MAXIMUM_ALLOCATION_MB, (int)UNDEFINED);
   }
 
-  public int getQueueMaximumAllocationVcores(String queue) {
+  public int getQueueMaximumAllocationVcores(QueuePath queue) {
     String queuePrefix = getQueuePrefix(queue);
     return getInt(queuePrefix + MAXIMUM_ALLOCATION_VCORES, (int)UNDEFINED);
   }
@@ -1529,20 +1530,20 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public boolean isReservable(String queue) {
     boolean isReservable =
-        getBoolean(getQueuePrefix(queue) + IS_RESERVABLE, false);
+        getBoolean(getQueuePrefix(new QueuePath(queue)) + IS_RESERVABLE, false);
     return isReservable;
   }
 
   public void setReservable(String queue, boolean isReservable) {
-    setBoolean(getQueuePrefix(queue) + IS_RESERVABLE, isReservable);
+    setBoolean(getQueuePrefix(new QueuePath(queue)) + IS_RESERVABLE, isReservable);
     LOG.debug("here setReservableQueue: queuePrefix={}, isReservableQueue={}",
-        getQueuePrefix(queue), isReservable(queue));
+        getQueuePrefix(new QueuePath(queue)), isReservable(queue));
   }
 
   @Override
   public long getReservationWindow(String queue) {
     long reservationWindow =
-        getLong(getQueuePrefix(queue) + RESERVATION_WINDOW,
+        getLong(getQueuePrefix(new QueuePath(queue)) + RESERVATION_WINDOW,
             DEFAULT_RESERVATION_WINDOW);
     return reservationWindow;
   }
@@ -1550,7 +1551,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Override
   public float getAverageCapacity(String queue) {
     float avgCapacity =
-        getFloat(getQueuePrefix(queue) + AVERAGE_CAPACITY,
+        getFloat(getQueuePrefix(new QueuePath(queue)) + AVERAGE_CAPACITY,
             MAXIMUM_CAPACITY_VALUE);
     return avgCapacity;
   }
@@ -1558,33 +1559,33 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Override
   public float getInstantaneousMaxCapacity(String queue) {
     float instMaxCapacity =
-        getFloat(getQueuePrefix(queue) + INSTANTANEOUS_MAX_CAPACITY,
+        getFloat(getQueuePrefix(new QueuePath(queue)) + INSTANTANEOUS_MAX_CAPACITY,
             MAXIMUM_CAPACITY_VALUE);
     return instMaxCapacity;
   }
 
-  public void setInstantaneousMaxCapacity(String queue, float instMaxCapacity) {
+  public void setInstantaneousMaxCapacity(QueuePath queue, float instMaxCapacity) {
     setFloat(getQueuePrefix(queue) + INSTANTANEOUS_MAX_CAPACITY,
         instMaxCapacity);
   }
 
-  public void setReservationWindow(String queue, long reservationWindow) {
+  public void setReservationWindow(QueuePath queue, long reservationWindow) {
     setLong(getQueuePrefix(queue) + RESERVATION_WINDOW, reservationWindow);
   }
 
-  public void setAverageCapacity(String queue, float avgCapacity) {
+  public void setAverageCapacity(QueuePath queue, float avgCapacity) {
     setFloat(getQueuePrefix(queue) + AVERAGE_CAPACITY, avgCapacity);
   }
 
   @Override
   public String getReservationAdmissionPolicy(String queue) {
     String reservationPolicy =
-        get(getQueuePrefix(queue) + RESERVATION_ADMISSION_POLICY,
+        get(getQueuePrefix(new QueuePath(queue)) + RESERVATION_ADMISSION_POLICY,
             DEFAULT_RESERVATION_ADMISSION_POLICY);
     return reservationPolicy;
   }
 
-  public void setReservationAdmissionPolicy(String queue,
+  public void setReservationAdmissionPolicy(QueuePath queue,
       String reservationPolicy) {
     set(getQueuePrefix(queue) + RESERVATION_ADMISSION_POLICY, reservationPolicy);
   }
@@ -1592,19 +1593,19 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Override
   public String getReservationAgent(String queue) {
     String reservationAgent =
-        get(getQueuePrefix(queue) + RESERVATION_AGENT_NAME,
+        get(getQueuePrefix(new QueuePath(queue)) + RESERVATION_AGENT_NAME,
             DEFAULT_RESERVATION_AGENT_NAME);
     return reservationAgent;
   }
 
-  public void setReservationAgent(String queue, String reservationPolicy) {
+  public void setReservationAgent(QueuePath queue, String reservationPolicy) {
     set(getQueuePrefix(queue) + RESERVATION_AGENT_NAME, reservationPolicy);
   }
 
   @Override
   public boolean getShowReservationAsQueues(String queuePath) {
     boolean showReservationAsQueues =
-        getBoolean(getQueuePrefix(queuePath)
+        getBoolean(getQueuePrefix(new QueuePath(queuePath))
             + RESERVATION_SHOW_RESERVATION_AS_QUEUE,
             DEFAULT_SHOW_RESERVATIONS_AS_QUEUES);
     return showReservationAsQueues;
@@ -1613,7 +1614,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Override
   public String getReplanner(String queue) {
     String replanner =
-        get(getQueuePrefix(queue) + RESERVATION_PLANNER_NAME,
+        get(getQueuePrefix(new QueuePath(queue)) + RESERVATION_PLANNER_NAME,
             DEFAULT_RESERVATION_PLANNER_NAME);
     return replanner;
   }
@@ -1621,7 +1622,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Override
   public boolean getMoveOnExpiry(String queue) {
     boolean killOnExpiry =
-        getBoolean(getQueuePrefix(queue) + RESERVATION_MOVE_ON_EXPIRY,
+        getBoolean(getQueuePrefix(new QueuePath(queue)) + RESERVATION_MOVE_ON_EXPIRY,
             DEFAULT_RESERVATION_MOVE_ON_EXPIRY);
     return killOnExpiry;
   }
@@ -1629,7 +1630,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Override
   public long getEnforcementWindow(String queue) {
     long enforcementWindow =
-        getLong(getQueuePrefix(queue) + RESERVATION_ENFORCEMENT_WINDOW,
+        getLong(getQueuePrefix(new QueuePath(queue)) + RESERVATION_ENFORCEMENT_WINDOW,
             DEFAULT_RESERVATION_ENFORCEMENT_WINDOW);
     return enforcementWindow;
   }
@@ -1642,7 +1643,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * @param queue queue path
    * @param preemptionDisabled true if preemption is disabled on queue
    */
-  public void setPreemptionDisabled(String queue, boolean preemptionDisabled) {
+  public void setPreemptionDisabled(QueuePath queue, boolean preemptionDisabled) {
     setBoolean(getQueuePrefix(queue) + QUEUE_PREEMPTION_DISABLED,
                preemptionDisabled);
   }
@@ -1655,7 +1656,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * is not set in the configuration
    * @return true if preemption is disabled on <em>queue</em>, false otherwise
    */
-  public boolean getPreemptionDisabled(String queue, boolean defaultVal) {
+  public boolean getPreemptionDisabled(QueuePath queue, boolean defaultVal) {
     boolean preemptionDisabled =
         getBoolean(getQueuePrefix(queue) + QUEUE_PREEMPTION_DISABLED,
                    defaultVal);
@@ -1670,7 +1671,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * configuration
    * @return true if preemption is disabled on queue, false otherwise
    */
-  public boolean getIntraQueuePreemptionDisabled(String queue,
+  public boolean getIntraQueuePreemptionDisabled(QueuePath queue,
       boolean defaultVal) {
     return
         getBoolean(getQueuePrefix(queue) + INTRA_QUEUE_PREEMPTION_CONFIG_PREFIX
@@ -1680,7 +1681,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   /**
    * Get configured node labels in a given queuePath
    */
-  public Set<String> getConfiguredNodeLabels(String queuePath) {
+  public Set<String> getConfiguredNodeLabels(QueuePath queuePath) {
     Set<String> configuredNodeLabels = new HashSet<String>();
     Entry<String, String> e = null;
 
@@ -1751,7 +1752,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         YarnConfiguration.DEFAULT_CLUSTER_LEVEL_APPLICATION_PRIORITY));
   }
 
-  public Integer getDefaultApplicationPriorityConfPerQueue(String queue) {
+  public Integer getDefaultApplicationPriorityConfPerQueue(QueuePath queue) {
     Integer defaultPriority = getInt(getQueuePrefix(queue)
         + DEFAULT_APPLICATION_PRIORITY,
         DEFAULT_CONFIGURATION_APPLICATION_PRIORITY);
@@ -1759,12 +1760,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   @VisibleForTesting
-  public void setOrderingPolicy(String queue, String policy) {
+  public void setOrderingPolicy(QueuePath queue, String policy) {
     set(getQueuePrefix(queue) + ORDERING_POLICY, policy);
   }
 
   @VisibleForTesting
-  public void setOrderingPolicyParameter(String queue,
+  public void setOrderingPolicyParameter(QueuePath queue,
       String parameterKey, String parameterValue) {
     set(getQueuePrefix(queue) + ORDERING_POLICY + "." + parameterKey,
         parameterValue);
@@ -1778,7 +1779,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return conf.getBoolean(APP_FAIL_FAST, DEFAULT_APP_FAIL_FAST);
   }
 
-  public Integer getMaxParallelAppsForQueue(String queue) {
+  public Integer getMaxParallelAppsForQueue(QueuePath queue) {
     int defaultMaxParallelAppsForQueue =
         getInt(PREFIX + MAX_PARALLEL_APPLICATIONS,
         DEFAULT_MAX_PARALLEL_APPLICATIONS);
@@ -1803,12 +1804,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         : defaultMaxParallelAppsForUser;
   }
 
-  public boolean getAllowZeroCapacitySum(String queue) {
+  public boolean getAllowZeroCapacitySum(QueuePath queue) {
     return getBoolean(getQueuePrefix(queue)
         + ALLOW_ZERO_CAPACITY_SUM, DEFAULT_ALLOW_ZERO_CAPACITY_SUM);
   }
 
-  public void setAllowZeroCapacitySum(String queue, boolean value) {
+  public void setAllowZeroCapacitySum(QueuePath queue, boolean value) {
     setBoolean(getQueuePrefix(queue)
         + ALLOW_ZERO_CAPACITY_SUM, value);
   }
@@ -2006,12 +2007,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
 
   @Private
-  public void setQueueOrderingPolicy(String queue, String policy) {
+  public void setQueueOrderingPolicy(QueuePath queue, String policy) {
     set(getQueuePrefix(queue) + ORDERING_POLICY, policy);
   }
 
   @Private
-  public QueueOrderingPolicy getQueueOrderingPolicy(String queue,
+  public QueueOrderingPolicy getQueueOrderingPolicy(QueuePath queue,
       String parentPolicy) {
     String defaultPolicy = parentPolicy;
     if (null == defaultPolicy) {
@@ -2033,7 +2034,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         qop = (QueueOrderingPolicy) Class.forName(policyType).newInstance();
       } catch (Exception e) {
         String message = "Unable to construct queue ordering policy="
-            + policyType + " queue=" + queue;
+            + policyType + " queue=" + queue.getFullPath();
         throw new YarnRuntimeException(message, e);
       }
     }
@@ -2152,7 +2153,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * @param queuePath full queue path
    * @return map of user weights, if they exist. Otherwise, return empty map.
    */
-  public UserWeights getAllUserWeightsForQueue(String queuePath) {
+  public UserWeights getAllUserWeightsForQueue(QueuePath queuePath) {
     return UserWeights.createByConfig(this, getConfigurationProperties(), queuePath);
   }
 
@@ -2170,23 +2171,23 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String DEFAULT_LIFETIME_SUFFIX =
       "default-application-lifetime";
 
-  public long getMaximumLifetimePerQueue(String queue) {
+  public long getMaximumLifetimePerQueue(QueuePath queue) {
     long maximumLifetimePerQueue = getLong(
         getQueuePrefix(queue) + MAXIMUM_LIFETIME_SUFFIX, (long) UNDEFINED);
     return maximumLifetimePerQueue;
   }
 
-  public void setMaximumLifetimePerQueue(String queue, long maximumLifetime) {
+  public void setMaximumLifetimePerQueue(QueuePath queue, long maximumLifetime) {
     setLong(getQueuePrefix(queue) + MAXIMUM_LIFETIME_SUFFIX, maximumLifetime);
   }
 
-  public long getDefaultLifetimePerQueue(String queue) {
+  public long getDefaultLifetimePerQueue(QueuePath queue) {
     long maximumLifetimePerQueue = getLong(
         getQueuePrefix(queue) + DEFAULT_LIFETIME_SUFFIX, (long) UNDEFINED);
     return maximumLifetimePerQueue;
   }
 
-  public void setDefaultLifetimePerQueue(String queue, long defaultLifetime) {
+  public void setDefaultLifetimePerQueue(QueuePath queue, long defaultLifetime) {
     setLong(getQueuePrefix(queue) + DEFAULT_LIFETIME_SUFFIX, defaultLifetime);
   }
 
@@ -2247,7 +2248,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * is false
    */
   @Private
-  public boolean isAutoCreateChildQueueEnabled(String queuePath) {
+  public boolean isAutoCreateChildQueueEnabled(QueuePath queuePath) {
     boolean isAutoCreateEnabled = getBoolean(
         getQueuePrefix(queuePath) + AUTO_CREATE_CHILD_QUEUE_ENABLED,
         DEFAULT_AUTO_CREATE_CHILD_QUEUE_ENABLED);
@@ -2256,21 +2257,21 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   @Private
   @VisibleForTesting
-  public void setAutoCreateChildQueueEnabled(String queuePath,
+  public void setAutoCreateChildQueueEnabled(QueuePath queuePath,
       boolean autoCreationEnabled) {
     setBoolean(getQueuePrefix(queuePath) +
             AUTO_CREATE_CHILD_QUEUE_ENABLED,
         autoCreationEnabled);
   }
 
-  public void setAutoQueueCreationV2Enabled(String queuePath,
+  public void setAutoQueueCreationV2Enabled(QueuePath queuePath,
       boolean autoQueueCreation) {
     setBoolean(
         getQueuePrefix(queuePath) + AUTO_QUEUE_CREATION_V2_ENABLED,
         autoQueueCreation);
   }
 
-  public boolean isAutoQueueCreationV2Enabled(String queuePath) {
+  public boolean isAutoQueueCreationV2Enabled(QueuePath queuePath) {
     boolean isAutoQueueCreation = getBoolean(
         getQueuePrefix(queuePath) + AUTO_QUEUE_CREATION_V2_ENABLED,
         DEFAULT_AUTO_QUEUE_CREATION_ENABLED);
@@ -2294,7 +2295,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    */
   @Private
   public boolean getShouldFailAutoQueueCreationWhenGuaranteedCapacityExceeded(
-      String queuePath) {
+          QueuePath queuePath) {
     boolean shouldFailAutoQueueCreationOnExceedingGuaranteedCapacity =
         getBoolean(getQueuePrefix(queuePath)
                 + FAIL_AUTO_CREATION_ON_EXCEEDING_CAPACITY,
@@ -2305,7 +2306,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @VisibleForTesting
   @Private
   public void setShouldFailAutoQueueCreationWhenGuaranteedCapacityExceeded(
-      String queuePath, boolean autoCreationEnabled) {
+          QueuePath queuePath, boolean autoCreationEnabled) {
     setBoolean(
         getQueuePrefix(queuePath) +
             FAIL_AUTO_CREATION_ON_EXCEEDING_CAPACITY,
@@ -2320,7 +2321,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * @return the max number of leaf queues allowed to be auto created
    */
   @Private
-  public int getAutoCreatedQueuesMaxChildQueuesLimit(String queuePath) {
+  public int getAutoCreatedQueuesMaxChildQueuesLimit(QueuePath queuePath) {
     return getInt(getQueuePrefix(queuePath) +
             AUTO_CREATE_QUEUE_MAX_QUEUES,
         DEFAULT_AUTO_CREATE_QUEUE_MAX_QUEUES);
@@ -2335,14 +2336,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * in new auto created.
    */
   @Private
-  public int getAutoCreatedQueuesV2MaxChildQueuesLimit(String queuePath) {
+  public int getAutoCreatedQueuesV2MaxChildQueuesLimit(QueuePath queuePath) {
     return getInt(getQueuePrefix(queuePath) +
             AUTO_QUEUE_CREATION_V2_MAX_QUEUES,
         DEFAULT_AUTO_QUEUE_CREATION_V2_MAX_QUEUES);
   }
 
   @VisibleForTesting
-  public void setAutoCreatedQueuesV2MaxChildQueuesLimit(String queuePath,
+  public void setAutoCreatedQueuesV2MaxChildQueuesLimit(QueuePath queuePath,
       int maxQueues) {
     setInt(getQueuePrefix(queuePath) +
         AUTO_QUEUE_CREATION_V2_MAX_QUEUES, maxQueues);
@@ -2399,7 +2400,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * is true.
    */
   @Private
-  public boolean isAutoExpiredDeletionEnabled(String queuePath) {
+  public boolean isAutoExpiredDeletionEnabled(QueuePath queuePath) {
     boolean isAutoExpiredDeletionEnabled = getBoolean(
         getQueuePrefix(queuePath) +
             AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE,
@@ -2409,7 +2410,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   @Private
   @VisibleForTesting
-  public void setAutoExpiredDeletionEnabled(String queuePath,
+  public void setAutoExpiredDeletionEnabled(QueuePath queuePath,
       boolean autoRemovalEnable) {
     setBoolean(getQueuePrefix(queuePath) +
             AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE,
@@ -2447,7 +2448,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * @return Configured policy class name
    */
   @Private
-  public String getAutoCreatedQueueManagementPolicy(String queue) {
+  public String getAutoCreatedQueueManagementPolicy(QueuePath queue) {
     String autoCreatedQueueManagementPolicy =
         get(getQueuePrefix(queue) + AUTO_CREATED_QUEUE_MANAGEMENT_POLICY,
             DEFAULT_AUTO_CREATED_QUEUE_MANAGEMENT_POLICY);
@@ -2458,19 +2459,19 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * Get The policy class configured to manage capacities for auto created leaf
    * queues under the specified parent
    *
-   * @param queueName The parent queue's name
+   * @param queue The parent queue's name
    * @return The policy class configured to manage capacities for auto created
    * leaf queues under the specified parent queue
    */
   @Private
   protected AutoCreatedQueueManagementPolicy
   getAutoCreatedQueueManagementPolicyClass(
-      String queueName) {
+        QueuePath queue) {
 
     String queueManagementPolicyClassName =
-        getAutoCreatedQueueManagementPolicy(queueName);
+        getAutoCreatedQueueManagementPolicy(queue);
     LOG.info("Using Auto Created Queue Management Policy: "
-        + queueManagementPolicyClassName + " for queue: " + queueName);
+        + queueManagementPolicyClassName + " for queue: " + queue.getFullPath());
     try {
       Class<?> queueManagementPolicyClazz = getClassByName(
           queueManagementPolicyClassName);
@@ -2486,36 +2487,36 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     } catch (ClassNotFoundException e) {
       throw new YarnRuntimeException(
           "Could not instantiate " + "AutoCreatedQueueManagementPolicy: "
-              + queueManagementPolicyClassName + " for queue: " + queueName,
+              + queueManagementPolicyClassName + " for queue: " + queue.getFullPath(),
           e);
     }
   }
 
   @VisibleForTesting
   @Private
-  public void setAutoCreatedLeafQueueConfigCapacity(String queuePath,
+  public void setAutoCreatedLeafQueueConfigCapacity(QueuePath queuePath,
       float val) {
-    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+    QueuePath leafQueueConfPrefix = getAutoCreatedQueueObjectTemplateConfPrefix(
         queuePath);
     setCapacity(leafQueueConfPrefix, val);
   }
 
   @VisibleForTesting
   @Private
-  public void setAutoCreatedLeafQueueTemplateCapacityByLabel(String queuePath,
+  public void setAutoCreatedLeafQueueTemplateCapacityByLabel(QueuePath queuePath,
       String label, float val) {
-    String leafQueueConfPrefix =
-        getAutoCreatedQueueTemplateConfPrefix(queuePath);
+    QueuePath leafQueueConfPrefix =
+         getAutoCreatedQueueObjectTemplateConfPrefix(queuePath);
     setCapacityByLabel(leafQueueConfPrefix, label, val);
   }
 
   @VisibleForTesting
   @Private
-  public void setAutoCreatedLeafQueueTemplateCapacityByLabel(String queuePath,
+  public void setAutoCreatedLeafQueueTemplateCapacityByLabel(QueuePath queuePath,
       String label, Resource resource) {
 
-    String leafQueueConfPrefix =
-        getAutoCreatedQueueTemplateConfPrefix(queuePath);
+    QueuePath leafQueueConfPrefix =
+         getAutoCreatedQueueObjectTemplateConfPrefix(queuePath);
 
     StringBuilder resourceString = new StringBuilder();
 
@@ -2541,18 +2542,18 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   @Private
   @VisibleForTesting
-  public void setAutoCreatedLeafQueueTemplateMaxCapacity(String queuePath,
+  public void setAutoCreatedLeafQueueTemplateMaxCapacity(QueuePath queuePath,
       String label, float val) {
-    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+    QueuePath leafQueueConfPrefix = getAutoCreatedQueueObjectTemplateConfPrefix(
         queuePath);
     setMaximumCapacityByLabel(leafQueueConfPrefix, label, val);
   }
 
   @Private
   @VisibleForTesting
-  public void setAutoCreatedLeafQueueTemplateMaxCapacity(String queuePath,
+  public void setAutoCreatedLeafQueueTemplateMaxCapacity(QueuePath queuePath,
       String label, Resource resource) {
-    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+    QueuePath leafQueueConfPrefix = getAutoCreatedQueueObjectTemplateConfPrefix(
         queuePath);
 
     StringBuilder resourceString = new StringBuilder();
@@ -2570,37 +2571,37 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   @VisibleForTesting
   @Private
-  public void setAutoCreatedLeafQueueConfigUserLimit(String queuePath,
+  public void setAutoCreatedLeafQueueConfigUserLimit(QueuePath queuePath,
       int val) {
-    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+    QueuePath leafQueueConfPrefix = getAutoCreatedQueueObjectTemplateConfPrefix(
         queuePath);
     setUserLimit(leafQueueConfPrefix, val);
   }
 
   @VisibleForTesting
   @Private
-  public void setAutoCreatedLeafQueueConfigUserLimitFactor(String queuePath,
+  public void setAutoCreatedLeafQueueConfigUserLimitFactor(QueuePath queuePath,
       float val) {
-    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+    QueuePath leafQueueConfPrefix = getAutoCreatedQueueObjectTemplateConfPrefix(
         queuePath);
     setUserLimitFactor(leafQueueConfPrefix, val);
   }
 
   @Private
   @VisibleForTesting
-  public void setAutoCreatedLeafQueueConfigDefaultNodeLabelExpression(String
+  public void setAutoCreatedLeafQueueConfigDefaultNodeLabelExpression(QueuePath
       queuePath,
       String expression) {
-    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+    QueuePath leafQueueConfPrefix = getAutoCreatedQueueObjectTemplateConfPrefix(
         queuePath);
     setDefaultNodeLabelExpression(leafQueueConfPrefix, expression);
   }
 
   @Private
   @VisibleForTesting
-  public void setAutoCreatedLeafQueueConfigMaximumAllocation(String
+  public void setAutoCreatedLeafQueueConfigMaximumAllocation(QueuePath
          queuePath, String expression) {
-    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+    QueuePath leafQueueConfPrefix = getAutoCreatedQueueObjectTemplateConfPrefix(
         queuePath);
     setQueueMaximumAllocation(leafQueueConfPrefix, expression);
   }
@@ -2629,7 +2630,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    *          Resource types
    * @return ResourceInformation
    */
-  public Resource getMinimumResourceRequirement(String label, String queue,
+  public Resource getMinimumResourceRequirement(String label, QueuePath queue,
       Set<String> resourceTypes) {
     return internalGetLabeledResourceRequirementForQueue(queue, label,
         resourceTypes, CAPACITY);
@@ -2646,7 +2647,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    *          Resource types
    * @return Resource
    */
-  public Resource getMaximumResourceRequirement(String label, String queue,
+  public Resource getMaximumResourceRequirement(String label, QueuePath queue,
       Set<String> resourceTypes) {
     return internalGetLabeledResourceRequirementForQueue(queue, label,
         resourceTypes, MAXIMUM_CAPACITY);
@@ -2665,10 +2666,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   public Map<String, QueueCapacityVector> parseConfiguredResourceVector(
-      String queuePath, Set<String> labels) {
+      QueuePath queuePath, Set<String> labels) {
     Map<String, QueueCapacityVector> queueResourceVectors = new HashMap<>();
     for (String label : labels) {
-      queueResourceVectors.put(label, queueCapacityConfigParser.parse(this, queuePath, label));
+      queueResourceVectors.put(label, queueCapacityConfigParser.parse(this,
+         queuePath, label));
     }
 
     return queueResourceVectors;
@@ -2691,15 +2693,15 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
             + ResourceUtils.
             getCustomResourcesStrings(resource) + "]");
 
-    String prefix = getQueuePrefix(queue.getFullPath()) + type;
+    String prefix = getQueuePrefix(queue) + type;
     if (!label.isEmpty()) {
-      prefix = getQueuePrefix(queue.getFullPath()) + ACCESSIBLE_NODE_LABELS + DOT + label
+      prefix = getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS + DOT + label
           + DOT + type;
     }
     set(prefix, resourceString.toString());
   }
 
-  public boolean checkConfigTypeIsAbsoluteResource(String label, String queue,
+  public boolean checkConfigTypeIsAbsoluteResource(String label, QueuePath queue,
       Set<String> resourceTypes) {
     String propertyName = getNodeLabelPrefix(queue, label) + CAPACITY;
     String resourceString = get(propertyName);
@@ -2714,7 +2716,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return false;
   }
 
-  private Resource internalGetLabeledResourceRequirementForQueue(String queue,
+  private Resource internalGetLabeledResourceRequirementForQueue(QueuePath queue,
       String label, Set<String> resourceTypes, String suffix) {
     String propertyName = getNodeLabelPrefix(queue, label) + suffix;
     String resourceString = get(propertyName);
@@ -2828,7 +2830,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final boolean DEFAULT_MULTI_NODE_PLACEMENT_ENABLED = false;
 
   public String getMultiNodesSortingAlgorithmPolicy(
-      String queue) {
+      QueuePath queue) {
 
     String policyName = get(
         getQueuePrefix(queue) + "multi-node-sorting.policy");

@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.helper.CapacitySchedulerInfoHelper;
 
 import java.util.ArrayList;
@@ -49,6 +50,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   protected float normalizedWeight;
   protected String queueName;
   private String queuePath;
+  private QueuePath queuePathObject;
   protected int maxParallelApps;
   private boolean isAbsoluteResource;
   protected CapacitySchedulerQueueInfoList queues;
@@ -76,6 +78,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   public CapacitySchedulerInfo(CSQueue parent, CapacityScheduler cs) {
     this.queueName = parent.getQueueName();
     this.queuePath = parent.getQueuePath();
+    this.queuePathObject = parent.getQueuePathObject();
     this.usedCapacity = parent.getUsedCapacity() * 100;
     this.capacity = parent.getCapacity() * 100;
     float max = parent.getMaximumCapacity();
@@ -97,7 +100,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
 
     CapacitySchedulerConfiguration conf = cs.getConfiguration();
     queueAcls = new QueueAclsInfo();
-    queueAcls.addAll(getSortedQueueAclInfoList(parent, queueName, conf));
+    queueAcls.addAll(getSortedQueueAclInfoList(parent, queuePathObject, conf));
 
     queuePriority = parent.getPriority().getPriority();
     if (parent instanceof ParentQueue) {

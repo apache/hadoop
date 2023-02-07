@@ -132,9 +132,9 @@ public class TestCapacitySchedulerPlanFollower extends
     QueuePath reservationQueuePath =
         ReservationSystemTestUtil.getFullReservationQueuePath();
     CapacitySchedulerConfiguration csConf = cs.getConfiguration();
-    csConf.setReservationWindow(reservationQ, 20L);
+    csConf.setReservationWindow(reservationQueuePath, 20L);
     csConf.setMaximumCapacity(reservationQueuePath, 40);
-    csConf.setAverageCapacity(reservationQ, 20);
+    csConf.setAverageCapacity(reservationQueuePath, 20);
     policy.init(reservationQ, csConf);
   }
 

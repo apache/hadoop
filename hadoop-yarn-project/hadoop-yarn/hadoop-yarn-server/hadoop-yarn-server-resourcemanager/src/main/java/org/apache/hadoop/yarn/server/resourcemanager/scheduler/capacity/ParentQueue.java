@@ -135,7 +135,7 @@ public class ParentQueue extends AbstractCSQueue {
     this.childQueues = new ArrayList<>();
     this.allowZeroCapacitySum =
         queueContext.getConfiguration()
-            .getAllowZeroCapacitySum(getQueuePath());
+            .getAllowZeroCapacitySum(getQueuePathObject());
 
     setupQueueConfigs(queueContext.getClusterResource());
   }
@@ -170,7 +170,7 @@ public class ParentQueue extends AbstractCSQueue {
 
       // Initialize queue ordering policy
       queueOrderingPolicy = configuration.getQueueOrderingPolicy(
-          getQueuePath(), parent == null ?
+          getQueuePathObject(), parent == null ?
               null :
               ((ParentQueue) parent).getQueueOrderingPolicyConfigName());
       queueOrderingPolicy.setQueues(childQueues);
@@ -536,7 +536,7 @@ public class ParentQueue extends AbstractCSQueue {
 
       // Check if the max queue limit is exceeded.
       int maxQueues = queueContext.getConfiguration().
-          getAutoCreatedQueuesV2MaxChildQueuesLimit(getQueuePath());
+          getAutoCreatedQueuesV2MaxChildQueuesLimit(getQueuePathObject());
       if (childQueues.size() >= maxQueues) {
         throw new SchedulerDynamicEditException(
             "Cannot auto create queue " + childQueuePath + ". Max Child "
@@ -620,7 +620,7 @@ public class ParentQueue extends AbstractCSQueue {
    */
   public boolean isEligibleForAutoQueueCreation() {
     return isDynamicQueue() || queueContext.getConfiguration().
-        isAutoQueueCreationV2Enabled(getQueuePath());
+        isAutoQueueCreationV2Enabled(getQueuePathObject());
   }
   
   @Override
@@ -1655,7 +1655,7 @@ public class ParentQueue extends AbstractCSQueue {
   public boolean isEligibleForAutoDeletion() {
     return isDynamicQueue() && getChildQueues().size() == 0 &&
         queueContext.getConfiguration().
-            isAutoExpiredDeletionEnabled(this.getQueuePath());
+            isAutoExpiredDeletionEnabled(this.getQueuePathObject());
   }
 
   public AutoCreatedQueueTemplate getAutoCreatedQueueTemplate() {

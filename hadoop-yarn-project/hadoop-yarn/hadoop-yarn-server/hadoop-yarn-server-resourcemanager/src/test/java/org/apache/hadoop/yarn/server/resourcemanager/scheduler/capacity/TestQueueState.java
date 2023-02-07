@@ -53,12 +53,15 @@ public class TestQueueState {
   private static final String Q2 = "q2";
   private static final String Q3 = "q3";
 
-  private final static String Q1_PATH =
-      CapacitySchedulerConfiguration.ROOT + "." + Q1;
-  private final static String Q2_PATH =
-      Q1_PATH + "." + Q2;
-  private final static String Q3_PATH =
-      Q1_PATH + "." + Q3;
+
+  private final static QueuePath ROOT_PATH =
+      new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private final static QueuePath Q1_PATH =
+      new QueuePath(CapacitySchedulerConfiguration.ROOT + "." + Q1);
+  private final static QueuePath Q2_PATH =
+      new QueuePath(Q1_PATH + "." + Q2);
+  private final static QueuePath Q3_PATH =
+      new QueuePath(Q1_PATH + "." + Q3);
   private CapacityScheduler cs;
   private YarnConfiguration conf;
 
@@ -66,7 +69,7 @@ public class TestQueueState {
   public void testQueueState() throws IOException {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {Q1});
+    csConf.setQueues(ROOT_PATH, new String[] {Q1});
     csConf.setQueues(Q1_PATH, new String[] {Q2});
 
     csConf.setCapacity(Q1_PATH, 100);
@@ -120,7 +123,7 @@ public class TestQueueState {
   public void testQueueStateTransit() throws Exception {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {Q1});
+    csConf.setQueues(ROOT_PATH, new String[] {Q1});
     csConf.setQueues(Q1_PATH, new String[] {Q2, Q3});
 
     csConf.setCapacity(Q1_PATH, 100);
@@ -232,7 +235,7 @@ public class TestQueueState {
         false);
     newConf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
     newConf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS, 1);
-    newConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{Q1});
+    newConf.setQueues(ROOT_PATH, new String[]{Q1});
     newConf.setQueues(Q1_PATH, new String[]{Q2});
     newConf.setCapacity(Q1_PATH, 100);
     newConf.setCapacity(Q2_PATH, 100);

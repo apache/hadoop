@@ -80,6 +80,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 
@@ -146,7 +147,10 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
       "test.build.data", "/tmp")).getAbsolutePath();
   private static final String FS_ALLOC_FILE = new File(TEST_DIR,
       "test-fs-queues.xml").getAbsolutePath();
-
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath DEFAULT = QueuePath.addQueueToPath(ROOT, "default");
+  private static final QueuePath TEST = QueuePath.addQueueToPath(ROOT, "test");
+  private static final QueuePath TEST_QUEUE = QueuePath.addQueueToPath(ROOT, "testqueue");
   /*
    * Helper class to allow testing of RM web services which require
    * authorization Add this class as a filter in the Guice injector for the
@@ -566,8 +570,8 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
       // default root queue allows anyone to have admin acl
       CapacitySchedulerConfiguration csconf =
           new CapacitySchedulerConfiguration();
-      csconf.setAcl("root", QueueACL.ADMINISTER_QUEUE, "someuser");
-      csconf.setAcl("root.default", QueueACL.ADMINISTER_QUEUE, "someuser");
+      csconf.setAcl(ROOT, QueueACL.ADMINISTER_QUEUE, "someuser");
+      csconf.setAcl(DEFAULT, QueueACL.ADMINISTER_QUEUE, "someuser");
       rm.getResourceScheduler().reinitialize(csconf, rm.getRMContext());
     }
 
@@ -789,9 +793,9 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     String[] queues = { "default", "testqueue" };
     CapacitySchedulerConfiguration csconf =
         new CapacitySchedulerConfiguration();
-    csconf.setQueues("root", queues);
-    csconf.setCapacity("root.default", 50.0f);
-    csconf.setCapacity("root.testqueue", 50.0f);
+    csconf.setQueues(ROOT, queues);
+    csconf.setCapacity(DEFAULT, 50.0f);
+    csconf.setCapacity(TEST_QUEUE, 50.0f);
     rm.getResourceScheduler().reinitialize(csconf, rm.getRMContext());
 
     String appName = "test";
@@ -1097,12 +1101,12 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     CapacitySchedulerConfiguration csconf =
         new CapacitySchedulerConfiguration();
     String[] queues = { "default", "test" };
-    csconf.setQueues("root", queues);
-    csconf.setCapacity("root.default", 50.0f);
-    csconf.setCapacity("root.test", 50.0f);
-    csconf.setAcl("root", QueueACL.ADMINISTER_QUEUE, "someuser");
-    csconf.setAcl("root.default", QueueACL.ADMINISTER_QUEUE, "someuser");
-    csconf.setAcl("root.test", QueueACL.ADMINISTER_QUEUE, "someuser");
+    csconf.setQueues(ROOT, queues);
+    csconf.setCapacity(DEFAULT, 50.0f);
+    csconf.setCapacity(TEST, 50.0f);
+    csconf.setAcl(ROOT, QueueACL.ADMINISTER_QUEUE, "someuser");
+    csconf.setAcl(DEFAULT, QueueACL.ADMINISTER_QUEUE, "someuser");
+    csconf.setAcl(TEST, QueueACL.ADMINISTER_QUEUE, "someuser");
     rm.getResourceScheduler().reinitialize(csconf, rm.getRMContext());
 
     rm.start();
@@ -1188,12 +1192,12 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     CapacitySchedulerConfiguration csconf =
         new CapacitySchedulerConfiguration();
     String[] queues = { "default", "test" };
-    csconf.setQueues("root", queues);
-    csconf.setCapacity("root.default", 50.0f);
-    csconf.setCapacity("root.test", 50.0f);
-    csconf.setAcl("root", QueueACL.ADMINISTER_QUEUE, "someuser");
-    csconf.setAcl("root.default", QueueACL.ADMINISTER_QUEUE, "someuser");
-    csconf.setAcl("root.test", QueueACL.ADMINISTER_QUEUE, "someuser");
+    csconf.setQueues(ROOT, queues);
+    csconf.setCapacity(DEFAULT, 50.0f);
+    csconf.setCapacity(TEST, 50.0f);
+    csconf.setAcl(ROOT, QueueACL.ADMINISTER_QUEUE, "someuser");
+    csconf.setAcl(DEFAULT, QueueACL.ADMINISTER_QUEUE, "someuser");
+    csconf.setAcl(TEST, QueueACL.ADMINISTER_QUEUE, "someuser");
     rm.getResourceScheduler().reinitialize(csconf, rm.getRMContext());
 
     rm.start();

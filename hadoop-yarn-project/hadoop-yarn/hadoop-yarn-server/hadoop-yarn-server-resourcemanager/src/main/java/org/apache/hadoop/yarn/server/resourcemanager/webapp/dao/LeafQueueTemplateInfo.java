@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes;
 
 import javax.xml.bind.annotation.XmlAccessType;
@@ -41,7 +42,7 @@ public class LeafQueueTemplateInfo {
   public LeafQueueTemplateInfo() {
   } // JAXB needs this
 
-  public LeafQueueTemplateInfo(Configuration conf, String queuePath) {
+  public LeafQueueTemplateInfo(Configuration conf, QueuePath queuePath) {
     String configPrefix = QueuePrefixes.
         getQueuePrefix(queuePath) + AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX
         + DOT;

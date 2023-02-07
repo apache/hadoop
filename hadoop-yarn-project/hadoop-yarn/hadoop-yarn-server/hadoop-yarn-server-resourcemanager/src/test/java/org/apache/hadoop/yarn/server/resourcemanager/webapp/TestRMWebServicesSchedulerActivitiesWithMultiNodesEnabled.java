@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.Activi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.AllocationState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.ResourceUsageMultiNodeLookupPolicy;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -59,7 +60,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Predicate;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.*;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_ACT_ALLOCATIONS;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_ACT_ALLOCATION_STATE;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_ACT_COUNT;
@@ -138,14 +138,18 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
   private static void setupQueueConfiguration(
       CapacitySchedulerConfiguration config) {
     // Define top-level queues
-    config.setQueues(CapacitySchedulerConfiguration.ROOT,
+    final QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    final QueuePath a = new QueuePath(CapacitySchedulerConfiguration.ROOT, "a");
+    final QueuePath b = new QueuePath(CapacitySchedulerConfiguration.ROOT, "b");
+
+    config.setQueues(root,
         new String[] {"a", "b"});
 
-    config.setCapacity(A, 10.5f);
-    config.setMaximumCapacity(A, 50);
+    config.setCapacity(a, 10.5f);
+    config.setMaximumCapacity(a, 50);
 
-    config.setCapacity(B, 89.5f);
-    config.setMaximumApplicationMasterResourcePerQueuePercent(B_QUEUE_PATH, 100);
+    config.setCapacity(b, 89.5f);
+    config.setMaximumApplicationMasterResourcePerQueuePercent(b, 100);
   }
 
   @Before

@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 
@@ -173,9 +174,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       CapacitySchedulerConfiguration csconf =
           new CapacitySchedulerConfiguration(conf);
       String[] queues = { "default", "dedicated" };
-      csconf.setQueues("root", queues);
-      csconf.setCapacity("root.default", 50.0f);
-      csconf.setCapacity("root.dedicated", 50.0f);
+      csconf.setQueues(new QueuePath("root"), queues);
+      csconf.setCapacity(new QueuePath("root.default"), 50.0f);
+      csconf.setCapacity(new QueuePath("root.dedicated"), 50.0f);
       csconf.setReservable("root.dedicated", true);
       conf = csconf;
     }

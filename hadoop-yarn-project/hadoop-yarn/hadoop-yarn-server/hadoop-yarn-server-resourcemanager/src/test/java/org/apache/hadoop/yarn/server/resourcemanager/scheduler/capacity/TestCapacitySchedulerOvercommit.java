@@ -23,15 +23,15 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerOvercommit;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.DEFAULT_QUEUE_PATH;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT_QUEUE_PATH;
-
 /**
  * Test changing resources and overcommit in the Capacity Scheduler
  * {@link CapacityScheduler}.
  */
 public class TestCapacitySchedulerOvercommit extends TestSchedulerOvercommit {
 
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath DEFAULT = new QueuePath(CapacitySchedulerConfiguration.ROOT
+    + ".default");
   @Override
   protected Configuration getConfiguration() {
     Configuration conf = super.getConfiguration();
@@ -41,14 +41,10 @@ public class TestCapacitySchedulerOvercommit extends TestSchedulerOvercommit {
     // Remove limits on AMs to allow multiple applications running
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration(conf);
-    csConf.setMaximumApplicationMasterResourcePerQueuePercent(
-        ROOT_QUEUE_PATH, 100.0f);
-    csConf.setMaximumAMResourcePercentPerPartition(
-        CapacitySchedulerConfiguration.ROOT, "", 100.0f);
-    csConf.setMaximumApplicationMasterResourcePerQueuePercent(
-        DEFAULT_QUEUE_PATH, 100.0f);
-    csConf.setMaximumAMResourcePercentPerPartition(
-        DEFAULT_QUEUE_PATH.getFullPath(), "", 100.0f);
+    csConf.setMaximumApplicationMasterResourcePerQueuePercent(ROOT, 100.0f);
+    csConf.setMaximumAMResourcePercentPerPartition(ROOT, "", 100.0f);
+    csConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT, 100.0f);
+    csConf.setMaximumAMResourcePercentPerPartition(DEFAULT, "", 100.0f);
 
     return csConf;
   }

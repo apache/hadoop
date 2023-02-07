@@ -60,7 +60,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     shouldFailAutoCreationWhenGuaranteedCapacityExceeded =
         queueContext.getConfiguration()
             .getShouldFailAutoQueueCreationWhenGuaranteedCapacityExceeded(
-                getQueuePath());
+                getQueuePathObject());
 
     leafQueueTemplate = initializeLeafQueueConfigs().build();
 
@@ -78,7 +78,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
       shouldFailAutoCreationWhenGuaranteedCapacityExceeded =
           queueContext.getConfiguration()
               .getShouldFailAutoQueueCreationWhenGuaranteedCapacityExceeded(
-                  getQueuePath());
+                  getQueuePathObject());
 
       //validate if capacity is exceeded for child queues
       if (shouldFailAutoCreationWhenGuaranteedCapacityExceeded) {
@@ -128,7 +128,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
   private void initializeQueueManagementPolicy() throws IOException {
     queueManagementPolicy =
         queueContext.getConfiguration().getAutoCreatedQueueManagementPolicyClass(
-            getQueuePath());
+            getQueuePathObject());
 
     queueManagementPolicy.init(this);
   }
@@ -136,7 +136,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
   private void reinitializeQueueManagementPolicy() throws IOException {
     AutoCreatedQueueManagementPolicy managementPolicy =
         queueContext.getConfiguration().getAutoCreatedQueueManagementPolicyClass(
-            getQueuePath());
+            getQueuePathObject());
 
     if (!(managementPolicy.getClass().equals(
         this.queueManagementPolicy.getClass()))) {
@@ -165,7 +165,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     setAbsoluteResourceTemplates(configuration, queueResourceQuotas);
 
     QueuePath templateQueuePath = QueuePrefixes
-        .getAutoCreatedQueueObjectTemplateConfPrefix(getQueuePath());
+        .getAutoCreatedQueueObjectTemplateConfPrefix(getQueuePathObject());
     Set<String> templateConfiguredNodeLabels = queueContext
         .getQueueManager().getConfiguredNodeLabelsForAllQueues()
         .getLabelsByQueue(templateQueuePath.getFullPath());
@@ -193,14 +193,14 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
   private void setAbsoluteResourceTemplates(CapacitySchedulerConfiguration configuration,
                                             QueueResourceQuotas queueResourceQuotas) throws IOException {
     QueuePath templateQueuePath = QueuePrefixes
-        .getAutoCreatedQueueObjectTemplateConfPrefix(getQueuePath());
+        .getAutoCreatedQueueObjectTemplateConfPrefix(getQueuePathObject());
     Set<String> templateConfiguredNodeLabels = queueContext
         .getQueueManager().getConfiguredNodeLabelsForAllQueues()
         .getLabelsByQueue(templateQueuePath.getFullPath());
 
     for (String nodeLabel : templateConfiguredNodeLabels) {
       Resource templateMinResource = configuration.getMinimumResourceRequirement(
-          nodeLabel, templateQueuePath.getFullPath(), resourceTypes);
+          nodeLabel, templateQueuePath, resourceTypes);
       queueResourceQuotas.setConfiguredMinResource(nodeLabel, templateMinResource);
 
       if (this.capacityConfigType.equals(CapacityConfigType.PERCENTAGE)
@@ -222,14 +222,14 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
               configuration.getMinimumResourceRequirement(
                   label,
                   QueuePrefixes
-                      .getAutoCreatedQueueTemplateConfPrefix(getQueuePath()),
+                      .getAutoCreatedQueueObjectTemplateConfPrefix(getQueuePathObject()),
                   resourceTypes),
               getQueueResourceQuotas().getConfiguredMinResource(label)));
 
       Resource childMaxResource = configuration
           .getMaximumResourceRequirement(label,
               QueuePrefixes
-                  .getAutoCreatedQueueTemplateConfPrefix(getQueuePath()),
+                  .getAutoCreatedQueueObjectTemplateConfPrefix(getQueuePathObject()),
               resourceTypes);
       Resource parentMaxRes = getQueueResourceQuotas()
           .getConfiguredMaxResource(label);
@@ -289,7 +289,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
 
       String leafQueuePath = childQueue.getQueuePath();
       int maxQueues = conf.getAutoCreatedQueuesMaxChildQueuesLimit(
-          parentQueue.getQueuePath());
+          parentQueue.getQueuePathObject());
 
       if (parentQueue.getChildQueues().size() >= maxQueues) {
         throw new SchedulerDynamicEditException(
@@ -380,7 +380,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
 
   public String getLeafQueueConfigPrefix() {
     return CapacitySchedulerConfiguration.PREFIX + QueuePrefixes
-        .getAutoCreatedQueueTemplateConfPrefix(getQueuePath());
+        .getAutoCreatedQueueTemplateConfPrefix(getQueuePathObject());
   }
 
   public boolean shouldFailAutoCreationWhenGuaranteedCapacityExceeded() {
