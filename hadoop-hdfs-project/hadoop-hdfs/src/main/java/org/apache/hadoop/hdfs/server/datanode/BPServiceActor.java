@@ -207,6 +207,8 @@ class BPServiceActor implements Runnable {
     info.put("ActorState", getRunningState());
     info.put("LastHeartbeat",
         String.valueOf(getScheduler().getLastHearbeatTime()));
+    info.put("LastHeartbeatResponseTime",
+        String.valueOf(getScheduler().getLastHeartbeatResponseTime()));
     info.put("LastBlockReport",
         String.valueOf(getScheduler().getLastBlockReportTime()));
     info.put("maxBlockReportSize", String.valueOf(getMaxBlockReportSize()));
@@ -579,6 +581,8 @@ class BPServiceActor implements Runnable {
         requestBlockReportLease,
         slowPeers,
         slowDisks);
+
+    scheduler.updateLastHeartbeatResponseTime(monotonicNow());
 
     if (outliersReportDue) {
       // If the report was due and successfully sent, schedule the next one.
@@ -1203,6 +1207,9 @@ class BPServiceActor implements Runnable {
     volatile long lastHeartbeatTime = monotonicNow();
 
     @VisibleForTesting
+    private volatile long lastHeartbeatResponseTime = -1;
+
+    @VisibleForTesting
     boolean resetBlockReportTime = true;
 
     @VisibleForTesting
@@ -1250,6 +1257,10 @@ class BPServiceActor implements Runnable {
       lastHeartbeatTime = heartbeatTime;
     }
 
+    void updateLastHeartbeatResponseTime(long heartbeatTime) {
+      this.lastHeartbeatResponseTime = heartbeatTime;
+    }
+
     void updateLastBlockReportTime(long blockReportTime) {
       lastBlockReportTime = blockReportTime;
     }
@@ -1260,6 +1271,10 @@ class BPServiceActor implements Runnable {
 
     long getLastHearbeatTime() {
       return (monotonicNow() - lastHeartbeatTime)/1000;
+    }
+
+    private long getLastHeartbeatResponseTime() {
+      return (monotonicNow() - lastHeartbeatResponseTime) / 1000;
     }
 
     long getLastBlockReportTime() {
