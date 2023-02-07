@@ -265,6 +265,11 @@ goto :eof
   )
   goto :eof
 
+:routeradmin
+  set CLASS=org.apache.hadoop.yarn.client.cli.RouterCLI
+  set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
+  goto :eof
+
 :nodemanager
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\nm-config\log4j.properties
   set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\*
@@ -342,6 +347,7 @@ goto :eof
   @echo   resourcemanager      run the ResourceManager
   @echo   nodemanager          run a nodemanager on each slave
   @echo   router               run the Router daemon
+  @echo   routeradmin          router admin tools
   @echo   timelineserver       run the timeline server
   @echo   timelinereader       run the timeline reader server
   @echo   rmadmin              admin tools
