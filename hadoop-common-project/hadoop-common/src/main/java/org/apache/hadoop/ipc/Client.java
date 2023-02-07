@@ -390,11 +390,13 @@ public class Client implements AutoCloseable {
     private AtomicLong lastActivity = new AtomicLong();// last I/O activity time
     private AtomicBoolean shouldCloseConnection = new AtomicBoolean();  // indicate if the connection is closed
     private IOException closeException; // close reason
-    private final Object sendRpcRequestLock = new Object();
 
     private final Thread rpcRequestThread;
     private final SynchronousQueue<Pair<Call, ResponseBuffer>> rpcRequestQueue =
         new SynchronousQueue<>(true);
+
+    /** reservation counter of active queue put calls. */
+    private final AtomicLong queueReservations = new AtomicLong(0);
 
     private AtomicReference<Thread> connectingThread = new AtomicReference<>();
     private final Consumer<Connection> removeMethod;
@@ -1160,9 +1162,6 @@ public class Client implements AutoCloseable {
      */
     public void sendRpcRequest(final Call call)
         throws InterruptedException, IOException {
-      if (shouldCloseConnection.get()) {
-        return;
-      }
 
       // Serialize the call to be sent. This is done from the actual
       // caller thread, rather than the rpcRequestThread in the connection,
@@ -1182,13 +1181,68 @@ public class Client implements AutoCloseable {
       final ResponseBuffer buf = new ResponseBuffer();
       header.writeDelimitedTo(buf);
       RpcWritable.wrap(call.rpcRequest).writeTo(buf);
-      synchronized (sendRpcRequestLock) {
-        if (shouldCloseConnection.get()) {
-          return;
+      queueIfActive(call, buf);
+    }
+
+    /**
+     * Queue an operation into the request queue,
+     * waiting if necessary for the queue to have a thread to process it.
+     * If the connection is closed, downgrades to a no-op
+     * @param call call to queue
+     * @param buf buffer for response
+     * @throws InterruptedException interrupted while waiting for a free thread.
+     */
+    private void queueIfActive(
+        final Call call,
+        final ResponseBuffer buf) throws InterruptedException {
+      // Get the request queue.
+      // done in a synchronized block to avoid a race condition where
+      // a call is queued after the connection has been closed
+      final SynchronousQueue<Pair<Call, ResponseBuffer>> queue =
+          acquireActiveRequestQueue();
+      if (queue != null) {
+        try {
+          queue.put(Pair.of(call, buf));
+        } finally {
+          // release the reservation afterwards.
+          releaseQueueReservation();
         }
-        rpcRequestQueue.put(Pair.of(call, buf));
+      } else {
+        LOG.debug("Discarding queued call as IPC client is stopped");
       }
     }
+
+    /**
+     * Get the active rpc request queue.
+     * If the connection is closed, returns null.
+     * This method is synchronized, as are the operations to set
+     * the {@link #shouldCloseConnection} and {@link #running}
+     * atomic booleans, therefore this entire method will complete in the
+     * same block. However, the returned queue may be used outside of
+     * a synchronous block, where this guarantee no longer holds.
+     * A queue reservation counter is used to track this.
+     * Callers MUST invoke {@link #releaseQueueReservation()} afterwards.
+     * @return the queue or null.
+     */
+    private synchronized SynchronousQueue<Pair<Call, ResponseBuffer>> acquireActiveRequestQueue() {
+      if (shouldCloseConnection.get() || !running.get()) {
+        LOG.debug("IPC client is stopped");
+        return null;
+      } else {
+        queueReservations.incrementAndGet();
+        return rpcRequestQueue;
+      }
+    }
+
+    /**
+     * Release the queue reservation acquired in
+     * {@link #acquireActiveRequestQueue()}.
+     */
+    private void releaseQueueReservation() {
+      queueReservations.decrementAndGet();
+    }
+
+
 
     /* Receive a response.
      * Because only one receiver, so no synchronization on in.
@@ -1247,12 +1301,27 @@ public class Client implements AutoCloseable {
         markClosed(e);
       }
     }
-    
+
+    /**
+     * Mark the connection as closed due to an exception.
+     * Sets the {@link #shouldCloseConnection} boolean to true,
+     * and, if it was false earlier, drains the queue before
+     * notifying any waiting objects.
+     * @param e exception which triggered the closure; may be null.
+     */
     private synchronized void markClosed(IOException e) {
       if (shouldCloseConnection.compareAndSet(false, true)) {
         Pair<Call, ResponseBuffer> request;
         while ((request = rpcRequestQueue.poll()) != null) {
           LOG.debug("Clean {} from RpcRequestQueue.", request.getLeft());
+        }
+        if (queueReservations.get() > 0) {
+          // there's still an active reservation.
+          // either a new put() is about to happen (bad),
+          // or it has happened but the finally {} clause has not been invoked (good).
+          // without knowing which, print a warning message so at least logs on
+          // a deadlock are meaningful.
+          LOG.warn("Possible overlap in queue shutdown and request");
         }
         closeException = e;
         notifyAll();
