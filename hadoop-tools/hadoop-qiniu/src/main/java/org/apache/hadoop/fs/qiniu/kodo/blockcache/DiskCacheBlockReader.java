@@ -9,9 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -48,14 +47,33 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
 
     @Override
     public void deleteBlocks(String key) {
+        LOG.debug("key: {}", key);
         synchronized (lruCache) {
             for (KeyBlockIdCacheKey kbck : lruCache.keySet()) {
                 if (kbck.key.equals(key)) {
                     Path needRemoveBlockFile = lruCache.remove(kbck);
                     if (needRemoveBlockFile == null) continue;
-                    deleteFile(needRemoveBlockFile);
                 }
             }
+        }
+        try {
+            Files.walkFileTree(Paths.get(bufferDir.toString(), key),
+                    new SimpleFileVisitor<Path>() {
+                        @Override
+                        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                            Files.delete(file);
+                            LOG.info("visitFile: {}", file);
+                            return FileVisitResult.CONTINUE;
+                        }
+
+                        @Override
+                        public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                            Files.delete(dir);
+                            LOG.info("postVisitDirectory: {}", dir);
+                            return FileVisitResult.CONTINUE;
+                        }
+                    });
+        } catch (IOException ignored) {
         }
     }
 
@@ -234,11 +252,16 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
 
     private void deleteFile(Path path) {
         LOG.debug("delete file: {}", path);
-        boolean success = path.toFile().delete();
-        if (success) {
-            LOG.debug("deleted file successful: {}", path);
-        } else {
-            LOG.warn("deleted file failed: {}", path);
+        try {
+            boolean success = Files.deleteIfExists(path);
+            if (success) {
+                LOG.debug("deleted file successful: {}", path);
+            } else {
+                LOG.debug("deleted file not exists: {}", path);
+            }
+
+        } catch (Exception e) {
+            LOG.warn("deleted file failed", e);
         }
     }
 
