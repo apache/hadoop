@@ -65,10 +65,24 @@ public class QiniuKodoFileSystem extends FileSystem {
             kodoClient = new QiniuKodoCachedClient(kodoClient);
         }
 
-        // 工作目录为相对路径使用的目录，其必须得存在，故需要预创建
-        mkdirs(workingDir);
-
         blockReader = new QiniuKodoBlockReader(fsConfig, kodoClient);
+    }
+
+    private volatile boolean makeSureWorkdirCreatedFlag = false;
+
+    /**
+     * 工作目录为相对路径使用的目录，其必须得存在，故需要检查是否被创建
+     * 需要在创建文件，创建文件夹前进行检查
+     * 需要在工作目录被改变的时候重新检查
+     */
+    private synchronized void makeSureWorkdirCreated(Path path) throws IOException {
+        if (makeSureWorkdirCreatedFlag) return;
+        if (!path.makeQualified(uri, workingDir).toString().startsWith(
+                workingDir.makeQualified(uri, workingDir).toString())) {
+            return;
+        }
+        mkdirs(workingDir);
+        makeSureWorkdirCreatedFlag = true;
     }
 
     @Override
@@ -120,6 +134,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         LOG.debug("== create, path:" + path + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
 
         if (path.isRoot()) throw new IOException("Cannot create file named /");
+        makeSureWorkdirCreated(path);
 
         mkdirs(path.getParent());
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
@@ -158,6 +173,8 @@ public class QiniuKodoFileSystem extends FileSystem {
             LOG.debug("Cannot rename the root of a filesystem");
             return false;
         }
+        makeSureWorkdirCreated(dstPath);
+
         Path parent = dstPath.getParent();
         while (parent != null && !srcPath.equals(parent)) {
             parent = parent.getParent();
@@ -314,8 +331,8 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     @Override
     public void setWorkingDirectory(Path newPath) {
-        LOG.debug("== setWorkingDirectory, path:" + newPath);
         workingDir = newPath;
+        makeSureWorkdirCreatedFlag = false;
     }
 
     @Override
