@@ -15,6 +15,7 @@ public class QiniuKodoFsConfig extends AConfigBase {
     public final UploadConfig upload;
     public final RegionConfig region;
     public final ClientConfig client;
+    public final ProxyConfig proxy;
 
     public QiniuKodoFsConfig(Configuration conf, String namespace) {
         super(conf, namespace);
@@ -24,6 +25,7 @@ public class QiniuKodoFsConfig extends AConfigBase {
         this.download = download();
         this.upload = upload();
         this.client = client();
+        this.proxy = proxy();
     }
 
     public QiniuKodoFsConfig(Configuration conf) {
@@ -56,6 +58,10 @@ public class QiniuKodoFsConfig extends AConfigBase {
 
     private ClientConfig client() {
         return new ClientConfig(conf, namespace + ".client");
+    }
+
+    private ProxyConfig proxy() {
+        return new ProxyConfig(conf, namespace + ".proxy");
     }
 
     @Override

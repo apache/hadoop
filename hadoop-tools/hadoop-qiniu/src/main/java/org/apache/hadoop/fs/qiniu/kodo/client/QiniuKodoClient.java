@@ -3,6 +3,7 @@ package org.apache.hadoop.fs.qiniu.kodo.client;
 
 import com.qiniu.common.QiniuException;
 import com.qiniu.http.Client;
+import com.qiniu.http.ProxyConfiguration;
 import com.qiniu.http.Response;
 import com.qiniu.storage.*;
 import com.qiniu.storage.model.FileInfo;
@@ -14,6 +15,7 @@ import okhttp3.Request;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoUtils;
 import org.apache.hadoop.fs.qiniu.kodo.config.MissingConfigFieldException;
+import org.apache.hadoop.fs.qiniu.kodo.config.ProxyConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.region.QiniuKodoPublicRegions;
 import org.apache.hadoop.fs.qiniu.kodo.config.region.QiniuKodoRegion;
@@ -82,6 +84,16 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         this.useHttps = fsConfig.useHttps;
         configuration.useHttpsDomains = this.useHttps;
 
+        if (fsConfig.proxy.enable) {
+            ProxyConfig proxyConfig = fsConfig.proxy;
+            configuration.proxy = new ProxyConfiguration(
+                    proxyConfig.hostname,
+                    proxyConfig.port,
+                    proxyConfig.username,
+                    proxyConfig.password,
+                    proxyConfig.type
+            );
+        }
         this.client = new Client(configuration);
         this.uploadManager = new UploadManager(configuration);
         this.bucketManager = new BucketManager(auth, configuration, this.client);
