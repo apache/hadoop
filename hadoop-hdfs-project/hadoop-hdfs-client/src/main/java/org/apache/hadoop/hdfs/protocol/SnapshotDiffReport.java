@@ -282,4 +282,8 @@ public class SnapshotDiffReport {
     }
     return str.toString();
   }
+
+  public String getToSnapshot() {
+    return toSnapshot;
+  }
 }
