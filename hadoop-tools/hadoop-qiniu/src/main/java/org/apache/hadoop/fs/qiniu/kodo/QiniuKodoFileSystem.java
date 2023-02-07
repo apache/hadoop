@@ -5,7 +5,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
-import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoCachedClient;
 import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.download.EmptyInputStream;
@@ -61,9 +60,9 @@ public class QiniuKodoFileSystem extends FileSystem {
         LOG.debug("== workingDir:" + workingDir);
 
         kodoClient = new QiniuKodoClient(bucket, fsConfig, statistics);
-        if (fsConfig.client.cache.enable) {
-            kodoClient = new QiniuKodoCachedClient(kodoClient);
-        }
+//        if (fsConfig.client.cache.enable) {
+//            kodoClient = new QiniuKodoCachedClient(kodoClient);
+//        }
 
         blockReader = new QiniuKodoBlockReader(fsConfig, kodoClient);
     }
@@ -137,8 +136,12 @@ public class QiniuKodoFileSystem extends FileSystem {
         makeSureWorkdirCreated(path);
 
         mkdirs(path.getParent());
+
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        LOG.debug("== create, key:" + key + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
+        
+        if (overwrite) {
+            blockReader.deleteBlocks(key);
+        }
 
         return new FSDataOutputStream(new QiniuKodoOutputStream(kodoClient, key, overwrite, blockReader), statistics);
     }
@@ -148,13 +151,16 @@ public class QiniuKodoFileSystem extends FileSystem {
                                                  EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
                                                  Progressable progress) throws IOException {
         boolean overwrite = flags.contains(CreateFlag.OVERWRITE);
+
         LOG.debug("== create, path:" + path + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
 
         if (path.isRoot()) throw new IOException("Cannot create file named /");
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         LOG.debug("== create, key:" + key + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
-
+        if (overwrite) {
+            blockReader.deleteBlocks(key);
+        }
         return new FSDataOutputStream(new QiniuKodoOutputStream(kodoClient, key, overwrite, blockReader), statistics);
 
     }
@@ -267,7 +273,6 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     @Override
     public boolean delete(Path path, boolean recursive) throws IOException {
-        // TODO 同时删除本地缓存
         LOG.debug("== delete, path:" + path + " recursive:" + recursive);
 
         // 判断是否是文件
@@ -291,13 +296,14 @@ public class QiniuKodoFileSystem extends FileSystem {
     private boolean deleteFile(String fileKey) throws IOException {
         fileKey = QiniuKodoUtils.keyToFileKey(fileKey);
         LOG.debug("== delete, fileKey:" + fileKey);
-
+        blockReader.deleteBlocks(fileKey);
         return kodoClient.deleteKey(fileKey);
     }
 
     private boolean deleteDir(String dirKey, boolean recursive) throws IOException {
         dirKey = QiniuKodoUtils.keyToDirKey(dirKey);
         LOG.debug("== deleteDir, dirKey:" + dirKey + " recursive:" + recursive);
+        blockReader.deleteBlocks(dirKey);
         return kodoClient.deleteKeys(dirKey, recursive);
     }
 
