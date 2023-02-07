@@ -3621,8 +3621,12 @@ public class DataNode extends ReconfigurableBase
    */
   @Override // DataNodeMXBean
   public String getBPServiceActorInfo() {
-    final ArrayList<Map<String, String>> infoArray =
-        new ArrayList<Map<String, String>>();
+    return JSON.toString(getBPServiceActorInfoMap());
+  }
+
+  @VisibleForTesting
+  public List<Map<String, String>> getBPServiceActorInfoMap() {
+    final List<Map<String, String>> infoArray = new ArrayList<>();
     for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
       if (bpos != null) {
         for (BPServiceActor actor : bpos.getBPServiceActors()) {
@@ -3630,7 +3634,7 @@ public class DataNode extends ReconfigurableBase
         }
       }
     }
-    return JSON.toString(infoArray);
+    return infoArray;
   }
 
   /**
@@ -3825,6 +3829,29 @@ public class DataNode extends ReconfigurableBase
    * @return true - if the data node is fully started
    */
   public boolean isDatanodeFullyStarted() {
+    return isDatanodeFullyStarted(false);
+  }
+
+  /**
+   * A datanode is considered to be fully started if all the BP threads are
+   * alive and all the block pools are initialized. If checkConnectionToActiveNamenode is true,
+   * the datanode is considered to be fully started if it is also heartbeating to
+   * active namenode in addition to the above-mentioned conditions.
+   *
+   * @param checkConnectionToActiveNamenode if true, performs additional check of whether datanode
+   * is heartbeating to active namenode.
+   * @return true if the datanode is fully started and also conditionally connected to active
+   * namenode, false otherwise.
+   */
+  public boolean isDatanodeFullyStarted(boolean checkConnectionToActiveNamenode) {
+    if (checkConnectionToActiveNamenode) {
+      for (BPOfferService bp : blockPoolManager.getAllNamenodeThreads()) {
+        if (!bp.isInitialized() || !bp.isAlive() || bp.getActiveNN() == null) {
+          return false;
+        }
+      }
+      return true;
+    }
     for (BPOfferService bp : blockPoolManager.getAllNamenodeThreads()) {
       if (!bp.isInitialized() || !bp.isAlive()) {
         return false;
@@ -3832,7 +3859,7 @@ public class DataNode extends ReconfigurableBase
     }
     return true;
   }
-  
+
   @VisibleForTesting
   public DatanodeID getDatanodeId() {
     return id;
