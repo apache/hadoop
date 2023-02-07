@@ -1108,6 +1108,7 @@ options are covered in [Testing](./testing.md).
   <value>8MB</value>
   <description>
       The size of a single prefetched block of data.
+      Decreasing this will increase the number of prefetches required, and may negatively impact performance.
   </description>
 </property>
 
