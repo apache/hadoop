@@ -186,6 +186,7 @@ public class S3ADelegationTokens extends AbstractDTService {
     tokenBinding.bindToFileSystem(getCanonicalUri(),
         getStoreContext(),
         getPolicyProvider());
+    tokenBinding.setTokenUpdateCallback(this::maybeUpdateTokenFromOwner);
     tokenBinding.init(conf);
     tokenBindingName = tokenBinding.getKind().toString();
     LOG.debug("Filesystem {} is using delegation tokens of kind {}",
@@ -291,6 +292,23 @@ public class S3ADelegationTokens extends AbstractDTService {
   }
 
   /**
+   * CallableRaisingIOE which can be invoked to trigger a reload of a DT,
+   * which helps pick up spark's updated tokens.
+   * @return true if a new token was retrieved and bonded to.
+   * @throws IOException failure unmarshalling any token.
+   */
+  @VisibleForTesting
+  boolean maybeUpdateTokenFromOwner() throws IOException {
+    Token<AbstractS3ATokenIdentifier> token = selectTokenFromFSOwner();
+    if (token == null || boundDT.orElse(null) == token) {
+      return false;;
+    } else {
+      bindToDelegationToken(token);
+      return true;
+    }
+  }
+
+  /**
    * This is a test-only back door which resets the state and binds to
    * a token again.
    * This allows an instance of this class to be bonded to a DT after being
@@ -314,6 +332,7 @@ public class S3ADelegationTokens extends AbstractDTService {
    * Bind to a delegation token retrieved for this filesystem.
    * Extract the secrets from the token and set internal fields
    * to the values.
+   * Can be called repeatedly.
    * <ol>
    *   <li>{@link #boundDT} is set to {@code token}.</li>
    *   <li>{@link #decodedIdentifier} is set to the extracted identifier.</li>
@@ -327,7 +346,6 @@ public class S3ADelegationTokens extends AbstractDTService {
   public void bindToDelegationToken(
       final Token<AbstractS3ATokenIdentifier> token)
       throws IOException {
-    checkState(!credentialProviders.isPresent(), E_ALREADY_DEPLOYED);
     boundDT = Optional.of(token);
     AbstractS3ATokenIdentifier dti = extractIdentifier(token);
     LOG.info("Using delegation token {}", dti);

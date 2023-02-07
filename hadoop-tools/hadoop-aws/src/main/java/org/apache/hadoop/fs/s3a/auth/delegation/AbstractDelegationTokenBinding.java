@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a.auth.delegation;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -33,6 +33,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DURATION_LOG_AT_INFO;
@@ -82,6 +83,14 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       AbstractDelegationTokenBinding.class);
+
+  /**
+   * Token update callback; returns true if, when invoked, a
+   * new token was retrieved from the owner's credentials and rebonded to.
+   * Binding can/should call this if the tokens are going to expire and
+   * it knows a call is to be made of the store.
+   */
+  private CallableRaisingIOE<Boolean> tokenUpdateCallback = () -> false;
 
   /**
    * Constructor.
@@ -279,7 +288,25 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
    * @return a password.
    */
   protected static byte[] getSecretManagerPasssword() {
-    return "non-password".getBytes(Charset.forName("UTF-8"));
+    return "non-password".getBytes(StandardCharsets.UTF_8);
+  }
+
+  /**
+   * Get the token update callback.
+   * @return current token update callback.
+   */
+  protected final CallableRaisingIOE<Boolean> getTokenUpdateCallback() {
+    return tokenUpdateCallback;
+  }
+
+  /**
+   * Set the token update callback.
+   * Invoked after the instance is constructed, and before init().
+   * @param tokenUpdateCallback callback to look for a new token identifier.
+   */
+  public final void setTokenUpdateCallback(
+      final CallableRaisingIOE<Boolean> tokenUpdateCallback) {
+    this.tokenUpdateCallback = tokenUpdateCallback;
   }
 
   /**
