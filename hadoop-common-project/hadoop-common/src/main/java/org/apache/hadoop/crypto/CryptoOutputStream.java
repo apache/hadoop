@@ -242,12 +242,15 @@ public class CryptoOutputStream extends FilterOutputStream implements
       return;
     }
     try {
-      flush();
-      if (closeOutputStream) {
-        super.close();
-        codec.close();
+      try {
+        flush();
+      } finally {
+        if (closeOutputStream) {
+          super.close();
+          codec.close();
+        }
+        freeBuffers();
       }
-      freeBuffers();
     } finally {
       closed = true;
     }
