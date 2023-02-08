@@ -650,18 +650,16 @@ checksums if the checksum algorithm between the two stores is different.
   cluster and that of the object store. Otherwise, changed files may be
   missed/copied too often.
 
-* `distcp.update.modification.time` can be used alongside the checksum check
-  in stores with same checksum algorithm as well. if set to true we check
-  both modification time and checksum between the files, but if this property
-  is set to false we only compare the checksum between the files to determine
-  if we should skip the copy or not.
+* `distcp.update.modification.time` would only be used if either of the two
+  stores don't have checksum validation resulting in incompatible checksum
+  comparison between the two. Even if the property is set to true, it won't
+  be used if their is valid checksum comparison between the two stores.
 
-  To turn off, set this in your core-site.xml
-
+To turn off the modification time check, set this in your core-site.xml
 ```xml
 <property>
         <name>distcp.update.modification.time</name>
-        <value>true</value>
+        <value>false</value>
 </property>
 ```
 
