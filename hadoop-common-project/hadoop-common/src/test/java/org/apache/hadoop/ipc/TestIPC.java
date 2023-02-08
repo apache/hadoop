@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ipc;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -91,7 +92,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.assertj.core.api.Condition;
 import org.junit.Assert;
@@ -620,9 +620,7 @@ public class TestIPC {
   
   private static void assertExceptionContains(
       Throwable t, String substring) {
-    String msg = StringUtils.stringifyException(t);
-    assertTrue("Exception should contain substring '" + substring + "':\n" +
-        msg, msg.contains(substring));
+    GenericTestUtils.assertExceptionContains(substring, t, "");
     LOG.info("Got expected exception", t);
   }
   
@@ -802,7 +800,7 @@ public class TestIPC {
     final Client client = new Client(LongWritable.class, conf);
     // set the rpc timeout to twice the MIN_SLEEP_TIME
     try {
-      LambdaTestUtils.intercept(UnknownHostException.class,
+      intercept(UnknownHostException.class,
           new Callable<Void>() {
             @Override
             public Void call() throws IOException {
@@ -1173,8 +1171,8 @@ public class TestIPC {
     client.stop();
   }
   
-  @Test(timeout=30000, expected=IOException.class)
-  public void testIpcAfterStopping() throws IOException {
+  @Test(timeout=30000)
+  public void testIpcAfterStopping() throws Throwable {
     // start server
     Server server = new TestServer(5, false);
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
@@ -1184,9 +1182,15 @@ public class TestIPC {
     Client client = new Client(LongWritable.class, conf);
     call(client, addr, 0, conf);
     client.stop();
- 
+
     // This call should throw IOException.
-    call(client, addr, 0, conf);
+    final String failed = "Failed to get connection for ";
+    final IOException ioe = intercept(IOException.class, failed, () ->
+        call(client, addr, 0, conf));
+    LOG.info("closed exception as expected", ioe);
+
+
+    // and if one is queued
   }
 
   /**
@@ -1219,12 +1223,15 @@ public class TestIPC {
     Thread.currentThread().interrupt();
     client.stop();
     try {
-      assertTrue(Thread.currentThread().isInterrupted());
+      assertTrue("The Client did not interrupt after handling an Interrupted Exception",
+          Thread.currentThread().isInterrupted());
       LOG.info("Expected thread interrupt during client cleanup");
     } catch (AssertionError e) {
-      LOG.error("The Client did not interrupt after handling an Interrupted Exception");
-      Assert.fail("The Client did not interrupt after handling an Interrupted Exception");
+      LOG.error("The Client {} did not interrupt after handling an Interrupted Exception",
+          client);
+      throw e;
     }
+    // after the interrupt, new calls will not block
     // Clear Thread interrupt
     Thread.interrupted();
   }

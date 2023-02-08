@@ -106,6 +106,14 @@ public class Client implements AutoCloseable {
         }
       };
 
+  /**
+   * Exception message when invoking the client after the connection is
+   * closed.
+   * {@value}.
+   */
+  @VisibleForTesting
+  static final String CONNECTION_HAS_BEEN_CLOSED = "connection has been closed";
+
   @SuppressWarnings("unchecked")
   @Unstable
   public static <T extends Writable> AsyncGet<T, IOException>
@@ -1159,6 +1167,9 @@ public class Client implements AutoCloseable {
      * thread, so that if the current thread is interrupted that the socket
      * state isn't corrupted with a partially written message.
      * @param call - the rpc request
+     * @throws InterruptedException interrupted while waiting for a free thread.
+     * @throws IOException if received from teh far end, or if the connection was
+     *          closed at the time of queuing.
      */
     public void sendRpcRequest(final Call call)
         throws InterruptedException, IOException {
@@ -1191,24 +1202,28 @@ public class Client implements AutoCloseable {
      * @param call call to queue
      * @param buf buffer for response
      * @throws InterruptedException interrupted while waiting for a free thread.
+     * @throws IOException if the connection is closed at the time of queuing.
      */
     private void queueIfActive(
         final Call call,
-        final ResponseBuffer buf) throws InterruptedException {
+        final ResponseBuffer buf) throws InterruptedException, IOException {
       // Get the request queue.
       // done in a synchronized block to avoid a race condition where
-      // a call is queued after the connection has been closed
+      // a call is queued after the connection has been closed.
+      // if the queue was acquired, this will increment the
+      // reservation count, which must be decremented afterwards
       final SynchronousQueue<Pair<Call, ResponseBuffer>> queue =
           acquireActiveRequestQueue();
-      if (queue != null) {
+      if (queue == null) {
+        // client is stopped.
+        throw new IOException(CONNECTION_HAS_BEEN_CLOSED);
+      } else {
         try {
           queue.put(Pair.of(call, buf));
         } finally {
           // release the reservation afterwards.
           releaseQueueReservation();
         }
-      } else {
-        LOG.debug("Discarding queued call as IPC client is stopped");
       }
     }
 
@@ -1226,7 +1241,7 @@ public class Client implements AutoCloseable {
      */
     private synchronized SynchronousQueue<Pair<Call, ResponseBuffer>> acquireActiveRequestQueue() {
       if (shouldCloseConnection.get() || !running.get()) {
-        LOG.debug("IPC client is stopped");
+        LOG.debug("IPC client is stopped in {}", this);
         return null;
       } else {
         queueReservations.incrementAndGet();
@@ -1315,13 +1330,15 @@ public class Client implements AutoCloseable {
         while ((request = rpcRequestQueue.poll()) != null) {
           LOG.debug("Clean {} from RpcRequestQueue.", request.getLeft());
         }
-        if (queueReservations.get() > 0) {
+        long reservations = queueReservations.get();
+        if (reservations > 0) {
           // there's still an active reservation.
           // either a new put() is about to happen (bad),
           // or it has happened but the finally {} clause has not been invoked (good).
           // without knowing which, print a warning message so at least logs on
           // a deadlock are meaningful.
-          LOG.warn("Possible overlap in queue shutdown and request");
+          LOG.warn("Possible overlap in queue shutdown and request in {}; reservation count={}",
+              this, reservations);
         }
         closeException = e;
         notifyAll();
@@ -1551,7 +1568,7 @@ public class Client implements AutoCloseable {
       try {
         connection.sendRpcRequest(call);                 // send the rpc request
       } catch (RejectedExecutionException e) {
-        throw new IOException("connection has been closed", e);
+        throw new IOException(CONNECTION_HAS_BEEN_CLOSED, e);
       } catch (InterruptedException ie) {
         Thread.currentThread().interrupt();
         IOException ioe = new InterruptedIOException(
@@ -1699,7 +1716,7 @@ public class Client implements AutoCloseable {
     while (true) {
       synchronized (putLock) { // synchronized to avoid put after stop
         if (!running.get()) {
-          throw new IOException("Failed to get connection for " + remoteId
+            throw new IOException("Failed to get connection for " + remoteId
               + ", " + call + ": " + this + " is already stopped");
         }
         connection = connections.computeIfAbsent(remoteId,
