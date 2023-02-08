@@ -31,7 +31,7 @@ public class QiniuKodoOutputStream extends OutputStream {
         this.blockManager = blockManager;
         this.pos = new PipedOutputStream();
         try {
-            this.pis = new PipedInputStream(pos);
+            this.pis = new PipedInputStream(pos, 400 * 1024 * 1024);
             this.thread = new Thread(() -> {
                 try {
                     client.upload(pis, key, overwrite);

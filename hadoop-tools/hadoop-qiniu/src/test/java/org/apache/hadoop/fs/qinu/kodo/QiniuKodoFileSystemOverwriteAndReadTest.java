@@ -25,6 +25,7 @@ public class QiniuKodoFileSystemOverwriteAndReadTest extends FileSystemContractB
         int success = 0;
         while (true) {
             try {
+                LOG.info("Count: {}", success);
                 testOverWriteAndRead();
                 success++;
             } catch (Throwable e) {
@@ -44,4 +45,8 @@ public class QiniuKodoFileSystemOverwriteAndReadTest extends FileSystemContractB
         testOverWriteAndReadBy(new S3AFileSystem());
     }
 
+    @Override
+    protected int getGlobalTimeout() {
+        return Integer.MAX_VALUE;
+    }
 }

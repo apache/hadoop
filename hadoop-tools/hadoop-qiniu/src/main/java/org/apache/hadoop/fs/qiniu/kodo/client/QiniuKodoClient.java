@@ -40,7 +40,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
     private final Client client;
 
-    private final UploadManager uploadManager;
+    public final UploadManager uploadManager;
     public final BucketManager bucketManager;
 
     private final boolean useHttps;
@@ -51,6 +51,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     private final int downloadSignExpires;
 
     private final int uploadSignExpires;
+    private final boolean useNoCacheHeader;
 
     public QiniuKodoClient(String bucket, QiniuKodoFsConfig fsConfig, FileSystem.Statistics statistics) throws QiniuException, AuthorizationException {
         this.bucket = bucket;
@@ -59,6 +60,9 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         this.auth = getAuth(fsConfig);
 
         Configuration configuration = new Configuration();
+
+        configuration.resumableUploadMaxConcurrentTaskCount = 4;
+        configuration.resumableUploadAPIV2BlockSize = 8 * 1024 * 1024;
 
         QiniuKodoRegion region = null;
 
@@ -112,8 +116,8 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
         this.downloadUseSign = fsConfig.download.sign.enable;
         this.downloadSignExpires = fsConfig.download.sign.expires;
-
         this.uploadSignExpires = fsConfig.upload.sign.expires;
+        this.useNoCacheHeader = fsConfig.download.useNoCacheHeader;
     }
 
     private static Auth getAuth(QiniuKodoFsConfig fsConfig) throws AuthorizationException {
@@ -183,6 +187,9 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         try {
             StringMap header = new StringMap();
             header.put("Range", String.format("bytes=%d-%d", offset, offset + size - 1));
+            if (useNoCacheHeader) {
+                header.put("X-QN-NOCACHE", 1);
+            }
             String url = getFileUrlByKey(key);
             LOG.debug("fetch content by url: {}", url);
             Response response = this.client.get(url, header);

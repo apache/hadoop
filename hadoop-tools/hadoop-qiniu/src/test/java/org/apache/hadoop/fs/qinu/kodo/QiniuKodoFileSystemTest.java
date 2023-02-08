@@ -159,4 +159,15 @@ public class QiniuKodoFileSystemTest {
             System.out.println(status);
         }
     }
+
+    @Test
+    public void testWriteBigFile() throws IOException {
+        byte[] bs = new byte[40 * 1024 * 1024];
+        FSDataOutputStream os = fs.create(new Path("/bigFile.txt"));
+        for (int i = 0; i < 100; i++) {
+            LOG.info("write block: {}", i);
+            os.write(bs);
+        }
+        os.close();
+    }
 }

@@ -1,6 +1,7 @@
 package org.apache.hadoop.fs.qinu.kodo;
 
 import com.qiniu.http.Response;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
@@ -12,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.InputStream;
 
 public class QiniuKodoClientUploadTest {
@@ -42,6 +44,7 @@ public class QiniuKodoClientUploadTest {
     }
 
     private QiniuKodoClient client;
+    private QiniuKodoFsConfig fsConfig;
 
     @Before
     public void setup() throws Exception {
@@ -49,12 +52,12 @@ public class QiniuKodoClientUploadTest {
         conf.addResource("core-site.xml");
         conf.addResource("contract-test-options.xml");
 
-        QiniuKodoFsConfig fsConfig = new QiniuKodoFsConfig(conf);
+        this.fsConfig = new QiniuKodoFsConfig(conf);
         this.client = new QiniuKodoClient("qshell-hadoop", fsConfig, null);
     }
 
     @Test
-    public void test() throws Exception {
+    public void testWriteAndRead() throws Exception {
         int blockSize = 4096;
         byte[] filedata1 = dataset(blockSize, 'A', 26);
         byte[] filedata2 = dataset(blockSize, 'a', 26);
@@ -64,5 +67,24 @@ public class QiniuKodoClientUploadTest {
             testWriteAndRead(client, filedata1);
             testWriteAndRead(client, filedata2);
         }
+    }
+
+    @Test
+    public void testUploadBigFile() throws Exception {
+        byte[] bs = new byte[400 * 1024 * 1024];
+
+        File file = new File(fsConfig.download.cache.disk.dir + "/file");
+        FileUtils.writeByteArrayToFile(file, bs);
+
+        LOG.debug("new byte[{}]", bs.length);
+        String key = "bigFile";
+        String token = client.getUploadToken(key, true);
+
+        LOG.debug("token: {}", token);
+        
+        Response response = client.uploadManager.put(file, key, token);
+
+        LOG.debug("response: {}", response);
+        Assert.assertTrue(response.isOK());
     }
 }

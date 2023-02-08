@@ -9,6 +9,7 @@ public class DownloadConfig extends AConfigBase {
     public final int blockSize;
     public final String domain;
     public final SignConfig sign;
+    public final boolean useNoCacheHeader;
 
     public DownloadConfig(Configuration conf, String namespace) {
         super(conf, namespace);
@@ -16,6 +17,7 @@ public class DownloadConfig extends AConfigBase {
         this.blockSize = blockSize();
         this.domain = domain();
         this.sign = new SignConfig(conf, namespace + ".sign");
+        this.useNoCacheHeader = useNoCacheHeader();
     }
 
     private CacheConfig cache() {
@@ -35,6 +37,14 @@ public class DownloadConfig extends AConfigBase {
      */
     private String domain() {
         return conf.get(namespace + ".domain");
+    }
+
+
+    /**
+     * 是否对下载请求添加
+     */
+    private boolean useNoCacheHeader() {
+        return conf.getBoolean(namespace + ".noCacheHeader", true);
     }
 
     @Override
