@@ -566,7 +566,7 @@ public class TestCopyCommitter {
             fs, new Path(sourceBase + srcFilename), null,
             fs, new Path(targetBase + srcFilename),
             sourceCurrStatus.getLen())
-            .equals(CopyMapper.ChecksumComparison.COMPATIBLE_AND_FALSE));
+            .equals(CopyMapper.ChecksumComparison.FALSE));
       } catch(IOException exception) {
         if (skipCrc) {
           LOG.error("Unexpected exception is found", exception);

@@ -594,9 +594,9 @@ public class DistCpUtils {
     if (sourceChecksum == null || targetChecksum == null) {
       return CopyMapper.ChecksumComparison.INCOMPATIBLE;
     } else if (sourceChecksum.equals(targetChecksum)) {
-      return CopyMapper.ChecksumComparison.COMPATIBLE_AND_TRUE;
+      return CopyMapper.ChecksumComparison.TRUE;
     }
-    return CopyMapper.ChecksumComparison.COMPATIBLE_AND_FALSE;
+    return CopyMapper.ChecksumComparison.FALSE;
   }
 
   /**
@@ -627,8 +627,7 @@ public class DistCpUtils {
           checksumComparison = checksumsAreEqual(sourceFS, source, sourceChecksum,
               targetFS, target, srcLen);
       // If Checksum comparison is false set it to false, else set to true.
-      boolean checksumResult = !checksumComparison.equals(
-          CopyMapper.ChecksumComparison.COMPATIBLE_AND_FALSE);
+      boolean checksumResult = !checksumComparison.equals(CopyMapper.ChecksumComparison.FALSE);
       if (!checksumResult) {
         StringBuilder errorMessage =
             new StringBuilder(DistCpConstants.CHECKSUM_MISMATCH_ERROR_MSG)

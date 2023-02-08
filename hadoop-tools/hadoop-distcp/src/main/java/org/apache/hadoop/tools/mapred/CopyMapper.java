@@ -80,9 +80,9 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
    * Indicates the checksum comparison result.
    */
   public enum ChecksumComparison {
-    COMPATIBLE_AND_TRUE, // checksum compariosn is compatible and true.
-    COMPATIBLE_AND_FALSE, // checksum compariosn is compatible and false.
-    INCOMPATIBLE, // checksum compariosn is not compatible.
+    TRUE,           // checksum comparison is compatible and true.
+    FALSE,          // checksum comparison is compatible and false.
+    INCOMPATIBLE,   // checksum comparison is not compatible.
   }
 
   private static Logger LOG = LoggerFactory.getLogger(CopyMapper.class);
@@ -403,8 +403,7 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
         }
         // if skipCrc is disabled and checksumComparison is compatible we
         // need not check the mod time.
-        return checksumComparison
-            .equals(ChecksumComparison.COMPATIBLE_AND_TRUE);
+        return checksumComparison.equals(ChecksumComparison.TRUE);
       }
     }
     return false;
