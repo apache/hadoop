@@ -1728,8 +1728,7 @@ public class DatanodeManager {
       DatanodeInfo[] recoveryInfos;
       if (recoveryLocations.size() > 1) {
         if (recoveryLocations.size() != storages.length) {
-          LOG.info("Skipped stale nodes for recovery : "
-              + (storages.length - recoveryLocations.size()));
+          LOG.info("Skipped {} stale nodes for recovery.", (storages.length - recoveryLocations.size()));
         }
         recoveryInfos = DatanodeStorageInfo.toDatanodeInfos(recoveryLocations);
       } else {
