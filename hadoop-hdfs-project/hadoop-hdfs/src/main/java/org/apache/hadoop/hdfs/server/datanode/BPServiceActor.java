@@ -1499,7 +1499,7 @@ class BPServiceActor implements Runnable {
           dn.getMetrics().addNumProcessedCommands(processCommandsMs);
         }
         if (processCommandsMs > dnConf.getProcessCommandsThresholdMs()) {
-          LOG.warn("Took {} ms to process {} commands from NN",
+          LOG.info("Took {} ms to process {} commands from NN",
               processCommandsMs, cmds.length);
         }
       }
