@@ -392,6 +392,7 @@ public class Client implements AutoCloseable {
     private IOException closeException; // close reason
 
     private final Thread rpcRequestThread;
+    private final AtomicLong sendingThreadNumber = new AtomicLong(0);
     private final SynchronousQueue<Pair<Call, ResponseBuffer>> rpcRequestQueue =
         new SynchronousQueue<>(true);
 
@@ -1115,7 +1116,7 @@ public class Client implements AutoCloseable {
     private class RpcRequestSender implements Runnable {
       @Override
       public void run() {
-        while (!shouldCloseConnection.get()) {
+        while (!shouldCloseConnection.get() || sendingThreadNumber.get() > 0) {
           ResponseBuffer buf = null;
           try {
             Pair<Call, ResponseBuffer> pair =
@@ -1159,7 +1160,9 @@ public class Client implements AutoCloseable {
      */
     public void sendRpcRequest(final Call call)
         throws InterruptedException, IOException {
+      sendingThreadNumber.incrementAndGet();
       if (shouldCloseConnection.get()) {
+        sendingThreadNumber.decrementAndGet();
         return;
       }
 
@@ -1182,6 +1185,7 @@ public class Client implements AutoCloseable {
       header.writeDelimitedTo(buf);
       RpcWritable.wrap(call.rpcRequest).writeTo(buf);
       rpcRequestQueue.put(Pair.of(call, buf));
+      sendingThreadNumber.decrementAndGet();
     }
 
     /* Receive a response.
