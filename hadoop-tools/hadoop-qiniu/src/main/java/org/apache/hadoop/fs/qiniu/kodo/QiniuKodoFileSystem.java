@@ -138,7 +138,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         mkdirs(path.getParent());
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        
+
         if (overwrite) {
             blockReader.deleteBlocks(key);
         }
@@ -361,7 +361,6 @@ public class QiniuKodoFileSystem extends FileSystem {
         }
         Stack<Path> stack = new Stack<>();
         while (path != null) {
-            LOG.debug("== mkdirs, path:" + path);
             stack.push(path);
             path = path.getParent();
         }
@@ -406,7 +405,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         }
 
         // TODO 是属于一个前缀，属于文件系统不一致的情景，需要修复依次创建出其各级父目录
-        throw new UnsupportedFileSystemException("unimplementation");
+        return kodoClient.makeEmptyObject(dirKey);
     }
 
 
