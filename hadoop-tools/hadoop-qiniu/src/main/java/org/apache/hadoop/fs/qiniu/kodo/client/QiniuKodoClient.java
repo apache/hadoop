@@ -23,9 +23,7 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -159,8 +157,18 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * 给定一个输入流将读取并上传对应文件
      */
     @Override
-    public Response upload(InputStream stream, String key, boolean overwrite) throws QiniuException {
-        return uploadManager.put(stream, key, getUploadToken(key, overwrite), null, null);
+    public Response upload(InputStream stream, String key, boolean overwrite) throws IOException {
+        if (stream.available() > 0) {
+            return uploadManager.put(stream, key, getUploadToken(key, overwrite), null, null);
+        }
+        int b = stream.read();
+        if (b == -1) {
+            // 空流
+            return uploadManager.put(new byte[0], key, getUploadToken(key, overwrite));
+        }
+        // 有内容，还得拼回去
+        SequenceInputStream sis = new SequenceInputStream(new ByteArrayInputStream(new byte[]{(byte) b}), stream);
+        return uploadManager.put(sis, key, getUploadToken(key, overwrite), null, null);
     }
 
 
@@ -187,7 +195,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         }
     }
 
-    
+
     @Override
     public boolean exists(String key) throws IOException {
         Request.Builder requestBuilder = new Request.Builder().url(getFileUrlByKey(key)).head();

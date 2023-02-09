@@ -1,6 +1,5 @@
 package org.apache.hadoop.fs.qiniu.kodo.client;
 
-import com.qiniu.common.QiniuException;
 import com.qiniu.http.Response;
 import com.qiniu.storage.model.FileInfo;
 
@@ -13,7 +12,7 @@ public interface IQiniuKodoClient {
 
     long getLength(String key) throws IOException;
 
-    Response upload(InputStream stream, String key, boolean overwrite) throws QiniuException;
+    Response upload(InputStream stream, String key, boolean overwrite) throws IOException;
 
     InputStream fetch(String key, long offset, int size) throws IOException;
 

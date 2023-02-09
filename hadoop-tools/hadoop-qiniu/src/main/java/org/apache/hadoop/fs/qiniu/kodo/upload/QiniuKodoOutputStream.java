@@ -22,9 +22,8 @@ public class QiniuKodoOutputStream extends OutputStream {
 
     private final Thread thread;
 
-    private volatile QiniuException uploadException;
+    private volatile IOException uploadException;
 
-    private final IBlockManager blockManager;
 
     public QiniuKodoOutputStream(
             IQiniuKodoClient client,
@@ -34,14 +33,13 @@ public class QiniuKodoOutputStream extends OutputStream {
             int bufferSize
     ) {
         this.key = key;
-        this.blockManager = blockManager;
         this.pos = new PipedOutputStream();
         try {
             this.pis = new PipedInputStream(pos, bufferSize);
             this.thread = new Thread(() -> {
                 try {
                     client.upload(pis, key, overwrite);
-                } catch (QiniuException e) {
+                } catch (IOException e) {
                     this.uploadException = e;
                 }
             });
@@ -68,12 +66,13 @@ public class QiniuKodoOutputStream extends OutputStream {
             thread.join();
             if (uploadException == null) {
                 // 无异常退出
-                blockManager.deleteBlocks(key); // 上传完毕，清理旧缓存
                 return;
             }
-            if (uploadException.response.statusCode == 614) {
+            if (uploadException instanceof QiniuException &&
+                    ((QiniuException) uploadException).response.statusCode == 614) {
                 throw new FileAlreadyExistsException("key exists " + key);
             }
+
             throw uploadException;
         } catch (InterruptedException e) {
             throw new RuntimeException(e);

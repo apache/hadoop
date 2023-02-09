@@ -1,6 +1,5 @@
 package org.apache.hadoop.fs.qiniu.kodo.client;
 
-import com.qiniu.common.QiniuException;
 import com.qiniu.http.Response;
 import com.qiniu.storage.model.FileInfo;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoUtils;
@@ -36,7 +35,7 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
     }
 
     @Override
-    public Response upload(InputStream stream, String key, boolean overwrite) throws QiniuException {
+    public Response upload(InputStream stream, String key, boolean overwrite) throws IOException {
         Response response = source.upload(stream, key, overwrite);
         if (response.isOK()) {
             cache.remove(key);

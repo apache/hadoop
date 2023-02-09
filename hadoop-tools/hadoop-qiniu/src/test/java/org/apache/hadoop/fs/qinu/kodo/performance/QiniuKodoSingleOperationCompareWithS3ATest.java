@@ -55,4 +55,14 @@ public class QiniuKodoSingleOperationCompareWithS3ATest {
         }
         kodoFs.mkdirs(new Path(sb.toString()));
     }
+
+    @Test
+    public void testS3ACreateSmallFile() throws Exception {
+        s3aFs.create(new Path("/s3aSmallFile")).close();
+    }
+
+    @Test
+    public void testKodoCreateSmallFile() throws Exception {
+        kodoFs.create(new Path("/kodoSmallFile")).close();
+    }
 }
