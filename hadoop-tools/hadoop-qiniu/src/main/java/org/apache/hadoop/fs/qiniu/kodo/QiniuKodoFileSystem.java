@@ -5,6 +5,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
+import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoCachedClient;
 import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.download.EmptyInputStream;
@@ -22,7 +23,8 @@ import java.net.URI;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Stack;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class QiniuKodoFileSystem extends FileSystem {
 
@@ -60,9 +62,9 @@ public class QiniuKodoFileSystem extends FileSystem {
         LOG.debug("workingDir:" + workingDir);
 
         kodoClient = new QiniuKodoClient(bucket, fsConfig, statistics);
-//        if (fsConfig.client.cache.enable) {
-//            kodoClient = new QiniuKodoCachedClient(kodoClient);
-//        }
+        if (fsConfig.client.cache.enable) {
+            kodoClient = new QiniuKodoCachedClient(kodoClient);
+        }
 
         blockReader = new QiniuKodoBlockReader(fsConfig, kodoClient);
     }
@@ -323,6 +325,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         return kodoClient.deleteKeys(dirKey, recursive);
     }
 
+
     @Override
     public FileStatus[] listStatus(Path path) throws IOException {
         LOG.debug("listStatus, path:" + path);
@@ -362,27 +365,20 @@ public class QiniuKodoFileSystem extends FileSystem {
         return workingDir;
     }
 
+    ExecutorService es = Executors.newFixedThreadPool(4);
+
     /**
      * 递归地创建文件夹
      */
     @Override
     public boolean mkdirs(Path path, FsPermission permission) throws IOException {
         // 如果该文件夹发现已存在，那么直接返回结果
-        if (null != kodoClient.getFileStatus(
-                QiniuKodoUtils.keyToDirKey(
-                        QiniuKodoUtils.pathToKey(workingDir, path)
-                )
-        )) {
-            return true;
-        }
-        Stack<Path> stack = new Stack<>();
         while (path != null) {
-            stack.push(path);
+            boolean success = mkdir(path);
+            if (!success) {
+                break;
+            }
             path = path.getParent();
-        }
-        // 从顶层文件夹开始循环创建
-        while (!stack.isEmpty()) {
-            mkdir(stack.pop());
         }
         return true;
     }
@@ -395,35 +391,48 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         // 根目录
         if (path.isRoot()) {
-            return true;
+            return false;
         }
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         String dirKey = QiniuKodoUtils.keyToDirKey(key);
         String fileKey = QiniuKodoUtils.keyToFileKey(key);
 
-        // 列举第一条
-        FileInfo file = kodoClient.listOneStatus(key);
-
-        // 找不到则创建文件夹
-        if (file == null) {
-            return kodoClient.makeEmptyObject(dirKey);
+        // 找到文件夹，返回
+        if (kodoClient.exists(dirKey)) {
+            return false;
         }
 
-        // 找到了，是已存在的文件夹
-        if (dirKey.equals(file.key)) {
-            return true;
-        }
-
-        // 找到了，但是是已存在的文件
-        if (fileKey.equals(file.key)) {
+        // 找到文件，抛异常
+        if (kodoClient.exists(fileKey)) {
             throw new FileAlreadyExistsException(path.toString());
         }
 
-        // TODO 是属于一个前缀，属于文件系统不一致的情景，需要修复依次创建出其各级父目录
+        // 啥都找不到，创建文件夹
         return kodoClient.makeEmptyObject(dirKey);
     }
 
+    @Override
+    public boolean exists(Path path) throws IOException {
+        Path qualifiedPath = path.makeQualified(uri, workingDir);
+        String key = QiniuKodoUtils.pathToKey(workingDir, qualifiedPath);
+
+        // Root always exists
+        if (key.length() == 0) return true;
+
+        // 1. key 可能是实际文件或文件夹, 也可能是中间路径
+
+        // 先尝试查找 key
+        if (kodoClient.exists(key)) return true;
+
+        // 2. 有可能是文件夹路径但是不存在末尾/
+        // 添加尾部/后再次获取
+        String dirKey = QiniuKodoUtils.keyToDirKey(key);
+
+        // 找不到表示文件夹的空对象，故只能列举是否有该前缀的对象
+        // 列举结果为null，则真的不存在
+        return kodoClient.listOneStatus(dirKey) != null;
+    }
 
     /**
      * 获取一个路径的文件详情

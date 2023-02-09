@@ -14,16 +14,16 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
     private final LRUCache<String, FileInfo> cache = new LRUCache<>(100);
     private final IQiniuKodoClient source;
 
-    private void removeKeyPrefixInCache(String keyPrefix) {
-        for (String key : cache.keySet()) {
-            if (key.startsWith(keyPrefix)) {
-                cache.remove(key);
-            }
-        }
-    }
-
     public QiniuKodoCachedClient(IQiniuKodoClient source) {
         this.source = source;
+    }
+
+    @Override
+    public boolean exists(String key) throws IOException {
+        if (cache.containsKey(key)) {
+            return true;
+        }
+        return source.exists(key);
     }
 
     @Override
@@ -84,7 +84,7 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
     @Override
     public boolean copyKeys(String oldPrefix, String newPrefix) throws IOException {
         boolean result = source.copyKeys(oldPrefix, newPrefix);
-        removeKeyPrefixInCache(oldPrefix);
+        cache.removeIf(e -> e.getKey().startsWith(oldPrefix));
         return result;
     }
 
@@ -98,7 +98,7 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
     @Override
     public boolean renameKeys(String oldPrefix, String newPrefix) throws IOException {
         boolean result = source.renameKeys(oldPrefix, newPrefix);
-        removeKeyPrefixInCache(oldPrefix);
+        cache.removeIf(e -> e.getKey().startsWith(oldPrefix));
         return result;
     }
 
@@ -112,7 +112,7 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
     @Override
     public boolean deleteKeys(String prefix, boolean recursive) throws IOException {
         boolean result = source.deleteKeys(prefix, recursive);
-        removeKeyPrefixInCache(prefix);
+        cache.removeIf(e -> e.getKey().startsWith(prefix));
         return result;
     }
 

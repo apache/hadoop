@@ -2,6 +2,7 @@ package org.apache.hadoop.fs.qiniu.kodo.util;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Predicate;
 
 
 public class LRUCache<K, V> extends LinkedHashMap<K, V> {
@@ -31,4 +32,22 @@ public class LRUCache<K, V> extends LinkedHashMap<K, V> {
         return false;
     }
 
+    @Override
+    public synchronized V get(Object key) {
+        return super.get(key);
+    }
+
+    @Override
+    public synchronized V remove(Object key) {
+        return super.remove(key);
+    }
+
+    @Override
+    public synchronized V put(K key, V value) {
+        return super.put(key, value);
+    }
+
+    public synchronized void removeIf(Predicate<Map.Entry<K, V>> filter) {
+        this.entrySet().removeIf(filter);
+    }
 }

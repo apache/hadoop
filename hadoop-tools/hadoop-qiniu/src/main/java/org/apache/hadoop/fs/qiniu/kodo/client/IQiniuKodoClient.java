@@ -9,6 +9,8 @@ import java.io.InputStream;
 import java.util.List;
 
 public interface IQiniuKodoClient {
+    boolean exists(String key) throws IOException;
+
     long getLength(String key) throws IOException;
 
     Response upload(InputStream stream, String key, boolean overwrite) throws QiniuException;
