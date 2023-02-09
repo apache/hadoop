@@ -298,10 +298,10 @@ public class S3ADelegationTokens extends AbstractDTService {
    * @throws IOException failure unmarshalling any token.
    */
   @VisibleForTesting
-  boolean maybeUpdateTokenFromOwner() throws IOException {
+  synchronized boolean maybeUpdateTokenFromOwner() throws IOException {
     Token<AbstractS3ATokenIdentifier> token = selectTokenFromFSOwner();
     if (token == null || boundDT.orElse(null) == token) {
-      return false;;
+      return false;
     } else {
       bindToDelegationToken(token);
       return true;
