@@ -45,8 +45,8 @@ public class TestSubClusterCleaner {
   private MemoryFederationStateStore stateStore;
   private FederationStateStoreFacade facade;
   private SubClusterCleaner cleaner;
-  private int NUM_SUBCLUSTERS = 4;
-  private long EXPIRATION_TIME = Time.now() - 5000;
+  private static int NUM_SUBCLUSTERS = 4;
+  private static long EXPIRATION_TIME = Time.now() - 5000;
 
   @Before
   public void setup() throws YarnException {
