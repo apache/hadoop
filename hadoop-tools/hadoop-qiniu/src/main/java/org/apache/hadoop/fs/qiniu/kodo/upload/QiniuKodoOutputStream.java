@@ -26,12 +26,18 @@ public class QiniuKodoOutputStream extends OutputStream {
 
     private final IBlockManager blockManager;
 
-    public QiniuKodoOutputStream(IQiniuKodoClient client, String key, boolean overwrite, IBlockManager blockManager) {
+    public QiniuKodoOutputStream(
+            IQiniuKodoClient client,
+            String key,
+            boolean overwrite,
+            IBlockManager blockManager,
+            int bufferSize
+    ) {
         this.key = key;
         this.blockManager = blockManager;
         this.pos = new PipedOutputStream();
         try {
-            this.pis = new PipedInputStream(pos, 400 * 1024 * 1024);
+            this.pis = new PipedInputStream(pos, bufferSize);
             this.thread = new Thread(() -> {
                 try {
                     client.upload(pis, key, overwrite);

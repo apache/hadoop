@@ -10,6 +10,7 @@ public class DownloadConfig extends AConfigBase {
     public final String domain;
     public final SignConfig sign;
     public final boolean useNoCacheHeader;
+    public final boolean useHttps;
 
     public DownloadConfig(Configuration conf, String namespace) {
         super(conf, namespace);
@@ -18,7 +19,13 @@ public class DownloadConfig extends AConfigBase {
         this.domain = domain();
         this.sign = new SignConfig(conf, namespace + ".sign");
         this.useNoCacheHeader = useNoCacheHeader();
+        this.useHttps = useHttps();
     }
+
+    private boolean useHttps() {
+        return conf.getBoolean(namespace + ".useHttps", true);
+    }
+
 
     private CacheConfig cache() {
         return new CacheConfig(conf, namespace + ".cache");

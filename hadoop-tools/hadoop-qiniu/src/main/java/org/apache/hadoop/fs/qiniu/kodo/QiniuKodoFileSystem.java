@@ -47,17 +47,17 @@ public class QiniuKodoFileSystem extends FileSystem {
         LOG.debug("QiniuKodoConfig: {}", fsConfig);
 
         String bucket = name.getHost();
-        LOG.debug("== bucket:" + bucket);
+        LOG.debug("bucket:" + bucket);
 
         uri = URI.create(name.getScheme() + "://" + name.getAuthority());
-        LOG.debug("== uri:" + uri);
+        LOG.debug("uri:" + uri);
 
         // 构造工作目录路径，工作目录路径为用户使用相对目录时所相对的路径
         username = UserGroupInformation.getCurrentUser().getShortUserName();
-        LOG.debug("== username:" + username);
+        LOG.debug("username:" + username);
 
         workingDir = new Path("/user", username).makeQualified(uri, null);
-        LOG.debug("== workingDir:" + workingDir);
+        LOG.debug("workingDir:" + workingDir);
 
         kodoClient = new QiniuKodoClient(bucket, fsConfig, statistics);
 //        if (fsConfig.client.cache.enable) {
@@ -130,9 +130,11 @@ public class QiniuKodoFileSystem extends FileSystem {
      */
     @Override
     public FSDataOutputStream create(Path path, FsPermission permission, boolean overwrite, int bufferSize, short replication, long blockSize, Progressable progress) throws IOException {
-        LOG.debug("== create, path:" + path + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
+        LOG.debug("create, path:" + path + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
 
-        if (path.isRoot()) throw new IOException("Cannot create file named /");
+        if (path.isRoot()) {
+            throw new IOException("Cannot create file named /");
+        }
         makeSureWorkdirCreated(path);
 
         mkdirs(path.getParent());
@@ -143,26 +145,40 @@ public class QiniuKodoFileSystem extends FileSystem {
             blockReader.deleteBlocks(key);
         }
 
-        return new FSDataOutputStream(new QiniuKodoOutputStream(kodoClient, key, overwrite, blockReader), statistics);
+        return new FSDataOutputStream(
+                new QiniuKodoOutputStream(
+                        kodoClient,
+                        key,
+                        overwrite,
+                        blockReader,
+                        fsConfig.upload.bufferSize
+                ),
+                statistics
+        );
     }
 
     @Override
-    public FSDataOutputStream createNonRecursive(Path path, FsPermission permission,
-                                                 EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
-                                                 Progressable progress) throws IOException {
+    public FSDataOutputStream createNonRecursive(
+            Path path, FsPermission permission,
+            EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
+            Progressable progress) throws IOException {
         boolean overwrite = flags.contains(CreateFlag.OVERWRITE);
-
-        LOG.debug("== create, path:" + path + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
-
         if (path.isRoot()) throw new IOException("Cannot create file named /");
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        LOG.debug("== create, key:" + key + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
         if (overwrite) {
             blockReader.deleteBlocks(key);
         }
-        return new FSDataOutputStream(new QiniuKodoOutputStream(kodoClient, key, overwrite, blockReader), statistics);
-
+        return new FSDataOutputStream(
+                new QiniuKodoOutputStream(
+                        kodoClient,
+                        key,
+                        overwrite,
+                        blockReader,
+                        fsConfig.upload.bufferSize
+                ),
+                statistics
+        );
     }
 
     @Override
@@ -273,7 +289,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     @Override
     public boolean delete(Path path, boolean recursive) throws IOException {
-        LOG.debug("== delete, path:" + path + " recursive:" + recursive);
+        LOG.debug("delete, path:" + path + " recursive:" + recursive);
 
         // 判断是否是文件
         FileStatus file;
@@ -284,7 +300,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         }
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        LOG.debug("== delete, key:" + key);
+        LOG.debug("delete, key:" + key);
 
         if (file.isDirectory()) {
             return deleteDir(key, recursive);
@@ -295,25 +311,25 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     private boolean deleteFile(String fileKey) throws IOException {
         fileKey = QiniuKodoUtils.keyToFileKey(fileKey);
-        LOG.debug("== delete, fileKey:" + fileKey);
+        LOG.debug("delete, fileKey:" + fileKey);
         blockReader.deleteBlocks(fileKey);
         return kodoClient.deleteKey(fileKey);
     }
 
     private boolean deleteDir(String dirKey, boolean recursive) throws IOException {
         dirKey = QiniuKodoUtils.keyToDirKey(dirKey);
-        LOG.debug("== deleteDir, dirKey:" + dirKey + " recursive:" + recursive);
+        LOG.debug("deleteDir, dirKey:" + dirKey + " recursive:" + recursive);
         blockReader.deleteBlocks(dirKey);
         return kodoClient.deleteKeys(dirKey, recursive);
     }
 
     @Override
     public FileStatus[] listStatus(Path path) throws IOException {
-        LOG.debug("== listStatus, path:" + path);
+        LOG.debug("listStatus, path:" + path);
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         key = QiniuKodoUtils.keyToDirKey(key);
-        LOG.debug("== listStatus, key:" + key);
+        LOG.debug("listStatus, key:" + key);
 
         // 尝试列举
         List<FileInfo> files = kodoClient.listStatus(key, true);
@@ -375,7 +391,7 @@ public class QiniuKodoFileSystem extends FileSystem {
      * 仅仅只创建当前路径文件夹
      */
     private boolean mkdir(Path path) throws IOException {
-        LOG.debug("== mkdir, path:" + path);
+        LOG.debug("mkdir, path:" + path);
 
         // 根目录
         if (path.isRoot()) {
@@ -414,7 +430,7 @@ public class QiniuKodoFileSystem extends FileSystem {
      */
     @Override
     public FileStatus getFileStatus(Path path) throws IOException {
-        LOG.debug("== getFileStatus, path:" + path);
+        LOG.debug("getFileStatus, path:" + path);
 
         Path qualifiedPath = path.makeQualified(uri, workingDir);
         String key = QiniuKodoUtils.pathToKey(workingDir, qualifiedPath);
@@ -464,7 +480,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     private FileStatus fileInfoToFileStatus(FileInfo file) {
         if (file == null) return null;
 
-        LOG.debug("== file conv, key:" + file.key);
+        LOG.debug("file conv, key:" + file.key);
 
         long putTime = file.putTime / 10000;
         boolean isDir = QiniuKodoUtils.isKeyDir(file.key);

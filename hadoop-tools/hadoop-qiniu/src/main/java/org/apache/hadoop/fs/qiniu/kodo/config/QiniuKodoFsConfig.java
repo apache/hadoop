@@ -8,8 +8,6 @@ import org.apache.hadoop.fs.qiniu.kodo.config.region.RegionConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.upload.UploadConfig;
 
 public class QiniuKodoFsConfig extends AConfigBase {
-    public final boolean useHttps;
-
     public final AuthConfig auth;
     public final DownloadConfig download;
     public final UploadConfig upload;
@@ -20,7 +18,6 @@ public class QiniuKodoFsConfig extends AConfigBase {
     public QiniuKodoFsConfig(Configuration conf, String namespace) {
         super(conf, namespace);
         this.region = region();
-        this.useHttps = useHttps();
         this.auth = auth();
         this.download = download();
         this.upload = upload();
@@ -39,11 +36,7 @@ public class QiniuKodoFsConfig extends AConfigBase {
     private RegionConfig region() {
         return new RegionConfig(conf, namespace + ".region");
     }
-
-    private boolean useHttps() {
-        return conf.getBoolean(namespace + ".useHttps", true);
-    }
-
+    
     private AuthConfig auth() {
         return new AuthConfig(conf, namespace + ".auth");
     }
@@ -67,7 +60,6 @@ public class QiniuKodoFsConfig extends AConfigBase {
     @Override
     public String toString() {
         return "QiniuKodoFsConfig{" +
-                ", useHttps=" + useHttps +
                 ", auth=" + auth +
                 ", download=" + download +
                 ", namespace='" + namespace + '\'' +

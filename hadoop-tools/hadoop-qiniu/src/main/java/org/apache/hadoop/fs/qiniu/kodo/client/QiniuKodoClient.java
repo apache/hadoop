@@ -43,7 +43,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     public final UploadManager uploadManager;
     public final BucketManager bucketManager;
 
-    private final boolean useHttps;
+    private final boolean useDownloadHttps;
 
     private String downloadDomain;
     private final FileSystem.Statistics statistics;
@@ -61,8 +61,16 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
         Configuration configuration = new Configuration();
 
-        configuration.resumableUploadMaxConcurrentTaskCount = 4;
-        configuration.resumableUploadAPIV2BlockSize = 8 * 1024 * 1024;
+        if (fsConfig.upload.v2.enable) {
+            configuration.resumableUploadAPIVersion = Configuration.ResumableUploadAPIVersion.V2;
+            configuration.resumableUploadAPIV2BlockSize = fsConfig.upload.v2.blockSize();
+        } else {
+            configuration.resumableUploadAPIVersion = Configuration.ResumableUploadAPIVersion.V1;
+        }
+        configuration.resumableUploadMaxConcurrentTaskCount = fsConfig.upload.maxConcurrentTasks;
+        configuration.useHttpsDomains = fsConfig.upload.useHttps;
+        configuration.accUpHostFirst = fsConfig.upload.accUpHostFirst;
+        configuration.useDefaultUpHostIfNone = fsConfig.upload.useDefaultUpHostIfNone;
 
         QiniuKodoRegion region = null;
 
@@ -85,8 +93,8 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         }
 
 
-        this.useHttps = fsConfig.useHttps;
-        configuration.useHttpsDomains = this.useHttps;
+        this.useDownloadHttps = fsConfig.download.useHttps;
+        configuration.useHttpsDomains = fsConfig.upload.useHttps;
 
         if (fsConfig.proxy.enable) {
             ProxyConfig proxyConfig = fsConfig.proxy;
@@ -484,7 +492,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * 构造某个文件的下载url
      */
     private String getFileUrlByKey(String key) throws IOException {
-        DownloadUrl downloadUrl = new DownloadUrl(downloadDomain, useHttps, key);
+        DownloadUrl downloadUrl = new DownloadUrl(downloadDomain, useDownloadHttps, key);
         String url = downloadUrl.buildURL();
         if (downloadUseSign) {
             return auth.privateDownloadUrl(url, downloadSignExpires);
