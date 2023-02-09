@@ -81,9 +81,11 @@
   <thead>
     <tr>
       <th>Namenode Address</th>
+      <th>Namenode HA State</th>
       <th>Block Pool ID</th>
       <th>Actor State</th>
-      <th>Last Heartbeat</th>
+      <th>Last Heartbeat Sent</th>
+      <th>Last Heartbeat Response</th>
       <th>Last Block Report</th>
       <th>Last Block Report Size (Max Size)</th>
     </tr>
@@ -91,9 +93,11 @@
   {#dn.BPServiceActorInfo}
     <tr>
       <td>{NamenodeAddress}</td>
+      <td>{NamenodeHaState}</td>
       <td>{BlockPoolID}</td>
       <td>{ActorState}</td>
       <td>{LastHeartbeat}s</td>
+      <td>{LastHeartbeatResponseTime}s</td>
       <td>{#helper_relative_time value="{LastBlockReport}"/}</td>
       <td>{maxBlockReportSize|fmt_bytes} ({maxDataLength|fmt_bytes})</td>
     </tr>
