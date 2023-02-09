@@ -2728,9 +2728,9 @@ public class TestClientRMService {
     resourceManager = rm;
     rm.start();
 
-    Resource resource = BuilderUtils.newResource(1024, 1);
+    Resource resource = Resources.createResource(976562);
     resource.setResourceInformation("memory-mb",
-        ResourceInformation.newInstance("memory-mb", "G", 1024));
+        ResourceInformation.newInstance("memory-mb", "G", 976562));
     resource.setResourceInformation("resource1",
         ResourceInformation.newInstance("resource1", "T", 1));
     resource.setResourceInformation("resource2",
@@ -2771,8 +2771,8 @@ public class TestClientRMService {
     Assert.assertEquals(1000000000, nodeReports.get(0).getCapability().
         getResourceInformation("resource2").getValue());
 
-    //Resource 'memory-mb' has been passed as 1024G while registering NM
-    //1024G should be converted to 976562Mi
+    //Resource 'memory-mb' has been passed as 976562G while registering NM
+    //976562G should be converted to 976562Mi
     Assert.assertEquals("Mi", nodeReports.get(0).getCapability().
         getResourceInformation("memory-mb").getUnits());
     Assert.assertEquals(976562, nodeReports.get(0).getCapability().
