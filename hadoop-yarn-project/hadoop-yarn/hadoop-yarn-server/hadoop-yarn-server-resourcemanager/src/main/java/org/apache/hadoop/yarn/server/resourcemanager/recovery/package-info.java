@@ -16,6 +16,10 @@
  * limitations under the License.
  */
 
+/**
+ *
+ */
+
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
