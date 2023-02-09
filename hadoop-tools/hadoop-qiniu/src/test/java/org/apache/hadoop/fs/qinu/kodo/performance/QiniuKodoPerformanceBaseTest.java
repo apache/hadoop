@@ -66,7 +66,7 @@ public abstract class QiniuKodoPerformanceBaseTest {
     }
 
     protected long timeoutN() {
-        return 1;
+        return 10;
     }
 
     protected TimeUnit timeoutUnit() {
@@ -110,7 +110,6 @@ public abstract class QiniuKodoPerformanceBaseTest {
     public void testS3A() throws Exception {
         long time = testS3AImpl(String.format("%s/%s", getS3ATestDir(), getSceneWorkDirName()), s3aFs);
         LOG.info(getSceneString() + " (S3A) " + "cost time: " + time);
-        
         testResult.get(getSceneString()).put("s3aTime", time);
     }
 
