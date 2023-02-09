@@ -1673,9 +1673,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       responseInfoMap.forEach((subClusterInfo, response) -> {
         SubClusterId subClusterId = subClusterInfo.getSubClusterId();
         if (response != null) {
-          buffer.append("SubCluster=" + subClusterId.getId() + ",SUCCESS#");
+          buffer.append("SubCluster=").append(subClusterId.getId()).append(",SUCCESS#");
         } else {
-          buffer.append("SubCluster=" + subClusterId.getId() + ",FAILED#");
+          buffer.append("SubCluster=").append(subClusterId.getId()).append(",FAILED#");
         }
       });
       long stopTime = clock.getTime();
