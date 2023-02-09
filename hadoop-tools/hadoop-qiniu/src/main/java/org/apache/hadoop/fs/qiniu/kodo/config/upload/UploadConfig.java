@@ -24,7 +24,7 @@ public class UploadConfig extends AConfigBase {
     }
 
     private int bufferSize() {
-        return conf.getInt(namespace + ".bufferSize", 4 * 1024 * 1024);
+        return conf.getInt(namespace + ".bufferSize", 16 * 1024 * 1024);
     }
 
     private V2Config v2() {
@@ -40,7 +40,7 @@ public class UploadConfig extends AConfigBase {
     }
 
     private int maxConcurrentTasks() {
-        return conf.getInt(namespace + ".concurrentTasks", 4);
+        return conf.getInt(namespace + ".concurrentTasks", 1);
     }
 
     private boolean useHttps() {

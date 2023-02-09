@@ -18,6 +18,6 @@ public class V2Config extends AConfigBase {
     }
 
     public int blockSize() {
-        return conf.getInt(namespace + ".blockSize", 4 * 1024 * 1024);
+        return conf.getInt(namespace + ".blockSize", 40 * 1024 * 1024);
     }
 }

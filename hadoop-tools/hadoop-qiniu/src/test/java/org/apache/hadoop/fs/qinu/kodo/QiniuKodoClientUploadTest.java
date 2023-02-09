@@ -73,18 +73,34 @@ public class QiniuKodoClientUploadTest {
     public void testUploadBigFile() throws Exception {
         byte[] bs = new byte[400 * 1024 * 1024];
 
-        File file = new File(fsConfig.download.cache.disk.dir + "/file");
+        File file = new File(fsConfig.download.cache.disk.dir + "/tmp_file");
+
         FileUtils.writeByteArrayToFile(file, bs);
 
-        LOG.debug("new byte[{}]", bs.length);
+        LOG.info("new byte[{}]", bs.length);
         String key = "bigFile";
         String token = client.getUploadToken(key, true);
 
-        LOG.debug("token: {}", token);
-        
+        LOG.info("token: {}", token);
+
         Response response = client.uploadManager.put(file, key, token);
 
-        LOG.debug("response: {}", response);
+        LOG.info("response: {}", response);
+        Assert.assertTrue(response.isOK());
+    }
+
+    @Test
+    public void testUploadEmptyFile() throws Exception {
+        ByteArrayInputStream bais = new ByteArrayInputStream(new byte[0]);
+
+        String key = "emptyFile";
+        String token = client.getUploadToken(key, true);
+
+        LOG.info("token: {}", token);
+
+        Response response = client.uploadManager.put(bais, key, token, null, null);
+
+        LOG.info("response: {}", response);
         Assert.assertTrue(response.isOK());
     }
 }
