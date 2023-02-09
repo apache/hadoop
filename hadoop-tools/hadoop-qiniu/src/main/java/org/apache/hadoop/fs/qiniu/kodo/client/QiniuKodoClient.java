@@ -187,6 +187,24 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         }
     }
 
+    
+    @Override
+    public boolean exists(String key) throws IOException {
+        Request.Builder requestBuilder = new Request.Builder().url(getFileUrlByKey(key)).head();
+
+        try {
+            Response response = client.send(requestBuilder, null);
+            // 找到了
+            return response.isOK();
+        } catch (QiniuException e) {
+            if (e.response != null && e.response.statusCode == 404) {
+                // 文件找不到
+                return false;
+            }
+            throw e;
+        }
+    }
+
     /**
      * 根据指定的key和文件大小获取一个输入流
      */
