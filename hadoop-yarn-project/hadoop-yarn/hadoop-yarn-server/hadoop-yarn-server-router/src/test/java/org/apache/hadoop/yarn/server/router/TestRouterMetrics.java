@@ -534,6 +534,11 @@ public class TestRouterMetrics {
       metrics.incrRenewDelegationTokenFailedRetrieved();
     }
 
+    public void getDumpSchedulerLogsFailed() {
+      LOG.info("Mocked: failed DumpSchedulerLogs call");
+      metrics.incrDumpSchedulerLogsFailedRetrieved();
+    }
+
     public void getActivitiesFailed() {
       LOG.info("Mocked: failed getBulkActivitie call");
       metrics.incrGetActivitiesFailedRetrieved();
@@ -772,6 +777,11 @@ public class TestRouterMetrics {
     public void getRenewDelegationTokenRetrieved(long duration) {
       LOG.info("Mocked: successful RenewDelegationToken call with duration {}", duration);
       metrics.succeededRenewDelegationTokenRetrieved(duration);
+    }
+
+    public void getDumpSchedulerLogsRetrieved(long duration) {
+      LOG.info("Mocked: successful DumpSchedulerLogs call with duration {}", duration);
+      metrics.succeededDumpSchedulerLogsRetrieved(duration);
     }
 
     public void getActivitiesRetrieved(long duration) {
@@ -1616,6 +1626,29 @@ public class TestRouterMetrics {
     badSubCluster.getRenewDelegationTokenFailed();
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getRenewDelegationTokenFailedRetrieved());
+  }
+
+  @Test
+  public void testDumpSchedulerLogsRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededDumpSchedulerLogsRetrieved();
+    goodSubCluster.getDumpSchedulerLogsRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededDumpSchedulerLogsRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededDumpSchedulerLogsRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getDumpSchedulerLogsRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededDumpSchedulerLogsRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededDumpSchedulerLogsRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testDumpSchedulerLogsRetrievedFailed() {
+    long totalBadBefore = metrics.getDumpSchedulerLogsFailedRetrieved();
+    badSubCluster.getDumpSchedulerLogsFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getDumpSchedulerLogsFailedRetrieved());
   }
 
   @Test

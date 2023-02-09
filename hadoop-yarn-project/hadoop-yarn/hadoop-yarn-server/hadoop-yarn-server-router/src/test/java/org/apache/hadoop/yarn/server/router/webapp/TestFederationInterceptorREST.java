@@ -134,7 +134,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT;
@@ -1783,6 +1782,41 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Response cancelResponse = interceptor.cancelDelegationToken(request);
     Assert.assertNotNull(cancelResponse);
     Assert.assertEquals(response.getStatus(), Status.OK.getStatusCode());
+  }
+
+  @Test
+  public void testDumpSchedulerLogs() throws Exception {
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName("admin");
+    String dumpSchedulerLogsMsg = interceptor.dumpSchedulerLogs("1", mockHsr);
+
+    // We cannot guarantee the calling order of the sub-clusters,
+    // We guarantee that the returned result contains the information of each subCluster.
+    Assert.assertNotNull(dumpSchedulerLogsMsg);
+    subClusters.stream().forEach(subClusterId -> {
+      String subClusterMsg =
+          "subClusterId" + subClusterId + " : Capacity scheduler logs are being created.; ";
+      Assert.assertTrue(dumpSchedulerLogsMsg.contains(subClusterMsg));
+    });
+  }
+
+  @Test
+  public void testDumpSchedulerLogsError() throws Exception {
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName("admin");
+
+    // time is empty
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the time is empty or null.",
+        () -> interceptor.dumpSchedulerLogs(null, mockHsr));
+
+    // time is negative
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "time must be greater than 0.",
+        () -> interceptor.dumpSchedulerLogs("-1", mockHsr));
+
+    // time is non-numeric
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "time must be a number.",
+        () -> interceptor.dumpSchedulerLogs("abc", mockHsr));
   }
 
   @Test
