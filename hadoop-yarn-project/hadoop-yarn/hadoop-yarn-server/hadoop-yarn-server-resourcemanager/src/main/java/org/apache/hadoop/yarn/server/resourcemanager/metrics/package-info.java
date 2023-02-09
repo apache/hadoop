@@ -20,9 +20,9 @@
  * Package org.apache.hadoop.yarn.server.resourcemanager.metrics contains
  * classes related to publishing app/container events to ATS.
  */
-@Private
-@Unstable
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
