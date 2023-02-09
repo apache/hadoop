@@ -310,10 +310,6 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
 
       DataNode datanode = cluster.getDataNodes().get(0);
 
-      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-      ObjectName mxbeanName = new ObjectName(
-          "Hadoop:service=DataNode,name=DataNodeInfo");
-
       // Verify and wait until one of the BP service actor identifies active namenode as active
       // and another as standby.
       cluster.waitDatanodeConnectedToActive(datanode, 5000);
