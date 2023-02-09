@@ -517,12 +517,12 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     empty = cs.getQueue("root.empty-auto-parent");
     Assert.assertTrue("empty-auto-parent is not a ParentQueue",
-        empty instanceof ParentQueue);
+        empty instanceof AbstractParentQueue);
     Assert.assertEquals("empty-auto-parent has children",
         0, empty.getChildQueues().size());
     Assert.assertTrue("empty-auto-parent is not eligible " +
             "for auto queue creation",
-        ((ParentQueue)empty).isEligibleForAutoQueueCreation());
+        ((AbstractParentQueue)empty).isEligibleForAutoQueueCreation());
   }
 
   @Test

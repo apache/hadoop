@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
-    .ParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .QueueManagementChange;
 
@@ -29,17 +28,17 @@ import java.util.List;
  */
 public class QueueManagementChangeEvent extends SchedulerEvent {
 
-  private ParentQueue parentQueue;
+  private AbstractParentQueue parentQueue;
   private List<QueueManagementChange> queueManagementChanges;
 
-  public QueueManagementChangeEvent(ParentQueue parentQueue,
+  public QueueManagementChangeEvent(AbstractParentQueue parentQueue,
       List<QueueManagementChange> queueManagementChanges) {
     super(SchedulerEventType.MANAGE_QUEUE);
     this.parentQueue = parentQueue;
     this.queueManagementChanges = queueManagementChanges;
   }
 
-  public ParentQueue getParentQueue() {
+  public AbstractParentQueue getParentQueue() {
     return parentQueue;
   }
 

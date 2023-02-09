@@ -712,7 +712,7 @@ public class TestCapacitySchedulerQueues {
           + " to convert a leaf queue WITHOUT running apps");
     }
     b1 = cs.getQueue(targetQueue);
-    Assert.assertTrue(b1 instanceof ParentQueue);
+    Assert.assertTrue(b1 instanceof AbstractParentQueue);
     Assert.assertEquals(QueueState.RUNNING, b1.getState());
     Assert.assertTrue(!b1.getChildQueues().isEmpty());
   }

@@ -56,7 +56,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
       final String queueName, final CSQueue parent, final CSQueue old)
       throws IOException {
     super(queueContext, queueName, parent, old);
-
+    super.setupQueueConfigs(queueContext.getClusterResource());
     shouldFailAutoCreationWhenGuaranteedCapacityExceeded =
         queueContext.getConfiguration()
             .getShouldFailAutoQueueCreationWhenGuaranteedCapacityExceeded(

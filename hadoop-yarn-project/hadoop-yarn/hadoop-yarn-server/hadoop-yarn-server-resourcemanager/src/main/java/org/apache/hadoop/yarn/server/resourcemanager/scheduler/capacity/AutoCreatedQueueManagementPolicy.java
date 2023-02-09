@@ -29,13 +29,13 @@ public interface AutoCreatedQueueManagementPolicy {
    * Initialize policy
    * @param parentQueue parent queue
    */
-  void init(ParentQueue parentQueue) throws IOException;
+  void init(AbstractParentQueue parentQueue) throws IOException;
 
   /**
    * Reinitialize policy state ( if required )
    * @param parentQueue parent queue
    */
-  void reinitialize(ParentQueue parentQueue) throws IOException;
+  void reinitialize(AbstractParentQueue parentQueue) throws IOException;
 
   /**
    * Get initial template for the specified leaf queue
