@@ -412,10 +412,11 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
   /**
    * If the mod time comparison is enabled, check the mod time else return
    * false.
-   * Comparison: If the target file perceives to have greater mod time(older)
-   * than the source file, we can assume that there has been no new changes
-   * that occurred in the source file, hence we should return true to skip the
-   * copy of the file.
+   * Comparison: If the target file perceives to have greater or equal mod time
+   * (older) than the source file, we can assume that there has been no new
+   * changes that occurred in the source file, hence we should return true to
+   * skip the copy of the file.
+   *
    * @param source Source fileStatus.
    * @param target Target fileStatus.
    * @return boolean representing result of modTime check.
@@ -423,7 +424,7 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
   private boolean maybeUseModTimeToCompare(
       CopyListingFileStatus source, FileStatus target) {
     if (useModTimeToUpdate) {
-      return source.getModificationTime() < target.getModificationTime();
+      return source.getModificationTime() <= target.getModificationTime();
     }
     // if we cannot check mod time, return true (skip the copy).
     return true;

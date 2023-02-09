@@ -562,11 +562,12 @@ public class TestCopyCommitter {
         Path sourcePath = new Path(sourceBase + srcFilename);
         CopyListingFileStatus sourceCurrStatus =
                 new CopyListingFileStatus(fs.getFileStatus(sourcePath));
-        Assert.assertFalse(!DistCpUtils.checksumsAreEqual(
-            fs, new Path(sourceBase + srcFilename), null,
-            fs, new Path(targetBase + srcFilename),
-            sourceCurrStatus.getLen())
-            .equals(CopyMapper.ChecksumComparison.FALSE));
+        Assert.assertEquals("Checksum should not be equal",
+            DistCpUtils.checksumsAreEqual(
+                fs, new Path(sourceBase + srcFilename), null,
+                fs, new Path(targetBase + srcFilename),
+                sourceCurrStatus.getLen()),
+            CopyMapper.ChecksumComparison.FALSE);
       } catch(IOException exception) {
         if (skipCrc) {
           LOG.error("Unexpected exception is found", exception);
