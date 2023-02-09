@@ -282,6 +282,14 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                   </restrictImports>
                   <restrictImports>
                     <includeTestCode>true</includeTestCode>
+                    <reason>Use HttpServlet APIs instead</reason>
+                    <bannedImports>
+                      <bannedImport>org.glassfish.grizzly</bannedImport>
+                      <bannedImport>org.glassfish.grizzly.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports>
+                    <includeTestCode>true</includeTestCode>
                     <reason>Use slf4j based Logger</reason>
                     <bannedImports>
                       <bannedImport>org.apache.commons.logging.**</bannedImport>
