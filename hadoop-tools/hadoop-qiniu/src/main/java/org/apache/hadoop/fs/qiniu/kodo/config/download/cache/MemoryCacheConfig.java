@@ -18,12 +18,5 @@ public class MemoryCacheConfig extends AConfigBase {
     private int blocks() {
         return conf.getInt(namespace + ".blocks", 25);
     }
-
-    @Override
-    public String toString() {
-        return "MemoryCacheConfig{" +
-                "blocks=" + blocks +
-                ", namespace='" + namespace + '\'' +
-                '}';
-    }
+    
 }

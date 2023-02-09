@@ -17,12 +17,4 @@ public class SignConfig extends AConfigBase {
     private int expires() {
         return conf.getInt(namespace + ".expires", 7 * 24 * 3600);
     }
-
-    @Override
-    public String toString() {
-        return "SignConfig{" +
-                "expires=" + expires +
-                ", namespace='" + namespace + '\'' +
-                '}';
-    }
 }

@@ -51,14 +51,4 @@ public class DiskCacheConfig extends AConfigBase {
     private int expires() {
         return conf.getInt(namespace + ".expires", 24 * 3600);
     }
-
-    @Override
-    public String toString() {
-        return "DiskCacheConfig{" +
-                "enable=" + enable +
-                ", blocks=" + blocks +
-                ", dir=" + dir +
-                ", namespace='" + namespace + '\'' +
-                '}';
-    }
 }

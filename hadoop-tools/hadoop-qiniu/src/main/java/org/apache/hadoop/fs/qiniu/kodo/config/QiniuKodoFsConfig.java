@@ -36,7 +36,7 @@ public class QiniuKodoFsConfig extends AConfigBase {
     private RegionConfig region() {
         return new RegionConfig(conf, namespace + ".region");
     }
-    
+
     private AuthConfig auth() {
         return new AuthConfig(conf, namespace + ".auth");
     }
@@ -55,14 +55,5 @@ public class QiniuKodoFsConfig extends AConfigBase {
 
     private ProxyConfig proxy() {
         return new ProxyConfig(conf, namespace + ".proxy");
-    }
-
-    @Override
-    public String toString() {
-        return "QiniuKodoFsConfig{" +
-                ", auth=" + auth +
-                ", download=" + download +
-                ", namespace='" + namespace + '\'' +
-                '}';
     }
 }

@@ -53,14 +53,5 @@ public class DownloadConfig extends AConfigBase {
     private boolean useNoCacheHeader() {
         return conf.getBoolean(namespace + ".noCacheHeader", true);
     }
-
-    @Override
-    public String toString() {
-        return "DownloadConfig{" +
-                "cache=" + cache +
-                ", blockSize=" + blockSize +
-                ", domain='" + domain + '\'' +
-                ", namespace='" + namespace + '\'' +
-                '}';
-    }
+    
 }

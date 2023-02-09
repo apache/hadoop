@@ -20,13 +20,5 @@ public class CacheConfig extends AConfigBase {
     private MemoryCacheConfig memory() {
         return new MemoryCacheConfig(conf, namespace + ".memory");
     }
-
-    @Override
-    public String toString() {
-        return "CacheConfig{" +
-                "disk=" + disk +
-                ", memory=" + memory +
-                ", namespace='" + namespace + '\'' +
-                '}';
-    }
+    
 }

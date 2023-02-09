@@ -24,13 +24,5 @@ public class AuthConfig extends AConfigBase {
     public String secretKey() {
         return conf.get(SECRET_KEY);
     }
-
-    @Override
-    public String toString() {
-        return "AuthConfig{" +
-                "accessKey='" + accessKey + '\'' +
-                ", secretKey='" + secretKey + '\'' +
-                ", namespace='" + namespace + '\'' +
-                '}';
-    }
+    
 }
