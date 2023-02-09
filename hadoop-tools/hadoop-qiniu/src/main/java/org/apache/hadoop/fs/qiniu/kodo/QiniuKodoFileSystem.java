@@ -5,7 +5,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
-import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoCachedClient;
 import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.download.EmptyInputStream;
@@ -20,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
@@ -55,7 +55,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         if (fsConfig.client.cache.enable) {
             this.kodoClient = new QiniuKodoClient(bucket, fsConfig, statistics);
-            this.kodoClient = new QiniuKodoCachedClient(kodoClient, fsConfig.client.cache.maxCapacity);
+//            this.kodoClient = new QiniuKodoCachedClient(this.kodoClient, fsConfig.client.cache.maxCapacity);
         } else {
             this.kodoClient = new QiniuKodoClient(bucket, fsConfig, statistics);
         }
@@ -366,15 +366,26 @@ public class QiniuKodoFileSystem extends FileSystem {
      */
     @Override
     public boolean mkdirs(Path path, FsPermission permission) throws IOException {
+        List<Path> successPaths = new ArrayList<>();
         // 如果该文件夹发现已存在，那么直接返回结果
-        while (path != null) {
-            boolean success = mkdir(path);
-            if (!success) {
-                break;
+        try {
+            while (path != null) {
+                boolean success = mkdir(path);
+                if (!success) {
+                    break;
+                }
+                successPaths.add(path);
+                path = path.getParent();
             }
-            path = path.getParent();
+            return true;
+        } catch (FileAlreadyExistsException e) {
+            // 回滚删除已创建成功的中间文件
+            for (Path p : successPaths) {
+                delete(p, false);
+            }
+            throw e;
         }
-        return true;
+
     }
 
     /**
