@@ -38,4 +38,21 @@ public class QiniuKodoSingleOperationCompareWithS3ATest {
         kodoFs.listStatus(new Path("/testS3A/CreateSmallFileConcurrentlyTest/"));
     }
 
+    @Test
+    public void testS3AMkdirDeeply() throws Exception {
+        StringBuilder sb = new StringBuilder("/s3aDeeply");
+        for (int i = 0; i < 10; i++) {
+            sb.append("/").append(i);
+        }
+        s3aFs.mkdirs(new Path(sb.toString()));
+    }
+
+    @Test
+    public void testKodoMkdirDeeply() throws Exception {
+        StringBuilder sb = new StringBuilder("/kodoDeeply");
+        for (int i = 0; i < 10; i++) {
+            sb.append("/").append(i);
+        }
+        kodoFs.mkdirs(new Path(sb.toString()));
+    }
 }
