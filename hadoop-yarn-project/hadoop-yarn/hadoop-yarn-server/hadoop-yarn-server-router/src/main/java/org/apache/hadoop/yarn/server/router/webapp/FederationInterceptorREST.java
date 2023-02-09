@@ -1183,10 +1183,70 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     throw new RuntimeException("getSchedulerInfo error.");
   }
 
+  /**
+   * This method dumps the scheduler logs for the time got in input, and it is
+   * reachable by using {@link RMWSConsts#SCHEDULER_LOGS}.
+   *
+   * @param time the period of time. It is a FormParam.
+   * @param hsr the servlet request
+   * @return the result of the operation
+   * @throws IOException when it cannot create dump log file
+   */
   @Override
   public String dumpSchedulerLogs(String time, HttpServletRequest hsr)
       throws IOException {
-    throw new NotImplementedException("Code is not implemented");
+
+    // Step1. We will check the time parameter to
+    // ensure that the time parameter is not empty and greater than 0.
+
+    if (StringUtils.isBlank(time)) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the time is empty or null.");
+    }
+
+    try {
+      int period = Integer.parseInt(time);
+      if (period <= 0) {
+        throw new IllegalArgumentException("time must be greater than 0.");
+      }
+    } catch (NumberFormatException e) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      throw new IllegalArgumentException("time must be a number.");
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      throw e;
+    }
+
+    // Step2. Call dumpSchedulerLogs of each subcluster.
+    try {
+      long startTime = clock.getTime();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{String.class, HttpServletRequest.class};
+      Object[] args = new Object[]{time, hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("dumpSchedulerLogs", argsClasses, args);
+      Map<SubClusterInfo, String> dumpSchedulerLogsMap = invokeConcurrent(
+          subClustersActive.values(), remoteMethod, String.class);
+      StringBuilder stringBuilder = new StringBuilder();
+      dumpSchedulerLogsMap.forEach((subClusterInfo, msg) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        stringBuilder.append("subClusterId" + subClusterId + " : " + msg + "; ");
+      });
+      long stopTime = clock.getTime();
+      routerMetrics.succeededDumpSchedulerLogsRetrieved(stopTime - startTime);
+      return stringBuilder.toString();
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Unable to dump SchedulerLogs by time: %s.", time);
+    } catch (YarnException e) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "dumpSchedulerLogs by time = %s error .", time);
+    }
+
+    routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+    throw new RuntimeException("dumpSchedulerLogs Failed.");
   }
 
   /**
