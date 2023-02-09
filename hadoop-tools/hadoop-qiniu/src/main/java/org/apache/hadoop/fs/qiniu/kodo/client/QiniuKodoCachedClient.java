@@ -10,11 +10,15 @@ import java.io.InputStream;
 import java.util.List;
 
 public class QiniuKodoCachedClient implements IQiniuKodoClient {
-    private final LRUCache<String, FileInfo> cache = new LRUCache<>(100);
+    private final LRUCache<String, FileInfo> cache;
     private final IQiniuKodoClient source;
 
-    public QiniuKodoCachedClient(IQiniuKodoClient source) {
+    public QiniuKodoCachedClient(
+            IQiniuKodoClient source,
+            int maxCapacity
+    ) {
         this.source = source;
+        this.cache = new LRUCache<>(maxCapacity);
     }
 
     @Override

@@ -46,27 +46,21 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         this.fsConfig = new QiniuKodoFsConfig(getConf());
 
-        LOG.debug("QiniuKodoConfig: {}", fsConfig);
-
         String bucket = name.getHost();
-        LOG.debug("bucket:" + bucket);
-
-        uri = URI.create(name.getScheme() + "://" + name.getAuthority());
-        LOG.debug("uri:" + uri);
+        this.uri = URI.create(name.getScheme() + "://" + name.getAuthority());
 
         // 构造工作目录路径，工作目录路径为用户使用相对目录时所相对的路径
-        username = UserGroupInformation.getCurrentUser().getShortUserName();
-        LOG.debug("username:" + username);
+        this.username = UserGroupInformation.getCurrentUser().getShortUserName();
+        this.workingDir = new Path("/user", username).makeQualified(uri, null);
 
-        workingDir = new Path("/user", username).makeQualified(uri, null);
-        LOG.debug("workingDir:" + workingDir);
-
-        kodoClient = new QiniuKodoClient(bucket, fsConfig, statistics);
         if (fsConfig.client.cache.enable) {
-            kodoClient = new QiniuKodoCachedClient(kodoClient);
+            this.kodoClient = new QiniuKodoClient(bucket, fsConfig, statistics);
+            this.kodoClient = new QiniuKodoCachedClient(kodoClient, fsConfig.client.cache.maxCapacity);
+        } else {
+            this.kodoClient = new QiniuKodoClient(bucket, fsConfig, statistics);
         }
 
-        blockReader = new QiniuKodoBlockReader(fsConfig, kodoClient);
+        this.blockReader = new QiniuKodoBlockReader(fsConfig, kodoClient);
     }
 
     private volatile boolean makeSureWorkdirCreatedFlag = false;
