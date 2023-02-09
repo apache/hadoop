@@ -1686,7 +1686,7 @@ public class TestRouterMetrics {
         metrics.getLatencySucceededReplaceLabelsOnNodeRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
-  ç
+  @Test
   public void testReplaceLabelOnNodeRetrievedFailed() {
     long totalBadBefore = metrics.getNumReplaceLabelsOnNodeFailedRetrieved();
     badSubCluster.getReplaceLabelsOnNodeFailed();
