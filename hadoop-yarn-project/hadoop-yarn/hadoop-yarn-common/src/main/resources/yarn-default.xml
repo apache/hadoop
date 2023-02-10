@@ -5117,4 +5117,12 @@
     </description>
   </property>
 
+  <property>
+    <name>yarn.router.asc-interceptor-max-size</name>
+    <value>1048576</value>
+    <description>
+
+    </description>
+  </property>
+
 </configuration>
