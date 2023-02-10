@@ -6,7 +6,11 @@ import java.util.concurrent.Executors;
 public class SequenceOpenBigFileConcurrentlyTest extends ASequenceOpenBigFileTest {
     @Override
     protected ExecutorService buildExecutorService() {
-        return Executors.newFixedThreadPool(2);
+        return Executors.newFixedThreadPool(readers());
     }
-    
+
+    @Override
+    protected int readers() {
+        return 4;
+    }
 }

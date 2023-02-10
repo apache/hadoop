@@ -1,6 +1,7 @@
 package org.apache.hadoop.fs.qinu.kodo.performance;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem;
@@ -64,5 +65,27 @@ public class QiniuKodoSingleOperationCompareWithS3ATest {
     @Test
     public void testKodoCreateSmallFile() throws Exception {
         kodoFs.create(new Path("/kodoSmallFile")).close();
+    }
+
+    private void createBigFile(FileSystem fs, Path path) throws Exception {
+        long ms = System.currentTimeMillis();
+        byte[] bs = new byte[40 * 1024 * 1024];
+        FSDataOutputStream fso = fs.create(path);
+        for (int i = 0; i < 2; i++) {
+            fso.write(bs);
+        }
+        fso.close();
+        long useMs = System.currentTimeMillis() - ms;
+        LOG.info("Use time: {}", useMs);
+    }
+
+    @Test
+    public void testS3ACreateBigFile() throws Exception {
+        createBigFile(s3aFs, new Path("/s3aBigFile"));
+    }
+
+    @Test
+    public void testKodoCreateBigFile() throws Exception {
+        createBigFile(kodoFs, new Path("/kodoBigFile"));
     }
 }
