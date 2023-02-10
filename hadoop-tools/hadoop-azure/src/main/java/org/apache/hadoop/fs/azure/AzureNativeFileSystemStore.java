@@ -778,7 +778,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     //
     sessionUri = uri;
     sessionConfiguration = conf;
-    tokenProvider = getTokenProvider();
+    if (tokenProvider == null) {
+      tokenProvider = getTokenProvider();
+    }
     useSecureMode = conf.getBoolean(KEY_USE_SECURE_MODE,
         DEFAULT_USE_SECURE_MODE);
     useLocalSasKeyMode = conf.getBoolean(KEY_USE_LOCAL_SAS_KEY_MODE,
@@ -1078,8 +1080,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       autoThrottlingEnabled = false;
     }
 
-    OperationContext.setLoggingEnabledByDefault(sessionConfiguration.
-        getBoolean(KEY_ENABLE_STORAGE_CLIENT_LOGGING, false));
+    if (LOG.isDebugEnabled()) {
+      OperationContext.setLoggingEnabledByDefault(true);
+    }
 
     LOG.debug(
         "AzureNativeFileSystemStore init. Settings={},{},{},{{},{},{},{}},{{},{},{}}",

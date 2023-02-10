@@ -365,6 +365,10 @@ public class AbfsConfiguration{
     return this.redirectDelete;
   }
 
+  public boolean isRedirection() {
+    return (shouldRedirectRename() || shouldRedirectDelete());
+  }
+
   @VisibleForTesting
   public void setRedirectRename(boolean redirectRename) {
     this.redirectRename = redirectRename;

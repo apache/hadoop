@@ -245,21 +245,25 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     AbfsClientThrottlingIntercept.initializeSingleton(abfsConfiguration.isAutoThrottlingEnabled());
-    String abfsUrl = uri.toString();
-    URI wasbUri = null;
-    try {
-      wasbUri = new URI(abfsUrlToWasbUrl(abfsUrl, abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
-    } catch (URISyntaxException e) {
-      e.printStackTrace();
-    }
-    nativeFs = new NativeAzureFileSystem();
-    Configuration config = getConf();
-    config.setInt("fs.azure.rename.threads", 5);
-    try {
-      nativeFs.initialize(wasbUri, config);
-    } catch (IOException e) {
-      LOG.debug("Initializing  NativeAzureBlobFileSystem failed ", e);
-      throw e;
+    boolean isRedirect = abfsConfiguration.isRedirection();
+    if (isRedirect) {
+      String abfsUrl = uri.toString();
+      URI wasbUri = null;
+      try {
+        wasbUri = new URI(abfsUrlToWasbUrl(abfsUrl,
+            abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
+      } catch (URISyntaxException e) {
+        e.printStackTrace();
+      }
+      nativeFs = new NativeAzureFileSystem();
+      Configuration config = getConf();
+      config.setInt("fs.azure.rename.threads", 5);
+      try {
+        nativeFs.initialize(wasbUri, config);
+      } catch (IOException e) {
+        LOG.debug("Initializing  NativeAzureBlobFileSystem failed ", e);
+        throw e;
+      }
     }
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
   }
@@ -604,6 +608,32 @@ public class AzureBlobFileSystem extends FileSystem
         getAbfsStore().getAbfsConfiguration().getPrefixMode());
     statIncrement(CALL_RENAME);
 
+    TracingContext tracingContext = new TracingContext(clientCorrelationId,
+            fileSystemId, FSOperationType.RENAME, true, tracingHeaderFormat,
+            listener);
+
+    if (shouldRedirect(FSOperationType.RENAME, tracingContext)) {
+      LOG.debug("Rename redirected for the given src {} and the given destination {}", src, dst);
+      Path wasbSrc = src;
+      Path wasbDest = dst;
+      if (src.toString().contains(FileSystemUriSchemes.ABFS_SCHEME)
+              || src.toString().contains(FileSystemUriSchemes.ABFS_SECURE_SCHEME)) {
+        wasbSrc = new Path(abfsUrlToWasbUrl(src.toString(),
+                abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
+      }
+      if (dst.toString().contains(FileSystemUriSchemes.ABFS_SCHEME)
+              || dst.toString().contains(FileSystemUriSchemes.ABFS_SECURE_SCHEME)) {
+        wasbDest = new Path(abfsUrlToWasbUrl(dst.toString(),
+                abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
+      }
+      try {
+        return nativeFs.rename(wasbSrc, wasbDest);
+      } catch (IOException e) {
+        LOG.debug("Rename redirection failed for the given src {} and the given destination {}", src, dst);
+        throw e;
+      }
+    }
+
     trailingPeriodCheck(dst);
 
     Path parentFolder = src.getParent();
@@ -613,10 +643,6 @@ public class AzureBlobFileSystem extends FileSystem
     Path qualifiedSrcPath = makeQualified(src);
     Path qualifiedDstPath = makeQualified(dst);
 
-
-    TracingContext tracingContext = new TracingContext(clientCorrelationId,
-        fileSystemId, FSOperationType.RENAME, true, tracingHeaderFormat,
-        listener);
     // special case 2:
     // rename under same folder;
     if (makeQualified(parentFolder).equals(qualifiedDstPath)) {
@@ -764,6 +790,25 @@ public class AzureBlobFileSystem extends FileSystem
         "AzureBlobFileSystem.delete path: {} recursive: {}", f.toString(), recursive);
     statIncrement(CALL_DELETE);
     Path qualifiedPath = makeQualified(f);
+    TracingContext tracingContext = new TracingContext(clientCorrelationId,
+            fileSystemId, FSOperationType.DELETE, tracingHeaderFormat,
+            listener);
+
+    if (shouldRedirect(FSOperationType.DELETE, tracingContext)) {
+      LOG.debug("Delete redirected for the given path {} ", qualifiedPath);
+      Path wasbPath = f;
+      if (wasbPath.toString().contains(FileSystemUriSchemes.ABFS_SCHEME)
+              || wasbPath.toString().contains(FileSystemUriSchemes.ABFS_SECURE_SCHEME)) {
+        wasbPath = new Path(abfsUrlToWasbUrl(wasbPath.toString(),
+                abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
+      }
+      try {
+        return nativeFs.delete(wasbPath, recursive);
+      } catch (IOException e) {
+        LOG.debug("Delete redirection failed for the given path {} ", qualifiedPath);
+        throw e;
+      }
+    }
 
     if (f.isRoot()) {
       if (!recursive) {
@@ -774,9 +819,6 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     try {
-      TracingContext tracingContext = new TracingContext(clientCorrelationId,
-          fileSystemId, FSOperationType.DELETE, tracingHeaderFormat,
-          listener);
       abfsStore.delete(qualifiedPath, recursive, tracingContext);
       return true;
     } catch (AzureBlobFileSystemException ex) {
