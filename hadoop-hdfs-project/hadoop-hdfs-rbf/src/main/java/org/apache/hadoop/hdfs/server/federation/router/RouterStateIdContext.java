@@ -22,6 +22,7 @@ import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashSet;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAccumulator;
@@ -90,6 +91,10 @@ class RouterStateIdContext implements AlignmentContext {
 
   public LongAccumulator getNamespaceStateId(String nsId) {
     return namespaceIdMap.computeIfAbsent(nsId, key -> new LongAccumulator(Math::max, Long.MIN_VALUE));
+  }
+
+  public List<String> getNamespaces() {
+    return Collections.list(namespaceIdMap.keys());
   }
 
   public void removeNamespaceStateId(String nsId) {

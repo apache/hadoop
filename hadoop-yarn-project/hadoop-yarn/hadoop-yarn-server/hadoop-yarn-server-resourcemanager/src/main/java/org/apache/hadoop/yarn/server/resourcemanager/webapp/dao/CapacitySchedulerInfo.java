@@ -121,6 +121,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
         .getAutoCreationEligibility(parent);
 
     defaultNodeLabelExpression = parent.getDefaultNodeLabelExpression();
+    schedulerName = "Capacity Scheduler";
   }
 
   public float getCapacity() {

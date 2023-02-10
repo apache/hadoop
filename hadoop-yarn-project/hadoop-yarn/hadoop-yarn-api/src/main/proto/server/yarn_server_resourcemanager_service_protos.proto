@@ -46,11 +46,13 @@ message RefreshNodesResponseProto {
 }
 
 message RefreshSuperUserGroupsConfigurationRequestProto {
+  optional string sub_cluster_id = 1;
 }
 message RefreshSuperUserGroupsConfigurationResponseProto {
 }
 
 message RefreshUserToGroupsMappingsRequestProto {
+  optional string sub_cluster_id = 1;
 }
 message RefreshUserToGroupsMappingsResponseProto {
 }

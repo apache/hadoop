@@ -323,7 +323,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
    * @param doAdminACLsCheck
    *          boolean flag to indicate whether ACLs check is needed
    * @throws AuthorizationException
-   *           in case of no access to perfom this op.
+   *           in case of no access to perform this op.
    */
   private void initForWritableEndpoints(UserGroupInformation callerUGI,
       boolean doAdminACLsCheck) throws AuthorizationException {
@@ -768,7 +768,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       return activitiesManager.getActivitiesInfo(nodeId, activitiesGroupBy);
     }
 
-    // Return a activities info with error message
+    // Return an activities info with error message
     return new ActivitiesInfo(errMessage, nodeId);
   }
 
@@ -965,10 +965,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       for (String action : actions) {
         if (!EnumUtils.isValidEnum(RMWSConsts.AppActivitiesRequiredAction.class,
             action.toUpperCase())) {
-          String errMesasge =
+          String errMessage =
               "Got invalid action: " + action + ", valid actions: " + Arrays
                   .asList(RMWSConsts.AppActivitiesRequiredAction.values());
-          throw new IllegalArgumentException(errMesasge);
+          throw new IllegalArgumentException(errMessage);
         }
         requiredActions.add(RMWSConsts.AppActivitiesRequiredAction
             .valueOf(action.toUpperCase()));
@@ -981,10 +981,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     if (groupBy != null) {
       if (!EnumUtils.isValidEnum(RMWSConsts.ActivitiesGroupBy.class,
           groupBy.toUpperCase())) {
-        String errMesasge =
+        String errMessage =
             "Got invalid groupBy: " + groupBy + ", valid groupBy types: "
                 + Arrays.asList(RMWSConsts.ActivitiesGroupBy.values());
-        throw new IllegalArgumentException(errMesasge);
+        throw new IllegalArgumentException(errMessage);
       }
       return RMWSConsts.ActivitiesGroupBy.valueOf(groupBy.toUpperCase());
     }
@@ -2328,7 +2328,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     }
     if (resContext.getReservationId() == null) {
       throw new BadRequestException(
-          "Update operations must specify an existing ReservaitonId");
+          "Update operations must specify an existing ReservationId");
     }
 
     ReservationRequestInterpreter[] values =
@@ -2700,7 +2700,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         return Response.status(Status.OK).entity("Configuration under " +
             "store successfully formatted.").build();
       } catch (Exception e) {
-        LOG.error("Exception thrown when formating configuration", e);
+        LOG.error("Exception thrown when formatting configuration", e);
         return Response.status(Status.BAD_REQUEST).entity(e.getMessage())
             .build();
       }
@@ -2906,7 +2906,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     initForReadableEndpoints();
 
     // For the user who invokes this REST call, he/she should have admin access
-    // to the queue. Otherwise we will reject the call.
+    // to the queue. Otherwise, we will reject the call.
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
     if (callerUGI != null && !this.rm.getResourceScheduler().checkAccess(
         callerUGI, QueueACL.ADMINISTER_QUEUE, queue)) {

@@ -121,7 +121,7 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    *         cumulative capacity in the cluster
    */
   public float getAbsoluteCapacity();
-  
+
   /**
    * Get the configured maximum-capacity of the queue. 
    * @return the configured maximum-capacity of the queue
@@ -169,7 +169,7 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return max-parallel-applications
    */
   public int getMaxParallelApps();
-  
+
   /**
    * Get child queues
    * @return child queues
@@ -269,6 +269,9 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    */
   public void reinitialize(CSQueue newlyParsedQueue, Resource clusterResource)
   throws IOException;
+
+  public void refreshAfterResourceCalculation(
+      Resource clusterResource, ResourceLimits resourceLimits);
 
    /**
    * Update the cluster resource for queues as we add/remove nodes
@@ -389,6 +392,12 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   public ReentrantReadWriteLock.ReadLock getReadLock();
 
   /**
+   * Get writeLock associated with the Queue.
+   * @return writeLock of corresponding queue.
+   */
+  ReentrantReadWriteLock.WriteLock getWriteLock();
+
+  /**
    * Validate submitApplication api so that moveApplication do a pre-check.
    * @param applicationId Application ID
    * @param userName User Name
@@ -433,12 +442,36 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   Resource getEffectiveCapacity(String label);
 
   /**
-   * Get configured capacity resource vector parsed from the capacity config
+   * Get configured capacity vector parsed from the capacity config
    * of the queue.
    * @param label node label (partition)
    * @return capacity resource vector
    */
   QueueCapacityVector getConfiguredCapacityVector(String label);
+
+  /**
+   * Get configured maximum capacity vector parsed from the capacity config
+   * of the queue.
+   * @param label node label (partition)
+   * @return capacity resource vector
+   */
+  QueueCapacityVector getConfiguredMaxCapacityVector(String label);
+
+  /**
+   * Sets the configured minimum capacity vector to a specific value.
+   * @param label node label (partition)
+   * @param minCapacityVector capacity vector
+   */
+  void setConfiguredMinCapacityVector(String label, QueueCapacityVector minCapacityVector);
+
+  /**
+   * Sets the configured maximum capacity vector to a specific value.
+   * @param label node label (partition)
+   * @param maxCapacityVector capacity vector
+   */
+  void setConfiguredMaxCapacityVector(String label, QueueCapacityVector maxCapacityVector);
+
+  Set<String> getConfiguredNodeLabels();
 
   /**
    * Get effective capacity of queue. If min/max resource is configured,

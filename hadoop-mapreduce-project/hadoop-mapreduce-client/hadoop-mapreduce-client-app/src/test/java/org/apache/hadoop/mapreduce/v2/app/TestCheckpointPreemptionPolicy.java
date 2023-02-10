@@ -22,7 +22,7 @@ import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
@@ -58,8 +58,8 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestCheckpointPreemptionPolicy {
 
@@ -77,7 +77,7 @@ public class TestCheckpointPreemptionPolicy {
 
   private int minAlloc = 1024;
 
-  @Before
+  @BeforeEach
   @SuppressWarnings("rawtypes") // mocked generics
   public void setup() {
     ApplicationId appId = ApplicationId.newInstance(200, 1);
