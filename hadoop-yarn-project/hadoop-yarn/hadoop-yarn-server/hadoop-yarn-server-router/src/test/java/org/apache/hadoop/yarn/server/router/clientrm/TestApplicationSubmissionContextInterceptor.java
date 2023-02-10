@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -41,7 +41,6 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPB
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
-import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -51,8 +50,7 @@ import org.junit.Test;
  * {@code RouterClientRMService} has been written cleverly so that it can be
  * reused to validate different request interceptor chains.
  */
-public class TestApplicationSubmissionContextInterceptor
-    extends BaseRouterClientRMTest {
+public class TestApplicationSubmissionContextInterceptor extends BaseRouterClientRMTest {
 
   @Override
   protected YarnConfiguration createConfiguration() {
@@ -79,6 +77,7 @@ public class TestApplicationSubmissionContextInterceptor
   /**
    * This test validates the correctness of SubmitApplication in case of empty
    * request.
+   * @throws Exception error occur.
    */
   @Test
   public void testSubmitApplicationEmptyRequest() throws Exception {
@@ -99,81 +98,62 @@ public class TestApplicationSubmissionContextInterceptor
   /**
    * This test validates the correctness of SubmitApplication by setting up
    * null, valid, and large ContainerLaunchContexts.
-   *
-   * @throws YarnException
-   * @throws IOException
-   * @throws InterruptedException
+   * @throws Exception error occur.
    */
   @Test
-  public void testCLCExceedSize()
-      throws YarnException, IOException, InterruptedException {
+  public void testCLCExceedSize() throws Exception {
 
-    ApplicationSubmissionContext asc = ApplicationSubmissionContext.newInstance(
+    ApplicationSubmissionContext context = ApplicationSubmissionContext.newInstance(
         ApplicationId.newInstance(1, 1), "test", "default",
         Priority.newInstance(0), null, false, true, 2,
         Resource.newInstance(10, 2), "test");
-    LocalResource lrsrc = LocalResource.newInstance(
+
+    LocalResource localResource = LocalResource.newInstance(
         URL.newInstance("hdfs", "somehost", 12345, "/some/path/to/rsrc"),
         LocalResourceType.FILE, LocalResourceVisibility.APPLICATION, 123L,
         1234567890L);
+
     Map<String, LocalResource> localResources = new HashMap<>();
-    localResources.put("rsrc", lrsrc);
+    localResources.put("rsrc", localResource);
+
     Map<String, String> env = new HashMap<>();
     env.put("somevar", "someval");
+
     List<String> containerCmds = new ArrayList<>();
     containerCmds.add("somecmd");
     containerCmds.add("somearg");
+
     Map<String, ByteBuffer> serviceData = new HashMap<>();
-    serviceData.put("someservice",
-        ByteBuffer.wrap(new byte[] {0x1, 0x2, 0x3}));
-    ByteBuffer containerTokens =
-        ByteBuffer.wrap(new byte[] {0x7, 0x8, 0x9, 0xa});
+    serviceData.put("someservice", ByteBuffer.wrap(new byte[] {0x1, 0x2, 0x3}));
+    ByteBuffer containerTokens = ByteBuffer.wrap(new byte[] {0x7, 0x8, 0x9, 0xa});
+
     Map<ApplicationAccessType, String> acls = new HashMap<>();
     acls.put(ApplicationAccessType.VIEW_APP, "viewuser");
     acls.put(ApplicationAccessType.MODIFY_APP, "moduser");
     ContainerLaunchContext clc = ContainerLaunchContext.newInstance(
         localResources, env, containerCmds, serviceData, containerTokens, acls);
+    ApplicationSubmissionContextPBImpl appSubmissionContextPB = (ApplicationSubmissionContextPBImpl) context;
+    Configuration configuration = getConf();
 
     // Null ApplicationSubmissionContext
-    try {
-      RouterServerUtil.checkAppSubmissionContext(null, getConf());
-    } catch (YarnException e) {
-      Assert.fail();
-    }
+    RouterServerUtil.checkAppSubmissionContext(null, configuration);
 
     // Null ContainerLaunchContext
-    try {
-      RouterServerUtil.checkAppSubmissionContext(
-          (ApplicationSubmissionContextPBImpl) asc, getConf());
-    } catch (YarnException e) {
-      Assert.fail();
-    }
+    RouterServerUtil.checkAppSubmissionContext(appSubmissionContextPB, configuration);
 
-    // ContainerLaunchContext within MaxSize
-    try {
-      asc.setAMContainerSpec(clc);
-      RouterServerUtil.checkAppSubmissionContext(
-          (ApplicationSubmissionContextPBImpl) asc, getConf());
-    } catch (YarnException e) {
-      Assert.fail();
-    }
+    // Valid ContainerLaunchContext
+    context.setAMContainerSpec(clc);
+    RouterServerUtil.checkAppSubmissionContext(appSubmissionContextPB, configuration);
 
     // ContainerLaunchContext exceeds 1MB
-    try {
-      for (int i = 0; i < 1000; i++) {
-        localResources.put("rsrc" + i, lrsrc);
-      }
-      ContainerLaunchContext clcExceedSize =
-          ContainerLaunchContext.newInstance(localResources, env, containerCmds,
-              serviceData, containerTokens, acls);
-      asc.setAMContainerSpec(clcExceedSize);
-      RouterServerUtil.checkAppSubmissionContext(
-          (ApplicationSubmissionContextPBImpl) asc, getConf());
-      Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage()
-          .startsWith("The size of the ApplicationSubmissionContext "
-              + "of the application"));
+    for (int i = 0; i < 1000; i++) {
+      localResources.put("rsrc" + i, localResource);
     }
+    ContainerLaunchContext clcExceedSize = ContainerLaunchContext.newInstance(
+        localResources, env, containerCmds, serviceData, containerTokens, acls);
+    context.setAMContainerSpec(clcExceedSize);
+    LambdaTestUtils.intercept(YarnException.class,
+        "The size of the ApplicationSubmissionContext of the application",
+        () -> RouterServerUtil.checkAppSubmissionContext(appSubmissionContextPB, configuration));
   }
 }
