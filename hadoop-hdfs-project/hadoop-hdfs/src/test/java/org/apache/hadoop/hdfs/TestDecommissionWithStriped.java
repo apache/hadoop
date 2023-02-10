@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
@@ -91,7 +92,7 @@ public class TestDecommissionWithStriped {
   private Path decommissionDir;
   private Path hostsFile;
   private Path excludeFile;
-  private FileSystem localFileSys;
+  private LocalFileSystem localFileSys;
 
   @Rule
   public TemporaryFolder baseDir = new TemporaryFolder();
@@ -120,9 +121,11 @@ public class TestDecommissionWithStriped {
   @Before
   public void setup() throws IOException {
     conf = createConfiguration();
+    FileSystem.setDefaultUri(conf, baseDir.getRoot().toURI());
     // Set up the hosts/exclude files.
-    localFileSys = FileSystem.get(baseDir.getRoot().toURI(), conf);
-    decommissionDir = new Path(baseDir.newFolder("work-dir/decommission").toString());
+    localFileSys = FileSystem.getLocal(conf);
+    Path workingDir = localFileSys.getWorkingDirectory();
+    decommissionDir = new Path(workingDir, "work-dir/decommission");
     hostsFile = new Path(decommissionDir, "hosts");
     excludeFile = new Path(decommissionDir, "exclude");
     writeConfigFile(hostsFile, null);
