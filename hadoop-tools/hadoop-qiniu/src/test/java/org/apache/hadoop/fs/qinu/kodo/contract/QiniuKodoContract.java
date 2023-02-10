@@ -5,6 +5,7 @@ import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
 
 public class QiniuKodoContract extends AbstractBondedFSContract {
     private static final String CONTRACT_XML = "qiniu-kodo/contract.xml";
+
     /**
      * Constructor: loads the authentication keys if found
      *

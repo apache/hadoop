@@ -24,5 +24,5 @@ public class AuthConfig extends AConfigBase {
     public String secretKey() {
         return conf.get(SECRET_KEY);
     }
-    
+
 }

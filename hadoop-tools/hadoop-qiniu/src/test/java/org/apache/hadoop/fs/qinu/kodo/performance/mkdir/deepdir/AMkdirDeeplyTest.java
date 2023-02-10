@@ -26,7 +26,7 @@ public abstract class AMkdirDeeplyTest extends QiniuKodoPerformanceBaseTest {
         data.put("dirs", dirs());
         data.put("deep", deep());
         data.put("consumers", consumers());
-        
+
         return data;
     }
 

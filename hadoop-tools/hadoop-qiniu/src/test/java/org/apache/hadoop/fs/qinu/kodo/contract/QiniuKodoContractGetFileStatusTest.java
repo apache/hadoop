@@ -5,8 +5,8 @@ import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
 public class QiniuKodoContractGetFileStatusTest extends AbstractContractGetFileStatusTest {
-  @Override
-  protected AbstractFSContract createContract(Configuration conf) {
-    return new QiniuKodoContract(conf);
-  }
+    @Override
+    protected AbstractFSContract createContract(Configuration conf) {
+        return new QiniuKodoContract(conf);
+    }
 }

@@ -18,5 +18,5 @@ public class MemoryCacheConfig extends AConfigBase {
     private int blocks() {
         return conf.getInt(namespace + ".blocks", 25);
     }
-    
+
 }

@@ -21,7 +21,7 @@ public abstract class AMkdirLargelyTest extends QiniuKodoPerformanceBaseTest {
         Map<String, Object> data = new HashMap<>();
         data.put("dirs", dirs());
         data.put("consumers", consumers());
-        
+
         return data;
     }
 

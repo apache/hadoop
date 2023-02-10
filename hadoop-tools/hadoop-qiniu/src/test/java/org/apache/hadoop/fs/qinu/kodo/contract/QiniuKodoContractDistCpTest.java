@@ -6,9 +6,9 @@ import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
 
 public class QiniuKodoContractDistCpTest extends AbstractContractDistCpTest {
 
-  @Override
-  protected AbstractFSContract createContract(Configuration conf) {
-    return new QiniuKodoContract(conf);
-  }
+    @Override
+    protected AbstractFSContract createContract(Configuration conf) {
+        return new QiniuKodoContract(conf);
+    }
 
 }

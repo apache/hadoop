@@ -20,5 +20,5 @@ public class CacheConfig extends AConfigBase {
     private MemoryCacheConfig memory() {
         return new MemoryCacheConfig(conf, namespace + ".memory");
     }
-    
+
 }
