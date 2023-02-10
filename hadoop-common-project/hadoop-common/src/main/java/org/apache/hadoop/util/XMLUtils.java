@@ -29,9 +29,12 @@ import javax.xml.transform.stream.*;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
 import java.io.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * General xml utilities.
@@ -40,6 +43,9 @@ import java.io.*;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class XMLUtils {
+
+  private static final Logger LOG =
+          LoggerFactory.getLogger(XMLUtils.class);
 
   public static final String DISALLOW_DOCTYPE_DECL =
       "http://apache.org/xml/features/disallow-doctype-decl";
@@ -53,6 +59,11 @@ public class XMLUtils {
       "http://apache.org/xml/features/dom/create-entity-ref-nodes";
   public static final String VALIDATION =
       "http://xml.org/sax/features/validation";
+
+  private static final AtomicBoolean CAN_SET_TRANSFORMER_ACCESS_EXTERNAL_DTD =
+          new AtomicBoolean(true);
+  private static final AtomicBoolean CAN_SET_TRANSFORMER_ACCESS_EXTERNAL_STYLESHEET =
+          new AtomicBoolean(true);
 
   /**
    * Transform input xml given a stylesheet.
@@ -138,8 +149,7 @@ public class XMLUtils {
           throws TransformerConfigurationException {
     TransformerFactory trfactory = TransformerFactory.newInstance();
     trfactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-    trfactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    trfactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+    setOptionalSecureTransformerAttributes(trfactory);
     return trfactory;
   }
 
@@ -156,8 +166,45 @@ public class XMLUtils {
           throws TransformerConfigurationException {
     SAXTransformerFactory trfactory = (SAXTransformerFactory) SAXTransformerFactory.newInstance();
     trfactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-    trfactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    trfactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+    setOptionalSecureTransformerAttributes(trfactory);
     return trfactory;
+  }
+
+  /**
+   * These attributes are recommended for maximum security but some JAXP transformers do
+   * not support them. If at any stage, we fail to set these attributes, then we won't try again
+   * for subsequent transformers.
+   *
+   * @param transformerFactory to update
+   */
+  private static void setOptionalSecureTransformerAttributes(
+          TransformerFactory transformerFactory) {
+    bestEffortSetAttribute(transformerFactory, CAN_SET_TRANSFORMER_ACCESS_EXTERNAL_DTD,
+            XMLConstants.ACCESS_EXTERNAL_DTD, "");
+    bestEffortSetAttribute(transformerFactory, CAN_SET_TRANSFORMER_ACCESS_EXTERNAL_STYLESHEET,
+            XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+  }
+
+  /**
+   * Set an attribute value on a {@link TransformerFactory}. If the TransformerFactory
+   * does not support the attribute, the method just returns <code>false</code> and
+   * logs the issue at debug level.
+   *
+   * @param transformerFactory to update
+   * @param flag that indicates whether to do the update and the flag can be set to
+   *             <code>false</code> if an update fails
+   * @param name of the attribute to set
+   * @param value to set on the attribute
+   */
+  static void bestEffortSetAttribute(TransformerFactory transformerFactory, AtomicBoolean flag,
+                                     String name, Object value) {
+    if (flag.get()) {
+      try {
+        transformerFactory.setAttribute(name, value);
+      } catch (Throwable t) {
+        flag.set(false);
+        LOG.debug("Issue setting TransformerFactory attribute {}: {}", name, t.toString());
+      }
+    }
   }
 }

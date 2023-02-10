@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.net.URI;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -99,6 +100,7 @@ abstract public class TestSymlinkHdfs extends SymlinkBaseTest {
     if (cluster != null) {
       cluster.shutdown();
     }
+    IOUtils.closeQuietly(webhdfs);
   }
 
   @Test(timeout=10000)

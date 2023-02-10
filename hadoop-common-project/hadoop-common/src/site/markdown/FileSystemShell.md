@@ -975,7 +975,7 @@ this will be in the bucket; the `rm` operation will then take time proportional
 to the size of the data. Furthermore, the deleted files will continue to incur
 storage costs.
 
-To avoid this, use the the `-skipTrash` option.
+To avoid this, use the `-skipTrash` option.
 
 ```bash
 hadoop fs -rm -skipTrash s3a://bucket/dataset
