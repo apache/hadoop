@@ -20,17 +20,19 @@ public abstract class ASequenceOpenBigFileTest extends QiniuKodoPerformanceBaseT
     protected int blockSize() {
         return 4 * 1024 * 1024;
     }
-    
+
     protected int blocks() {
         return 10;
     }
 
-    protected int readers() {
-        return 1;
+    abstract protected int readers();
+
+    protected int count() {
+        return 10;
     }
 
     protected int readerBufferSize() {
-        return 4 * 1024 * 1024;
+        return 16 * 1024 * 1024;
     }
 
     @Override
@@ -48,9 +50,8 @@ public abstract class ASequenceOpenBigFileTest extends QiniuKodoPerformanceBaseT
         // 总计20 * 4MB * 2 = 160MB
         Path p = OpenBigFileCommonUtil.makeSureExistsBigFile(testDir, fs, blockSize(), blocks());
 
-        long ms = System.currentTimeMillis();
 
-        for (int i = 0; i < readers(); i++) {
+        for (int i = 0; i < count(); i++) {
             service.submit(() -> {
                 try {
                     FSDataInputStream fis = fs.open(p);
@@ -67,6 +68,7 @@ public abstract class ASequenceOpenBigFileTest extends QiniuKodoPerformanceBaseT
             });
             LOG.debug("submit task create file: {}", p);
         }
+        long ms = System.currentTimeMillis();
         awaitAllExecutors(service);
         return System.currentTimeMillis() - ms;
     }
