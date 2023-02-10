@@ -543,7 +543,7 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed ReplaceLabelOnNode call");
       metrics.incrReplaceLabelsOnNodeFailedRetrieved();
     }
-    
+
     public void getDumpSchedulerLogsFailed() {
       LOG.info("Mocked: failed DumpSchedulerLogs call");
       metrics.incrDumpSchedulerLogsFailedRetrieved();
@@ -798,7 +798,7 @@ public class TestRouterMetrics {
       LOG.info("Mocked: successful ReplaceLabelOnNode call with duration {}", duration);
       metrics.succeededReplaceLabelsOnNodeRetrieved(duration);
     }
-    
+
     public void getDumpSchedulerLogsRetrieved(long duration) {
       LOG.info("Mocked: successful DumpSchedulerLogs call with duration {}", duration);
       metrics.succeededDumpSchedulerLogsRetrieved(duration);
@@ -1693,7 +1693,7 @@ public class TestRouterMetrics {
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getNumReplaceLabelsOnNodeFailedRetrieved());
   }
-  
+
   @Test
   public void testDumpSchedulerLogsRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededDumpSchedulerLogsRetrieved();

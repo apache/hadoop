@@ -1881,7 +1881,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
         "Parameter error, newNodeLabelsName must not be empty.",
         () -> interceptor.replaceLabelsOnNode(labelsEmpty, null, nodeId));
   }
-  
+
   @Test
   public void testDumpSchedulerLogs() throws Exception {
     HttpServletRequest mockHsr = mockHttpServletRequestByUserName("admin");

@@ -1252,7 +1252,7 @@ public class MockDefaultRequestInterceptorREST
       HttpServletRequest hsr, String nodeId) throws Exception {
     return super.replaceLabelsOnNode(newNodeLabelsName, hsr, nodeId);
   }
-  
+
   public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId, String groupBy) {
     if (!EnumUtils.isValidEnum(RMWSConsts.ActivitiesGroupBy.class, groupBy.toUpperCase())) {
       String errMessage = "Got invalid groupBy: " + groupBy + ", valid groupBy types: "
