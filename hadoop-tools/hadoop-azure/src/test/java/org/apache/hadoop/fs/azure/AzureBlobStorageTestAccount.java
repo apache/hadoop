@@ -520,8 +520,8 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
     String accountKey = AzureNativeFileSystemStore
         .getAccountKeyFromConfiguration(accountName, conf);
     final StorageCredentials credentials;
-    if (fs.getStore().getTokenProvider() != null){
-      AccessTokenProvider tokenProvider = fs.getStore().getTokenProvider();
+    if (fs.getStore().getTokenProviderStore() != null){
+      AccessTokenProvider tokenProvider = fs.getStore().getTokenProviderStore();
       int iend = accountName.indexOf("."); //this finds the first occurrence of "."
       if (iend != -1) {
         accountName = accountName.substring(0 , iend); //this will give abc
@@ -635,7 +635,7 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
 //    // Set account URI and initialize Azure file system.
     URI accountUri = createAccountUri(accountName, containerName);
     fs.initialize(accountUri, conf);
-    if (fs.getStore().getTokenProvider() != null){
+    if (fs.getStore().getTokenProviderStore() != null){
       account = createTestAccount(conf, fs);
     } else {
       account = createTestAccount(conf);

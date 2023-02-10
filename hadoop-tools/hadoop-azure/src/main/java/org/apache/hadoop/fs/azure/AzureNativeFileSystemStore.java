@@ -544,6 +544,10 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     return authority;
   }
 
+  public AccessTokenProvider getTokenProviderStore() {
+    return tokenProvider;
+  }
+
   public AccessTokenProvider getTokenProvider() throws
       TokenAccessProviderException, URISyntaxException {
     AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
