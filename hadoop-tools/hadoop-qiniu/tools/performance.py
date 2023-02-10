@@ -6,6 +6,7 @@ from typing import Dict, Any
 all_js = {}
 
 with open('report.log', mode='r', encoding='utf-8') as f:
+    # 批量读取每一非空行并json解析，增量地更新all_js字典
     jsons = map(lambda x: json.loads(x),
                 filter(lambda x: len(x) > 0,
                        map(lambda x: x.strip(),
