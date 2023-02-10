@@ -1181,7 +1181,14 @@ public class Client implements AutoCloseable {
       final ResponseBuffer buf = new ResponseBuffer();
       header.writeDelimitedTo(buf);
       RpcWritable.wrap(call.rpcRequest).writeTo(buf);
-      rpcRequestQueue.put(Pair.of(call, buf));
+      // Wait for the message to be sent. We offer with timeout to
+      // prevent a race condition between checking the shouldCloseConnection
+      // and the stopping of the polling thread
+      while (!shouldCloseConnection.get()) {
+        if (rpcRequestQueue.offer(Pair.of(call, buf), 1, TimeUnit.SECONDS)) {
+          break;
+        }
+      }
     }
 
     /* Receive a response.

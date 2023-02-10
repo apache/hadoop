@@ -1338,7 +1338,7 @@ public class TestIPC {
   /**
    * Test the retry count while used in a retry proxy.
    */
-  @Test(timeout=60000)
+  @Test(timeout=100000)
   public void testRetryProxy() throws IOException {
     final Client client = new Client(LongWritable.class, conf);
     
