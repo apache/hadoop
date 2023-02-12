@@ -121,9 +121,9 @@ public class TestDecommissionWithStriped {
   @Before
   public void setup() throws IOException {
     conf = createConfiguration();
-    FileSystem.setDefaultUri(conf, baseDir.getRoot().toURI());
     // Set up the hosts/exclude files.
     localFileSys = FileSystem.getLocal(conf);
+    localFileSys.setWorkingDirectory(new Path(baseDir.getRoot().getPath()));
     Path workingDir = localFileSys.getWorkingDirectory();
     decommissionDir = new Path(workingDir, "work-dir/decommission");
     hostsFile = new Path(decommissionDir, "hosts");
