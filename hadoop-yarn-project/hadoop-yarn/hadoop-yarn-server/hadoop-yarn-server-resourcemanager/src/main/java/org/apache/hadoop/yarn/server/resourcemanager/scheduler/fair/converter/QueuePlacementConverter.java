@@ -234,11 +234,11 @@ class QueuePlacementConverter {
   private void checkStaticDynamicConflict(QueuePath parentPath,
       CapacitySchedulerConfiguration csConf,
       FSConfigToCSConfigRuleHandler ruleHandler) {
-    String[] childQueues = csConf.getQueues(parentPath);
+    List<String> childQueues = csConf.getQueues(parentPath);
 
     // User must be warned: static + dynamic queues are under the
     // same parent
-    if (childQueues != null && childQueues.length > 0) {
+    if (childQueues != null && childQueues.size() > 0) {
       ruleHandler.handleChildStaticDynamicConflict(parentPath.getFullPath());
     }
   }

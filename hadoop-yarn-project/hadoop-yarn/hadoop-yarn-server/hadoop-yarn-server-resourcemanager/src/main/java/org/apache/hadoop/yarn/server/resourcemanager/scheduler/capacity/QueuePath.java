@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import com.google.common.collect.Iterators;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -125,7 +123,7 @@ public class QueuePath implements Iterable<String> {
    * @return true if the queue path is invalid.
    */
   public boolean isInvalid() {
-    return getFullPath().split(QUEUE_REGEX_DELIMITER).length <= 1 && !isRoot();
+    return getPathComponents().length <= 1 && !isRoot();
   }
 
   /**
@@ -193,7 +191,7 @@ public class QueuePath implements Iterable<String> {
    */
   @Override
   public Iterator<String> iterator() {
-    return Arrays.asList(getFullPath().split(QUEUE_REGEX_DELIMITER)).iterator();
+    return Arrays.asList(getPathComponents()).iterator();
   }
 
   /**
@@ -244,13 +242,14 @@ public class QueuePath implements Iterable<String> {
     // Start with the most explicit format (without wildcard)
     wildcardedPaths.add(this);
 
-    String[] pathParts = getFullPath().split(QUEUE_REGEX_DELIMITER);
+    String[] pathComponents = getPathComponents();
     int supportedWildcardLevel = getSupportedWildcardLevel(maxAutoCreatedQueueDepth);
 
     // Collect all template entries
     for (int wildcardLevel = supportedWildcardLevel; wildcardLevel > 0; wildcardLevel--) {
-      pathParts[wildcardLevel] = WILDCARD_QUEUE;
-      wildcardedPaths.add(createFromQueues(pathParts));
+      pathComponents[wildcardLevel] = WILDCARD_QUEUE;
+      QueuePath wildcardedPath = createFromQueues(pathComponents);
+      wildcardedPaths.add(wildcardedPath);
     }
 
     return wildcardedPaths;
@@ -263,9 +262,17 @@ public class QueuePath implements Iterable<String> {
    * @return int value of the supported wildcard level
    */
   private int getSupportedWildcardLevel(int maxAutoCreatedQueueDepth) {
-    int queuePathMaxIndex = Iterators.size(iterator()) - 1;
+    int queuePathMaxIndex = getPathComponents().length - 1;
     // Allow root to have template properties
     return isRoot() ? 0 : Math.min(queuePathMaxIndex, maxAutoCreatedQueueDepth);
+  }
+
+  /**
+   * Returns queue path components.
+   * @return String array containing the queue names.
+   */
+  public String[] getPathComponents() {
+    return getFullPath().split(QUEUE_REGEX_DELIMITER);
   }
 
   @Override

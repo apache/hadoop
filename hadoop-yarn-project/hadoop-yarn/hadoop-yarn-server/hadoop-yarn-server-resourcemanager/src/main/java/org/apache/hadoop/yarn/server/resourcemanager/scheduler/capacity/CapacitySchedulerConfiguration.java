@@ -1092,7 +1092,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return priorityACLConfig.getPriorityAcl(clusterMaxPriority, aclString);
   }
 
-  public String[] getQueues(QueuePath queue) {
+  public List<String> getQueues(QueuePath queue) {
     LOG.debug("CSConf - getQueues called for: queuePrefix={}",
         getQueuePrefix(queue));
     String[] queues = getStrings(getQueuePrefix(queue) + QUEUES);
@@ -1101,14 +1101,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       for (String s : queues) {
         trimmedQueueNames.add(s.trim());
       }
-      queues = trimmedQueueNames.toArray(new String[0]);
     }
 
     LOG.debug("CSConf - getQueues: queuePrefix={}, queues={}",
         getQueuePrefix(queue),
         ((queues == null) ? "" : StringUtils.arrayToString(queues)));
 
-    return queues;
+    return trimmedQueueNames;
   }
 
   public void setQueues(QueuePath queue, String[] subQueues) {

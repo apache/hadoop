@@ -122,9 +122,7 @@ public final class ConfigurationUpdateAssembler {
     }
     String parentPath = queuePath.substring(0, queuePath.lastIndexOf('.'));
     QueuePath parentQueuePath = new QueuePath(parentPath);
-    String[] siblings = proposedConf.getQueues(parentQueuePath);
-    List<String> siblingQueues = siblings == null ? new ArrayList<>() :
-            new ArrayList<>(Arrays.asList(siblings));
+    List<String> siblingQueues = proposedConf.getQueues(parentQueuePath);
     siblingQueues.add(queuePath.substring(queuePath.lastIndexOf('.') + 1));
     proposedConf.setQueues(parentQueuePath,
             siblingQueues.toArray(new String[0]));

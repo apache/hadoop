@@ -238,9 +238,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     CSQueue queue;
     QueuePath fullQueuePath = (parent == null) ? new QueuePath(queueName) :
         (QueuePath.createFromQueues(parent.getQueuePath(), queueName));
-    String[] staticChildQueueNames = conf.getQueues(fullQueuePath);
-    List<String> childQueueNames = staticChildQueueNames != null ?
-        Arrays.asList(staticChildQueueNames) : Collections.emptyList();
+    List<String> childQueueNames = conf.getQueues(fullQueuePath);
     CSQueue oldQueue = oldQueues.get(fullQueuePath.getFullPath());
 
     boolean isReservableQueue = conf.isReservable(fullQueuePath.getFullPath());
