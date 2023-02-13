@@ -23,7 +23,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -37,12 +36,15 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test symbolic links in Hdfs.
@@ -52,6 +54,9 @@ abstract public class TestSymlinkHdfs extends SymlinkBaseTest {
   {
     GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.ALL);
   }
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      TestSymlinkHdfs.class);
 
   protected static MiniDFSCluster cluster;
   protected static WebHdfsFileSystem webhdfs;
@@ -100,7 +105,7 @@ abstract public class TestSymlinkHdfs extends SymlinkBaseTest {
     if (cluster != null) {
       cluster.shutdown();
     }
-    IOUtils.closeQuietly(webhdfs);
+    IOUtils.cleanupWithLogger(LOG, webhdfs);
   }
 
   @Test(timeout=10000)
