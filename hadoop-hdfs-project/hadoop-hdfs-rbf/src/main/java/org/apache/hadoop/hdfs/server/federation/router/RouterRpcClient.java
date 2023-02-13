@@ -1768,8 +1768,8 @@ public class RouterRpcClient {
     if (activeNNStateIdRefreshPeriodMs < 0) {
       return true;
     }
-    long currentTimeMs = Time.monotonicNow();
-    return ((currentTimeMs - getTimeOfLastCallToActive(nsId).get()) <= activeNNStateIdRefreshPeriodMs);
+    long timeSinceRefreshMs = Time.monotonicNow() - getTimeOfLastCallToActive(nsId).get();
+    return (timeSinceRefreshMs <= activeNNStateIdRefreshPeriodMs);
   }
 
   private LongAccumulator getTimeOfLastCallToActive(String namespaceId) {
