@@ -223,9 +223,9 @@ public class TestMutableCSConfigurationProvider {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
     QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
-    QueuePath a = QueuePath.addQueueToPath(root, "a");
-    QueuePath b = QueuePath.addQueueToPath(root, "b");
-    QueuePath c = QueuePath.addQueueToPath(root, "c");
+    QueuePath a = root.createNewLeaf("a");
+    QueuePath b = root.createNewLeaf("b");
+    QueuePath c = root.createNewLeaf("c");
 
     csConf.setQueues(root, new String[] {" a   , b, c" });
 

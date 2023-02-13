@@ -101,19 +101,19 @@ public class TestParentQueue {
   private static final String B2 = "b2";
   private static final String B3 = "b3";
   private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
-  private static final QueuePath Q_A = QueuePath.addQueueToPath(ROOT, A);
-  private static final QueuePath Q_B = QueuePath.addQueueToPath(ROOT, B);
-  private static final QueuePath Q_C = QueuePath.addQueueToPath(ROOT, C);
-  private static final QueuePath Q_D = QueuePath.addQueueToPath(ROOT, D);
-  private static final QueuePath Q_A1 = QueuePath.addQueueToPath(Q_A, A1);
-  private static final QueuePath Q_A2 = QueuePath.addQueueToPath(Q_A, A2);
-  private static final QueuePath Q_B1 = QueuePath.addQueueToPath(Q_B, B1);
-  private static final QueuePath Q_B2 = QueuePath.addQueueToPath(Q_B, B2);
-  private static final QueuePath Q_B3 = QueuePath.addQueueToPath(Q_B, B3);
-  private static final QueuePath Q_C1 = QueuePath.addQueueToPath(Q_C, C1);
-  private static final QueuePath Q_C11 = QueuePath.addQueueToPath(Q_C1, C11);
-  private static final QueuePath Q_C111 = QueuePath.addQueueToPath(Q_C11, C111);
-  private static final QueuePath Q_C1111 = QueuePath.addQueueToPath(Q_C111, C1111);
+  private static final QueuePath Q_A = ROOT.createNewLeaf(A);
+  private static final QueuePath Q_B = ROOT.createNewLeaf(B);
+  private static final QueuePath Q_C = ROOT.createNewLeaf(C);
+  private static final QueuePath Q_D = ROOT.createNewLeaf(D);
+  private static final QueuePath Q_A1 = Q_A.createNewLeaf(A1);
+  private static final QueuePath Q_A2 = Q_A.createNewLeaf(A2);
+  private static final QueuePath Q_B1 = Q_B.createNewLeaf(B1);
+  private static final QueuePath Q_B2 = Q_B.createNewLeaf(B2);
+  private static final QueuePath Q_B3 = Q_B.createNewLeaf(B3);
+  private static final QueuePath Q_C1 = Q_C.createNewLeaf(C1);
+  private static final QueuePath Q_C11 = Q_C1.createNewLeaf(C11);
+  private static final QueuePath Q_C111 = Q_C11.createNewLeaf(C111);
+  private static final QueuePath Q_C1111 = Q_C111.createNewLeaf(C1111);
 
   @Before
   public void setUp() throws Exception {

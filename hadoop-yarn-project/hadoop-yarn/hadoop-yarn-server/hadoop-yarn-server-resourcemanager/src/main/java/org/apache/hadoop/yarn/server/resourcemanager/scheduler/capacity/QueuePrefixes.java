@@ -36,6 +36,6 @@ public final class QueuePrefixes {
   }
 
   public static QueuePath getAutoCreatedQueueObjectTemplateConfPrefix(QueuePath queuePath) {
-    return new QueuePath(queuePath.getFullPath(), AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX);
+    return queuePath.createChild(AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX);
   }
 }

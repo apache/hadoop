@@ -672,7 +672,7 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     conf.setQueues(root, new String[] { "a" });
     conf.setCapacityByLabel(root, "x", 100);
 
-    final QueuePath A = QueuePath.addQueueToPath(root, "a");
+    final QueuePath A = root.createNewLeaf("a");
     conf.setCapacity(A, 100);
     conf.setAccessibleNodeLabels(A, ImmutableSet.of("x"));
     conf.setCapacityByLabel(A, "x", 100);

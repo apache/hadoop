@@ -123,7 +123,7 @@ public class TestAutoCreatedQueueTemplate {
   public void testTemplatePrecedence() {
     conf.set(getTemplateKey(TEST_QUEUE_AB, "capacity"), "6w");
     conf.set(getTemplateKey(TEST_QUEUE_A_WILDCARD, "capacity"), "4w");
-    conf.set(getTemplateKey(TEST_QUEUE_A_WILDCARD, "capacity"), "2w");
+    conf.set(getTemplateKey(TEST_QUEUE_TWO_LEVEL_WILDCARDS, "capacity"), "2w");
 
     AutoCreatedQueueTemplate template =
         new AutoCreatedQueueTemplate(conf, TEST_QUEUE_AB);
@@ -149,7 +149,7 @@ public class TestAutoCreatedQueueTemplate {
     conf.set(getTemplateKey(ROOT, "capacity"), "2w");
 
     AutoCreatedQueueTemplate template =
-        new AutoCreatedQueueTemplate(conf, TEST_QUEUE_A);
+        new AutoCreatedQueueTemplate(conf, ROOT);
     template.setTemplateEntriesForChild(conf, TEST_QUEUE_A);
     Assert.assertEquals("root property is not set", 2f,
         conf.getNonLabeledQueueWeight(TEST_QUEUE_A), 10e-6);

@@ -78,8 +78,8 @@ public class TestApplicationLifetimeMonitor {
   private final long maxLifetime = 30L;
   private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
   private static final String CQ1 = "child1";
-  private static final QueuePath CQ1_QUEUE_PATH = QueuePath.addQueueToPath(ROOT, CQ1);
-  private static final QueuePath DEFAULT_QUEUE_PATH = QueuePath.addQueueToPath(ROOT, "default");
+  private static final QueuePath CQ1_QUEUE_PATH = ROOT.createNewLeaf(CQ1);
+  private static final QueuePath DEFAULT_QUEUE_PATH = ROOT.createNewLeaf("default");
 
   private YarnConfiguration conf;
 

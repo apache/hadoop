@@ -18,11 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import com.google.common.collect.Iterators;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueTemplate.WILDCARD_QUEUE;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
 
@@ -61,13 +66,13 @@ public class QueuePath implements Iterable<String> {
   }
 
   /**
-   * Static method to create Queue path from parent QueuePath object and a leaf queue name.
-   * @param parent Parent QueuePath object for the queue
-   * @param leaf Name of the leaf queue
+   * Creates a new {@code QueuePath} with the current object as  a parent, and appends the
+   * child to its queue path
+   * @param childName Name of the child which will be added to the queue path
    * @return QueuePath object
    */
-  public static QueuePath addQueueToPath(QueuePath parent, String leaf) {
-    return new QueuePath(parent.getFullPath(), leaf);
+  public QueuePath createChild(String childName) {
+    return new QueuePath(getFullPath(), childName);
   }
 
   /**
@@ -113,6 +118,14 @@ public class QueuePath implements Iterable<String> {
     }
 
     return false;
+  }
+
+  /**
+   * Simple helper method to determine if the queue path is invalid or not.
+   * @return true if the queue path is invalid.
+   */
+  public boolean isInvalid() {
+    return getFullPath().split(QUEUE_REGEX_DELIMITER).length <= 1 && !isRoot();
   }
 
   /**
@@ -215,6 +228,45 @@ public class QueuePath implements Iterable<String> {
         return old;
       }
     };
+  }
+
+  /**
+   * Returns the list of wildcarded queue paths based on the autoCreatedQueueDepth config value.
+   * An example template precedence hierarchy for root.a ParentQueue from highest to lowest:
+   * yarn.scheduler.capacity.root.a.auto-queue-creation-v2.template.capacity
+   * yarn.scheduler.capacity.root.*.auto-queue-creation-v2.template.capacity
+   * @param maxAutoCreatedQueueDepth the maximum depth of auto-created queues stored in the
+   *                                 configuration
+   * @return list of wildcarded QueuePath objects
+   */
+  public List<QueuePath> getWildcardedQueuePaths(int maxAutoCreatedQueueDepth) {
+    List<QueuePath> wildcardedPaths = new ArrayList<>();
+    // Start with the most explicit format (without wildcard)
+    wildcardedPaths.add(this);
+
+    String[] pathParts = getFullPath().split(QUEUE_REGEX_DELIMITER);
+    int supportedWildcardLevel = getSupportedWildcardLevel(maxAutoCreatedQueueDepth);
+
+    // Collect all template entries
+    for (int wildcardLevel = supportedWildcardLevel; wildcardLevel > 0; wildcardLevel--) {
+      pathParts[wildcardLevel] = WILDCARD_QUEUE;
+      String wildcardedPath = String.join(DOT, pathParts);
+      wildcardedPaths.add(new QueuePath(wildcardedPath));
+    }
+
+    return wildcardedPaths;
+  }
+
+  /**
+   * Returns the supported wildcard level for this queuepath
+   * @param maxAutoCreatedQueueDepth the maximum depth of auto-created queues stored in the
+   *                                 configuration
+   * @return int value of the supported wildcard level
+   */
+  private int getSupportedWildcardLevel(int maxAutoCreatedQueueDepth) {
+    int queuePathMaxIndex = Iterators.size(iterator()) - 1;
+    // Allow root to have template properties
+    return isRoot() ? 0 : Math.min(queuePathMaxIndex, maxAutoCreatedQueueDepth);
   }
 
   @Override

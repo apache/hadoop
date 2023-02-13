@@ -169,8 +169,8 @@ public class TestReservations {
 
     // Define top-level queues
     QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
-    QueuePath newRootPath = QueuePath.addQueueToPath(root, newRoot);
-    QueuePath aQueuePath = QueuePath.addQueueToPath(newRootPath, A);
+    QueuePath newRootPath = root.createNewLeaf(newRoot);
+    QueuePath aQueuePath = newRootPath.createNewLeaf(A);
 
     conf.setQueues(root, new String[] { newRoot });
     conf.setMaximumCapacity(root, 100);

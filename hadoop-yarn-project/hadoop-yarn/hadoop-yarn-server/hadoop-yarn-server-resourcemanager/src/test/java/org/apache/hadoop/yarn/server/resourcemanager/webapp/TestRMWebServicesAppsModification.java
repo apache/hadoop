@@ -148,9 +148,9 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
   private static final String FS_ALLOC_FILE = new File(TEST_DIR,
       "test-fs-queues.xml").getAbsolutePath();
   private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
-  private static final QueuePath DEFAULT = QueuePath.addQueueToPath(ROOT, "default");
-  private static final QueuePath TEST = QueuePath.addQueueToPath(ROOT, "test");
-  private static final QueuePath TEST_QUEUE = QueuePath.addQueueToPath(ROOT, "testqueue");
+  private static final QueuePath DEFAULT = ROOT.createNewLeaf("default");
+  private static final QueuePath TEST = ROOT.createNewLeaf("test");
+  private static final QueuePath TEST_QUEUE = ROOT.createNewLeaf("testqueue");
   /*
    * Helper class to allow testing of RM web services which require
    * authorization Add this class as a filter in the Guice injector for the
