@@ -90,4 +90,9 @@ public abstract class DefaultAuditLogger extends HdfsAuditLogger {
       CallerContext callerContext, UserGroupInformation ugi,
       DelegationTokenSecretManager dtSecretManager);
 
+  public abstract void logAuditEvent(boolean succeeded, String userName,
+      InetAddress addr, String cmd, String src, String dst, FileStatus stat,
+      CallerContext callerContext, UserGroupInformation ugi,
+      DelegationTokenSecretManager dtSecretManager, String extra);
+
 }
