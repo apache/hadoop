@@ -635,10 +635,8 @@ public class RouterRpcClient {
     CallerContext ctx = CallerContext.getCurrent();
     String origContext = ctx == null ? null : ctx.getContext();
     byte[] origSignature = ctx == null ? null : ctx.getSignature();
-    String realUser;
-    if (ugi.getRealUser() == null) {
-      return;
-    } else {
+    String realUser = null;
+    if (ugi.getRealUser() != null) {
       realUser = ugi.getRealUser().getUserName();
     }
     CallerContext.Builder builder =
