@@ -44,7 +44,9 @@ jobs:
       - name: Build Hadoop maven plugins
         run: cd hadoop-maven-plugins && mvn --batch-mode install
       - name: Build Hadoop
-        run: mvn clean install site -DskipTests -DskipShade
+        run: mvn clean install -DskipTests -DskipShade
+      - name: Build document
+        run: mvn clean site
       - name: Stage document
         run: mvn site:stage -DstagingDirectory=${GITHUB_WORKSPACE}/staging/
       - name: Deploy to GitHub Pages
