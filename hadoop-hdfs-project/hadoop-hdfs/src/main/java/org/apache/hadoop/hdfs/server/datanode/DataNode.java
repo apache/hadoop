@@ -140,8 +140,6 @@ import javax.annotation.Nullable;
 import javax.management.ObjectName;
 import javax.net.SocketFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -318,9 +316,9 @@ public class DataNode extends ReconfigurableBase
         ", srvID: %s" +  // DatanodeRegistration
         ", blockid: %s" + // block id
         ", duration(ns): %s";  // duration time
-        
-  static final Log ClientTraceLog =
-    LogFactory.getLog(DataNode.class.getName() + ".clienttrace");
+
+  static final Logger CLIENT_TRACE_LOG =
+      LoggerFactory.getLogger(DataNode.class.getName() + ".clienttrace");
   
   private static final String USAGE =
       "Usage: hdfs datanode [-regular | -rollback | -rollingupgrade rollback" +
@@ -360,7 +358,7 @@ public class DataNode extends ReconfigurableBase
               FS_GETSPACEUSED_JITTER_KEY,
               FS_GETSPACEUSED_CLASSNAME));
 
-  public static final Log METRICS_LOG = LogFactory.getLog("DataNodeMetricsLog");
+  public static final String METRICS_LOG_NAME = "DataNodeMetricsLog";
 
   private static final String DATANODE_HTRACE_PREFIX = "datanode.htrace.";
   private final FileIoProvider fileIoProvider;
@@ -4060,12 +4058,12 @@ public class DataNode extends ReconfigurableBase
       return;
     }
 
-    MetricsLoggerTask.makeMetricsLoggerAsync(METRICS_LOG);
+    MetricsLoggerTask.makeMetricsLoggerAsync(METRICS_LOG_NAME);
 
     // Schedule the periodic logging.
     metricsLoggerTimer = new ScheduledThreadPoolExecutor(1);
     metricsLoggerTimer.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
-    metricsLoggerTimer.scheduleWithFixedDelay(new MetricsLoggerTask(METRICS_LOG,
+    metricsLoggerTimer.scheduleWithFixedDelay(new MetricsLoggerTask(METRICS_LOG_NAME,
         "DataNode", (short) 0), metricsLoggerPeriodSec, metricsLoggerPeriodSec,
         TimeUnit.SECONDS);
   }
