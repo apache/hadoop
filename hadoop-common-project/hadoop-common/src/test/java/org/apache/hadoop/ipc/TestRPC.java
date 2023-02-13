@@ -1849,6 +1849,13 @@ public class TestRPC extends TestRpcBase {
           // if it wasn't fatal, verify there's only one open connection.
           Connection[] conns = server.getConnections();
           assertEquals(reqName, 1, conns.length);
+          String connectionInfo = conns[0].toString();
+          assertEquals(
+              "Connection string representation should include both IP address and Host name", 2,
+              connectionInfo.split(" / ").length);
+          assertEquals(
+              "Client hostname associated with the given socket connection must be localhost.",
+              "localhost", connectionInfo.split(" / ")[0].split(":")[0]);
           // verify whether the connection should have been reused.
           if (isDisconnected) {
             assertNotSame(reqName, lastConn, conns[0]);

@@ -1985,11 +1985,25 @@ public abstract class Server {
     private long lastContact;
     private int dataLength;
     private Socket socket;
+
     // Cache the remote host & port info so that even if the socket is 
     // disconnected, we can say where it used to connect to.
+
+    /**
+     * Client Host IP address from where the socket connection is being established to the Server.
+     */
     private final String hostAddress;
+    /**
+     * Client remote port used for the given socket connection.
+     */
     private final int remotePort;
+    /**
+     * Address to which the socket is connected to.
+     */
     private final InetAddress addr;
+    /**
+     * Client Host address from where the socket connection is being established to the Server.
+     */
     private final String hostName;
     
     IpcConnectionContextProto connectionContext;
@@ -2055,7 +2069,7 @@ public abstract class Server {
 
     @Override
     public String toString() {
-      return getHostAddress() + ":" + remotePort; 
+      return hostName + ":" + remotePort + " / " + hostAddress + ":" + remotePort;
     }
 
     boolean setShouldClose() {
