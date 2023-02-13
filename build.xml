@@ -1,0 +1,217 @@
+<project name="Merge Request Quality Check" basedir="." default="uploadCoverageFile">
+
+	<!-- This ant target extracts the tags and source branchname from the Merge Request number using Gitlab API.-->
+	<target name="getTagAndBranchDetailsFromMR" description="This ant target fetches the start tag, to tag and source branch name from the Merge request.">
+
+		<!-- Access the jenkins variables -->
+		<property environment="env" />
+
+		<!-- On production, the Merge request number can be accessed from ${env.CHANGE_ID}-->
+		<!-- Currently, Hardcoding the Merge request number. -->
+		<property name="MRnumber" value="5126" />
+		<echo message="Obtained Merge Request with MR number: ${MRnumber}" />
+		
+		<!-- Project id and gitlab PAT token needs to be set in the Gitlab API for whichever project the analysis is to be done.-->
+		<echo message="Initiating the curl request to fetch from tag and to tag from Merge Request."/>
+		<exec executable='curl' failonerror="true" outputproperty="reponse">
+			<arg value='--request' />
+			<arg value='GET'/>
+			<arg value='--location' />
+			<arg value='https://api.github.com/repos/apache/hadoop/pulls/${MRnumber}' />
+			<arg value='--header' />
+			<arg value='Authorization: Bearer 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' />
+			<arg value='--silent' />
+		</exec>
+		
+		<!-- Extract start tag, to tag and source branch name, from the API response-->
+		<script language="javascript">
+			jsonResponse = project.getProperty("reponse");
+			parsedJsonResponse = JSON.parse(jsonResponse);
+			project.setProperty("fromTag", parsedJsonResponse.base.sha);
+			project.setProperty("toTag", parsedJsonResponse.head.sha);
+			project.setProperty("branchName", parsedJsonResponse.head.ref);
+			project.setProperty("username", parsedJsonResponse.user.login);
+			
+		</script>
+		
+		<echo message="Start Tag obtained from MR is : ${fromTag}" />
+		<echo message="To Tag obtained from MR is : ${toTag}" />
+		<echo message="Source branch name obtained from MR is : ${branchName}" />
+		
+		
+	</target>
+	
+	
+	<!-- This ant target performs the curl request to upload the coverage file.-->
+	<!-- It depends on getTagAndBranchDetailsFromMR for getting the start tag, to tag and branchname for form-data. -->
+	<target name="uploadCoverageFile" description="Invoke curl using Ant to upload the latest coverage file with tags." depends="getTagAndBranchDetailsFromMR">
+		<echo message="Initiating the curl request to upload the file."/>
+		<echo message="From tag: ${fromTag}, To tag: ${toTag}, Branch: ${branchName}"/>
+		
+		<exec executable='curl' failonerror="true" outputproperty="uploadFileResponse">
+			<arg value='--request' />
+			<arg value='POST'/>
+			<arg value='--location' />
+			<arg value='https://demoinsight.myopshub.com/OpsHubWS/rest/api/1.0/file-upload-service/upload-file' />
+			<arg value='--header' />
+			<arg value='Authorization: Basic YWRtaW46aW5zaWdodEBPcHNIdWI=' />
+			<arg value='--form' />
+			<arg value='files=@jacoco.xml' />
+			<arg value='--form' />
+			<arg value='file_attributes={"reportType":"jacoco",  "fileTag":"merged"}' />
+			<arg value='--form' />
+			<arg value='file_category=COVERAGE' />
+			<arg value='--form' />
+			<arg value='project_id=3' />
+			<arg value='--form' />
+			<arg value='system_id=2' />
+			<arg value='--form' />
+			<arg value='language=java' />
+			<arg value='--form' />
+			<arg value='fromTag=${fromTag}' />
+			<arg value='--form' />
+			<arg value='toTag=${toTag}' />
+			<arg value='--form' />
+			<arg value='branchName=${branchName}' />
+			<arg value='--form' />
+			<arg value='hardRefresh=1' />
+			<arg value='--silent' />
+		</exec>
+		
+		<script language="javascript">
+				// get the file id of the uploaded file from the response of the API.
+				uploadFileJsonResponse = project.getProperty("uploadFileResponse");
+				uploadFileParsedJsonResponse = JSON.parse(uploadFileJsonResponse);
+				project.setProperty("fileId", uploadFileParsedJsonResponse.fileId);
+				
+				// Call the checkDynamicStatus target to check if the uploaded file is processed or not.
+				// As the status will be dynamically checked, set a timeout and sleep time for checking status.
+				project.setProperty("sleepMinutes",1);
+				project.setProperty("timeout", 10);
+				project.setProperty("apiCallCounter", 0);
+				
+				var task = project.createTask("antcall");
+				task.setTarget("checkDynamicStatus");
+				task.perform();
+		</script>
+
+	</target>
+	
+	
+		<target name="checkDynamicStatus" description="Invoke curl using Ant to check the status of the event.">
+		
+			<echo message="Waiting for ${sleepMinutes} minute(s) file to get processed..." />
+			<sleep minutes="${sleepMinutes}" />
+			
+			<script language="javascript">
+			
+				// Update the api call counter on each call to this target.
+				project.setProperty("apiCallCounter",parseInt(project.getProperty("apiCallCounter"),10)+1);
+				var echo = project.createTask("echo");
+				echo.setMessage("API call count to check status: " + project.getProperty("apiCallCounter"));
+				echo.perform();
+				
+				// If the api call counter reaches timeout, build fails with an error.
+				if ( parseInt(project.getProperty("apiCallCounter")) == parseInt(project.getProperty("timeout"))) {
+					throw new Error("Timeout reached!");
+				}
+				
+			</script>
+			
+			<echo message="Initiating the curl request to check the status of event."/>
+			<echo message="Checking status of entity id ${fileId} ..."/>
+			<echo message="https://demoinsight.myopshub.com/OpsHubWS/rest/api/1.0/event-status-service?entityId=${fileId}&amp;entityTypeId=ohrt_op_uploaded_files" />
+			
+			
+			<exec executable='curl' failonerror="true" outputproperty="${apiCallCounter}">
+				<arg value='--request' />
+				<arg value='GET'/>
+				<arg value='--location' />
+				<arg value='https://demoinsight.myopshub.com/OpsHubWS/rest/api/1.0/event-status-service?entityId=${fileId}&amp;entityTypeId=ohrt_op_uploaded_files' />
+				<arg value='--header' />
+				<arg value='Authorization: Basic YWRtaW46aW5zaWdodEBPcHNIdWI=' />
+				<arg value='--silent' />
+			</exec>
+			
+			<!-- Perform recursive calls to check the processing status of the event-->
+			<!-- Once the status is processed, the event UUID of the event is returned by the webservice-->
+			<script language="javascript">
+				
+				jsonResponseForEvent = project.getProperty(project.getProperty("apiCallCounter"));
+				parsedJsonResponseForEvent = JSON.parse(jsonResponseForEvent);
+
+				var task = project.createTask("antcall");
+				var echo = project.createTask("echo");
+				
+				echo.setMessage(parsedJsonResponseForEvent.status);
+				echo.perform();
+				
+				// If event is not processed, call the webservice again to check the status.
+				if(parsedJsonResponseForEvent.status == "NOT_PROCESSED") {
+					task.setTarget("checkDynamicStatus");
+					task.perform();
+				}
+				
+				// Once the event is processed, call the changedCodeCoverage webservice to get the CCC metrics.
+				else {
+					project.setProperty("eventUUid", parsedJsonResponseForEvent.eventUUID);
+					echo.setMessage(project.getProperty("eventUUid"));
+					echo.perform();
+					
+					task.setTarget("changedCodeCoverage");
+					task.perform();
+				}
+				
+			</script>
+		
+		</target>
+	
+	<!-- This ant target performs a curl request to call the changedCodeCoverage webservice, which gives CCC details for a processed coverage file --> 
+	<target name="changedCodeCoverage" description="Invoke curl using Ant to get the Changed Code Coverage details.">
+		<echo message="Initiating the curl request to check the status of event."/>
+		
+		<!-- Hardcoded the non-mandatory parameter testType, if not provided, by default it takes "merged" -->
+		<property name="testType" value="merged" />
+		<property name="threshold" value="50" />
+
+		<echo message="event_uuid = ${eventUUid}, test_type = ${testType}, threshold = ${threshold}"/>
+		
+		<echo message="Started computing Changed Code Coverage metrics..." />
+		<echo message="https://demoinsight.myopshub.com/OpsHubWS/rest/api/1.0/changed-code-coverage?eventUUID=${eventUUid}&amp;testType=${testType}&amp;threshold=${threshold}" />
+		
+		<exec executable='curl' failonerror="true" outputproperty="coverageResponse">
+			<arg value='--request' />
+			<arg value='GET'/>
+			<arg value='--location' />
+			<arg value='https://demoinsight.myopshub.com/OpsHubWS/rest/api/1.0/changed-code-coverage?eventUUID=d23d1226-b769-41a7-a745-b4c608ecab48&amp;testType=${testType}&amp;threshold=${threshold}' />
+			<arg value='--header' />
+			<arg value='Authorization: Basic YWRtaW46aW5zaWdodEBPcHNIdWI=' />
+			<arg value='--silent' />
+		</exec>
+
+		<!-- This script decides whether the merge request meets desired quality using CCC metrics -->
+		<!-- Currently the metrics used are cumulative changed code coverage percentage and no. of commit-files below threshold -->
+		<script language="javascript">
+
+			jsonResponse = project.getProperty("coverageResponse");
+			parsedJsonResponse = JSON.parse(jsonResponse);
+			
+			var echo = project.createTask("echo");
+			echo.setMessage("Obtained cumulative changed code coverage percentage is : " + parsedJsonResponse.changedCodeCoveragePercentage);
+			echo.perform();
+			echo.setMessage("Number of commit-files with CCC percentage below threshold is : " + parsedJsonResponse.commitFilesBelowCCCThreshold);
+			echo.perform();
+
+			// Build fails on not meeting criteria
+			if( parseInt(parsedJsonResponse.changedCodeCoveragePercentage,10) &lt; parseInt(project.getProperty("threshold"),10) || parseInt(parsedJsonResponse.commitFilesBelowCCCThreshold,10) != 0 ) {
+				throw new Error("MR blocked . This merge request does not meet quality checks. ");
+			}
+			
+			echo.setMessage(project.getProperty("branchName") + " meets quality check for a safe merge!");
+			echo.perform();
+						
+		</script>
+		
+	</target>
+
+</project>
