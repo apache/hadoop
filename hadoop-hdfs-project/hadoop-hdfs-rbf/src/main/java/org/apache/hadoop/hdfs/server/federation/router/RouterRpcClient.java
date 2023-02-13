@@ -1724,12 +1724,13 @@ public class RouterRpcClient {
       boolean isObserverRead) throws IOException {
     final List<? extends FederationNamenodeContext> namenodes;
 
-    if (isNamespaceStateIdFresh(nsId)
-        && (RouterStateIdContext.getClientStateIdFromCurrentCall(nsId) > Long.MIN_VALUE)) {
-      namenodes = namenodeResolver.getNamenodesForNameserviceId(nsId, isObserverRead);
-    } else {
-      namenodes = namenodeResolver.getNamenodesForNameserviceId(nsId, false);
-      refreshTimeOfLastCallToActiveNameNode(nsId);
+    boolean listObserverNamenodesFirst = isObserverRead
+        && isNamespaceStateIdFresh(nsId)
+        && (RouterStateIdContext.getClientStateIdFromCurrentCall(nsId) > Long.MIN_VALUE);
+    namenodes = namenodeResolver.getNamenodesForNameserviceId(nsId, listObserverNamenodesFirst);
+    if (!listObserverNamenodesFirst) {
+      // Refresh time of last call to active NameNode.
+      getTimeOfLastCallToActive(nsId).accumulate(Time.monotonicNow());
     }
 
     if (namenodes == null || namenodes.isEmpty()) {
@@ -1767,18 +1768,12 @@ public class RouterRpcClient {
     if (activeNNStateIdRefreshPeriodMs < 0) {
       return true;
     }
-
     long currentTimeMs = Time.monotonicNow();
-    LongAccumulator latestRefreshTimeMs = lastActiveNNRefreshTimes
-        .computeIfAbsent(nsId, key -> new LongAccumulator(Math::max, 0));
-
-    return ((currentTimeMs - latestRefreshTimeMs.get()) <= activeNNStateIdRefreshPeriodMs);
+    return ((currentTimeMs - getTimeOfLastCallToActive(nsId).get()) <= activeNNStateIdRefreshPeriodMs);
   }
 
-  private void refreshTimeOfLastCallToActiveNameNode(String namespaceId) {
-    LongAccumulator latestRefreshTimeMs = lastActiveNNRefreshTimes
+  private LongAccumulator getTimeOfLastCallToActive(String namespaceId) {
+    return lastActiveNNRefreshTimes
         .computeIfAbsent(namespaceId, key -> new LongAccumulator(Math::max, 0));
-    long requestTimeMs = Time.monotonicNow();
-    latestRefreshTimeMs.accumulate(requestTimeMs);
   }
 }
