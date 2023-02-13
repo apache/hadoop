@@ -22,7 +22,6 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.QueueCapacityConfigParser;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.MappingRuleCreator;
 import org.slf4j.Logger;
@@ -78,7 +77,9 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes.*;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes.getAutoCreatedQueueObjectTemplateConfPrefix;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes.getNodeLabelPrefix;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes.getQueuePrefix;
 
 public class CapacitySchedulerConfiguration extends ReservationSchedulerConfiguration {
 
@@ -583,7 +584,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   public void setCapacity(QueuePath queue, float capacity) {
-    if (queue.getFullPath().equals("root")) {
+    if (queue.isRoot()) {
       throw new IllegalArgumentException(
           "Cannot set capacity, root queue has a fixed capacity of 100.0f");
     }
@@ -595,7 +596,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   @VisibleForTesting
   public void setCapacity(QueuePath queue, String absoluteResourceCapacity) {
-    if (queue.getFullPath().equals("root")) {
+    if (queue.isRoot()) {
       throw new IllegalArgumentException(
           "Cannot set capacity, root queue has a fixed capacity");
     }
@@ -669,7 +670,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   // if possible.
   @SuppressWarnings("unchecked")
   public <S extends SchedulableEntity> OrderingPolicy<S> getAppOrderingPolicy(
-          QueuePath queue) {
+      QueuePath queue) {
 
     String policyType = get(getQueuePrefix(queue) + ORDERING_POLICY,
         DEFAULT_APP_ORDERING_POLICY);
@@ -933,7 +934,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * @return A mapping of the queue ACLs.
    */
   public Map<AccessType, AccessControlList> getACLsForLegacyAutoCreatedLeafQueue(
-        QueuePath parentQueuePath) {
+      QueuePath parentQueuePath) {
     final String prefix =
         getQueuePrefix(getAutoCreatedQueueObjectTemplateConfPrefix(
             parentQueuePath));
@@ -2294,7 +2295,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    */
   @Private
   public boolean getShouldFailAutoQueueCreationWhenGuaranteedCapacityExceeded(
-          QueuePath queuePath) {
+      QueuePath queuePath) {
     boolean shouldFailAutoQueueCreationOnExceedingGuaranteedCapacity =
         getBoolean(getQueuePrefix(queuePath)
                 + FAIL_AUTO_CREATION_ON_EXCEEDING_CAPACITY,
@@ -2458,14 +2459,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * Get The policy class configured to manage capacities for auto created leaf
    * queues under the specified parent
    *
-   * @param queue The parent queue's name
+   * @param queue The parent queue's path
    * @return The policy class configured to manage capacities for auto created
    * leaf queues under the specified parent queue
    */
   @Private
   protected AutoCreatedQueueManagementPolicy
   getAutoCreatedQueueManagementPolicyClass(
-        QueuePath queue) {
+      QueuePath queue) {
 
     String queueManagementPolicyClassName =
         getAutoCreatedQueueManagementPolicy(queue);
@@ -2668,8 +2669,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       QueuePath queuePath, Set<String> labels) {
     Map<String, QueueCapacityVector> queueResourceVectors = new HashMap<>();
     for (String label : labels) {
-      queueResourceVectors.put(label, queueCapacityConfigParser.parse(this,
-         queuePath, label));
+      queueResourceVectors.put(label, queueCapacityConfigParser.parse(this, queuePath, label));
     }
 
     return queueResourceVectors;

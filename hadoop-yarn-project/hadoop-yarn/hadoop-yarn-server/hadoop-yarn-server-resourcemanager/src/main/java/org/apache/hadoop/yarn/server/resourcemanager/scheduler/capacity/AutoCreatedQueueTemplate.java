@@ -104,7 +104,7 @@ public class AutoCreatedQueueTemplate {
   public void setTemplateEntriesForChild(CapacitySchedulerConfiguration conf,
                                          QueuePath childQueuePath,
                                          boolean isLeaf) {
-    if (childQueuePath.getFullPath().equals(ROOT)) {
+    if (childQueuePath.isRoot()) {
       return;
     }
 

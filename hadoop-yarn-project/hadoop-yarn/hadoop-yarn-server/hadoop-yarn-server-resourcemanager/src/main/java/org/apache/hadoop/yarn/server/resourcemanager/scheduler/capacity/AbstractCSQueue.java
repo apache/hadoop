@@ -387,7 +387,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       // Store preemption settings
       this.preemptionSettings = new CSQueuePreemptionSettings(this, configuration);
       this.priority = configuration.getQueuePriority(
-              getQueuePathObject());
+          getQueuePathObject());
 
       // Update multi-node sorting algorithm for scheduling as configured.
       setMultiNodeSortingPolicyName(
