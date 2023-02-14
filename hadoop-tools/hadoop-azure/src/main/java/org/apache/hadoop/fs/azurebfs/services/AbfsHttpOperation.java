@@ -81,6 +81,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private long sendRequestTimeMs;
   private long recvResponseTimeMs;
   private boolean shouldMask = false;
+  private TimeoutOptimizer timeoutOptimizer;
 
   public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
       final URL url,
@@ -166,6 +167,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   public String getResponseHeader(String httpHeader) {
     return connection.getHeaderField(httpHeader);
   }
+
+  public TimeoutOptimizer getTimeoutOptimizer() { return timeoutOptimizer; }
 
   // Returns a trace message for the request
   @Override
@@ -261,11 +264,12 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    *
    * @throws IOException if an error occurs.
    */
-  public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders)
+  public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders, final TimeoutOptimizer timeoutOptimizer)
       throws IOException {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
+    this.timeoutOptimizer = timeoutOptimizer;
 
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
@@ -276,14 +280,15 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       }
     }
 
-    this.connection.setConnectTimeout(CONNECT_TIMEOUT);
-    this.connection.setReadTimeout(READ_TIMEOUT);
+    this.connection.setConnectTimeout(timeoutOptimizer.getConnTimeout(CONNECT_TIMEOUT));
+    this.connection.setReadTimeout(timeoutOptimizer.getReadTimeout(READ_TIMEOUT));
 
     this.connection.setRequestMethod(method);
 
     for (AbfsHttpHeader header : requestHeaders) {
       this.connection.setRequestProperty(header.getName(), header.getValue());
     }
+
   }
 
    /**
@@ -555,6 +560,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     public AbfsHttpOperationWithFixedResult(final URL url,
         final String method,
         final int httpStatus) {
+
       super(url, method, httpStatus);
     }
 
