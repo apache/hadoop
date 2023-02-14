@@ -69,17 +69,3 @@ DROP PROCEDURE sp_getDelegationToken;
 DROP PROCEDURE sp_updateDelegationToken;
 
 DROP PROCEDURE sp_deleteDelegationToken;
-
-DROP PROCEDURE sp_addMasterKey;
-
-DROP PROCEDURE sp_getMasterKey;
-
-DROP PROCEDURE sp_deleteMasterKey;
-
-DROP PROCEDURE sp_addDelegationToken;
-
-DROP PROCEDURE sp_getDelegationToken;
-
-DROP PROCEDURE sp_updateDelegationToken;
-
-DROP PROCEDURE sp_deleteDelegationToken;

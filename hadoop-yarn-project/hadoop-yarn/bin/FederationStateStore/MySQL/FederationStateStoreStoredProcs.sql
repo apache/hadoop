@@ -183,7 +183,7 @@ BEGIN
    SELECT ROW_COUNT() INTO rowCount_OUT;
    SELECT homeSubCluster INTO storedHomeSubCluster_OUT
    FROM reservationsHomeSubCluster
-   WHERE applicationId = reservationId_IN;
+   WHERE reservationId = reservationId_IN;
 END //
 
 CREATE PROCEDURE sp_getReservationHomeSubCluster(
@@ -265,7 +265,7 @@ CREATE PROCEDURE sp_getDelegationToken(
    IN sequenceNum_IN bigint, OUT tokenIdent_OUT varchar(1024),
    OUT token_OUT varchar(1024), OUT renewDate_OUT bigint)
 BEGIN
-   SELECT tokenIdent INTO tokenIdent_OUT, token INTO token_OUT, renewDate INTO renewDate_OUT
+   SELECT tokenIdent, token,  renewDate INTO tokenIdent_OUT, token_OUT, renewDate_OUT
      FROM delegationTokens
     WHERE sequenceNum = sequenceNum_IN;
 END //
