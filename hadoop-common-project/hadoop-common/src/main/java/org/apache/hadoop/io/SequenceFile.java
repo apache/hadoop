@@ -2196,7 +2196,7 @@ public class SequenceFile {
     public synchronized Class<?> getKeyClass() {
       if (null == keyClass) {
         try {
-          keyClass = WritableName.getClass(getKeyClassName(), conf);
+          keyClass = WritableName.getClass(getKeyClassName(), conf, false);
         } catch (IOException e) {
           throw new RuntimeException(e);
         }
@@ -2213,7 +2213,7 @@ public class SequenceFile {
     public synchronized Class<?> getValueClass() {
       if (null == valClass) {
         try {
-          valClass = WritableName.getClass(getValueClassName(), conf);
+          valClass = WritableName.getClass(getValueClassName(), conf, false);
         } catch (IOException e) {
           throw new RuntimeException(e);
         }

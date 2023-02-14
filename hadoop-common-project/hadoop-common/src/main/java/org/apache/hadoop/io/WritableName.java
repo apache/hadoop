@@ -80,7 +80,8 @@ public class WritableName {
   }
 
   /**
-   * Return the class for a name.
+   * Return the class for a name. Requires the class for name to extend Writable.
+   * See {@link #getClass(String, Configuration, boolean)} if class doesn't extend Writable.
    * Default is {@link Class#forName(String)}.
    *
    * @param name input name.
@@ -88,11 +89,32 @@ public class WritableName {
    * @return class for a name.
    * @throws IOException raised on errors performing I/O.
    */
-  public static synchronized Class<?> getClass(String name, Configuration conf
-                                            ) throws IOException {
+  public static synchronized Class<?> getClass(String name, Configuration conf)
+      throws IOException {
+    return getClass(name, conf, true);
+  }
+
+  /**
+   * Return the class for a name.
+   * Default is {@link Class#forName(String)}.
+   *
+   * @param name input name.
+   * @param conf input configuration.
+   * @param requireWritable if true, require the class for name to extend Writable
+   * @return class for a name.
+   * @throws IOException raised on errors performing I/O.
+   */
+  public static synchronized Class<?> getClass(String name, Configuration conf,
+      boolean requireWritable) throws IOException {
     Class<?> writableClass = NAME_TO_CLASS.get(name);
-    if (writableClass != null)
-      return writableClass;
+    if (writableClass != null) {
+      if (requireWritable) {
+        return writableClass.asSubclass(Writable.class);
+      } else {
+        return writableClass;
+      }
+    }
+
     try {
       return conf.getClassByName(name);
     } catch (ClassNotFoundException e) {

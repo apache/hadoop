@@ -32,6 +32,7 @@ import org.apache.hadoop.io.serializer.Serializer;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 /** Unit tests for WritableName. */
@@ -136,7 +137,11 @@ public class TestWritableName {
 
     WritableName.addName(SimpleSerializable.class, altName);
 
-    Class<?> test = WritableName.getClass(altName, conf);
+    // test that old behavior works as expected if requireWritable not set to false
+    assertThrows(ClassCastException.class, () -> WritableName.getClass(altName, conf));
+
+    // test that it succeeds with requireWritable = false
+    Class<?> test = WritableName.getClass(altName, conf, false);
     assertEquals(test, SimpleSerializable.class);
     assertNotNull(serializationFactory.getSerialization(test));
 
