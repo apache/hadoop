@@ -246,7 +246,8 @@ public class OptionsParser {
       }
       for (String hostAndPort : favoredNodesStr.split(",")) {
         if (hostAndPort.split(":").length != 2) {
-          throw new IllegalArgumentException("favoredNodes is invalid: " + favoredNodesStr + ", desired format: ${host}:${port}...");
+          throw new IllegalArgumentException("favoredNodes is invalid: " + favoredNodesStr
+              + ", desired option input format: host1:port1,host2:port2,...");
         }
       }
       LOG.info("The value of favoredNodes parameter is [" + favoredNodesStr + "].");

@@ -597,7 +597,7 @@ public class TestDistCpSystem {
   }
 
   @Test
-  public void testFavoredNodesOption() throws Exception {
+  public void testFavoredNodes() throws Exception {
     final String testRoot = "/testdir";
     final String testSrc = testRoot + "/" + SRCDAT;
     final String testDst = testRoot + "/" + DSTDAT;
@@ -623,14 +623,14 @@ public class TestDistCpSystem {
     LOG.info("ls before distcp");
     LOG.info(execCmd(shell, "-lsr", testRoot));
 
-    String favoredNodes = getFavoredNode();
-    assertEquals(ToolRunner.run(conf, new DistCp(), new String[]{"-favoredNodes", favoredNodes, "-i", rootStr, tgtStr}), 0);
+    // happy path
+    assertEquals(ToolRunner.run(conf, new DistCp(), new String[]{"-favoredNodes", getFavoredNodes(), "-i", rootStr, tgtStr}), 0);
 
     LOG.info("ls after distcp");
     LOG.info(execCmd(shell, "-lsr", testRoot));
   }
 
-  private String getFavoredNode() {
+  private String getFavoredNodes() {
     DataNode dataNode = cluster.getDataNodes().get(0);
     String hostName = dataNode.ipcServer.getListenerAddress().getHostName();
     int port = dataNode.ipcServer.getListenerAddress().getPort();
