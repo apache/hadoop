@@ -18,18 +18,18 @@
 
 package org.apache.hadoop.mapreduce.v2.app.speculate.forecast;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.util.ControlledClock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.yarn.util.ControlledClock;
 
 /**
  * Testing the statistical model of simple exponential estimator.
  */
 public class TestSimpleExponentialForecast {
-  private static final Log LOG =
-      LogFactory.getLog(TestSimpleExponentialForecast.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSimpleExponentialForecast.class);
 
   private static long clockTicks = 1000L;
   private ControlledClock clock;

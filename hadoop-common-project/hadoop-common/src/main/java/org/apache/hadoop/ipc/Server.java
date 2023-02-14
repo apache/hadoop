@@ -1985,11 +1985,26 @@ public abstract class Server {
     private long lastContact;
     private int dataLength;
     private Socket socket;
+
     // Cache the remote host & port info so that even if the socket is 
     // disconnected, we can say where it used to connect to.
-    private String hostAddress;
-    private int remotePort;
-    private InetAddress addr;
+
+    /**
+     * Client Host IP address from where the socket connection is being established to the Server.
+     */
+    private final String hostAddress;
+    /**
+     * Client remote port used for the given socket connection.
+     */
+    private final int remotePort;
+    /**
+     * Address to which the socket is connected to.
+     */
+    private final InetAddress addr;
+    /**
+     * Client Host address from where the socket connection is being established to the Server.
+     */
+    private final String hostName;
     
     IpcConnectionContextProto connectionContext;
     String protocolName;
@@ -2033,8 +2048,12 @@ public abstract class Server {
       this.isOnAuxiliaryPort = isOnAuxiliaryPort;
       if (addr == null) {
         this.hostAddress = "*Unknown*";
+        this.hostName = this.hostAddress;
       } else {
+        // host IP address
         this.hostAddress = addr.getHostAddress();
+        // host name for the IP address
+        this.hostName = addr.getHostName();
       }
       this.remotePort = socket.getPort();
       this.responseQueue = new LinkedList<RpcCall>();
@@ -2050,7 +2069,7 @@ public abstract class Server {
 
     @Override
     public String toString() {
-      return getHostAddress() + ":" + remotePort; 
+      return hostName + ":" + remotePort + " / " + hostAddress + ":" + remotePort;
     }
 
     boolean setShouldClose() {
@@ -2463,19 +2482,18 @@ public abstract class Server {
             return -1;
           }
 
-          if(!RpcConstants.HEADER.equals(dataLengthBuffer)) {
-            LOG.warn("Incorrect RPC Header length from {}:{} "
-                + "expected length: {} got length: {}",
-                hostAddress, remotePort, RpcConstants.HEADER, dataLengthBuffer);
+          if (!RpcConstants.HEADER.equals(dataLengthBuffer)) {
+            LOG.warn("Incorrect RPC Header length from {}:{} / {}:{}. Expected: {}. Actual: {}",
+                hostName, remotePort, hostAddress, remotePort, RpcConstants.HEADER,
+                dataLengthBuffer);
             setupBadVersionResponse(version);
             return -1;
           }
           if (version != CURRENT_VERSION) {
             //Warning is ok since this is not supposed to happen.
-            LOG.warn("Version mismatch from " +
-                     hostAddress + ":" + remotePort +
-                     " got version " + version + 
-                     " expected version " + CURRENT_VERSION);
+            LOG.warn("Version mismatch from {}:{} / {}:{}. "
+                    + "Expected version: {}. Actual version: {} ", hostName,
+                remotePort, hostAddress, remotePort, CURRENT_VERSION, version);
             setupBadVersionResponse(version);
             return -1;
           }
