@@ -896,13 +896,27 @@ public class RPC {
       this.numHandlers = numHandlers;
       return this;
     }
-    
+
     /**
      * @return Default: -1.
      * @param numReaders input numReaders.
+     * @deprecated call {@link #setNumReaders(int value)} instead.
      */
+    @Deprecated
     public Builder setnumReaders(int numReaders) {
       this.numReaders = numReaders;
+      return this;
+    }
+
+    /**
+     * Set the number of reader threads.
+     *
+     * @return this builder.
+     * @param value input numReaders.
+     * @since HADOOP-18625.
+     */
+    public Builder setNumReaders(int value) {
+      this.numReaders = value;
       return this;
     }
     
