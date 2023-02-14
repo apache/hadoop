@@ -21,10 +21,18 @@ package org.apache.hadoop.tools.mapred;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.tools.DistCpOptions;
@@ -204,6 +212,8 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         DistCpConstants.COPY_BUFFER_SIZE_DEFAULT);
     boolean preserveEC = getFileAttributeSettings(context)
         .contains(DistCpOptions.FileAttribute.ERASURECODINGPOLICY);
+    String favoredNodesStr = context.getConfiguration().get(
+        DistCpOptionSwitch.FAVORED_NODES.getConfigLabel());
 
     ErasureCodingPolicy ecPolicy = null;
     if (preserveEC && sourceStatus.isErasureCoded()
@@ -223,9 +233,17 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       FSDataOutputStream out;
       ChecksumOpt checksumOpt = getChecksumOpt(fileAttributes, sourceChecksum);
       if (!preserveEC || ecPolicy == null) {
-        out = targetFS.create(targetPath, permission,
-            EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), copyBufferSize,
-            repl, blockSize, context, checksumOpt);
+        if (targetFS instanceof DistributedFileSystem
+            && StringUtils.isNotEmpty(favoredNodesStr)) {
+          out = ((DistributedFileSystem) targetFS).create(targetPath, permission,
+              EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), copyBufferSize,
+              repl, blockSize, context, checksumOpt, toFavoredNodes(favoredNodesStr),
+              null, null);
+        } else {
+          out = targetFS.create(targetPath, permission,
+              EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), copyBufferSize,
+              repl, blockSize, context, checksumOpt);
+        }
       } else {
         DistributedFileSystem dfs = (DistributedFileSystem) targetFS;
         DistributedFileSystem.HdfsDataOutputStreamBuilder builder =
@@ -236,6 +254,9 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         if (checksumOpt != null) {
           builder.checksumOpt(checksumOpt);
         }
+        if (StringUtils.isNotEmpty(favoredNodesStr)) {
+          builder.favoredNodes(toFavoredNodes(favoredNodesStr));
+        }
         out = builder.build();
       }
       outStream = new BufferedOutputStream(out);
@@ -245,6 +266,21 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     }
     return copyBytes(source, sourceOffset, outStream, copyBufferSize,
         context);
+  }
+
+  private InetSocketAddress[] toFavoredNodes(String favoredNodesStr) throws UnknownHostException {
+    List<InetSocketAddress> result = new ArrayList<>();
+    for (String hostAndPort : favoredNodesStr.split(",")) {
+      String[] split = hostAndPort.split(":");
+      if (split.length != 2) {
+        throw new IllegalArgumentException("Illegal favoredNodes parameter: " + hostAndPort);
+      }
+      InetAddress hostname = InetAddress.getByName(split[0]);
+      int port = Integer.parseInt(split[1]);
+      result.add(new InetSocketAddress(hostname, port));
+    }
+    Collections.shuffle(result);
+    return result.stream().limit(HdfsClientConfigKeys.DFS_REPLICATION_DEFAULT).toArray(InetSocketAddress[]::new);
   }
 
   //If target file exists and unable to delete target - fail

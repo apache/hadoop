@@ -239,6 +239,20 @@ public class OptionsParser {
       }
     }
 
+    if (command.hasOption(DistCpOptionSwitch.FAVORED_NODES.getSwitch())) {
+      String favoredNodesStr = getVal(command, DistCpOptionSwitch.FAVORED_NODES.getSwitch().trim());
+      if (StringUtils.isEmpty(favoredNodesStr)) {
+        throw new IllegalArgumentException("favoredNodes is invalid: " + favoredNodesStr);
+      }
+      for (String hostAndPort : favoredNodesStr.split(",")) {
+        if (hostAndPort.split(":").length != 2) {
+          throw new IllegalArgumentException("favoredNodes is invalid: " + favoredNodesStr + ", desired format: ${host}:${port}...");
+        }
+      }
+      LOG.info("The value of favoredNodes parameter is [" + favoredNodesStr + "].");
+      builder.withFavoredNodes(favoredNodesStr);
+    }
+
     return builder.build();
   }
 

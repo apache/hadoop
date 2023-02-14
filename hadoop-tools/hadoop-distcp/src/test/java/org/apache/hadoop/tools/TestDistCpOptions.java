@@ -289,7 +289,7 @@ public class TestDistCpOptions {
         "atomicWorkPath=null, logPath=null, sourceFileListing=abc, " +
         "sourcePaths=null, targetPath=xyz, filtersFile='null', " +
         "blocksPerChunk=0, copyBufferSize=8192, verboseLog=false, " +
-        "directWrite=false, useiterator=false, updateRoot=false}";
+        "directWrite=false, useiterator=false, updateRoot=false, favoredNodes=null}";
     String optionString = option.toString();
     Assert.assertEquals(val, optionString);
     Assert.assertNotSame(DistCpOptionSwitch.ATOMIC_COMMIT.toString(),
@@ -573,5 +573,16 @@ public class TestDistCpOptions {
         .withUpdateRoot(true)
         .build();
     Assert.assertTrue(options.shouldUpdateRoot());
+  }
+
+  @Test
+  public void testFavoredNodes() {
+    final DistCpOptions options = new DistCpOptions.Builder(
+        Collections.singletonList(
+            new Path("hdfs://localhost:8020/source")),
+        new Path("hdfs://localhost:8020/target/"))
+        .withFavoredNodes("localhost:50010")
+        .build();
+    Assert.assertNotNull(options.getFavoredNodes());
   }
 }

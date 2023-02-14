@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -593,5 +594,46 @@ public class TestDistCpSystem {
     assertEquals(srcStatus.getOwner(), destStatus2.getOwner());
     assertEquals(srcStatus.getModificationTime(),
         destStatus2.getModificationTime());
+  }
+
+  @Test
+  public void testFavoredNodesOption() throws Exception {
+    final String testRoot = "/testdir";
+    final String testSrc = testRoot + "/" + SRCDAT;
+    final String testDst = testRoot + "/" + DSTDAT;
+
+    String nnUri = FileSystem.getDefaultUri(conf).toString();
+    String rootStr = nnUri + testSrc;
+    String tgtStr = nnUri + testDst;
+
+    FileEntry[] srcFiles = {
+        new FileEntry(SRCDAT, true),
+        new FileEntry(SRCDAT + "/file10", false)
+    };
+
+    DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(URI.create(nnUri), conf);
+    createFiles(fs, testRoot, srcFiles, -1);
+
+    // sad path
+    assertNotEquals(ToolRunner.run(conf, new DistCp(), new String[]{"-favoredNodes", "-i", rootStr, tgtStr}), 0);
+    assertNotEquals(ToolRunner.run(conf, new DistCp(), new String[]{"-favoredNodes", "unknown_host", "-i", rootStr, tgtStr}), 0);
+    assertNotEquals(ToolRunner.run(conf, new DistCp(), new String[]{"-favoredNodes", "unknown_host:10000", "-i", rootStr, tgtStr}), 0);
+
+    FsShell shell = new FsShell(fs.getConf());
+    LOG.info("ls before distcp");
+    LOG.info(execCmd(shell, "-lsr", testRoot));
+
+    String favoredNodes = getFavoredNode();
+    assertEquals(ToolRunner.run(conf, new DistCp(), new String[]{"-favoredNodes", favoredNodes, "-i", rootStr, tgtStr}), 0);
+
+    LOG.info("ls after distcp");
+    LOG.info(execCmd(shell, "-lsr", testRoot));
+  }
+
+  private String getFavoredNode() {
+    DataNode dataNode = cluster.getDataNodes().get(0);
+    String hostName = dataNode.ipcServer.getListenerAddress().getHostName();
+    int port = dataNode.ipcServer.getListenerAddress().getPort();
+    return String.format("%s:%s", hostName, port);
   }
 }
