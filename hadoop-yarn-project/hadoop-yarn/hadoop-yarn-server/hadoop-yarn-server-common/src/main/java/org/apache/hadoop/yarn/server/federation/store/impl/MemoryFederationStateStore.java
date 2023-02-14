@@ -363,8 +363,18 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public Version loadVersion() {
+  public Version loadVersion() throws Exception {
     return null;
+  }
+
+  @Override
+  public void storeVersion() throws Exception {
+
+  }
+
+  @Override
+  public void checkVersion() throws Exception {
+
   }
 
   @Override
