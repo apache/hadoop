@@ -137,7 +137,7 @@ public class ITestAbfsCustomTimeout extends AbstractAbfsIntegrationTest {
     private void initOpTypeRequestTimeout() {
         opMap.put(AbfsRestOperationType.GetFileSystemProperties, new Integer(5));
         opMap.put(AbfsRestOperationType.SetFileSystemProperties, new Integer(5));
-        //opMap.put(AbfsRestOperationType.DeleteFileSystem, new Integer(5));
+        opMap.put(AbfsRestOperationType.DeleteFileSystem, new Integer(5));
         opMap.put(AbfsRestOperationType.ListPaths, new Integer(10));
         opMap.put(AbfsRestOperationType.CreatePath, new Integer(5));
         opMap.put(AbfsRestOperationType.RenamePath, new Integer(5));
