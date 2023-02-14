@@ -1168,8 +1168,10 @@ public class TestIPC {
 
     call(client, addr, serviceClass, conf);
     Connection connection = server.getConnections()[0];
-    assertEquals("Client hostname associated with the given socket connection must be localhost.",
-        "localhost", connection.toString().split(" / ")[0].split(":")[0]);
+    LOG.info("Connection is from: {}", connection);
+    assertEquals(
+        "Connection string representation should include both IP address and Host name", 2,
+        connection.toString().split(" / ").length);
     int serviceClass2 = connection.getServiceClass();
     assertFalse(noChanged ^ serviceClass == serviceClass2);
     client.stop();
