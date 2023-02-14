@@ -304,9 +304,8 @@ public abstract class CachingBlockManager extends BlockManager {
     synchronized (data) {
       try {
         readBlock(data, false, BufferData.State.BLANK);
-      } catch(Exception e) {
-        String message = String.format("error reading block %s", data.getBlockNumber());
-        LOG.error(message, e);
+      } catch (IOException e) {
+        LOG.error("error reading block {}", data.getBlockNumber(), e);
         throw e;
       }
     }
