@@ -93,7 +93,7 @@ public class TestAuditLoggerWithCommands {
     user2 =
         UserGroupInformation.createUserForTesting("theEngineer",
             new String[]{"hadoop"});
-    auditlog = LogCapturer.captureLogs(FSNamesystem.auditLog);
+    auditlog = LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
     proto = cluster.getNameNodeRpc();
     fileSys = DFSTestUtil.getFileSystemAs(user1, conf);
     fs2 = DFSTestUtil.getFileSystemAs(user2, conf);

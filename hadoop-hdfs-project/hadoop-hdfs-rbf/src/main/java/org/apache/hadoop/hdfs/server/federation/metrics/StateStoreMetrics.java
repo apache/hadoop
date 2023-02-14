@@ -30,6 +30,7 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -134,6 +135,19 @@ public class StateStoreMetrics implements StateStoreMBean {
       cacheSizes.put(counterName, counter);
     }
     counter.set(size);
+  }
+
+  /**
+   * set the count of the location cache access information.
+   * @param name Name of the record.
+   * @param count count of the record.
+   */
+  public void setLocationCache(String name, long count) {
+    MutableGaugeLong counter = (MutableGaugeLong) registry.get(name);
+    if (counter == null) {
+      counter = registry.newGauge(name, name, count);
+    }
+    counter.set(count);
   }
 
   @VisibleForTesting
