@@ -378,7 +378,7 @@ public class TestRPC extends TestRpcBase {
     assertEquals(confReaders, server.getNumReaders());
 
     server = newServerBuilder(conf)
-        .setNumHandlers(1).setnumReaders(3).setQueueSizePerHandler(200)
+        .setNumHandlers(1).setNumReaders(3).setQueueSizePerHandler(200)
         .setVerbose(false).build();
 
     assertEquals(3, server.getNumReaders());

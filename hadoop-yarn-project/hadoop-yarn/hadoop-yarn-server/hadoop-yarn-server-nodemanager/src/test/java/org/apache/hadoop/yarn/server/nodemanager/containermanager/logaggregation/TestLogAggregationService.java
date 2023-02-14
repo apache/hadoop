@@ -143,6 +143,7 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -2293,7 +2294,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
       long cId, ContainerType containerType) {
     ContainerId containerId = BuilderUtils.newContainerId(appAttemptId1,
         cId);
-    Resource r = BuilderUtils.newResource(1024, 1);
+    Resource r = Resources.createResource(1024);
     ContainerTokenIdentifier containerToken = new ContainerTokenIdentifier(
         containerId, context.getNodeId().toString(), user, r,
         System.currentTimeMillis() + 100000L, 123, DUMMY_RM_IDENTIFIER,

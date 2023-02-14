@@ -378,6 +378,26 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.store.driver.zk.parent-path</name>
+    <value>/hdfs-federation</value>
+    <description>
+      The parent path of zookeeper for StateStoreZooKeeperImpl.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.driver.zk.async.max.threads</name>
+    <value>-1</value>
+    <description>
+      Max threads number of StateStoreZooKeeperImpl in async mode.
+      The only class currently being supported:
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.
+      Default value is -1, which means StateStoreZooKeeperImpl is working in sync mode.
+      Use positive integer value to enable async mode.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.cache.ttl</name>
     <value>1m</value>
     <description>
