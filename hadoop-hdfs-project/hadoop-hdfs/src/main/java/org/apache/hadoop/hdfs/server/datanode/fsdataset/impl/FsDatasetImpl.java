@@ -1586,6 +1586,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     long startTimeMs = Time.monotonicNow();
     try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
         b.getBlockPoolId())) {
+      startTimeMs = Time.monotonicNow();
       ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(),
           b.getBlockId());
       if (replicaInfo != null) {
@@ -1648,8 +1649,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
     } finally {
       if (dataNodeMetrics != null) {
-        long createRbwMs = Time.monotonicNow() - startTimeMs;
-        dataNodeMetrics.addCreateRbwOp(createRbwMs);
+        long createRbwLockMs = Time.monotonicNow() - startTimeMs;
+        dataNodeMetrics.addCreateRbwOp(createRbwLockMs);
       }
     }
   }
@@ -1659,12 +1660,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       ExtendedBlock b, long newGS, long minBytesRcvd, long maxBytesRcvd)
       throws IOException {
     LOG.info("Recover RBW replica " + b);
-    long startTimeMs = Time.monotonicNow();
+    long previousTimeMs = Time.monotonicNow();;
+    long accumulatedLockTimeMs = 0L;
     try {
       while (true) {
         try {
           try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,
               b.getBlockPoolId(), getStorageUuidForLock(b))) {
+            previousTimeMs = Time.monotonicNow();
             ReplicaInfo replicaInfo =
                 getReplicaInfo(b.getBlockPoolId(), b.getBlockId());
             // check the replica's state
@@ -1678,6 +1681,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             }
             LOG.info("At " + datanode.getDisplayName() + ", Recovering " + rbw);
             return recoverRbwImpl(rbw, b, newGS, minBytesRcvd, maxBytesRcvd);
+          } finally {
+            accumulatedLockTimeMs += (Time.monotonicNow() - previousTimeMs);
           }
         } catch (MustStopExistingWriter e) {
           e.getReplicaInPipeline().stopWriter(
@@ -1686,8 +1691,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
     } finally {
       if (dataNodeMetrics != null) {
-        long recoverRbwMs = Time.monotonicNow() - startTimeMs;
-        dataNodeMetrics.addRecoverRbwOp(recoverRbwMs);
+        dataNodeMetrics.addRecoverRbwOp(accumulatedLockTimeMs);
       }
     }
   }
@@ -1759,6 +1763,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     long startTimeMs = Time.monotonicNow();
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,
         b.getBlockPoolId(), getStorageUuidForLock(b))) {
+      startTimeMs = Time.monotonicNow();
       final long blockId = b.getBlockId();
       final long expectedGs = b.getGenerationStamp();
       final long visible = b.getNumBytes();
@@ -1815,8 +1820,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       return rbw;
     } finally {
       if (dataNodeMetrics != null) {
-        long convertTemporaryToRbwMs = Time.monotonicNow() - startTimeMs;
-        dataNodeMetrics.addConvertTemporaryToRbwOp(convertTemporaryToRbwMs);
+        long convertTemporaryToRbwLockMs = Time.monotonicNow() - startTimeMs;
+        dataNodeMetrics.addConvertTemporaryToRbwOp(convertTemporaryToRbwLockMs);
       }
     }
   }
@@ -1833,12 +1838,15 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       String storageId, ExtendedBlock b, boolean isTransfer)
       throws IOException {
     long startTimeMs = Time.monotonicNow();
+    long previousTimeMs = startTimeMs;
+    long accumulatedTimeMs = 0L;
     long writerStopTimeoutMs = datanode.getDnConf().getXceiverStopTimeout();
     ReplicaInfo lastFoundReplicaInfo = null;
     boolean isInPipeline = false;
     do {
       try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
           b.getBlockPoolId())) {
+        previousTimeMs = Time.monotonicNow();
         ReplicaInfo currentReplicaInfo =
             volumeMap.get(b.getBlockPoolId(), b.getBlockId());
         if (currentReplicaInfo == lastFoundReplicaInfo) {
@@ -1861,6 +1869,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           }
           lastFoundReplicaInfo = currentReplicaInfo;
         }
+
+      } finally {
+        accumulatedTimeMs += (Time.monotonicNow() - previousTimeMs);
       }
       if (!isInPipeline) {
         continue;
@@ -1883,7 +1894,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       // Stop the previous writer
       ((ReplicaInPipeline)lastFoundReplicaInfo).stopWriter(writerStopTimeoutMs);
     } while (true);
-    long holdLockTimeMs = Time.monotonicNow() - startTimeMs;
     if (lastFoundReplicaInfo != null
         && !isReplicaProvided(lastFoundReplicaInfo)) {
       // Old blockfile should be deleted synchronously as it might collide
@@ -1899,6 +1909,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     ReplicaInPipeline newReplicaInfo;
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,
         b.getBlockPoolId(), v.getStorageID())) {
+      startHoldLockTimeMs = Time.monotonicNow();
       try {
         newReplicaInfo = v.createTemporary(b);
         LOG.debug("creating temporary for block: {} on volume: {}",
@@ -1913,9 +1924,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     } finally {
       if (dataNodeMetrics != null) {
         // Create temporary operation hold write lock twice.
-        long createTemporaryOpMs = Time.monotonicNow() - startHoldLockTimeMs
-            + holdLockTimeMs;
-        dataNodeMetrics.addCreateTemporaryOp(createTemporaryOpMs);
+        long createTemporaryLockMs = Time.monotonicNow() - startHoldLockTimeMs
+            + accumulatedTimeMs;
+        dataNodeMetrics.addCreateTemporaryOp(createTemporaryLockMs);
       }
     }
   }
@@ -1957,6 +1968,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     long startTimeMs = Time.monotonicNow();
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,
         b.getBlockPoolId(), getStorageUuidForLock(b))) {
+      startTimeMs = Time.monotonicNow();
       if (Thread.interrupted()) {
         // Don't allow data modifications from interrupted threads
         throw new IOException("Cannot finalize block from Interrupted Thread");
@@ -1970,8 +1982,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       finalizedReplicaInfo = finalizeReplica(b.getBlockPoolId(), replicaInfo);
     } finally {
       if (dataNodeMetrics != null) {
-        long finalizeBlockMs = Time.monotonicNow() - startTimeMs;
-        dataNodeMetrics.addFinalizeBlockOp(finalizeBlockMs);
+        long finalizeBlockLockMs = Time.monotonicNow() - startTimeMs;
+        dataNodeMetrics.addFinalizeBlockOp(finalizeBlockLockMs);
       }
     }
     /*
@@ -2044,6 +2056,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     long startTimeMs = Time.monotonicNow();
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,
         b.getBlockPoolId(), getStorageUuidForLock(b))) {
+      startTimeMs = Time.monotonicNow();
       ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(),
           b.getLocalBlock());
       if (replicaInfo != null &&
@@ -2062,8 +2075,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
     } finally {
       if (dataNodeMetrics != null) {
-        long unFinalizedBlockMs = Time.monotonicNow() - startTimeMs;
-        dataNodeMetrics.addUnfinalizeBlockOp(unFinalizedBlockMs);
+        long unFinalizedBlockLockMs = Time.monotonicNow() - startTimeMs;
+        dataNodeMetrics.addUnfinalizeBlockOp(unFinalizedBlockLockMs);
       }
     }
   }
@@ -2694,6 +2707,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME, bpid,
         vol.getStorageID())) {
+      startTimeMs = Time.monotonicNow();
       memBlockInfo = volumeMap.get(bpid, blockId);
       if (memBlockInfo != null &&
           memBlockInfo.getState() != ReplicaState.FINALIZED) {
@@ -2887,8 +2901,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
     } finally {
       if (dataNodeMetrics != null) {
-        long checkAndUpdateTimeMs = Time.monotonicNow() - startTimeMs;
-        dataNodeMetrics.addCheckAndUpdateOp(checkAndUpdateTimeMs);
+        long checkAndUpdateTimeLockMs = Time.monotonicNow() - startTimeMs;
+        dataNodeMetrics.addCheckAndUpdateOp(checkAndUpdateTimeLockMs);
       }
     }
 
@@ -3051,6 +3065,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     long startTimeMs = Time.monotonicNow();
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,
         oldBlock.getBlockPoolId(), getStorageUuidForLock(oldBlock))) {
+      startTimeMs = Time.monotonicNow();
       //get replica
       final String bpid = oldBlock.getBlockPoolId();
       final ReplicaInfo replica = volumeMap.get(bpid, oldBlock.getBlockId());
@@ -3108,9 +3123,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       return finalized;
     } finally {
       if (dataNodeMetrics != null) {
-        long updateReplicaUnderRecoveryMs = Time.monotonicNow() - startTimeMs;
+        long updateReplicaUnderRecoveryLockMs = Time.monotonicNow() - startTimeMs;
         dataNodeMetrics.addUpdateReplicaUnderRecoveryOp(
-            updateReplicaUnderRecoveryMs);
+            updateReplicaUnderRecoveryLockMs);
       }
     }
   }
