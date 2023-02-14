@@ -440,7 +440,7 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
   @Test
   public void testCallerContextWithMultiDestinations() throws IOException {
     GenericTestUtils.LogCapturer auditLog =
-        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
     // set client context
     CallerContext.setCurrent(
