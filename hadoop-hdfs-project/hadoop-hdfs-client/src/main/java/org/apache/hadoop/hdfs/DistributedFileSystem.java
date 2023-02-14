@@ -597,7 +597,7 @@ public class DistributedFileSystem extends FileSystem
    * inherited policy.
    *
    */
-  public HdfsDataOutputStream create(final Path f,
+  private HdfsDataOutputStream create(final Path f,
       final FsPermission permission, final EnumSet<CreateFlag> flag,
       final int bufferSize, final short replication, final long blockSize,
       final Progressable progress, final ChecksumOpt checksumOpt,

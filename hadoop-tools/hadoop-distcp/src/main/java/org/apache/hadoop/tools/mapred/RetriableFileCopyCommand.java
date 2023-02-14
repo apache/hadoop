@@ -235,10 +235,18 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       if (!preserveEC || ecPolicy == null) {
         if (targetFS instanceof DistributedFileSystem
             && StringUtils.isNotEmpty(favoredNodesStr)) {
-          out = ((DistributedFileSystem) targetFS).create(targetPath, permission,
-              EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), copyBufferSize,
-              repl, blockSize, context, checksumOpt, toFavoredNodes(favoredNodesStr),
-              null, null);
+          DistributedFileSystem dfs = (DistributedFileSystem) targetFS;
+          DistributedFileSystem.HdfsDataOutputStreamBuilder builder =
+              dfs.createFile(targetPath).permission(permission).create()
+                  .overwrite(true).bufferSize(copyBufferSize).replication(repl)
+                  .blockSize(blockSize).progress(context).recursive();
+          if (checksumOpt != null) {
+            builder.checksumOpt(checksumOpt);
+          }
+          if (StringUtils.isNotEmpty(favoredNodesStr)) {
+            builder.favoredNodes(toFavoredNodes(favoredNodesStr));
+          }
+          out = builder.build();
         } else {
           out = targetFS.create(targetPath, permission,
               EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), copyBufferSize,
@@ -280,7 +288,8 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       result.add(new InetSocketAddress(hostname, port));
     }
     Collections.shuffle(result);
-    return result.stream().limit(HdfsClientConfigKeys.DFS_REPLICATION_DEFAULT).toArray(InetSocketAddress[]::new);
+    return result.stream().limit(HdfsClientConfigKeys.DFS_REPLICATION_DEFAULT)
+        .toArray(InetSocketAddress[]::new);
   }
 
   //If target file exists and unable to delete target - fail

@@ -615,16 +615,20 @@ public class TestDistCpSystem {
     createFiles(fs, testRoot, srcFiles, -1);
 
     // sad path
-    assertNotEquals(ToolRunner.run(conf, new DistCp(), new String[]{"-favoredNodes", "-i", rootStr, tgtStr}), 0);
-    assertNotEquals(ToolRunner.run(conf, new DistCp(), new String[]{"-favoredNodes", "unknown_host", "-i", rootStr, tgtStr}), 0);
-    assertNotEquals(ToolRunner.run(conf, new DistCp(), new String[]{"-favoredNodes", "unknown_host:10000", "-i", rootStr, tgtStr}), 0);
+    assertNotEquals(ToolRunner.run(conf, new DistCp(),
+        new String[]{"-favoredNodes", "-i", rootStr, tgtStr}), 0);
+    assertNotEquals(ToolRunner.run(conf, new DistCp(),
+        new String[]{"-favoredNodes", "unknown_host", "-i", rootStr, tgtStr}), 0);
+    assertNotEquals(ToolRunner.run(conf, new DistCp(),
+        new String[]{"-favoredNodes", "unknown_host:10000", "-i", rootStr, tgtStr}), 0);
 
     FsShell shell = new FsShell(fs.getConf());
     LOG.info("ls before distcp");
     LOG.info(execCmd(shell, "-lsr", testRoot));
 
     // happy path
-    assertEquals(ToolRunner.run(conf, new DistCp(), new String[]{"-favoredNodes", getFavoredNodes(), "-i", rootStr, tgtStr}), 0);
+    assertEquals(ToolRunner.run(conf, new DistCp(),
+        new String[]{"-favoredNodes", getFavoredNodes(), "-i", rootStr, tgtStr}), 0);
 
     LOG.info("ls after distcp");
     LOG.info(execCmd(shell, "-lsr", testRoot));

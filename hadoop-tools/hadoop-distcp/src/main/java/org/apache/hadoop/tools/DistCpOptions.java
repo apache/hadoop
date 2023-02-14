@@ -447,8 +447,9 @@ public final class DistCpOptions {
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.UPDATE_ROOT,
         String.valueOf(updateRoot));
 
-    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.FAVORED_NODES,
-        String.valueOf(favoredNodes));
+    if (favoredNodes != null) {
+      DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.FAVORED_NODES, favoredNodes);
+    }
   }
 
   /**
@@ -831,8 +832,8 @@ public final class DistCpOptions {
       return this;
     }
 
-    public Builder withFavoredNodes(String favoredNodes) {
-      this.favoredNodes = favoredNodes;
+    public Builder withFavoredNodes(String favoredNodesStr) {
+      this.favoredNodes = favoredNodesStr;
       return this;
     }
   }
