@@ -172,6 +172,14 @@ public class DistCp extends Configured implements Tool {
       //Blocking distcp so close the job after its done
       if (job != null && context.shouldBlock()) {
         try {
+          Long bytesCopied = job.getCounters().findCounter(CopyMapper.Counter.BYTESCOPIED).getValue();
+          LOG.info("distcp copied {} number of bytes", bytesCopied);
+          //Set the config label so that consumer such as hive can see this distcp counter
+          getConf().set(DistCpConstants.CONF_LABEL_DISTCP_TOTAL_BYTES_COPIED, String.valueOf(bytesCopied));
+        } catch (IOException e) {
+          LOG.error("Exception encountered while retrieving distcp counter from job", e);
+        }
+        try {
           job.close();
         } catch (IOException e) {
           LOG.error("Exception encountered while closing distcp job", e);
