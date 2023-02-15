@@ -302,7 +302,12 @@ public abstract class CachingBlockManager extends BlockManager {
 
   private void read(BufferData data) throws IOException {
     synchronized (data) {
-      readBlock(data, false, BufferData.State.BLANK);
+      try {
+        readBlock(data, false, BufferData.State.BLANK);
+      } catch (IOException e) {
+        LOG.error("error reading block {}", data.getBlockNumber(), e);
+        throw e;
+      }
     }
   }
 
@@ -362,9 +367,6 @@ public abstract class CachingBlockManager extends BlockManager {
         buffer.flip();
         data.setReady(expectedState);
       } catch (Exception e) {
-        String message = String.format("error during readBlock(%s)", data.getBlockNumber());
-        LOG.error(message, e);
-
         if (isPrefetch && tracker != null) {
           tracker.failed();
         }
@@ -406,7 +408,8 @@ public abstract class CachingBlockManager extends BlockManager {
       try {
         blockManager.prefetch(data, taskQueuedStartTime);
       } catch (Exception e) {
-        LOG.error("error during prefetch", e);
+        LOG.info("error prefetching block {}. {}", data.getBlockNumber(), e.getMessage());
+        LOG.debug("error prefetching block {}", data.getBlockNumber(), e);
       }
       return null;
     }
@@ -493,7 +496,8 @@ public abstract class CachingBlockManager extends BlockManager {
         return;
       }
     } catch (Exception e) {
-      LOG.error("error waiting on blockFuture: {}", data, e);
+      LOG.info("error waiting on blockFuture: {}. {}", data, e.getMessage());
+      LOG.debug("error waiting on blockFuture: {}", data, e);
       data.setDone();
       return;
     }
@@ -523,8 +527,8 @@ public abstract class CachingBlockManager extends BlockManager {
         data.setDone();
       } catch (Exception e) {
         numCachingErrors.incrementAndGet();
-        String message = String.format("error adding block to cache after wait: %s", data);
-        LOG.error(message, e);
+        LOG.info("error adding block to cache after wait: {}. {}", data, e.getMessage());
+        LOG.debug("error adding block to cache after wait: {}", data, e);
         data.setDone();
       }
 
