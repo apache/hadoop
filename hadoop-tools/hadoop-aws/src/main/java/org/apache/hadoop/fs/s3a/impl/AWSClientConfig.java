@@ -143,7 +143,7 @@ public final class AWSClientConfig {
     httpClientBuilder.readTimeout(Duration.ofSeconds(socketTimeout));
     httpClientBuilder.writeTimeout(Duration.ofSeconds(socketTimeout));
 
-    // TODO: Don't think you can set a socket factory for the netty client. 
+    // TODO: Don't think you can set a socket factory for the netty client.
     //  NetworkBinding.bindSSLChannelMode(conf, awsConf);
 
     return httpClientBuilder;

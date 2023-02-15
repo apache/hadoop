@@ -64,7 +64,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   public void testWithoutRegionConfig() throws IOException {
     Configuration conf = getConfiguration();
     String bucket = getFileSystem().getBucket();
-    conf.unset(String.format("fs.s3a.bucket.%s.endpoint", bucket));
+    conf.unset(String.format("fs.s3a.bucket.%s.endpoint.region", bucket));
     conf.unset(AWS_REGION);
 
     S3AFileSystem fs = new S3AFileSystem();
@@ -99,8 +99,18 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   public void testEndpointOverride() throws Throwable {
     describe("Create a client with no region and the default endpoint");
     Configuration conf = getConfiguration();
-    S3Client client = createS3Client(conf, AWS_ENDPOINT_TEST);
+
+    String bucketSpecificRegion =
+        conf.get(String.format("fs.s3a.bucket.%s.endpoint.region", getFileSystem().getBucket()));
+
+    if (bucketSpecificRegion != null && !bucketSpecificRegion.isEmpty()) {
+      conf.set(AWS_REGION, bucketSpecificRegion);
+    }
+
     AWS_REGION_TEST = conf.get(AWS_REGION);
+
+    S3Client client = createS3Client(conf, AWS_ENDPOINT_TEST);
+
     try {
       client.headBucket(HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build());
     } catch (AwsServiceException exception) {
