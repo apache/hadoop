@@ -34,6 +34,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -115,9 +116,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedule
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewReservation;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeAllocationInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationBulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.apache.hadoop.yarn.util.MonotonicClock;
@@ -128,7 +133,6 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY;
@@ -1535,6 +1539,34 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   @Test
+  public void testInvokeConcurrent() throws IOException, YarnException {
+
+    // We design such a test case, we call the interceptor's getNodes interface,
+    // this interface will generate the following test data
+    // subCluster0 Node 0
+    // subCluster1 Node 1
+    // subCluster2 Node 2
+    // subCluster3 Node 3
+    // We use the returned data to verify whether the subClusterId
+    // of the multi-thread call can match the node data
+    Map<SubClusterInfo, NodesInfo> subClusterInfoNodesInfoMap =
+        interceptor.invokeConcurrentGetNodeLabel();
+    Assert.assertNotNull(subClusterInfoNodesInfoMap);
+    Assert.assertEquals(4, subClusterInfoNodesInfoMap.size());
+
+    subClusterInfoNodesInfoMap.forEach((subClusterInfo, nodesInfo) -> {
+      String subClusterId = subClusterInfo.getSubClusterId().getId();
+      List<NodeInfo> nodeInfos = nodesInfo.getNodes();
+      Assert.assertNotNull(nodeInfos);
+      Assert.assertEquals(1, nodeInfos.size());
+
+      String expectNodeId = "Node " + subClusterId;
+      String nodeId = nodeInfos.get(0).getNodeId();
+      Assert.assertEquals(expectNodeId, nodeId);
+    });
+  }
+
+  @Test
   public void testGetSchedulerInfo() {
     // In this test case, we will get the return results of 4 sub-clusters.
     SchedulerTypeInfo typeInfo = interceptor.getSchedulerInfo();
@@ -1750,5 +1782,121 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Response cancelResponse = interceptor.cancelDelegationToken(request);
     Assert.assertNotNull(cancelResponse);
     Assert.assertEquals(response.getStatus(), Status.OK.getStatusCode());
+  }
+
+  @Test
+  public void testDumpSchedulerLogs() throws Exception {
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName("admin");
+    String dumpSchedulerLogsMsg = interceptor.dumpSchedulerLogs("1", mockHsr);
+
+    // We cannot guarantee the calling order of the sub-clusters,
+    // We guarantee that the returned result contains the information of each subCluster.
+    Assert.assertNotNull(dumpSchedulerLogsMsg);
+    subClusters.stream().forEach(subClusterId -> {
+      String subClusterMsg =
+          "subClusterId" + subClusterId + " : Capacity scheduler logs are being created.; ";
+      Assert.assertTrue(dumpSchedulerLogsMsg.contains(subClusterMsg));
+    });
+  }
+
+  @Test
+  public void testDumpSchedulerLogsError() throws Exception {
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName("admin");
+
+    // time is empty
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the time is empty or null.",
+        () -> interceptor.dumpSchedulerLogs(null, mockHsr));
+
+    // time is negative
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "time must be greater than 0.",
+        () -> interceptor.dumpSchedulerLogs("-1", mockHsr));
+
+    // time is non-numeric
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "time must be a number.",
+        () -> interceptor.dumpSchedulerLogs("abc", mockHsr));
+  }
+
+  @Test
+  public void testGetActivitiesNormal() {
+    ActivitiesInfo activitiesInfo = interceptor.getActivities(null, "1", "DIAGNOSTIC");
+    Assert.assertNotNull(activitiesInfo);
+
+    String nodeId = activitiesInfo.getNodeId();
+    Assert.assertNotNull(nodeId);
+    Assert.assertEquals("1", nodeId);
+
+    String diagnostic = activitiesInfo.getDiagnostic();
+    Assert.assertNotNull(diagnostic);
+    Assert.assertTrue(StringUtils.contains(diagnostic, "Diagnostic"));
+
+    long timestamp = activitiesInfo.getTimestamp();
+    Assert.assertEquals(1673081972L, timestamp);
+
+    List<NodeAllocationInfo> allocationInfos = activitiesInfo.getAllocations();
+    Assert.assertNotNull(allocationInfos);
+    Assert.assertEquals(1, allocationInfos.size());
+  }
+
+  @Test
+  public void testGetActivitiesError() throws Exception {
+    // nodeId is empty
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "'nodeId' must not be empty.",
+        () -> interceptor.getActivities(null, "", "DIAGNOSTIC"));
+
+    // groupBy is empty
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "'groupBy' must not be empty.",
+        () -> interceptor.getActivities(null, "1", ""));
+
+    // groupBy value is wrong
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Got invalid groupBy: TEST1, valid groupBy types: [DIAGNOSTIC]",
+        () -> interceptor.getActivities(null, "1", "TEST1"));
+  }
+
+  @Test
+  public void testGetBulkActivitiesNormal() throws InterruptedException {
+    BulkActivitiesInfo bulkActivitiesInfo =
+        interceptor.getBulkActivities(null, "DIAGNOSTIC", 5);
+    Assert.assertNotNull(bulkActivitiesInfo);
+
+    Assert.assertTrue(bulkActivitiesInfo instanceof FederationBulkActivitiesInfo);
+
+    FederationBulkActivitiesInfo federationBulkActivitiesInfo =
+        FederationBulkActivitiesInfo.class.cast(bulkActivitiesInfo);
+    Assert.assertNotNull(federationBulkActivitiesInfo);
+
+    List<BulkActivitiesInfo> activitiesInfos = federationBulkActivitiesInfo.getList();
+    Assert.assertNotNull(activitiesInfos);
+    Assert.assertEquals(4, activitiesInfos.size());
+
+    for (BulkActivitiesInfo activitiesInfo : activitiesInfos) {
+      Assert.assertNotNull(activitiesInfo);
+      List<ActivitiesInfo> activitiesInfoList = activitiesInfo.getActivities();
+      Assert.assertNotNull(activitiesInfoList);
+      Assert.assertEquals(5, activitiesInfoList.size());
+    }
+  }
+
+  @Test
+  public void testGetBulkActivitiesError() throws Exception {
+    // activitiesCount < 0
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "'activitiesCount' must not be negative.",
+        () -> interceptor.getBulkActivities(null, "DIAGNOSTIC", -1));
+
+    // groupBy value is wrong
+    LambdaTestUtils.intercept(YarnRuntimeException.class,
+        "Got invalid groupBy: TEST1, valid groupBy types: [DIAGNOSTIC]",
+        () -> interceptor.getBulkActivities(null, "TEST1", 1));
+
+    // groupBy is empty
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "'groupBy' must not be empty.",
+        () -> interceptor.getBulkActivities(null, "", 1));
   }
 }
