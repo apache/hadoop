@@ -16,9 +16,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_CREATE_CHILD_QUEUE_ENABLED;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_QUEUE_CREATION_V2_ENABLED;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_AUTO_CREATE_CHILD_QUEUE_ENABLED;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_AUTO_QUEUE_CREATION_ENABLED;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
@@ -224,8 +222,7 @@ public class FSQueueConverter {
   }
 
   public void emitDefaultUserLimitFactor(String queueName, List<FSQueue> children) {
-    if (children.isEmpty() && checkAutoQueueCreationV2Disabled(queueName) &&
-        checkAutoCreateChildQueueDisabled(queueName)) {
+    if (children.isEmpty() && checkAutoQueueCreationV2Disabled(queueName)) {
       capacitySchedulerConfig.setFloat(
               CapacitySchedulerConfiguration.
                       PREFIX + queueName + DOT + USER_LIMIT_FACTOR,
@@ -318,12 +315,6 @@ public class FSQueueConverter {
     return !capacitySchedulerConfig.getBoolean(
         PREFIX + queueName + DOT + AUTO_QUEUE_CREATION_V2_ENABLED,
         DEFAULT_AUTO_QUEUE_CREATION_ENABLED);
-  }
-
-  private boolean checkAutoCreateChildQueueDisabled(String queueName) {
-    return !capacitySchedulerConfig.getBoolean(
-        PREFIX + queueName + DOT + AUTO_CREATE_CHILD_QUEUE_ENABLED,
-        DEFAULT_AUTO_CREATE_CHILD_QUEUE_ENABLED);
   }
 
   private String getQueueShortName(String queueName) {

@@ -16,11 +16,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_CREATE_CHILD_QUEUE_ENABLED;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_QUEUE_CREATION_V2_ENABLED;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_AUTO_CREATE_CHILD_QUEUE_ENABLED;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_AUTO_QUEUE_CREATION_ENABLED;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_LIMIT_FACTOR;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.DYNAMIC_MAX_ASSIGN;
@@ -201,8 +196,6 @@ public class TestFSConfigToCSConfigConverter {
             conf.get(PREFIX + "root.users." + USER_LIMIT_FACTOR));
     assertEquals("root.users auto-queue-creation-v2.enabled", "true",
             conf.get(PREFIX + "root.users.auto-queue-creation-v2.enabled"));
-    assertNull( "root.users auto-create-child-queue.enabled should be null",
-            conf.get(PREFIX + "root.users.auto-create-child-queue.enabled"));
 
     assertEquals("root.default user-limit-factor", "-1.0",
             conf.get(PREFIX + "root.default.user-limit-factor"));
@@ -214,8 +207,6 @@ public class TestFSConfigToCSConfigConverter {
             conf.get(PREFIX + "root.admins.bob.user-limit-factor"));
     assertNull("root.admin.bob auto-queue-creation-v2.enabled should be null",
             conf.get(PREFIX + "root.admin.bob.auto-queue-creation-v2.enabled"));
-    assertNull( "root.admin.bob auto-create-child-queue.enabled should be null",
-            conf.get(PREFIX + "root.admin.bob.auto-create-child-queue.enabled"));
   }
 
   @Test
