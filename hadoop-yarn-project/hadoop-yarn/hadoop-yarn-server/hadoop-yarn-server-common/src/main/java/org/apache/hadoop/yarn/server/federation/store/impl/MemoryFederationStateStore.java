@@ -34,6 +34,7 @@ import java.util.Comparator;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -605,5 +606,15 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @VisibleForTesting
   public void setMembership(Map<SubClusterId, SubClusterInfo> membership) {
     this.membership = membership;
+  }
+
+  @VisibleForTesting
+  public void setExpiredHeartbeat(SubClusterId subClusterId, long heartBearTime)
+      throws YarnRuntimeException {
+    if(!membership.containsKey(subClusterId)){
+      throw new YarnRuntimeException("subClusterId = " + subClusterId + "not exist");
+    }
+    SubClusterInfo subClusterInfo = membership.get(subClusterId);
+    subClusterInfo.setLastHeartBeat(heartBearTime);
   }
 }
