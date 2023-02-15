@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferTestCase;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BPServiceActorAttributes;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -315,10 +316,11 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
       cluster.waitDatanodeConnectedToActive(datanode, 5000);
 
       // Verify that last heartbeat sent to both namenodes in last 5 sec.
-      assertLastHeartbeatSentTime(datanode, "LastHeartbeat");
+      assertLastHeartbeatSentTime(datanode, BPServiceActorAttributes.LAST_HEARTBEAT.toString());
       // Verify that last heartbeat response from both namenodes have been received within
       // last 5 sec.
-      assertLastHeartbeatSentTime(datanode, "LastHeartbeatResponseTime");
+      assertLastHeartbeatSentTime(datanode,
+          BPServiceActorAttributes.LAST_HEARTBEAT_RESPONSE_TIME.toString());
 
 
       NameNode sbNameNode = cluster.getNameNode(1);
@@ -334,9 +336,11 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
         Map<String, String> bpServiceActorInfo2 = bpServiceActorInfo.get(1);
 
         long lastHeartbeatResponseTime1 =
-            Long.parseLong(bpServiceActorInfo1.get("LastHeartbeatResponseTime"));
+            Long.parseLong(bpServiceActorInfo1.get(
+                BPServiceActorAttributes.LAST_HEARTBEAT_RESPONSE_TIME.toString()));
         long lastHeartbeatResponseTime2 =
-            Long.parseLong(bpServiceActorInfo2.get("LastHeartbeatResponseTime"));
+            Long.parseLong(bpServiceActorInfo2.get(
+                BPServiceActorAttributes.LAST_HEARTBEAT_RESPONSE_TIME.toString()));
 
         LOG.info("Last heartbeat response from namenode 1: {}", lastHeartbeatResponseTime1);
         LOG.info("Last heartbeat response from namenode 2: {}", lastHeartbeatResponseTime2);

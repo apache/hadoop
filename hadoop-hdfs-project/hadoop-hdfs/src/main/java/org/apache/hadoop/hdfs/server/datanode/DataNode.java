@@ -300,7 +300,9 @@ public class DataNode extends ReconfigurableBase
     implements InterDatanodeProtocol, ClientDatanodeProtocol,
         DataNodeMXBean, ReconfigurationProtocol {
   public static final Logger LOG = LoggerFactory.getLogger(DataNode.class);
-  
+
+  static final String SHUTDOWN_ALREADY_IN_PROGRESS = "Shutdown already in progress.";
+
   static{
     HdfsConfiguration.init();
   }
@@ -475,6 +477,8 @@ public class DataNode extends ReconfigurableBase
   private DataTransferThrottler ecReconstuctReadThrottler;
   private DataTransferThrottler ecReconstuctWriteThrottler;
 
+  private final DataNodeHealthChecker dataNodeHealthChecker;
+
   /**
    * Creates a dummy DataNode for testing purpose.
    */
@@ -500,6 +504,7 @@ public class DataNode extends ReconfigurableBase
     volumeChecker = new DatasetVolumeChecker(conf, new Timer());
     this.xferService =
         HadoopExecutors.newCachedThreadPool(new Daemon.DaemonFactory());
+    dataNodeHealthChecker = new DataNodeHealthChecker(this);
   }
 
   /**
@@ -564,6 +569,8 @@ public class DataNode extends ReconfigurableBase
 
     this.socketFactory = NetUtils.getDefaultSocketFactory(conf);
 
+    this.dataNodeHealthChecker = new DataNodeHealthChecker(this);
+
     try {
       hostName = getHostName(conf);
       LOG.info("Configured hostname is {}", hostName);
@@ -599,6 +606,10 @@ public class DataNode extends ReconfigurableBase
         new DataTransferThrottler(100, ecReconstuctReadBandwidth) : null;
     this.ecReconstuctWriteThrottler = ecReconstuctWriteBandwidth > 0 ?
         new DataTransferThrottler(100, ecReconstuctWriteBandwidth) : null;
+
+    // Datanode health checker is enabled if dfs.datanode.health.activennconnect.timeout is
+    // configured.
+    this.dataNodeHealthChecker.initiateHealthCheck();
   }
 
   @Override  // ReconfigurableBase
@@ -2563,6 +2574,7 @@ public class DataNode extends ReconfigurableBase
     }
     tracer.close();
     dataSetLockManager.lockLeakCheck();
+    this.dataNodeHealthChecker.shutdown();
   }
 
   /**
@@ -3718,7 +3730,7 @@ public class DataNode extends ReconfigurableBase
 
     // Shutdown can be called only once.
     if (shutdownInProgress) {
-      throw new IOException("Shutdown already in progress.");
+      throw new IOException(SHUTDOWN_ALREADY_IN_PROGRESS);
     }
     shutdownInProgress = true;
     shutdownForUpgrade = forUpgrade;

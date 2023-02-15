@@ -393,4 +393,29 @@ public interface HdfsServerConstants {
   byte MAX_BLOCKS_IN_GROUP = 16;
   // maximum bandwidth per datanode 1TB/sec.
   long MAX_BANDWIDTH_PER_DATANODE = 1099511627776L;
+
+  enum BPServiceActorAttributes {
+    NAMENODE_ADDRESS("NamenodeAddress"),
+    NAMENODE_HA_STATE("NamenodeHaState"),
+    BLOCK_POOL_ID("BlockPoolID"),
+    BP_ACTOR_STATE("ActorState"),
+    LAST_HEARTBEAT("LastHeartbeat"),
+    LAST_HEARTBEAT_RESPONSE_TIME("LastHeartbeatResponseTime"),
+    LAST_BLOCK_REPORT("LastBlockReport"),
+    MAX_BLOCK_REPORT_SIZE("maxBlockReportSize"),
+    MAX_DATA_LENGTH("maxDataLength"),
+    IS_SLOW_NODE("isSlownode");
+
+    private final String value;
+
+    BPServiceActorAttributes(final String value) {
+      this.value = value;
+    }
+
+    @Override
+    public String toString() {
+      return value;
+    }
+  }
+
 }

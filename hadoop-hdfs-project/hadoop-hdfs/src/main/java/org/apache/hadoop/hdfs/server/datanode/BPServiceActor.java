@@ -54,6 +54,7 @@ import org.apache.hadoop.hdfs.protocol.RollingUpgradeStatus;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeLifelineProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BPServiceActorAttributes;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -200,20 +201,27 @@ class BPServiceActor implements Runnable {
   }
 
   Map<String, String> getActorInfoMap() {
-    final Map<String, String> info = new HashMap<String, String>();
-    info.put("NamenodeAddress", getNameNodeAddress());
-    info.put("NamenodeHaState", state != null ? state.toString() : "Unknown");
-    info.put("BlockPoolID", bpos.getBlockPoolId());
-    info.put("ActorState", getRunningState());
-    info.put("LastHeartbeat",
+    final Map<String, String> info = new HashMap<>();
+    info.put(BPServiceActorAttributes.NAMENODE_ADDRESS.toString(),
+        getNameNodeAddress());
+    info.put(BPServiceActorAttributes.NAMENODE_HA_STATE.toString(),
+        state != null ? state.toString() : "Unknown");
+    info.put(BPServiceActorAttributes.BLOCK_POOL_ID.toString(),
+        bpos.getBlockPoolId());
+    info.put(BPServiceActorAttributes.BP_ACTOR_STATE.toString(),
+        getRunningState());
+    info.put(BPServiceActorAttributes.LAST_HEARTBEAT.toString(),
         String.valueOf(getScheduler().getLastHearbeatTime()));
-    info.put("LastHeartbeatResponseTime",
+    info.put(BPServiceActorAttributes.LAST_HEARTBEAT_RESPONSE_TIME.toString(),
         String.valueOf(getScheduler().getLastHeartbeatResponseTime()));
-    info.put("LastBlockReport",
+    info.put(BPServiceActorAttributes.LAST_BLOCK_REPORT.toString(),
         String.valueOf(getScheduler().getLastBlockReportTime()));
-    info.put("maxBlockReportSize", String.valueOf(getMaxBlockReportSize()));
-    info.put("maxDataLength", String.valueOf(maxDataLength));
-    info.put("isSlownode", String.valueOf(isSlownode));
+    info.put(BPServiceActorAttributes.MAX_BLOCK_REPORT_SIZE.toString(),
+        String.valueOf(getMaxBlockReportSize()));
+    info.put(BPServiceActorAttributes.MAX_DATA_LENGTH.toString(),
+        String.valueOf(maxDataLength));
+    info.put(BPServiceActorAttributes.IS_SLOW_NODE.toString(),
+        String.valueOf(isSlownode));
     return info;
   }
 
