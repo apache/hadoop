@@ -653,7 +653,7 @@ checksums if the checksum algorithm between the two stores is different.
 * `distcp.update.modification.time` would only be used if either of the two
   stores don't have checksum validation resulting in incompatible checksum
   comparison between the two. Even if the property is set to true, it won't
-  be used if their is valid checksum comparison between the two stores.
+  be used if there is valid checksum comparison between the two stores.
 
 To turn off the modification time check, set this in your core-site.xml
 ```xml
