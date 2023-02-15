@@ -19,24 +19,30 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.util.AwsHostNameUtils;
 import org.assertj.core.api.Assertions;
+import org.junit.Assert;
 import org.junit.Test;
+import software.amazon.awssdk.awscore.AwsExecutionAttribute;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.interceptor.Context;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
-import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AWS_REGION_SYSPROP;
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.fs.s3a.Constants.BUCKET_REGION_HEADER;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_301_MOVED_PERMANENTLY;
 
 /**
  * Test to check correctness of S3A endpoint regions in
@@ -44,64 +50,37 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  */
 public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
 
-  private static final String AWS_REGION_TEST = "test-region";
+  private static String AWS_REGION_TEST;
   private static final String AWS_ENDPOINT_TEST = "test-endpoint";
-  private static final String AWS_ENDPOINT_TEST_WITH_REGION =
-      "test-endpoint.some-region.amazonaws.com";
   public static final String MARS_NORTH_2 = "mars-north-2";
 
+
   /**
-   * Test to verify that setting a region with the config would bypass the
-   * construction of region from endpoint.
+   * Test to verify that not setting the region config, will lead to the client factory making
+   * a HEAD bucket call to configure the correct region. If an incorrect region is set, the HEAD
+   * bucket call in this test will raise an exception.
    */
   @Test
-  public void testWithRegionConfig() {
-    getFileSystem().getConf().set(AWS_REGION, AWS_REGION_TEST);
+  public void testWithoutRegionConfig() throws IOException {
+    Configuration conf = getConfiguration();
+    String bucket = getFileSystem().getBucket();
+    conf.unset(String.format("fs.s3a.bucket.%s.endpoint", bucket));
+    conf.unset(AWS_REGION);
 
-    //Creating an endpoint config with a custom endpoint.
-    AwsClientBuilder.EndpointConfiguration epr = createEpr(AWS_ENDPOINT_TEST,
-        getFileSystem().getConf().getTrimmed(AWS_REGION));
-    //Checking if setting region config bypasses the endpoint region.
-    Assertions.assertThat(epr.getSigningRegion())
-        .describedAs("There is a region mismatch")
-        .isEqualTo(getFileSystem().getConf().get(AWS_REGION));
+    S3AFileSystem fs = new S3AFileSystem();
+    fs.initialize(getFileSystem().getUri(), conf);
+    S3Client s3Client = fs.getAmazonS3V2ClientForTesting("testWithoutRegionConfig");
+
+    try (AuditSpan span = span()) {
+      s3Client.headBucket(HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build());
+    } catch (S3Exception exception) {
+      if (exception.statusCode() == SC_301_MOVED_PERMANENTLY) {
+        List<String> bucketRegion =
+            exception.awsErrorDetails().sdkHttpResponse().headers().get(BUCKET_REGION_HEADER);
+        Assert.fail("Region not configured correctly, expected region: " + bucketRegion);
+      }
+    }
   }
-
-  /**
-   * Test to verify that not setting the region config, would lead to using
-   * endpoint to construct the region.
-   */
-  @Test
-  public void testWithoutRegionConfig() {
-    getFileSystem().getConf().unset(AWS_REGION);
-
-    //Creating an endpoint config with a custom endpoint containing a region.
-    AwsClientBuilder.EndpointConfiguration eprRandom =
-        createEpr(AWS_ENDPOINT_TEST_WITH_REGION,
-            getFileSystem().getConf().getTrimmed(AWS_REGION));
-    String regionFromEndpoint =
-        AwsHostNameUtils
-            .parseRegionFromAwsPartitionPattern(AWS_ENDPOINT_TEST_WITH_REGION);
-    //Checking if not setting region config leads to constructing the region
-    // from endpoint.
-    Assertions.assertThat(eprRandom.getSigningRegion())
-        .describedAs("There is a region mismatch")
-        .isNotEqualTo(getFileSystem().getConf().get(AWS_REGION))
-        .isEqualTo(regionFromEndpoint);
-  }
-
-  /**
-   * Method to create EndpointConfiguration using an endpoint.
-   *
-   * @param endpoint the endpoint to be used for EndpointConfiguration creation.
-   * @return an instance of EndpointConfiguration.
-   */
-  private AwsClientBuilder.EndpointConfiguration createEpr(String endpoint,
-      String awsRegion) {
-    return DefaultS3ClientFactory.createEndpointConfiguration(endpoint,
-        new ClientConfiguration(), awsRegion);
-  }
-
 
   @Test
   public void testInvalidRegionDefaultEndpoint() throws Throwable {
@@ -112,34 +91,20 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     // if this test ever fails because this region now exists
     // -congratulations!
     conf.set(AWS_REGION, MARS_NORTH_2);
+    AWS_REGION_TEST = MARS_NORTH_2;
     createMarsNorth2Client(conf);
   }
 
   @Test
-  public void testUnsetRegionDefaultEndpoint() throws Throwable {
+  public void testEndpointOverride() throws Throwable {
     describe("Create a client with no region and the default endpoint");
     Configuration conf = getConfiguration();
-    conf.unset(AWS_REGION);
-    createS3Client(conf, DEFAULT_ENDPOINT, AWS_S3_CENTRAL_REGION);
-  }
-
-  /**
-   * By setting the system property {@code "aws.region"} we can
-   * guarantee that the SDK region resolution chain will always succeed
-   * (and fast).
-   * Clearly there is no validation of the region during the build process.
-   */
-  @Test
-  public void testBlankRegionTriggersSDKResolution() throws Throwable {
-    describe("Create a client with a blank region and the default endpoint."
-        + " This will trigger the SDK Resolution chain");
-    Configuration conf = getConfiguration();
-    conf.set(AWS_REGION, "");
-    System.setProperty(AWS_REGION_SYSPROP, MARS_NORTH_2);
+    S3Client client = createS3Client(conf, AWS_ENDPOINT_TEST);
+    AWS_REGION_TEST = conf.get(AWS_REGION);
     try {
-      createMarsNorth2Client(conf);
-    } finally {
-      System.clearProperty(AWS_REGION_SYSPROP);
+      client.headBucket(HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build());
+    } catch (AwsServiceException exception) {
+      // Expected to be thrown by interceptor, do nothing.
     }
   }
 
@@ -150,8 +115,43 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
    * @param conf configuration to use in the building.
    */
   private void createMarsNorth2Client(Configuration conf) throws Exception {
-    AmazonS3 client = createS3Client(conf, DEFAULT_ENDPOINT, MARS_NORTH_2);
-    intercept(IllegalArgumentException.class, MARS_NORTH_2, client::getRegion);
+    S3Client client = createS3Client(conf, "");
+
+    try {
+      client.headBucket(HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build());
+    } catch (AwsServiceException exception) {
+      // Expected to be thrown by interceptor, do nothing.
+    }
+  }
+
+  class RegionInterceptor implements ExecutionInterceptor {
+    boolean endpointOverridden;
+
+    RegionInterceptor(boolean endpointOverridden) {
+      this.endpointOverridden = endpointOverridden;
+    }
+
+    @Override
+    public void beforeExecution(Context.BeforeExecution context,
+        ExecutionAttributes executionAttributes)  {
+
+      Assertions.assertThat(executionAttributes.getAttribute(AwsExecutionAttribute.AWS_REGION))
+                    .describedAs("There is a region mismatch")
+                    .isEqualTo(Region.of(AWS_REGION_TEST));
+
+      if (endpointOverridden) {
+        Assertions.assertThat(
+                executionAttributes.getAttribute(AwsExecutionAttribute.ENDPOINT_OVERRIDDEN))
+            .describedAs("Endpoint not overridden").isTrue();
+
+        Assertions.assertThat(
+                executionAttributes.getAttribute(AwsExecutionAttribute.CLIENT_ENDPOINT).toString())
+            .describedAs("There is an endpoint mismatch").isEqualTo("https://" + AWS_ENDPOINT_TEST);
+      }
+
+      // We don't actually want to make a request, so exit early.
+        throw AwsServiceException.builder().build();
+    }
   }
 
   /**
@@ -160,16 +160,22 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
    * value.
    * @param conf configuration to use.
    * @param endpoint endpoint.
-   * @param expectedRegion expected region
    * @return the client.
    * @throws URISyntaxException parse problems.
    * @throws IOException IO problems
    */
-  @SuppressWarnings("deprecation")
-  private AmazonS3 createS3Client(Configuration conf,
-      String endpoint,
-      String expectedRegion)
-      throws URISyntaxException, IOException {
+  private S3Client createS3Client(Configuration conf,
+      String endpoint)
+      throws IOException {
+
+    boolean endpointOverridden = false;
+
+    if (endpoint != null && !endpoint.isEmpty()) {
+      endpointOverridden = true;
+    }
+
+    List<ExecutionInterceptor> interceptors = new ArrayList<>();
+    interceptors.add(new RegionInterceptor(endpointOverridden));
 
     DefaultS3ClientFactory factory
         = new DefaultS3ClientFactory();
@@ -177,16 +183,28 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     S3ClientFactory.S3ClientCreationParameters parameters
         = new S3ClientFactory.S3ClientCreationParameters()
         .withCredentialSet(new AnonymousAWSCredentialsProvider())
-        .withPathUri(new URI("s3a://localhost/"))
         .withEndpoint(endpoint)
         .withMetrics(new EmptyS3AStatisticsContext()
-            .newStatisticsFromAwsSdk());
-    AmazonS3 client = factory.createS3Client(
-        new URI("s3a://localhost/"),
+            .newStatisticsFromAwsSdk())
+        .withInvoker(new Invoker(new S3ARetryPolicy(conf),
+            this::operationRetried))
+        .withExecutionInterceptors(interceptors);
+    S3Client client = factory.createS3ClientV2(
+        getFileSystem().getUri(),
         parameters);
-    Assertions.assertThat(client.getRegionName())
-        .describedAs("Client region name")
-        .isEqualTo(expectedRegion);
     return client;
+  }
+
+  /**
+   * Callback from {@link Invoker} when an operation is retried.
+   * @param text text of the operation
+   * @param ex exception
+   * @param retries number of retries
+   * @param idempotent is the method idempotent
+   */
+  void operationRetried(String text, Exception ex, int retries,
+      boolean idempotent) {
+    LOG.info("{}: Retried {}: {}", text, retries, ex.toString());
+    LOG.debug("Stack", ex);
   }
 }

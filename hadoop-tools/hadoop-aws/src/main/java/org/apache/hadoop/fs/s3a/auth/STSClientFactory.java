@@ -165,8 +165,6 @@ public class STSClientFactory {
    */
   private static URI getSTSEndpoint(String endpoint) {
     try {
-      // TODO: The URI builder is currently imported via a shaded dependency. This is due to TM
-      //  preview dependency causing some issues.
       return new URIBuilder().setScheme("https").setHost(endpoint).build();
     } catch (URISyntaxException e) {
       throw new IllegalArgumentException(e);

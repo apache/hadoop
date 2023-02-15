@@ -38,9 +38,6 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
-import com.amazonaws.event.ProgressEvent;
-import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
 
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
@@ -116,8 +113,6 @@ class S3ABlockOutputStream extends OutputStream implements
   /** Total bytes for uploads submitted so far. */
   private long bytesSubmitted;
 
-  /** Callback for progress. */
-  private final ProgressListener progressListener;
   private final ListeningExecutorService executorService;
 
   /**
@@ -192,10 +187,6 @@ class S3ABlockOutputStream extends OutputStream implements
     this.executorService = MoreExecutors.listeningDecorator(
         builder.executorService);
     this.multiPartUpload = null;
-    final Progressable progress = builder.progress;
-    this.progressListener = (progress instanceof ProgressListener) ?
-        (ProgressListener) progress
-        : new ProgressableListener(progress);
     downgradeSyncableExceptions = builder.downgradeSyncableExceptions;
     // create that first block. This guarantees that an open + close sequence
     // writes a 0-byte entry.
@@ -991,94 +982,6 @@ class S3ABlockOutputStream extends OutputStream implements
             + " you may need to purge uploaded parts", e);
         statistics.exceptionInMultipartAbort();
         return e;
-      }
-    }
-  }
-
-  /**
-   * The upload progress listener registered for events returned
-   * during the upload of a single block.
-   * It updates statistics and handles the end of the upload.
-   * Transfer failures are logged at WARN.
-   */
-  private final class BlockUploadProgress implements ProgressListener {
-    private final S3ADataBlocks.DataBlock block;
-    private final ProgressListener nextListener;
-    private final Instant transferQueueTime;
-    private Instant transferStartTime;
-
-    /**
-     * Track the progress of a single block upload.
-     * @param block block to monitor
-     * @param nextListener optional next progress listener
-     * @param transferQueueTime time the block was transferred
-     * into the queue
-     */
-    private BlockUploadProgress(S3ADataBlocks.DataBlock block,
-        ProgressListener nextListener,
-        Instant transferQueueTime) {
-      this.block = block;
-      this.transferQueueTime = transferQueueTime;
-      this.nextListener = nextListener;
-    }
-
-    @Override
-    public void progressChanged(ProgressEvent progressEvent) {
-      ProgressEventType eventType = progressEvent.getEventType();
-      long bytesTransferred = progressEvent.getBytesTransferred();
-
-      int size = block.dataSize();
-      switch (eventType) {
-
-      case REQUEST_BYTE_TRANSFER_EVENT:
-        // bytes uploaded
-        statistics.bytesTransferred(bytesTransferred);
-        break;
-
-      case TRANSFER_PART_STARTED_EVENT:
-        transferStartTime = now();
-        statistics.blockUploadStarted(
-            Duration.between(transferQueueTime, transferStartTime),
-            size);
-        incrementWriteOperations();
-        break;
-
-      case TRANSFER_PART_COMPLETED_EVENT:
-        statistics.blockUploadCompleted(
-            Duration.between(transferStartTime, now()),
-            size);
-        break;
-
-      case TRANSFER_PART_FAILED_EVENT:
-        statistics.blockUploadFailed(
-            Duration.between(transferStartTime, now()),
-            size);
-        LOG.warn("Transfer failure of block {}", block);
-        break;
-
-      default:
-        // nothing
-      }
-
-      if (nextListener != null) {
-        nextListener.progressChanged(progressEvent);
-      }
-    }
-  }
-
-  /**
-   * Bridge from AWS {@code ProgressListener} to Hadoop {@link Progressable}.
-   */
-  private static class ProgressableListener implements ProgressListener {
-    private final Progressable progress;
-
-    ProgressableListener(Progressable progress) {
-      this.progress = progress;
-    }
-
-    public void progressChanged(ProgressEvent progressEvent) {
-      if (progress != null) {
-        progress.progress();
       }
     }
   }

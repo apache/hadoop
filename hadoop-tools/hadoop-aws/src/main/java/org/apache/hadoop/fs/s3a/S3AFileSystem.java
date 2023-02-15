@@ -987,7 +987,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withRequesterPays(conf.getBoolean(ALLOW_REQUESTER_PAYS, DEFAULT_ALLOW_REQUESTER_PAYS))
         .withExecutionInterceptors(auditManager.createExecutionInterceptors())
         .withMinimumPartSize(partSize)
-        .withTransferManagerExecutor(unboundedThreadPool);
+        .withTransferManagerExecutor(unboundedThreadPool)
+        .withInvoker(invoker);
 
     S3ClientFactory clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
     s3Client = clientFactory.createS3ClientV2(getUri(), parameters);

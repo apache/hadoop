@@ -18,14 +18,10 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.createEndpointConfiguration;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -62,44 +58,5 @@ public class TestNetworkBinding extends AbstractHadoopTestBase {
     assertThat(fixBucketRegion(region))
         .describedAs("Fixup of %s", region)
         .isEqualTo(expected);
-  }
-
-  @Test
-  public void testNull() throws Throwable {
-    expectEndpoint("", true, "unused");
-  }
-
-  @Test
-  @Ignore("disabled until endpoint logic works for S3 client builder API")
-  public void testUSEastEndpoint() throws Throwable {
-    expectEndpoint(US_EAST_1, false, US_EAST_1);
-  }
-
-  @Test
-  @Ignore("disabled until endpoint logic works for S3 client builder API")
-  public void testUSWestEndpoint() throws Throwable {
-    expectEndpoint(US_WEST_2, false, US_WEST_2);
-  }
-
-  public void expectEndpoint(final String src,
-      final boolean expectNull,
-      final String expectRegion) {
-    AwsClientBuilder.EndpointConfiguration epr =
-        createEndpointConfiguration(src, new ClientConfiguration(), src);
-    String eprStr = epr == null
-        ? "(empty)"
-        : ("(" + epr.getServiceEndpoint() + " " + epr.getSigningRegion());
-    if (expectNull) {
-      assertThat(epr)
-          .describedAs("Endpoint configuration of %s =",
-              src, eprStr)
-          .isNull();
-    } else {
-      assertThat(epr)
-          .describedAs("Endpoint configuration of %s =",
-              src, eprStr)
-          .hasFieldOrPropertyWithValue("serviceEndpoint", src)
-          .hasFieldOrPropertyWithValue("signingRegion", expectRegion);
-    }
   }
 }

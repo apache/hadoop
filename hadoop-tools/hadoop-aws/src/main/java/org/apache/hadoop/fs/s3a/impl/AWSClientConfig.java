@@ -102,7 +102,8 @@ public final class AWSClientConfig {
    * @param conf The Hadoop configuration
    * @return Http client builder
    */
-  public static ApacheHttpClient.Builder createHttpClientBuilder(Configuration conf) {
+  public static ApacheHttpClient.Builder createHttpClientBuilder(Configuration conf)
+      throws IOException {
     ApacheHttpClient.Builder httpClientBuilder =
         ApacheHttpClient.builder();
 
@@ -116,8 +117,7 @@ public final class AWSClientConfig {
     httpClientBuilder.connectionTimeout(Duration.ofSeconds(connectionEstablishTimeout));
     httpClientBuilder.socketTimeout(Duration.ofSeconds(socketTimeout));
 
-    // TODO: Need to set ssl socket factory, as done in
-    //  NetworkBinding.bindSSLChannelMode(conf, awsConf);
+    NetworkBinding.bindSSLChannelMode(conf, httpClientBuilder);
 
     return httpClientBuilder;
   }
@@ -183,14 +183,14 @@ public final class AWSClientConfig {
 
     if (!proxyHost.isEmpty()) {
       if (proxyPort >= 0) {
-        proxyConfigBuilder.endpoint(buildURI(proxyHost, proxyPort));
+        proxyConfigBuilder.endpoint(buildURI("https", proxyHost, proxyPort));
       } else {
         if (conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS)) {
           LOG.warn("Proxy host set without port. Using HTTPS default 443");
-          proxyConfigBuilder.endpoint(buildURI(proxyHost, 443));
+          proxyConfigBuilder.endpoint(buildURI("https", proxyHost, 443));
         } else {
           LOG.warn("Proxy host set without port. Using HTTP default 80");
-          proxyConfigBuilder.endpoint(buildURI(proxyHost, 80));
+          proxyConfigBuilder.endpoint(buildURI("http", proxyHost, 80));
         }
       }
       final String proxyUsername = S3AUtils.lookupPassword(bucket, conf, PROXY_USERNAME,
@@ -294,9 +294,9 @@ public final class AWSClientConfig {
    * @param port proxy port
    * @return uri with host and port
    */
-  private static URI buildURI(String host, int port) {
+  private static URI buildURI(String scheme, String host, int port) {
     try {
-      return new URIBuilder().setHost(host).setPort(port).build();
+      return new URIBuilder().setScheme(scheme).setHost(host).setPort(port).build();
     } catch (URISyntaxException e) {
       String msg =
           "Proxy error: incorrect " + PROXY_HOST + " or " + PROXY_PORT;

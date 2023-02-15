@@ -27,9 +27,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntFunction;
 
-import com.amazonaws.event.ProgressEvent;
-import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
 import org.assertj.core.api.Assertions;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -301,8 +298,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   /**
    * Progress callback from AWS. Likely to come in on a different thread.
    */
-  private final class ProgressCallback implements Progressable,
-      ProgressListener {
+  private final class ProgressCallback implements Progressable {
     private AtomicLong bytesTransferred = new AtomicLong(0);
     private AtomicInteger failures = new AtomicInteger(0);
     private final ContractTestUtils.NanoTimer timer;
@@ -315,39 +311,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     public void progress() {
     }
 
-    @Override
-    public void progressChanged(ProgressEvent progressEvent) {
-      ProgressEventType eventType = progressEvent.getEventType();
-      if (eventType.isByteCountEvent()) {
-        bytesTransferred.addAndGet(progressEvent.getBytesTransferred());
-      }
-      switch (eventType) {
-      case TRANSFER_PART_FAILED_EVENT:
-        // failure
-        failures.incrementAndGet();
-        LOG.warn("Transfer failure");
-        break;
-      case TRANSFER_PART_COMPLETED_EVENT:
-        // completion
-        long elapsedTime = timer.elapsedTime();
-        double elapsedTimeS = elapsedTime / 1.0e9;
-        long written = bytesTransferred.get();
-        long writtenMB = written / _1MB;
-        LOG.info(String.format(
-            "Event %s; total uploaded=%d MB in %.1fs;" +
-                " effective upload bandwidth = %.2f MB/s",
-            progressEvent,
-            writtenMB, elapsedTimeS, writtenMB / elapsedTimeS));
-        break;
-      default:
-        if (eventType.isByteCountEvent()) {
-          LOG.debug("Event {}", progressEvent);
-        } else {
-          LOG.info("Event {}", progressEvent);
-        }
-        break;
-      }
-    }
+    // TODO: You cannot currently attach progress listeners to individual operations.
 
     @Override
     public String toString() {
