@@ -45,8 +45,8 @@ public class TestSubClusterCleaner {
   private MemoryFederationStateStore stateStore;
   private FederationStateStoreFacade facade;
   private SubClusterCleaner cleaner;
-  private static int NUM_SUBCLUSTERS = 4;
-  private static long EXPIRATION_TIME = Time.now() - 5000;
+  private final static int NUM_SUBCLUSTERS = 4;
+  private final static long EXPIRATION_TIME = Time.now() - 5000;
 
   @Before
   public void setup() throws YarnException {
@@ -84,9 +84,8 @@ public class TestSubClusterCleaner {
 
     // Step1. Manually set subCluster heartbeat expiration.
     // subCluster has no heartbeat, and all subClusters will expire.
-    subClustersMap.keySet().forEach(subClusterId -> {
-      stateStore.setExpiredHeartbeat(subClusterId, EXPIRATION_TIME);
-    });
+    subClustersMap.keySet().forEach(subClusterId ->
+        stateStore.setExpiredHeartbeat(subClusterId, EXPIRATION_TIME));
 
     // Step2. Run the Cleaner to change the status of the expired SubCluster to SC_LOST.
     cleaner.run();
@@ -100,7 +99,7 @@ public class TestSubClusterCleaner {
     // We want all subClusters to be SC_LOST.
     subClustersMap.values().forEach(subClusterInfo -> {
       SubClusterState subClusterState = subClusterInfo.getState();
-      Assert.assertEquals(SubClusterState.SC_LOST, subClusterState.SC_LOST);
+      Assert.assertEquals(SubClusterState.SC_LOST, subClusterState);
     });
   }
 
