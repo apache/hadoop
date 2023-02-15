@@ -156,3 +156,157 @@ ELSE
     PRINT 'Table reservationsHomeSubCluster exists, no operation required...'
     GO
 GO
+
+IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
+    WHERE name = 'masterKeys'
+    AND schema_id = SCHEMA_ID('dbo'))
+    BEGIN
+        PRINT 'Table masterKeys does not exist, create it...'
+
+        SET ANSI_NULLS ON
+
+        SET QUOTED_IDENTIFIER ON
+
+        SET ANSI_PADDING ON
+
+        CREATE TABLE [dbo].[masterKeys](
+            keyId BIGINT NOT NULL,
+            masterKey VARCHAR(1024) NOT NULL,
+            CONSTRAINT [pk_keyId] PRIMARY KEY
+            (
+                [keyId]
+            )
+        )
+
+        SET ANSI_PADDING OFF
+
+        PRINT 'Table masterKeys created.'
+    END
+ELSE
+    PRINT 'Table masterKeys exists, no operation required...'
+    GO
+GO
+
+IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
+    WHERE name = 'delegationTokens'
+    AND schema_id = SCHEMA_ID('dbo'))
+    BEGIN
+        PRINT 'Table delegationTokens does not exist, create it...'
+
+        SET ANSI_NULLS ON
+
+        SET QUOTED_IDENTIFIER ON
+
+        SET ANSI_PADDING ON
+
+        CREATE TABLE [dbo].[delegationTokens](
+            sequenceNum BIGINT NOT NULL,
+            tokenIdent VARCHAR(1024) NOT NULL,
+            token VARCHAR(1024) NOT NULL,
+            renewDate BIGINT NOT NULL,
+            CONSTRAINT [pk_sequenceNum] PRIMARY KEY
+            (
+                [sequenceNum]
+            )
+        )
+
+        SET ANSI_PADDING OFF
+
+        PRINT 'Table delegationTokens created.'
+    END
+ELSE
+    PRINT 'Table delegationTokens exists, no operation required...'
+    GO
+GO
+
+IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
+    WHERE name = 'masterKeys'
+    AND schema_id = SCHEMA_ID('dbo'))
+    BEGIN
+        PRINT 'Table masterKeys does not exist, create it...'
+
+        SET ANSI_NULLS ON
+
+        SET QUOTED_IDENTIFIER ON
+
+        SET ANSI_PADDING ON
+
+        CREATE TABLE [dbo].[masterKeys](
+            keyId BIGINT NOT NULL,
+            masterKey VARCHAR(1024) NOT NULL,
+            CONSTRAINT [pk_keyId] PRIMARY KEY
+            (
+                [keyId]
+            )
+        )
+
+        SET ANSI_PADDING OFF
+
+        PRINT 'Table masterKeys created.'
+    END
+ELSE
+    PRINT 'Table masterKeys exists, no operation required...'
+    GO
+GO
+
+IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
+    WHERE name = 'delegationTokens'
+    AND schema_id = SCHEMA_ID('dbo'))
+    BEGIN
+        PRINT 'Table delegationTokens does not exist, create it...'
+
+        SET ANSI_NULLS ON
+
+        SET QUOTED_IDENTIFIER ON
+
+        SET ANSI_PADDING ON
+
+        CREATE TABLE [dbo].[delegationTokens](
+            sequenceNum BIGINT NOT NULL,
+            tokenIdent VARCHAR(1024) NOT NULL,
+            token VARCHAR(1024) NOT NULL,
+            renewDate BIGINT NOT NULL,
+            CONSTRAINT [pk_sequenceNum] PRIMARY KEY
+            (
+                [sequenceNum]
+            )
+        )
+
+        SET ANSI_PADDING OFF
+
+        PRINT 'Table delegationTokens created.'
+    END
+ELSE
+    PRINT 'Table delegationTokens exists, no operation required...'
+    GO
+GO
+
+IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
+    WHERE name = 'sequenceTable'
+    AND schema_id = SCHEMA_ID('dbo'))
+    BEGIN
+        PRINT 'Table sequenceTable does not exist, create it...'
+
+        SET ANSI_NULLS ON
+
+        SET QUOTED_IDENTIFIER ON
+
+        SET ANSI_PADDING ON
+
+        CREATE TABLE [dbo].[sequenceTable](
+            sequenceName VARCHAR(255) NOT NULL,
+            nextVal bigint NOT NULL
+            CONSTRAINT [pk_sequenceName] PRIMARY KEY
+            (
+                [sequenceName]
+            )
+        )
+
+        SET ANSI_PADDING OFF
+
+        PRINT 'Table sequenceTable created.'
+    END
+ELSE
+    PRINT 'Table sequenceTable exists, no operation required...'
+    GO
+GO
