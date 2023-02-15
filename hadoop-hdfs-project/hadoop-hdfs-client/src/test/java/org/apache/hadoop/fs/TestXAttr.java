@@ -19,8 +19,8 @@
 package org.apache.hadoop.fs;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNotEquals;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -77,18 +77,18 @@ public class TestXAttr {
     assertEquals(XATTR3, XATTR3);
     assertEquals(XATTR4, XATTR4);
     assertEquals(XATTR5, XATTR5);
-    assertFalse(XATTR1.equals(XATTR2));
-    assertFalse(XATTR2.equals(XATTR3));
-    assertFalse(XATTR3.equals(XATTR4));
-    assertFalse(XATTR4.equals(XATTR5));
+    assertNotEquals(XATTR1, XATTR2);
+    assertNotEquals(XATTR2, XATTR3);
+    assertNotEquals(XATTR3, XATTR4);
+    assertNotEquals(XATTR4, XATTR5);
   }
   
   @Test
   public void testXAttrHashCode() {
     assertEquals(XATTR.hashCode(), XATTR1.hashCode());
-    assertFalse(XATTR1.hashCode() == XATTR2.hashCode());
-    assertFalse(XATTR2.hashCode() == XATTR3.hashCode());
-    assertFalse(XATTR3.hashCode() == XATTR4.hashCode());
-    assertFalse(XATTR4.hashCode() == XATTR5.hashCode());
+    assertNotEquals(XATTR1.hashCode(), XATTR2.hashCode());
+    assertNotEquals(XATTR2.hashCode(), XATTR3.hashCode());
+    assertNotEquals(XATTR3.hashCode(), XATTR4.hashCode());
+    assertNotEquals(XATTR4.hashCode(), XATTR5.hashCode());
   }
 }
