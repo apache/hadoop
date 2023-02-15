@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BPServiceActorAttributes;
 import org.apache.hadoop.util.Time;
 
@@ -47,11 +48,6 @@ import org.apache.hadoop.util.Time;
 public class DataNodeHealthChecker {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DataNodeHealthChecker.class);
-
-  public static final String DFS_DATANODE_HEALTH_ACTIVENNCONNECT_TIMEOUT =
-      "dfs.datanode.health.activennconnect.timeout";
-  // disabled by default
-  private static final long DFS_DATANODE_HEALTH_ACTIVENNCONNECT_TIMEOUT_DEFAULT = 0;
 
   public static final String DFS_DATANODE_HEATHCHECK_RUN_INTERVAL =
       "dfs.datanode.heathcheck.run.interval";
@@ -77,8 +73,8 @@ public class DataNodeHealthChecker {
         .getLong(DFS_DATANODE_HEATHCHECK_RUN_INIT_DELAY,
             DFS_DATANODE_HEATHCHECK_RUN_INIT_DELAY_DEFAULT);
     this.activeNNConnectionTimeoutForHealthyDN = this.dataNode.getConf()
-        .getLong(DFS_DATANODE_HEALTH_ACTIVENNCONNECT_TIMEOUT,
-            DFS_DATANODE_HEALTH_ACTIVENNCONNECT_TIMEOUT_DEFAULT);
+        .getLong(DFSConfigKeys.DFS_DATANODE_HEALTH_ACTIVENNCONNECT_TIMEOUT,
+            DFSConfigKeys.DFS_DATANODE_HEALTH_ACTIVENNCONNECT_TIMEOUT_DEFAULT);
   }
 
   public void initiateHealthCheck() {
@@ -94,7 +90,7 @@ public class DataNodeHealthChecker {
     } else {
       LOGGER.trace("To terminate the datanode if it does not stay healthy or connected to "
               + "active namenode for given time duration, provide positive time duration "
-              + "value in millies for config {}", DFS_DATANODE_HEALTH_ACTIVENNCONNECT_TIMEOUT);
+              + "value in millies for config {}", DFSConfigKeys.DFS_DATANODE_HEALTH_ACTIVENNCONNECT_TIMEOUT);
     }
   }
 
@@ -111,7 +107,7 @@ public class DataNodeHealthChecker {
     }
   }
 
-  private static class DataNodeHeathCheckThread implements Runnable {
+  private static final class DataNodeHeathCheckThread implements Runnable {
 
     private final DataNode dataNode;
     private final long activeNNConnectionTimeoutForHealthyDN; // value > 0

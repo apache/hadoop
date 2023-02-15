@@ -2032,5 +2032,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long DFS_LEASE_HARDLIMIT_DEFAULT =
       HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT;
 
-
+  public static final String DFS_DATANODE_HEALTH_ACTIVENNCONNECT_TIMEOUT =
+      "dfs.datanode.health.activennconnect.timeout";
+  // disabled by default
+  public static final long DFS_DATANODE_HEALTH_ACTIVENNCONNECT_TIMEOUT_DEFAULT = 0;
 }

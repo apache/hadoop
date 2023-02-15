@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
@@ -46,7 +47,7 @@ public class TestDatanodeHealthChecker {
     Configuration conf = new HdfsConfiguration();
     // if datanode cannot receive heartbeat response from active namenode in 3s,
     // datanodehealthchecker would terminate it.
-    conf.setLong(DataNodeHealthChecker.DFS_DATANODE_HEALTH_ACTIVENNCONNECT_TIMEOUT, 3000);
+    conf.setLong(DFSConfigKeys.DFS_DATANODE_HEALTH_ACTIVENNCONNECT_TIMEOUT, 3000);
     conf.setLong(DataNodeHealthChecker.DFS_DATANODE_HEATHCHECK_RUN_INTERVAL, 1000);
 
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
@@ -93,7 +94,7 @@ public class TestDatanodeHealthChecker {
     Configuration conf = new HdfsConfiguration();
     // if datanode cannot receive heartbeat response from active namenode in 3s,
     // datanodehealthchecker would terminate it.
-    conf.setLong(DataNodeHealthChecker.DFS_DATANODE_HEALTH_ACTIVENNCONNECT_TIMEOUT, 3000);
+    conf.setLong(DFSConfigKeys.DFS_DATANODE_HEALTH_ACTIVENNCONNECT_TIMEOUT, 3000);
     conf.setLong(DataNodeHealthChecker.DFS_DATANODE_HEATHCHECK_RUN_INTERVAL, 1000);
     conf.setLong(DataNodeHealthChecker.DFS_DATANODE_HEATHCHECK_RUN_INIT_DELAY, 7000);
 
