@@ -89,12 +89,18 @@ public class TestAuditLogs {
 
   // Pattern for: 
   // allowed=(true|false) ugi=name ip=/address cmd={cmd} src={path} dst=null perm=null
-  static final Pattern auditPattern = Pattern.compile(
+  private static final Pattern AUDIT_PATTERN_WITH_IP = Pattern.compile(
       "allowed=.*?\\s" +
       "ugi=.*?\\s" +
       "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
       "cmd=.*?\\ssrc=.*?\\sdst=null\\s" +
       "perm=.*?");
+  private static final Pattern AUDIT_PATTERN_WITH_IP_AND_HOST = Pattern.compile(
+      "allowed=.*?\\s" +
+          "ugi=.*?\\s" +
+          "ip=[a-zA-Z0-9.]+/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
+          "cmd=.*?\\ssrc=.*?\\sdst=null\\s" +
+          "perm=.*?");
   static final Pattern successPattern = Pattern.compile(
       ".*allowed=true.*");
   static final Pattern webOpenPattern = Pattern.compile(
@@ -334,7 +340,8 @@ public class TestAuditLogs {
         line = reader.readLine();
         assertNotNull(line);
         assertTrue("Expected audit event not found in audit log",
-            auditPattern.matcher(line).matches());
+            AUDIT_PATTERN_WITH_IP.matcher(line).matches()
+                || AUDIT_PATTERN_WITH_IP_AND_HOST.matcher(line).matches());
         ret &= successPattern.matcher(line).matches();
       }
       assertNull("Unexpected event in audit log", reader.readLine());
