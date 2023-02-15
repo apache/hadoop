@@ -109,6 +109,8 @@ public class ITestAbfsCustomTimeout extends AbstractAbfsIntegrationTest {
             abfsConfig.unset(config);
         }
 
+        abfsConfig.set(ConfigurationKeys.AZURE_OPTIMIZE_TIMEOUTS, "false");
+
     }
 
     public void testInitTimeoutOptimizer(AbfsRestOperationType opType, int maxRetryCount, int expectedReqTimeout, AbfsConfiguration abfsConfig) throws IOException {
