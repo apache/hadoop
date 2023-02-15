@@ -42,6 +42,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -51,6 +52,7 @@ import java.util.ArrayList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
@@ -97,6 +99,8 @@ public class MountTableResolver
   private final TreeMap<String, MountTable> tree = new TreeMap<>();
   /** Path -> Remote location. */
   private final Cache<String, PathLocation> locationCache;
+  private final LongAdder locCacheMiss = new LongAdder();
+  private final LongAdder locCacheAccess = new LongAdder();
 
   /** Default nameservice when no mount matches the math. */
   private String defaultNameService = "";
@@ -408,6 +412,9 @@ public class MountTableResolver
           mountTable.getMountTableEntries(request);
       List<MountTable> records = response.getEntries();
       refreshEntries(records);
+      StateStoreMetrics metrics = this.getMountTableStore().getDriver().getMetrics();
+      metrics.setLocationCache("locationCacheMissed", this.getLocCacheMiss().sum());
+      metrics.setLocationCache("locationCacheAccessed", this.getLocCacheAccess().sum());
     } catch (IOException e) {
       LOG.error("Cannot fetch mount table entries from State Store", e);
       return false;
@@ -441,9 +448,12 @@ public class MountTableResolver
       if (this.locationCache == null) {
         res = lookupLocation(processTrashPath(path));
       } else {
-        Callable<? extends PathLocation> meh = (Callable<PathLocation>) () ->
-            lookupLocation(processTrashPath(path));
+        Callable<? extends PathLocation> meh = (Callable<PathLocation>) () -> {
+          this.getLocCacheMiss().increment();
+          return lookupLocation(processTrashPath(path));
+        };
         res = this.locationCache.get(processTrashPath(path), meh);
+        this.getLocCacheAccess().increment();
       }
       if (isTrashPath(path)) {
         List<RemoteLocation> remoteLocations = new ArrayList<>();
@@ -698,5 +708,13 @@ public class MountTableResolver
   @VisibleForTesting
   public void setDisabled(boolean disable) {
     this.disabled = disable;
+  }
+
+  public LongAdder getLocCacheMiss() {
+    return locCacheMiss;
+  }
+
+  public LongAdder getLocCacheAccess() {
+    return locCacheAccess;
   }
 }
