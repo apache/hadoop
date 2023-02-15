@@ -20,7 +20,9 @@ Hadoop in Secure Mode
 Introduction
 ------------
 
-This document describes how to configure authentication for Hadoop in secure mode. When Hadoop is configured to run in secure mode, each Hadoop service and each user must be authenticated by Kerberos.
+In its default configuration, we expect you to make sure attackers don't have access to your Hadoop deployment by restricting all network access. If you want to expose Hadoop to untrusted users, you will have to configure authentication for Hadoop in secure mode as described in this document.
+
+When Hadoop is configured to run in secure mode, each Hadoop service and each user must be authenticated by Kerberos.
 
 Forward and reverse host lookup for all service hosts must be configured correctly to allow services to authenticate with each other. Host lookups may be configured using either DNS or `/etc/hosts` files. Working knowledge of Kerberos and DNS is recommended before attempting to configure Hadoop services in Secure Mode.
 
