@@ -1936,4 +1936,17 @@ public class DFSUtil {
     return path.charAt(parent.length()) == Path.SEPARATOR_CHAR
         || parent.equals(Path.SEPARATOR);
   }
+
+  /**
+   * Calculate the transfer rate in megabytes/second.
+   * @param bytes bytes
+   * @param durationMS duration in milliseconds
+   * @return the number of megabytes/second of the transfer rate
+  */
+  public static long transferRateMBs(long bytes, long durationMS) {
+    if (durationMS == 0) {
+      durationMS = 1;
+    }
+    return bytes / (1024 * 1024) * 1000 / durationMS;
+  }
 }
