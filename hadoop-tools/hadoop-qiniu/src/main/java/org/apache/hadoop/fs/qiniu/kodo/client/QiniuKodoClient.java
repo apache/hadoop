@@ -14,9 +14,17 @@ import com.qiniu.util.StringUtils;
 import okhttp3.Request;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoUtils;
+import org.apache.hadoop.fs.qiniu.kodo.client.batch.BatchOperationConsumer;
+import org.apache.hadoop.fs.qiniu.kodo.client.batch.ListingProducer;
+import org.apache.hadoop.fs.qiniu.kodo.client.batch.Product;
+import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.BatchOperator;
+import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.CopyOperator;
+import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.DeleteOperator;
 import org.apache.hadoop.fs.qiniu.kodo.config.MissingConfigFieldException;
 import org.apache.hadoop.fs.qiniu.kodo.config.ProxyConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
+import org.apache.hadoop.fs.qiniu.kodo.config.client.CopyConfig;
+import org.apache.hadoop.fs.qiniu.kodo.config.client.ListConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.region.QiniuKodoPublicRegions;
 import org.apache.hadoop.fs.qiniu.kodo.config.region.QiniuKodoRegion;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -27,6 +35,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.*;
 
 public class QiniuKodoClient implements IQiniuKodoClient {
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoClient.class);
@@ -50,11 +59,12 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
     private final int uploadSignExpires;
     private final boolean useNoCacheHeader;
+    private final QiniuKodoFsConfig fsConfig;
 
     public QiniuKodoClient(String bucket, QiniuKodoFsConfig fsConfig, FileSystem.Statistics statistics) throws QiniuException, AuthorizationException {
         this.bucket = bucket;
         this.statistics = statistics;
-
+        this.fsConfig = fsConfig;
         this.auth = getAuth(fsConfig);
 
         Configuration configuration = new Configuration();
@@ -249,12 +259,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         }
     }
 
-    /**
-     * 若 withDelimiter 为 true, 则列举出分级的目录效果
-     * 否则，将呈现出所有前缀为key的对象
-     */
-    @Override
-    public List<FileInfo> listStatus(String key, boolean useDirectory) throws IOException {
+    public List<FileInfo> listStatusOld(String key, boolean useDirectory) throws IOException {
         LOG.info("key: {}, useDirectory: {}", key, useDirectory);
         List<FileInfo> retFiles = new ArrayList<>();
 
@@ -289,6 +294,57 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         return retFiles;
     }
 
+    ExecutorService service = Executors.newFixedThreadPool(8);
+
+    /**
+     * 若 useDirectory 为 true, 则列举出分级的目录效果
+     * 否则，将呈现出所有前缀为key的对象
+     */
+    @Override
+    public List<FileInfo> listStatus(String key, boolean useDirectory) throws IOException {
+        LOG.info("key: {}, useDirectory: {}", key, useDirectory);
+
+        ListConfig listConfig = fsConfig.client.list;
+        // 最终结果
+        List<FileInfo> retFiles = new ArrayList<>();
+
+        // 消息队列
+        BlockingQueue<Product<FileInfo, QiniuException>> fileInfoQueue = new LinkedBlockingQueue<>(listConfig.bufferSize);
+
+        // 生产者
+        ListingProducer producer = new ListingProducer(
+                fileInfoQueue, bucketManager, bucket, key,
+                false, listConfig.singleRequestLimit,
+                useDirectory, listConfig.useListV2,
+                listConfig.offerTimeout
+        );
+
+        // 生产者线程
+        service.submit(producer);
+
+        for (; ; ) {
+            Product<FileInfo, QiniuException> product = fileInfoQueue.poll();
+            // 缓冲区队列为空
+            if (product == null) {
+                continue;
+            }
+            // EOF
+            if (product.isEOF()) {
+                break;
+            }
+            // Exception
+            if (product.hasException()) {
+                throw product.getException();
+            }
+            if (product.hasValue()) {
+                // 既不为空也不为EOF
+                retFiles.add(product.getValue());
+            }
+        }
+
+        return retFiles;
+    }
+
     /**
      * 复制对象
      */
@@ -301,8 +357,8 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     /**
      * 批量复制对象
      */
-    @Override
-    public boolean copyKeys(String oldPrefix, String newPrefix) throws IOException {
+
+    public boolean copyKeysOld(String oldPrefix, String newPrefix) throws IOException {
         FileListing fileListing;
 
         // 为分页遍历提供下一次的遍历标志
@@ -330,6 +386,78 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             }
             marker = fileListing.marker;
         } while (!fileListing.isEOF());
+        return true;
+    }
+
+    @Override
+    public boolean copyKeys(String oldPrefix, String newPrefix) throws IOException {
+        CopyConfig copyConfig = fsConfig.client.copy;
+        // 消息队列
+        // 对象列举生产者队列
+        BlockingQueue<Product<FileInfo, QiniuException>> fileInfoQueue = new LinkedBlockingQueue<>(copyConfig.producer.queueBufferSize);
+        // 批量复制队列
+        BlockingQueue<BatchOperator> operatorQueue = new LinkedBlockingQueue<>(copyConfig.consumer.queueBufferSize);
+
+        // 对象列举生产者
+        ListingProducer producer = new ListingProducer(
+                fileInfoQueue, bucketManager, bucket, oldPrefix,
+                true, copyConfig.producer.singleRequestLimit,
+                false, copyConfig.producer.useV2,
+                copyConfig.producer.offerTimeout
+        );
+
+        // 生产者线程
+        service.submit(producer);
+
+        // 消费者线程
+        int consumerCount = copyConfig.consumer.count;
+        BatchOperationConsumer[] consumers = new BatchOperationConsumer[consumerCount];
+        Future<?>[] futures = new Future[consumerCount];
+        for (int i = 0; i < consumerCount; i++) {
+            consumers[i] = new BatchOperationConsumer(
+                    operatorQueue, bucketManager,
+                    copyConfig.consumer.singleBatchRequestLimit,
+                    copyConfig.consumer.pollTimeout
+            );
+            futures[i] = service.submit(consumers[i]);
+        }
+
+        // 从生产者队列取出产品并加工后放入消费者队列
+        for (; ; ) {
+            Product<FileInfo, QiniuException> product = fileInfoQueue.poll();
+            // 缓冲区队列为空
+            if (product == null) continue;
+            // EOF
+            if (product.isEOF()) break;
+            // Exception
+            if (product.hasException()) throw product.getException();
+            // 无值
+            if (!product.hasValue()) continue;
+
+            String fromFileKey = product.getValue().key;
+            String toFileKey = fromFileKey.replaceFirst(oldPrefix, newPrefix);
+            BatchOperator operator = new CopyOperator(bucket, fromFileKey, bucket, toFileKey);
+
+            boolean success;
+            do {
+                success = operatorQueue.offer(operator);
+            } while (!success);
+        }
+
+        LOG.debug("生产者生产完毕");
+        // 发送关闭信号
+        for (int i = 0; i < consumerCount; i++) {
+            consumers[i].stop();
+        }
+        // 等待所有的消费者消费完毕
+        for (int i = 0; i < consumerCount; i++) {
+            try {
+                futures[i].get();
+                LOG.debug("消费者{}号消费完毕", i);
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }
         return true;
     }
 
@@ -411,8 +539,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     /**
      * 删除该前缀的所有文件夹
      */
-    @Override
-    public boolean deleteKeys(String prefix, boolean recursive) throws IOException {
+    public boolean deleteKeys1(String prefix, boolean recursive) throws IOException {
         boolean hasPrefixObject = false;
 
         FileListing fileListing;
@@ -466,6 +593,63 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             incrementOneReadOps();
             return response.isOK();
         }
+        return true;
+    }
+
+    @Override
+    public boolean deleteKeys(String prefix, boolean recursive) throws IOException {
+        // 消息队列
+        BlockingQueue<Product<FileInfo, QiniuException>> fileInfoQueue = new LinkedBlockingQueue<>(500);
+        BlockingQueue<BatchOperator> operatorQueue = new LinkedBlockingQueue<>(200);
+
+        // 生产者
+        ListingProducer producer = new ListingProducer(
+                fileInfoQueue, bucketManager, bucket, prefix,
+                false, 100,
+                false, false,
+                10
+        );
+
+        // 生产者线程
+        service.submit(producer);
+
+        // 消费者
+        BatchOperationConsumer consumer = new BatchOperationConsumer(
+                operatorQueue, bucketManager, 20, 10
+        );
+        service.submit(consumer);
+        service.submit(consumer);
+
+
+        for (; ; ) {
+            Product<FileInfo, QiniuException> product = fileInfoQueue.poll();
+            // 缓冲区队列为空
+            if (product == null) {
+                continue;
+            }
+            // EOF
+            if (product.isEOF()) {
+                break;
+            }
+            // Exception
+            if (product.hasException()) {
+                throw product.getException();
+            }
+            // 无值
+            if (!product.hasValue()) {
+                continue;
+            }
+
+            try {
+                boolean success;
+                do {
+                    success = operatorQueue.offer(new DeleteOperator(bucket, product.getValue().key), 1, TimeUnit.SECONDS);
+                } while (!success);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         return true;
     }
 

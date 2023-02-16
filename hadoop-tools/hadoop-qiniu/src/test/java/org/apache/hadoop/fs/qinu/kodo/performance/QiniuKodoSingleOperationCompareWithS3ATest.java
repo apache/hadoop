@@ -31,12 +31,18 @@ public class QiniuKodoSingleOperationCompareWithS3ATest {
 
     @Test
     public void testS3AList() throws IOException {
-        s3aFs.listStatus(new Path("/testS3A/CreateSmallFileConcurrentlyTest/"));
+        long ms = System.currentTimeMillis();
+        s3aFs.listStatus(new Path("/testKodo/ListBigDirectorySeriallyTest/"));
+        ms = System.currentTimeMillis() - ms;
+        System.out.println("s3a: " + ms);
     }
 
     @Test
     public void testKodoList() throws IOException {
-        kodoFs.listStatus(new Path("/testS3A/CreateSmallFileConcurrentlyTest/"));
+        long ms = System.currentTimeMillis();
+        kodoFs.listStatus(new Path("/testKodo/ListBigDirectorySeriallyTest/"));
+        ms = System.currentTimeMillis() - ms;
+        System.out.println("kodo: " + ms);
     }
 
     @Test

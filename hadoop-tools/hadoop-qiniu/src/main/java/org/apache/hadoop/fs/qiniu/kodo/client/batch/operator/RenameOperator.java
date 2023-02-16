@@ -1,4 +1,4 @@
-package org.apache.hadoop.fs.qiniu.kodo.client.operator;
+package org.apache.hadoop.fs.qiniu.kodo.client.batch.operator;
 
 import com.qiniu.storage.BucketManager;
 
