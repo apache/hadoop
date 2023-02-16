@@ -5939,6 +5939,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     // Ensure we record the new generation stamp
     getEditLog().logSync();
+    LOG.info("bumpBlockGenerationStamp({}, client={}) success",
+        locatedBlock.getBlock(), clientName);
     return locatedBlock;
   }
   
