@@ -61,8 +61,8 @@ public class DataNodeMetrics {
   @Metric MutableCounterLong bytesRead;
   @Metric("Milliseconds spent reading")
   MutableCounterLong totalReadTime;
-  @Metric MutableRate bytesReadTransferRate;
-  final MutableQuantiles[] bytesReadTransferRateQuantiles;
+  @Metric private MutableRate readTransferRateMBs;
+  final private MutableQuantiles[] readTransferRateMBsQuantiles;
   @Metric MutableCounterLong blocksWritten;
   @Metric MutableCounterLong blocksRead;
   @Metric MutableCounterLong blocksReplicated;
@@ -229,7 +229,7 @@ public class DataNodeMetrics {
     sendDataPacketTransferNanosQuantiles = new MutableQuantiles[len];
     ramDiskBlocksEvictionWindowMsQuantiles = new MutableQuantiles[len];
     ramDiskBlocksLazyPersistWindowMsQuantiles = new MutableQuantiles[len];
-    bytesReadTransferRateQuantiles = new MutableQuantiles[len];
+    readTransferRateMBsQuantiles = new MutableQuantiles[len];
 
     for (int i = 0; i < len; i++) {
       int interval = intervals[i];
@@ -258,8 +258,8 @@ public class DataNodeMetrics {
           "ramDiskBlocksLazyPersistWindows" + interval + "s",
           "Time between the RamDisk block write and disk persist in ms",
           "ops", "latency", interval);
-      bytesReadTransferRateQuantiles[i] = registry.newQuantiles(
-          "bytesReadTransferRate" + interval + "s",
+      readTransferRateMBsQuantiles[i] = registry.newQuantiles(
+          "readTransferRateMBs" + interval + "s",
           "Rate at which bytes are read from datanode calculated in megabytes per second",
           "ops", "rate", interval);
     }
@@ -323,9 +323,9 @@ public class DataNodeMetrics {
     }
   }
 
-  public void addBytesReadTransferRate(long transferRateMBs) {
-    bytesReadTransferRate.add(transferRateMBs);
-    for (MutableQuantiles q : bytesReadTransferRateQuantiles) {
+  public void addReadTransferRateMBs(long transferRateMBs) {
+    readTransferRateMBs.add(transferRateMBs);
+    for (MutableQuantiles q : readTransferRateMBsQuantiles) {
       q.add(transferRateMBs);
     }
   }

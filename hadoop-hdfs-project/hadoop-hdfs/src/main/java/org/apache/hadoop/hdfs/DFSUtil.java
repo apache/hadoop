@@ -1938,12 +1938,15 @@ public class DFSUtil {
   }
 
   /**
-   * Calculate the transfer rate in megabytes/second.
+   * Calculate the transfer rate in megabytes/second. Return -1 for any negative input.
    * @param bytes bytes
    * @param durationMS duration in milliseconds
    * @return the number of megabytes/second of the transfer rate
   */
   public static long transferRateMBs(long bytes, long durationMS) {
+    if (bytes < 0 || durationMS < 0) {
+      return -1;
+    }
     if (durationMS == 0) {
       durationMS = 1;
     }
