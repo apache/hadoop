@@ -94,13 +94,13 @@ public class TestAuditLogger {
   private static final Pattern AUDIT_PATTERN = Pattern.compile(
       ".*allowed=.*?\\s" +
       "ugi=.*?\\s" +
-      "ip=[a-zA-Z0-9.]+/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
+      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
       "cmd=.*?\\ssrc=.*?\\sdst=null\\s" +
       "perm=.*?");
   private static final Pattern AUDIT_WITH_PORT_PATTERN = Pattern.compile(
       ".*allowed=.*?\\s" +
       "ugi=.*?\\s" +
-      "ip=[a-zA-Z0-9.]+/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
+      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
       "cmd=.*?\\ssrc=.*?\\sdst=null\\s" +
       "perm=.*?" +
       "proto=.*?" +
