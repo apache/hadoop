@@ -3,13 +3,13 @@ package org.apache.hadoop.fs.qiniu.kodo.config.client;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.qiniu.kodo.config.AConfigBase;
 
-public class ListConfig extends AConfigBase {
+public class ListProducerConfig extends AConfigBase {
     public final boolean useListV2;
     public final int singleRequestLimit;
     public final int bufferSize;
     public final int offerTimeout;
 
-    public ListConfig(Configuration conf, String namespace) {
+    public ListProducerConfig(Configuration conf, String namespace) {
         super(conf, namespace);
         this.useListV2 = useListV2();
         this.singleRequestLimit = singleRequestLimit();

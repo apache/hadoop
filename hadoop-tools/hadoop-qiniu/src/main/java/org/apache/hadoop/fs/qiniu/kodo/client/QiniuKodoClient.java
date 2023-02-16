@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.qiniu.kodo.config.MissingConfigFieldException;
 import org.apache.hadoop.fs.qiniu.kodo.config.ProxyConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.client.CopyConfig;
-import org.apache.hadoop.fs.qiniu.kodo.config.client.ListConfig;
+import org.apache.hadoop.fs.qiniu.kodo.config.client.ListProducerConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.region.QiniuKodoPublicRegions;
 import org.apache.hadoop.fs.qiniu.kodo.config.region.QiniuKodoRegion;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -304,7 +304,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     public List<FileInfo> listStatus(String key, boolean useDirectory) throws IOException {
         LOG.info("key: {}, useDirectory: {}", key, useDirectory);
 
-        ListConfig listConfig = fsConfig.client.list;
+        ListProducerConfig listConfig = fsConfig.client.list;
         // 最终结果
         List<FileInfo> retFiles = new ArrayList<>();
 
@@ -394,30 +394,30 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         CopyConfig copyConfig = fsConfig.client.copy;
         // 消息队列
         // 对象列举生产者队列
-        BlockingQueue<Product<FileInfo, QiniuException>> fileInfoQueue = new LinkedBlockingQueue<>(copyConfig.producer.queueBufferSize);
+        BlockingQueue<Product<FileInfo, QiniuException>> fileInfoQueue = new LinkedBlockingQueue<>(copyConfig.listProducer.bufferSize);
         // 批量复制队列
-        BlockingQueue<BatchOperator> operatorQueue = new LinkedBlockingQueue<>(copyConfig.consumer.queueBufferSize);
+        BlockingQueue<BatchOperator> operatorQueue = new LinkedBlockingQueue<>(copyConfig.batchConsumer.bufferSize);
 
         // 对象列举生产者
         ListingProducer producer = new ListingProducer(
                 fileInfoQueue, bucketManager, bucket, oldPrefix,
-                true, copyConfig.producer.singleRequestLimit,
-                false, copyConfig.producer.useV2,
-                copyConfig.producer.offerTimeout
+                true, copyConfig.listProducer.singleRequestLimit,
+                false, copyConfig.listProducer.useListV2,
+                copyConfig.listProducer.offerTimeout
         );
 
         // 生产者线程
         service.submit(producer);
 
         // 消费者线程
-        int consumerCount = copyConfig.consumer.count;
+        int consumerCount = copyConfig.batchConsumer.count;
         BatchOperationConsumer[] consumers = new BatchOperationConsumer[consumerCount];
         Future<?>[] futures = new Future[consumerCount];
         for (int i = 0; i < consumerCount; i++) {
             consumers[i] = new BatchOperationConsumer(
                     operatorQueue, bucketManager,
-                    copyConfig.consumer.singleBatchRequestLimit,
-                    copyConfig.consumer.pollTimeout
+                    copyConfig.batchConsumer.singleBatchRequestLimit,
+                    copyConfig.batchConsumer.pollTimeout
             );
             futures[i] = service.submit(consumers[i]);
         }

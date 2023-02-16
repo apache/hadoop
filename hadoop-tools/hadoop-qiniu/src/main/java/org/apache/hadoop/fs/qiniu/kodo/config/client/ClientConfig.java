@@ -5,7 +5,7 @@ import org.apache.hadoop.fs.qiniu.kodo.config.AConfigBase;
 
 public class ClientConfig extends AConfigBase {
     public final CacheConfig cache;
-    public final ListConfig list;
+    public final ListProducerConfig list;
     public final CopyConfig copy;
 
     public ClientConfig(Configuration conf, String namespace) {
@@ -19,8 +19,8 @@ public class ClientConfig extends AConfigBase {
         return new CacheConfig(conf, namespace + ".cache");
     }
 
-    private ListConfig list() {
-        return new ListConfig(conf, namespace + ".list");
+    private ListProducerConfig list() {
+        return new ListProducerConfig(conf, namespace + ".list");
     }
 
     private CopyConfig copy() {
