@@ -333,7 +333,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         .setBindAddress(confRpcAddress.getHostName())
         .setPort(confRpcAddress.getPort())
         .setNumHandlers(handlerCount)
-        .setnumReaders(readerCount)
+        .setNumReaders(readerCount)
         .setQueueSizePerHandler(handlerQueueSize)
         .setVerbose(false)
         .setAlignmentContext(routerStateIdContext)
