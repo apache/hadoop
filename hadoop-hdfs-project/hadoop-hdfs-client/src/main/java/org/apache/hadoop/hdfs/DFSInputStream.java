@@ -198,7 +198,7 @@ public class DFSInputStream extends FSInputStream
   }
 
   /**
-   * clear list of ignored nodes used for hedged reads
+   * Clear list of ignored nodes used for hedged reads.
    */
   private void clearIgnoredNodes(Collection<DatanodeInfo> ignoredNodes) {
     if (ignoredNodes != null) {
