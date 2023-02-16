@@ -5,6 +5,7 @@ import org.apache.hadoop.fs.qiniu.kodo.config.AConfigBase;
 import org.apache.hadoop.fs.qiniu.kodo.config.client.base.ListProducerConfig;
 
 public class ClientConfig extends AConfigBase {
+    public final int nThread;
     public final CacheConfig cache;
     public final ListProducerConfig list;
     public final CopyConfig copy;
@@ -18,6 +19,11 @@ public class ClientConfig extends AConfigBase {
         this.copy = copy();
         this.delete = delete();
         this.rename = rename();
+        this.nThread = nThread();
+    }
+
+    private int nThread() {
+        return conf.getInt(namespace + ".nThread", 16);
     }
 
     private CacheConfig cache() {

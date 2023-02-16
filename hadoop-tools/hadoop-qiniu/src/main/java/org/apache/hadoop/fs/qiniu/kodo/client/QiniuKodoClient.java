@@ -61,13 +61,15 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     private final int uploadSignExpires;
     private final boolean useNoCacheHeader;
     private final QiniuKodoFsConfig fsConfig;
+    private final ExecutorService service;
 
     public QiniuKodoClient(String bucket, QiniuKodoFsConfig fsConfig, FileSystem.Statistics statistics) throws QiniuException, AuthorizationException {
         this.bucket = bucket;
         this.statistics = statistics;
         this.fsConfig = fsConfig;
         this.auth = getAuth(fsConfig);
-
+        this.service = Executors.newFixedThreadPool(fsConfig.client.nThread);
+        
         Configuration configuration = new Configuration();
 
         if (fsConfig.upload.v2.enable) {
@@ -259,8 +261,6 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             return list.items[0];
         }
     }
-
-    ExecutorService service = Executors.newFixedThreadPool(8);
 
     /**
      * 若 useDirectory 为 true, 则列举出分级的目录效果
