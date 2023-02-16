@@ -8787,7 +8787,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         sb.setLength(0);
         sb.append("allowed=").append(succeeded).append("\t")
             .append("ugi=").append(userName).append("\t")
-            .append("ip=").append(addr).append("\t")
+            // InetAddress#tostring can also return hostname in addition to IP address.
+            // To not include hostname regardless of the hostname resolution, we should
+            // only include IP address here. See HADOOP-18628.
+            .append("ip=").append("/").append(addr.getHostAddress()).append("\t")
             .append("cmd=").append(cmd).append("\t")
             .append("src=").append(src).append("\t")
             .append("dst=").append(dst).append("\t");
