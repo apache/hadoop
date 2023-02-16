@@ -9,6 +9,7 @@ public class ClientConfig extends AConfigBase {
     public final ListProducerConfig list;
     public final CopyConfig copy;
     public final DeleteConfig delete;
+    public final RenameConfig rename;
 
     public ClientConfig(Configuration conf, String namespace) {
         super(conf, namespace);
@@ -16,6 +17,7 @@ public class ClientConfig extends AConfigBase {
         this.list = list();
         this.copy = copy();
         this.delete = delete();
+        this.rename = rename();
     }
 
     private CacheConfig cache() {
@@ -32,5 +34,9 @@ public class ClientConfig extends AConfigBase {
 
     private DeleteConfig delete() {
         return new DeleteConfig(conf, namespace + ".delete");
+    }
+
+    private RenameConfig rename() {
+        return new RenameConfig(conf, namespace + ".rename");
     }
 }

@@ -19,6 +19,7 @@ import org.apache.hadoop.fs.qiniu.kodo.client.batch.Product;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.BatchOperator;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.CopyOperator;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.DeleteOperator;
+import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.RenameOperator;
 import org.apache.hadoop.fs.qiniu.kodo.config.MissingConfigFieldException;
 import org.apache.hadoop.fs.qiniu.kodo.config.ProxyConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
@@ -319,6 +320,9 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         return response.isOK();
     }
 
+    /**
+     * 列举并批处理
+     */
     private boolean listAndBatch(
             ListAndBatchBaseConfig config,
             String prefix,
@@ -423,50 +427,15 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      */
     @Override
     public boolean renameKeys(String oldPrefix, String newPrefix) throws IOException {
-        boolean hasPrefixObject = false;
-
-        FileListing fileListing;
-
-        // 为分页遍历提供下一次的遍历标志
-        String marker = null;
-
-        do {
-            fileListing = bucketManager.listFiles(bucket, oldPrefix, marker, 100, "");
-            incrementOneReadOps();
-
-            if (fileListing.items != null) {
-                BucketManager.BatchOperations operations = null;
-                for (FileInfo file : fileListing.items) {
-                    if (file.key.equals(oldPrefix)) {
-                        // 标记一下 prefix 本身留到最后再去修改
-                        hasPrefixObject = true;
-                        continue;
-                    }
-                    if (operations == null) {
-                        operations = new BucketManager.BatchOperations();
-                    }
-                    String destKey = file.key.replaceFirst(oldPrefix, newPrefix);
-                    LOG.debug(" == rename old: {} new: {}", file.key, destKey);
-                    operations.addRenameOp(bucket, file.key, destKey);
+        return listAndBatch(
+                fsConfig.client.rename,
+                oldPrefix,
+                (FileInfo fileInfo) -> {
+                    String fromFileKey = fileInfo.key;
+                    String toFileKey = fromFileKey.replaceFirst(oldPrefix, newPrefix);
+                    return new RenameOperator(bucket, fromFileKey, toFileKey);
                 }
-                if (operations == null) {
-                    continue;
-                }
-                Response response = bucketManager.batch(operations);
-                incrementOneReadOps();
-
-                if (!response.isOK()) {
-                    return false;
-                }
-            }
-            marker = fileListing.marker;
-        } while (!fileListing.isEOF());
-
-        if (hasPrefixObject) {
-            Response response = bucketManager.rename(bucket, oldPrefix, newPrefix);
-            return response.isOK();
-        }
-        return true;
+        );
     }
 
     /**
