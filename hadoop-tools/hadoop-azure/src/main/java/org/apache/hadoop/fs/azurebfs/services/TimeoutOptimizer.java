@@ -186,8 +186,8 @@ public class TimeoutOptimizer {
             timeout = DEFAULT_TIMEOUT;
         }
         requestTimeout = Integer.parseInt(timeout);
-        readTimeout = requestTimeout;
-        connTimeout = requestTimeout - 1;
+        readTimeout = requestTimeout * 1000;
+        connTimeout = readTimeout - 1;
         updateUrl();
     }
 
@@ -204,8 +204,8 @@ public class TimeoutOptimizer {
             } else {
                 requestTimeout *= timeoutIncRate;
             }
-            readTimeout = requestTimeout;
-            connTimeout = requestTimeout - 1;
+            readTimeout = requestTimeout * 1000;
+            connTimeout = readTimeout - 1;
         }
     }
 
