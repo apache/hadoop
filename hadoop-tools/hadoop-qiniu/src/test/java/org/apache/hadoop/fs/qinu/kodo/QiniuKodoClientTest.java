@@ -2,7 +2,6 @@ package org.apache.hadoop.fs.qinu.kodo;
 
 import com.qiniu.common.QiniuException;
 import com.qiniu.storage.BucketManager;
-import com.qiniu.storage.model.FileInfo;
 import com.qiniu.storage.model.FileListing;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
@@ -17,7 +16,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.List;
 
 public class QiniuKodoClientTest {
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoClient.class);
@@ -71,30 +69,6 @@ public class QiniuKodoClientTest {
             }
         }
 
-    }
-
-    @Test
-    public void testListStatus12Equals() throws Exception {
-        // jit
-        client.listStatus("testKodo/ListBigDirectorySeriallyTest/", false);
-        client.listStatusOld("testKodo/ListBigDirectorySeriallyTest/", false);
-
-        long useTime, ms;
-        ms = System.currentTimeMillis();
-        List<FileInfo> fileInfoList1 = client.listStatus("testKodo/ListBigDirectorySeriallyTest/", false);
-        useTime = System.currentTimeMillis() - ms;
-        LOG.info("Use time: {}, size: {}", useTime, fileInfoList1.size());
-
-        ms = System.currentTimeMillis();
-        List<FileInfo> fileInfoList2 = client.listStatusOld("testKodo/ListBigDirectorySeriallyTest/", false);
-        useTime = System.currentTimeMillis() - ms;
-        LOG.info("Use time: {}, size: {}", useTime, fileInfoList2.size());
-        for (int i = 0; i < 10000; i++) {
-            Assert.assertEquals(
-                    fileInfoList1.get(i).key,
-                    fileInfoList2.get(i).key
-            );
-        }
     }
 
     @Test
