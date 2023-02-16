@@ -23,8 +23,8 @@ import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.DeleteOperator;
 import org.apache.hadoop.fs.qiniu.kodo.config.MissingConfigFieldException;
 import org.apache.hadoop.fs.qiniu.kodo.config.ProxyConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
-import org.apache.hadoop.fs.qiniu.kodo.config.client.CopyConfig;
-import org.apache.hadoop.fs.qiniu.kodo.config.client.ListProducerConfig;
+import org.apache.hadoop.fs.qiniu.kodo.config.client.base.ListAndBatchBaseConfig;
+import org.apache.hadoop.fs.qiniu.kodo.config.client.base.ListProducerConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.region.QiniuKodoPublicRegions;
 import org.apache.hadoop.fs.qiniu.kodo.config.region.QiniuKodoRegion;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -391,7 +391,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
     @Override
     public boolean copyKeys(String oldPrefix, String newPrefix) throws IOException {
-        CopyConfig copyConfig = fsConfig.client.copy;
+        ListAndBatchBaseConfig copyConfig = fsConfig.client.copy;
         // 消息队列
         // 对象列举生产者队列
         BlockingQueue<Product<FileInfo, QiniuException>> fileInfoQueue = new LinkedBlockingQueue<>(copyConfig.listProducer.bufferSize);

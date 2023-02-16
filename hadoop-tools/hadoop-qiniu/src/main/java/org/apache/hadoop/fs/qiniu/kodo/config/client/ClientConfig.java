@@ -2,17 +2,20 @@ package org.apache.hadoop.fs.qiniu.kodo.config.client;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.qiniu.kodo.config.AConfigBase;
+import org.apache.hadoop.fs.qiniu.kodo.config.client.base.ListProducerConfig;
 
 public class ClientConfig extends AConfigBase {
     public final CacheConfig cache;
     public final ListProducerConfig list;
     public final CopyConfig copy;
+    public final DeleteConfig delete;
 
     public ClientConfig(Configuration conf, String namespace) {
         super(conf, namespace);
         this.cache = cache();
         this.list = list();
         this.copy = copy();
+        this.delete = delete();
     }
 
     private CacheConfig cache() {
@@ -25,5 +28,9 @@ public class ClientConfig extends AConfigBase {
 
     private CopyConfig copy() {
         return new CopyConfig(conf, namespace + ".copy");
+    }
+
+    private DeleteConfig delete() {
+        return new DeleteConfig(conf, namespace + ".delete");
     }
 }

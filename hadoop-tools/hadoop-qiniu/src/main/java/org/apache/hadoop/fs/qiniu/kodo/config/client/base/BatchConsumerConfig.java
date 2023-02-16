@@ -1,4 +1,4 @@
-package org.apache.hadoop.fs.qiniu.kodo.config.client;
+package org.apache.hadoop.fs.qiniu.kodo.config.client.base;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.qiniu.kodo.config.AConfigBase;
@@ -18,19 +18,19 @@ public class BatchConsumerConfig extends AConfigBase {
         this.pollTimeout = pollTimeout();
     }
 
-    private int bufferSize() {
+    protected int bufferSize() {
         return conf.getInt(namespace + ".bufferSize", 1000);
     }
 
-    private int count() {
+    protected int count() {
         return conf.getInt(namespace + ".count", 4);
     }
 
-    private int singleBatchRequestLimit() {
+    protected int singleBatchRequestLimit() {
         return conf.getInt(namespace + ".singleBatchRequestLimit", 200);
     }
 
-    private int pollTimeout() {
+    protected int pollTimeout() {
         return conf.getInt(namespace + ".pollTimeout", 10);
     }
 
