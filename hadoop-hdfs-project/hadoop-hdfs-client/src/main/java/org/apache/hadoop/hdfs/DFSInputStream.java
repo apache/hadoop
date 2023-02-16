@@ -1352,10 +1352,10 @@ public class DFSInputStream extends FSInputStream
         } catch (InterruptedException ie) {
           // Ignore and retry
         }
-        // if refetch is true then all nodes are in deadlist or ignorelist
-        // we should loop through all futures and remove them so we do not
+        // If refetch is true, then all nodes are in deadNodes or ignoredNodes.
+        // We should loop through all futures and remove them, so we do not
         // have concurrent requests to the same node.
-        // Once all futures are cleared we can clear the ignore list and retry
+        // Once all futures are cleared, we can clear the ignoredNodes and retry.
         if (refetch && futures.isEmpty()) {
           refetchLocations(block, ignored);
         }
