@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,16 +16,5 @@
  * limitations under the License.
  */
 
--- Script to create a new User in SQLServer for the Federation StateStore
-
-USE [FederationStateStore]
-GO
-
-CREATE LOGIN FederationUser with password = 'Federation@Password', default_database=[FederationStateStore];
-GO
-
-CREATE USER FederationUser FOR LOGIN FederationUser WITH default_schema=dbo;
-GO
-
-EXEC sp_addrolemember 'db_owner', 'FederationUser';
-GO
+/** Router Cleaner package. **/
+package org.apache.hadoop.yarn.server.router.cleaner;

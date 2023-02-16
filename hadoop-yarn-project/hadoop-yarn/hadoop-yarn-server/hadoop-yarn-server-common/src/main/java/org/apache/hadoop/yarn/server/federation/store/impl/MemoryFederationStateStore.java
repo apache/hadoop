@@ -34,6 +34,7 @@ import java.util.Comparator;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -504,8 +505,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
     RouterStoreToken storeToken = request.getRouterStoreToken();
     RMDelegationTokenIdentifier tokenIdentifier =
         (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
-    Long renewDate = storeToken.getRenewDate();
-    storeOrUpdateRouterRMDT(tokenIdentifier, renewDate, false);
+    storeOrUpdateRouterRMDT(tokenIdentifier, storeToken, false);
     return RouterRMTokenResponse.newInstance(storeToken);
   }
 
@@ -515,10 +515,10 @@ public class MemoryFederationStateStore implements FederationStateStore {
     RouterStoreToken storeToken = request.getRouterStoreToken();
     RMDelegationTokenIdentifier tokenIdentifier =
         (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
-    Long renewDate = storeToken.getRenewDate();
-    Map<RMDelegationTokenIdentifier, Long> rmDTState = routerRMSecretManagerState.getTokenState();
+    Map<RMDelegationTokenIdentifier, RouterStoreToken> rmDTState =
+        routerRMSecretManagerState.getTokenState();
     rmDTState.remove(tokenIdentifier);
-    storeOrUpdateRouterRMDT(tokenIdentifier, renewDate, true);
+    storeOrUpdateRouterRMDT(tokenIdentifier, storeToken, true);
     return RouterRMTokenResponse.newInstance(storeToken);
   }
 
@@ -528,7 +528,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
     RouterStoreToken storeToken = request.getRouterStoreToken();
     RMDelegationTokenIdentifier tokenIdentifier =
         (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
-    Map<RMDelegationTokenIdentifier, Long> rmDTState = routerRMSecretManagerState.getTokenState();
+    Map<RMDelegationTokenIdentifier, RouterStoreToken> rmDTState =
+        routerRMSecretManagerState.getTokenState();
     rmDTState.remove(tokenIdentifier);
     return RouterRMTokenResponse.newInstance(storeToken);
   }
@@ -539,13 +540,13 @@ public class MemoryFederationStateStore implements FederationStateStore {
     RouterStoreToken storeToken = request.getRouterStoreToken();
     RMDelegationTokenIdentifier tokenIdentifier =
         (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
-    Map<RMDelegationTokenIdentifier, Long> rmDTState = routerRMSecretManagerState.getTokenState();
+    Map<RMDelegationTokenIdentifier, RouterStoreToken> rmDTState =
+        routerRMSecretManagerState.getTokenState();
     if (!rmDTState.containsKey(tokenIdentifier)) {
       LOG.info("Router RMDelegationToken: {} does not exist.", tokenIdentifier);
       throw new IOException("Router RMDelegationToken: " + tokenIdentifier + " does not exist.");
     }
-    RouterStoreToken resultToken =
-        RouterStoreToken.newInstance(tokenIdentifier, rmDTState.get(tokenIdentifier));
+    RouterStoreToken resultToken = rmDTState.get(tokenIdentifier);
     return RouterRMTokenResponse.newInstance(resultToken);
   }
 
@@ -575,13 +576,14 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   private void storeOrUpdateRouterRMDT(RMDelegationTokenIdentifier rmDTIdentifier,
-      Long renewDate, boolean isUpdate) throws IOException {
-    Map<RMDelegationTokenIdentifier, Long> rmDTState = routerRMSecretManagerState.getTokenState();
+      RouterStoreToken routerStoreToken, boolean isUpdate) throws IOException {
+    Map<RMDelegationTokenIdentifier, RouterStoreToken> rmDTState =
+        routerRMSecretManagerState.getTokenState();
     if (rmDTState.containsKey(rmDTIdentifier)) {
       LOG.info("Error storing info for RMDelegationToken: {}.", rmDTIdentifier);
       throw new IOException("Router RMDelegationToken: " + rmDTIdentifier + "is already stored.");
     }
-    rmDTState.put(rmDTIdentifier, renewDate);
+    rmDTState.put(rmDTIdentifier, routerStoreToken);
     if (!isUpdate) {
       routerRMSecretManagerState.setDtSequenceNumber(rmDTIdentifier.getSequenceNumber());
     }
@@ -614,5 +616,15 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @VisibleForTesting
   public void setMembership(Map<SubClusterId, SubClusterInfo> membership) {
     this.membership = membership;
+  }
+
+  @VisibleForTesting
+  public void setExpiredHeartbeat(SubClusterId subClusterId, long heartBearTime)
+      throws YarnRuntimeException {
+    if(!membership.containsKey(subClusterId)){
+      throw new YarnRuntimeException("subClusterId = " + subClusterId + "not exist");
+    }
+    SubClusterInfo subClusterInfo = membership.get(subClusterId);
+    subClusterInfo.setLastHeartBeat(heartBearTime);
   }
 }
