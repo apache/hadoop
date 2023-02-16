@@ -13,7 +13,6 @@ import com.qiniu.util.StringMap;
 import com.qiniu.util.StringUtils;
 import okhttp3.Request;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoUtils;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.BatchOperationConsumer;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.ListingProducer;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.Product;
@@ -36,6 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.*;
+import java.util.function.Function;
 
 public class QiniuKodoClient implements IQiniuKodoClient {
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoClient.class);
@@ -259,41 +259,6 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         }
     }
 
-    public List<FileInfo> listStatusOld(String key, boolean useDirectory) throws IOException {
-        LOG.info("key: {}, useDirectory: {}", key, useDirectory);
-        List<FileInfo> retFiles = new ArrayList<>();
-
-        String marker = null;
-        FileListing fileListing;
-        do {
-            fileListing = bucketManager.listFiles(bucket, key, marker, 1000, useDirectory ? QiniuKodoUtils.PATH_SEPARATOR : "");
-
-            incrementOneReadOps();
-
-            // 列举出除自身外的所有对象
-            if (fileListing.items != null) {
-                for (FileInfo file : fileListing.items) {
-                    if (key.equals(file.key)) {
-                        continue;
-                    }
-                    retFiles.add(file);
-                }
-            }
-
-            // 列举出目录
-            if (fileListing.commonPrefixes != null) {
-                for (String dirPath : fileListing.commonPrefixes) {
-                    FileInfo dir = new FileInfo();
-                    dir.key = dirPath;
-                    retFiles.add(dir);
-                }
-            }
-            marker = fileListing.marker;
-        } while (!fileListing.isEOF());
-
-        return retFiles;
-    }
-
     ExecutorService service = Executors.newFixedThreadPool(8);
 
     /**
@@ -314,7 +279,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         // 生产者
         ListingProducer producer = new ListingProducer(
                 fileInfoQueue, bucketManager, bucket, key,
-                false, listConfig.singleRequestLimit,
+                listConfig.singleRequestLimit,
                 useDirectory, listConfig.useListV2,
                 listConfig.offerTimeout
         );
@@ -354,63 +319,28 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         return response.isOK();
     }
 
-    /**
-     * 批量复制对象
-     */
-
-    public boolean copyKeysOld(String oldPrefix, String newPrefix) throws IOException {
-        FileListing fileListing;
-
-        // 为分页遍历提供下一次的遍历标志
-        String marker = null;
-
-        do {
-            fileListing = bucketManager.listFiles(bucket, oldPrefix, marker, 100, "");
-            if (fileListing.items != null) {
-                BucketManager.BatchOperations operations = null;
-                for (FileInfo file : fileListing.items) {
-                    if (operations == null) {
-                        operations = new BucketManager.BatchOperations();
-                    }
-                    String destKey = file.key.replaceFirst(oldPrefix, newPrefix);
-                    LOG.debug(" == copy old: {} new: {}", file.key, destKey);
-                    operations.addCopyOp(bucket, file.key, bucket, destKey);
-                }
-                if (operations == null) {
-                    continue;
-                }
-                Response response = bucketManager.batch(operations);
-                if (!response.isOK()) {
-                    return false;
-                }
-            }
-            marker = fileListing.marker;
-        } while (!fileListing.isEOF());
-        return true;
-    }
-
-    @Override
-    public boolean copyKeys(String oldPrefix, String newPrefix) throws IOException {
-        ListAndBatchBaseConfig copyConfig = fsConfig.client.copy;
+    private boolean listAndBatch(
+            ListAndBatchBaseConfig config,
+            String prefix,
+            Function<FileInfo, BatchOperator> f
+    ) throws IOException {
         // 消息队列
         // 对象列举生产者队列
-        BlockingQueue<Product<FileInfo, QiniuException>> fileInfoQueue = new LinkedBlockingQueue<>(copyConfig.listProducer.bufferSize);
-        // 批量复制队列
-        BlockingQueue<BatchOperator> operatorQueue = new LinkedBlockingQueue<>(copyConfig.batchConsumer.bufferSize);
+        BlockingQueue<Product<FileInfo, QiniuException>> fileInfoQueue = new LinkedBlockingQueue<>(config.listProducer.bufferSize);
+        // 批处理队列
+        BlockingQueue<BatchOperator> operatorQueue = new LinkedBlockingQueue<>(config.batchConsumer.bufferSize);
 
         // 对象列举生产者
         ListingProducer producer = new ListingProducer(
-                fileInfoQueue, bucketManager, bucket, oldPrefix,
-                true, copyConfig.listProducer.singleRequestLimit,
-                false, copyConfig.listProducer.useListV2,
-                copyConfig.listProducer.offerTimeout
+                fileInfoQueue, bucketManager, bucket, prefix,
+                config.listProducer.singleRequestLimit, false,
+                config.listProducer.useListV2,
+                config.listProducer.offerTimeout
         );
-
         // 生产者线程
         service.submit(producer);
-
         // 消费者线程
-        int consumerCount = copyConfig.batchConsumer.count;
+        int consumerCount = config.batchConsumer.count;
         BatchOperationConsumer[] consumers = new BatchOperationConsumer[consumerCount];
         Future<?>[] futures = new Future[consumerCount];
 
@@ -418,8 +348,8 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         for (int i = 0; i < consumerCount; i++) {
             consumers[i] = new BatchOperationConsumer(
                     operatorQueue, bucketManager,
-                    copyConfig.batchConsumer.singleBatchRequestLimit,
-                    copyConfig.batchConsumer.pollTimeout
+                    config.batchConsumer.singleBatchRequestLimit,
+                    config.batchConsumer.pollTimeout
             );
             futures[i] = service.submit(consumers[i]);
         }
@@ -436,13 +366,10 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             // 无值
             if (!product.hasValue()) continue;
 
-            String fromFileKey = product.getValue().key;
-            String toFileKey = fromFileKey.replaceFirst(oldPrefix, newPrefix);
-            BatchOperator operator = new CopyOperator(bucket, fromFileKey, bucket, toFileKey);
 
             boolean success;
             do {
-                success = operatorQueue.offer(operator);
+                success = operatorQueue.offer(f.apply(product.getValue()));
             } while (!success);
         }
 
@@ -460,7 +387,21 @@ public class QiniuKodoClient implements IQiniuKodoClient {
                 throw new RuntimeException(e);
             }
         }
+
         return true;
+    }
+
+    @Override
+    public boolean copyKeys(String oldPrefix, String newPrefix) throws IOException {
+        return listAndBatch(
+                fsConfig.client.copy,
+                oldPrefix,
+                (FileInfo fileInfo) -> {
+                    String fromFileKey = fileInfo.key;
+                    String toFileKey = fromFileKey.replaceFirst(oldPrefix, newPrefix);
+                    return new CopyOperator(bucket, fromFileKey, bucket, toFileKey);
+                }
+        );
     }
 
     /**
@@ -538,121 +479,13 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         return response.isOK();
     }
 
-    /**
-     * 删除该前缀的所有文件夹
-     */
-    public boolean deleteKeys1(String prefix, boolean recursive) throws IOException {
-        boolean hasPrefixObject = false;
-
-        FileListing fileListing;
-
-        // 为分页遍历提供下一次的遍历标志
-        String marker = null;
-
-        do {
-            fileListing = bucketManager.listFiles(bucket, prefix, marker, 100, "");
-            for (FileInfo file : fileListing.items) {
-                // 略过自身
-                if (file.key.equals(prefix)) {
-                    continue;
-                }
-                // 除去自身外还有子文件文件，但未 recursive 抛出异常
-                if (!recursive) {
-                    throw new IOException("file" + prefix + "is not empty");
-                }
-            }
-            incrementOneReadOps();
-
-            if (fileListing.items != null) {
-                BucketManager.BatchOperations operations = new BucketManager.BatchOperations();
-                boolean shouldExecBatch = false;
-                for (FileInfo file : fileListing.items) {
-                    if (file.key.equals(prefix)) {
-                        // 标记一下 prefix 本身留到最后再去删除
-                        hasPrefixObject = true;
-                        continue;
-                    }
-                    shouldExecBatch = true;
-                    operations.addDeleteOp(bucket, file.key);
-                }
-                if (!shouldExecBatch) {
-                    continue;
-                }
-                Response response = bucketManager.batch(operations);
-                if (statistics != null) {
-                    statistics.incrementReadOps(1);
-                }
-
-                if (!response.isOK()) {
-                    return false;
-                }
-            }
-            marker = fileListing.marker;
-        } while (!fileListing.isEOF());
-
-        if (hasPrefixObject) {
-            Response response = bucketManager.delete(bucket, prefix);
-            incrementOneReadOps();
-            return response.isOK();
-        }
-        return true;
-    }
-
     @Override
     public boolean deleteKeys(String prefix, boolean recursive) throws IOException {
-        // 消息队列
-        BlockingQueue<Product<FileInfo, QiniuException>> fileInfoQueue = new LinkedBlockingQueue<>(500);
-        BlockingQueue<BatchOperator> operatorQueue = new LinkedBlockingQueue<>(200);
-
-        // 生产者
-        ListingProducer producer = new ListingProducer(
-                fileInfoQueue, bucketManager, bucket, prefix,
-                false, 100,
-                false, false,
-                10
+        return listAndBatch(
+                fsConfig.client.delete,
+                prefix,
+                e -> new DeleteOperator(bucket, e.key)
         );
-
-        // 生产者线程
-        service.submit(producer);
-
-        // 消费者
-        BatchOperationConsumer consumer = new BatchOperationConsumer(
-                operatorQueue, bucketManager, 20, 10
-        );
-        service.submit(consumer);
-        service.submit(consumer);
-
-
-        for (; ; ) {
-            Product<FileInfo, QiniuException> product = fileInfoQueue.poll();
-            // 缓冲区队列为空
-            if (product == null) {
-                continue;
-            }
-            // EOF
-            if (product.isEOF()) {
-                break;
-            }
-            // Exception
-            if (product.hasException()) {
-                throw product.getException();
-            }
-            // 无值
-            if (!product.hasValue()) {
-                continue;
-            }
-
-            try {
-                boolean success;
-                do {
-                    success = operatorQueue.offer(new DeleteOperator(bucket, product.getValue().key), 1, TimeUnit.SECONDS);
-                } while (!success);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        return true;
     }
 
     private void incrementOneReadOps() {

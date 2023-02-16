@@ -14,7 +14,6 @@ public class ListingProducer implements Runnable {
     private final BucketManager bucketManager;
     private final String keyPrefix;
     private final String bucketName;
-    private final boolean containsSelf;
 
     private final int singleRequestLimit;
     private final boolean useDirectory;
@@ -28,7 +27,6 @@ public class ListingProducer implements Runnable {
      * @param bucketManager      bucketManager
      * @param bucketName         列举的bucket名称
      * @param keyPrefix          列举的key前缀
-     * @param containsSelf       是否包含keyPrefix自身
      * @param singleRequestLimit 单次请求获取最大限制的列举数目
      * @param useDirectory       是否使用文件夹目录结构，将会列举出文件夹结构
      */
@@ -37,7 +35,6 @@ public class ListingProducer implements Runnable {
             BucketManager bucketManager,
             String bucketName,
             String keyPrefix,
-            boolean containsSelf,
             int singleRequestLimit,
             boolean useDirectory,
             boolean useV2,
@@ -47,7 +44,6 @@ public class ListingProducer implements Runnable {
         this.bucketManager = bucketManager;
         this.keyPrefix = keyPrefix;
         this.bucketName = bucketName;
-        this.containsSelf = containsSelf;
         this.singleRequestLimit = singleRequestLimit;
         this.useDirectory = useDirectory;
         this.useV2 = useV2;
@@ -113,10 +109,6 @@ public class ListingProducer implements Runnable {
             fileListing = listFiles(marker);
             if (fileListing.items != null) {
                 for (FileInfo file : fileListing.items) {
-                    // containSelf 关闭且key equals keyPrefix，则跳过
-                    if (!containsSelf && file.key.equals(keyPrefix)) {
-                        continue;
-                    }
                     offer(file);
                 }
             }
