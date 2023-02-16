@@ -1357,7 +1357,7 @@ public class DFSInputStream extends FSInputStream
         // have concurrent requests to the same node.
         // Once all futures are cleared, we can clear the ignoredNodes and retry.
         if (refetch && futures.isEmpty()) {
-          refetchLocations(block, ignored);
+          block = refetchLocations(block, ignored);
         }
         // We got here if exception. Ignore this node on next go around IFF
         // we found a chosenNode to hedge read against.
