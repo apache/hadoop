@@ -113,7 +113,7 @@ public class TimeoutOptimizer {
         }
 
         String query = url.getQuery();
-        int timeoutPos = query.indexOf("timeout");
+        Integer timeoutPos = new Integer(query.indexOf("timeout"));
         if (timeoutPos < 0) {
             // no value of timeout exists in the URL
             // no optimization is needed for this particular request as well
@@ -216,10 +216,10 @@ public class TimeoutOptimizer {
             URIBuilder uriBuilder = new URIBuilder(url.toURI());
             uriBuilder.setParameter(HttpQueryParams.QUERY_PARAM_TIMEOUT, Integer.toString(requestTimeout));
             updatedUrl = uriBuilder.build().toURL();
-        } catch (URISyntaxException e) {
-
         } catch (MalformedURLException e) {
-
+            throw new RuntimeException(e);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
         }
         url = updatedUrl;
     }
