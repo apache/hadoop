@@ -78,7 +78,7 @@ public class TestMemoryFederationStateStore extends FederationStateStoreBaseTest
         memoryStateStore.getRouterRMSecretManagerState();
     assertNotNull(secretManagerState);
 
-    Map<RMDelegationTokenIdentifier, Long> tokenStateMap =
+    Map<RMDelegationTokenIdentifier, RouterStoreToken> tokenStateMap =
         secretManagerState.getTokenState();
     assertNotNull(tokenStateMap);
 

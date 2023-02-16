@@ -866,9 +866,9 @@ extends AbstractDelegationTokenIdentifier>
   /**
    * Add token stats to the owner to token count mapping.
    *
-   * @param id
+   * @param id token id.
    */
-  private void addTokenForOwnerStats(TokenIdent id) {
+  protected void addTokenForOwnerStats(TokenIdent id) {
     String realOwner = getTokenRealOwner(id);
     tokenOwnerStats.put(realOwner,
         tokenOwnerStats.getOrDefault(realOwner, 0L)+1);

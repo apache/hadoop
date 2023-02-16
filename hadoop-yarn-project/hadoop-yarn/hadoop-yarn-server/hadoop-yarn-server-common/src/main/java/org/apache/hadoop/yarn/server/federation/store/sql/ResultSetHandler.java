@@ -16,16 +16,15 @@
  * limitations under the License.
  */
 
--- Script to create a new User in SQLServer for the Federation StateStore
+package org.apache.hadoop.yarn.server.federation.store.sql;
 
-USE [FederationStateStore]
-GO
+import java.sql.SQLException;
 
-CREATE LOGIN FederationUser with password = 'Federation@Password', default_database=[FederationStateStore];
-GO
-
-CREATE USER FederationUser FOR LOGIN FederationUser WITH default_schema=dbo;
-GO
-
-EXEC sp_addrolemember 'db_owner', 'FederationUser';
-GO
+/**
+ * Result Set Handler.
+ *
+ * @param <T> Generic T.
+ */
+public interface ResultSetHandler<T> {
+  T handle(Object... params) throws SQLException;
+}
