@@ -32,7 +32,6 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -130,7 +129,7 @@ public class TestAuditLogs {
     util.createFiles(fs, fileName);
 
     // make sure the appender is what it's supposed to be
-    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    Logger logger = FSNamesystem.AUDIT_LOG;
     @SuppressWarnings("unchecked")
     List<Appender> appenders = Collections.list(logger.getAllAppenders());
     assertEquals(1, appenders.size());
@@ -283,7 +282,7 @@ public class TestAuditLogs {
 
   /** Sets up log4j logger for auditlogs */
   private void setupAuditLogs() throws IOException {
-    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    Logger logger = FSNamesystem.AUDIT_LOG;
     // enable logging now that the test is ready to run
     logger.setLevel(Level.INFO);
   }
@@ -303,7 +302,7 @@ public class TestAuditLogs {
     disableAuditLog();
     PatternLayout layout = new PatternLayout("%m%n");
     RollingFileAppender appender = new RollingFileAppender(layout, auditLogFile);
-    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    Logger logger = FSNamesystem.AUDIT_LOG;
     logger.addAppender(appender);
   }
 
@@ -319,7 +318,7 @@ public class TestAuditLogs {
     disableAuditLog();
 
     // Close the appenders and force all logs to be flushed
-    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    Logger logger = FSNamesystem.AUDIT_LOG;
     Enumeration<?> appenders = logger.getAllAppenders();
     while (appenders.hasMoreElements()) {
       Appender appender = (Appender)appenders.nextElement();
@@ -352,7 +351,7 @@ public class TestAuditLogs {
     disableAuditLog();
 
     // Close the appenders and force all logs to be flushed
-    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    Logger logger = FSNamesystem.AUDIT_LOG;
     Enumeration<?> appenders = logger.getAllAppenders();
     while (appenders.hasMoreElements()) {
       Appender appender = (Appender)appenders.nextElement();

@@ -103,4 +103,16 @@ public class ITestS3AClosedFS extends AbstractS3ATestBase {
         () ->  getFileSystem().open(path("to-open")));
   }
 
+  @Test
+  public void testClosedInstrumentation() throws Exception {
+    // no metrics
+    Assertions.assertThat(S3AInstrumentation.hasMetricSystem())
+        .describedAs("S3AInstrumentation.hasMetricSystem()")
+        .isFalse();
+
+    Assertions.assertThat(getFileSystem().getIOStatistics())
+        .describedAs("iostatistics of %s", getFileSystem())
+        .isNotNull();
+  }
+
 }

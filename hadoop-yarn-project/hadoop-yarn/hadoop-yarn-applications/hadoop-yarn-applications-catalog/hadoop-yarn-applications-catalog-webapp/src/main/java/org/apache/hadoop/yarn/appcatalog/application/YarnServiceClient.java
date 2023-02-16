@@ -21,8 +21,6 @@ package org.apache.hadoop.yarn.appcatalog.application;
 import java.io.IOException;
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.appcatalog.model.AppEntry;
@@ -39,13 +37,15 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Driver class for calling YARN Resource Manager REST API.
  */
 public class YarnServiceClient {
 
-  private static final Log LOG = LogFactory.getLog(YarnServiceClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(YarnServiceClient.class);
   private static Configuration conf = new Configuration();
   private static ClientConfig getClientConfig() {
     ClientConfig config = new DefaultClientConfig();

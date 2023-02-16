@@ -146,7 +146,8 @@ public abstract class Shell {
    * @param arg the argument to quote
    * @return the quoted string
    */
-  static String bashQuote(String arg) {
+  @InterfaceAudience.Private
+  public static String bashQuote(String arg) {
     StringBuilder buffer = new StringBuilder(arg.length() + 2);
     buffer.append('\'')
         .append(arg.replace("'", "'\\''"))

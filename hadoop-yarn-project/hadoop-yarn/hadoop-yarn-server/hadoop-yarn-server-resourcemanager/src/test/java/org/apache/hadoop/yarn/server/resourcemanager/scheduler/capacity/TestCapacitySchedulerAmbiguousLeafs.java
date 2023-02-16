@@ -24,7 +24,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -52,7 +52,7 @@ public class TestCapacitySchedulerAmbiguousLeafs {
     final ApplicationAttemptId appAttemptId = TestUtils
         .getMockApplicationAttemptId(appId++, 1);
 
-    Resource resource = BuilderUtils.newResource(1024, 1);
+    Resource resource = Resources.createResource(1024);
     ContainerLaunchContext amContainerSpec = ContainerLaunchContext
         .newInstance(null, null, null, null, null, null);
     ApplicationSubmissionContext asc = ApplicationSubmissionContext
