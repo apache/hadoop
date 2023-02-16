@@ -577,12 +577,9 @@ class S3ABlockOutputStream extends OutputStream implements
             builder.putOptions,
         false);
 
-          // TODO: You cannot currently add progress listeners to requests not via the TM.
-          // There is an open ticket for this with the SDK team. But need to check how important
-          // this is for us?
-    //    BlockUploadProgress callback =
-    //        new BlockUploadProgress(
-    //            block, progressListener,  now());
+        BlockUploadProgress progressCallback =
+            new BlockUploadProgress(
+                block, now());
     // putObjectRequest.setGeneralProgressListener(callback);
     statistics.blockUploadQueued(size);
     ListenableFuture<PutObjectResponse> putObjectResult =
@@ -590,8 +587,11 @@ class S3ABlockOutputStream extends OutputStream implements
           try {
             // the putObject call automatically closes the input
             // stream afterwards.
-            return writeOperationHelper.putObject(putObjectRequest, builder.putOptions, uploadData,
-                uploadData.hasFile());
+            PutObjectResponse response =
+                writeOperationHelper.putObject(putObjectRequest, builder.putOptions, uploadData,
+                    uploadData.hasFile());
+            progressCallback.transferredBytes();
+            return response;
           } finally {
             cleanupWithLogger(LOG, uploadData, block);
           }
@@ -863,12 +863,8 @@ class S3ABlockOutputStream extends OutputStream implements
         throw e;
       }
 
-      // TODO: You cannot currently add progress listeners to requests not via the TM.
-      // See also putObject
-      // BlockUploadProgress callback =
-      //    new BlockUploadProgress(
-      //        block, progressListener, now());
-      // request.setGeneralProgressListener(callback);
+       BlockUploadProgress progressCallback =
+          new BlockUploadProgress(block, now());
 
       statistics.blockUploadQueued(block.dataSize());
       ListenableFuture<CompletedPart> partETagFuture =
@@ -878,12 +874,18 @@ class S3ABlockOutputStream extends OutputStream implements
             try {
               LOG.debug("Uploading part {} for id '{}'",
                   currentPartNumber, uploadId);
+
+              progressCallback.partTransferStarted();
+
               UploadPartResponse response = writeOperationHelper
                   .uploadPart(request, requestBody);
               LOG.debug("Completed upload of {} to part {}",
                   block, response.eTag());
               LOG.debug("Stream statistics of {}", statistics);
               partsUploaded++;
+
+              progressCallback.partTransferCompleted();
+
               return CompletedPart.builder()
                   .eTag(response.eTag())
                   .partNumber(currentPartNumber)
@@ -891,6 +893,7 @@ class S3ABlockOutputStream extends OutputStream implements
             } catch (IOException e) {
               // save immediately.
               noteUploadFailure(e);
+              progressCallback.partTransferFailed();
               throw e;
             } finally {
               // close the stream and block
@@ -992,6 +995,60 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   public static BlockOutputStreamBuilder builder() {
     return new BlockOutputStreamBuilder();
+  }
+
+
+  /**
+   * The upload progress listener registered for events returned
+   * during the upload of a single block.
+   * It updates statistics and handles the end of the upload.
+   * Transfer failures are logged at WARN.
+   */
+  private final class BlockUploadProgress  {
+
+    private final S3ADataBlocks.DataBlock block;
+    private final Instant transferQueueTime;
+    private Instant transferStartTime;
+    private int size;
+
+    /**
+     * Track the progress of a single block upload.
+     * @param block block to monitor
+     * @param transferQueueTime time the block was transferred
+     * into the queue
+     */
+    private BlockUploadProgress(S3ADataBlocks.DataBlock block,
+        Instant transferQueueTime) {
+      this.block = block;
+      this.transferQueueTime = transferQueueTime;
+      this.size = block.dataSize();
+    }
+
+    public void transferredBytes() {
+      statistics.bytesTransferred(size);
+    }
+
+    public void partTransferStarted() {
+      transferStartTime = now();
+      statistics.blockUploadStarted(
+          Duration.between(transferQueueTime, transferStartTime),
+          size);
+      statistics.bytesTransferred(size);
+      incrementWriteOperations();
+    }
+
+    public void partTransferCompleted() {
+      statistics.blockUploadCompleted(
+          Duration.between(transferStartTime, now()),
+          size);
+    }
+
+    public void partTransferFailed() {
+      statistics.blockUploadFailed(
+          Duration.between(transferStartTime, now()),
+          size);
+      LOG.warn("Transfer failure of block {}", block);
+    }
   }
 
   /**
