@@ -413,6 +413,8 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         int consumerCount = copyConfig.batchConsumer.count;
         BatchOperationConsumer[] consumers = new BatchOperationConsumer[consumerCount];
         Future<?>[] futures = new Future[consumerCount];
+
+        // 多消费者共享一个队列
         for (int i = 0; i < consumerCount; i++) {
             consumers[i] = new BatchOperationConsumer(
                     operatorQueue, bucketManager,

@@ -67,7 +67,9 @@ public class BatchOperationConsumer implements Runnable {
 
     @Override
     public void run() {
-        while (isRunning) {
+        // is Running == true or
+        // queue非空
+        while (isRunning || !queue.isEmpty()) {
             loop();
         }
         // 提交剩余的批处理
