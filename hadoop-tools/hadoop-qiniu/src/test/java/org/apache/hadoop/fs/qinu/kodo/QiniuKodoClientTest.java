@@ -117,4 +117,31 @@ public class QiniuKodoClientTest {
         useTime = System.currentTimeMillis() - ms;
         LOG.info("Use time: {}", useTime);
     }
+
+    @Test
+    public void testCopyAndCount() throws Exception {
+        long useTime, ms;
+        String oldPrefix = "testKodo/ListBigDirectorySeriallyTest/";
+        String newPrefix = "testClient/copyKey123/";
+
+        ms = System.currentTimeMillis();
+        int s1 = client.listStatus(oldPrefix, false).size();
+        useTime = System.currentTimeMillis() - ms;
+        LOG.info("Use time: {}", useTime);
+
+        client.copyKeys(oldPrefix, newPrefix);
+
+        ms = System.currentTimeMillis();
+        client.copyKeys(oldPrefix, newPrefix);
+        useTime = System.currentTimeMillis() - ms;
+        LOG.info("Use time: {}", useTime);
+
+        ms = System.currentTimeMillis();
+        int s2 = client.listStatus(newPrefix, false).size();
+        useTime = System.currentTimeMillis() - ms;
+        LOG.info("Use time: {}", useTime);
+
+        Assert.assertEquals(s1, s2);
+    }
+
 }
