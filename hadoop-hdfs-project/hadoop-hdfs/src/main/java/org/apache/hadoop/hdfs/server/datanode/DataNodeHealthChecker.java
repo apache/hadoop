@@ -90,7 +90,8 @@ public class DataNodeHealthChecker {
     } else {
       LOGGER.trace("To terminate the datanode if it does not stay healthy or connected to "
               + "active namenode for given time duration, provide positive time duration "
-              + "value in millies for config {}", DFSConfigKeys.DFS_DATANODE_HEALTH_ACTIVENNCONNECT_TIMEOUT);
+              + "value in millies for config {}",
+          DFSConfigKeys.DFS_DATANODE_HEALTH_ACTIVENNCONNECT_TIMEOUT);
     }
   }
 
