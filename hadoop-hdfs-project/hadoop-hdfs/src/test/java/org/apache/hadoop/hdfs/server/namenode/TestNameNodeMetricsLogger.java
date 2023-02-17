@@ -19,8 +19,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.function.Supplier;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -70,8 +68,7 @@ public class TestNameNodeMetricsLogger {
   @Test
   public void testMetricsLoggerIsAsync() throws IOException {
     makeNameNode(true);
-    org.apache.log4j.Logger logger =
-        ((Log4JLogger) NameNode.MetricsLog).getLogger();
+    org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(NameNode.METRICS_LOG_NAME);
     @SuppressWarnings("unchecked")
     List<Appender> appenders = Collections.list(logger.getAllAppenders());
     assertTrue(appenders.get(0) instanceof AsyncAppender);
@@ -90,7 +87,7 @@ public class TestNameNodeMetricsLogger {
     makeNameNode(true);     // Log metrics early and often.
     final PatternMatchingAppender appender =
         new PatternMatchingAppender("^.*FakeMetric42.*$");
-    addAppender(NameNode.MetricsLog, appender);
+    addAppender(org.apache.log4j.Logger.getLogger(NameNode.METRICS_LOG_NAME), appender);
 
     // Ensure that the supplied pattern was matched.
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
@@ -118,8 +115,7 @@ public class TestNameNodeMetricsLogger {
     return new TestNameNode(conf);
   }
 
-  private void addAppender(Log log, Appender appender) {
-    org.apache.log4j.Logger logger = ((Log4JLogger) log).getLogger();
+  private void addAppender(org.apache.log4j.Logger logger, Appender appender) {
     @SuppressWarnings("unchecked")
     List<Appender> appenders = Collections.list(logger.getAllAppenders());
     ((AsyncAppender) appenders.get(0)).addAppender(appender);

@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.http;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.minikdc.MiniKdc;
@@ -52,8 +50,6 @@ import static org.junit.Assert.assertTrue;
  * This class is tested for http server with SPNEGO authentication.
  */
 public class TestHttpServerWithSpnego {
-
-  static final Log LOG = LogFactory.getLog(TestHttpServerWithSpnego.class);
 
   private static final String SECRET_STR = "secret";
   private static final String HTTP_USER = "HTTP";

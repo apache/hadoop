@@ -46,6 +46,7 @@ import javax.ws.rs.core.Response.Status;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -121,6 +122,7 @@ import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationBulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.SubClusterResult;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeInfo;
@@ -1181,22 +1183,176 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     throw new RuntimeException("getSchedulerInfo error.");
   }
 
+  /**
+   * This method dumps the scheduler logs for the time got in input, and it is
+   * reachable by using {@link RMWSConsts#SCHEDULER_LOGS}.
+   *
+   * @param time the period of time. It is a FormParam.
+   * @param hsr the servlet request
+   * @return the result of the operation
+   * @throws IOException when it cannot create dump log file
+   */
   @Override
   public String dumpSchedulerLogs(String time, HttpServletRequest hsr)
       throws IOException {
-    throw new NotImplementedException("Code is not implemented");
+
+    // Step1. We will check the time parameter to
+    // ensure that the time parameter is not empty and greater than 0.
+
+    if (StringUtils.isBlank(time)) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the time is empty or null.");
+    }
+
+    try {
+      int period = Integer.parseInt(time);
+      if (period <= 0) {
+        throw new IllegalArgumentException("time must be greater than 0.");
+      }
+    } catch (NumberFormatException e) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      throw new IllegalArgumentException("time must be a number.");
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      throw e;
+    }
+
+    // Step2. Call dumpSchedulerLogs of each subcluster.
+    try {
+      long startTime = clock.getTime();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{String.class, HttpServletRequest.class};
+      Object[] args = new Object[]{time, hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("dumpSchedulerLogs", argsClasses, args);
+      Map<SubClusterInfo, String> dumpSchedulerLogsMap = invokeConcurrent(
+          subClustersActive.values(), remoteMethod, String.class);
+      StringBuilder stringBuilder = new StringBuilder();
+      dumpSchedulerLogsMap.forEach((subClusterInfo, msg) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        stringBuilder.append("subClusterId" + subClusterId + " : " + msg + "; ");
+      });
+      long stopTime = clock.getTime();
+      routerMetrics.succeededDumpSchedulerLogsRetrieved(stopTime - startTime);
+      return stringBuilder.toString();
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Unable to dump SchedulerLogs by time: %s.", time);
+    } catch (YarnException e) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "dumpSchedulerLogs by time = %s error .", time);
+    }
+
+    routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+    throw new RuntimeException("dumpSchedulerLogs Failed.");
   }
 
+  /**
+   * This method retrieve all the activities in a specific node, and it is
+   * reachable by using {@link RMWSConsts#SCHEDULER_ACTIVITIES}.
+   *
+   * @param hsr the servlet request
+   * @param nodeId the node we want to retrieve the activities. It is a
+   *          QueryParam.
+   * @param groupBy the groupBy type by which the activities should be
+   *          aggregated. It is a QueryParam.
+   * @return all the activities in the specific node
+   */
   @Override
   public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
       String groupBy) {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      // Check the parameters to ensure that the parameters are not empty
+      Validate.checkNotNullAndNotEmpty(nodeId, "nodeId");
+      Validate.checkNotNullAndNotEmpty(groupBy, "groupBy");
+
+      // Query SubClusterInfo according to id,
+      // if the nodeId cannot get SubClusterInfo, an exception will be thrown directly.
+      SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
+
+      // Call the corresponding subCluster to get ActivitiesInfo.
+      long startTime = clock.getTime();
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      final HttpServletRequest hsrCopy = clone(hsr);
+      ActivitiesInfo activitiesInfo = interceptor.getActivities(hsrCopy, nodeId, groupBy);
+      if (activitiesInfo != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetActivitiesLatencyRetrieved(stopTime - startTime);
+        return activitiesInfo;
+      }
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrGetActivitiesFailedRetrieved();
+      throw e;
+    } catch (NotFoundException e) {
+      routerMetrics.incrGetActivitiesFailedRetrieved();
+      throw e;
+    }
+
+    routerMetrics.incrGetActivitiesFailedRetrieved();
+    throw new RuntimeException("getActivities Failed.");
   }
 
+  /**
+   * This method retrieve the last n activities inside scheduler, and it is
+   * reachable by using {@link RMWSConsts#SCHEDULER_BULK_ACTIVITIES}.
+   *
+   * @param hsr the servlet request
+   * @param groupBy the groupBy type by which the activities should be
+   *        aggregated. It is a QueryParam.
+   * @param activitiesCount number of activities
+   * @return last n activities
+   */
   @Override
   public BulkActivitiesInfo getBulkActivities(HttpServletRequest hsr,
       String groupBy, int activitiesCount) throws InterruptedException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      // Step1. Check the parameters to ensure that the parameters are not empty
+      Validate.checkNotNullAndNotEmpty(groupBy, "groupBy");
+      Validate.checkNotNegative(activitiesCount, "activitiesCount");
+
+      // Step2. Call the interface of subCluster concurrently and get the returned result.
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{HttpServletRequest.class, String.class, int.class};
+      Object[] args = new Object[]{hsrCopy, groupBy, activitiesCount};
+      ClientMethod remoteMethod = new ClientMethod("getBulkActivities", argsClasses, args);
+      Map<SubClusterInfo, BulkActivitiesInfo> appStatisticsMap = invokeConcurrent(
+          subClustersActive.values(), remoteMethod, BulkActivitiesInfo.class);
+
+      // Step3. Generate Federation objects and set subCluster information.
+      long startTime = clock.getTime();
+      FederationBulkActivitiesInfo fedBulkActivitiesInfo = new FederationBulkActivitiesInfo();
+      appStatisticsMap.forEach((subClusterInfo, bulkActivitiesInfo) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        bulkActivitiesInfo.setSubClusterId(subClusterId.getId());
+        fedBulkActivitiesInfo.getList().add(bulkActivitiesInfo);
+      });
+      long stopTime = clock.getTime();
+      routerMetrics.succeededGetBulkActivitiesRetrieved(stopTime - startTime);
+      return fedBulkActivitiesInfo;
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrGetBulkActivitiesFailedRetrieved();
+      throw e;
+    } catch (NotFoundException e) {
+      routerMetrics.incrGetBulkActivitiesFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("get all active sub cluster(s) error.", e);
+    } catch (IOException e) {
+      routerMetrics.incrGetBulkActivitiesFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "getBulkActivities by groupBy = %s, activitiesCount = %s with io error.",
+          groupBy, String.valueOf(activitiesCount));
+    } catch (YarnException e) {
+      routerMetrics.incrGetBulkActivitiesFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "getBulkActivities by groupBy = %s, activitiesCount = %s with yarn error.",
+          groupBy, String.valueOf(activitiesCount));
+    }
+
+    routerMetrics.incrGetBulkActivitiesFailedRetrieved();
+    throw new RuntimeException("getBulkActivities Failed.");
   }
 
   @Override
