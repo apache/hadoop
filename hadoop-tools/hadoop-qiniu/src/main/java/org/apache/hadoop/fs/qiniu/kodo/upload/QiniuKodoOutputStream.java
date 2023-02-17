@@ -2,7 +2,6 @@ package org.apache.hadoop.fs.qiniu.kodo.upload;
 
 import com.qiniu.common.QiniuException;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockManager;
 import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +10,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 public class QiniuKodoOutputStream extends OutputStream {
 
@@ -19,34 +21,26 @@ public class QiniuKodoOutputStream extends OutputStream {
     private final String key;
     private final PipedOutputStream pos;
     private final PipedInputStream pis;
-
-    private final Thread thread;
-
-    private volatile IOException uploadException;
-
+    private final Future<IOException> future;
 
     public QiniuKodoOutputStream(
             IQiniuKodoClient client,
             String key,
             boolean overwrite,
-            IBlockManager blockManager,
-            int bufferSize
-    ) {
+            int bufferSize,
+            ExecutorService executorService
+    ) throws IOException {
         this.key = key;
         this.pos = new PipedOutputStream();
-        try {
-            this.pis = new PipedInputStream(pos, bufferSize);
-            this.thread = new Thread(() -> {
-                try {
-                    client.upload(pis, key, overwrite);
-                } catch (IOException e) {
-                    this.uploadException = e;
-                }
-            });
-            this.thread.start();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        this.pis = new PipedInputStream(pos, bufferSize);
+        this.future = executorService.submit(() -> {
+            try {
+                client.upload(pis, key, overwrite);
+                return null;
+            } catch (IOException e) {
+                return e;
+            }
+        });
     }
 
     @Override
@@ -63,7 +57,7 @@ public class QiniuKodoOutputStream extends OutputStream {
     public void close() throws IOException {
         pos.close();
         try {
-            thread.join();
+            IOException uploadException = future.get();
             if (uploadException == null) {
                 // 无异常退出
                 return;
@@ -72,9 +66,8 @@ public class QiniuKodoOutputStream extends OutputStream {
                     ((QiniuException) uploadException).response.statusCode == 614) {
                 throw new FileAlreadyExistsException("key exists " + key);
             }
-
             throw uploadException;
-        } catch (InterruptedException e) {
+        } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
     }

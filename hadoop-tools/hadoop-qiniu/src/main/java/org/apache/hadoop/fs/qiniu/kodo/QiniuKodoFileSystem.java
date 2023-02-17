@@ -38,6 +38,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     private QiniuKodoFsConfig fsConfig;
     private QiniuKodoBlockReader blockReader;
+    private ExecutorService uploadExecutorService;
 
     @Override
     public void initialize(URI name, Configuration conf) throws IOException {
@@ -121,6 +122,13 @@ public class QiniuKodoFileSystem extends FileSystem {
         blockReader.close();
     }
 
+    private synchronized ExecutorService getUploadExecutorService() {
+        if (uploadExecutorService == null) {
+            uploadExecutorService = Executors.newFixedThreadPool(fsConfig.upload.maxConcurrentUploadFiles);
+        }
+        return uploadExecutorService;
+    }
+
     /**
      * 创建一个文件，返回一个可以被写入的输出流
      */
@@ -146,8 +154,8 @@ public class QiniuKodoFileSystem extends FileSystem {
                         kodoClient,
                         key,
                         overwrite,
-                        blockReader,
-                        fsConfig.upload.bufferSize
+                        fsConfig.upload.bufferSize,
+                        getUploadExecutorService()
                 ),
                 statistics
         );
@@ -170,8 +178,8 @@ public class QiniuKodoFileSystem extends FileSystem {
                         kodoClient,
                         key,
                         overwrite,
-                        blockReader,
-                        fsConfig.upload.bufferSize
+                        fsConfig.upload.bufferSize,
+                        getUploadExecutorService()
                 ),
                 statistics
         );

@@ -5,6 +5,8 @@ import org.apache.hadoop.fs.qiniu.kodo.config.AConfigBase;
 
 public class UploadConfig extends AConfigBase {
     public final SignConfig sign;
+    // 同一时刻最大并发上传文件数
+    public final int maxConcurrentUploadFiles;
     public final int maxConcurrentTasks;
     public final boolean useHttps;
     public final boolean accUpHostFirst;
@@ -15,12 +17,17 @@ public class UploadConfig extends AConfigBase {
     public UploadConfig(Configuration conf, String namespace) {
         super(conf, namespace);
         this.sign = sign();
+        this.maxConcurrentUploadFiles = maxConcurrentUploadFiles();
         this.maxConcurrentTasks = maxConcurrentTasks();
         this.useHttps = useHttps();
         this.accUpHostFirst = accUpHostFirst();
         this.useDefaultUpHostIfNone = useDefaultUpHostIfNone();
         this.v2 = v2();
         this.bufferSize = bufferSize();
+    }
+
+    private int maxConcurrentUploadFiles() {
+        return conf.getInt(namespace + ".maxConcurrentUploadFiles", 4);
     }
 
     private int bufferSize() {
