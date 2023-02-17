@@ -20,7 +20,7 @@ Hadoop in Secure Mode
 Introduction
 ------------
 
-In its default configuration, we expect you to make sure attackers don't have access to your Hadoop deployment by restricting all network access. If you want to expose Hadoop to untrusted users, you will have to configure authentication for Hadoop in secure mode as described in this document.
+In its default configuration, we expect you to make sure attackers don't have access to your Hadoop deployment by restricting all network access. If you want any restrictions on who can remotely access data or submit work, you MUST secure authentication and access for your Hadoop cluster as described in this document.
 
 When Hadoop is configured to run in secure mode, each Hadoop service and each user must be authenticated by Kerberos.
 
