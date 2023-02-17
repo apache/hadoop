@@ -233,7 +233,7 @@ public class DFSInputStream extends FSInputStream
   }
 
   /**
-   * Grab the open-file info from namenode
+   * Grab the open-file info from namenode.
    * @param refreshLocatedBlocks whether to re-fetch locatedblocks
    */
   void openInfo(boolean refreshLocatedBlocks) throws IOException {

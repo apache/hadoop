@@ -603,8 +603,8 @@ public class TestPread {
       input.read(0, buffer, 0, 1024);
       Assert.fail("Reading the block should have thrown BlockMissingException");
     } catch (BlockMissingException e) {
-      // The result of 9 is due to 2 blocks by 4 iterations plus one because hedgedReadOpsLoopNumForTesting
-      // is incremented at start of the loop.
+      // The result of 9 is due to 2 blocks by 4 iterations plus one because
+      // hedgedReadOpsLoopNumForTesting is incremented at start of the loop.
       assertEquals(9, input.getHedgedReadOpsLoopNumForTesting());
       assertTrue(metrics.getHedgedReadOps() == 0);
     } finally {
