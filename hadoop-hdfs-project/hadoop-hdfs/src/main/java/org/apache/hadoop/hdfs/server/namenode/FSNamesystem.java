@@ -8506,9 +8506,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         src = escapeJava(src);
         dst = escapeJava(dst);
         sb.setLength(0);
+        // InetAddress#tostring can also return hostname in addition to IP address.
+        // To not include hostname regardless of the hostname resolution, we should
+        // only include IP address here.
+        String ipAddr = addr != null ? "/" + addr.getHostAddress() : "null";
         sb.append("allowed=").append(succeeded).append("\t")
             .append("ugi=").append(userName).append("\t")
-            .append("ip=").append(addr).append("\t")
+            .append("ip=").append(ipAddr).append("\t")
             .append("cmd=").append(cmd).append("\t")
             .append("src=").append(src).append("\t")
             .append("dst=").append(dst).append("\t");
