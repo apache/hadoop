@@ -72,6 +72,7 @@ public class BatchOperationConsumer implements Runnable {
         while (isRunning || !queue.isEmpty()) {
             loop();
         }
+        // isRunning is false && queue is empty
         // 提交剩余的批处理
         if (batchOperationsSize > 0) {
             try {

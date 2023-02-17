@@ -209,19 +209,20 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
     @Override
     public boolean exists(String key) throws IOException {
-        Request.Builder requestBuilder = new Request.Builder().url(getFileUrlByKey(key)).head();
-
-        try {
-            Response response = client.send(requestBuilder, null);
-            // 找到了
-            return response.isOK();
-        } catch (QiniuException e) {
-            if (e.response != null && e.response.statusCode == 404) {
-                // 文件找不到
-                return false;
-            }
-            throw e;
-        }
+        return getFileStatus(key) != null;
+//        Request.Builder requestBuilder = new Request.Builder().url(getFileUrlByKey(key)).head();
+//
+//        try {
+//            Response response = client.send(requestBuilder, null);
+//            // 找到了
+//            return response.isOK();
+//        } catch (QiniuException e) {
+//            if (e.response != null && e.response.statusCode == 404) {
+//                // 文件找不到
+//                return false;
+//            }
+//            throw e;
+//        }
     }
 
     /**
@@ -393,7 +394,15 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         }
 
         LOG.debug("生产者生产完毕");
-        // 发送关闭信号
+
+        // 等待消费队列为空
+        while (true) {
+            if (operatorQueue.isEmpty()) {
+                break;
+            }
+        }
+
+        // 向所有消费者发送关闭信号
         for (int i = 0; i < consumerCount; i++) {
             consumers[i].stop();
         }
