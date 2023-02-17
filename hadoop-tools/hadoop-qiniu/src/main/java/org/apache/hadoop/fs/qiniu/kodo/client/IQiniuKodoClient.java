@@ -18,6 +18,8 @@ public interface IQiniuKodoClient {
 
     FileInfo listOneStatus(String keyPrefix) throws IOException;
 
+    List<FileInfo> listNStatus(String keyPrefix, int n) throws IOException;
+
     List<FileInfo> listStatus(String key, boolean useDirectory) throws IOException;
 
     boolean copyKey(String oldKey, String newKey) throws IOException;
@@ -30,7 +32,7 @@ public interface IQiniuKodoClient {
 
     boolean deleteKey(String key) throws IOException;
 
-    boolean deleteKeys(String prefix, boolean recursive) throws IOException;
+    boolean deleteKeys(String prefix) throws IOException;
 
     boolean makeEmptyObject(String key) throws IOException;
 

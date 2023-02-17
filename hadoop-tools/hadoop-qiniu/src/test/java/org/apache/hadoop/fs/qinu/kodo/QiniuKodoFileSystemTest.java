@@ -170,4 +170,21 @@ public class QiniuKodoFileSystemTest {
         }
         os.close();
     }
+
+    @Test
+    public void testLSRootDir() throws Exception {
+
+        Path dir = new Path("/");
+        Path child = new Path("/FileSystemContractBaseTest");
+        fs.create(child).close();
+        FileStatus[] fileStatuses = fs.listStatus(dir);
+        for (FileStatus status : fileStatuses) {
+            LOG.info("arr: {}", status.getPath());
+        }
+        RemoteIterator<LocatedFileStatus> it = fs.listFiles(dir, true);
+        while (it.hasNext()) {
+            LocatedFileStatus status = it.next();
+            LOG.info("iter: {}", status);
+        }
+    }
 }

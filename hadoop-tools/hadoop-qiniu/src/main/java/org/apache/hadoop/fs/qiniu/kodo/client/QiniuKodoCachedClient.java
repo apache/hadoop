@@ -73,6 +73,11 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
     }
 
     @Override
+    public List<FileInfo> listNStatus(String keyPrefix, int n) throws IOException {
+        return source.listNStatus(keyPrefix, n);
+    }
+
+    @Override
     public List<FileInfo> listStatus(String key, boolean useDirectory) throws IOException {
         return source.listStatus(key, useDirectory);
     }
@@ -113,8 +118,8 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
     }
 
     @Override
-    public boolean deleteKeys(String prefix, boolean recursive) throws IOException {
-        boolean result = source.deleteKeys(prefix, recursive);
+    public boolean deleteKeys(String prefix) throws IOException {
+        boolean result = source.deleteKeys(prefix);
         cache.removeIf(e -> e.getKey().startsWith(prefix));
         return result;
     }

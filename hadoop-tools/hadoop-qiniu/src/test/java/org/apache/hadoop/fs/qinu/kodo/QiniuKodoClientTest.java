@@ -2,6 +2,7 @@ package org.apache.hadoop.fs.qinu.kodo;
 
 import com.qiniu.common.QiniuException;
 import com.qiniu.storage.BucketManager;
+import com.qiniu.storage.model.FileInfo;
 import com.qiniu.storage.model.FileListing;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
@@ -16,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.List;
 
 public class QiniuKodoClientTest {
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoClient.class);
@@ -50,7 +52,7 @@ public class QiniuKodoClientTest {
 
     @Test
     public void testDeleteKeys() throws IOException {
-        client.deleteKeys("", true);
+        client.deleteKeys("");
     }
 
     @Test
@@ -118,4 +120,14 @@ public class QiniuKodoClientTest {
         Assert.assertEquals(s1, s2);
     }
 
+    @Test
+    public void testDeleleAll() throws Exception {
+        long useTime, ms;
+        ms = System.currentTimeMillis();
+        client.deleteKeys("");
+        useTime = System.currentTimeMillis() - ms;
+        LOG.info("Use time: {}", useTime);
+        List<FileInfo> fis = client.listStatus("", false);
+        Assert.assertTrue(fis.isEmpty());
+    }
 }

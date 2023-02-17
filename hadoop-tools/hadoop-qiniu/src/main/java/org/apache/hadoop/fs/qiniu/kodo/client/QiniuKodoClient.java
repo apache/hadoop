@@ -32,9 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Function;
 
@@ -69,7 +67,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         this.fsConfig = fsConfig;
         this.auth = getAuth(fsConfig);
         this.service = Executors.newFixedThreadPool(fsConfig.client.nThread);
-        
+
         Configuration configuration = new Configuration();
 
         if (fsConfig.upload.v2.enable) {
@@ -254,12 +252,22 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      */
     @Override
     public FileInfo listOneStatus(String keyPrefix) throws IOException {
-        FileListing list = bucketManager.listFiles(bucket, keyPrefix, null, 1, "");
-        if (list.items.length == 0) {
+        List<FileInfo> ret = listNStatus(keyPrefix, 1);
+        if (ret.isEmpty()) {
             return null;
-        } else {
-            return list.items[0];
         }
+        return ret.get(0);
+    }
+
+    /**
+     * 获取指定前缀的最多前n个对象
+     */
+    public List<FileInfo> listNStatus(String keyPrefix, int n) throws IOException {
+        FileListing listing = bucketManager.listFiles(bucket, keyPrefix, null, n, "");
+        if (listing.items == null) {
+            return Collections.emptyList();
+        }
+        return Arrays.asList(listing.items);
     }
 
     /**
@@ -267,8 +275,8 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * 否则，将呈现出所有前缀为key的对象
      */
     @Override
-    public List<FileInfo> listStatus(String key, boolean useDirectory) throws IOException {
-        LOG.info("key: {}, useDirectory: {}", key, useDirectory);
+    public List<FileInfo> listStatus(String prefixKey, boolean useDirectory) throws IOException {
+        LOG.info("key: {}, useDirectory: {}", prefixKey, useDirectory);
 
         ListProducerConfig listConfig = fsConfig.client.list;
         // 最终结果
@@ -279,7 +287,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
         // 生产者
         ListingProducer producer = new ListingProducer(
-                fileInfoQueue, bucketManager, bucket, key,
+                fileInfoQueue, bucketManager, bucket, prefixKey,
                 listConfig.singleRequestLimit,
                 useDirectory, listConfig.useListV2,
                 listConfig.offerTimeout
@@ -302,14 +310,22 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             if (product.hasException()) {
                 throw product.getException();
             }
-            if (product.hasValue()) {
-                // 既不为空也不为EOF
-                retFiles.add(product.getValue());
+            if (!product.hasValue()) {
+                continue;
             }
+            FileInfo fileInfo = product.getValue();
+            // 跳过自身
+            if (fileInfo.key.equals(prefixKey)) {
+                continue;
+            }
+            // 既不为空也不为EOF
+            retFiles.add(fileInfo);
+
         }
 
         return retFiles;
     }
+
 
     /**
      * 复制对象
@@ -369,7 +385,6 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             if (product.hasException()) throw product.getException();
             // 无值
             if (!product.hasValue()) continue;
-
 
             boolean success;
             do {
@@ -449,7 +464,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     }
 
     @Override
-    public boolean deleteKeys(String prefix, boolean recursive) throws IOException {
+    public boolean deleteKeys(String prefix) throws IOException {
         return listAndBatch(
                 fsConfig.client.delete,
                 prefix,
