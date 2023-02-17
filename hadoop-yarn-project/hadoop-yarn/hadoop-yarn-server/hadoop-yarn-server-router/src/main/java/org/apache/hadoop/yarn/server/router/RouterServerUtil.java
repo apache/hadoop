@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.router;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -25,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.thirdparty.protobuf.GeneratedMessageV3;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
@@ -676,61 +678,50 @@ public final class RouterServerUtil {
   @Unstable
   private static void logContainerLaunchContext(ApplicationSubmissionContextPBImpl appContext)
       throws IOException {
-
-    if (appContext != null) {
+    if (appContext != null && appContext.getAMContainerSpec() != null) {
       ContainerLaunchContext launchContext = appContext.getAMContainerSpec();
       ContainerLaunchContextPBImpl clc = (ContainerLaunchContextPBImpl) launchContext;
+      LOG.warn("ContainerLaunchContext size: {}.", clc.getProto().getSerializedSize());
 
-      if (clc != null) {
-        LOG.warn("ContainerLaunchContext size: {}.", clc.getProto().getSerializedSize());
+      // ContainerLaunchContext contains:
+      // 1) Map<String, LocalResource> localResources,
+      List<StringLocalResourceMapProto> lrs = clc.getProto().getLocalResourcesList();
+      logContainerLaunchContext("LocalResource size: {}. Length: {}.", lrs);
 
-        // ContainerLaunchContext contains:
-        // 1) Map<String, LocalResource> localResources,
-        // 2) Map<String, String> environment, List<String> commands,
-        // 3) Map<String, ByteBuffer> serviceData,
-        // 4) Map<ApplicationAccessType, String> acls
+      // 2) Map<String, String> environment, List<String> commands,
+      List<StringStringMapProto> envs = clc.getProto().getEnvironmentList();
+      logContainerLaunchContext("Environment size: {}. Length: {}.", envs);
 
-        List<String> cmds = clc.getCommands();
-        if (cmds != null) {
-          LOG.warn("Commands size: {}. Length: {}.", cmds.size(), serialize(cmds).length);
-        }
-
-        List<StringStringMapProto> envs = clc.getProto().getEnvironmentList();
-        if (envs != null) {
-          int sumLength = 0;
-          for (StringStringMapProto env : envs) {
-            sumLength += env.getSerializedSize();
-          }
-          LOG.warn("Environment size: {}. Length: {}.", envs.size(), sumLength);
-        }
-
-        List<StringBytesMapProto> serviceData = clc.getProto().getServiceDataList();
-        if (serviceData != null) {
-          int sumLength = 0;
-          for (StringBytesMapProto sd : serviceData) {
-            sumLength += sd.getSerializedSize();
-          }
-          LOG.warn("ServiceData size: {}. Length: {}.", serviceData.size(), sumLength);
-        }
-
-        List<ApplicationACLMapProto> acls = clc.getProto().getApplicationACLsList();
-        if (acls != null) {
-          int sumLength = 0;
-          for (ApplicationACLMapProto acl : acls) {
-            sumLength += acl.getSerializedSize();
-          }
-          LOG.warn("ACLs size: {}. Length: {}.", acls.size(), sumLength);
-        }
-
-        List<StringLocalResourceMapProto> lrs = clc.getProto().getLocalResourcesList();
-        if (lrs != null) {
-          int sumLength = 0;
-          for (StringLocalResourceMapProto lr : lrs) {
-            sumLength += lr.getSerializedSize();
-          }
-          LOG.warn("LocalResource size: {}. Length: {}.", lrs.size(), sumLength);
-        }
+      List<String> cmds = clc.getCommands();
+      if (CollectionUtils.isNotEmpty(cmds)) {
+        LOG.warn("Commands size: {}. Length: {}.", cmds.size(), serialize(cmds).length);
       }
+
+      // 3) Map<String, ByteBuffer> serviceData,
+      List<StringBytesMapProto> serviceData = clc.getProto().getServiceDataList();
+      logContainerLaunchContext("ServiceData size: {}. Length: {}.", serviceData);
+
+      // 4) Map<ApplicationAccessType, String> acls
+      List<ApplicationACLMapProto> acls = clc.getProto().getApplicationACLsList();
+      logContainerLaunchContext("ACLs size: {}. Length: {}.", acls);
+    }
+  }
+
+  /**
+   * Log ContainerLaunchContext Data SerializedSize.
+   *
+   * @param format format of logging.
+   * @param lists data list.
+   * @param <R> generic type R.
+   */
+  private static <R extends GeneratedMessageV3> void logContainerLaunchContext(String format,
+      List<R> lists) {
+    if (CollectionUtils.isNotEmpty(lists)) {
+      int sumLength = 0;
+      for (R item : lists) {
+        sumLength += item.getSerializedSize();
+      }
+      LOG.warn(format, lists.size(), sumLength);
     }
   }
 
