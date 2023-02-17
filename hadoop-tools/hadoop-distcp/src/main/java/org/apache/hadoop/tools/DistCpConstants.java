@@ -117,7 +117,7 @@ public final class DistCpConstants {
   public static final String CONF_LABEL_DISTCP_JOB_ID = "distcp.job.id";
 
   /**
-   * DistCp Counter for consumers of the Distcp
+   * DistCp Counter for consumers of the Distcp.
    */
   public static final String CONF_LABEL_DISTCP_TOTAL_BYTES_COPIED = "distcp.total.bytes.copied";
 
