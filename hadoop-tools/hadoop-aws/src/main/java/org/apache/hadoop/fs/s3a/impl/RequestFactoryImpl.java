@@ -231,7 +231,7 @@ public class RequestFactoryImpl implements RequestFactory {
 
     Map<String, String> dstom = new HashMap<>();
     HeaderProcessing.cloneObjectMetadata(srcom, dstom, copyObjectRequestBuilder);
-    copyEncryptionParameters(copyObjectRequestBuilder);
+    copyEncryptionParameters(srcom, copyObjectRequestBuilder);
 
     copyObjectRequestBuilder
         .metadata(dstom)
@@ -252,10 +252,21 @@ public class RequestFactoryImpl implements RequestFactory {
    * Propagate encryption parameters from source file if set else use the
    * current filesystem encryption settings.
    * @param copyObjectRequestBuilder copy object request builder.
+   * @param srcom source object metadata.
    */
-  protected void copyEncryptionParameters(CopyObjectRequest.Builder copyObjectRequestBuilder) {
+  protected void copyEncryptionParameters(HeadObjectResponse srcom,
+      CopyObjectRequest.Builder copyObjectRequestBuilder) {
 
     final S3AEncryptionMethods algorithm = getServerSideEncryptionAlgorithm();
+
+    String sourceKMSId = srcom.ssekmsKeyId();
+    if (isNotEmpty(sourceKMSId)) {
+      // source KMS ID is propagated
+      LOG.debug("Propagating SSE-KMS settings from source {}",
+          sourceKMSId);
+      copyObjectRequestBuilder.ssekmsKeyId(sourceKMSId);
+      return;
+    }
 
     if (S3AEncryptionMethods.SSE_S3 == algorithm) {
       copyObjectRequestBuilder.serverSideEncryption(algorithm.getMethod());

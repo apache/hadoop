@@ -18,16 +18,17 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import software.amazon.awssdk.awscore.AwsExecutionAttribute;
-import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.client.config.SdkClientConfiguration;
 import software.amazon.awssdk.core.client.config.SdkClientOption;
-import software.amazon.awssdk.core.interceptor.Context;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
-import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
-import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.core.signer.Signer;
+import software.amazon.awssdk.http.SdkHttpFullRequest;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.model.StsException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -35,12 +36,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -50,10 +50,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.File;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -62,7 +59,6 @@ import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.http.HttpStatus;
 import org.junit.rules.TemporaryFolder;
-import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
@@ -532,4 +528,76 @@ public class ITestS3AConfiguration {
     assertOptionEquals(updated, "fs.s3a.propagation", "propagated");
   }
 
+  @Test(timeout = 10_000L)
+  public void testS3SpecificSignerOverride() throws IOException {
+    Configuration config = new Configuration();
+
+    config.set(CUSTOM_SIGNERS,
+        "CustomS3Signer:" + CustomS3Signer.class.getName() + ",CustomSTSSigner:"
+            + CustomSTSSigner.class.getName());
+
+    config.set(SIGNING_ALGORITHM_S3, "CustomS3Signer");
+    config.set(SIGNING_ALGORITHM_STS, "CustomSTSSigner");
+
+    config.set(AWS_REGION, "eu-west-1");
+    fs = S3ATestUtils.createTestFileSystem(config);
+
+    S3Client s3Client = fs.getAmazonS3V2ClientForTesting("testS3SpecificSignerOverride");
+
+    StsClient stsClient =
+        STSClientFactory.builder(config, fs.getBucket(), new AnonymousAWSCredentialsProvider(), "",
+            "").build();
+
+    try {
+      stsClient.getSessionToken();
+    } catch (StsException exception) {
+      // Expected 403, as credentials are not provided.
+    }
+
+    try {
+      s3Client.headBucket(HeadBucketRequest.builder().bucket(fs.getBucket()).build());
+    } catch (S3Exception exception) {
+      // Expected 403, as credentials are not provided.
+    }
+
+    Assertions.assertThat(CustomS3Signer.isS3SignerCalled())
+        .describedAs("Custom S3 signer not called").isTrue();
+
+    Assertions.assertThat(CustomSTSSigner.isSTSSignerCalled())
+        .describedAs("Custom STS signer not called").isTrue();
+  }
+
+  public static final class CustomS3Signer implements Signer {
+
+    private static boolean s3SignerCalled = false;
+
+    @Override
+    public SdkHttpFullRequest sign(SdkHttpFullRequest request,
+        ExecutionAttributes executionAttributes) {
+      LOG.debug("Custom S3 signer called");
+      s3SignerCalled = true;
+      return request;
+    }
+
+    public static boolean isS3SignerCalled() {
+      return s3SignerCalled;
+    }
+  }
+
+  public static final class CustomSTSSigner implements Signer {
+
+    private static boolean stsSignerCalled = false;
+
+    @Override
+    public SdkHttpFullRequest sign(SdkHttpFullRequest request,
+        ExecutionAttributes executionAttributes) {
+      LOG.debug("Custom STS signer called");
+      stsSignerCalled = true;
+      return request;
+    }
+
+    public static boolean isSTSSignerCalled() {
+      return stsSignerCalled;
+    }
+  }
 }
