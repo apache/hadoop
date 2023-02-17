@@ -2,15 +2,19 @@ package org.apache.hadoop.fs.qinu.kodo.config;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class QiniuKodoFsConfigTest {
     @Test
     public void testLoad() throws Exception {
+        String testAccessKeyStr = "test123";
+        String testSecretKeyStr = "test234";
         Configuration conf = new Configuration();
-        conf.addResource("core-site.xml");
-        conf.addResource("contract-test-options.xml");
+        conf.set("fs.qiniu.auth.accessKey", testAccessKeyStr);
+        conf.set("fs.qiniu.auth.secretKey", testSecretKeyStr);
         QiniuKodoFsConfig fsConfig = new QiniuKodoFsConfig(conf);
-        System.out.println(fsConfig);
+        Assert.assertEquals(testAccessKeyStr, fsConfig.auth.accessKey);
+        Assert.assertEquals(testSecretKeyStr, fsConfig.auth.secretKey);
     }
 }

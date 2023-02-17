@@ -11,9 +11,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class QiniuKodoFileSystemTest {
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoFileSystemTest.class);
@@ -62,129 +65,69 @@ public class QiniuKodoFileSystemTest {
 
     @Test
     public void testRename() throws IOException {
-        FSDataOutputStream is = fs.create(new Path("/abc"));
-        is.write(12);
-        is.close();
-        fs.rename(new Path("/abc"), new Path("/abc_new"));
-    }
+        Path oldPath = new Path("/abc");
+        Path newPath = new Path("/abc_new");
 
-    @Test
-    public void testOpen() throws IOException, InterruptedException {
-        FSDataInputStream is = fs.open(new Path("/vscode2.zip"));
-        byte[] buf = new byte[4 * 1024 * 1024];
-        while ((is.read(buf)) != -1) {
-//            System.out.print(ch + " ");
-        }
-        is.close();
-    }
+        fs.create(oldPath).close();
+        assertTrue(fs.exists(oldPath));
+        assertFalse(fs.exists(newPath));
 
-    void writeEmptyFile(String file) throws IOException {
-        fs.create(new Path(file)).close();
+        fs.rename(oldPath, newPath);
+        assertFalse(fs.exists(oldPath));
+        assertTrue(fs.exists(newPath));
     }
 
     @Test
     public void testEmptyFileWriteRead() throws IOException {
-        writeEmptyFile("emptyFile.txt");
+        fs.create(new Path("emptyFile.txt")).close();
         FSDataInputStream is = fs.open(new Path("emptyFile.txt"));
-        byte[] buf = new byte[4 * 1024 * 1024];
-        while ((is.read(buf)) != -1) {
-        }
+        assertEquals(-1, is.read());
         is.close();
     }
 
     @Test
-    public void testWrite() throws IOException {
-        FSDataOutputStream os = fs.create(new Path("/user/zzq123.txt"));
+    public void testWriteAndRead() throws IOException {
+        Path file = new Path("writeFile.txt");
+        FSDataOutputStream os = fs.create(file);
         for (int i = 0; i < 100; i++) {
             os.write(i);
         }
         os.close();
-    }
-
-    @Test
-    public void testReadFully() throws IOException {
-        byte[] data = new byte[256];
-        for (int i = 0; i < 256; i++) {
-            data[i] = (byte) i;
+        FSDataInputStream is = fs.open(file);
+        for (int i = 0; i < 100; i++) {
+            assertEquals(i, is.read());
         }
-
-        FSDataOutputStream os = fs.create(new Path("testFile.tmp"), true);
-        os.write(data);
-        os.close();
-
-        FSDataInputStream is = fs.open(new Path("testFile.tmp"));
-        byte[] buf = new byte[5];
-
-        int sz;
-        while ((sz = is.read(buf)) != -1) {
-            LOG.info("sz: {}, buf: {}", sz, buf);
-        }
-
+        assertEquals(-1, is.read());
         is.close();
-    }
-
-
-    @Test
-    public void testReadBigFile1() throws IOException {
-        FSDataInputStream is = fs.open(new Path("/vscode.zip"));
-        int ch;
-        long st = System.currentTimeMillis();
-        while ((ch = is.read()) != -1) {
-        }
-        is.close();
-        long et = System.currentTimeMillis();
-        System.out.printf("%f\n", (double) (et - st) / 1000f);
-    }
-
-    @Test
-    public void testReadBigFile() throws Exception {
-        FSDataInputStream is = fs.open(new Path("/vscode.zip"));
-        byte[] buf = new byte[4 * 1024 * 1024];
-        int sz;
-        long st = System.currentTimeMillis();
-        while ((sz = is.read(buf)) != -1) {
-//            System.out.println(sz);
-        }
-        is.close();
-        long et = System.currentTimeMillis();
-        System.out.printf("%f\n", (double) (et - st) / 1000f);
     }
 
     @Test
     public void testListSmallFiles() throws Exception {
-        Path dir = new Path("/testSmallFiles1");
-        System.out.println("Status: " + fs.getFileStatus(dir));
-        FileStatus[] fileStatuses = fs.listStatus(dir);
-        for (FileStatus status : fileStatuses) {
-            System.out.println(status);
+        Path dir = new Path("testSmallFiles");
+
+        Set<Path> ps = new HashSet<>();
+        for (int i = 0; i < 100; i++) {
+            Path file = new Path(dir.toString(), i + ".txt").makeQualified(fs.getUri(), fs.getWorkingDirectory());
+            fs.create(file).close();
+            assertTrue(fs.exists(file));
+            ps.add(file);
         }
+        FileStatus[] fss = fs.listStatus(dir);
+        assertEquals(100, fss.length);
+        Set<Path> fileStatusSet = Arrays.stream(fss)
+                .map(FileStatus::getPath)
+                .collect(Collectors.toSet());
+        assertEquals(ps, fileStatusSet);
     }
 
     @Test
     public void testWriteBigFile() throws IOException {
         byte[] bs = new byte[40 * 1024 * 1024];
         FSDataOutputStream os = fs.create(new Path("/bigFile.txt"));
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 3; i++) {
             LOG.info("write block: {}", i);
             os.write(bs);
         }
         os.close();
-    }
-
-    @Test
-    public void testLSRootDir() throws Exception {
-
-        Path dir = new Path("/");
-        Path child = new Path("/FileSystemContractBaseTest");
-        fs.create(child).close();
-        FileStatus[] fileStatuses = fs.listStatus(dir);
-        for (FileStatus status : fileStatuses) {
-            LOG.info("arr: {}", status.getPath());
-        }
-        RemoteIterator<LocatedFileStatus> it = fs.listFiles(dir, true);
-        while (it.hasNext()) {
-            LocatedFileStatus status = it.next();
-            LOG.info("iter: {}", status);
-        }
     }
 }

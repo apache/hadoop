@@ -188,7 +188,10 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      */
     @Override
     public long getLength(String key) throws IOException {
-        Request.Builder requestBuilder = new Request.Builder().url(getFileUrlByKey(key)).head();
+        Request.Builder requestBuilder = new Request.Builder()
+                .url(getFileUrlByKey(key))
+                .header("Accept-Encoding", "identity")    // Content-Length返回的是压缩后的大小
+                .head();
 
         try {
             Response response = client.send(requestBuilder, null);
