@@ -570,8 +570,8 @@ public class ImageServlet extends HttpServlet {
 
             @Override
             public Void run() throws Exception {
-              // if its not the active NN, then we need to notify the caller it was was the wrong
-              // target (regardless of the fact that we got the image)
+              // if it's not the active NN and Observer NN, then we need to notify the caller it was
+              // the wrong target (regardless of the fact that we got the image)
               HAServiceProtocol.HAServiceState state = NameNodeHttpServer
                   .getNameNodeStateFromContext(getServletContext());
               if (state != HAServiceProtocol.HAServiceState.ACTIVE &&
@@ -580,8 +580,8 @@ public class ImageServlet extends HttpServlet {
                 // from the failure to upload due to (1) security, or (2) other checkpoints already
                 // present
                 sendError(response, HttpServletResponse.SC_EXPECTATION_FAILED,
-                    "Nameode "+request.getLocalAddr()+" is currently not in a state which can "
-                        + "accept uploads of new fsimages. State: "+state);
+                    "NameNode " + request.getLocalAddr() + " is currently not in a state " +
+                        "which can accept uploads of new fsimages. State: " + state);
                 return null;
               }
 
