@@ -132,7 +132,8 @@ public class TestApplicationSubmissionContextInterceptor extends BaseRouterClien
     acls.put(ApplicationAccessType.MODIFY_APP, "moduser");
     ContainerLaunchContext clc = ContainerLaunchContext.newInstance(
         localResources, env, containerCmds, serviceData, containerTokens, acls);
-    ApplicationSubmissionContextPBImpl appSubmissionContextPB = (ApplicationSubmissionContextPBImpl) context;
+    ApplicationSubmissionContextPBImpl appSubmissionContextPB =
+        (ApplicationSubmissionContextPBImpl) context;
     Configuration configuration = getConf();
 
     // Null ApplicationSubmissionContext

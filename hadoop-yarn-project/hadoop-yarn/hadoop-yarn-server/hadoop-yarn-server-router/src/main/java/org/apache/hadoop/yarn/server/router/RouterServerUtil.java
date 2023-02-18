@@ -678,33 +678,36 @@ public final class RouterServerUtil {
   @Unstable
   private static void logContainerLaunchContext(ApplicationSubmissionContextPBImpl appContext)
       throws IOException {
-    if (appContext != null && appContext.getAMContainerSpec() != null) {
-      ContainerLaunchContext launchContext = appContext.getAMContainerSpec();
-      ContainerLaunchContextPBImpl clc = (ContainerLaunchContextPBImpl) launchContext;
-      LOG.warn("ContainerLaunchContext size: {}.", clc.getProto().getSerializedSize());
-
-      // ContainerLaunchContext contains:
-      // 1) Map<String, LocalResource> localResources,
-      List<StringLocalResourceMapProto> lrs = clc.getProto().getLocalResourcesList();
-      logContainerLaunchContext("LocalResource size: {}. Length: {}.", lrs);
-
-      // 2) Map<String, String> environment, List<String> commands,
-      List<StringStringMapProto> envs = clc.getProto().getEnvironmentList();
-      logContainerLaunchContext("Environment size: {}. Length: {}.", envs);
-
-      List<String> cmds = clc.getCommands();
-      if (CollectionUtils.isNotEmpty(cmds)) {
-        LOG.warn("Commands size: {}. Length: {}.", cmds.size(), serialize(cmds).length);
-      }
-
-      // 3) Map<String, ByteBuffer> serviceData,
-      List<StringBytesMapProto> serviceData = clc.getProto().getServiceDataList();
-      logContainerLaunchContext("ServiceData size: {}. Length: {}.", serviceData);
-
-      // 4) Map<ApplicationAccessType, String> acls
-      List<ApplicationACLMapProto> acls = clc.getProto().getApplicationACLsList();
-      logContainerLaunchContext("ACLs size: {}. Length: {}.", acls);
+    if (appContext == null || appContext.getAMContainerSpec() == null ||
+        !(appContext.getAMContainerSpec() instanceof ContainerLaunchContextPBImpl)) {
+      return;
     }
+
+    ContainerLaunchContext launchContext = appContext.getAMContainerSpec();
+    ContainerLaunchContextPBImpl clc = (ContainerLaunchContextPBImpl) launchContext;
+    LOG.warn("ContainerLaunchContext size: {}.", clc.getProto().getSerializedSize());
+
+    // ContainerLaunchContext contains:
+    // 1) Map<String, LocalResource> localResources,
+    List<StringLocalResourceMapProto> lrs = clc.getProto().getLocalResourcesList();
+    logContainerLaunchContext("LocalResource size: {}. Length: {}.", lrs);
+
+    // 2) Map<String, String> environment, List<String> commands,
+    List<StringStringMapProto> envs = clc.getProto().getEnvironmentList();
+    logContainerLaunchContext("Environment size: {}. Length: {}.", envs);
+
+    List<String> cmds = clc.getCommands();
+    if (CollectionUtils.isNotEmpty(cmds)) {
+      LOG.warn("Commands size: {}. Length: {}.", cmds.size(), serialize(cmds).length);
+    }
+
+    // 3) Map<String, ByteBuffer> serviceData,
+    List<StringBytesMapProto> serviceData = clc.getProto().getServiceDataList();
+    logContainerLaunchContext("ServiceData size: {}. Length: {}.", serviceData);
+
+    // 4) Map<ApplicationAccessType, String> acls
+    List<ApplicationACLMapProto> acls = clc.getProto().getApplicationACLsList();
+    logContainerLaunchContext("ACLs size: {}. Length: {}.", acls);
   }
 
   /**
