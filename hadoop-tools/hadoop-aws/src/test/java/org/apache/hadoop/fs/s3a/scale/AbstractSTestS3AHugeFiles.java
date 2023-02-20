@@ -46,6 +46,8 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.impl.ProgressListener;
+import org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.util.Progressable;
@@ -296,9 +298,9 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   }
 
   /**
-   * Progress callback from AWS. Likely to come in on a different thread.
+   * Progress callback.
    */
-  private final class ProgressCallback implements Progressable {
+  private final class ProgressCallback implements Progressable, ProgressListener {
     private AtomicLong bytesTransferred = new AtomicLong(0);
     private AtomicInteger failures = new AtomicInteger(0);
     private final ContractTestUtils.NanoTimer timer;
@@ -311,9 +313,34 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     public void progress() {
     }
 
-    // TODO: You cannot currently attach progress listeners to individual operations.
-
     @Override
+    public void progressChanged(ProgressListenerEvent eventType, int transferredBytes) {
+
+      switch (eventType) {
+      case TRANSFER_PART_FAILED_EVENT:
+        // failure
+        failures.incrementAndGet();
+        LOG.warn("Transfer failure");
+        break;
+      case TRANSFER_PART_COMPLETED_EVENT:
+        // completion
+        bytesTransferred.addAndGet(transferredBytes);
+        long elapsedTime = timer.elapsedTime();
+        double elapsedTimeS = elapsedTime / 1.0e9;
+        long written = bytesTransferred.get();
+        long writtenMB = written / _1MB;
+        LOG.info(String.format(
+            "Event %s; total uploaded=%d MB in %.1fs;" +
+                " effective upload bandwidth = %.2f MB/s",
+            eventType,
+            writtenMB, elapsedTimeS, writtenMB / elapsedTimeS));
+        break;
+      default:
+        // nothing
+        break;
+      }
+    }
+
     public String toString() {
       String sb = "ProgressCallback{"
           + "bytesTransferred=" + bytesTransferred +

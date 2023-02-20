@@ -39,6 +39,8 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
+import org.apache.hadoop.fs.s3a.impl.ProgressListener;
+import org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.util.Preconditions;
@@ -68,6 +70,7 @@ import org.apache.hadoop.util.Progressable;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
+import static org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent.*;
 import static org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext.EMPTY_BLOCK_OUTPUT_STREAM_STATISTICS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
@@ -113,6 +116,8 @@ class S3ABlockOutputStream extends OutputStream implements
   /** Total bytes for uploads submitted so far. */
   private long bytesSubmitted;
 
+  /** Callback for progress. */
+  private final ProgressListener progressListener;
   private final ListeningExecutorService executorService;
 
   /**
@@ -187,6 +192,10 @@ class S3ABlockOutputStream extends OutputStream implements
     this.executorService = MoreExecutors.listeningDecorator(
         builder.executorService);
     this.multiPartUpload = null;
+    Progressable progress = builder.progress;
+    this.progressListener = (progress instanceof ProgressListener) ?
+        (ProgressListener) progress
+        : new ProgressableListener(progress);
     downgradeSyncableExceptions = builder.downgradeSyncableExceptions;
     // create that first block. This guarantees that an open + close sequence
     // writes a 0-byte entry.
@@ -579,7 +588,7 @@ class S3ABlockOutputStream extends OutputStream implements
 
         BlockUploadProgress progressCallback =
             new BlockUploadProgress(
-                block, now());
+                block, progressListener, now());
     // putObjectRequest.setGeneralProgressListener(callback);
     statistics.blockUploadQueued(size);
     ListenableFuture<PutObjectResponse> putObjectResult =
@@ -590,7 +599,7 @@ class S3ABlockOutputStream extends OutputStream implements
             PutObjectResponse response =
                 writeOperationHelper.putObject(putObjectRequest, builder.putOptions, uploadData,
                     uploadData.hasFile());
-            progressCallback.transferredBytes();
+            progressCallback.progressChanged(REQUEST_BYTE_TRANSFER_EVENT);
             return response;
           } finally {
             cleanupWithLogger(LOG, uploadData, block);
@@ -864,7 +873,7 @@ class S3ABlockOutputStream extends OutputStream implements
       }
 
        BlockUploadProgress progressCallback =
-          new BlockUploadProgress(block, now());
+          new BlockUploadProgress(block, progressListener, now());
 
       statistics.blockUploadQueued(block.dataSize());
       ListenableFuture<CompletedPart> partETagFuture =
@@ -875,7 +884,7 @@ class S3ABlockOutputStream extends OutputStream implements
               LOG.debug("Uploading part {} for id '{}'",
                   currentPartNumber, uploadId);
 
-              progressCallback.partTransferStarted();
+              progressCallback.progressChanged(TRANSFER_PART_STARTED_EVENT);
 
               UploadPartResponse response = writeOperationHelper
                   .uploadPart(request, requestBody);
@@ -884,7 +893,7 @@ class S3ABlockOutputStream extends OutputStream implements
               LOG.debug("Stream statistics of {}", statistics);
               partsUploaded++;
 
-              progressCallback.partTransferCompleted();
+              progressCallback.progressChanged(TRANSFER_PART_COMPLETED_EVENT);
 
               return CompletedPart.builder()
                   .eTag(response.eTag())
@@ -893,7 +902,7 @@ class S3ABlockOutputStream extends OutputStream implements
             } catch (IOException e) {
               // save immediately.
               noteUploadFailure(e);
-              progressCallback.partTransferFailed();
+              progressCallback.progressChanged(TRANSFER_PART_FAILED_EVENT);
               throw e;
             } finally {
               // close the stream and block
@@ -1007,6 +1016,7 @@ class S3ABlockOutputStream extends OutputStream implements
   private final class BlockUploadProgress  {
 
     private final S3ADataBlocks.DataBlock block;
+    private final ProgressListener nextListener;
     private final Instant transferQueueTime;
     private Instant transferStartTime;
     private int size;
@@ -1018,38 +1028,73 @@ class S3ABlockOutputStream extends OutputStream implements
      * into the queue
      */
     private BlockUploadProgress(S3ADataBlocks.DataBlock block,
+        ProgressListener nextListener,
         Instant transferQueueTime) {
       this.block = block;
       this.transferQueueTime = transferQueueTime;
       this.size = block.dataSize();
+      this.nextListener = nextListener;
     }
 
-    public void transferredBytes() {
-      statistics.bytesTransferred(size);
-    }
+    public void progressChanged(ProgressListenerEvent eventType) {
 
-    public void partTransferStarted() {
-      transferStartTime = now();
-      statistics.blockUploadStarted(
-          Duration.between(transferQueueTime, transferStartTime),
-          size);
-      statistics.bytesTransferred(size);
-      incrementWriteOperations();
-    }
+      int size = block.dataSize();
+      switch (eventType) {
 
-    public void partTransferCompleted() {
-      statistics.blockUploadCompleted(
-          Duration.between(transferStartTime, now()),
-          size);
-    }
+      case REQUEST_BYTE_TRANSFER_EVENT:
+        // bytes uploaded
+        statistics.bytesTransferred(size);
+        break;
 
-    public void partTransferFailed() {
-      statistics.blockUploadFailed(
-          Duration.between(transferStartTime, now()),
-          size);
-      LOG.warn("Transfer failure of block {}", block);
+      case TRANSFER_PART_STARTED_EVENT:
+        transferStartTime = now();
+        statistics.blockUploadStarted(
+            Duration.between(transferQueueTime, transferStartTime),
+            size);
+        incrementWriteOperations();
+        break;
+
+      case TRANSFER_PART_COMPLETED_EVENT:
+        statistics.blockUploadCompleted(
+            Duration.between(transferStartTime, now()),
+            size);
+        statistics.bytesTransferred(size);
+        break;
+
+      case TRANSFER_PART_FAILED_EVENT:
+        statistics.blockUploadFailed(
+            Duration.between(transferStartTime, now()),
+            size);
+        LOG.warn("Transfer failure of block {}", block);
+        break;
+
+      default:
+        // nothing
+      }
+
+      if (nextListener != null) {
+        nextListener.progressChanged(eventType, size);
+      }
     }
   }
+
+  /**
+   * Bridge from {@link ProgressListener} to Hadoop {@link Progressable}.
+   */
+  private static class ProgressableListener implements ProgressListener {
+    private final Progressable progress;
+
+    ProgressableListener(Progressable progress) {
+      this.progress = progress;
+    }
+
+    public void progressChanged(ProgressListenerEvent eventType, int bytesTransferred) {
+      if (progress != null) {
+        progress.progress();
+      }
+    }
+  }
+
 
   /**
    * Builder class for constructing an output stream.
