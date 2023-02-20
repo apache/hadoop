@@ -18,6 +18,14 @@ public class BatchOperationConsumer implements Runnable {
     private int batchOperationsSize = 0;
     private volatile boolean isRunning = true;
 
+    /**
+     * 批处理消费者
+     *
+     * @param queue                   从队列中读取批处理操作
+     * @param bucketManager           bucketManager
+     * @param singleBatchRequestLimit 单次批处理的limit值
+     * @param pollTimeout             每次poll的超时时间
+     */
     public BatchOperationConsumer(
             BlockingQueue<BatchOperator> queue,
             BucketManager bucketManager,

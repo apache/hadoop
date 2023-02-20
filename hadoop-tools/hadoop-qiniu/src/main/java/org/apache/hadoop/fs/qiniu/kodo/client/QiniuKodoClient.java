@@ -342,10 +342,14 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
     /**
      * 列举并批处理
+     *
+     * @param config    生产消费相关的配置
+     * @param prefixKey 生产列举的key前缀
+     * @param f         消费操作函数
      */
     private boolean listAndBatch(
             ListAndBatchBaseConfig config,
-            String prefix,
+            String prefixKey,
             Function<FileInfo, BatchOperator> f
     ) throws IOException {
         // 消息队列
@@ -356,7 +360,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
         // 对象列举生产者
         ListingProducer producer = new ListingProducer(
-                fileInfoQueue, bucketManager, bucket, prefix,
+                fileInfoQueue, bucketManager, bucket, prefixKey,
                 config.listProducer.singleRequestLimit, false,
                 config.listProducer.useListV2,
                 config.listProducer.offerTimeout
