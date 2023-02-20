@@ -47,12 +47,13 @@ public class TimeoutOptimizer {
         if (opType != null) {
             this.retryPolicy = retryPolicy;
             this.abfsConfiguration = abfsConfiguration;
-            if (abfsConfiguration.get(ConfigurationKeys.AZURE_OPTIMIZE_TIMEOUTS) == null) {
+            String shouldOptimize = abfsConfiguration.get(ConfigurationKeys.AZURE_OPTIMIZE_TIMEOUTS);
+            if (shouldOptimize == null || shouldOptimize.isEmpty()) {
                 // config is not set
                 this.shouldOptimizeTimeout = false;
             }
             else {
-                this.shouldOptimizeTimeout = Boolean.parseBoolean(abfsConfiguration.get(ConfigurationKeys.AZURE_OPTIMIZE_TIMEOUTS));
+                this.shouldOptimizeTimeout = Boolean.parseBoolean(shouldOptimize);
             }
             if (this.shouldOptimizeTimeout) {
                 // config is set to true
@@ -187,7 +188,7 @@ public class TimeoutOptimizer {
                 timeout = abfsConfiguration.get(ConfigurationKeys.AZURE_LEASE_PATH_REQUEST_TIMEOUT);
                 break;
         }
-        if (timeout == null) {
+        if (timeout == null || timeout.isEmpty()) {
             // if any of the timeout values are not set
             // despite optimize config set to true
             timeout = DEFAULT_TIMEOUT;
