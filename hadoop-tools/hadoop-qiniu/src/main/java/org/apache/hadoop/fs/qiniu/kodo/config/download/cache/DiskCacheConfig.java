@@ -39,7 +39,9 @@ public class DiskCacheConfig extends AConfigBase {
      */
     private Path dir() {
         String dir = conf.get(namespace + ".dir");
-        if (dir != null) return Paths.get(dir);
+        if (dir != null) {
+            return Paths.get(dir);
+        }
 
         String hadoopTmpDir = conf.get("hadoop.tmp.dir");
         return Paths.get(hadoopTmpDir, "qiniu", "download");

@@ -27,7 +27,7 @@ public class ProxyConfig extends AConfigBase {
     }
 
     private String hostname() {
-        return conf.get(namespace + ".hostname");
+        return conf.get(namespace + ".hostname", "127.0.0.1");
     }
 
     private int port() {

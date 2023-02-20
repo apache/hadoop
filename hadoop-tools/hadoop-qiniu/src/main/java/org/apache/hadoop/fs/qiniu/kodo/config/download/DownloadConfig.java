@@ -23,7 +23,7 @@ public class DownloadConfig extends AConfigBase {
     }
 
     private boolean useHttps() {
-        return conf.getBoolean(namespace + ".useHttps", true);
+        return conf.getBoolean(namespace + ".useHttps", false);
     }
 
 
@@ -48,10 +48,10 @@ public class DownloadConfig extends AConfigBase {
 
 
     /**
-     * 是否对下载请求添加
+     * 是否对下载请求添加NO-Cache请求头
      */
     private boolean useNoCacheHeader() {
-        return conf.getBoolean(namespace + ".noCacheHeader", true);
+        return conf.getBoolean(namespace + ".noCacheHeader", false);
     }
 
 }

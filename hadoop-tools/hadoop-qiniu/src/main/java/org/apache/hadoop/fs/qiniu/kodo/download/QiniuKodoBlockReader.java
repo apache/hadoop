@@ -30,6 +30,7 @@ public class QiniuKodoBlockReader implements IBlockReader, IBlockManager {
 
         // 构造原始数据获取器
         this.sourceReader = new QiniuKodoSourceDataFetcher(blockSize, client);
+        this.finalReader = sourceReader;
 
         if (diskCache.enable) {
             // 添加磁盘缓存层
@@ -39,14 +40,17 @@ public class QiniuKodoBlockReader implements IBlockReader, IBlockManager {
                     diskCache.dir,
                     diskCache.expires
             );
+            this.finalReader = this.diskCacheReader;
         }
 
-        // 必须添加内存缓存层，否则单字节读取可能将不断读取文件块
-        this.memoryCacheReader = new MemoryCacheBlockReader(
-                diskCacheReader == null ? sourceReader : diskCacheReader,
-                memoryCache.blocks
-        );
-        this.finalReader = memoryCacheReader;
+        if (memoryCache.enable) {
+            // 添加内存缓存
+            this.memoryCacheReader = new MemoryCacheBlockReader(
+                    diskCacheReader == null ? sourceReader : diskCacheReader,
+                    memoryCache.blocks
+            );
+            this.finalReader = this.memoryCacheReader;
+        }
         this.blockSize = finalReader.getBlockSize();
     }
 

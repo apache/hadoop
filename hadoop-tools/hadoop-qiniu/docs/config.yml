@@ -1,4 +1,4 @@
-# 七牛鉴权
+# 七牛鉴权，必须给出否则将抛出异常
 auth:
   accessKey: ''
   secretKey: ''
@@ -7,81 +7,60 @@ auth:
 proxy:
   # 是否启用代理
   enable: false
-  username: ''
-  hostname: ''
-  password: ''
+
+  # 代理服务地址与端口
+  hostname: '127.0.0.1'
   port: 8080
-  type: http
 
-# 客户端模拟文件系统相关设置
-client:
-  cache:
-    enable: true
-    maxCapacity: 100
+  # 用户名与密码字符串
+  username: null
+  password: null
 
-  list:
-    useListV2: false
-    singleRequestLimit: 1000
-    bufferSize: 100
-    offerTimeout: 10
+  # 代理类型，HTTP or SOCKS
+  type: 'HTTP'
 
-  copy:
-    listProducer:
-      useListV2: false
-      singleRequestLimit: 1000
-      bufferSize: 100
-      offerTimeout: 10
-
-    batchConsumer:
-      bufferSize: 1000
-      count: 4
-      singleBatchRequestLimit: 200
-      pollTimeout: 10
-
-  delete:
-    listProducer:
-      useListV2: false
-      singleRequestLimit: 1000
-      bufferSize: 100
-      offerTimeout: 10
-
-    batchConsumer:
-      bufferSize: 1000
-      count: 4
-      singleBatchRequestLimit: 200
-      pollTimeout: 10
 
 # 文件下载相关设置
 download:
+  # 默认不使用https
+  useHttps: false
+  # 是否添加 X-QN-NOCACHE 请求头，启用后可能会对后端服务造成较大压力，若需要强一致性需求时可启用，默认不启用
+  useNoCacheHeader: false
+  # 文件下载块大小，默认为4MB，若启用了磁盘缓存，则修改该值可能会清空磁盘缓存
+  blockSize: 4194304
+  # 下载域名，字符串类型，可自行绑定cdn域名
+  domain: null
+
+  # 下载签名相关
+  sign:
+    enable: true  # 默认启用
+    # 过期时间，单位为秒，默认设置为7天，即7*24*3600
+    expires: 604800
+
   # 下载缓存设置
   cache:
     # 磁盘缓存
     disk:
-      expires: 86400
-      enable: false
-      blocks: 120
-      dir: ''
+      enable: false   # 默认关闭
+      expires: 86400  # 磁盘缓存过期时间，单位是秒，默认1天，即24*3600
+      blocks: 120     # 默认设置LRU缓存块数120
+      dir: null       # 下载缓冲区路径，默认为null，将使用文件夹${hadoop.tmp.dir}/qiniu
 
     # 内存缓存
     memory:
-      blocks: 25
+      enable: true  # 默认开启
+      blocks: 25    # 默认设置LRU缓存块数25
 
-  # 下载域名，可绑定cdn域名
-  domain: ''
 
-  # 下载签名相关
-  sign:
-    enable: true
-    expires: 604800
-
-  useHttps: false
-  useNoCacheHeader: true
-  blockSize: 4194304
 
 # 文件上传相关设置
 upload:
+  # 使用 AutoRegion 时，如果从区域信息得到上传 host 失败，使用默认的上传域名上传，
+  # 默认 是 upload.qiniup.com, upload-z1.qiniup.com, upload-z2.qiniup.com,
+  # upload-na0.qiniup.com, upload-as0.qiniup.com
   useDefaultUpHostIfNone: true
   sign:
+    # 上传签名过期时间，单位为秒，默认设置为7天，即7*24*3600
     expires: 604800
   useHttps: false
   accUpHostFirst: false
@@ -89,18 +68,25 @@ upload:
   v2:
     # 是否启用v2分片上传
     enable: true
-    # v2分片上传块大小
-    blockSize: 41943040
+    # v2分片上传块大小，默认32MB
+    blockSize: 33554432
 
-  # hadoop与java sdk之间的pipe缓冲区大小
+  # hadoop与java sdk之间的pipe缓冲区大小，默认16MB
   bufferSize: 16777216
 
 # 区域与私有云相关设置
 region:
-  # 区域ID
+  # 区域ID，默认支持公有云id配置如下，也可通过添加custom相关字段实现私有云接入
+  #     华东: cn-east-1, z0
+  #     华东-浙江: cn-east-2
+  #     华北: cn-north-1, z1
+  #     华南: cn-south-1, z2
+  #     北美: us-north-1, na0
+  #     新加坡: ap-southeast-1
+  #     亚太-首尔: ap-northeast-1
   id: custom1
 
-  # 私有云ID自定义配置
+  # 私有云ID自定义配置，子命名空间均为用户自定义region id
   custom:
     custom1:
       rsHost:
@@ -120,3 +106,44 @@ region:
       srcUpHosts: [ ]
       endpointHost:
 
+# 客户端模拟文件系统相关设置
+client:
+  # 文件系统缓存，目前主要针对部分场景下的stat性能做缓存优化
+  cache:
+    enable: true
+    maxCapacity: 100
+
+  # 文件复制
+  copy:
+    listProducer:
+      useListV2: false  # 默认不使用listV2
+      singleRequestLimit: 1000  # 单次列举请求最大拉取列表限制，默认1000条
+      bufferSize: 100   # 生产者队列大小
+      offerTimeout: 10  # 当生产者队列满后的自旋重试的等待时间
+
+    batchConsumer:
+      bufferSize: 1000  # 消费者队列大小
+      count: 4          # 消费者数量
+      singleBatchRequestLimit: 200  # 消费者单批请求处理数量
+      pollTimeout: 10   # 消费者拉取消费队列的自旋重试的等待时间
+
+  # 文件删除
+  delete:
+    listProducer:
+      useListV2: false
+      singleRequestLimit: 1000
+      bufferSize: 100
+      offerTimeout: 10
+
+    batchConsumer:
+      bufferSize: 1000
+      count: 4
+      singleBatchRequestLimit: 200
+      pollTimeout: 10
+
+  # 文件列举，配置同 copy/delete 的 listProducer
+  list:
+    useListV2: false  # 默认不使用listV2
+    singleRequestLimit: 1000  # 单次列举请求最大拉取列表限制，默认1000条
+    bufferSize: 100   # 生产者队列大小
+    offerTimeout: 10  # 当生产者队列满后的自旋重试的等待时间
