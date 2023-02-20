@@ -43,7 +43,7 @@ The IOStatistics API is intended to
 Any class *may* implement `IOStatisticsSource` in order to
 provide statistics.
 
-Wrapper I/O Classes such as `FSDataInputStream` anc `FSDataOutputStream` *should*
+Wrapper I/O Classes such as `FSDataInputStream` and `FSDataOutputStream` *should*
 implement the interface and forward it to the wrapped class, if they also
 implement it -and return `null` if they do not.
 
