@@ -991,7 +991,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withInvoker(invoker);
 
     S3ClientFactory clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
-    s3Client = clientFactory.createS3ClientV2(getUri(), parameters);
+    s3Client = clientFactory.createS3Client(getUri(), parameters);
     s3AsyncClient = clientFactory.createS3AsyncClient(getUri(), parameters);
     transferManager =  clientFactory.createS3TransferManager(s3AsyncClient);
   }
@@ -1273,7 +1273,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return S3Client
    */
   @VisibleForTesting
-  public S3Client getAmazonS3V2ClientForTesting(String reason) {
+  public S3Client getAmazonS3ClientForTesting(String reason) {
     LOG.warn("Access to S3 client requested, reason {}", reason);
     return s3Client;
   }

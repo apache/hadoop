@@ -64,7 +64,7 @@ public abstract class AbstractS3AMockTest {
     // unset S3CSE property from config to avoid pathIOE.
     conf.unset(Constants.S3_ENCRYPTION_ALGORITHM);
     fs.initialize(uri, conf);
-    s3 = fs.getAmazonS3V2ClientForTesting("mocking");
+    s3 = fs.getAmazonS3ClientForTesting("mocking");
   }
 
   public Configuration createConfiguration() {

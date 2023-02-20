@@ -69,7 +69,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
 
     S3AFileSystem fs = new S3AFileSystem();
     fs.initialize(getFileSystem().getUri(), conf);
-    S3Client s3Client = fs.getAmazonS3V2ClientForTesting("testWithoutRegionConfig");
+    S3Client s3Client = fs.getAmazonS3ClientForTesting("testWithoutRegionConfig");
 
     try (AuditSpan span = span()) {
       s3Client.headBucket(HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build());
@@ -199,7 +199,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
         .withInvoker(new Invoker(new S3ARetryPolicy(conf),
             this::operationRetried))
         .withExecutionInterceptors(interceptors);
-    S3Client client = factory.createS3ClientV2(
+    S3Client client = factory.createS3Client(
         getFileSystem().getUri(),
         parameters);
     return client;

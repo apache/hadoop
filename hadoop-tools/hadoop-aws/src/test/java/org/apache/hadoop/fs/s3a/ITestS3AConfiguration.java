@@ -118,7 +118,7 @@ public class ITestS3AConfiguration {
     } else {
       conf.set(Constants.ENDPOINT, endpoint);
       fs = S3ATestUtils.createTestFileSystem(conf);
-      S3Client s3 = fs.getAmazonS3V2ClientForTesting("test endpoint");
+      S3Client s3 = fs.getAmazonS3ClientForTesting("test endpoint");
       String endPointRegion = "";
       // Differentiate handling of "s3-" and "s3." based endpoint identifiers
       String[] endpointParts = StringUtils.split(endpoint, '.');
@@ -358,7 +358,7 @@ public class ITestS3AConfiguration {
     try {
       fs = S3ATestUtils.createTestFileSystem(conf);
       assertNotNull(fs);
-      S3Client s3 = fs.getAmazonS3V2ClientForTesting("configuration");
+      S3Client s3 = fs.getAmazonS3ClientForTesting("configuration");
       assertNotNull(s3);
 
       SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
@@ -393,7 +393,7 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
-    S3Client s3 = fs.getAmazonS3V2ClientForTesting("User Agent");
+    S3Client s3 = fs.getAmazonS3ClientForTesting("User Agent");
     assertNotNull(s3);
     SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
@@ -408,7 +408,7 @@ public class ITestS3AConfiguration {
     conf.set(Constants.USER_AGENT_PREFIX, "MyApp");
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
-    S3Client s3 = fs.getAmazonS3V2ClientForTesting("User agent");
+    S3Client s3 = fs.getAmazonS3ClientForTesting("User agent");
     assertNotNull(s3);
     SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
@@ -422,7 +422,7 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     conf.set(REQUEST_TIMEOUT, "120");
     fs = S3ATestUtils.createTestFileSystem(conf);
-    S3Client s3 = fs.getAmazonS3V2ClientForTesting("Request timeout (ms)");
+    S3Client s3 = fs.getAmazonS3ClientForTesting("Request timeout (ms)");
     SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
     assertEquals("Configured " + REQUEST_TIMEOUT +
@@ -542,7 +542,7 @@ public class ITestS3AConfiguration {
     config.set(AWS_REGION, "eu-west-1");
     fs = S3ATestUtils.createTestFileSystem(config);
 
-    S3Client s3Client = fs.getAmazonS3V2ClientForTesting("testS3SpecificSignerOverride");
+    S3Client s3Client = fs.getAmazonS3ClientForTesting("testS3SpecificSignerOverride");
 
     StsClient stsClient =
         STSClientFactory.builder(config, fs.getBucket(), new AnonymousAWSCredentialsProvider(), "",

@@ -171,6 +171,43 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       LOG.info("Creating Signer #{}", c);
     }
 
+    /**
+     * Method to sign the incoming request with credentials.
+     *
+     * NOTE: In case of Client-side encryption, we do a "Generate Key" POST
+     * request to AWSKMS service rather than S3, this was causing the test to
+     * break. When this request happens, we have the endpoint in form of
+     * "kms.[REGION].amazonaws.com", and bucket-name becomes "kms". We can't
+     * use AWSS3V4Signer for AWSKMS service as it contains a header
+     * "x-amz-content-sha256:UNSIGNED-PAYLOAD", which returns a 400 bad
+     * request because the signature calculated by the service doesn't match
+     * what we sent.
+     * @param request the request to sign.
+     * @param executionAttributes request executionAttributes which contain the credentials.
+     */
+    @Override
+    public SdkHttpFullRequest sign(SdkHttpFullRequest request,
+        ExecutionAttributes executionAttributes) {
+      int c = INVOCATION_COUNT.incrementAndGet();
+      LOG.info("Signing request #{}", c);
+
+      String host = request.host();
+      String bucketName = parseBucketFromHost(host);
+      try {
+        lastStoreValue = CustomSignerInitializer
+            .getStoreValue(bucketName, UserGroupInformation.getCurrentUser());
+      } catch (IOException e) {
+        throw new RuntimeException("Failed to get current Ugi", e);
+      }
+      if (bucketName.equals("kms")) {
+        Aws4Signer realKMSSigner = Aws4Signer.create();
+        return realKMSSigner.sign(request, executionAttributes);
+      } else {
+        AwsS3V4Signer realSigner = AwsS3V4Signer.create();
+        return realSigner.sign(request, executionAttributes);
+      }
+    }
+
     private String parseBucketFromHost(String host) {
       String[] hostBits = host.split("\\.");
       String bucketName = hostBits[0];
@@ -209,43 +246,6 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
 
     public static int getInvocationCount() {
       return INVOCATION_COUNT.get();
-    }
-
-    /**
-     * Method to sign the incoming request with credentials.
-     *
-     * NOTE: In case of Client-side encryption, we do a "Generate Key" POST
-     * request to AWSKMS service rather than S3, this was causing the test to
-     * break. When this request happens, we have the endpoint in form of
-     * "kms.[REGION].amazonaws.com", and bucket-name becomes "kms". We can't
-     * use AWSS3V4Signer for AWSKMS service as it contains a header
-     * "x-amz-content-sha256:UNSIGNED-PAYLOAD", which returns a 400 bad
-     * request because the signature calculated by the service doesn't match
-     * what we sent.
-     * @param request the request to sign.
-     * @param executionAttributes request executionAttributes which contain the credentials.
-     */
-    @Override
-    public SdkHttpFullRequest sign(SdkHttpFullRequest request,
-        ExecutionAttributes executionAttributes) {
-      int c = INVOCATION_COUNT.incrementAndGet();
-      LOG.info("Signing request #{}", c);
-
-      String host = request.host();
-      String bucketName = parseBucketFromHost(host);
-      try {
-        lastStoreValue = CustomSignerInitializer
-            .getStoreValue(bucketName, UserGroupInformation.getCurrentUser());
-      } catch (IOException e) {
-        throw new RuntimeException("Failed to get current Ugi", e);
-      }
-      if (bucketName.equals("kms")) {
-        Aws4Signer realKMSSigner = Aws4Signer.create();
-        return realKMSSigner.sign(request, executionAttributes);
-      } else {
-        AwsS3V4Signer realSigner = AwsS3V4Signer.create();
-        return realSigner.sign(request, executionAttributes);
-      }
     }
   }
 

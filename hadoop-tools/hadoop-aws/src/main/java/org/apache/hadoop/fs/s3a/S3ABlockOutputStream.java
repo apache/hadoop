@@ -998,14 +998,6 @@ class S3ABlockOutputStream extends OutputStream implements
     }
   }
 
-  /**
-   * Create a builder.
-   * @return
-   */
-  public static BlockOutputStreamBuilder builder() {
-    return new BlockOutputStreamBuilder();
-  }
-
 
   /**
    * The upload progress listener registered for events returned
@@ -1095,6 +1087,13 @@ class S3ABlockOutputStream extends OutputStream implements
     }
   }
 
+  /**
+   * Create a builder.
+   * @return
+   */
+  public static BlockOutputStreamBuilder builder() {
+    return new BlockOutputStreamBuilder();
+  }
 
   /**
    * Builder class for constructing an output stream.

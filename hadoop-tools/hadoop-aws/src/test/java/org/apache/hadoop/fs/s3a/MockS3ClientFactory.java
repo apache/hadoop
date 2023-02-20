@@ -23,9 +23,15 @@ import static org.mockito.Mockito.*;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.function.Consumer;
 
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
+import software.amazon.awssdk.services.s3.model.GetBucketLocationResponse;
+import software.amazon.awssdk.services.s3.model.ListMultipartUploadsRequest;
+import software.amazon.awssdk.services.s3.model.ListMultipartUploadsResponse;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
 /**
@@ -36,8 +42,18 @@ public class MockS3ClientFactory implements S3ClientFactory {
 
 
   @Override
-  public S3Client createS3ClientV2(URI uri, final S3ClientCreationParameters parameters) {
+  public S3Client createS3Client(URI uri, final S3ClientCreationParameters parameters) {
     S3Client s3 = mock(S3Client.class);
+    // this listing is used in startup if purging is enabled, so
+    // return a stub value
+    ListMultipartUploadsResponse noUploads = ListMultipartUploadsResponse.builder()
+        .uploads(new ArrayList<>(0))
+        .isTruncated(false)
+        .build();
+    // noUploads.setMultipartUploads(new ArrayList<>(0));
+    when(s3.listMultipartUploads((ListMultipartUploadsRequest) any())).thenReturn(noUploads);
+    when(s3.getBucketLocation((GetBucketLocationRequest) any())).thenReturn(
+        GetBucketLocationResponse.builder().locationConstraint(Region.US_WEST_2.toString()).build());
     return s3;
   }
 

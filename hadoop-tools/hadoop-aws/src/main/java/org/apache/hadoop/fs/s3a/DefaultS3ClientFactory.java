@@ -24,12 +24,9 @@ import java.net.URISyntaxException;
 import java.util.List;
 
 import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
-import org.apache.hadoop.util.Preconditions;
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
@@ -43,7 +40,6 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
-import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
@@ -75,8 +71,6 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404_NOT_FOUND;
 public class DefaultS3ClientFactory extends Configured
     implements S3ClientFactory {
 
-  private static final String S3_SERVICE_NAME = "s3";
-
   private static final String REQUESTER_PAYS_HEADER_VALUE = "requester";
 
   /**
@@ -85,24 +79,12 @@ public class DefaultS3ClientFactory extends Configured
   protected static final Logger LOG =
       LoggerFactory.getLogger(DefaultS3ClientFactory.class);
 
-  /**
-   * A one-off warning of default region chains in use.
-   */
-  private static final LogExactlyOnce WARN_OF_DEFAULT_REGION_CHAIN =
-      new LogExactlyOnce(LOG);
-
-  /**
-   * Warning message printed when the SDK Region chain is in use.
-   */
-  private static final String SDK_REGION_CHAIN_IN_USE =
-      "S3A filesystem client is using"
-          + " the SDK region resolution chain.";
 
   /** Exactly once log to inform about ignoring the AWS-SDK Warnings for CSE. */
   private static final LogExactlyOnce IGNORE_CSE_WARN = new LogExactlyOnce(LOG);
 
   @Override
-  public S3Client createS3ClientV2(
+  public S3Client createS3Client(
       final URI uri,
       final S3ClientCreationParameters parameters) throws IOException {
 

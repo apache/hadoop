@@ -90,7 +90,7 @@ public class ITestS3ACannedACLs extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
 
     StoreContext storeContext = fs.createStoreContext();
-    S3Client s3 = fs.getAmazonS3V2ClientForTesting("acls");
+    S3Client s3 = fs.getAmazonS3ClientForTesting("acls");
     String key = storeContext.pathToKey(path);
     if (!isFile) {
       key = key + "/";

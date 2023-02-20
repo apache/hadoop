@@ -598,7 +598,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
         .withMetrics(new EmptyS3AStatisticsContext()
             .newStatisticsFromAwsSdk())
         .withUserAgentSuffix("ITestSessionDelegationInFileystem");
-    S3Client s3 = factory.createS3ClientV2(landsat, parameters);
+    S3Client s3 = factory.createS3Client(landsat, parameters);
 
     return Invoker.once("HEAD", host,
         () -> s3.headBucket(b -> b.bucket(host)));
