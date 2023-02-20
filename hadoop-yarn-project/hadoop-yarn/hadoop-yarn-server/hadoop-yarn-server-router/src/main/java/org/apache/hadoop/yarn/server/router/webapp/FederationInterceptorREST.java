@@ -1596,10 +1596,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
               subCluster.getSubClusterId(), subCluster.getRMWebServiceAddress());
           interceptor.replaceLabelsOnNodes(nodeToLabelsEntryList, hsrCopy);
-          builder.append("subCluster#" + subClusterId.getId() + ":Success;");
+          builder.append("subCluster-").append(subClusterId.getId()).append(":Success,");
         } catch (Exception e) {
           LOG.error("replaceLabelsOnNodes Failed. subClusterId = {}.", subClusterId, e);
-          builder.append(subClusterId.getId() + " : Failed.");
+          builder.append("subCluster-").append(subClusterId.getId()).append(":Failed,");
         }
       });
       long stopTime = clock.getTime();

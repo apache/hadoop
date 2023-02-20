@@ -1815,11 +1815,11 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertNotNull(entityObject);
 
     String entityValue = String.valueOf(entityObject);
-    String[] entities = entityValue.split(";");
+    String[] entities = entityValue.split(",");
     Assert.assertNotNull(entities);
     Assert.assertEquals(4, entities.length);
     String expectValue =
-        "subCluster#0:Success;subCluster#1:Success;subCluster#2:Success;subCluster#3:Success;";
+        "subCluster-0:Success,subCluster-1:Success,subCluster-2:Success,subCluster-3:Success,";
     for (String entity : entities) {
       Assert.assertTrue(expectValue.contains(entity));
     }
