@@ -1324,7 +1324,7 @@ public class MockDefaultRequestInterceptorREST
       if (StringUtils.contains("A0", id)) {
         return Response.status(Status.OK).build();
       } else {
-        return null;
+        return Response.status(Status.BAD_REQUEST).entity(null).build();
       }
     }
     throw new YarnException("addToClusterNodeLabels Error");
@@ -1342,7 +1342,7 @@ public class MockDefaultRequestInterceptorREST
       if (StringUtils.contains("A0", id)) {
         return Response.status(Status.OK).build();
       } else {
-        return null;
+        return Response.status(Status.BAD_REQUEST).entity(null).build();
       }
     }
     throw new YarnException("removeFromClusterNodeLabels Error");

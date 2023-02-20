@@ -1916,14 +1916,14 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertNotNull(entityObj);
 
     String entity = String.valueOf(entityObj);
-    String[] entities = StringUtils.split(entity, "#");
+    String[] entities = StringUtils.split(entity, ",");
     Assert.assertNotNull(entities);
     Assert.assertEquals(4, entities.length);
 
     // The order in which the cluster returns messages is uncertain,
     // we confirm the result by contains
     String expectedMsg =
-        "SubCluster=0,SUCCESS#SubCluster=1,SUCCESS#SubCluster=2,SUCCESS#SubCluster=3,SUCCESS#";
+        "SubCluster-0:SUCCESS,SubCluster-1:SUCCESS,SubCluster-2:SUCCESS,SubCluster-3:SUCCESS";
     Arrays.stream(entities).forEach(item -> {
       Assert.assertTrue(expectedMsg.contains(item));
     });
@@ -1943,9 +1943,9 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Object entityObj = response.getEntity();
     Assert.assertNotNull(entityObj);
 
-    String expectedValue = "SubCluster=0,SUCCESS#";
+    String expectedValue = "SubCluster-0:SUCCESS,";
     String entity = String.valueOf(entityObj);
-    Assert.assertEquals(expectedValue, entity);
+    Assert.assertTrue(entity.contains(expectedValue));
   }
 
   @Test
@@ -1981,14 +1981,14 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertNotNull(entityObj);
 
     String entity = String.valueOf(entityObj);
-    String[] entities = StringUtils.split(entity, "#");
+    String[] entities = StringUtils.split(entity, ",");
     Assert.assertNotNull(entities);
     Assert.assertEquals(4, entities.length);
 
     // The order in which the cluster returns messages is uncertain,
     // we confirm the result by contains
     String expectedMsg =
-        "SubCluster=0,SUCCESS#SubCluster=1,SUCCESS#SubCluster=2,SUCCESS#SubCluster=3,SUCCESS#";
+        "SubCluster-0:SUCCESS,SubCluster-1:SUCCESS,SubCluster-2:SUCCESS,SubCluster-3:SUCCESS";
     Arrays.stream(entities).forEach(item -> {
       Assert.assertTrue(expectedMsg.contains(item));
     });
@@ -2005,9 +2005,9 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Object entityObj = response.getEntity();
     Assert.assertNotNull(entityObj);
 
-    String expectedValue = "SubCluster=0,SUCCESS#";
+    String expectedValue = "SubCluster-0:SUCCESS,";
     String entity = String.valueOf(entityObj);
-    Assert.assertEquals(expectedValue, entity);
+    Assert.assertTrue(entity.contains(expectedValue));
   }
 
   @Test

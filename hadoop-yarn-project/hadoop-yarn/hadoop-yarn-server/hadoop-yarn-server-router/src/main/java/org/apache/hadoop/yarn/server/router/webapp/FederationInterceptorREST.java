@@ -1617,13 +1617,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       Map<SubClusterInfo, Response> responseInfoMap =
           invokeConcurrent(subClustersActive.values(), remoteMethod, Response.class);
       StringBuffer buffer = new StringBuffer();
+      // SubCluster-0:SUCCESS,SubCluster-1:SUCCESS
       responseInfoMap.forEach((subClusterInfo, response) -> {
-        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
-        if (response != null) {
-          buffer.append("SubCluster=" + subClusterId.getId() + ",SUCCESS#");
-        } else {
-          buffer.append("SubCluster=" + subClusterId.getId() + ",FAILED#");
-        }
+        buildAppendMsg(subClusterInfo, buffer, response);
       });
       long stopTime = clock.getTime();
       routerMetrics.succeededAddToClusterNodeLabelsRetrieved((stopTime - startTime));
@@ -1670,13 +1666,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       Map<SubClusterInfo, Response> responseInfoMap =
           invokeConcurrent(subClustersActive.values(), remoteMethod, Response.class);
       StringBuffer buffer = new StringBuffer();
+      // SubCluster-0:SUCCESS,SubCluster-1:SUCCESS
       responseInfoMap.forEach((subClusterInfo, response) -> {
-        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
-        if (response != null) {
-          buffer.append("SubCluster=").append(subClusterId.getId()).append(",SUCCESS#");
-        } else {
-          buffer.append("SubCluster=").append(subClusterId.getId()).append(",FAILED#");
-        }
+        buildAppendMsg(subClusterInfo, buffer, response);
       });
       long stopTime = clock.getTime();
       routerMetrics.succeededRemoveFromClusterNodeLabelsRetrieved(stopTime - startTime);
@@ -1691,6 +1683,25 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
     throw new RuntimeException("removeFromClusterNodeLabels Failed.");
+  }
+
+  /**
+   * Bbulid Append information.
+   *
+   * @param subClusterInfo subCluster information.
+   * @param buffer StringBuffer.
+   * @param response response message.
+   */
+  private void buildAppendMsg(SubClusterInfo subClusterInfo, StringBuffer buffer,
+      Response response) {
+    SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+    String state = response != null &&
+        (response.getStatus() == Status.OK.getStatusCode()) ? "SUCCESS" : "FAILED";
+    buffer.append("SubCluster-")
+        .append(subClusterId.getId())
+        .append(":")
+        .append(state)
+        .append(",");
   }
 
   @Override
