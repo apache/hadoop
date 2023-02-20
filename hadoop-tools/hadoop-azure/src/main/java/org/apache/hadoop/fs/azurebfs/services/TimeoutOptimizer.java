@@ -29,6 +29,11 @@ import java.net.URL;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DEFAULT_TIMEOUT;
 
+/**
+ * Class handling whether timeout values should be optimized.
+ * Timeout values optimized per request level,
+ * based on configs in the settings.
+ */
 public class TimeoutOptimizer {
     AbfsConfiguration abfsConfiguration;
     private URL url;
@@ -41,6 +46,14 @@ public class TimeoutOptimizer {
     private int timeoutIncRate;
     private boolean shouldOptimizeTimeout;
 
+    /**
+     * Constructor to initialize the parameters in class,
+     * depending upon what is configured in the settings.
+     * @param url request URL
+     * @param opType operation type
+     * @param retryPolicy retry policy set for this instance of AbfsClient
+     * @param abfsConfiguration current configuration
+     */
     public TimeoutOptimizer(URL url, AbfsRestOperationType opType, ExponentialRetryPolicy retryPolicy, AbfsConfiguration abfsConfiguration) {
         this.url = url;
         this.opType = opType;
@@ -82,9 +95,13 @@ public class TimeoutOptimizer {
     public URL getUrl() {
         return url;
     }
-    public boolean getShouldOptimizeTimeout() { return this.shouldOptimizeTimeout; }
+    public boolean getShouldOptimizeTimeout() {
+        return this.shouldOptimizeTimeout;
+    }
 
-    public int getRequestTimeout() { return requestTimeout; }
+    public int getRequestTimeout() {
+        return requestTimeout;
+    }
 
     public int getReadTimeout() {
         return readTimeout;

@@ -288,7 +288,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     for (AbfsHttpHeader header : requestHeaders) {
       this.connection.setRequestProperty(header.getName(), header.getValue());
     }
-
   }
 
    /**
@@ -560,7 +559,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     public AbfsHttpOperationWithFixedResult(final URL url,
         final String method,
         final int httpStatus) {
-
       super(url, method, httpStatus);
     }
 
