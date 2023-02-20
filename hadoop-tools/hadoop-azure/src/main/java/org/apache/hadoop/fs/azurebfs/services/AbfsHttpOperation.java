@@ -168,7 +168,9 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return connection.getHeaderField(httpHeader);
   }
 
-  public TimeoutOptimizer getTimeoutOptimizer() { return timeoutOptimizer; }
+  public TimeoutOptimizer getTimeoutOptimizer() {
+    return timeoutOptimizer;
+  }
 
   // Returns a trace message for the request
   @Override

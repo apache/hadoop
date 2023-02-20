@@ -25,7 +25,6 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
 
-import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,10 +36,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperati
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
-
-import javax.security.auth.login.Configuration;
-
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.

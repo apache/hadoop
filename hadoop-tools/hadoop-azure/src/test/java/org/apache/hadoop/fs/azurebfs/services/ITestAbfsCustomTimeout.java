@@ -113,7 +113,10 @@ public class ITestAbfsCustomTimeout extends AbstractAbfsIntegrationTest {
 
     }
 
-    public void testInitTimeoutOptimizer(AbfsRestOperationType opType, int maxRetryCount, int expectedReqTimeout, AbfsConfiguration abfsConfig) throws IOException {
+    public void testInitTimeoutOptimizer(AbfsRestOperationType opType,
+                                         int maxRetryCount,
+                                         int expectedReqTimeout,
+                                         AbfsConfiguration abfsConfig) throws IOException {
 
         AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(abfsConfig.getRawConfiguration());
         AbfsClient client = fs.getAbfsStore().getClient();

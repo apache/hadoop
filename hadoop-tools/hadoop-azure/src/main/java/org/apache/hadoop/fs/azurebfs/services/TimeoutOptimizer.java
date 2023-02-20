@@ -35,7 +35,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DEFAULT_
  * based on configs in the settings.
  */
 public class TimeoutOptimizer {
-    AbfsConfiguration abfsConfiguration;
+    private AbfsConfiguration abfsConfiguration;
     private URL url;
     private AbfsRestOperationType opType;
     private ExponentialRetryPolicy retryPolicy;
