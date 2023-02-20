@@ -764,7 +764,20 @@ public final class S3AUtils {
   }
 
   /***
-   * Creates an instance of a class using reflection.
+   * Creates an instance of a class using reflection. The
+   * class must implement one of the following means of construction, which are
+   * attempted in order:
+   *
+   * <ol>
+   * <li>a public constructor accepting java.net.URI and
+   *     org.apache.hadoop.conf.Configuration</li>
+   * <li>a public constructor accepting
+   *    org.apache.hadoop.conf.Configuration</li>
+   * <li>a public static method named as per methodName, that accepts no
+   *    arguments and returns an instance of
+   *    specified type, or</li>
+   * <li>a public default constructor.</li>
+   * </ol>
    *
    * @param instanceClass Class for which instance is to be created
    * @param conf configuration
@@ -797,7 +810,7 @@ public final class S3AUtils {
         }
       }
 
-      // X.getInstance()
+      // X.methodName()
       Method factory = getFactoryMethod(instanceClass, interfaceImplemented, methodName);
       if (factory != null) {
         return (InstanceT) factory.invoke(null);
