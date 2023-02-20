@@ -1,0 +1,122 @@
+# 七牛鉴权
+auth:
+  accessKey: ''
+  secretKey: ''
+
+# 代理设置
+proxy:
+  # 是否启用代理
+  enable: false
+  username: ''
+  hostname: ''
+  password: ''
+  port: 8080
+  type: http
+
+# 客户端模拟文件系统相关设置
+client:
+  cache:
+    enable: true
+    maxCapacity: 100
+
+  list:
+    useListV2: false
+    singleRequestLimit: 1000
+    bufferSize: 100
+    offerTimeout: 10
+
+  copy:
+    listProducer:
+      useListV2: false
+      singleRequestLimit: 1000
+      bufferSize: 100
+      offerTimeout: 10
+
+    batchConsumer:
+      bufferSize: 1000
+      count: 4
+      singleBatchRequestLimit: 200
+      pollTimeout: 10
+
+  delete:
+    listProducer:
+      useListV2: false
+      singleRequestLimit: 1000
+      bufferSize: 100
+      offerTimeout: 10
+
+    batchConsumer:
+      bufferSize: 1000
+      count: 4
+      singleBatchRequestLimit: 200
+      pollTimeout: 10
+
+# 文件下载相关设置
+download:
+  # 下载缓存设置
+  cache:
+    # 磁盘缓存
+    disk:
+      expires: 86400
+      enable: false
+      blocks: 120
+      dir: ''
+
+    # 内存缓存
+    memory:
+      blocks: 25
+
+  # 下载域名，可绑定cdn域名
+  domain: ''
+
+  # 下载签名相关
+  sign:
+    enable: true
+    expires: 604800
+
+  useHttps: false
+  useNoCacheHeader: true
+  blockSize: 4194304
+
+# 文件上传相关设置
+upload:
+  useDefaultUpHostIfNone: true
+  sign:
+    expires: 604800
+  useHttps: false
+  accUpHostFirst: false
+  maxConcurrentTasks: 1
+  v2:
+    # 是否启用v2分片上传
+    enable: true
+    # v2分片上传块大小
+    blockSize: 41943040
+
+  # hadoop与java sdk之间的pipe缓冲区大小
+  bufferSize: 16777216
+
+# 区域与私有云相关设置
+region:
+  # 区域ID
+  id: custom1
+
+  # 私有云ID自定义配置
+  custom:
+    custom1:
+      rsHost:
+      rsfHost:
+      apiHost:
+      iovipHost:
+      accUpHosts: [ ]
+      srcUpHosts: [ ]
+      endpointHost:
+
+    custom2:
+      rsHost:
+      rsfHost:
+      apiHost:
+      iovipHost:
+      accUpHosts: [ ]
+      srcUpHosts: [ ]
+      endpointHost:
+
