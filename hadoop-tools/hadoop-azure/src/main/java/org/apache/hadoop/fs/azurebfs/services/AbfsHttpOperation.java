@@ -282,7 +282,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       }
     }
 
-    this.connection.setConnectTimeout(timeoutOptimizer.getConnTimeout(CONNECT_TIMEOUT));
+    this.connection.setConnectTimeout(CONNECT_TIMEOUT);
     this.connection.setReadTimeout(timeoutOptimizer.getReadTimeout(READ_TIMEOUT));
 
     this.connection.setRequestMethod(method);

@@ -41,7 +41,6 @@ public class TimeoutOptimizer {
     private ExponentialRetryPolicy retryPolicy;
     private int requestTimeout;
     private int readTimeout = -1;
-    private int connTimeout = -1;
     private int maxReqTimeout;
     private int timeoutIncRate;
     private boolean shouldOptimizeTimeout;
@@ -114,22 +113,10 @@ public class TimeoutOptimizer {
         return defaultTimeout;
     }
 
-    public int getConnTimeout() {
-        return connTimeout;
-    }
-
-    public int getConnTimeout(final int defaultTimeout) {
-        if (connTimeout == -1) {
-            return defaultTimeout;
-        }
-        return connTimeout;
-    }
-
     private void initTimeouts() {
         if (!shouldOptimizeTimeout) {
             requestTimeout = -1;
             readTimeout = -1;
-            connTimeout = -1;
             return;
         }
 
@@ -140,7 +127,6 @@ public class TimeoutOptimizer {
             // no optimization is needed for this particular request as well
             requestTimeout = -1;
             readTimeout = -1;
-            connTimeout = -1;
             shouldOptimizeTimeout = false;
             return;
         }
@@ -212,7 +198,6 @@ public class TimeoutOptimizer {
         }
         requestTimeout = Integer.parseInt(timeout);
         readTimeout = requestTimeout * 1000;
-        connTimeout = readTimeout - 1;
         updateUrl();
     }
 
@@ -230,7 +215,6 @@ public class TimeoutOptimizer {
                 requestTimeout *= timeoutIncRate;
             }
             readTimeout = requestTimeout * 1000;
-            connTimeout = readTimeout - 1;
         }
     }
 
