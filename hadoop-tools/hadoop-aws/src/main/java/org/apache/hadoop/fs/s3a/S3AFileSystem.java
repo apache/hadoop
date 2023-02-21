@@ -708,7 +708,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * bucket existence check is not done to improve performance of
    * S3AFileSystem initialization. When set to 1 or 2, bucket existence check
    * will be performed which is potentially slow.
-   * If 3 or higher: warn and use the v2 check.
+   * If 3 or higher: warn and use the check.
    * Also logging DNS address of the s3 endpoint if the bucket probe value is
    * greater than 0 else skipping it for increased performance.
    * @throws UnknownStoreException the bucket is absent
@@ -725,18 +725,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("skipping check for bucket existence");
       break;
     case 1:
-      logDnsLookup(getConf());
-      verifyBucketExists();
-      break;
     case 2:
       logDnsLookup(getConf());
-      verifyBucketExistsV2();
+      verifyBucketExists();
       break;
     default:
       // we have no idea what this is, assume it is from a later release.
       LOG.warn("Unknown bucket probe option {}: {}; falling back to check #2",
           S3A_BUCKET_PROBE, bucketProbe);
-      verifyBucketExistsV2();
+      verifyBucketExists();
       break;
     }
   }
@@ -834,8 +831,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws UnknownStoreException the bucket is absent
    * @throws IOException any other problem talking to S3
    */
-  // TODO: Review: this used to call doesBucketExist in v1, which does not check permissions,
-  //  not even read access.
   @Retries.RetryTranslated
   protected void verifyBucketExists() throws UnknownStoreException, IOException {
     if (!invoker.retry("doesBucketExist", bucket, true,
@@ -844,48 +839,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               try {
                 s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
                 return true;
-              } catch (NoSuchBucketException e) {
-                return false;
-              }
-            }))) {
-      throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does " + "not exist");
-    }
-  }
-
-  /**
-   * Verify that the bucket exists. This will correctly throw an exception
-   * when credentials are invalid.
-   * TODO: Review. May be redundant in v2.
-   * Retry policy: retrying, translated.
-   * @throws UnknownStoreException the bucket is absent
-   * @throws IOException any other problem talking to S3
-   */
-  @Retries.RetryTranslated
-  protected void verifyBucketExistsV2()
-      throws UnknownStoreException, IOException {
-    if (!invoker.retry("doesBucketExistV2", bucket, true,
-        trackDurationOfOperation(getDurationTrackerFactory(),
-            STORE_EXISTS_PROBE.getSymbol(),
-            () -> {
-              // Bug in SDK always returns `true` for AccessPoint ARNs with `doesBucketExistV2()`
-              // expanding implementation to use ARNs and buckets correctly
-              try {
-                s3Client.getBucketAcl(GetBucketAclRequest.builder()
-                    .bucket(bucket)
-                    .build());
               } catch (AwsServiceException ex) {
                 int statusCode = ex.statusCode();
                 if (statusCode == SC_404_NOT_FOUND ||
-                    (statusCode == SC_403_FORBIDDEN &&
-                        ex.getMessage().contains(AP_INACCESSIBLE))) {
+                    (statusCode == SC_403_FORBIDDEN && accessPoint != null)) {
                   return false;
                 }
               }
 
               return true;
             }))) {
-      throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does "
-          + "not exist");
+      throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does " + "not exist");
     }
   }
 

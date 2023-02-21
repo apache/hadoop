@@ -149,9 +149,6 @@ public class DefaultS3ClientFactory extends Configured
     // TODO: Some configuration done in configureBasicParams is not done yet.
     S3Configuration serviceConfiguration = S3Configuration.builder()
             .pathStyleAccessEnabled(parameters.isPathStyleAccess())
-            // TODO: Review. Currently required to pass access point tests in ITestS3ABucketExistence,
-            //  but resolving the region from the ap may be the correct solution.
-            .useArnRegionEnabled(true)
             .build();
 
     return builder
@@ -246,6 +243,12 @@ public class DefaultS3ClientFactory extends Configured
 
     if (!StringUtils.isBlank(region)) {
       return Region.of(region);
+    }
+
+    ArnResource accessPoint = parameters.getAccessPoint();
+
+    if (accessPoint != null) {
+      return Region.of(accessPoint.getRegion());
     }
 
     Invoker invoker = parameters.getInvoker();

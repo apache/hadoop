@@ -161,6 +161,11 @@ public interface S3ClientFactory {
     private Invoker invoker;
 
     /**
+     * Access point to be used.
+     */
+    private ArnResource accessPoint;
+
+    /**
      * List of execution interceptors to include in the chain
      * of interceptors in the SDK.
      * @return the interceptors list
@@ -372,6 +377,26 @@ public interface S3ClientFactory {
      */
     public Invoker getInvoker() {
       return invoker;
+    }
+
+    /**
+     * Set access point.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withAccessPoint(
+        final ArnResource value) {
+      accessPoint = value;
+      return this;
+    }
+
+    /**
+     * Get the access point.
+     * @return invoker
+     */
+    public ArnResource getAccessPoint() {
+      return accessPoint;
     }
 
   }
