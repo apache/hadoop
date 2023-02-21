@@ -9,26 +9,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class DeleteLargeDirectoryTest extends QiniuKodoPerformanceBaseTest {
-    protected int file() {
+    protected int files() {
         return 2000;
-    }
-
-    public void makeSureLargeDir(String testDir, FileSystem fs) throws Exception {
-        if (fs.exists(new Path(testDir + "/" + (file() - 1)))) {
-            return;
-        }
-        ExecutorService service = Executors.newFixedThreadPool(20);
-        for (int i = 0; i < file(); i++) {
-            Path p = new Path(testDir + "/" + i);
-            service.submit(() -> {
-                try {
-                    fs.create(p).close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-        }
-        awaitAllExecutors(service);
     }
 
     @Override
@@ -38,7 +20,7 @@ public class DeleteLargeDirectoryTest extends QiniuKodoPerformanceBaseTest {
 
     @Override
     protected long testImpl(String testDir, FileSystem fs, ExecutorService service) throws Exception {
-        makeSureLargeDir(testDir, fs);
+        getPrepareHelper().prepareLargeDir(testDir, files());
         service.submit(() -> {
             try {
                 fs.delete(new Path(testDir));
@@ -48,9 +30,6 @@ public class DeleteLargeDirectoryTest extends QiniuKodoPerformanceBaseTest {
         });
         long ms = System.currentTimeMillis();
         awaitAllExecutors(service);
-        long useMs = System.currentTimeMillis() - ms;
-        // 确保下一次加速
-        makeSureLargeDir(testDir, fs);
-        return useMs;
+        return System.currentTimeMillis() - ms;
     }
 }

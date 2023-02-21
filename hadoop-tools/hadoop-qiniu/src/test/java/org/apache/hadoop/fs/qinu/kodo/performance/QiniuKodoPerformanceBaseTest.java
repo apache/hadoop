@@ -3,7 +3,10 @@ package org.apache.hadoop.fs.qinu.kodo.performance;
 import com.google.gson.Gson;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem;
+import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
+import org.apache.hadoop.fs.qinu.kodo.performance.prepare.TestPrepareHelper;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.junit.After;
 import org.junit.Before;
@@ -11,19 +14,22 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public abstract class QiniuKodoPerformanceBaseTest {
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoPerformanceBaseTest.class);
+    private static final String DEFAULT_PREPARE_FILE_DIR = "/testPrepare";
     private static final String DEFAULT_KODO_TEST_DIR = "/testKodo";
     private static final String DEFAULT_S3A_TEST_DIR = "/testS3A";
-    private final FileSystem kodoFs = new QiniuKodoFileSystem();
-    private final FileSystem s3aFs = new S3AFileSystem();
+    private final QiniuKodoFileSystem kodoFs = new QiniuKodoFileSystem();
+    private final S3AFileSystem s3aFs = new S3AFileSystem();
 
     private static final Map<String, Map<String, Object>> testResult = new HashMap<>();
 
@@ -43,6 +49,15 @@ public abstract class QiniuKodoPerformanceBaseTest {
         if (getSceneDescription() != null) {
             testResult.get(getSceneString()).put("description", getSceneDescription());
         }
+    }
+
+    protected TestPrepareHelper getPrepareHelper() throws Exception {
+        Field field = QiniuKodoFileSystem.class.getDeclaredField("kodoClient");
+        field.setAccessible(true);
+        QiniuKodoClient client = (QiniuKodoClient) field.get(kodoFs);
+        return new TestPrepareHelper(kodoFs, client,
+                new Path(DEFAULT_PREPARE_FILE_DIR),
+                Executors.newFixedThreadPool(10));
     }
 
     /**
