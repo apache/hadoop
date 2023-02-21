@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.Random;
+import java.util.Collection;
 
 import javax.cache.Cache;
 import javax.cache.CacheManager;
@@ -1210,5 +1211,15 @@ public final class FederationStateStoreFacade {
       return true;
     }
     return false;
+  }
+
+  public Collection<SubClusterInfo> getActiveSubClusters() {
+    try {
+      Map<SubClusterId, SubClusterInfo> subClusterMap = getSubClusters(true);
+      return subClusterMap.values();
+    } catch (Exception e) {
+      LOG.error("getSubClustersCollection failed.", e);
+      return null;
+    }
   }
 }
