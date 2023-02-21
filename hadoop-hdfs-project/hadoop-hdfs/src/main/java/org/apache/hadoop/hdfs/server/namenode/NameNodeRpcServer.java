@@ -2368,7 +2368,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public long getCurrentEditLogTxid() throws IOException {
     String operationName = "getCurrentEditLogTxid";
     checkNNStartup();
-    namesystem.checkOperation(OperationCategory.READ); // only active
+    namesystem.checkOperation(OperationCategory.WRITE); // only active
     namesystem.checkSuperuserPrivilege(operationName);
     // if it's not yet open for write, we may be in the process of transitioning
     // from standby to active and may not yet know what the latest committed
@@ -2398,7 +2398,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public EventBatchList getEditsFromTxid(long txid) throws IOException {
     String operationName = "getEditsFromTxid";
     checkNNStartup();
-    namesystem.checkOperation(OperationCategory.READ); // only active
+    namesystem.checkOperation(OperationCategory.WRITE); // only active
     namesystem.checkSuperuserPrivilege(operationName);
     int maxEventsPerRPC = nn.getConf().getInt(
         DFSConfigKeys.DFS_NAMENODE_INOTIFY_MAX_EVENTS_PER_RPC_KEY,
