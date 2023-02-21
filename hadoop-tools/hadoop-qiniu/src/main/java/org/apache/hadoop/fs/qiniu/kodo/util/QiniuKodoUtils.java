@@ -1,4 +1,4 @@
-package org.apache.hadoop.fs.qiniu.kodo;
+package org.apache.hadoop.fs.qiniu.kodo.util;
 
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;

@@ -11,6 +11,7 @@ import org.apache.hadoop.fs.qiniu.kodo.download.EmptyInputStream;
 import org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoInputStream;
 import org.apache.hadoop.fs.qiniu.kodo.upload.QiniuKodoOutputStream;
+import org.apache.hadoop.fs.qiniu.kodo.util.QiniuKodoUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;

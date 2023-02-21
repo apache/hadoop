@@ -6,7 +6,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem;
 import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
-import org.apache.hadoop.fs.qinu.kodo.performance.prepare.TestPrepareHelper;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.junit.After;
 import org.junit.Before;

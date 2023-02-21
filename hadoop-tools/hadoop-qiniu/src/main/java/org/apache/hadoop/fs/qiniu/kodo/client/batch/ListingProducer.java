@@ -4,7 +4,7 @@ import com.qiniu.common.QiniuException;
 import com.qiniu.storage.BucketManager;
 import com.qiniu.storage.model.FileInfo;
 import com.qiniu.storage.model.FileListing;
-import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoUtils;
+import org.apache.hadoop.fs.qiniu.kodo.util.QiniuKodoUtils;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;

@@ -5,7 +5,7 @@ import org.junit.Test;
 
 import java.net.URI;
 
-import static org.apache.hadoop.fs.qiniu.kodo.QiniuKodoUtils.*;
+import static org.apache.hadoop.fs.qiniu.kodo.util.QiniuKodoUtils.*;
 import static org.junit.Assert.*;
 
 public class QiniuKodoUtilsTest {

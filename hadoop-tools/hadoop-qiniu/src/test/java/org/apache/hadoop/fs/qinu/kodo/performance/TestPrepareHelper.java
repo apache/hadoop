@@ -1,9 +1,9 @@
-package org.apache.hadoop.fs.qinu.kodo.performance.prepare;
+package org.apache.hadoop.fs.qinu.kodo.performance;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoUtils;
 import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
+import org.apache.hadoop.fs.qiniu.kodo.util.QiniuKodoUtils;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
