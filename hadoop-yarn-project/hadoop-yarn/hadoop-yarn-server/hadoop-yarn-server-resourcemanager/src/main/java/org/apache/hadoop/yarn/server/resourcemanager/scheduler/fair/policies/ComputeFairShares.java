@@ -45,9 +45,9 @@ public final class ComputeFairShares {
    * shares considering only active schedulables ie schedulables which have
    * running apps.
    * 
-   * @param schedulables
-   * @param totalResources
-   * @param type
+   * @param schedulables given schedulables.
+   * @param totalResources totalResources.
+   * @param type type of the resource.
    */
   public static void computeShares(
       Collection<? extends Schedulable> schedulables, Resource totalResources,
@@ -60,9 +60,9 @@ public final class ComputeFairShares {
    * share is an allocation of shares considering all queues, i.e.,
    * active and inactive.
    *
-   * @param queues
-   * @param totalResources
-   * @param type
+   * @param queues {@link FSQueue}s whose shares are to be updated.
+   * @param totalResources totalResources.
+   * @param type type of the resource.
    */
   public static void computeSteadyShares(
       Collection<? extends FSQueue> queues, Resource totalResources,
