@@ -1,4 +1,4 @@
-package org.apache.hadoop.fs.qinu.kodo.blockcache;
+package org.apache.hadoop.fs.qinu.kodo.util;
 
 import com.google.gson.Gson;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader;

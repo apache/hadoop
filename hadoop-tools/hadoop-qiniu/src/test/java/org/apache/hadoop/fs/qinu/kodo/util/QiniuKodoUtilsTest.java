@@ -1,4 +1,4 @@
-package org.apache.hadoop.fs.qinu.kodo;
+package org.apache.hadoop.fs.qinu.kodo.util;
 
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
