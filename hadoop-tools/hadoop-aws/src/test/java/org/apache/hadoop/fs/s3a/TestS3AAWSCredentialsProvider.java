@@ -22,9 +22,15 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
@@ -37,6 +43,7 @@ import org.junit.rules.ExpectedException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.auth.AbstractSessionCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -46,6 +53,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.junit.Assert.*;
 
 /**
@@ -95,6 +103,7 @@ public class TestS3AAWSCredentialsProvider {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testInstantiationChain() throws Throwable {
     Configuration conf = new Configuration(false);
     conf.set(AWS_CREDENTIALS_PROVIDER,
@@ -114,6 +123,7 @@ public class TestS3AAWSCredentialsProvider {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testDefaultChain() throws Exception {
     URI uri1 = new URI("s3a://bucket1"), uri2 = new URI("s3a://bucket2");
     Configuration conf = new Configuration(false);
@@ -138,6 +148,7 @@ public class TestS3AAWSCredentialsProvider {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testConfiguredChain() throws Exception {
     URI uri1 = new URI("s3a://bucket1"), uri2 = new URI("s3a://bucket2");
     List<Class<?>> expectedClasses =
@@ -156,6 +167,7 @@ public class TestS3AAWSCredentialsProvider {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testConfiguredChainUsesSharedInstanceProfile() throws Exception {
     URI uri1 = new URI("s3a://bucket1"), uri2 = new URI("s3a://bucket2");
     Configuration conf = new Configuration(false);
@@ -194,7 +206,7 @@ public class TestS3AAWSCredentialsProvider {
   /**
    * A credential provider whose constructor signature doesn't match.
    */
-  static class ConstructorSignatureErrorProvider
+  protected static class ConstructorSignatureErrorProvider
       implements AWSCredentialsProvider {
 
     @SuppressWarnings("unused")
@@ -214,7 +226,7 @@ public class TestS3AAWSCredentialsProvider {
   /**
    * A credential provider whose constructor raises an NPE.
    */
-  static class ConstructorFailureProvider
+  protected static class ConstructorFailureProvider
       implements AWSCredentialsProvider {
 
     @SuppressWarnings("unused")
@@ -242,7 +254,7 @@ public class TestS3AAWSCredentialsProvider {
     }
   }
 
-  static class AWSExceptionRaisingFactory implements AWSCredentialsProvider {
+  protected static class AWSExceptionRaisingFactory implements AWSCredentialsProvider {
 
     public static final String NO_AUTH = "No auth";
 
@@ -368,6 +380,7 @@ public class TestS3AAWSCredentialsProvider {
    * @see S3ATestUtils#authenticationContains(Configuration, String).
    */
   @Test
+  @SuppressWarnings("deprecation")
   public void testAuthenticationContainsProbes() {
     Configuration conf = new Configuration(false);
     assertFalse("found AssumedRoleCredentialProvider",
@@ -457,7 +470,7 @@ public class TestS3AAWSCredentialsProvider {
   /**
    * Credential provider which raises an IOE when constructed.
    */
-  private static class IOERaisingProvider implements AWSCredentialsProvider {
+  protected static class IOERaisingProvider implements AWSCredentialsProvider {
 
     public IOERaisingProvider(URI uri, Configuration conf)
         throws IOException {
@@ -475,4 +488,153 @@ public class TestS3AAWSCredentialsProvider {
     }
   }
 
+  private static final AWSCredentials EXPECTED_CREDENTIALS = new AWSCredentials() {
+    @Override
+    public String getAWSAccessKeyId() {
+      return "expectedAccessKey";
+    }
+
+    @Override
+    public String getAWSSecretKey() {
+      return "expectedSecret";
+    }
+  };
+
+  /**
+   * Credential provider that takes a long time.
+   */
+  protected static class SlowProvider extends AbstractSessionCredentialsProvider {
+
+    public SlowProvider(@Nullable URI uri, Configuration conf) {
+      super(uri, conf);
+    }
+
+    @Override
+    protected AWSCredentials createCredentials(Configuration config) throws IOException {
+      // yield to other callers to induce race condition
+      Thread.yield();
+      return EXPECTED_CREDENTIALS;
+    }
+  }
+
+  private static final int CONCURRENT_THREADS = 10;
+
+  @Test
+  public void testConcurrentAuthentication() throws Throwable {
+    Configuration conf = createProviderConfiguration(SlowProvider.class.getName());
+    Path testFile = getCSVTestPath(conf);
+
+    AWSCredentialProviderList list = createAWSCredentialProviderSet(testFile.toUri(), conf);
+
+    SlowProvider provider = (SlowProvider) list.getProviders().get(0);
+
+    ExecutorService pool = Executors.newFixedThreadPool(CONCURRENT_THREADS);
+
+    List<Future<AWSCredentials>> results = new ArrayList<>();
+
+    try {
+      assertFalse(
+          "Provider not initialized. isInitialized should be false",
+          provider.isInitialized());
+      assertFalse(
+          "Provider not initialized. hasCredentials should be false",
+          provider.hasCredentials());
+      if (provider.getInitializationException() != null) {
+        throw new AssertionError(
+            "Provider not initialized. getInitializationException should return null",
+            provider.getInitializationException());
+      }
+
+      for (int i = 0; i < CONCURRENT_THREADS; i++) {
+        results.add(pool.submit(() -> list.getCredentials()));
+      }
+
+      for (Future<AWSCredentials> result : results) {
+        AWSCredentials credentials = result.get();
+        assertEquals("Access key from credential provider",
+                "expectedAccessKey", credentials.getAWSAccessKeyId());
+        assertEquals("Secret key from credential provider",
+                "expectedSecret", credentials.getAWSSecretKey());
+      }
+    } finally {
+      pool.awaitTermination(10, TimeUnit.SECONDS);
+      pool.shutdown();
+    }
+
+    assertTrue(
+        "Provider initialized without errors. isInitialized should be true",
+         provider.isInitialized());
+    assertTrue(
+        "Provider initialized without errors. hasCredentials should be true",
+        provider.hasCredentials());
+    if (provider.getInitializationException() != null) {
+      throw new AssertionError(
+          "Provider initialized without errors. getInitializationException should return null",
+          provider.getInitializationException());
+    }
+  }
+
+  /**
+   * Credential provider with error.
+   */
+  protected static class ErrorProvider extends AbstractSessionCredentialsProvider {
+
+    public ErrorProvider(@Nullable URI uri, Configuration conf) {
+      super(uri, conf);
+    }
+
+    @Override
+    protected AWSCredentials createCredentials(Configuration config) throws IOException {
+      throw new IOException("expected error");
+    }
+  }
+
+  @Test
+  public void testConcurrentAuthenticationError() throws Throwable {
+    Configuration conf = createProviderConfiguration(ErrorProvider.class.getName());
+    Path testFile = getCSVTestPath(conf);
+
+    AWSCredentialProviderList list = createAWSCredentialProviderSet(testFile.toUri(), conf);
+    ErrorProvider provider = (ErrorProvider) list.getProviders().get(0);
+
+    ExecutorService pool = Executors.newFixedThreadPool(CONCURRENT_THREADS);
+
+    List<Future<AWSCredentials>> results = new ArrayList<>();
+
+    try {
+      assertFalse("Provider not initialized. isInitialized should be false",
+          provider.isInitialized());
+      assertFalse("Provider not initialized. hasCredentials should be false",
+          provider.hasCredentials());
+      if (provider.getInitializationException() != null) {
+        throw new AssertionError(
+            "Provider not initialized. getInitializationException should return null",
+            provider.getInitializationException());
+      }
+
+      for (int i = 0; i < CONCURRENT_THREADS; i++) {
+        results.add(pool.submit(() -> list.getCredentials()));
+      }
+
+      for (Future<AWSCredentials> result : results) {
+        interceptFuture(CredentialInitializationException.class,
+            "expected error",
+            result
+        );
+      }
+    } finally {
+      pool.awaitTermination(10, TimeUnit.SECONDS);
+      pool.shutdown();
+    }
+
+    assertTrue(
+        "Provider initialization failed. isInitialized should be true",
+        provider.isInitialized());
+    assertFalse(
+        "Provider initialization failed. hasCredentials should be false",
+        provider.hasCredentials());
+    assertTrue(
+        "Provider initialization failed. getInitializationException should contain the error",
+        provider.getInitializationException().getMessage().contains("expected error"));
+  }
 }

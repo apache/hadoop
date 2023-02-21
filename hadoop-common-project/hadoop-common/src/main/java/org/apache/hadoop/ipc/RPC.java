@@ -541,6 +541,50 @@ public class RPC {
     return getProtocolProxy(protocol, clientVersion, addr, ticket, conf,
         factory, getRpcTimeout(conf), null);
   }
+
+  /**
+   * Get a protocol proxy that contains a proxy connection to a remote server
+   * and a set of methods that are supported by the server.
+   *
+   * @param <T> Generics Type T
+   * @param protocol protocol class
+   * @param clientVersion client's version
+   * @param connId client connection identifier
+   * @param conf configuration
+   * @param factory socket factory
+   * @return the protocol proxy
+   * @throws IOException if the far end through a RemoteException
+   */
+  public static <T> ProtocolProxy<T> getProtocolProxy(Class<T> protocol,
+      long clientVersion, ConnectionId connId, Configuration conf,
+      SocketFactory factory) throws IOException {
+    return getProtocolProxy(protocol, clientVersion, connId, conf,
+        factory, null);
+  }
+
+  /**
+   * Get a protocol proxy that contains a proxy connection to a remote server
+   * and a set of methods that are supported by the server.
+   *
+   * @param <T> Generics Type T
+   * @param protocol protocol class
+   * @param clientVersion client's version
+   * @param connId client connection identifier
+   * @param conf configuration
+   * @param factory socket factory
+   * @param alignmentContext StateID alignment context
+   * @return the protocol proxy
+   * @throws IOException if the far end through a RemoteException
+   */
+  public static <T> ProtocolProxy<T> getProtocolProxy(Class<T> protocol,
+      long clientVersion, ConnectionId connId, Configuration conf,
+      SocketFactory factory, AlignmentContext alignmentContext) throws IOException {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      SaslRpcServer.init(conf);
+    }
+    return getProtocolEngine(protocol, conf).getProxy(
+        protocol, clientVersion, connId, conf, factory, alignmentContext);
+  }
   
   /**
    * Construct a client-side proxy that implements the named protocol,
@@ -852,13 +896,27 @@ public class RPC {
       this.numHandlers = numHandlers;
       return this;
     }
-    
+
     /**
      * @return Default: -1.
      * @param numReaders input numReaders.
+     * @deprecated call {@link #setNumReaders(int value)} instead.
      */
+    @Deprecated
     public Builder setnumReaders(int numReaders) {
       this.numReaders = numReaders;
+      return this;
+    }
+
+    /**
+     * Set the number of reader threads.
+     *
+     * @return this builder.
+     * @param value input numReaders.
+     * @since HADOOP-18625.
+     */
+    public Builder setNumReaders(int value) {
+      this.numReaders = value;
       return this;
     }
     

@@ -119,7 +119,7 @@ public class TestStateStoreDriverBase {
   }
 
   @SuppressWarnings("unchecked")
-  private <T extends BaseRecord> T generateFakeRecord(Class<T> recordClass)
+  protected  <T extends BaseRecord> T generateFakeRecord(Class<T> recordClass)
       throws IllegalArgumentException, IllegalAccessException, IOException {
 
     if (recordClass == MembershipState.class) {
@@ -232,6 +232,25 @@ public class TestStateStoreDriverBase {
     QueryResult<T> queryResult2 = driver.get(recordClass);
     List<T> records2 = queryResult2.getRecords();
     assertEquals(11, records2.size());
+  }
+
+  public <T extends BaseRecord> void testInsertWithErrorDuringWrite(
+      StateStoreDriver driver, Class<T> recordClass)
+      throws IllegalArgumentException, IllegalAccessException, IOException {
+
+    assertTrue(driver.removeAll(recordClass));
+    QueryResult<T> queryResult0 = driver.get(recordClass);
+    List<T> records0 = queryResult0.getRecords();
+    assertTrue(records0.isEmpty());
+
+    // Insert single
+    BaseRecord record = generateFakeRecord(recordClass);
+    driver.put(record, true, false);
+
+    // Verify that no record was inserted.
+    QueryResult<T> queryResult1 = driver.get(recordClass);
+    List<T> records1 = queryResult1.getRecords();
+    assertEquals(0, records1.size());
   }
 
   public <T extends BaseRecord> void testFetchErrors(StateStoreDriver driver,

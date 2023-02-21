@@ -32,8 +32,7 @@ import org.apache.hadoop.yarn.api.records.NodeLabel;
 public class NodeLabelsInfo {
 
   @XmlElement(name = "nodeLabelInfo")
-  private ArrayList<NodeLabelInfo> nodeLabelsInfo =
-    new ArrayList<NodeLabelInfo>();
+  private ArrayList<NodeLabelInfo> nodeLabelsInfo = new ArrayList<>();
 
   public NodeLabelsInfo() {
     // JAXB needs this
@@ -44,17 +43,24 @@ public class NodeLabelsInfo {
   }
 
   public NodeLabelsInfo(List<NodeLabel> nodeLabels) {
-    this.nodeLabelsInfo = new ArrayList<NodeLabelInfo>();
+    this.nodeLabelsInfo = new ArrayList<>();
     for (NodeLabel label : nodeLabels) {
       this.nodeLabelsInfo.add(new NodeLabelInfo(label));
     }
   }
   
   public NodeLabelsInfo(Set<String> nodeLabelsName) {
-    this.nodeLabelsInfo = new ArrayList<NodeLabelInfo>();
+    this.nodeLabelsInfo = new ArrayList<>();
     for (String labelName : nodeLabelsName) {
       this.nodeLabelsInfo.add(new NodeLabelInfo(labelName));
     }
+  }
+
+  public NodeLabelsInfo(Collection<NodeLabel> nodeLabels) {
+    this.nodeLabelsInfo = new ArrayList<>();
+    nodeLabels.stream().forEach(nodeLabel -> {
+      this.nodeLabelsInfo.add(new NodeLabelInfo(nodeLabel));
+    });
   }
 
   public ArrayList<NodeLabelInfo> getNodeLabelsInfo() {
@@ -62,7 +68,7 @@ public class NodeLabelsInfo {
   }
 
   public Set<NodeLabel> getNodeLabels() {
-    Set<NodeLabel> nodeLabels = new HashSet<NodeLabel>();
+    Set<NodeLabel> nodeLabels = new HashSet<>();
     for (NodeLabelInfo label : nodeLabelsInfo) {
       nodeLabels.add(NodeLabel.newInstance(label.getName(),
           label.getExclusivity()));
@@ -71,7 +77,7 @@ public class NodeLabelsInfo {
   }
   
   public List<String> getNodeLabelsName() {
-    ArrayList<String> nodeLabelsName = new ArrayList<String>();
+    ArrayList<String> nodeLabelsName = new ArrayList<>();
     for (NodeLabelInfo label : nodeLabelsInfo) {
       nodeLabelsName.add(label.getName());
     }

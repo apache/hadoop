@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-#include "hdfspp/ioservice.h"
+#include "RpcHeader.pb.h"
 
+#include "hdfspp/ioservice.h"
 #include "mock_connection.h"
 #include "test.pb.h"
-#include "RpcHeader.pb.h"
 #include "rpc/rpc_connection_impl.h"
 #include "common/namenode_info.h"
 
@@ -40,6 +40,8 @@ using ::hadoop::common::EmptyRequestProto;
 using ::hadoop::common::EmptyResponseProto;
 using ::hadoop::common::EchoRequestProto;
 using ::hadoop::common::EchoResponseProto;
+
+using boost::system::error_code;
 
 using ::testing::Return;
 

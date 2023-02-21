@@ -23,18 +23,21 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.Map;
 
+import org.apache.hadoop.oncrpc.RpcReply;
 import org.junit.Assert;
 
 import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.CredentialsNone;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
-import org.apache.hadoop.test.Whitebox;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 public class TestPortmap {
   private static Portmap pm = new Portmap();
@@ -76,7 +79,7 @@ public class TestPortmap {
   }
 
   @Test(timeout = 10000)
-  public void testRegistration() throws IOException, InterruptedException {
+  public void testRegistration() throws IOException, InterruptedException, IllegalAccessException {
     XDR req = new XDR();
     RpcCall.getInstance(++xid, RpcProgramPortmap.PROGRAM,
         RpcProgramPortmap.VERSION,
@@ -93,6 +96,19 @@ public class TestPortmap {
         pm.getUdpServerLoAddress());
     try {
       s.send(p);
+
+      // verify that portmap server responds a UDF packet back to the client
+      byte[] receiveData = new byte[65535];
+      DatagramPacket receivePacket = new DatagramPacket(receiveData,
+              receiveData.length);
+      s.setSoTimeout(2000);
+      s.receive(receivePacket);
+
+      // verify that the registration is accepted.
+      XDR xdr = new XDR(Arrays.copyOfRange(receiveData, 0,
+              receivePacket.getLength()));
+      RpcReply reply = RpcReply.read(xdr);
+      assertEquals(reply.getState(), RpcReply.ReplyState.MSG_ACCEPTED);
     } finally {
       s.close();
     }
@@ -100,9 +116,7 @@ public class TestPortmap {
     // Give the server a chance to process the request
     Thread.sleep(100);
     boolean found = false;
-    @SuppressWarnings("unchecked")
-    Map<String, PortmapMapping> map = (Map<String, PortmapMapping>) Whitebox
-        .getInternalState(pm.getHandler(), "map");
+    Map<String, PortmapMapping> map = pm.getHandler().getMap();
 
     for (PortmapMapping m : map.values()) {
       if (m.getPort() == sent.getPort()

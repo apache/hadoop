@@ -35,13 +35,17 @@ import org.apache.hadoop.fs.s3a.Retries;
 
 /**
  * Base class for session credential support.
+ *
+ * @deprecated This class will be replaced by one that implements AWS SDK V2's AwsCredentialProvider
+ * as part of upgrading S3A to SDK V2. See HADOOP-18073.
  */
 @InterfaceAudience.Private
+@Deprecated
 public abstract class AbstractSessionCredentialsProvider
     extends AbstractAWSCredentialProvider {
 
   /** Credentials, created in {@link #init()}. */
-  private AWSCredentials awsCredentials;
+  private volatile AWSCredentials awsCredentials;
 
   /** Atomic flag for on-demand initialization. */
   private final AtomicBoolean initialized = new AtomicBoolean(false);
@@ -50,7 +54,7 @@ public abstract class AbstractSessionCredentialsProvider
    * The (possibly translated) initialization exception.
    * Used for testing.
    */
-  private IOException initializationException;
+  private volatile IOException initializationException;
 
   /**
    * Constructor.
@@ -69,9 +73,9 @@ public abstract class AbstractSessionCredentialsProvider
    * @throws IOException on any failure.
    */
   @Retries.OnceTranslated
-  protected void init() throws IOException {
+  protected synchronized void init() throws IOException {
     // stop re-entrant attempts
-    if (initialized.getAndSet(true)) {
+    if (isInitialized()) {
       return;
     }
     try {
@@ -80,6 +84,8 @@ public abstract class AbstractSessionCredentialsProvider
     } catch (IOException e) {
       initializationException = e;
       throw e;
+    } finally {
+      initialized.set(true);
     }
   }
 
@@ -128,13 +134,15 @@ public abstract class AbstractSessionCredentialsProvider
     }
     if (awsCredentials == null) {
       throw new CredentialInitializationException(
-          "Provider " + this + " has no credentials");
+          "Provider " + this + " has no credentials: " +
+             (initializationException != null ? initializationException.toString() : ""),
+          initializationException);
     }
     return awsCredentials;
   }
 
   public final boolean hasCredentials() {
-    return awsCredentials == null;
+    return awsCredentials != null;
   }
 
   @Override

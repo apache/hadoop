@@ -50,14 +50,14 @@ public class TestRetryCache {
   static class TestServer {
     AtomicInteger retryCount = new AtomicInteger();
     AtomicInteger operationCount = new AtomicInteger();
-    private RetryCache retryCache = new RetryCache("TestRetryCache", 1,
-        100 * 1000 * 1000 * 1000L);
+    private final RetryCache retryCache = new RetryCache(
+        "TestRetryCache", 1, 100 * 1000 * 1000 * 1000L);
 
     /**
      * A server method implemented using {@link RetryCache}.
      * 
      * @param input is returned back in echo, if {@code success} is true.
-     * @param failureOuput returned on failure, if {@code success} is false.
+     * @param failureOutput returned on failure, if {@code success} is false.
      * @param methodTime time taken by the operation. By passing smaller/larger
      *          value one can simulate an operation that takes short/long time.
      * @param success whether this operation completes successfully or not
@@ -67,7 +67,7 @@ public class TestRetryCache {
     int echo(int input, int failureOutput, long methodTime, boolean success)
         throws InterruptedException {
       CacheEntryWithPayload entry = RetryCache.waitForCompletion(retryCache,
-          null);
+          null, Server.getClientId(), Server.getCallId());
       if (entry != null && entry.isSuccess()) {
         System.out.println("retryCount incremented " + retryCount.get());
         retryCount.incrementAndGet();
@@ -173,16 +173,13 @@ public class TestRetryCache {
     final int failureOutput = input + 1;
     ExecutorService executorService = Executors
         .newFixedThreadPool(numberOfThreads);
-    List<Future<Integer>> list = new ArrayList<Future<Integer>>();
+    List<Future<Integer>> list = new ArrayList<>();
     for (int i = 0; i < numberOfThreads; i++) {
-      Callable<Integer> worker = new Callable<Integer>() {
-        @Override
-        public Integer call() throws Exception {
-          Server.getCurCall().set(call);
-          Assert.assertEquals(Server.getCurCall().get(), call);
-          int randomPause = pause == 0 ? pause : r.nextInt(pause);
-          return testServer.echo(input, failureOutput, randomPause, success);
-        }
+      Callable<Integer> worker = () -> {
+        Server.getCurCall().set(call);
+        Assert.assertEquals(Server.getCurCall().get(), call);
+        int randomPause = pause == 0 ? pause : r.nextInt(pause);
+        return testServer.echo(input, failureOutput, randomPause, success);
       };
       Future<Integer> submit = executorService.submit(worker);
       list.add(submit);

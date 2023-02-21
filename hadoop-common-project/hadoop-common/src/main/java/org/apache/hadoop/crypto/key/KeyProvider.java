@@ -639,13 +639,14 @@ public abstract class KeyProvider implements Closeable {
   public abstract void flush() throws IOException;
 
   /**
-   * Split the versionName in to a base name. Converts "/aaa/bbb/3" to
+   * Split the versionName in to a base name. Converts "/aaa/bbb@3" to
    * "/aaa/bbb".
    * @param versionName the version name to split
    * @return the base name of the key
    * @throws IOException raised on errors performing I/O.
    */
   public static String getBaseName(String versionName) throws IOException {
+    Objects.requireNonNull(versionName, "VersionName cannot be null");
     int div = versionName.lastIndexOf('@');
     if (div == -1) {
       throw new IOException("No version in key path " + versionName);

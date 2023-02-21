@@ -95,6 +95,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.XMLUtils;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -565,7 +566,7 @@ public class TestOfflineImageViewer {
     try (RandomAccessFile r = new RandomAccessFile(originalFsimage, "r")) {
       v.visit(r);
     }
-    SAXParserFactory spf = SAXParserFactory.newInstance();
+    SAXParserFactory spf = XMLUtils.newSecureSAXParserFactory();
     SAXParser parser = spf.newSAXParser();
     final String xml = output.toString();
     ECXMLHandler ecxmlHandler = new ECXMLHandler();
@@ -1028,13 +1029,13 @@ public class TestOfflineImageViewer {
 
   private void deleteINodeFromXML(File inputFile, File outputFile,
       List<Long> corruptibleIds) throws Exception {
-    DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory docFactory = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
     Document doc = docBuilder.parse(inputFile);
 
     properINodeDelete(corruptibleIds, doc);
 
-    TransformerFactory transformerFactory = TransformerFactory.newInstance();
+    TransformerFactory transformerFactory = XMLUtils.newSecureTransformerFactory();
     Transformer transformer = transformerFactory.newTransformer();
     DOMSource source = new DOMSource(doc);
     StreamResult result = new StreamResult(outputFile);
@@ -1370,10 +1371,9 @@ public class TestOfflineImageViewer {
     v.visit(new RandomAccessFile(originalFsimage, "r"));
     final String xml = output.toString();
 
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
-    InputSource is = new InputSource();
-    is.setCharacterStream(new StringReader(xml));
+    InputSource is = new InputSource(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList ecSection = dom.getElementsByTagName(ERASURE_CODING_SECTION_NAME);
     assertEquals(1, ecSection.getLength());

@@ -115,7 +115,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
    * Does this test suite require rename resilience in the store/FS?
    * @return true if the store operations are resilient.
    */
-  protected boolean requireRenameResilience() {
+  protected boolean requireRenameResilience() throws IOException {
     return false;
   }
 

@@ -677,8 +677,8 @@ public class TestBlockManager {
    */
   @Test
   public void testHighestPriReplSrcChosenDespiteMaxReplLimit() throws Exception {
-    bm.maxReplicationStreams = 0;
-    bm.replicationStreamsHardLimit = 1;
+    bm.setMaxReplicationStreams(0, false);
+    bm.setReplicationStreamsHardLimit(1);
 
     long blockId = 42;         // arbitrary
     Block aBlock = new Block(blockId, 0, 0);
@@ -700,6 +700,7 @@ public class TestBlockManager {
             new NumberReplicas(),
             new ArrayList<Byte>(),
             new ArrayList<Byte>(),
+            new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY)[0]);
 
     assertEquals("Does not choose a source node for a less-than-highest-priority"
@@ -710,6 +711,7 @@ public class TestBlockManager {
             cntNodes,
             liveNodes,
             new NumberReplicas(),
+            new ArrayList<Byte>(),
             new ArrayList<Byte>(),
             new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_VERY_LOW_REDUNDANCY).length);
@@ -727,12 +729,13 @@ public class TestBlockManager {
             new NumberReplicas(),
             new ArrayList<Byte>(),
             new ArrayList<Byte>(),
+            new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY).length);
   }
 
   @Test
   public void testChooseSrcDatanodesWithDupEC() throws Exception {
-    bm.maxReplicationStreams = 4;
+    bm.setMaxReplicationStreams(4, false);
 
     long blockId = -9223372036854775776L; // real ec block id
     Block aBlock = new Block(blockId, 0, 0);
@@ -773,6 +776,7 @@ public class TestBlockManager {
     NumberReplicas numReplicas = new NumberReplicas();
     List<Byte> liveBlockIndices = new ArrayList<>();
     List<Byte> liveBusyBlockIndices = new ArrayList<>();
+    List<Byte> excludeReconstructedIndices = new ArrayList<>();
 
     bm.chooseSourceDatanodes(
             aBlockInfoStriped,
@@ -780,6 +784,7 @@ public class TestBlockManager {
             liveNodes,
             numReplicas, liveBlockIndices,
             liveBusyBlockIndices,
+            excludeReconstructedIndices,
             LowRedundancyBlocks.QUEUE_VERY_LOW_REDUNDANCY);
 
     assertEquals("Choose the source node for reconstruction with one node reach"
@@ -836,6 +841,7 @@ public class TestBlockManager {
     NumberReplicas numReplicas = new NumberReplicas();
     List<Byte> liveBlockIndices = new ArrayList<>();
     List<Byte> liveBusyBlockIndices = new ArrayList<>();
+    List<Byte> excludeReconstructedIndices = new ArrayList<>();
 
     bm.chooseSourceDatanodes(
         aBlockInfoStriped,
@@ -843,6 +849,7 @@ public class TestBlockManager {
         nodesContainingLiveReplicas,
         numReplicas, liveBlockIndices,
         liveBusyBlockIndices,
+        excludeReconstructedIndices,
         LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY);
     assertEquals("There are 5 live replicas in " +
             "[ds2, ds3, ds4, ds5, ds6] datanodes ",
@@ -888,7 +895,7 @@ public class TestBlockManager {
     assertNotNull(work);
 
     // simulate the 2 nodes reach maxReplicationStreams
-    for(int i = 0; i < bm.maxReplicationStreams; i++){
+    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){
       ds3.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
       ds4.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
     }
@@ -932,7 +939,7 @@ public class TestBlockManager {
     assertNotNull(work);
 
     // simulate the 1 node reaches maxReplicationStreams
-    for(int i = 0; i < bm.maxReplicationStreams; i++){
+    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){
       ds2.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
     }
 
@@ -941,7 +948,7 @@ public class TestBlockManager {
     assertNotNull(work);
 
     // simulate the 1 more node reaches maxReplicationStreams
-    for(int i = 0; i < bm.maxReplicationStreams; i++){
+    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){
       ds3.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
     }
 
@@ -951,9 +958,61 @@ public class TestBlockManager {
   }
 
   @Test
+  public void testSkipReconstructionWithManyBusyNodes3() {
+    NameNode.initMetrics(new Configuration(), HdfsServerConstants.NamenodeRole.NAMENODE);
+    long blockId = -9223372036854775776L; // Real ec block id
+    // RS-3-2 EC policy
+    ErasureCodingPolicy ecPolicy =
+            SystemErasureCodingPolicies.getPolicies().get(1);
+
+    // Create an EC block group: 3 data blocks + 2 parity blocks.
+    Block aBlockGroup = new Block(blockId, ecPolicy.getCellSize() * ecPolicy.getNumDataUnits(), 0);
+    BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlockGroup, ecPolicy);
+
+    // Create 4 storageInfo, which means 1 block is missing.
+    DatanodeStorageInfo ds1 = DFSTestUtil.createDatanodeStorageInfo(
+            "storage1", "1.1.1.1", "rack1", "host1");
+    DatanodeStorageInfo ds2 = DFSTestUtil.createDatanodeStorageInfo(
+            "storage2", "2.2.2.2", "rack2", "host2");
+    DatanodeStorageInfo ds3 = DFSTestUtil.createDatanodeStorageInfo(
+            "storage3", "3.3.3.3", "rack3", "host3");
+    DatanodeStorageInfo ds4 = DFSTestUtil.createDatanodeStorageInfo(
+            "storage4", "4.4.4.4", "rack4", "host4");
+
+    // Link block with storage.
+    aBlockInfoStriped.addStorage(ds1, aBlockGroup);
+    aBlockInfoStriped.addStorage(ds2, new Block(blockId + 1, 0, 0));
+    aBlockInfoStriped.addStorage(ds3, new Block(blockId + 2, 0, 0));
+    aBlockInfoStriped.addStorage(ds4, new Block(blockId + 3, 0, 0));
+
+    addEcBlockToBM(blockId, ecPolicy);
+    aBlockInfoStriped.setBlockCollectionId(mockINodeId);
+
+    // Reconstruction should be scheduled.
+    BlockReconstructionWork work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
+    assertNotNull(work);
+
+    ExtendedBlock dummyBlock = new ExtendedBlock("bpid", 1, 1, 1);
+    DatanodeDescriptor dummyDD = ds1.getDatanodeDescriptor();
+    DatanodeDescriptor[] dummyDDArray = new DatanodeDescriptor[]{dummyDD};
+    DatanodeStorageInfo[] dummyDSArray = new DatanodeStorageInfo[]{ds1};
+    // Simulate the 2 nodes reach maxReplicationStreams.
+    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){ //Add some dummy EC reconstruction task.
+      ds3.getDatanodeDescriptor().addBlockToBeErasureCoded(dummyBlock, dummyDDArray,
+              dummyDSArray, new byte[0], new byte[0], ecPolicy);
+      ds4.getDatanodeDescriptor().addBlockToBeErasureCoded(dummyBlock, dummyDDArray,
+              dummyDSArray, new byte[0], new byte[0], ecPolicy);
+    }
+
+    // Reconstruction should be skipped since the number of non-busy nodes are not enough.
+    work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
+    assertNull(work);
+  }
+
+  @Test
   public void testFavorDecomUntilHardLimit() throws Exception {
-    bm.maxReplicationStreams = 0;
-    bm.replicationStreamsHardLimit = 1;
+    bm.setMaxReplicationStreams(0, false);
+    bm.setReplicationStreamsHardLimit(1);
 
     long blockId = 42;         // arbitrary
     Block aBlock = new Block(blockId, 0, 0);
@@ -975,6 +1034,7 @@ public class TestBlockManager {
             new NumberReplicas(),
             new LinkedList<Byte>(),
             new ArrayList<Byte>(),
+            new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY)[0]);
 
 
@@ -990,6 +1050,7 @@ public class TestBlockManager {
             liveNodes,
             new NumberReplicas(),
             new LinkedList<Byte>(),
+            new ArrayList<Byte>(),
             new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY).length);
   }

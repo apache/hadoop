@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.webapp.dao;
 
 import java.util.ArrayList;
+import java.util.Collection;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -46,4 +47,7 @@ public class ContainersInfo {
     return container;
   }
 
+  public void addAll(Collection<ContainerInfo> containersInfo) {
+    container.addAll(containersInfo);
+  }
 }

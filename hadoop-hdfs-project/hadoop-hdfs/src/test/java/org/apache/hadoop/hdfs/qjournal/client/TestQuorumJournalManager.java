@@ -22,29 +22,34 @@ import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.JID;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.verifyEdits;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeSegment;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeTxns;
+import static org.apache.hadoop.hdfs.qjournal.client.SpyQJournalUtil.spyGetJournaledEdits;
 import static org.apache.hadoop.hdfs.qjournal.client.TestQuorumJournalManagerUnit.futureThrows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
+import static org.mockito.ArgumentMatchers.eq;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hdfs.server.common.Util;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.net.MockDomainNameResolver;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 import org.apache.hadoop.util.Lists;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -61,7 +66,6 @@ import org.apache.hadoop.hdfs.server.namenode.FileJournalManager;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
-import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -1101,6 +1105,45 @@ public class TestQuorumJournalManager {
     }
   }
 
+  /**
+   * Test selecting EditLogInputStream after some journalNode jitter.
+   * Suppose there are 3 journalNodes, JN0 ~ JN2.
+   *  1. JN0 has some abnormal cases when Active Namenode is syncing 10 Edits with first txid 11.
+   *  2. NameNode just ignore the abnormal JN0 and continue to sync Edits to Journal 1 and 2.
+   *  3. JN0 backed to health.
+   *  4. NameNode continue sync 10 Edits with first txid 21.
+   *  5. At this point, there are no Edits 11 ~ 30 in the cache of JN0.
+   *  6. Observer NameNode try to select EditLogInputStream through
+   *     getJournaledEdits with since txId 21.
+   *  7. JN2 has some abnormal cases and caused a slow response.
+   */
+  @Test
+  public void testSelectViaRPCAfterJNJitter() throws Exception {
+    EditLogOutputStream stm = qjm.startLogSegment(
+        1, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+    SettableFuture<Void> slowLog = SettableFuture.create();
+    Mockito.doReturn(slowLog).when(spies.get(0))
+        .sendEdits(eq(1L), eq(11L), eq(10), Mockito.any());
+    // Successfully write these edits to JN0 ~ JN2
+    writeTxns(stm, 1, 10);
+    // Failed write these edits to JN0, but successfully write them to JN1 ~ JN2
+    writeTxns(stm, 11, 10);
+    // Successfully write these edits to JN1 ~ JN2
+    writeTxns(stm, 21, 20);
+
+    Semaphore semaphore = new Semaphore(0);
+    spyGetJournaledEdits(spies, 0, 21, () -> semaphore.release(1));
+    spyGetJournaledEdits(spies, 1, 21, () -> semaphore.release(1));
+    spyGetJournaledEdits(spies, 2, 21, () -> semaphore.acquireUninterruptibly(2));
+
+    List<EditLogInputStream> streams = new ArrayList<>();
+    qjm.selectInputStreams(streams, 21, true, true);
+
+    assertEquals(1, streams.size());
+    assertEquals(21, streams.get(0).getFirstTxId());
+    assertEquals(40, streams.get(0).getLastTxId());
+  }
+
   @Test
   public void testSelectViaRpcAfterJNRestart() throws Exception {
     EditLogOutputStream stm =
@@ -1153,27 +1196,10 @@ public class TestQuorumJournalManager {
       // expected
     }
   }
-  
-  private QuorumJournalManager createSpyingQJM()
-      throws IOException, URISyntaxException {
-    AsyncLogger.Factory spyFactory = new AsyncLogger.Factory() {
-      @Override
-      public AsyncLogger createLogger(Configuration conf, NamespaceInfo nsInfo,
-          String journalId, String nameServiceId, InetSocketAddress addr) {
-        AsyncLogger logger = new IPCLoggerChannel(conf, nsInfo, journalId,
-            nameServiceId, addr) {
-          protected ExecutorService createSingleThreadExecutor() {
-            // Don't parallelize calls to the quorum in the tests.
-            // This makes the tests more deterministic.
-            return new DirectExecutorService();
-          }
-        };
-        
-        return Mockito.spy(logger);
-      }
-    };
-    return closeLater(new QuorumJournalManager(
-        conf, cluster.getQuorumJournalURI(JID), FAKE_NSINFO, spyFactory));
+
+  private QuorumJournalManager createSpyingQJM() throws IOException {
+    return closeLater(SpyQJournalUtil.createSpyingQJM(
+        conf, cluster.getQuorumJournalURI(JID), FAKE_NSINFO, null));
   }
 
   private static void waitForAllPendingCalls(AsyncLoggerSet als)
@@ -1207,5 +1233,40 @@ public class TestQuorumJournalManager {
       fail("Did not find a quorum of finalized logs starting at " +
           segmentTxId);
     }
+  }
+
+  @Test
+  public void testSelectLatestEditsWithoutStreaming() throws Exception {
+    EditLogOutputStream stm = qjm.startLogSegment(
+        1, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+    // Successfully write these edits to JN0 ~ JN2
+    writeTxns(stm, 1, 10);
+
+    AtomicInteger atomicInteger = new AtomicInteger(0);
+    spyGetEditLogManifest(0, 11, true, atomicInteger::incrementAndGet);
+    spyGetEditLogManifest(1, 11, true, atomicInteger::incrementAndGet);
+    spyGetEditLogManifest(2, 11, true, atomicInteger::incrementAndGet);
+
+    List<EditLogInputStream> streams = new ArrayList<>();
+    qjm.selectInputStreams(streams, 1, true, true);
+    assertEquals(1, streams.size());
+    assertEquals(1, streams.get(0).getFirstTxId());
+    assertEquals(10, streams.get(0).getLastTxId());
+
+    streams.clear();
+    qjm.selectInputStreams(streams, 11, true, true);
+    assertEquals(0, streams.size());
+    assertEquals(0, atomicInteger.get());
+  }
+
+  private void spyGetEditLogManifest(int jnSpyIdx, long fromTxId,
+      boolean inProgressOk, Runnable preHook) {
+    Mockito.doAnswer((Answer<ListenableFuture<RemoteEditLogManifest>>) invocation -> {
+      preHook.run();
+      @SuppressWarnings("unchecked")
+      ListenableFuture<RemoteEditLogManifest> result =
+          (ListenableFuture<RemoteEditLogManifest>) invocation.callRealMethod();
+      return result;
+    }).when(spies.get(jnSpyIdx)).getEditLogManifest(fromTxId, inProgressOk);
   }
 }

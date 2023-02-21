@@ -26,6 +26,7 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.TaskCounter;
+import org.apache.hadoop.mapreduce.task.reduce.Fetcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,6 +38,7 @@ import java.util.Arrays;
 import java.util.Formatter;
 import java.util.Iterator;
 
+import static org.apache.hadoop.mapreduce.task.reduce.Fetcher.SHUFFLE_ERR_GRP_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -87,6 +89,9 @@ public class TestReduceFetchFromPartialMem {
     final long spill = c.findCounter(TaskCounter.SPILLED_RECORDS).getCounter();
     assertTrue("Expected some records not spilled during reduce" + spill + ")",
         spill < 2 * out); // spilled map records, some records at the reduce
+    long shuffleIoErrors =
+        c.getGroup(SHUFFLE_ERR_GRP_NAME).getCounter(Fetcher.ShuffleErrors.IO_ERROR.toString());
+    assertEquals(0, shuffleIoErrors);
   }
 
   /**

@@ -91,6 +91,7 @@ import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
+import org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
@@ -233,16 +234,31 @@ public class MiniRouterDFSCluster {
       return DistributedFileSystem.get(conf);
     }
 
+    public FileSystem getFileSystem(Configuration configuration) throws  IOException {
+      configuration.addResource(conf);
+      return DistributedFileSystem.get(configuration);
+    }
+
+    public FileSystem getFileSystemWithObserverReadProxyProvider() throws IOException {
+      Configuration observerReadConf = new Configuration(conf);
+      observerReadConf.set(DFS_NAMESERVICES,
+          observerReadConf.get(DFS_NAMESERVICES)+ ",router-service");
+      observerReadConf.set(DFS_HA_NAMENODES_KEY_PREFIX + ".router-service", "router1");
+      observerReadConf.set(DFS_NAMENODE_RPC_ADDRESS_KEY+ ".router-service.router1",
+          getFileSystemURI().toString());
+      observerReadConf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX
+          + "." + "router-service", ObserverReadProxyProvider.class.getName());
+      DistributedFileSystem.setDefaultUri(observerReadConf, "hdfs://router-service");
+
+      return DistributedFileSystem.get(observerReadConf);
+    }
+
     public DFSClient getClient(UserGroupInformation user)
         throws IOException, URISyntaxException, InterruptedException {
 
       LOG.info("Connecting to router at {}", fileSystemUri);
-      return user.doAs(new PrivilegedExceptionAction<DFSClient>() {
-        @Override
-        public DFSClient run() throws IOException {
-          return new DFSClient(fileSystemUri, conf);
-        }
-      });
+      return user.doAs((PrivilegedExceptionAction<DFSClient>)
+          () -> new DFSClient(fileSystemUri, conf));
     }
 
     public RouterClient getAdminClient() throws IOException {
@@ -384,12 +400,8 @@ public class MiniRouterDFSCluster {
         throws IOException, URISyntaxException, InterruptedException {
 
       LOG.info("Connecting to namenode at {}", fileSystemUri);
-      return user.doAs(new PrivilegedExceptionAction<DFSClient>() {
-        @Override
-        public DFSClient run() throws IOException {
-          return new DFSClient(fileSystemUri, conf);
-        }
-      });
+      return user.doAs((PrivilegedExceptionAction<DFSClient>)
+          () -> new DFSClient(fileSystemUri, conf));
     }
 
     public DFSClient getClient() throws IOException, URISyntaxException {
@@ -814,6 +826,7 @@ public class MiniRouterDFSCluster {
           .numDataNodes(numDNs)
           .nnTopology(topology)
           .dataNodeConfOverlays(dnConfs)
+          .checkExitOnShutdown(false)
           .storageTypes(storageTypes)
           .racks(racks)
           .build();
@@ -1043,6 +1056,27 @@ public class MiniRouterDFSCluster {
       }
     } catch (Throwable e) {
       LOG.error("Cannot transition to standby", e);
+    }
+  }
+
+  /**
+   * Switch a namenode in a nameservice to be the observer.
+   * @param nsId Nameservice identifier.
+   * @param nnId Namenode identifier.
+   */
+  public void switchToObserver(String nsId, String nnId) {
+    try {
+      int total = cluster.getNumNameNodes();
+      NameNodeInfo[] nns = cluster.getNameNodeInfos();
+      for (int i = 0; i < total; i++) {
+        NameNodeInfo nn = nns[i];
+        if (nn.getNameserviceId().equals(nsId) &&
+            nn.getNamenodeId().equals(nnId)) {
+          cluster.transitionToObserver(i);
+        }
+      }
+    } catch (Throwable e) {
+      LOG.error("Cannot transition to active", e);
     }
   }
 

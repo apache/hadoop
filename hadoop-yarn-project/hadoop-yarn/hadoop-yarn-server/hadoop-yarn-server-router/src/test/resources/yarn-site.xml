@@ -31,4 +31,12 @@
     <name>yarn.cluster.max-application-priority</name>
     <value>50</value>
   </property>
+  <property>
+    <name>yarn.resourcemanager.resource-profiles.enabled</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>yarn.resourcemanager.resource-profiles.source-file</name>
+    <value>profiles/sample-profiles-1.json</value>
+  </property>
 </configuration>

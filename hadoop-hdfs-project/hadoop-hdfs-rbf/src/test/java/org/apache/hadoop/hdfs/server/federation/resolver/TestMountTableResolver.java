@@ -729,4 +729,41 @@ public class TestMountTableResolver {
     assertEquals("2->/testInvalidateCache/foo", mountTable
         .getDestinationForPath("/testInvalidateCache/foo").toString());
   }
+
+  /**
+   * Test location cache hit when get destination for path.
+   */
+  @Test
+  public void testLocationCacheHitrate() throws Exception {
+    List<MountTable> entries = new ArrayList<>();
+
+    // Add entry and test location cache
+    Map<String, String> map1 = getMountTableEntry("1", "/testlocationcache");
+    MountTable entry1 = MountTable.newInstance("/testlocationcache", map1);
+    entries.add(entry1);
+
+    Map<String, String> map2 = getMountTableEntry("2",
+        "/anothertestlocationcache");
+    MountTable entry2 = MountTable.newInstance("/anothertestlocationcache",
+        map2);
+    entries.add(entry2);
+
+    mountTable.refreshEntries(entries);
+    mountTable.getLocCacheAccess().reset();
+    mountTable.getLocCacheMiss().reset();
+    assertEquals("1->/testlocationcache",
+        mountTable.getDestinationForPath("/testlocationcache").toString());
+    assertEquals("2->/anothertestlocationcache",
+        mountTable.getDestinationForPath("/anothertestlocationcache")
+            .toString());
+
+    assertEquals(2, mountTable.getLocCacheMiss().intValue());
+    assertEquals("1->/testlocationcache",
+        mountTable.getDestinationForPath("/testlocationcache").toString());
+    assertEquals(3, mountTable.getLocCacheAccess().intValue());
+
+    // Cleanup before exit
+    mountTable.removeEntry("/testlocationcache");
+    mountTable.removeEntry("/anothertestlocationcache");
+  }
 }

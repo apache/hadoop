@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -953,5 +954,10 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
       NodesToAttributesMappingRequest request)
       throws YarnException, IOException {
     return null;
+  }
+
+  @VisibleForTesting
+  public HashMap<ApplicationId, List<ContainerId>> getApplicationContainerIdMap() {
+    return applicationContainerIdMap;
   }
 }

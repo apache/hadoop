@@ -46,7 +46,7 @@ public interface AlignmentContext {
   void updateResponseState(RpcResponseHeaderProto.Builder header);
 
   /**
-   * This is the intended client method call to implement to recieve state info
+   * This is the intended client method call to implement to receive state info
    * during RPC response processing.
    *
    * @param header The RPC response header.

@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -437,18 +438,22 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
   @Override
   protected void createAttemptHeadRoomTable(Block html) {
     RMAppAttempt attempt = getRMAppAttempt();
-    if (attempt != null) {
-      if (!isApplicationInFinalState(YarnApplicationAttemptState
-          .valueOf(attempt.getAppAttemptState().toString()))) {
-        RMAppAttemptMetrics metrics = attempt.getRMAppAttemptMetrics();
-        DIV<Hamlet> pdiv = html.__(InfoBlock.class).div(_INFO_WRAP);
-        info("Application Attempt Overview").clear();
-        info("Application Attempt Metrics").__(
+    if (attempt != null && !isApplicationInFinalState(createApplicationAttemptState(attempt))) {
+      RMAppAttemptMetrics metrics = attempt.getRMAppAttemptMetrics();
+      DIV<Hamlet> pdiv = html.__(InfoBlock.class).div(_INFO_WRAP);
+      info("Application Attempt Overview").clear();
+      info("Application Attempt Metrics").__(
           "Application Attempt Headroom : ", metrics == null ? "N/A" :
-            metrics.getApplicationAttemptHeadroom());
-        pdiv.__();
-      }
+          metrics.getApplicationAttemptHeadroom());
+      pdiv.__();
     }
+  }
+
+  private YarnApplicationAttemptState createApplicationAttemptState(RMAppAttempt attempt) {
+    return RMServerUtils.convertRmAppAttemptStateToYarnApplicationAttemptState(
+        attempt.getState(),
+        attempt.getPreviousState()
+    );
   }
 
   private RMAppAttempt getRMAppAttempt() {

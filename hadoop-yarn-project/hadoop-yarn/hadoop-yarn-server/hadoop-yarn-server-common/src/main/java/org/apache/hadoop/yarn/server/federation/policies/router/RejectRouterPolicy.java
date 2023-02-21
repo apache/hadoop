@@ -17,15 +17,15 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
-import java.util.List;
+import java.util.Map;
 
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContextValidator;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 
 /**
  * This {@link FederationRouterPolicy} simply rejects all incoming requests.
@@ -43,34 +43,12 @@ public class RejectRouterPolicy extends AbstractRouterPolicy {
     setPolicyContext(federationPolicyContext);
   }
 
-  /**
-   * The policy always reject requests.
-   *
-   * @param appSubmissionContext the {@link ApplicationSubmissionContext} that
-   *          has to be routed to an appropriate subCluster for execution.
-   *
-   * @param blackListSubClusters the list of subClusters as identified by
-   *          {@link SubClusterId} to blackList from the selection of the home
-   *          subCluster.
-   *
-   * @return (never).
-   *
-   * @throws YarnException (always) to prevent applications in this queue to be
-   *           run anywhere in the federated cluster.
-   */
   @Override
-  public SubClusterId getHomeSubcluster(
-      ApplicationSubmissionContext appSubmissionContext,
-      List<SubClusterId> blackListSubClusters) throws YarnException {
-
-    // run standard validation, as error might differ
-    validate(appSubmissionContext);
-
-    throw new FederationPolicyException("The policy configured for this queue"
-        + " (" + appSubmissionContext.getQueue() + ") reject all routing "
-        + "requests by construction. Application "
-        + appSubmissionContext.getApplicationId()
-        + " cannot be routed to any RM.");
+  protected SubClusterId chooseSubCluster(
+      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
+    throw new FederationPolicyException(
+        "The policy configured for this queue (" + queue + ") "
+        + "reject all routing requests by construction. Application in "
+        + queue + " cannot be routed to any RM.");
   }
-
 }

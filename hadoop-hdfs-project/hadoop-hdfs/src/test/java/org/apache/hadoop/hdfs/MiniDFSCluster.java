@@ -2159,10 +2159,11 @@ public class MiniDFSCluster implements AutoCloseable {
     LOG.info("Shutting down the Mini HDFS Cluster");
     if (checkExitOnShutdown)  {
       if (ExitUtil.terminateCalled()) {
-        LOG.error("Test resulted in an unexpected exit",
-            ExitUtil.getFirstExitException());
+        Exception cause = ExitUtil.getFirstExitException();
+        LOG.error("Test resulted in an unexpected exit", cause);
         ExitUtil.resetFirstExitException();
-        throw new AssertionError("Test resulted in an unexpected exit");
+        throw new AssertionError("Test resulted in an unexpected exit: " +
+            cause.toString(), cause);
       }
     }
     if (closeFileSystem) {
@@ -2308,6 +2309,8 @@ public class MiniDFSCluster implements AutoCloseable {
     nn.getHttpServer()
         .setAttribute(ImageServlet.RECENT_IMAGE_CHECK_ENABLED, false);
     info.nameNode = nn;
+    info.nameserviceId = info.conf.get(DFS_NAMESERVICE_ID);
+    info.nnId = info.conf.get(DFS_HA_NAMENODE_ID_KEY);
     info.setStartOpt(startOpt);
     if (waitActive) {
       if (numDataNodes > 0) {
@@ -2524,6 +2527,24 @@ public class MiniDFSCluster implements AutoCloseable {
    */
   public boolean restartDataNode(DataNodeProperties dnprop) throws IOException {
     return restartDataNode(dnprop, false);
+  }
+
+  /**
+   * Wait for the datanode to be fully functional i.e. all the BP service threads are alive,
+   * all block pools initiated and also connected to active namenode.
+   *
+   * @param dn Datanode instance.
+   * @param timeout Timeout in millis until when we should wait for datanode to be fully
+   * operational.
+   * @throws InterruptedException If the thread wait is interrupted.
+   * @throws TimeoutException If times out while awaiting the fully operational capability of
+   * datanode.
+   */
+  public void waitDatanodeConnectedToActive(DataNode dn, int timeout)
+      throws InterruptedException, TimeoutException {
+    GenericTestUtils.waitFor(() -> dn.isDatanodeFullyStarted(true),
+        100, timeout, "Datanode is not connected to active namenode even after "
+            + timeout + " ms of waiting");
   }
 
   public void waitDatanodeFullyStarted(DataNode dn, int timeout)

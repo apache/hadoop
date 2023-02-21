@@ -47,6 +47,8 @@ full details.
 * [Auditing](./auditing.html).
 * [Auditing Architecture](./auditing_architecture.html).
 * [Testing](./testing.html)
+* [Prefetching](./prefetching.html)
+* [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade.html)
 
 ## <a name="overview"></a> Overview
 
@@ -234,6 +236,9 @@ needs the credentials needed to interact with buckets.
 The client supports multiple authentication mechanisms and can be configured as to
 which mechanisms to use, and their order of use. Custom implementations
 of `com.amazonaws.auth.AWSCredentialsProvider` may also be used.
+However, with the upcoming upgrade to AWS Java SDK V2, these classes will need to be
+updated to implement `software.amazon.awssdk.auth.credentials.AwsCredentialsProvider`.
+For more information see [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade.html).
 
 *Important*: The S3A connector no longer supports username and secrets
 in URLs of the form `s3a://key:secret@bucket/`.
@@ -500,7 +505,7 @@ providers listed after it will be ignored.
 
 ### <a name="auth_simple"></a> Simple name/secret credentials with `SimpleAWSCredentialsProvider`*
 
-This is is the standard credential provider, which supports the secret
+This is the standard credential provider, which supports the secret
 key in `fs.s3a.access.key` and token in `fs.s3a.secret.key`
 values.
 
@@ -1090,6 +1095,30 @@ options are covered in [Testing](./testing.md).
   </description>
 </property>
 
+<property>
+  <name>fs.s3a.prefetch.enabled</name>
+  <value>false</value>
+  <description>
+    Enables prefetching and caching when reading from input stream.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.prefetch.block.size</name>
+  <value>8MB</value>
+  <description>
+      The size of a single prefetched block of data.
+      Decreasing this will increase the number of prefetches required, and may negatively impact performance.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.prefetch.block.count</name>
+  <value>8</value>
+  <description>
+      Maximum number of blocks prefetched concurrently at any given time.
+  </description>
+</property>
 ```
 
 ## <a name="retry_and_recovery"></a>Retry and Recovery
@@ -1364,7 +1393,7 @@ an S3 implementation that doesn't return eTags.
 
 When `true` (default) and 'Get Object' doesn't return eTag or
 version ID (depending on configured 'source'), a `NoVersionAttributeException`
-will be thrown.  When `false` and and eTag or version ID is not returned,
+will be thrown.  When `false` and eTag or version ID is not returned,
 the stream can be read, but without any version checking.
 
 
@@ -1840,7 +1869,7 @@ in byte arrays in the JVM's heap prior to upload.
 This *may* be faster than buffering to disk.
 
 The amount of data which can be buffered is limited by the available
-size of the JVM heap heap. The slower the write bandwidth to S3, the greater
+size of the JVM heap. The slower the write bandwidth to S3, the greater
 the risk of heap overflows. This risk can be mitigated by
 [tuning the upload settings](#upload_thread_tuning).
 

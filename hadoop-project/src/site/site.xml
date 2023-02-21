@@ -178,7 +178,6 @@
       <item name="Azure Blob Storage" href="hadoop-azure/index.html"/>
       <item name="Azure Data Lake Storage"
             href="hadoop-azure-datalake/index.html"/>
-      <item name="OpenStack Swift" href="hadoop-openstack/index.html"/>
       <item name="Tencent COS" href="hadoop-cos/cloud-storage/index.html"/>
       <item name="Huaweicloud OBS" href="hadoop-huaweicloud/cloud-storage/index.html"/>
     </menu>

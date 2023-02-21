@@ -41,6 +41,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -274,7 +275,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * that are currently being written by this client.
    * Note that a file can only be written by a single client.
    */
-  private final Map<Long, DFSOutputStream> filesBeingWritten = new HashMap<>();
+  private final Map<String, DFSOutputStream> filesBeingWritten = new HashMap<>();
 
   /**
    * Same as this(NameNode.getNNAddress(conf), conf);
@@ -501,9 +502,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /** Get a lease and start automatic renewal */
-  private void beginFileLease(final long inodeId, final DFSOutputStream out) {
+  private void beginFileLease(final String key, final DFSOutputStream out) {
     synchronized (filesBeingWritten) {
-      putFileBeingWritten(inodeId, out);
+      putFileBeingWritten(key, out);
       LeaseRenewer renewer = getLeaseRenewer();
       boolean result = renewer.put(this);
       if (!result) {
@@ -517,9 +518,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /** Stop renewal of lease for the file. */
-  void endFileLease(final long inodeId) {
+  void endFileLease(final String renewLeaseKey) {
     synchronized (filesBeingWritten) {
-      removeFileBeingWritten(inodeId);
+      removeFileBeingWritten(renewLeaseKey);
       // remove client from renewer if no files are open
       if (filesBeingWritten.isEmpty()) {
         getLeaseRenewer().closeClient(this);
@@ -531,10 +532,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    *  enforced to consistently update its local dfsclients array and
    *  client's filesBeingWritten map.
    */
-  public void putFileBeingWritten(final long inodeId,
+  public void putFileBeingWritten(final String key,
       final DFSOutputStream out) {
     synchronized(filesBeingWritten) {
-      filesBeingWritten.put(inodeId, out);
+      filesBeingWritten.put(key, out);
       // update the last lease renewal time only when there was no
       // writes. once there is one write stream open, the lease renewer
       // thread keeps it updated well with in anyone's expiration time.
@@ -545,9 +546,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /** Remove a file. Only called from LeaseRenewer. */
-  public void removeFileBeingWritten(final long inodeId) {
+  public void removeFileBeingWritten(final String key) {
     synchronized(filesBeingWritten) {
-      filesBeingWritten.remove(inodeId);
+      filesBeingWritten.remove(key);
       if (filesBeingWritten.isEmpty()) {
         lastLeaseRenewal = 0;
       }
@@ -579,6 +580,34 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
+  @VisibleForTesting
+  public int getNumOfFilesBeingWritten() {
+    synchronized (filesBeingWritten) {
+      return filesBeingWritten.size();
+    }
+  }
+
+  /**
+   * Get all namespaces of DFSOutputStreams.
+   */
+  private List<String> getNamespaces() {
+    HashSet<String> namespaces = new HashSet<>();
+    synchronized (filesBeingWritten) {
+      for (DFSOutputStream outputStream : filesBeingWritten.values()) {
+        String namespace = outputStream.getNamespace();
+        if (namespace == null || namespace.isEmpty()) {
+          return null;
+        } else {
+          namespaces.add(namespace);
+        }
+      }
+      if (namespaces.isEmpty()) {
+        return null;
+      }
+    }
+    return new ArrayList<>(namespaces);
+  }
+
   /**
    * Renew leases.
    * @return true if lease was renewed. May return false if this
@@ -587,7 +616,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public boolean renewLease() throws IOException {
     if (clientRunning && !isFilesBeingWrittenEmpty()) {
       try {
-        namenode.renewLease(clientName);
+        namenode.renewLease(clientName, getNamespaces());
         updateLastLeaseRenewal();
         return true;
       } catch (IOException e) {
@@ -618,14 +647,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   /** Close/abort all files being written. */
   public void closeAllFilesBeingWritten(final boolean abort) {
     for(;;) {
-      final long inodeId;
+      final String key;
       final DFSOutputStream out;
       synchronized(filesBeingWritten) {
         if (filesBeingWritten.isEmpty()) {
           return;
         }
-        inodeId = filesBeingWritten.keySet().iterator().next();
-        out = filesBeingWritten.remove(inodeId);
+        key = filesBeingWritten.keySet().iterator().next();
+        out = filesBeingWritten.remove(key);
       }
       if (out != null) {
         try {
@@ -636,7 +665,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           }
         } catch(IOException ie) {
           LOG.error("Failed to " + (abort ? "abort" : "close") + " file: "
-              + out.getSrc() + " with inode: " + inodeId, ie);
+              + out.getSrc() + " with renewLeaseKey: " + key, ie);
         }
       }
     }
@@ -1275,7 +1304,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         src, masked, flag, createParent, replication, blockSize, progress,
         dfsClientConf.createChecksum(checksumOpt),
         getFavoredNodesStr(favoredNodes), ecPolicyName, storagePolicy);
-    beginFileLease(result.getFileId(), result);
+    beginFileLease(result.getUniqKey(), result);
     return result;
   }
 
@@ -1330,7 +1359,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           flag, createParent, replication, blockSize, progress, checksum,
           null, null, null);
     }
-    beginFileLease(result.getFileId(), result);
+    beginFileLease(result.getUniqKey(), result);
     return result;
   }
 
@@ -1475,7 +1504,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     checkOpen();
     final DFSOutputStream result = callAppend(src, flag, progress,
         favoredNodes);
-    beginFileLease(result.getFileId(), result);
+    beginFileLease(result.getUniqKey(), result);
     return result;
   }
 
@@ -2396,8 +2425,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   @VisibleForTesting
-  ExtendedBlock getPreviousBlock(long fileId) {
-    return filesBeingWritten.get(fileId).getBlock();
+  ExtendedBlock getPreviousBlock(String key) {
+    return filesBeingWritten.get(key).getBlock();
   }
 
   /**

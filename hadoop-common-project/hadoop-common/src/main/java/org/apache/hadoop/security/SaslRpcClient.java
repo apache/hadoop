@@ -237,7 +237,14 @@ public class SaslRpcClient {
           LOG.debug("client isn't using kerberos");
           return null;
         }
-        String serverPrincipal = getServerPrincipal(authType);
+        final String serverPrincipal;
+        try {
+          serverPrincipal = getServerPrincipal(authType);
+        } catch (IllegalArgumentException ex) {
+          // YARN-11210: getServerPrincipal can throw IllegalArgumentException if Kerberos
+          // configuration is bad, this is surfaced as a non-retryable SaslException
+          throw new SaslException("Bad Kerberos server principal configuration", ex);
+        }
         if (serverPrincipal == null) {
           LOG.debug("protocol doesn't use kerberos");
           return null;

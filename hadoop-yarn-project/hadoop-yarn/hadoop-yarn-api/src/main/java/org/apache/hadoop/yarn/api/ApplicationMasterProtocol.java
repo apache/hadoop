@@ -76,9 +76,9 @@ public interface ApplicationMasterProtocol {
    * </p>
    *
    * @param request registration request
-   * @return registration respose
-   * @throws YarnException
-   * @throws IOException
+   * @return registration response
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
    * @throws InvalidApplicationMasterRequestException The exception is thrown
    *           when an ApplicationMaster tries to register more then once.
    * @see RegisterApplicationMasterRequest
@@ -104,8 +104,8 @@ public interface ApplicationMasterProtocol {
    * 
    * @param request completion request
    * @return completion response
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
    * @see FinishApplicationMasterRequest
    * @see FinishApplicationMasterResponse
    */
@@ -154,8 +154,8 @@ public interface ApplicationMasterProtocol {
    * @param request
    *          allocation request
    * @return allocation response
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
    * @throws InvalidApplicationMasterRequestException
    *           This exception is thrown when an ApplicationMaster calls allocate
    *           without registering first.

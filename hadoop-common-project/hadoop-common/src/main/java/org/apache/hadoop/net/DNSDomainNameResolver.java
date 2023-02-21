@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.net;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.naming.NamingException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -27,6 +31,10 @@ import java.net.UnknownHostException;
  * fully qualified domain names belonging to the IPs from this host name
  */
 public class DNSDomainNameResolver implements DomainNameResolver {
+
+  private final static Logger LOG =
+      LoggerFactory.getLogger(DNSDomainNameResolver.class.getName());
+
   @Override
   public InetAddress[] getAllByDomainName(String domainName)
       throws UnknownHostException {
@@ -39,6 +47,16 @@ public class DNSDomainNameResolver implements DomainNameResolver {
     if (host != null && host.length() != 0
         && host.charAt(host.length()-1) == '.') {
       host = host.substring(0, host.length()-1);
+    }
+    // Protect against the Java behaviour of returning the IP address as a string from a cache
+    // instead of performing a reverse lookup.
+    if (host != null && host.equals(address.getHostAddress())) {
+      LOG.debug("IP address returned for FQDN detected: {}", address.getHostAddress());
+      try {
+        return DNS.reverseDns(address, null);
+      } catch (NamingException lookupFailure) {
+        LOG.warn("Failed to perform reverse lookup: {}", address);
+      }
     }
     return host;
   }
