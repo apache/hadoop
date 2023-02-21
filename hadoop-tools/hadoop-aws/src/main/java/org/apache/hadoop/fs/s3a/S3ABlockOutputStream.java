@@ -589,7 +589,6 @@ class S3ABlockOutputStream extends OutputStream implements
         BlockUploadProgress progressCallback =
             new BlockUploadProgress(
                 block, progressListener, now());
-    // putObjectRequest.setGeneralProgressListener(callback);
     statistics.blockUploadQueued(size);
     ListenableFuture<PutObjectResponse> putObjectResult =
         executorService.submit(() -> {

@@ -230,9 +230,6 @@ public class ChangeTracker {
       RemoteFileChangedException {
     if (e instanceof AwsServiceException) {
       AwsServiceException serviceException = (AwsServiceException)e;
-      // TODO: Verify whether this is fixed in SDK v2.
-      // In SDK v1, this wasn't really going to be hit due to
-      // https://github.com/aws/aws-sdk-java/issues/1644
       if (serviceException.statusCode() == SC_412_PRECONDITION_FAILED) {
         versionMismatches.versionMismatchError();
         throw new RemoteFileChangedException(uri, operation, String.format(

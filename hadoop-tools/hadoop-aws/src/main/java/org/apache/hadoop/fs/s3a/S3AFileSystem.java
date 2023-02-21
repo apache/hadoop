@@ -2980,16 +2980,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IllegalArgumentException if the length is negative
    */
   private long getPutRequestLength(PutObjectRequest putObjectRequest) {
-    long len;
-
-    // TODO: Check why this exists. Content length is set before. Why can't that be used directly?
-//    if (putObjectRequest.getFile() != null) {
-//      len = putObjectRequest.getFile().length();
-//    } else {
-//      len = putObjectRequest.getMetadata().getContentLength();
-//    }
-
-    len = putObjectRequest.contentLength();
+    long len = putObjectRequest.contentLength();
 
     Preconditions.checkState(len >= 0, "Cannot PUT object of unknown length");
     return len;

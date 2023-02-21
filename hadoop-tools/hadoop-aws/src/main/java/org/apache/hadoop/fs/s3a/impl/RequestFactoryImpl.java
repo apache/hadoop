@@ -202,7 +202,6 @@ public class RequestFactoryImpl implements RequestFactory {
    */
   protected void uploadPartEncryptionParameters(
       UploadPartRequest.Builder builder) {
-    // TODO: review/refactor together with similar methods for other requests.
     // need to set key to get objects encrypted with SSE_C
     EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets).ifPresent(base64customerKey -> {
       builder.sseCustomerAlgorithm(ServerSideEncryption.AES256.name())

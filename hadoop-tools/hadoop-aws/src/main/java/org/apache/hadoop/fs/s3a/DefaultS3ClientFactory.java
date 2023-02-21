@@ -51,12 +51,12 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
-import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.BUCKET_REGION_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_301_MOVED_PERMANENTLY;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404_NOT_FOUND;
 
@@ -137,16 +137,16 @@ public class DefaultS3ClientFactory extends Configured
       BuilderT builder, S3ClientCreationParameters parameters, Configuration conf, String bucket)
       throws IOException {
 
-    URI endpoint = getS3Endpoint(parameters.getEndpoint(), conf);
     Region region = getS3Region(conf.getTrimmed(AWS_REGION), bucket, parameters);
     LOG.debug("Using region {}", region);
+
+    URI endpoint = getS3Endpoint(parameters.getEndpoint(), conf);
 
     if (endpoint != null) {
       builder.endpointOverride(endpoint);
       LOG.debug("Using endpoint {}", endpoint);
     }
 
-    // TODO: Some configuration done in configureBasicParams is not done yet.
     S3Configuration serviceConfiguration = S3Configuration.builder()
             .pathStyleAccessEnabled(parameters.isPathStyleAccess())
             .build();

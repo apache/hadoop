@@ -50,7 +50,6 @@ public class MockS3ClientFactory implements S3ClientFactory {
         .uploads(new ArrayList<>(0))
         .isTruncated(false)
         .build();
-    // noUploads.setMultipartUploads(new ArrayList<>(0));
     when(s3.listMultipartUploads((ListMultipartUploadsRequest) any())).thenReturn(noUploads);
     when(s3.getBucketLocation((GetBucketLocationRequest) any())).thenReturn(
         GetBucketLocationResponse.builder().locationConstraint(Region.US_WEST_2.toString()).build());
