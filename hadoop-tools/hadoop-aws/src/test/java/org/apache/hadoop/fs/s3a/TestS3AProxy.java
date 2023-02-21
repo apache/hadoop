@@ -82,7 +82,7 @@ public class TestS3AProxy extends AbstractHadoopTestBase {
         AWSClientConfig.createProxyConfiguration(proxyConfig, "testBucket");
     Assertions.assertThat(config.scheme())
         .describedAs("Proxy protocol not as expected")
-        .isEqualTo(isExpectedSecured ? "https" : "https");
+        .isEqualTo(isExpectedSecured ? "https" : "http");
   }
 
   /**
