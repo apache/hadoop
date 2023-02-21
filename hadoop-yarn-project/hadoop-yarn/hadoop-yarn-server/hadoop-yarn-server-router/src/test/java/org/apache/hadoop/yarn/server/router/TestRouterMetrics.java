@@ -533,7 +533,7 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed renewDelegationToken call");
       metrics.incrRenewDelegationTokenFailedRetrieved();
     }
-    
+
     public void getRefreshAdminAclsFailedRetrieved() {
       LOG.info("Mocked: failed refreshAdminAcls call");
       metrics.incrRefreshAdminAclsFailedRetrieved();
@@ -543,7 +543,7 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed refreshServiceAcls call");
       metrics.incrRefreshServiceAclsFailedRetrieved();
     }
-    
+
     public void getDumpSchedulerLogsFailed() {
       LOG.info("Mocked: failed DumpSchedulerLogs call");
       metrics.incrDumpSchedulerLogsFailedRetrieved();
@@ -798,7 +798,7 @@ public class TestRouterMetrics {
       LOG.info("Mocked: successful RefreshServiceAcls call with duration {}", duration);
       metrics.succeededRefreshServiceAclsRetrieved(duration);
     }
-    
+
     public void getDumpSchedulerLogsRetrieved(long duration) {
       LOG.info("Mocked: successful DumpSchedulerLogs call with duration {}", duration);
       metrics.succeededDumpSchedulerLogsRetrieved(duration);
@@ -1693,7 +1693,7 @@ public class TestRouterMetrics {
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getNumRefreshServiceAclsFailedRetrieved());
   }
-  
+
   @Test
   public void testDumpSchedulerLogsRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededDumpSchedulerLogsRetrieved();
