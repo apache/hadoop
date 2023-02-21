@@ -133,7 +133,7 @@ public class TestFsck {
       LoggerFactory.getLogger(TestFsck.class.getName());
 
   private static final File AUDIT_LOG_FILE =
-      new File(System.getProperty("hadoop.log.dir"), "/hdfs-audit.log");
+      new File(System.getProperty("hadoop.log.dir"), "hdfs-audit.log");
 
   // Pattern for: 
   // allowed=true ugi=name ip=/address cmd=FSCK src=/ dst=null perm=null
@@ -252,6 +252,7 @@ public class TestFsck {
       int getFileStatusSuccess = 0;
       int fsckCount = 0;
       while ((line = reader.readLine()) != null) {
+        LOG.info("Line: {}", line);
         if (line.contains("cmd=getfileinfo") && GET_FILE_INFO_PATTERN.matcher(line).matches()) {
           getFileStatusSuccess++;
         } else if (FSCK_PATTERN.matcher(line).matches()) {

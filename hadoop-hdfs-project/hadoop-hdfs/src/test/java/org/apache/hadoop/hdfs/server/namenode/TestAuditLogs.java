@@ -66,8 +66,8 @@ public class TestAuditLogs {
 
   private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(TestAuditLogs.class);
 
-  private static final String AUDIT_LOG_FILE =
-      System.getProperty("hadoop.log.dir") + "/hdfs-audit.log";
+  private static final File AUDIT_LOG_FILE =
+      new File(System.getProperty("hadoop.log.dir"), "hdfs-audit.log");
 
   final boolean useAsyncEdits;
 
@@ -134,6 +134,8 @@ public class TestAuditLogs {
     fnames = util.getFileNames(fileName);
     util.waitReplication(fs, fileName, (short)3);
     userGroupInfo = UserGroupInformation.createUserForTesting(username, groups);
+    LOG.info("Audit log file: {}, exists: {}, length: {}", AUDIT_LOG_FILE, AUDIT_LOG_FILE.exists(),
+        AUDIT_LOG_FILE.length());
  }
 
   @After
@@ -151,8 +153,7 @@ public class TestAuditLogs {
 
   @AfterClass
   public static void afterClass() throws Exception {
-    File file = new File(AUDIT_LOG_FILE);
-    assertTrue(file.delete());
+    assertTrue(AUDIT_LOG_FILE.delete());
   }
 
   /** test that allowed operation puts proper entry in audit log */
@@ -270,7 +271,7 @@ public class TestAuditLogs {
     verifySuccessCommandsAuditLogs(1, "foo", "cmd=create");
   }
 
-  private void verifySuccessCommandsAuditLogs(int leastExpected, String fileName, String cmd)
+  private void verifySuccessCommandsAuditLogs(int leastExpected, String file, String cmd)
       throws IOException {
 
     try (BufferedReader reader = new BufferedReader(new FileReader(AUDIT_LOG_FILE))) {
@@ -278,9 +279,10 @@ public class TestAuditLogs {
       int success = 0;
       while ((line = reader.readLine()) != null) {
         assertNotNull(line);
+        LOG.info("Line: {}", line);
         assertTrue("Expected audit event not found in audit log",
             AUDIT_PATTERN.matcher(line).matches());
-        if (SUCCESS_PATTERN.matcher(line).matches() && line.contains(fileName) && line.contains(
+        if (SUCCESS_PATTERN.matcher(line).matches() && line.contains(file) && line.contains(
             cmd)) {
           LOG.info("Successful verification. Log line: {}", line);
           success++;
@@ -293,7 +295,7 @@ public class TestAuditLogs {
     }
   }
 
-  private void verifyFailedCommandsAuditLogs(int leastExpected, String fileName, String cmd)
+  private void verifyFailedCommandsAuditLogs(int leastExpected, String file, String cmd)
       throws IOException {
 
     try (BufferedReader reader = new BufferedReader(new FileReader(AUDIT_LOG_FILE))) {
@@ -301,9 +303,10 @@ public class TestAuditLogs {
       int success = 0;
       while ((line = reader.readLine()) != null) {
         assertNotNull(line);
+        LOG.info("Line: {}", line);
         assertTrue("Expected audit event not found in audit log",
             AUDIT_PATTERN.matcher(line).matches());
-        if (FAILURE_PATTERN.matcher(line).matches() && line.contains(fileName) && line.contains(
+        if (FAILURE_PATTERN.matcher(line).matches() && line.contains(file) && line.contains(
             cmd)) {
           LOG.info("Failure verification. Log line: {}", line);
           success++;

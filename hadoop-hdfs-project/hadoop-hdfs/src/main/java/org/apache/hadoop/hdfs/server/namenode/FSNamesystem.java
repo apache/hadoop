@@ -855,11 +855,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throws IOException {
     provider = DFSUtil.createKeyProviderCryptoExtension(conf);
     LOG.info("KeyProvider: " + provider);
-    if (conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY,
-                        DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT)) {
-      LOG.warn("Use log4j properties to enable async log for audit logs. {} is deprecated",
-          DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY);
-    }
+    checkForAsyncLogEnabledByOldConfigs(conf);
     auditLogWithRemotePort =
         conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_WITH_REMOTE_PORT_KEY,
             DFS_NAMENODE_AUDIT_LOG_WITH_REMOTE_PORT_DEFAULT);
@@ -1070,6 +1066,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       LOG.error(getClass().getSimpleName() + " initialization failed.", re);
       close();
       throw re;
+    }
+  }
+
+  @SuppressWarnings("deprecation")
+  private static void checkForAsyncLogEnabledByOldConfigs(Configuration conf) {
+    if (conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY, DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT)) {
+      LOG.warn("Use log4j properties to enable async log for audit logs. {} is deprecated",
+          DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY);
     }
   }
 
