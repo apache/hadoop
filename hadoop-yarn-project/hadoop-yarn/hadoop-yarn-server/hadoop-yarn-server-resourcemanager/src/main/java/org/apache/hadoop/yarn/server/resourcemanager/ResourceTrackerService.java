@@ -194,8 +194,8 @@ public class ResourceTrackerService extends AbstractService implements
 
   /**
    * Load DynamicResourceConfiguration from dynamic-resources.xml.
-   * @param conf
-   * @throws IOException
+   * @param conf Configuration.
+   * @throws IOException an I/O exception has occurred.
    */
   public void loadDynamicResourceConfiguration(Configuration conf)
       throws IOException {
@@ -219,7 +219,7 @@ public class ResourceTrackerService extends AbstractService implements
 
   /**
    * Update DynamicResourceConfiguration with new configuration.
-   * @param conf
+   * @param conf DynamicResourceConfiguration.
    */
   public void updateDynamicResourceConfiguration(
       DynamicResourceConfiguration conf) {

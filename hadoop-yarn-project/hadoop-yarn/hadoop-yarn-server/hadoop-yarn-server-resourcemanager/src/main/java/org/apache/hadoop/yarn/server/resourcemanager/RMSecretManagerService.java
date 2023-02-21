@@ -43,7 +43,8 @@ public class RMSecretManagerService extends AbstractService {
 
   /**
    * Construct the service.
-   *
+   * @param conf Configuration.
+   * @param rmContext RMContext.
    */
   public RMSecretManagerService(Configuration conf, RMContextImpl rmContext) {
     super(RMSecretManagerService.class.getName());

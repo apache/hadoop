@@ -1896,10 +1896,11 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
 
   /**
-     * catch the InvalidStateTransition.
-     * @param state
-     * @param rmAppEventType
-     */
+   * catch the InvalidStateTransition.
+   *
+   * @param state RMAppState.
+   * @param rmAppEventType RMAppEventType.
+   */
   protected void onInvalidStateTransition(RMAppEventType rmAppEventType,
               RMAppState state){
       /* TODO fail the application on the failed transition */

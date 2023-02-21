@@ -172,12 +172,16 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @param applicationId the applicationId of the application being submitted
    * @param user user who submitted the application
    * @param queue queue to which the application is submitted
+   * @throws AccessControlException if any acl violation is there.
    */
   public void submitApplication(ApplicationId applicationId, String user,
       String queue) throws AccessControlException;
 
   /**
    * Submit an application attempt to the queue.
+   *
+   * @param application application whose attempt is being submitted.
+   * @param userName userName who submitted the application.
    */
   public void submitApplicationAttempt(FiCaSchedulerApp application,
       String userName);
@@ -193,13 +197,16 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
 
   /**
    * An application submitted to this queue has finished.
-   * @param applicationId
+   * @param applicationId applicationId.
    * @param user user who submitted the application
    */
   public void finishApplication(ApplicationId applicationId, String user);
 
   /**
    * An application attempt submitted to this queue has finished.
+   *
+   * @param application application attempt.
+   * @param queue queue.
    */
   public void finishApplicationAttempt(FiCaSchedulerApp application,
       String queue);
@@ -248,6 +255,7 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * Reinitialize the queue.
    * @param newlyParsedQueue new queue to re-initalize from
    * @param clusterResource resources in the cluster
+   * @throws IOException an I/O exception has occurred.
    */
   public void reinitialize(CSQueue newlyParsedQueue, Resource clusterResource)
   throws IOException;
@@ -325,6 +333,10 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   /**
    * When partition of node updated, we will update queue's resource usage if it
    * has container(s) running on that.
+   *
+   * @param nodePartition node label.
+   * @param resourceToInc resource.
+   * @param application application.
    */
   public void incUsedResource(String nodePartition, Resource resourceToInc,
       SchedulerApplicationAttempt application);
@@ -332,6 +344,10 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   /**
    * When partition of node updated, we will update queue's resource usage if it
    * has container(s) running on that.
+   *
+   * @param nodePartition node label.
+   * @param resourceToDec resource.
+   * @param application application.
    */
   public void decUsedResource(String nodePartition, Resource resourceToDec,
       SchedulerApplicationAttempt application);

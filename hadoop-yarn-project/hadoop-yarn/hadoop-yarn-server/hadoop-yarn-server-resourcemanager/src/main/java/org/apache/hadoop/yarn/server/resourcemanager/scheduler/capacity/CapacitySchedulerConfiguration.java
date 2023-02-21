@@ -1344,7 +1344,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   /**
-   * Get configured node labels in a given queuePath
+   * Get configured node labels in a given queuePath.
+   *
+   * @param queuePath queue path.
+   * @return configured node labels.
    */
   public Set<String> getConfiguredNodeLabels(String queuePath) {
     Set<String> configuredNodeLabels = new HashSet<String>();
