@@ -48,6 +48,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.AbstractCSUser;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.UserInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.UsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeLabelsUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
@@ -62,7 +65,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
   private final int GB = 1024;
 
   private YarnConfiguration conf;
-  
+
   RMNodeLabelsManager mgr;
 
   @Before
@@ -73,11 +76,11 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     mgr = new NullRMNodeLabelsManager();
     mgr.init(conf);
   }
-  
+
   private Configuration getConfigurationWithQueueLabels(Configuration config) {
     CapacitySchedulerConfiguration conf =
         new CapacitySchedulerConfiguration(config);
-    
+
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a"});
     conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
@@ -90,7 +93,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     conf.setCapacityByLabel(A, "x", 100);
     conf.setCapacityByLabel(A, "y", 100);
     conf.setCapacityByLabel(A, "z", 100);
-    
+
     return conf;
   }
 
@@ -144,7 +147,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     Set<String> set = Sets.newHashSet(elements);
     return set;
   }
-  
+
   private void checkUsedResource(MockRM rm, String queueName, int memory) {
     checkUsedResource(rm, queueName, memory, RMNodeLabelsManager.NO_LABEL);
   }
@@ -188,9 +191,9 @@ public class TestCapacitySchedulerNodeLabelUpdate {
       String userName, String partition, int memory) {
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
     LeafQueue queue = (LeafQueue) scheduler.getQueue(queueName);
-    UsersManager.User user = queue.getUser(userName);
+    AbstractCSUser user = queue.getUser(userName);
     Assert.assertEquals(memory,
-        user.getResourceUsage().getUsed(partition).getMemorySize());
+        user.getUsedCloned(partition).getMemorySize());
   }
 
   @Test(timeout = 60000)
@@ -269,7 +272,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
       throws Exception {
     // set node -> label
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y", "z"));
-    
+
     // set mapping:
     // h1 -> x
     // h2 -> y
@@ -312,17 +315,17 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     containerId2 = ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertTrue(rm.waitForState(nm1, containerId2,
         RMContainerState.ALLOCATED));
-    
+
     // check used resource:
     // queue-a used x=1G, ""=1G
     checkUsedResource(rm, "a", 1024, "x");
     checkUsedResource(rm, "a", 1024);
     checkUsedCapacity(rm, "a", 1024, 8000, "x");
     checkUsedCapacity(rm, "a", 1024, 8000);
-    
+
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     FiCaSchedulerApp app = cs.getApplicationAttempt(am1.getApplicationAttemptId());
-    
+
     // change h1's label to z
     mgr.replaceLabelsOnNode(ImmutableMap.of(nm1.getNodeId(), toSet("z")));
     cs.handle(new NodeLabelsUpdateSchedulerEvent(ImmutableMap.of(nm1.getNodeId(),
@@ -343,7 +346,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
         app.getAppAttemptResourceUsage().getUsed("x").getMemorySize());
     Assert.assertEquals(1024,
         app.getAppAttemptResourceUsage().getUsed("z").getMemorySize());
-    
+
     // change h1's label to y
     mgr.replaceLabelsOnNode(ImmutableMap.of(nm1.getNodeId(), toSet("y")));
     cs.handle(new NodeLabelsUpdateSchedulerEvent(ImmutableMap.of(nm1.getNodeId(),
@@ -370,7 +373,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
         app.getAppAttemptResourceUsage().getUsed("y").getMemorySize());
     Assert.assertEquals(0,
         app.getAppAttemptResourceUsage().getUsed("z").getMemorySize());
-    
+
     // change h1's label to no label
     Set<String> emptyLabels = new HashSet<>();
     Map<NodeId,Set<String>> map = ImmutableMap.of(nm1.getNodeId(),
@@ -412,7 +415,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
         ContainerStatus.newInstance(containerId1, ContainerState.COMPLETE, "",
             ContainerExitStatus.KILLED_BY_RESOURCEMANAGER),
         RMContainerEventType.KILL);
-    
+
     checkUsedResource(rm, "a", 0, "x");
     checkUsedResource(rm, "a", 0, "y");
     checkUsedResource(rm, "a", 0, "z");
@@ -530,7 +533,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
      */
     // set node -> label
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y", "z"));
-    
+
     // set mapping:
     // h1 -> x
     // h2 -> y
@@ -572,7 +575,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 3);
     Assert.assertTrue(rm.waitForState(nm2, containerId,
         RMContainerState.ALLOCATED));
-    
+
     // app2
     MockRMAppSubmissionData data =
         MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
@@ -591,7 +594,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
         ContainerId.newContainerId(am2.getApplicationAttemptId(), 3);
     Assert.assertTrue(rm.waitForState(nm1, containerId,
         RMContainerState.ALLOCATED));
-    
+
     // check used resource:
     // queue-a used x=1G, ""=1G
     checkUsedResource(rm, "a", 3 * GB, "x");

@@ -29,7 +29,7 @@ import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UsersManager.User;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.AbstractCSUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -38,7 +38,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.IntraQueue
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.IntraQueueCandidatesSelector.TAPriorityComparator;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy.IntraQueuePreemptionOrderPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -226,31 +225,31 @@ public class FifoIntraQueuePreemptionPlugin
    * Algorithm for calculating idealAssigned is as follows:
    * For each partition:
    *  Q.reassignable = Q.used - Q.selected;
-   *  
+   *
    * # By default set ideal assigned 0 for app.
    * app.idealAssigned as 0
    * # get user limit from scheduler.
    * userLimitRes = Q.getUserLimit(userName)
-   * 
+   *
    * # initial all value to 0
    * Map<String, Resource> userToAllocated
-   * 
+   *
    * # Loop from highest priority to lowest priority app to calculate ideal
    * for app in sorted-by(priority) {
    *  if Q.reassignable < 0:
    *    break;
-   *    
+   *
    *  if (user-to-allocated.get(app.user) < userLimitRes) {
-   *   idealAssigned = min((userLimitRes - userToAllocated.get(app.user)), 
+   *   idealAssigned = min((userLimitRes - userToAllocated.get(app.user)),
    *                      (app.used + app.pending - app.selected))
    *   app.idealAssigned = min(Q.reassignable, idealAssigned)
    *   userToAllocated.get(app.user) += app.idealAssigned;
-   *  } else { 
+   *  } else {
    *   // skip this app because user-limit reached
    *  }
    *  Q.reassignable -= app.idealAssigned
    * }
-   *  
+   *
    * @param clusterResource Cluster Resource
    * @param tq TempQueue
    * @param selectedCandidates Already Selected preemption candidates
@@ -418,10 +417,11 @@ public class FifoIntraQueuePreemptionPlugin
       String userName = app.getUser();
       TempUserPerPartition tmpUser = usersPerPartition.get(userName);
       if (tmpUser == null) {
-        // User might have already been removed, but preemption still accounts for this app,
-        // therefore reinserting the user will not cause a memory leak
-        User  user = tq.leafQueue.getOrCreateUser(userName);
-        ResourceUsage userResourceUsage = user.getResourceUsage();
+        AbstractCSUser user = tq.leafQueue.getUser(userName);
+        if (user == null) {
+          // TODO - Check why https://issues.apache.org/jira/browse/YARN-10996 expects user to be present here
+          continue;
+        }
 
         // perUserAMUsed was populated with running apps, now we are looping
         // through both running and pending apps.
@@ -430,9 +430,9 @@ public class FifoIntraQueuePreemptionPlugin
             ? Resources.none() : userSpecificAmUsed;
 
         tmpUser = new TempUserPerPartition(user, tq.queueName,
-            Resources.clone(userResourceUsage.getUsed(partition)),
+            user.getUsedCloned(partition),
             Resources.clone(amUsed),
-            Resources.clone(userResourceUsage.getReserved(partition)),
+            user.getReservedCloned(partition),
             Resources.none());
 
         Resource userLimitResource = Resources.clone(

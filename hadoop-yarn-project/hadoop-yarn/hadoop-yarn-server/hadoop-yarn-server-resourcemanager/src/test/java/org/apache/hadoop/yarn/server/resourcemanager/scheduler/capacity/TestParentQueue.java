@@ -24,16 +24,20 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -74,8 +78,12 @@ public class TestParentQueue {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestParentQueue.class);
-  
+
   RMContext rmContext;
+  RMContext spyRMContext;
+  private RMApp rmApp;
+  ResourceRequest amResourceRequest;
+
   YarnConfiguration conf;
   CapacitySchedulerConfiguration csConf;
   CapacitySchedulerContext csContext;
@@ -86,10 +94,27 @@ public class TestParentQueue {
 
   private final ResourceCalculator resourceComparator =
       new DefaultResourceCalculator();
-  
+
   @Before
   public void setUp() throws Exception {
     rmContext = TestUtils.getMockRMContext();
+    spyRMContext = spy(rmContext);
+
+    ConcurrentMap<ApplicationId, RMApp> spyApps =
+        spy(new ConcurrentHashMap<ApplicationId, RMApp>());
+    rmApp = mock(RMApp.class);
+    when(rmApp.getRMAppAttempt(any())).thenReturn(null);
+    amResourceRequest = mock(ResourceRequest.class);
+    when(amResourceRequest.getCapability()).thenReturn(
+        Resources.createResource(0, 0));
+    when(rmApp.getAMResourceRequests()).thenReturn(
+        Collections.singletonList(amResourceRequest));
+    Mockito.doReturn(rmApp)
+        .when(spyApps).get(ArgumentMatchers.<ApplicationId>any());
+    when(spyRMContext.getRMApps()).thenReturn(spyApps);
+    when(spyRMContext.getYarnConfiguration())
+        .thenReturn(new YarnConfiguration());
+
     conf = new YarnConfiguration();
     csConf = new CapacitySchedulerConfiguration();
     
@@ -200,14 +225,21 @@ public class TestParentQueue {
         }
         final Resource allocatedResource = Resources.createResource(allocation);
         if (queue instanceof ParentQueue) {
-          ((ParentQueue)queue).allocateResource(clusterResource, 
+          ((ParentQueue)queue).allocateResource(clusterResource,
               allocatedResource, RMNodeLabelsManager.NO_LABEL);
         } else {
-          FiCaSchedulerApp app1 = getMockApplication(0, "");
-          ((LeafQueue)queue).allocateResource(clusterResource, app1, 
+          LeafQueue leafQueue = (LeafQueue)queue;
+          ApplicationAttemptId applicationAttemptId =
+              TestUtils.getMockApplicationAttemptId(0, 0);
+          FiCaSchedulerApp app = new FiCaSchedulerApp(applicationAttemptId,
+              "user",
+              leafQueue, leafQueue.getUsersManager(), spyRMContext);
+
+          leafQueue.submitApplicationAttempt(app, "user");
+          ((LeafQueue)queue).allocateResource(clusterResource, app,
               allocatedResource, null, null);
         }
-        
+
         // Next call - nothing
         if (allocation > 0) {
           doReturn(new CSAssignment(Resources.none(), type)).when(queue)

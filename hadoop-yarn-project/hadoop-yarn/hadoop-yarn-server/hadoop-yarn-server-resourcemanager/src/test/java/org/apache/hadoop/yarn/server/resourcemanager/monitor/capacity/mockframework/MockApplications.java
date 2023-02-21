@@ -22,7 +22,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UsersManager.User;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -160,12 +159,11 @@ class MockApplications {
     Map<String, ResourceUsage> userResourceUsage =
         userResourceUsagePerLabel.get(label).get(queueName);
     for (String userName : users) {
-      User user = new User(userName);
-      if (userResourceUsage != null) {
-        user.setResourceUsage(userResourceUsage.get(userName));
-      }
-      when(queue.getUser(eq(userName))).thenReturn(user);
-      when(queue.getOrCreateUser(eq(userName))).thenReturn(user);
+//      User user = new User(userName);
+//      if (userResourceUsage != null) {
+//        user.setResourceUsage(userResourceUsage.get(userName));
+//      }
+//      when(queue.getUser(eq(userName))).thenReturn(user);
       when(queue.getResourceLimitForAllUsers(eq(userName),
           any(Resource.class), anyString(), any(SchedulingMode.class)))
           .thenReturn(userLimit);

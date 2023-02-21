@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.AbstractCSUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -197,12 +198,15 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
   private void initializeUsageAndUserLimitForCompute(Resource clusterResource,
       String partition, AbstractLeafQueue leafQueue,
       Map<String, Resource> rollingResourceUsagePerUser) {
-    for (String user : leafQueue.getAllUsers()) {
+    for (String userName : leafQueue.getAllUsers()) {
       // Initialize used resource of a given user for rolling computation.
-      rollingResourceUsagePerUser.put(user, Resources.clone(
-          leafQueue.getUser(user).getResourceUsage().getUsed(partition)));
-      LOG.debug("Rolling resource usage for user:{} is : {}", user,
-          rollingResourceUsagePerUser.get(user));
+      AbstractCSUser user = leafQueue.getUser(userName);
+      // user can be null because users can get removed after calling getAllUsers()
+      if (user != null) {
+        rollingResourceUsagePerUser.put(userName, user.getUsedCloned(partition));
+        LOG.debug("Rolling resource usage for user:{} is : {}", userName,
+            rollingResourceUsagePerUser.get(userName));
+      }
     }
   }
 

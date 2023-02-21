@@ -71,7 +71,13 @@ public class ResourceUsage extends AbstractResourceUsage {
   public void setUsed(Resource res) {
     setUsed(NL, res);
   }
-  
+
+  public static ResourceUsage clone(AbstractResourceUsage res) {
+    ResourceUsage cloned = new ResourceUsage();
+    cloned.copyAllUsed(res);
+    return cloned;
+  }
+
   public void copyAllUsed(AbstractResourceUsage other) {
     writeLock.lock();
     try {

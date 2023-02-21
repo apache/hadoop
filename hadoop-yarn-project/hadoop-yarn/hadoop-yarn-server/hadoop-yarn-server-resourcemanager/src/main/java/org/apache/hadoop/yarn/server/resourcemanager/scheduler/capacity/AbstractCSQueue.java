@@ -105,7 +105,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   // used-capacity/abs-used-capacity/capacity/abs-capacity,
   // etc.
   QueueCapacities queueCapacities;
-  CSQueueUsageTracker usageTracker;
+  final CSQueueUsageTracker usageTracker;
 
   public enum CapacityConfigType {
     NONE, PERCENTAGE, ABSOLUTE_RESOURCE
@@ -251,6 +251,10 @@ public abstract class AbstractCSQueue implements CSQueue {
   @Override
   public String getQueueName() {
     return this.queuePath.getLeafName();
+  }
+
+  public Resource getClusterResource() {
+    return this.queueContext.getClusterResource();
   }
 
   @Override

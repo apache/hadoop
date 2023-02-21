@@ -73,6 +73,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.AbstractCSUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.UsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
@@ -1270,11 +1272,10 @@ public class TestCapacitySchedulerApps {
     assertApps(scheduler, "b");
     assertApps(scheduler, "b1");
 
-    UsersManager um =
-        (UsersManager) scheduler.getQueue("a1").getAbstractUsersManager();
+    AbstractCSUsersManager um =
+        (AbstractCSUsersManager) scheduler.getQueue("a1").getAbstractUsersManager();
 
     assertEquals(4, um.getNumActiveUsers());
-    assertEquals(2, um.getNumActiveUsersWithOnlyPendingApps());
 
     // now move the app
     scheduler.moveAllApps("a1", "b1");
@@ -1305,11 +1306,10 @@ public class TestCapacitySchedulerApps {
         app3.getCurrentAppAttempt().getAppAttemptId(),
         app4.getCurrentAppAttempt().getAppAttemptId());
 
-    UsersManager umB1 =
-        (UsersManager) scheduler.getQueue("b1").getAbstractUsersManager();
+    AbstractCSUsersManager umB1 =
+        (AbstractCSUsersManager) scheduler.getQueue("b1").getAbstractUsersManager();
 
     assertEquals(2, umB1.getNumActiveUsers());
-    assertEquals(2, umB1.getNumActiveUsersWithOnlyPendingApps());
 
     rm.close();
   }

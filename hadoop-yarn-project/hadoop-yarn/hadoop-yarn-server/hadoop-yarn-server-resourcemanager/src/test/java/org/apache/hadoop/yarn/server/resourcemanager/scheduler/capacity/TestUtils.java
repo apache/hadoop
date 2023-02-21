@@ -142,7 +142,13 @@ public class TestUtils {
   static class SpyHook extends CapacitySchedulerQueueManager.QueueHook {
     @Override
     public CSQueue hook(CSQueue queue) {
-      return spy(queue);
+      CSQueue spyQueue = spy(queue);
+      if (spyQueue instanceof AbstractLeafQueue) {
+        AbstractLeafQueue spyLeafQueue = (AbstractLeafQueue) spyQueue;
+        spyLeafQueue.reinitializeUsersManager();
+        return spyLeafQueue;
+      }
+      return spyQueue;
     }
   }
   public static SpyHook spyHook = new SpyHook();

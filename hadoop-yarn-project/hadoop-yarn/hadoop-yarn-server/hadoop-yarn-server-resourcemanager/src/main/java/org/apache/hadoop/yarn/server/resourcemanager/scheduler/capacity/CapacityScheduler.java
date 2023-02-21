@@ -2699,6 +2699,13 @@ public class CapacityScheduler extends
 
       FiCaSchedulerApp app = application.getCurrentAppAttempt();
       if (app != null) {
+        /* TODO - What is the right behaviour when application is finished before moving it ?
+            source.detachContainer fails because user is removed from users manager if user has no apps
+         */
+        if (!app.isStopped()) {
+          // Submit to a new queue
+          dest.submitApplicationAttempt(app, user, true);
+        }
         // Move all live containers even when stopped.
         // For transferStateFromPreviousAttempt required
         for (RMContainer rmContainer : app.getLiveContainers()) {
@@ -2713,8 +2720,6 @@ public class CapacityScheduler extends
         }
         if (!app.isStopped()) {
           source.finishApplicationAttempt(app, sourceQueueName);
-          // Submit to a new queue
-          dest.submitApplicationAttempt(app, user, true);
         }
         // Finish app & update metrics
         app.move(dest);

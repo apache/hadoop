@@ -65,7 +65,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.Activi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.AMState;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UsersManager.User;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.AbstractCSUser;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.AbstractCSUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.UsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.KillableContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerAllocationProposal;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
@@ -119,7 +121,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
 
-  private final UsersManager usersManager;
+  // TODO - can this be made final ? Requires initialising usersManager without 'this' reference & refactoring SpyHook
+  private volatile AbstractCSUsersManager usersManager;
 
   // cache last cluster resource to compute actual capacity
   private Resource lastClusterResource = Resources.none();
@@ -162,10 +165,6 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       IOException {
     super(queueContext, queueName, parent, old);
     setDynamicQueue(isDynamic);
-
-    this.usersManager = new UsersManager(usageTracker.getMetrics(), this, labelManager,
-        resourceCalculator);
-
     // One time initialization is enough since it is static ordering policy
     this.pendingOrderingPolicy = new FifoOrderingPolicyForPendingApps<>();
   }
@@ -175,6 +174,11 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       IOException {
     writeLock.lock();
     try {
+      if (this.usersManager == null) {
+        this.usersManager = AbstractCSUsersManager.createUsersManager(usageTracker.getMetrics(), this, labelManager,
+            resourceCalculator);
+      }
+
       CapacitySchedulerConfiguration configuration = queueContext.getConfiguration();
       super.setupQueueConfigs(clusterResource);
 
@@ -257,7 +261,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       // Validate leaf queue's user's weights.
       float queueUserLimit = Math.min(100.0f, configuration.getUserLimit(getQueuePath()));
       getUserWeights().validateForLeafQueue(queueUserLimit, getQueuePath());
-      usersManager.updateUserWeights();
+      usersManager.queueConfigUpdated();
 
       LOG.info(
           "Initializing " + getQueuePath() + "\n" +
@@ -316,6 +320,20 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     }
   }
 
+  /**
+   * Used only for tests.
+   * TODO - Figure out a way to avoid this method
+   */
+  @Private
+  public void reinitializeUsersManager() {
+    this.usersManager = AbstractCSUsersManager.createUsersManager(usageTracker.getMetrics(), this, labelManager,
+        resourceCalculator);
+    CapacitySchedulerConfiguration configuration = queueContext.getConfiguration();
+    usersManager.setUserLimit(configuration.getUserLimit(getQueuePath()));
+    usersManager.setUserLimitFactor(configuration.getUserLimitFactor(getQueuePath()));
+    usersManager.queueConfigUpdated();
+  }
+
   private String getDefaultNodeLabelExpressionStr() {
     String defaultLabelExpression = queueNodeLabelsSettings.getDefaultLabelExpression();
     return defaultLabelExpression == null ? "" : defaultLabelExpression;
@@ -349,7 +367,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
    *
    * @return UsersManager instance.
    */
-  public UsersManager getUsersManager() {
+  public AbstractCSUsersManager getUsersManager() {
     return usersManager;
   }
 
@@ -416,7 +434,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   public int getNumPendingApplications(String user) {
     readLock.lock();
     try {
-      User u = getUser(user);
+      AbstractCSUser u = getUser(user);
       if (null == u) {
         return 0;
       }
@@ -430,7 +448,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   public int getNumActiveApplications(String user) {
     readLock.lock();
     try {
-      User u = getUser(user);
+      AbstractCSUser u = getUser(user);
       if (null == u) {
         return 0;
       }
@@ -511,13 +529,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   }
 
   @VisibleForTesting
-  public User getUser(String userName) {
+  public AbstractCSUser getUser(String userName) {
     return usersManager.getUser(userName);
-  }
-
-  @VisibleForTesting
-  public User getOrCreateUser(String userName) {
-    return usersManager.getUserAndAddIfAbsent(userName);
   }
 
   @Private
@@ -585,12 +598,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         application.getApplicationAttemptId());
     writeLock.lock();
     try {
-      // TODO, should use getUser, use this method just to avoid UT failure
-      // which is caused by wrong invoking order, will fix UT separately
-      User user = usersManager.getUserAndAddIfAbsent(userName);
-
       // Add the attempt to our data-structures
-      addApplicationAttempt(application, user);
+      addApplicationAttempt(application, userName);
     } finally {
       writeLock.unlock();
     }
@@ -651,9 +660,9 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       }
 
       // Check submission limits for the user on this queue
-      User user = usersManager.getUserAndAddIfAbsent(userName);
+      AbstractCSUser user = this.getUser(userName);
       //TODO recalculate max applications because they can depend on capacity
-      if (user.getTotalApplications() >= getMaxApplicationsPerUser() &&
+      if (user != null && user.getTotalApplications() >= getMaxApplicationsPerUser() &&
           !(this instanceof AutoCreatedLeafQueue)) {
         String msg = "Queue " + getQueuePath() + " already has " + user
             .getTotalApplications() + " applications from user " + userName
@@ -696,10 +705,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   public Resource getUserAMResourceLimitPerPartition(
       String nodePartition, String userName) {
-    float userWeight = 1.0f;
-    if (userName != null && getUser(userName) != null) {
-      userWeight = getUser(userName).getWeight();
-    }
+
+    float userWeight = this.getUserWeights().getByUser(userName);
 
     readLock.lock();
     try {
@@ -881,7 +888,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         }
 
         // Check user am resource limit
-        User user = usersManager.getUserAndAddIfAbsent(application.getUser());
+        // TODO - Check root cause of https://issues.apache.org/jira/browse/YARN-10934 which makes it acceptable for user object to not be present
+        AbstractCSUser user = this.getUser(application.getUser());
         Resource userAMLimit = userAmPartitionLimit.get(partitionName);
 
         // Verify whether we already calculated user-am-limit for this label.
@@ -893,7 +901,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
         Resource userAmIfStarted = Resources.add(
             application.getAMResource(partitionName),
-            user.getConsumedAMResources(partitionName));
+            user.getConsumedAMResourcesCloned(partitionName));
 
         if (!resourceCalculator.fitsIn(userAmIfStarted, userAMLimit)) {
           if (getNumActiveApplications() < 1 || (Resources.lessThanOrEqual(
@@ -918,9 +926,10 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
         usageTracker.getQueueUsage().incAMUsed(partitionName,
             application.getAMResource(partitionName));
-        user.getResourceUsage().incAMUsed(partitionName,
+
+        user.incAMUsed(partitionName,
             application.getAMResource(partitionName));
-        user.getResourceUsage().setAMLimit(partitionName, userAMLimit);
+        user.setAMLimit(partitionName, userAMLimit);
         usageTracker.getMetrics().incAMUsed(partitionName, application.getUser(),
             application.getAMResource(partitionName));
         usageTracker.getMetrics().setAMResouceLimitForUser(partitionName,
@@ -934,8 +943,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     }
   }
 
-  private void addApplicationAttempt(FiCaSchedulerApp application,
-      User user) {
+  private void addApplicationAttempt(FiCaSchedulerApp application, String userName) {
     writeLock.lock();
     try {
       applicationAttemptMap.put(application.getApplicationAttemptId(),
@@ -953,7 +961,9 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       }
 
       // Accept
-      user.submitApplication();
+      usersManager.submitApplication(userName);
+      // User can be initialised only after application is submitted - to ensure user object is present
+      AbstractCSUser user = this.getUser(userName);
       getPendingAppsOrderingPolicy().addSchedulableEntity(application);
 
       // Activate applications
@@ -1008,7 +1018,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     try {
       // TODO, should use getUser, use this method just to avoid UT failure
       // which is caused by wrong invoking order, will fix UT separately
-      User user = usersManager.getUserAndAddIfAbsent(userName);
+      AbstractCSUser user = this.getUser(userName);
 
       boolean runnable = runnableApps.remove(application);
       if (!runnable) {
@@ -1026,17 +1036,14 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       } else{
         usageTracker.getQueueUsage().decAMUsed(partitionName,
             application.getAMResource(partitionName));
-        user.getResourceUsage().decAMUsed(partitionName,
+        user.decAMUsed(partitionName,
             application.getAMResource(partitionName));
         usageTracker.getMetrics().decAMUsed(partitionName, application.getUser(),
             application.getAMResource(partitionName));
       }
       applicationAttemptMap.remove(application.getApplicationAttemptId());
 
-      user.finishApplication(wasActive);
-      if (user.getTotalApplications() == 0) {
-        usersManager.removeUser(application.getUser());
-      }
+      usersManager.removeApplication(userName, wasActive);
 
       // Check if we can activate more applications
       activateApplications();
@@ -1108,8 +1115,16 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   private ConcurrentMap<String, CachedUserLimit> getUserLimitCache(
       String partition,
       SchedulingMode schedulingMode) {
+    if (!(usersManager instanceof UsersManager)) {
+      /* TODO - Refactor leaf queue to not require to maintain a user limit cache.
+          Ideally user limit should completely be managed by users manager and clients shouldn't implement this cache
+          for now, just returning an empty map
+       */
+      return new ConcurrentHashMap<>();
+    }
     synchronized (userLimitsCache) {
-      long latestVersion = usersManager.getLatestVersionOfUsersState();
+
+      long latestVersion = ((UsersManager) usersManager).getLatestVersionOfUsersState();
 
       if (latestVersion != this.currentUserLimitCacheVersion) {
         // User limits cache needs invalidating
@@ -1340,12 +1355,12 @@ public class AbstractLeafQueue extends AbstractCSQueue {
             allocation.getSchedulingMode(), null);
 
         // Deduct resources that we can release
-        User user = getUser(username);
+        AbstractCSUser user = getUser(username);
         if (user == null) {
-          LOG.debug("User {} has been removed!", username);
+          LOG.error("User {} has been removed. Not expected in accept()!", username);
           return false;
         }
-        Resource usedResource = Resources.clone(user.getUsed(p));
+        Resource usedResource = user.getUsedCloned(p);
         Resources.subtractFrom(usedResource,
             request.getTotalReleasedResource());
 
@@ -1467,13 +1482,13 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   }
 
 
-  protected Resource getHeadroom(User user, Resource queueCurrentLimit,
+  protected Resource getHeadroom(AbstractCSUser user, Resource queueCurrentLimit,
       Resource clusterResource, FiCaSchedulerApp application) {
     return getHeadroom(user, queueCurrentLimit, clusterResource, application,
         RMNodeLabelsManager.NO_LABEL);
   }
 
-  protected Resource getHeadroom(User user, Resource queueCurrentLimit,
+  protected Resource getHeadroom(AbstractCSUser user, Resource queueCurrentLimit,
       Resource clusterResource, FiCaSchedulerApp application,
       String partition) {
     return getHeadroom(user, queueCurrentLimit, clusterResource,
@@ -1482,7 +1497,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         partition);
   }
 
-  private Resource getHeadroom(User user,
+  private Resource getHeadroom(AbstractCSUser user,
       Resource currentPartitionResourceLimit, Resource clusterResource,
       Resource userLimitResource, String partition) {
     /**
@@ -1514,7 +1529,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
     Resource headroom = Resources.componentwiseMin(
         Resources.subtractNonNegative(userLimitResource,
-            user.getUsed(partition)),
+            user.getUsedCloned(partition)),
         Resources.subtractNonNegative(currentPartitionResourceLimit,
             usageTracker.getQueueUsage().getUsed(partition)));
     // Normalize it before return
@@ -1548,9 +1563,9 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       Resource clusterResource, String nodePartition,
       SchedulingMode schedulingMode, Resource userLimit) {
     String user = application.getUser();
-    User queueUser = getUser(user);
+    AbstractCSUser queueUser = getUser(user);
     if (queueUser == null) {
-      LOG.debug("User {} has been removed!", user);
+      LOG.error("User {} has been removed. Not expected while computing user limits!", user);
       return Resources.none();
     }
 
@@ -1571,7 +1586,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       LOG.debug("Headroom calculation for user " + user + ": " + " userLimit="
           + userLimit + " queueMaxAvailRes="
           + cachedResourceLimitsForHeadroom.getLimit() + " consumed="
-          + queueUser.getUsed() + " partition="
+          + queueUser.getUsedCloned() + " partition="
           + nodePartition);
     }
 
@@ -1647,9 +1662,9 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
     readLock.lock();
     try {
-      User user = getUser(userName);
+      AbstractCSUser user = getUser(userName);
       if (user == null) {
-        LOG.debug("User {} has been removed!", userName);
+        LOG.error("User {} has been removed. Not expected here while checking user limits!", userName);
         return false;
       }
 
@@ -1658,22 +1673,22 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       // Note: We aren't considering the current request since there is a fixed
       // overhead of the AM, but it's a > check, not a >= check, so...
       if (Resources.greaterThan(resourceCalculator, clusterResource,
-          user.getUsed(nodePartition), limit)) {
+          user.getUsedCloned(nodePartition), limit)) {
         // if enabled, check to see if could we potentially use this node instead
         // of a reserved node if the application has reserved containers
         if (this.reservationsContinueLooking) {
           if (Resources.lessThanOrEqual(resourceCalculator, clusterResource,
-              Resources.subtract(user.getUsed(),
+              Resources.subtract(user.getUsedCloned(),
                   application.getCurrentReservation()), limit)) {
 
             if (LOG.isDebugEnabled()) {
               LOG.debug("User " + userName + " in queue " + getQueuePath()
                   + " will exceed limit based on reservations - "
-                  + " consumed: " + user.getUsed() + " reserved: " + application
+                  + " consumed: " + user.getUsedCloned() + " reserved: " + application
                   .getCurrentReservation() + " limit: " + limit);
             }
             Resource amountNeededToUnreserve = Resources.subtract(
-                user.getUsed(nodePartition), limit);
+                user.getUsedCloned(nodePartition), limit);
             // we can only acquire a new container if we unreserve first to
             // respect user-limit
             currentResourceLimits.setAmountNeededUnreserve(
@@ -1684,7 +1699,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         if (LOG.isDebugEnabled()) {
           LOG.debug("User " + userName + " in queue " + getQueuePath()
               + " will exceed limit - " + " consumed: " + user
-              .getUsed(nodePartition) + " limit: " + limit);
+              .getUsedCloned(nodePartition) + " limit: " + limit);
         }
         return false;
       }
@@ -1749,12 +1764,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       String nodePartition) {
     writeLock.lock();
     try {
-      ResourceUsage queueResourceUsage = getQueueResourceUsage();
-
       if (nodePartition == null) {
-        for (String partition : Sets.union(
-            getQueueCapacities().getExistingNodeLabels(),
-            queueResourceUsage.getExistingNodeLabels())) {
+        for (String partition : getAllNodeLabels()) {
           usersManager.updateUsageRatio(partition, clusterResource);
         }
       } else {
@@ -1763,6 +1774,12 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     } finally {
       writeLock.unlock();
     }
+  }
+
+  public Set<String> getAllNodeLabels() {
+    return Sets.union(
+        getQueueCapacities().getExistingNodeLabels(),
+        getQueueResourceUsage().getExistingNodeLabels());
   }
 
   @Override
@@ -1850,7 +1867,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       String userName = application.getUser();
 
       // Increment user's resource usage.
-      User user = usersManager.updateUserResourceUsage(userName, resource,
+      AbstractCSUser user = usersManager.getUser(userName);
+      usersManager.updateUserResourceUsage(userName, resource,
           queueContext.getClusterResource(), nodePartition, true);
 
       Resource partitionHeadroom = Resources.createResource(0, 0);
@@ -1868,7 +1886,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         LOG.debug(getQueuePath() + " user=" + userName + " used="
             + usageTracker.getQueueUsage().getUsed(nodePartition) + " numContainers="
             + usageTracker.getNumContainers() + " headroom = " + application.getHeadroom()
-            + " user-resources=" + user.getUsed());
+            + " user-resources=" + user.getUsedCloned());
       }
     } finally {
       writeLock.unlock();
@@ -1898,7 +1916,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
       // Update user metrics
       String userName = application.getUser();
-      User user = usersManager.updateUserResourceUsage(userName, resource,
+      AbstractCSUser user = usersManager.getUser(userName);
+      usersManager.updateUserResourceUsage(userName, resource,
           queueContext.getClusterResource(), nodePartition, false);
 
       Resource partitionHeadroom = Resources.createResource(0, 0);
@@ -1916,7 +1935,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         LOG.debug(
             getQueuePath() + " used=" + usageTracker.getQueueUsage().getUsed() + " numContainers="
                 + usageTracker.getNumContainers() + " user=" + userName + " user-resources="
-                + user.getUsed());
+                + user.getUsedCloned());
       }
     } finally {
       writeLock.unlock();
@@ -2052,12 +2071,12 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   public void incAMUsedResource(String nodeLabel, Resource resourceToInc,
       SchedulerApplicationAttempt application) {
-    User user = getUser(application.getUser());
+    AbstractCSUser user = getUser(application.getUser());
     if (user == null) {
       return;
     }
 
-    user.getResourceUsage().incAMUsed(nodeLabel,
+    user.incAMUsed(nodeLabel,
         resourceToInc);
     // ResourceUsage has its own lock, no addition lock needs here.
     usageTracker.getQueueUsage().incAMUsed(nodeLabel, resourceToInc);
@@ -2065,12 +2084,12 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   public void decAMUsedResource(String nodeLabel, Resource resourceToDec,
       SchedulerApplicationAttempt application) {
-    User user = getUser(application.getUser());
+    AbstractCSUser user = getUser(application.getUser());
     if (user == null) {
       return;
     }
 
-    user.getResourceUsage().decAMUsed(nodeLabel,
+    user.decAMUsed(nodeLabel,
         resourceToDec);
     // ResourceUsage has its own lock, no addition lock needs here.
     usageTracker.getQueueUsage().decAMUsed(nodeLabel, resourceToDec);
@@ -2158,11 +2177,12 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       for (FiCaSchedulerApp app : getApplications()) {
         String userName = app.getUser();
         if (!userNameToHeadroom.containsKey(userName)) {
-          User user = getUsersManager().getUserAndAddIfAbsent(userName);
+          // TODO - Check why https://issues.apache.org/jira/browse/YARN-10996 expects user to be present here
+          AbstractCSUser user = this.getUser(userName);
           Resource headroom = Resources.subtract(
               getResourceLimitForActiveUsers(app.getUser(), clusterResources,
                   partition, SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY),
-              user.getUsed(partition));
+              user.getUsedCloned(partition));
           // Make sure headroom is not negative.
           headroom = Resources.componentwiseMax(headroom, Resources.none());
           userNameToHeadroom.put(userName, headroom);
@@ -2447,7 +2467,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
    * @return user list
    */
   public Set<String> getAllUsers() {
-    return this.getUsersManager().getUsers().keySet();
+    return this.getUsersManager().getUserNames();
   }
 
   static class CachedUserLimit {

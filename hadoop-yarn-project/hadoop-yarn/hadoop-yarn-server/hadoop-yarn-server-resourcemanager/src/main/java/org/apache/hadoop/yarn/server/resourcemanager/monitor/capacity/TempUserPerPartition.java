@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UsersManager.User;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.AbstractCSUser;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -30,11 +30,11 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  */
 public class TempUserPerPartition extends AbstractPreemptionEntity {
 
-  private final User user;
+  private final AbstractCSUser user;
   private Resource userLimit;
   private boolean donePreemptionQuotaForULDelta = false;
 
-  TempUserPerPartition(User user, String queueName, Resource usedPerPartition,
+  TempUserPerPartition(AbstractCSUser user, String queueName, Resource usedPerPartition,
       Resource amUsedPerPartition, Resource reserved,
       Resource pendingPerPartition) {
     super(queueName, usedPerPartition, amUsedPerPartition, reserved,

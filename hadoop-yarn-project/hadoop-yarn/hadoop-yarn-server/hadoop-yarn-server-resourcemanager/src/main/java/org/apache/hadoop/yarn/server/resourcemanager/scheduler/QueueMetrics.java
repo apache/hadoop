@@ -134,7 +134,7 @@ public class QueueMetrics implements MetricsSource {
 
   protected final MetricsRegistry registry;
   protected final String queueName;
-  private QueueMetrics parent;
+  private volatile QueueMetrics parent;
   private Queue parentQueue;
   protected final MetricsSystem metricsSystem;
   protected final Map<String, QueueMetrics> users;

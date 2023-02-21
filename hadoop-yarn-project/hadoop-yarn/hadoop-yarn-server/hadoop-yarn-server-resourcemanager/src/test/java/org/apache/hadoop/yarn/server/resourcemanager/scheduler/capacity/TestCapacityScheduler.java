@@ -1782,7 +1782,7 @@ public class TestCapacityScheduler {
     LeafQueue queueA =
         (LeafQueue) ((CapacityScheduler) scheduler).getQueue(queueName);
     assertEquals("Minimum Resource for AM is incorrect", minAllocResource,
-        queueA.getUser("user_0").getResourceUsage().getAMUsed());
+        queueA.getUser("user_0").getConsumedAMResourcesCloned());
     rm.stop();
   }
 
