@@ -101,6 +101,7 @@ public final class AWSClientConfig {
    *
    * @param conf The Hadoop configuration
    * @return Http client builder
+   * @throws IOException on any problem
    */
   public static ApacheHttpClient.Builder createHttpClientBuilder(Configuration conf)
       throws IOException {

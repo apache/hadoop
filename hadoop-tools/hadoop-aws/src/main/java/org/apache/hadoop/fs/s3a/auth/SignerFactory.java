@@ -81,7 +81,7 @@ public final class SignerFactory {
 
   /**
    * Check if the signer has already been registered.
-   * @param signerType
+   * @param signerType signer to get
    */
   public static void getSigner(String signerType) {
     Class<? extends Signer> signerClass = SIGNERS.get(signerType);
@@ -96,8 +96,8 @@ public final class SignerFactory {
    *
    * @param signerType The signer type.
    * @param configKey Config key used to configure the signer.
-   *
    * @return The new signer instance.
+   * @throws IOException on any problem.
    */
   public static Signer createSigner(String signerType, String configKey) throws IOException {
     Class<?> signerClass = SIGNERS.get(signerType);

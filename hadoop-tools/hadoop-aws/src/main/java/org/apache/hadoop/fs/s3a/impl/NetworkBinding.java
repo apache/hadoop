@@ -56,8 +56,7 @@ public final class NetworkBinding {
    * so as to avoid 
    * @param conf the {@link Configuration} used to get the client specified
    *             value of {@code SSL_CHANNEL_MODE}
-   * @param awsConf the {@code ClientConfiguration} to set the
-   *                SSLConnectionSocketFactory for.
+   * @param httpClientBuilder the http client builder.
    * @throws IOException if there is an error while initializing the
    * {@code SSLSocketFactory} other than classloader problems.
    */

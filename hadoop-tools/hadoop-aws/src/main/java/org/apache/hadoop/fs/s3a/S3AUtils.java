@@ -781,8 +781,9 @@ public final class S3AUtils {
    * @param interfaceImplemented interface that this class implements
    * @param methodName name of factory method to be invoked
    * @param configKey config key under which this class is specified
+   * @param <InstanceT> Instance of class
    * @return instance of the specified class
-   * @throws IOException
+   * @throws IOException on any problem
    */
   public static <InstanceT> InstanceT getInstanceFromReflection(Class<?> instanceClass,
       Configuration conf, @Nullable URI uri, Class<?> interfaceImplemented, String methodName,

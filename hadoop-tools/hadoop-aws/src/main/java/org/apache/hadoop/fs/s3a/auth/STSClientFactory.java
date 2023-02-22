@@ -118,7 +118,9 @@ public class STSClientFactory {
    * @param credentials AWS credential chain to use
    * @param stsEndpoint optional endpoint "https://sns.us-west-1.amazonaws.com"
    * @param stsRegion the region, e.g "us-west-1". Must be set if endpoint is.
+   * @param bucket bucket name
    * @return the builder to call {@code build()}
+   * @throws IOException problem reading proxy secrets
    */
   public static StsClientBuilder builder(final AwsCredentialsProvider credentials,
       final Configuration conf, final String stsEndpoint, final String stsRegion,
