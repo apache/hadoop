@@ -70,6 +70,10 @@ public class SingleFilePerBlockCache implements BlockCache {
 
   private final PrefetchingStatistics prefetchingStatistics;
 
+  // File attributes attached to any intermediate temporary file created during index creation.
+  private static final Set<PosixFilePermission> TEMP_FILE_ATTRS =
+      ImmutableSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
+
   /**
    * Cache entry.
    * Each block is stored as a separate file.
@@ -175,8 +179,13 @@ public class SingleFilePerBlockCache implements BlockCache {
   /**
    * Puts the given block in this cache.
    *
-   * @throws IllegalArgumentException if buffer is null.
-   * @throws IllegalArgumentException if buffer.limit() is zero or negative.
+   * @param blockNumber the block number, used as a key for blocks map.
+   * @param buffer buffer contents of the given block to be added to this cache.
+   * @param conf the configuration.
+   * @param localDirAllocator the local dir allocator instance.
+   * @throws IOException if either local dir allocator fails to allocate file or if IO error
+   * occurs while writing the buffer content to the file.
+   * @throws IllegalArgumentException if buffer is null, or if buffer.limit() is zero or negative.
    */
   @Override
   public void put(int blockNumber, ByteBuffer buffer, Configuration conf,
@@ -346,10 +355,17 @@ public class SingleFilePerBlockCache implements BlockCache {
   // The suffix (file extension) of each serialized index file.
   private static final String BINARY_FILE_SUFFIX = ".bin";
 
-  // File attributes attached to any intermediate temporary file created during index creation.
-  private static final Set<PosixFilePermission> TEMP_FILE_ATTRS =
-      ImmutableSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
-
+  /**
+   * Create temporary file based on the file path retrieved from local dir allocator
+   * instance. The file is created with .bin suffix. The created file has been granted
+   * posix file permissions available in TEMP_FILE_ATTRS.
+   *
+   * @param conf the configuration.
+   * @param localDirAllocator the local dir allocator instance.
+   * @return patch of the file created.
+   * @throws IOException if IO error occurs while local dir allocator tries to retrieve path
+   * from local FS or file creation fails or permission set fails.
+   */
   private static Path getTempFilePath(final Configuration conf,
       final LocalDirAllocator localDirAllocator) throws IOException {
     org.apache.hadoop.fs.Path path =

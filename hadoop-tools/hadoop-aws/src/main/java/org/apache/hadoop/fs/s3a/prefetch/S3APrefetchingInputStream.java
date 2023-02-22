@@ -117,10 +117,10 @@ public class S3APrefetchingInputStream
           streamStatistics);
     } else {
       LOG.debug("Creating in caching input stream for {}", context.getPath());
-      String contextCfgItemName =
+      final String bufferDir =
           conf.get(BUFFER_DIR) != null ? BUFFER_DIR : HADOOP_TMP_DIR;
-      LocalDirAllocator localDirAllocator =
-          new LocalDirAllocator(contextCfgItemName);
+      final LocalDirAllocator localDirAllocator =
+          new LocalDirAllocator(bufferDir);
       this.inputStream = new S3ACachingInputStream(
           context,
           s3Attributes,

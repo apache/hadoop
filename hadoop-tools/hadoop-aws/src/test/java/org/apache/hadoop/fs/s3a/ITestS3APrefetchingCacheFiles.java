@@ -28,8 +28,11 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_DEFAULT_SIZE;
@@ -43,7 +46,7 @@ import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(ITestS3APrefetchingInputStream.class);
+      LoggerFactory.getLogger(ITestS3APrefetchingCacheFiles.class);
 
   private Path testFile;
   private FileSystem fs;
@@ -76,7 +79,7 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
   @Override
   public synchronized void teardown() throws Exception {
     super.teardown();
-    File tmpFileDir = new File(new File("target", "build"), "test");
+    File tmpFileDir = new File("target/build/test");
     File[] tmpFiles = tmpFileDir.listFiles();
     if (tmpFiles != null) {
       for (File filePath : tmpFiles) {
@@ -91,6 +94,11 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
     testFile = null;
   }
 
+  /**
+   * Test to verify the existence of the cache file.
+   * Tries to perform inputStream read and seek ops to make the prefetching take place and
+   * asserts whether file with .bin suffix is present. It also verifies certain file stats.
+   */
   @Test
   public void testCacheFileExistence() throws Throwable {
     describe("Verify that FS cache files exist on local FS");
@@ -102,22 +110,31 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
       in.seek(prefetchBlockSize * 2);
       in.read(buffer, 0, prefetchBlockSize);
 
-      File tmpFileDir = new File(new File("target", "build"), "test");
+      File tmpFileDir = new File("target/build/test");
       assertTrue("The dir to keep cache files must exist", tmpFileDir.exists());
-      boolean isCacheFileForBlockFound = false;
-      File[] tmpFiles = tmpFileDir.listFiles();
-      if (tmpFiles != null) {
-        for (File filePath : tmpFiles) {
-          String path = filePath.getPath();
-          if (path.endsWith(".bin") && path.contains("fs-cache-")) {
-            isCacheFileForBlockFound = true;
-            break;
-          }
-        }
-      } else {
+      File[] tmpFiles = tmpFileDir
+          .listFiles((dir, name) -> name.endsWith(".bin") && name.contains("fs-cache-"));
+      boolean isCacheFileForBlockFound = tmpFiles != null && tmpFiles.length > 0;
+      if (!isCacheFileForBlockFound) {
         LOG.warn("No cache files found under " + tmpFileDir);
       }
       assertTrue("File to cache block data must exist", isCacheFileForBlockFound);
+
+      for (File tmpFile : tmpFiles) {
+        Path path = new Path(tmpFile.getAbsolutePath());
+        try (FileSystem localFs = FileSystem.getLocal(getConfiguration())) {
+          FileStatus stat = localFs.getFileStatus(path);
+          ContractTestUtils.assertIsFile(path, stat);
+          assertEquals("File length not matching with prefetchBlockSize", prefetchBlockSize,
+              stat.getLen());
+          assertEquals("User permissions should be RW", FsAction.READ_WRITE,
+              stat.getPermission().getUserAction());
+          assertEquals("Group permissions should be NONE", FsAction.NONE,
+              stat.getPermission().getGroupAction());
+          assertEquals("Other permissions should be NONE", FsAction.NONE,
+              stat.getPermission().getOtherAction());
+        }
+      }
     }
   }
 
