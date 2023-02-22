@@ -263,14 +263,17 @@ public class QiniuKodoFileSystem extends FileSystem {
             }
         }
 
-        boolean succeed;
-        if (srcStatus.isDirectory()) {
-            succeed = copyDirectory(srcPath, dstPath);
+        if (srcStatus != null) {
+            boolean succeed;
+            if (srcStatus.isDirectory()) {
+                succeed = copyDirectory(srcPath, dstPath);
+            } else {
+                succeed = copyFile(srcPath, dstPath);
+            }
+            return srcPath.equals(dstPath) || (succeed && delete(srcPath, true));
         } else {
-            succeed = copyFile(srcPath, dstPath);
+            throw new FileNotFoundException(srcPath.toString());
         }
-
-        return srcPath.equals(dstPath) || (succeed && delete(srcPath, true));
     }
 
     private boolean copyFile(Path srcPath, Path dstPath) throws IOException {
