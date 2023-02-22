@@ -25,29 +25,33 @@ import java.util.Locale;
  * of the interface define if the given enum can be applied on the given server
  * response.
  * */
-public interface RetryReasonAbbreviationCreator {
+interface RetryReasonAbbreviationCreator {
 
   /**
    * Returns an abbreviation if the {@link RetryReason} enum can be applied on
    * the server response.
+   *
    * @param ex exception captured in the server API call.
    * @param statusCode statusCode on the server response
    * @param serverErrorMessage serverErrorMessage on the server response.
+   *
    * @return <ol><li>null if the enum can not be used on the server response</li>
    * <li>abbreviation corresponding to the server response.</li></ol>
-   * */
-  String capturableAndGetAbbreviation(Exception ex,
+   */
+  Boolean canCapture(Exception ex,
       Integer statusCode,
       String serverErrorMessage);
 
-  default String buildFromExceptionMessage(final Exception exceptionCaptured,
+  String getAbbreviation(Exception ex, Integer statusCode, String serverErrorMessage);
+
+  default Boolean buildFromExceptionMessage(final Exception exceptionCaptured,
       final String search,
       final String result) {
     if (exceptionCaptured != null
         && exceptionCaptured.getMessage() != null
         && exceptionCaptured.getMessage().toLowerCase(Locale.US).contains(search.toLowerCase(Locale.US))) {
-      return result;
+      return true;
     }
-    return null;
+    return false;
   }
 }

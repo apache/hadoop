@@ -18,22 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.io.IOException;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
-
-import org.apache.hadoop.fs.azurebfs.services.retryReason.ClientErrorRetryReason;
-import org.apache.hadoop.fs.azurebfs.services.retryReason.ConnectionResetRetryReason;
-import org.apache.hadoop.fs.azurebfs.services.retryReason.ConnectionTimeoutRetryReason;
-import org.apache.hadoop.fs.azurebfs.services.retryReason.ReadTimeoutRetryReason;
-import org.apache.hadoop.fs.azurebfs.services.retryReason.ServerErrorRetryReason;
-import org.apache.hadoop.fs.azurebfs.services.retryReason.UnknownHostRetryReason;
-import org.apache.hadoop.fs.azurebfs.services.retryReason.UnknownIOExceptionRetryReason;
-import org.apache.hadoop.fs.azurebfs.services.retryReason.UnknownSocketExceptionRetryReason;
 
 
 /**
@@ -58,11 +44,9 @@ public class RetryReason {
     String result = null;
 
     for(RetryReasonAbbreviationCreator retryReasonAbbreviationCreator : rankedReasons) {
-      String enumCapturedAndAbbreviate
-          = retryReasonAbbreviationCreator.capturableAndGetAbbreviation(
-          ex, statusCode, storageErrorMessage);
-      if (enumCapturedAndAbbreviate != null) {
-        result = enumCapturedAndAbbreviate;
+      Boolean canCapture = retryReasonAbbreviationCreator.canCapture(ex, statusCode, storageErrorMessage);
+      if(canCapture) {
+        result = retryReasonAbbreviationCreator.getAbbreviation(ex, statusCode, storageErrorMessage);
       }
     }
     return result;
