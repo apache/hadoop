@@ -7,6 +7,7 @@ import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
 import java.io.IOException;
 
 public class QiniuKodoInputStream extends FSInputStream {
@@ -53,12 +54,20 @@ public class QiniuKodoInputStream extends FSInputStream {
     public synchronized void seek(long pos) throws IOException {
         checkNotClosed();
         this.position = pos;
-        refreshCurrentBlock();
+        if (pos >= 0 && pos < contentLength) {
+            refreshCurrentBlock();
+        }
     }
 
     @Override
     public synchronized long getPos() throws IOException {
         checkNotClosed();
+        if (position < 0) {
+            return 0;
+        }
+        if (position >= contentLength) {
+            return contentLength - 1;
+        }
         return position;
     }
 
@@ -82,7 +91,9 @@ public class QiniuKodoInputStream extends FSInputStream {
     @Override
     public synchronized int read() throws IOException {
         checkNotClosed();
-
+        if (position < 0 || position >= contentLength) {
+            throw new EOFException();
+        }
         refreshCurrentBlock();
         int offset = (int) (position % (long) blockSize);
         if (currentBlockData.length < blockSize && offset >= currentBlockData.length) {
