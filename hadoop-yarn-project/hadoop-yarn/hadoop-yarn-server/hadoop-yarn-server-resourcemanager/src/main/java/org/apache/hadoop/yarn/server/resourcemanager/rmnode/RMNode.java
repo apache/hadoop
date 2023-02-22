@@ -95,7 +95,8 @@ public interface RMNode {
 
   /**
    * the node manager version of the node received as part of the
-   * registration with the resource manager
+   * registration with the resource manager.
+   * @return node manager version.
    */
   public String getNodeManagerVersion();
 
