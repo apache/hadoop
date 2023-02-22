@@ -42,12 +42,10 @@ import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteException;
-import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.Preconditions;
-import org.apache.hadoop.util.VersionInfo;
 
 import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
@@ -80,7 +78,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -226,12 +223,11 @@ public final class S3AUtils {
       case SC_301_MOVED_PERMANENTLY:
       case SC_307_TEMPORARY_REDIRECT:
         if (s3Exception != null) {
-            message = String.format("Received permanent redirect response to "
-                + "region %s.  This likely indicates that the S3 region "
-                + "configured in %s does not match the AWS region containing "
-                + "the bucket.",
-                s3Exception.awsErrorDetails().sdkHttpResponse().headers().get(BUCKET_REGION_HEADER),
-                AWS_REGION);
+          message = String.format("Received permanent redirect response to "
+                  + "region %s.  This likely indicates that the S3 region "
+                  + "configured in %s does not match the AWS region containing " + "the bucket.",
+              s3Exception.awsErrorDetails().sdkHttpResponse().headers().get(BUCKET_REGION_HEADER),
+              AWS_REGION);
           ioe = new AWSRedirectException(message, s3Exception);
         } else {
           ioe = new AWSRedirectException(message, ase);

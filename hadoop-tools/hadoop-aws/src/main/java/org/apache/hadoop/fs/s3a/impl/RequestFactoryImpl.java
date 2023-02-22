@@ -41,7 +41,6 @@ import software.amazon.awssdk.services.s3.model.ListMultipartUploadsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.MetadataDirective;
-import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
@@ -477,9 +476,10 @@ public class RequestFactoryImpl implements RequestFactory {
   }
 
   @Override
-  public HeadBucketRequest.Builder newHeadBucketRequestBuilder(String bucket) {
+  public HeadBucketRequest.Builder newHeadBucketRequestBuilder(String bucketName) {
 
-    HeadBucketRequest.Builder headBucketRequestBuilder = HeadBucketRequest.builder().bucket(bucket);
+    HeadBucketRequest.Builder headBucketRequestBuilder =
+        HeadBucketRequest.builder().bucket(bucketName);
 
     return prepareRequest(headBucketRequestBuilder);
   }

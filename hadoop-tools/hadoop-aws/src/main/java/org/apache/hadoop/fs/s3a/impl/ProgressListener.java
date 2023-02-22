@@ -22,5 +22,5 @@ package org.apache.hadoop.fs.s3a.impl;
  * Interface for progress listeners to implement.
  */
 public interface ProgressListener {
-    default void progressChanged(ProgressListenerEvent eventType, int bytesTransferred) {};
+  default void progressChanged(ProgressListenerEvent eventType, int bytesTransferred) {};
 }

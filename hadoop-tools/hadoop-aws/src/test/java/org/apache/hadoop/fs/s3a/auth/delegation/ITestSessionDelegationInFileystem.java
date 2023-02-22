@@ -332,7 +332,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     // TODO: Check what should happen here. Calling headObject() on the root path fails in V2,
     // with the error that key cannot be empty.
    // fs.getObjectMetadata(new Path("/"));
-   readLandsatMetadata(fs);
+    readLandsatMetadata(fs);
 
     URI uri = fs.getUri();
     // create delegation tokens from the test suites FS.

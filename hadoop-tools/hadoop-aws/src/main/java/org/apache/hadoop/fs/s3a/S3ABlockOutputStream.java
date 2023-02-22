@@ -586,9 +586,8 @@ class S3ABlockOutputStream extends OutputStream implements
             builder.putOptions,
         false);
 
-        BlockUploadProgress progressCallback =
-            new BlockUploadProgress(
-                block, progressListener, now());
+    BlockUploadProgress progressCallback =
+        new BlockUploadProgress(block, progressListener, now());
     statistics.blockUploadQueued(size);
     ListenableFuture<PutObjectResponse> putObjectResult =
         executorService.submit(() -> {
@@ -871,7 +870,7 @@ class S3ABlockOutputStream extends OutputStream implements
         throw e;
       }
 
-       BlockUploadProgress progressCallback =
+      BlockUploadProgress progressCallback =
           new BlockUploadProgress(block, progressListener, now());
 
       statistics.blockUploadQueued(block.dataSize());
@@ -1029,7 +1028,6 @@ class S3ABlockOutputStream extends OutputStream implements
 
     public void progressChanged(ProgressListenerEvent eventType) {
 
-      int size = block.dataSize();
       switch (eventType) {
 
       case REQUEST_BYTE_TRANSFER_EVENT:

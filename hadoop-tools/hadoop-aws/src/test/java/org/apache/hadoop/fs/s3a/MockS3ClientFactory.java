@@ -20,10 +20,8 @@ package org.apache.hadoop.fs.s3a;
 
 import static org.mockito.Mockito.*;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.function.Consumer;
 
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -52,7 +50,8 @@ public class MockS3ClientFactory implements S3ClientFactory {
         .build();
     when(s3.listMultipartUploads((ListMultipartUploadsRequest) any())).thenReturn(noUploads);
     when(s3.getBucketLocation((GetBucketLocationRequest) any())).thenReturn(
-        GetBucketLocationResponse.builder().locationConstraint(Region.US_WEST_2.toString()).build());
+        GetBucketLocationResponse.builder().locationConstraint(Region.US_WEST_2.toString())
+            .build());
     return s3;
   }
 

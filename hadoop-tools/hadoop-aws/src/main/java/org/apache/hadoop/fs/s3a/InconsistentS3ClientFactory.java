@@ -45,7 +45,7 @@ import org.apache.hadoop.conf.Configuration;
 public class InconsistentS3ClientFactory extends DefaultS3ClientFactory {
 
   @Override
-  protected ClientOverrideConfiguration createClientOverrideConfiguration (
+  protected ClientOverrideConfiguration createClientOverrideConfiguration(
       S3ClientCreationParameters parameters, Configuration conf) throws IOException {
     LOG.warn("** FAILURE INJECTION ENABLED.  Do not run in production! **");
     LOG.warn("List inconsistency is no longer emulated; only throttling and read errors");

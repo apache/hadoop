@@ -135,7 +135,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   }
 
   class RegionInterceptor implements ExecutionInterceptor {
-    boolean endpointOverridden;
+    private boolean endpointOverridden;
 
     RegionInterceptor(boolean endpointOverridden) {
       this.endpointOverridden = endpointOverridden;
@@ -160,7 +160,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
       }
 
       // We don't actually want to make a request, so exit early.
-        throw AwsServiceException.builder().build();
+      throw AwsServiceException.builder().build();
     }
   }
 

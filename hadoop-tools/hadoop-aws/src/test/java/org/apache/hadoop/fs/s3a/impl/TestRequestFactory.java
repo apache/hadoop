@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import software.amazon.awssdk.awscore.AwsRequest;
 import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
