@@ -41,7 +41,7 @@ import static org.apache.hadoop.fs.azurebfs.services.AuthType.OAuth;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.nullable;
 
-public class TestAbfsRestOperation {
+public class TestAbfsRestOperationMockFailures {
 
   @Test
   public void testClientRequestIdForConnectTimeoutRetry() throws Exception {
@@ -262,7 +262,7 @@ public class TestAbfsRestOperation {
         .setRequestProperty(nullable(String.class), nullable(String.class));
     Mockito.doReturn(httpURLConnection).when(httpOperation).getConnection();
     Mockito.doReturn("").when(abfsRestOperation).getClientLatency();
-    Mockito.doReturn(httpOperation).when(abfsRestOperation).getHttpOperation();
+    Mockito.doReturn(httpOperation).when(abfsRestOperation).createHttpOperation();
   }
 
   private void addMockBehaviourToAbfsClient(final AbfsClient abfsClient,

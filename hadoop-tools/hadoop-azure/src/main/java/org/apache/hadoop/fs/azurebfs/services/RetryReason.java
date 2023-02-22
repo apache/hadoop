@@ -23,9 +23,12 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_STATUS_CATEGORY_QUOTIENT;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.connectionTimeoutJdkMessage;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.readTimeoutJdkMessage;
 
 /**
  * In case of retry, this enum would give the information on the reason for
@@ -34,18 +37,10 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_STA
 public enum RetryReason {
   CONNECTION_TIMEOUT(2,
       ((exceptionCaptured, statusCode, serverErrorMessage) -> {
-        if (exceptionCaptured != null && "connect timed out".equalsIgnoreCase(
-            exceptionCaptured.getMessage())) {
-          return "CT";
-        }
-        return null;
+        return buildFromExceptionMessage(exceptionCaptured, connectionTimeoutJdkMessage, "CT");
       })),
   READ_TIMEOUT(2, ((exceptionCaptured, statusCode, serverErrorMessage) -> {
-    if (exceptionCaptured != null && "Read timed out".equalsIgnoreCase(
-        exceptionCaptured.getMessage())) {
-      return "RT";
-    }
-    return null;
+    return buildFromExceptionMessage(exceptionCaptured, readTimeoutJdkMessage, "RT");
   })),
   UNKNOWN_HOST(2, ((exceptionCaptured, statusCode, serverErrorMessage) -> {
     if (exceptionCaptured instanceof UnknownHostException) {
@@ -54,11 +49,7 @@ public enum RetryReason {
     return null;
   })),
   CONNECTION_RESET(2, ((exceptionCaptured, statusCode, serverErrorMessage) -> {
-    if (exceptionCaptured != null && exceptionCaptured.getMessage() != null
-        && exceptionCaptured.getMessage().contains("Connection reset")) {
-      return "CR";
-    }
-    return null;
+    return buildFromExceptionMessage(exceptionCaptured, "Connection reset", "CR");
   })),
   STATUS_5XX(0, ((exceptionCaptured, statusCode, serverErrorMessage) -> {
     if (statusCode == null || statusCode / HTTP_STATUS_CATEGORY_QUOTIENT != 5) {
@@ -104,6 +95,17 @@ public enum RetryReason {
         return null;
       }));
 
+  private static String buildFromExceptionMessage(final Exception exceptionCaptured,
+      final String search,
+      final String result) {
+    if (exceptionCaptured != null
+        && exceptionCaptured.getMessage() != null
+        && exceptionCaptured.getMessage().toLowerCase(Locale.US).contains(search.toLowerCase(Locale.US))) {
+      return result;
+    }
+    return null;
+  }
+
   private RetryReasonAbbreviationCreator retryReasonAbbreviationCreator = null;
 
   private int rank = 0;
@@ -116,8 +118,7 @@ public enum RetryReason {
    * @param abbreviationCreator The implementation of {@link RetryReasonAbbreviationCreator}
    * which would give the information if a given enum can be mapped to an error or not.
    * */
-  RetryReason(int rank,
-      RetryReasonAbbreviationCreator abbreviationCreator) {
+  RetryReason(int rank, RetryReasonAbbreviationCreator abbreviationCreator) {
     this.rank = rank;
     this.retryReasonAbbreviationCreator = abbreviationCreator;
   }
