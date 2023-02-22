@@ -101,7 +101,8 @@ public class TestShuffleHandlerBase {
     return allMatches;
   }
 
-  public static void generateMapOutput(String user, String tempDir, String attempt, List<String> maps)
+  public static void generateMapOutput(String user, String tempDir,
+                                       String attempt, List<String> maps)
       throws IOException {
     SpillRecord record = new SpillRecord(maps.size());
 
