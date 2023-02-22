@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -50,7 +51,6 @@ import org.apache.log4j.AsyncAppender;
 import org.apache.log4j.Logger;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -111,6 +111,9 @@ public class TestAuditLogs {
 
   @Before
   public void setupCluster() throws Exception {
+    try (PrintWriter writer = new PrintWriter(AUDIT_LOG_FILE)) {
+      writer.print("");
+    }
     // must configure prior to instantiating the namesystem because it
     // will reconfigure the logger if async is enabled
     conf = new HdfsConfiguration();
@@ -140,6 +143,9 @@ public class TestAuditLogs {
 
   @After
   public void teardownCluster() throws Exception {
+    try (PrintWriter writer = new PrintWriter(AUDIT_LOG_FILE)) {
+      writer.print("");
+    }
     util.cleanup(fs, "/srcdat");
     if (fs != null) {
       fs.close();
@@ -149,11 +155,6 @@ public class TestAuditLogs {
       cluster.shutdown();
       cluster = null;
     }
-  }
-
-  @AfterClass
-  public static void afterClass() throws Exception {
-    assertTrue(AUDIT_LOG_FILE.delete());
   }
 
   /** test that allowed operation puts proper entry in audit log */
@@ -280,10 +281,10 @@ public class TestAuditLogs {
       while ((line = reader.readLine()) != null) {
         assertNotNull(line);
         LOG.info("Line: {}", line);
-        assertTrue("Expected audit event not found in audit log",
-            AUDIT_PATTERN.matcher(line).matches());
         if (SUCCESS_PATTERN.matcher(line).matches() && line.contains(file) && line.contains(
             cmd)) {
+          assertTrue("Expected audit event not found in audit log",
+              AUDIT_PATTERN.matcher(line).matches());
           LOG.info("Successful verification. Log line: {}", line);
           success++;
         }
@@ -304,10 +305,10 @@ public class TestAuditLogs {
       while ((line = reader.readLine()) != null) {
         assertNotNull(line);
         LOG.info("Line: {}", line);
-        assertTrue("Expected audit event not found in audit log",
-            AUDIT_PATTERN.matcher(line).matches());
         if (FAILURE_PATTERN.matcher(line).matches() && line.contains(file) && line.contains(
             cmd)) {
+          assertTrue("Expected audit event not found in audit log",
+              AUDIT_PATTERN.matcher(line).matches());
           LOG.info("Failure verification. Log line: {}", line);
           success++;
         }
@@ -316,7 +317,7 @@ public class TestAuditLogs {
           success);
       if (success < leastExpected) {
         throw new AssertionError(
-            );
+            "Least expected: " + leastExpected + ". Actual success: " + success);
       }
     }
   }
