@@ -129,7 +129,7 @@
     <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.3.1</ehcache.version>
     <hikari.version>4.0.3</hikari.version>
-    <derby.version>10.10.2.0</derby.version>
+    <derby.version>10.14.2.0</derby.version>
     <mysql-connector-java.version>8.0.29</mysql-connector-java.version>
     <mssql.version>6.2.1.jre7</mssql.version>
     <okhttp3.version>4.10.0</okhttp3.version>
