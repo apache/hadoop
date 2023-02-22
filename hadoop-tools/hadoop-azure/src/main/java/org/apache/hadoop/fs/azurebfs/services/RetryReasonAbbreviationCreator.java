@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.util.Locale;
+
 /**
  * Interface to be implemented by each enum in {@link RetryReason}. The methods
  * of the interface define if the given enum can be applied on the given server
@@ -37,4 +39,15 @@ public interface RetryReasonAbbreviationCreator {
   String capturableAndGetAbbreviation(Exception ex,
       Integer statusCode,
       String serverErrorMessage);
+
+  default String buildFromExceptionMessage(final Exception exceptionCaptured,
+      final String search,
+      final String result) {
+    if (exceptionCaptured != null
+        && exceptionCaptured.getMessage() != null
+        && exceptionCaptured.getMessage().toLowerCase(Locale.US).contains(search.toLowerCase(Locale.US))) {
+      return result;
+    }
+    return null;
+  }
 }
