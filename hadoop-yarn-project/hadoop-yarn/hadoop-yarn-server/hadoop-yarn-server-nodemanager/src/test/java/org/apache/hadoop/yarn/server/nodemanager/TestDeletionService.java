@@ -33,9 +33,13 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DockerContainerDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.RecoveryIterator;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -369,5 +373,62 @@ public class TestDeletionService {
       del.close();
       stateStore.close();
     }
+  }
+
+  @Test
+  public void testDockerContainerDeletionTaskLeak() throws Exception {
+
+    String user = "foo";
+    String containerId = "container_e123_123456_000001";
+
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.NM_RECOVERY_ENABLED, true);
+    conf.setInt(YarnConfiguration.DEBUG_NM_DELETE_DELAY_SEC, 1);
+    NMMemoryStateStoreService stateStore = new NMMemoryStateStoreService();
+    stateStore.init(conf);
+    stateStore.start();
+
+    LinuxContainerExecutor lce = Mockito.mock(LinuxContainerExecutor.class);
+    DeletionService del = new DeletionService(lce, stateStore);
+
+    try {
+      del.init(conf);
+      del.start();
+      DockerContainerDeletionTask deletionTask = new DockerContainerDeletionTask(del,
+              user, containerId);
+      del.delete(deletionTask);
+
+      List<DeletionServiceDeleteTaskProto> deleteTaskProtos =
+              loadDeletionTaskProtos(stateStore);
+
+      assertEquals(1, deleteTaskProtos.size());
+      DeletionServiceDeleteTaskProto deleteTaskProto = deleteTaskProtos.get(0);
+      assertEquals(user, deleteTaskProto.getUser());
+      assertEquals(containerId, deleteTaskProto.getDockerContainerId());
+
+      int msecToWait = 5 * 1000;
+      Thread.sleep(msecToWait);
+
+      deleteTaskProtos = loadDeletionTaskProtos(stateStore);
+      System.out.println("TEST deleteTaskProtos Size: " + deleteTaskProtos.size());
+      assertTrue(deleteTaskProtos.isEmpty());
+
+    } finally {
+      del.close();
+      stateStore.close();
+    }
+  }
+
+  private List<DeletionServiceDeleteTaskProto> loadDeletionTaskProtos(
+          NMStateStoreService stateStore) throws IOException {
+
+    RecoveryIterator<DeletionServiceDeleteTaskProto> it =
+            stateStore.loadDeletionServiceState().getIterator();
+    List<DeletionServiceDeleteTaskProto> deleteTaskProtos =
+            new ArrayList<DeletionServiceDeleteTaskProto>();
+    while (it.hasNext()) {
+      deleteTaskProtos.add(it.next());
+    }
+    return deleteTaskProtos;
   }
 }
