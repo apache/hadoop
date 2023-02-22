@@ -301,8 +301,7 @@ public class TestShuffleHandler extends TestShuffleHandlerBase {
       try {
         is = conn.getInputStream();
       } catch (IOException ioe) {
-        int statusCode = conn.getResponseCode();
-        if (statusCode != 200) {
+        if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
           is = conn.getErrorStream();
         }
       }
