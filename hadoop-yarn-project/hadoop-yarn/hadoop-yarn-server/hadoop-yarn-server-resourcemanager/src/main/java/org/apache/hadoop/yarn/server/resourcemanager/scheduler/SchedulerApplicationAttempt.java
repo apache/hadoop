@@ -801,6 +801,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
    * Called when AM heartbeats. These containers were recovered by the RM after
    * the AM had registered. They are reported to the AM in the
    * <code>AllocateResponse#containersFromPreviousAttempts</code>.
+   * @return Container List.
    */
   public List<Container> pullPreviousAttemptContainers() {
     writeLock.lock();
