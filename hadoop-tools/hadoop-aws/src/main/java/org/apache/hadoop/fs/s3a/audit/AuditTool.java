@@ -145,8 +145,7 @@ public class AuditTool extends Configured implements Tool, Closeable {
       if (!mergeAndParseResult) {
         return FAILURE;
       }
-    }
-    else {
+    } else {
       errorln(getUsage());
       throw invalidArgs("Invalid number of arguments, please specify audit "
           + "log files directory as 1st argument and destination directory "
