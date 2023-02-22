@@ -62,31 +62,36 @@ public class AsyncRFAAppender extends AsyncAppender {
 
   private RollingFileAppender rollingFileAppender = null;
 
-  private final Object rollingFileAppenderLock = new Object();
+  private volatile boolean isRollingFileAppenderAssigned = false;
 
   @Override
   public void append(LoggingEvent event) {
     if (rollingFileAppender == null) {
-      synchronized (rollingFileAppenderLock) {
-        PatternLayout patternLayout;
-        if (conversionPattern != null) {
-          patternLayout = new PatternLayout(conversionPattern);
-        } else {
-          patternLayout = new PatternLayout();
-        }
-        try {
-          rollingFileAppender = new RollingFileAppender(patternLayout, fileName, true);
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
-        rollingFileAppender.setMaxBackupIndex(maxBackupIndex);
-        rollingFileAppender.setMaxFileSize(maxFileSize);
-        this.addAppender(rollingFileAppender);
-        super.setBlocking(blocking);
-        super.setBufferSize(bufferSize);
-      }
+      appendRFAToAsyncAppender();
     }
     super.append(event);
+  }
+
+  private synchronized void appendRFAToAsyncAppender() {
+    if (!isRollingFileAppenderAssigned) {
+      PatternLayout patternLayout;
+      if (conversionPattern != null) {
+        patternLayout = new PatternLayout(conversionPattern);
+      } else {
+        patternLayout = new PatternLayout();
+      }
+      try {
+        rollingFileAppender = new RollingFileAppender(patternLayout, fileName, true);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+      rollingFileAppender.setMaxBackupIndex(maxBackupIndex);
+      rollingFileAppender.setMaxFileSize(maxFileSize);
+      this.addAppender(rollingFileAppender);
+      isRollingFileAppenderAssigned = true;
+      super.setBlocking(blocking);
+      super.setBufferSize(bufferSize);
+    }
   }
 
   public String getMaxFileSize() {
