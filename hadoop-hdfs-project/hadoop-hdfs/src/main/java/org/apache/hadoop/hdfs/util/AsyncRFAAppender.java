@@ -27,9 +27,11 @@ import org.apache.log4j.spi.LoggingEvent;
 
 /**
  * Until we migrate to log4j2, use this appender for namenode audit logger as well as
- * datanode and namenode metric loggers with log4j1 properties.
+ * datanode and namenode metric loggers with log4j properties, if async logging is required with
+ * RFA.
  * This appender will take parameters necessary to supply RollingFileAppender to AsyncAppender.
- * While migrating to log4j2, we can directly specify appender ref to Async appender.
+ * While migrating to log4j2, we can directly wrap RFA appender to Async appender as part of
+ * log4j2 properties. However, same is not possible with log4j1 properties.
  */
 public class AsyncRFAAppender extends AsyncAppender {
 
