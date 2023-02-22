@@ -43,30 +43,32 @@ public interface VolumeManager {
 
   /**
    * Start to supervise on a volume.
-   * @param volume
+   * @param volume volume.
    * @return the volume being managed by the manager.
    */
   Volume addOrGetVolume(Volume volume);
 
   /**
    * Execute volume provisioning tasks as backend threads.
-   * @param volumeProvisioningTask
-   * @param delaySecond
+   * @param volumeProvisioningTask  A provisioning task encapsulates
+   * all the logic required by a storage system to provision a volume.
+   * @param delaySecond delay Second.
+   * @return ScheduledFuture.
    */
   ScheduledFuture<VolumeProvisioningResults> schedule(
       VolumeProvisioningTask volumeProvisioningTask, int delaySecond);
 
   /**
    * Register a csi-driver-adaptor to the volume manager.
-   * @param driverName
-   * @param client
+   * @param driverName driver name.
+   * @param client csi adaptor protocol client.
    */
   void registerCsiDriverAdaptor(String driverName, CsiAdaptorProtocol client);
 
   /**
    * Returns the csi-driver-adaptor client from cache by the given driver name.
    * If the client is not found, null is returned.
-   * @param driverName
+   * @param driverName driver name.
    * @return a csi-driver-adaptor client working for given driver or null
    * if the adaptor could not be found.
    */
