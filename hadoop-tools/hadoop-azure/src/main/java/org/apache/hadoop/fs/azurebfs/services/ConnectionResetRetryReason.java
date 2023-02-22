@@ -27,12 +27,11 @@ class ConnectionResetRetryReason implements
   public Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
-    return buildFromExceptionMessage(ex, connectionResetMessage, "CR");
+    return checkExceptionMessage(ex, connectionResetMessage);
   }
 
   @Override
-  public String getAbbreviation(final Exception ex,
-      final Integer statusCode,
+  public String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
     return "CR";
   }

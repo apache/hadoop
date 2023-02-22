@@ -46,7 +46,7 @@ public class RetryReason {
     for(RetryReasonAbbreviationCreator retryReasonAbbreviationCreator : rankedReasons) {
       Boolean canCapture = retryReasonAbbreviationCreator.canCapture(ex, statusCode, storageErrorMessage);
       if(canCapture) {
-        result = retryReasonAbbreviationCreator.getAbbreviation(ex, statusCode, storageErrorMessage);
+        result = retryReasonAbbreviationCreator.getAbbreviation(statusCode, storageErrorMessage);
       }
     }
     return result;

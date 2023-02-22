@@ -26,12 +26,11 @@ class ReadTimeoutRetryReason implements RetryReasonAbbreviationCreator {
   public Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
-    return buildFromExceptionMessage(ex, readTimeoutJdkMessage, "RT");
+    return checkExceptionMessage(ex, readTimeoutJdkMessage);
   }
 
   @Override
-  public String getAbbreviation(final Exception ex,
-      final Integer statusCode,
+  public String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
     return "RT";
   }

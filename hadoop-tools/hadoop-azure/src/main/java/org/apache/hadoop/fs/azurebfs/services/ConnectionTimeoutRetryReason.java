@@ -25,8 +25,7 @@ class ConnectionTimeoutRetryReason implements
     RetryReasonAbbreviationCreator {
 
   @Override
-  public String getAbbreviation(final Exception ex,
-      final Integer statusCode,
+  public String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
     return "CT";
   }
@@ -35,6 +34,6 @@ class ConnectionTimeoutRetryReason implements
   public Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
-    return buildFromExceptionMessage(ex, connectionTimeoutJdkMessage, "CT");
+    return checkExceptionMessage(ex, connectionTimeoutJdkMessage);
   }
 }

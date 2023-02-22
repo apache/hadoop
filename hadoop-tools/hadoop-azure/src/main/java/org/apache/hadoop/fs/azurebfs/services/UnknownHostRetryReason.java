@@ -33,8 +33,7 @@ class UnknownHostRetryReason implements RetryReasonAbbreviationCreator {
   }
 
   @Override
-  public String getAbbreviation(final Exception ex,
-      final Integer statusCode,
+  public String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
     return "UH";
   }
