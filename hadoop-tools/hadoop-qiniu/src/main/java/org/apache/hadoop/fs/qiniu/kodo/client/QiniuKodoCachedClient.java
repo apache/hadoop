@@ -141,7 +141,9 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
             return fileInfo;
         }
         fileInfo = source.getFileStatus(key);
-        cache.put(key, fileInfo);
+        if (fileInfo != null) {
+            cache.put(key, fileInfo);
+        }
         return fileInfo;
     }
 }

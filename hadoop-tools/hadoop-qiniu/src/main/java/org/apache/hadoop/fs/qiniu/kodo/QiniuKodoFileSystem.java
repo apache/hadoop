@@ -5,6 +5,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
+import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoCachedClient;
 import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.download.EmptyInputStream;
@@ -57,7 +58,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         if (fsConfig.client.cache.enable) {
             this.kodoClient = new QiniuKodoClient(bucket, fsConfig, statistics);
-//            this.kodoClient = new QiniuKodoCachedClient(this.kodoClient, fsConfig.client.cache.maxCapacity);
+            this.kodoClient = new QiniuKodoCachedClient(this.kodoClient, fsConfig.client.cache.maxCapacity);
         } else {
             this.kodoClient = new QiniuKodoClient(bucket, fsConfig, statistics);
         }
