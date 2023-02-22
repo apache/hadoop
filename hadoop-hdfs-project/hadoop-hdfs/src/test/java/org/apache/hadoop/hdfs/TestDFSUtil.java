@@ -1108,4 +1108,12 @@ public class TestDFSUtil {
     LambdaTestUtils.intercept(IOException.class, expectedErrorMessage,
         ()->DFSUtil.getNNServiceRpcAddressesForCluster(conf));
   }
+  
+  @Test
+  public void testTransferRateBytesPerSecond() {
+    assertEquals(9830, DFSUtil.transferRateBytesPerSecond(983, 100));
+    assertEquals(983000, DFSUtil.transferRateBytesPerSecond(983, 0));
+    assertEquals(-1, DFSUtil.transferRateBytesPerSecond(-983, 100));
+    assertEquals(-1, DFSUtil.transferRateBytesPerSecond(983, -100));
+  }
 }

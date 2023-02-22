@@ -61,8 +61,8 @@ public class DataNodeMetrics {
   @Metric MutableCounterLong bytesRead;
   @Metric("Milliseconds spent reading")
   MutableCounterLong totalReadTime;
-  @Metric private MutableRate readTransferRateMBs;
-  final private MutableQuantiles[] readTransferRateMBsQuantiles;
+  @Metric private MutableRate readTransferRate;
+  final private MutableQuantiles[] readTransferRateQuantiles;
   @Metric MutableCounterLong blocksWritten;
   @Metric MutableCounterLong blocksRead;
   @Metric MutableCounterLong blocksReplicated;
@@ -229,7 +229,7 @@ public class DataNodeMetrics {
     sendDataPacketTransferNanosQuantiles = new MutableQuantiles[len];
     ramDiskBlocksEvictionWindowMsQuantiles = new MutableQuantiles[len];
     ramDiskBlocksLazyPersistWindowMsQuantiles = new MutableQuantiles[len];
-    readTransferRateMBsQuantiles = new MutableQuantiles[len];
+    readTransferRateQuantiles = new MutableQuantiles[len];
 
     for (int i = 0; i < len; i++) {
       int interval = intervals[i];
@@ -258,9 +258,9 @@ public class DataNodeMetrics {
           "ramDiskBlocksLazyPersistWindows" + interval + "s",
           "Time between the RamDisk block write and disk persist in ms",
           "ops", "latency", interval);
-      readTransferRateMBsQuantiles[i] = registry.newQuantiles(
-          "readTransferRateMBs" + interval + "s",
-          "Rate at which bytes are read from datanode calculated in megabytes per second",
+      readTransferRateQuantiles[i] = registry.newQuantiles(
+          "readTransferRate" + interval + "s",
+          "Rate at which bytes are read from datanode calculated in bytes per second",
           "ops", "rate", interval);
     }
   }
@@ -323,10 +323,10 @@ public class DataNodeMetrics {
     }
   }
 
-  public void addReadTransferRateMBs(long transferRateMBs) {
-    readTransferRateMBs.add(transferRateMBs);
-    for (MutableQuantiles q : readTransferRateMBsQuantiles) {
-      q.add(transferRateMBs);
+  public void addReadTransferRate(long readTransferRate) {
+    this.readTransferRate.add(readTransferRate);
+    for (MutableQuantiles q : readTransferRateQuantiles) {
+      q.add(readTransferRate);
     }
   }
 
