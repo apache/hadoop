@@ -423,7 +423,7 @@ public class RouterRpcClient {
           + router.getRouterId());
     }
 
-    addClientIpToCallerContext();
+    addClientInfoToCallerContext(ugi);
 
     Object ret = null;
     if (rpcMonitor != null) {
@@ -541,19 +541,24 @@ public class RouterRpcClient {
 
   /**
    * For tracking which is the actual client address.
-   * It adds trace info "clientIp:ip" and "clientPort:port"
+   * It adds trace info "clientIp:ip", "clientPort:port" and "realUser:userName"
    * in the caller context, removing the old values if they were
    * already present.
    */
-  private void addClientIpToCallerContext() {
+  private void addClientInfoToCallerContext(UserGroupInformation ugi) {
     CallerContext ctx = CallerContext.getCurrent();
     String origContext = ctx == null ? null : ctx.getContext();
     byte[] origSignature = ctx == null ? null : ctx.getSignature();
+    String realUser = null;
+    if (ugi.getRealUser() != null) {
+      realUser = ugi.getRealUser().getUserName();
+    }
     CallerContext.Builder builder =
         new CallerContext.Builder("", contextFieldSeparator)
             .append(CallerContext.CLIENT_IP_STR, Server.getRemoteAddress())
             .append(CallerContext.CLIENT_PORT_STR,
                 Integer.toString(Server.getRemotePort()))
+            .append(CallerContext.REAL_USER_STR, realUser)
             .setSignature(origSignature);
     // Append the original caller context
     if (origContext != null) {

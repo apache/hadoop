@@ -47,6 +47,7 @@ public final class CallerContext {
   // field names
   public static final String CLIENT_IP_STR = "clientIp";
   public static final String CLIENT_PORT_STR = "clientPort";
+  public static final String REAL_USER_STR = "realUser";
 
   /** The caller context.
    *
