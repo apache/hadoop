@@ -362,6 +362,11 @@ public class QiniuKodoFileSystem extends FileSystem {
     }
 
     @Override
+    public RemoteIterator<FileStatus> listStatusIterator(Path p) throws IOException {
+        return super.listStatusIterator(p);
+    }
+
+    @Override
     public void setWorkingDirectory(Path newPath) {
         workingDir = newPath;
         makeSureWorkdirCreatedFlag = false;

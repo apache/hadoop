@@ -15,7 +15,6 @@ import okhttp3.Request;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.BatchOperationConsumer;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.ListingProducer;
-import org.apache.hadoop.fs.qiniu.kodo.client.batch.Product;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.BatchOperator;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.CopyOperator;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.DeleteOperator;
@@ -274,6 +273,47 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         return Arrays.asList(listing.items);
     }
 
+    public Iterator<FileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException {
+        ListProducerConfig listConfig = fsConfig.client.list;
+        // 消息队列
+        BlockingQueue<FileInfo> fileInfoQueue = new LinkedBlockingQueue<>(listConfig.bufferSize);
+
+        // 生产者
+        ListingProducer producer = new ListingProducer(
+                fileInfoQueue, bucketManager, bucket, prefixKey,
+                listConfig.singleRequestLimit,
+                useDirectory, listConfig.useListV2,
+                listConfig.offerTimeout
+        );
+
+        // 生产者线程
+        Future<Exception> future = service.submit(producer);
+
+        return new Iterator<FileInfo>() {
+            @Override
+            public boolean hasNext() {
+                if (!fileInfoQueue.isEmpty()) {
+                    return true;
+                }
+                // 生产缓冲区队列为空，且生产任务完成，则没有下一个了，返回false
+                return !future.isDone();
+            }
+
+            @Override
+            public FileInfo next() {
+                if (!hasNext()) {
+                    return null;
+                }
+
+                try {
+                    return fileInfoQueue.poll(Long.MAX_VALUE, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    return null;
+                }
+            }
+        };
+    }
+
     /**
      * 若 useDirectory 为 true, 则列举出分级的目录效果
      * 否则，将呈现出所有前缀为key的对象
@@ -287,7 +327,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         List<FileInfo> retFiles = new ArrayList<>();
 
         // 消息队列
-        BlockingQueue<Product<FileInfo, QiniuException>> fileInfoQueue = new LinkedBlockingQueue<>(listConfig.bufferSize);
+        BlockingQueue<FileInfo> fileInfoQueue = new LinkedBlockingQueue<>(listConfig.bufferSize);
 
         // 生产者
         ListingProducer producer = new ListingProducer(
@@ -298,33 +338,20 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         );
 
         // 生产者线程
-        service.submit(producer);
+        Future<Exception> future = service.submit(producer);
 
-        for (; ; ) {
-            Product<FileInfo, QiniuException> product = fileInfoQueue.poll();
-            // 缓冲区队列为空
+        // 只要生产者未生产完毕或队列非空就不断地轮询队列
+        while (!future.isDone() || !fileInfoQueue.isEmpty()) {
+            FileInfo product = fileInfoQueue.poll();
+            // 缓冲区队列为空，等待下一次轮询
             if (product == null) {
                 continue;
             }
-            // EOF
-            if (product.isEOF()) {
-                break;
-            }
-            // Exception
-            if (product.hasException()) {
-                throw product.getException();
-            }
-            if (!product.hasValue()) {
-                continue;
-            }
-            FileInfo fileInfo = product.getValue();
             // 跳过自身
-            if (fileInfo.key.equals(prefixKey)) {
+            if (product.key.equals(prefixKey)) {
                 continue;
             }
-            // 既不为空也不为EOF
-            retFiles.add(fileInfo);
-
+            retFiles.add(product);
         }
 
         return retFiles;
@@ -354,7 +381,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     ) throws IOException {
         // 消息队列
         // 对象列举生产者队列
-        BlockingQueue<Product<FileInfo, QiniuException>> fileInfoQueue = new LinkedBlockingQueue<>(config.listProducer.bufferSize);
+        BlockingQueue<FileInfo> fileInfoQueue = new LinkedBlockingQueue<>(config.listProducer.bufferSize);
         // 批处理队列
         BlockingQueue<BatchOperator> operatorQueue = new LinkedBlockingQueue<>(config.batchConsumer.bufferSize);
 
@@ -366,7 +393,8 @@ public class QiniuKodoClient implements IQiniuKodoClient {
                 config.listProducer.offerTimeout
         );
         // 生产者线程
-        service.submit(producer);
+        Future<Exception> producerFuture = service.submit(producer);
+
         // 消费者线程
         int consumerCount = config.batchConsumer.count;
         BatchOperationConsumer[] consumers = new BatchOperationConsumer[consumerCount];
@@ -383,23 +411,27 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         }
 
         // 从生产者队列取出产品并加工后放入消费者队列
-        for (; ; ) {
-            Product<FileInfo, QiniuException> product = fileInfoQueue.poll();
+        while (!producerFuture.isDone() || !fileInfoQueue.isEmpty()) {
+            FileInfo product = fileInfoQueue.poll();
             // 缓冲区队列为空
-            if (product == null) continue;
-            // EOF
-            if (product.isEOF()) break;
-            // Exception
-            if (product.hasException()) throw product.getException();
-            // 无值
-            if (!product.hasValue()) continue;
+            if (product == null) {
+                continue;
+            }
 
             boolean success;
             do {
-                success = operatorQueue.offer(f.apply(product.getValue()));
+                success = operatorQueue.offer(f.apply(product));
             } while (!success);
         }
 
+        // 生产完毕
+        try {
+            if (producerFuture.get() != null) {
+                throw producerFuture.get();
+            }
+        } catch (Exception e) {
+            throw new IOException(e);
+        }
         LOG.debug("生产者生产完毕");
 
         // 等待消费队列为空
@@ -413,13 +445,16 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         for (int i = 0; i < consumerCount; i++) {
             consumers[i].stop();
         }
+
         // 等待所有的消费者消费完毕
         for (int i = 0; i < consumerCount; i++) {
             try {
-                futures[i].get();
+                if (futures[i].get() != null) {
+                    throw (Exception) futures[i].get();
+                }
                 LOG.debug("消费者{}号消费完毕", i);
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
+            } catch (Exception e) {
+                throw new IOException(e);
             }
         }
 

@@ -5,6 +5,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem;
+import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,11 +13,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.URI;
 
 public class QiniuKodoSingleOperationCompareWithS3ATest {
-    private final FileSystem kodoFs = new QiniuKodoFileSystem();
-    private final FileSystem s3aFs = new S3AFileSystem();
+    private final QiniuKodoFileSystem kodoFs = new QiniuKodoFileSystem();
+    private final S3AFileSystem s3aFs = new S3AFileSystem();
+    private QiniuKodoClient kodoClient;
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoSingleOperationCompareWithS3ATest.class);
 
     @Before
@@ -27,6 +30,10 @@ public class QiniuKodoSingleOperationCompareWithS3ATest {
 
         kodoFs.initialize(URI.create(conf.get("fs.contract.test.fs.kodo")), conf);
         s3aFs.initialize(URI.create(conf.get("fs.contract.test.fs.s3a")), conf);
+
+        Field field = QiniuKodoFileSystem.class.getDeclaredField("kodoClient");
+        field.setAccessible(true);
+        this.kodoClient = (QiniuKodoClient) field.get(kodoFs);
     }
 
     @Test
@@ -42,7 +49,28 @@ public class QiniuKodoSingleOperationCompareWithS3ATest {
         long ms = System.currentTimeMillis();
         kodoFs.listStatus(new Path("/testKodo/ListBigDirectorySeriallyTest/"));
         ms = System.currentTimeMillis() - ms;
-        System.out.println("kodo: " + ms);
+        System.out.println("s3a: " + ms);
+    }
+
+    @Test
+    public void testKodoClientListV1() throws IOException {
+        long ms = System.currentTimeMillis();
+        String prefix = "testKodo/ListBigDirectorySeriallyTest/";
+        String marker = null;
+        do {
+            marker = kodoClient.bucketManager.listFiles("qshell-hadoop", prefix, marker, 1000, "").marker;
+        } while (marker != null);
+        ms = System.currentTimeMillis() - ms;
+        LOG.info("kodo list v1: " + ms);
+    }
+
+    @Test
+    public void testKodoClientListV2() throws IOException {
+        long ms = System.currentTimeMillis();
+        String prefix = "testKodo/ListBigDirectorySeriallyTest/";
+        kodoClient.bucketManager.listFilesV2("qshell-hadoop", prefix, null, 10000, "");
+        ms = System.currentTimeMillis() - ms;
+        LOG.info("kodo list v2: " + ms);
     }
 
     @Test

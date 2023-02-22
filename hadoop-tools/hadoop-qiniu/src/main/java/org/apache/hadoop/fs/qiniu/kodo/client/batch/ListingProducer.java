@@ -7,10 +7,11 @@ import com.qiniu.storage.model.FileListing;
 import org.apache.hadoop.fs.qiniu.kodo.util.QiniuKodoUtils;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
-public class ListingProducer implements Runnable {
-    private final BlockingQueue<Product<FileInfo, QiniuException>> queue;
+public class ListingProducer implements Callable<Exception> {
+    private final BlockingQueue<FileInfo> queue;
     private final BucketManager bucketManager;
     private final String keyPrefix;
     private final String bucketName;
@@ -31,7 +32,7 @@ public class ListingProducer implements Runnable {
      * @param useDirectory       是否使用文件夹目录结构，将会列举出文件夹结构
      */
     public ListingProducer(
-            BlockingQueue<Product<FileInfo, QiniuException>> queue,
+            BlockingQueue<FileInfo> queue,
             BucketManager bucketManager,
             String bucketName,
             String keyPrefix,
@@ -71,37 +72,14 @@ public class ListingProducer implements Runnable {
 
     }
 
-    private void offer(FileInfo file) {
-        try {
-            boolean success;
-            do {
-                success = queue.offer(Product.wrapData(file), offerTimeout, TimeUnit.MILLISECONDS);
-            } while (!success);
-        } catch (InterruptedException ignored) {
-        }
+    private void offer(FileInfo file) throws InterruptedException {
+        boolean success;
+        do {
+            success = queue.offer(file, offerTimeout, TimeUnit.MILLISECONDS);
+        } while (!success);
     }
 
-    private void throwException(QiniuException e) {
-        try {
-            boolean success;
-            do {
-                success = queue.offer(Product.wrapException(e), offerTimeout, TimeUnit.MILLISECONDS);
-            } while (!success);
-        } catch (InterruptedException ignored) {
-        }
-    }
-
-    private void notifyEOF() {
-        try {
-            boolean success;
-            do {
-                success = queue.offer(Product.wrapEOF(), offerTimeout, TimeUnit.MILLISECONDS);
-            } while (!success);
-        } catch (InterruptedException ignored) {
-        }
-    }
-
-    private void list() throws QiniuException {
+    private void list() throws QiniuException, InterruptedException {
         FileListing fileListing;
         String marker = null;
 
@@ -123,15 +101,15 @@ public class ListingProducer implements Runnable {
 
             marker = fileListing.marker;
         } while (!fileListing.isEOF());
-        notifyEOF();
     }
 
     @Override
-    public void run() {
+    public Exception call() {
         try {
             list();
-        } catch (QiniuException e) {
-            throwException(e);
+            return null;
+        } catch (Exception e) {
+            return e;
         }
     }
 }

@@ -6,9 +6,10 @@ import com.qiniu.storage.BucketManager.BatchOperations;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.BatchOperator;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
-public class BatchOperationConsumer implements Runnable {
+public class BatchOperationConsumer implements Callable<Exception> {
     private final BlockingQueue<BatchOperator> queue;
     private final BucketManager bucketManager;
     private final int singleBatchRequestLimit;
@@ -47,47 +48,48 @@ public class BatchOperationConsumer implements Runnable {
         batchOperationsSize = 0;
     }
 
-    private void loop() {
-        try {
-            BatchOperator operator = queue.poll(pollTimeout, TimeUnit.MILLISECONDS);
+    private void loop() throws InterruptedException, QiniuException {
+        BatchOperator operator = queue.poll(pollTimeout, TimeUnit.MILLISECONDS);
 
-            // poll失败了，等待下一次循环轮询
-            if (operator == null) {
-                return;
-            }
-            if (batchOperations == null) {
-                batchOperations = new BatchOperations();
-            }
-
-            operator.addTo(batchOperations);
-            batchOperationsSize++;
-
-            // 批处理数目不够，直接等待下一次poll
-            if (batchOperationsSize < singleBatchRequestLimit) {
-                return;
-            }
-            // 批处理到到达一定数目时提交
-            submitBatchOperations();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        // poll失败了，等待下一次循环轮询
+        if (operator == null) {
+            return;
         }
+        if (batchOperations == null) {
+            batchOperations = new BatchOperations();
+        }
+
+        operator.addTo(batchOperations);
+        batchOperationsSize++;
+
+        // 批处理数目不够，直接等待下一次poll
+        if (batchOperationsSize < singleBatchRequestLimit) {
+            return;
+        }
+        // 批处理到到达一定数目时提交
+        submitBatchOperations();
     }
 
     @Override
-    public void run() {
-        // is Running == true or
-        // queue非空
-        while (isRunning || !queue.isEmpty()) {
-            loop();
-        }
-        // isRunning is false && queue is empty
-        // 提交剩余的批处理
-        if (batchOperationsSize > 0) {
-            try {
-                submitBatchOperations();
-            } catch (QiniuException e) {
-                throw new RuntimeException(e);
+    public Exception call() {
+        try {
+            // is Running == true or
+            // queue非空
+            while (isRunning || !queue.isEmpty()) {
+                loop();
             }
+            // isRunning is false && queue is empty
+            // 提交剩余的批处理
+            if (batchOperationsSize > 0) {
+                try {
+                    submitBatchOperations();
+                } catch (QiniuException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            return null;
+        } catch (Exception e) {
+            return e;
         }
     }
 
