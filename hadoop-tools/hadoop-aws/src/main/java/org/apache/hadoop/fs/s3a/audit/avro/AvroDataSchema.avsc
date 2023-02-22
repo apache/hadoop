@@ -15,7 +15,7 @@
 // limitations under the License.
 
 {
-    "type" : "record", "name" : "AvroDataRecord",
+    "type" : "record", "name" : "AvroS3LogEntryRecord",
     "namespace" : "org.apache.hadoop.fs.s3a.audit",
     "fields" : [
             { "name" : "turnaroundtime" , "type" : ["long", "null"] },

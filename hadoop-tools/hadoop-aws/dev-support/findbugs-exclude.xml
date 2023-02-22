@@ -88,7 +88,7 @@
   </Match>
 
   <Match>
-    <Class name="org.apache.hadoop.fs.s3a.audit.AvroDataRecord"/>
+    <Class name="org.apache.hadoop.fs.s3a.audit.AvroS3LogEntryRecord"/>
     <Bug pattern="NP_NULL_INSTANCEOF"/>
   </Match>
 </FindBugsFilter>

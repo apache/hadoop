@@ -110,44 +110,47 @@ public class AuditTool extends Configured implements Tool, Closeable {
   @Override
   public int run(String[] args) throws Exception {
     List<String> paths = Arrays.asList(args);
-    if (paths.isEmpty()) {
+    if(paths.size() == 2) {
+      // Path of audit log files
+      Path logsPath = new Path(paths.get(1));
+      // Path of destination directory
+      Path destPath = new Path(paths.get(0));
+
+      // Setting the file system
+      URI fsURI = new URI(logsPath.toString());
+      FileSystem fileSystem = FileSystem.get(fsURI, new Configuration());
+
+      FileStatus fileStatus = fileSystem.getFileStatus(logsPath);
+      if (fileStatus.isFile()) {
+        errorln("Expecting a directory, but " + logsPath.getName() + " is a"
+            + " file which was passed as an argument");
+        throw invalidArgs(
+            "Expecting a directory, but " + logsPath.getName() + " is a"
+                + " file which was passed as an argument");
+      }
+      FileStatus fileStatus1 = fileSystem.getFileStatus(destPath);
+      if (fileStatus1.isFile()) {
+        errorln("Expecting a directory, but " + destPath.getName() + " is a"
+            + " file which was passed as an argument");
+        throw invalidArgs(
+            "Expecting a directory, but " + destPath.getName() + " is a"
+                + " file which was passed as an argument");
+      }
+
+      // Calls S3AAuditLogMergerAndParser for implementing merging, passing of
+      // audit log files and converting into avro file
+      boolean mergeAndParseResult =
+          s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(
+              fileSystem, logsPath, destPath);
+      if (!mergeAndParseResult) {
+        return FAILURE;
+      }
+    }
+    else {
       errorln(getUsage());
-      throw invalidArgs("No bucket specified");
-    }
-
-    // Path of audit log files
-    Path logsPath = new Path(paths.get(1));
-    // Path of destination directory
-    Path destPath = new Path(paths.get(0));
-
-    // Setting the file system
-    URI fsURI = new URI(logsPath.toString());
-    FileSystem fileSystem = FileSystem.get(fsURI, new Configuration());
-
-    FileStatus fileStatus = fileSystem.getFileStatus(logsPath);
-    if (fileStatus.isFile()) {
-      errorln("Expecting a directory, but " + logsPath.getName() + " is a"
-          + " file which was passed as an argument");
-      throw invalidArgs(
-          "Expecting a directory, but " + logsPath.getName() + " is a"
-              + " file which was passed as an argument");
-    }
-    FileStatus fileStatus1 = fileSystem.getFileStatus(destPath);
-    if (fileStatus1.isFile()) {
-      errorln("Expecting a directory, but " + destPath.getName() + " is a"
-          + " file which was passed as an argument");
-      throw invalidArgs(
-          "Expecting a directory, but " + destPath.getName() + " is a"
-              + " file which was passed as an argument");
-    }
-
-    // Calls S3AAuditLogMergerAndParser for implementing merging, passing of
-    // audit log files and converting into avro file
-    boolean mergeAndParseResult =
-        s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(
-            fileSystem, logsPath, destPath);
-    if (!mergeAndParseResult) {
-      return FAILURE;
+      throw invalidArgs("Invalid number of arguments, please specify audit "
+          + "log files directory as 1st argument and destination directory "
+          + "as 2nd argument");
     }
     return SUCCESS;
   }

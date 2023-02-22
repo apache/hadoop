@@ -236,4 +236,38 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
             logsPath, destPath);
     assertTrue("the result should be true", mergeAndParseResult);
   }
+
+  /**
+   * Testing mergeAndParseAuditLogCounter method by passing filesystem,
+   * sample files source and destination paths.
+   */
+  @Test
+  public void testMergeAndParseAuditLogCounter() throws IOException {
+    sampleDir = Files.createTempDirectory("sampleDir").toFile();
+    File firstSampleFile =
+        File.createTempFile("sampleFile1", ".txt", sampleDir);
+    File secondSampleFile =
+        File.createTempFile("sampleFile2", ".txt", sampleDir);
+    File thirdSampleFile =
+        File.createTempFile("sampleFile3", ".txt", sampleDir);
+    try (FileWriter fw = new FileWriter(firstSampleFile);
+        FileWriter fw1 = new FileWriter(secondSampleFile);
+        FileWriter fw2 = new FileWriter(thirdSampleFile)) {
+      fw.write(SAMPLE_LOG_ENTRY);
+      fw1.write(SAMPLE_LOG_ENTRY);
+      fw2.write(SAMPLE_LOG_ENTRY_1);
+    }
+    sampleDestDir = Files.createTempDirectory("sampleDestDir").toFile();
+    Path logsPath = new Path(sampleDir.toURI());
+    Path destPath = new Path(sampleDestDir.toURI());
+    FileSystem fileSystem = logsPath.getFileSystem(getConfiguration());
+    boolean mergeAndParseResult =
+        s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(fileSystem,
+            logsPath, destPath);
+    assertTrue("the result should be true", mergeAndParseResult);
+
+    long noOfAuditLogsParsed = s3AAuditLogMergerAndParser.getAuditLogsParsed();
+    assertEquals("the expected and actual results should be same",
+        3, noOfAuditLogsParsed);
+  }
 }

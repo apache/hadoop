@@ -38,13 +38,18 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.s3a.audit.AvroDataRecord;
+import org.apache.hadoop.fs.s3a.audit.AvroS3LogEntryRecord;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.LineRecordReader;
 
 import static org.apache.hadoop.fs.s3a.audit.S3LogParser.AWS_LOG_REGEXP_GROUPS;
+import static org.apache.hadoop.fs.s3a.audit.S3LogParser.BYTESSENT_GROUP;
 import static org.apache.hadoop.fs.s3a.audit.S3LogParser.LOG_ENTRY_PATTERN;
+import static org.apache.hadoop.fs.s3a.audit.S3LogParser.OBJECTSIZE_GROUP;
+import static org.apache.hadoop.fs.s3a.audit.S3LogParser.TOTALTIME_GROUP;
+import static org.apache.hadoop.fs.s3a.audit.S3LogParser.TURNAROUNDTIME_GROUP;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /**
  * Merge all the audit logs present in a directory of
@@ -56,6 +61,8 @@ public class S3AAuditLogMergerAndParser {
   private static final Logger LOG =
       LoggerFactory.getLogger(S3AAuditLogMergerAndParser.class);
 
+  private long auditLogsParsed = 0;
+
   /**
    * parseAuditLog method helps in parsing the audit log
    * into key-value pairs using regular expressions.
@@ -66,7 +73,7 @@ public class S3AAuditLogMergerAndParser {
   public HashMap<String, String> parseAuditLog(String singleAuditLog) {
     HashMap<String, String> auditLogMap = new HashMap<>();
     if (singleAuditLog == null || singleAuditLog.length() == 0) {
-      LOG.debug(
+      LOG.info(
           "This is an empty string or null string, expected a valid string to parse");
       return auditLogMap;
     }
@@ -96,7 +103,7 @@ public class S3AAuditLogMergerAndParser {
   public HashMap<String, String> parseReferrerHeader(String referrerHeader) {
     HashMap<String, String> referrerHeaderMap = new HashMap<>();
     if (referrerHeader == null || referrerHeader.length() == 0) {
-      LOG.debug(
+      LOG.info(
           "This is an empty string or null string, expected a valid string to parse");
       return referrerHeaderMap;
     }
@@ -150,21 +157,24 @@ public class S3AAuditLogMergerAndParser {
         FileStatus fileStatus = listOfLogFiles.next();
         int fileLength = (int) fileStatus.getLen();
         byte[] byteBuffer = new byte[fileLength];
+
         try (FSDataInputStream fsDataInputStream =
-            fileSystem.open(fileStatus.getPath())) {
+            awaitFuture(fileSystem.openFile(fileStatus.getPath())
+                .withFileStatus(fileStatus)
+                .build())) {
 
           // Instantiating generated AvroDataRecord class
-          AvroDataRecord avroDataRecord = new AvroDataRecord();
+          AvroS3LogEntryRecord avroDataRecord = new AvroS3LogEntryRecord();
 
           // Instantiate DatumWriter class
-          DatumWriter<AvroDataRecord> datumWriter =
-              new SpecificDatumWriter<AvroDataRecord>(AvroDataRecord.class);
-          DataFileWriter<AvroDataRecord> dataFileWriter =
-              new DataFileWriter<AvroDataRecord>(datumWriter);
+          DatumWriter<AvroS3LogEntryRecord> datumWriter =
+              new SpecificDatumWriter<AvroS3LogEntryRecord>(AvroS3LogEntryRecord.class);
+          DataFileWriter<AvroS3LogEntryRecord> dataFileWriter =
+              new DataFileWriter<AvroS3LogEntryRecord>(datumWriter);
 
           List<String> longValues =
-              Arrays.asList("turnaroundtime", "bytessent", "objectsize",
-                  "totaltime");
+              Arrays.asList(TURNAROUNDTIME_GROUP, BYTESSENT_GROUP,
+                  OBJECTSIZE_GROUP, TOTALTIME_GROUP);
 
           // Write avro data into a file in bucket destination path
           Path avroFile = new Path(destPath, "AvroData.avro");
@@ -179,7 +189,7 @@ public class S3AAuditLogMergerAndParser {
           try (FSDataOutputStream fsDataOutputStreamAvro = fileSystem.create(
               avroFile)) {
             // adding schema, output stream to DataFileWriter
-            dataFileWriter.create(AvroDataRecord.getClassSchema(),
+            dataFileWriter.create(AvroS3LogEntryRecord.getClassSchema(),
                 fsDataOutputStreamAvro);
 
             // Parse each and every audit log from list of logs
@@ -190,13 +200,17 @@ public class S3AAuditLogMergerAndParser {
 
               String referrerHeader = auditLogMap.get("referrer");
               if (referrerHeader == null || referrerHeader.equals("-")) {
-                LOG.debug("Log didn't parsed : {}", referrerHeader);
+                LOG.debug("Log didn't parse : {}", referrerHeader);
                 continue;
               }
 
               // Parse only referrer header
               HashMap<String, String> referrerHeaderMap =
                   parseReferrerHeader(referrerHeader);
+
+              if (referrerHeaderMap.size() > 0) {
+                auditLogsParsed++;
+              }
 
               // Insert data according to schema
               for (Map.Entry<String, String> entry : auditLogMap.entrySet()) {
@@ -233,5 +247,9 @@ public class S3AAuditLogMergerAndParser {
       LOG.info("Successfully generated avro data");
     }
     return true;
+  }
+
+  public long getAuditLogsParsed() {
+    return auditLogsParsed;
   }
 }

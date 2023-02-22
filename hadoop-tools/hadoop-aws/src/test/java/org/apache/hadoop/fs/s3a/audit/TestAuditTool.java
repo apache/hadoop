@@ -74,30 +74,28 @@ public class TestAuditTool extends AbstractS3ATestBase {
     FileSystem fileSystem = destPath.getFileSystem(getConfiguration());
     RemoteIterator<LocatedFileStatus> listOfDestFiles =
         fileSystem.listFiles(destPath, true);
-    while (listOfDestFiles.hasNext()) {
-      Path filesPath = listOfDestFiles.next().getPath();
-      if (filesPath.getName().equals("AvroData.avro")) {
-        File avroFile = new File(filesPath.toUri());
+    Path expectedPath = new Path(destPath, "AvroData.avro");
+    fileSystem.open(expectedPath);
 
-        //DeSerializing the objects
-        DatumReader<AvroDataRecord> datumReader =
-            new SpecificDatumReader<AvroDataRecord>(AvroDataRecord.class);
+    File avroFile = new File(expectedPath.toUri());
 
-        //Instantiating DataFileReader
-        DataFileReader<AvroDataRecord> dataFileReader =
-            new DataFileReader<AvroDataRecord>(avroFile, datumReader);
-        AvroDataRecord avroDataRecord = null;
+    //DeSerializing the objects
+    DatumReader<AvroS3LogEntryRecord> datumReader =
+            new SpecificDatumReader<AvroS3LogEntryRecord>(AvroS3LogEntryRecord.class);
 
-        while (dataFileReader.hasNext()) {
-          avroDataRecord = dataFileReader.next(avroDataRecord);
-          //verifying the bucket from generated avro data
-          assertEquals("the expected and actual results should be same",
-              "bucket-london", avroDataRecord.get("bucket").toString());
-          //verifying the remoteip from generated avro data
-          assertEquals("the expected and actual results should be same",
-              "109.157.171.174", avroDataRecord.get("remoteip").toString());
-        }
-      }
+    //Instantiating DataFileReader
+    DataFileReader<AvroS3LogEntryRecord> dataFileReader =
+            new DataFileReader<AvroS3LogEntryRecord>(avroFile, datumReader);
+    AvroS3LogEntryRecord avroS3LogEntryRecord = null;
+
+    while (dataFileReader.hasNext()) {
+      avroS3LogEntryRecord = dataFileReader.next(avroS3LogEntryRecord);
+      //verifying the bucket from generated avro data
+      assertEquals("the expected and actual results should be same",
+              "bucket-london", avroS3LogEntryRecord.get("bucket").toString());
+      //verifying the remoteip from generated avro data
+      assertEquals("the expected and actual results should be same",
+              "109.157.171.174", avroS3LogEntryRecord.get("remoteip").toString());
     }
   }
 }
