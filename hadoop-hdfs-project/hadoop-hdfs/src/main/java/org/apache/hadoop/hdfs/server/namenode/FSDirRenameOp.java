@@ -346,7 +346,7 @@ class FSDirRenameOp {
         collectedBlocks, options);
     if (!collectedBlocks.getToDeleteList().isEmpty()) {
       fsd.getFSNamesystem().getBlockManager()
-          .removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
+          .removeBlocksAndUpdateSafemodeTotal(collectedBlocks,false);
     }
   }
 
