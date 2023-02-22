@@ -201,10 +201,16 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
             return Integer.parseInt(len);
         } catch (QiniuException e) {
-            if (e.response != null && e.response.statusCode == 612) {
-                throw new FileNotFoundException("key: " + key);
+            if (e.response == null) {
+                throw e;
             }
-            throw e;
+            switch (e.response.statusCode) {
+                case 612:
+                case 404:
+                    throw new FileNotFoundException("key: " + key);
+                default:
+                    throw e;
+            }
         }
     }
 
