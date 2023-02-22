@@ -1,10 +1,12 @@
 package org.apache.hadoop.fs.qinu.kodo.performance;
 
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
+import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.util.QiniuKodoUtils;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -12,10 +14,10 @@ import java.util.concurrent.Future;
 public class TestPrepareHelper {
     private final Path preparePath;
     private final FileSystem fs;
-    private final QiniuKodoClient client;
+    private final IQiniuKodoClient client;
     private final ExecutorService executorService;
 
-    public TestPrepareHelper(FileSystem fs, QiniuKodoClient client, Path preparePath, ExecutorService executorService) {
+    public TestPrepareHelper(FileSystem fs, IQiniuKodoClient client, Path preparePath, ExecutorService executorService) {
         this.fs = fs;
         this.client = client;
         this.preparePath = preparePath;
@@ -73,5 +75,43 @@ public class TestPrepareHelper {
         fs.mkdirs(QiniuKodoUtils.keyToPath(fs.getUri(), fs.getWorkingDirectory(), newPrefix));
         // 复制key
         client.copyKeys(oldPrefix, newPrefix);
+    }
+
+    private Path prePrepareBigFile(int length) throws IOException {
+        Path p = new Path(preparePath, "big-file-" + length);
+        try {
+            if (fs.getFileStatus(p).getLen() == length) {
+                return p;
+            }
+        } catch (FileNotFoundException ignored) {
+        }
+
+        FSDataOutputStream fos = fs.create(p);
+        for (int i = 0; i < length; i++) {
+            fos.write(0);
+        }
+        fos.close();
+        return p;
+    }
+
+    /**
+     * 准备一个大文件
+     *
+     * @param path   文件路径
+     * @param length 文件大小
+     */
+    public void prepareBigFile(String path, int length) throws Exception {
+        boolean shouldCreate = false;
+        try {
+            if (fs.getFileStatus(new Path(path)).getLen() == length) {
+                return;
+            }
+        } catch (FileNotFoundException ignored) {
+        }
+
+        Path p = prePrepareBigFile(length);
+        String oldPrefix = QiniuKodoUtils.pathToKey(fs.getWorkingDirectory(), p);
+        String newPrefix = QiniuKodoUtils.pathToKey(fs.getWorkingDirectory(), new Path(path));
+        client.copyKey(oldPrefix, newPrefix);
     }
 }

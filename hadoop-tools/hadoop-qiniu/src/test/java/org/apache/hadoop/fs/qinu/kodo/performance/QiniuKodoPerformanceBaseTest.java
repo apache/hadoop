@@ -5,7 +5,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem;
-import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
+import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.junit.After;
 import org.junit.Before;
@@ -53,7 +53,7 @@ public abstract class QiniuKodoPerformanceBaseTest {
     protected TestPrepareHelper getPrepareHelper() throws Exception {
         Field field = QiniuKodoFileSystem.class.getDeclaredField("kodoClient");
         field.setAccessible(true);
-        QiniuKodoClient client = (QiniuKodoClient) field.get(kodoFs);
+        IQiniuKodoClient client = (IQiniuKodoClient) field.get(kodoFs);
         return new TestPrepareHelper(kodoFs, client,
                 new Path(DEFAULT_PREPARE_FILE_DIR),
                 Executors.newFixedThreadPool(10));
