@@ -37,7 +37,22 @@ import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT;
 import static org.apache.hadoop.fs.azurebfs.services.AuthType.OAuth;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_MESSAGE;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_JDK_MESSAGE;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.EGRESS_LIMIT_BREACH_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.INGRESS_LIMIT_BREACH_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.IO_EXCEPTION_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OPERATION_BREACH_MESSAGE;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OPERATION_LIMIT_BREACH_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_JDK_MESSAGE;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.SOCKET_EXCEPTION_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.UNKNOWN_HOST_EXCEPTION_ABBREVIATION;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.nullable;
 
@@ -47,8 +62,8 @@ public class TestAbfsRestOperationMockFailures {
   public void testClientRequestIdForConnectTimeoutRetry() throws Exception {
     Exception[] exceptions = new Exception[1];
     String[] abbreviations = new String[1];
-    exceptions[0] = new SocketTimeoutException("connect timed out");
-    abbreviations[0] = "CT";
+    exceptions[0] = new SocketTimeoutException(CONNECTION_TIMEOUT_JDK_MESSAGE);
+    abbreviations[0] = CONNECTION_TIMEOUT_ABBREVIATION;
     testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
   }
 
@@ -57,10 +72,10 @@ public class TestAbfsRestOperationMockFailures {
       throws Exception {
     Exception[] exceptions = new Exception[2];
     String[] abbreviations = new String[2];
-    exceptions[0] = new SocketTimeoutException("connect timed out");
-    abbreviations[0] = "CT";
-    exceptions[1] = new SocketTimeoutException("Read timed out");
-    abbreviations[1] = "RT";
+    exceptions[0] = new SocketTimeoutException(CONNECTION_TIMEOUT_JDK_MESSAGE);
+    abbreviations[0] = CONNECTION_TIMEOUT_ABBREVIATION;
+    exceptions[1] = new SocketTimeoutException(READ_TIMEOUT_JDK_MESSAGE);
+    abbreviations[1] = READ_TIMEOUT_ABBREVIATION;
     testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
   }
 
@@ -68,8 +83,8 @@ public class TestAbfsRestOperationMockFailures {
   public void testClientRequestIdForReadTimeoutRetry() throws Exception {
     Exception[] exceptions = new Exception[1];
     String[] abbreviations = new String[1];
-    exceptions[0] = new SocketTimeoutException("Read timed out");
-    abbreviations[0] = "RT";
+    exceptions[0] = new SocketTimeoutException(READ_TIMEOUT_JDK_MESSAGE);
+    abbreviations[0] = READ_TIMEOUT_ABBREVIATION;
     testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
   }
 
@@ -78,7 +93,7 @@ public class TestAbfsRestOperationMockFailures {
     Exception[] exceptions = new Exception[1];
     String[] abbreviations = new String[1];
     exceptions[0] = new UnknownHostException();
-    abbreviations[0] = "UH";
+    abbreviations[0] = UNKNOWN_HOST_EXCEPTION_ABBREVIATION;
     testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
   }
 
@@ -86,8 +101,8 @@ public class TestAbfsRestOperationMockFailures {
   public void testClientRequestIdForConnectionResetRetry() throws Exception {
     Exception[] exceptions = new Exception[1];
     String[] abbreviations = new String[1];
-    exceptions[0] = new SocketTimeoutException("Connection reset by peer");
-    abbreviations[0] = "CR";
+    exceptions[0] = new SocketTimeoutException(CONNECTION_RESET_MESSAGE + " by peer");
+    abbreviations[0] = CONNECTION_RESET_ABBREVIATION;
     testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
   }
 
@@ -96,7 +111,7 @@ public class TestAbfsRestOperationMockFailures {
     Exception[] exceptions = new Exception[1];
     String[] abbreviations = new String[1];
     exceptions[0] = new SocketException("unknown");
-    abbreviations[0] = "SE";
+    abbreviations[0] = SOCKET_EXCEPTION_ABBREVIATION;
     testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
   }
 
@@ -105,7 +120,7 @@ public class TestAbfsRestOperationMockFailures {
     Exception[] exceptions = new Exception[1];
     String[] abbreviations = new String[1];
     exceptions[0] = new InterruptedIOException();
-    abbreviations[0] = "IOE";
+    abbreviations[0] = IO_EXCEPTION_ABBREVIATION;
     testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1);
   }
 
@@ -122,21 +137,21 @@ public class TestAbfsRestOperationMockFailures {
   @Test
   public void testClientRequestIdFor503INGRetry() throws Exception {
     testClientRequestIdForStatusRetry(HTTP_UNAVAILABLE,
-        "Ingress is over the account limit.",
-        "ING");
+        INGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage(),
+        INGRESS_LIMIT_BREACH_ABBREVIATION);
   }
 
   @Test
   public void testClientRequestIdFor503egrRetry() throws Exception {
     testClientRequestIdForStatusRetry(HTTP_UNAVAILABLE,
-        "Egress is over the account limit.",
-        "EGR");
+        EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage(),
+        EGRESS_LIMIT_BREACH_ABBREVIATION);
   }
 
   @Test
   public void testClientRequestIdFor503OPRRetry() throws Exception {
     testClientRequestIdForStatusRetry(HTTP_UNAVAILABLE,
-        "Operations per second is over the account limit.", "OPR");
+        OPERATION_BREACH_MESSAGE, OPERATION_LIMIT_BREACH_ABBREVIATION);
   }
 
   @Test
