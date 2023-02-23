@@ -22,6 +22,9 @@ import java.net.UnknownHostException;
 
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.UNKNOWN_HOST_EXCEPTION_ABBREVIATION;
 
+/**
+ * Category that can capture server-response errors for {@link UnknownHostException}.
+ * */
 public class UnknownHostRetryReason extends RetryReasonCategory {
 
   @Override

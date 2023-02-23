@@ -23,6 +23,9 @@ import java.io.IOException;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.IO_EXCEPTION_ABBREVIATION;
 
 
+/**
+ * Category that can capture server-response errors for {@link IOException}.
+ * */
 public class UnknownIOExceptionRetryReason extends
     RetryReasonCategory {
 

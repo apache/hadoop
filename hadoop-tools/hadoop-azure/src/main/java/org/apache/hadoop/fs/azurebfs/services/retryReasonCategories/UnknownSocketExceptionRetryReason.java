@@ -22,7 +22,9 @@ import java.net.SocketException;
 
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.SOCKET_EXCEPTION_ABBREVIATION;
 
-
+/**
+ * Category that can capture server-response errors for {@link SocketException}.
+ * */
 public class UnknownSocketExceptionRetryReason extends
     RetryReasonCategory {
 

@@ -21,6 +21,9 @@ package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_JDK_MESSAGE;
 
+/**
+ * Category that can capture server-response errors for read-timeout.
+ * */
 public class ReadTimeoutRetryReason extends RetryReasonCategory {
 
   @Override
