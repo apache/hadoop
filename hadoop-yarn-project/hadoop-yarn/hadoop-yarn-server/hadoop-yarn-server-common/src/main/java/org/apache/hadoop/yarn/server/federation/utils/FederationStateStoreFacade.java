@@ -89,6 +89,9 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterResponse;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -810,6 +813,24 @@ public final class FederationStateStoreFacade {
   }
 
   /**
+   * The Router Supports Store RMDelegationTokenIdentifier{@link RMDelegationTokenIdentifier}.
+   *
+   * @param identifier delegation tokens from the RM.
+   * @param renewDate renewDate.
+   * @param tokenInfo tokenInfo.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
+  public void storeNewToken(RMDelegationTokenIdentifier identifier,
+      long renewDate, String tokenInfo) throws YarnException, IOException {
+    LOG.info("storing RMDelegation token with sequence number: {}.",
+        identifier.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate, tokenInfo);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    stateStore.storeNewToken(request);
+  }
+
+  /**
    * The Router Supports Update RMDelegationTokenIdentifier{@link RMDelegationTokenIdentifier}.
    *
    * @param identifier delegation tokens from the RM
@@ -822,6 +843,24 @@ public final class FederationStateStoreFacade {
     LOG.info("updating RMDelegation token with sequence number: {}.",
         identifier.getSequenceNumber());
     RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    stateStore.updateStoredToken(request);
+  }
+
+  /**
+   * The Router Supports Update RMDelegationTokenIdentifier{@link RMDelegationTokenIdentifier}.
+   *
+   * @param identifier delegation tokens from the RM
+   * @param renewDate renewDate
+   * @param tokenInfo tokenInfo.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
+  public void updateStoredToken(RMDelegationTokenIdentifier identifier,
+      long renewDate, String tokenInfo) throws YarnException, IOException {
+    LOG.info("updating RMDelegation token with sequence number: {}.",
+        identifier.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate, tokenInfo);
     RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     stateStore.updateStoredToken(request);
   }
@@ -1150,5 +1189,26 @@ public final class FederationStateStoreFacade {
       updateReservationHomeSubCluster(subClusterId, reservationId,
           reservationHomeSubCluster);
     }
+  }
+
+  /**
+   * Deregister subCluster, Update the subCluster state to
+   * SC_LOST、SC_DECOMMISSIONED etc.
+   *
+   * @param subClusterId subClusterId.
+   * @param subClusterState The state of the subCluster to be updated.
+   * @throws YarnException yarn exception.
+   * @return If Deregister subCluster is successful, return true, otherwise, return false.
+   */
+  public boolean deregisterSubCluster(SubClusterId subClusterId,
+      SubClusterState subClusterState) throws YarnException {
+    SubClusterDeregisterRequest deregisterRequest =
+        SubClusterDeregisterRequest.newInstance(subClusterId, subClusterState);
+    SubClusterDeregisterResponse response = stateStore.deregisterSubCluster(deregisterRequest);
+    // If the response is not empty, deregisterSubCluster is successful.
+    if (response != null) {
+      return true;
+    }
+    return false;
   }
 }

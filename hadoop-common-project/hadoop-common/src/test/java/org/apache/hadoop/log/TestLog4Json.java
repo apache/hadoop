@@ -22,8 +22,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ContainerNode;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Category;
@@ -43,8 +41,6 @@ import java.util.Enumeration;
 import java.util.Vector;
 
 public class TestLog4Json {
-
-  private static final Log LOG = LogFactory.getLog(TestLog4Json.class);
 
   @Test
   public void testConstruction() throws Throwable {
