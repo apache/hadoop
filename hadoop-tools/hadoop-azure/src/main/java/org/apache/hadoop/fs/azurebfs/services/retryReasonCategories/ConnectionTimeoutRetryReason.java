@@ -22,6 +22,9 @@ package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_JDK_MESSAGE;
 
+/**
+ * Category that can capture server-response errors for connection-timeout.
+ * */
 public class ConnectionTimeoutRetryReason extends
     RetryReasonCategory {
 

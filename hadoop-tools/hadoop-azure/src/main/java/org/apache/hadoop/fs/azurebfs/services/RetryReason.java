@@ -49,9 +49,9 @@ class RetryReason {
    *   hence, {@link UnknownIOExceptionRetryReason} is placed before
    *   {@link UnknownSocketExceptionRetryReason}</li>
    *   <li>Since, connectionTimeout, readTimeout, and connectionReset are
-   *   {@link java.net.SocketException} exceptions with different messages,
+   *   {@link java.net.SocketTimeoutException} exceptions with different messages,
    *   hence, {@link ConnectionTimeoutRetryReason}, {@link ReadTimeoutRetryReason},
-   *   {@link ConnectionResetRetryReason} are above {@link UnknownSocketExceptionRetryReason}.
+   *   {@link ConnectionResetRetryReason} are above {@link UnknownIOExceptionRetryReason}.
    *   There is no order between the three reasons as they are differentiated
    *   by exception-message.</li>
    *   <li>Since, {@link java.net.UnknownHostException} is subclass of
@@ -75,11 +75,20 @@ class RetryReason {
 
   }
 
+  /**
+   * Method to get correct abbreviation for a given set of exception, statusCode,
+   * storageStatusCode.
+   *
+   * @param ex exception caught during server communication.
+   * @param statusCode statusCode in the server response.
+   * @param storageErrorMessage storageErrorMessage in the server response.
+   *
+   * @return abbreviation for the the given set of exception, statusCode, storageStatusCode.
+   * */
   static String getAbbreviation(Exception ex,
       Integer statusCode,
       String storageErrorMessage) {
     String result = null;
-
     for (RetryReasonCategory retryReasonCategory : rankedReasonCategories) {
       final String abbreviation
           = retryReasonCategory.captureAndGetAbbreviation(ex,

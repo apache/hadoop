@@ -20,6 +20,9 @@ package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_STATUS_CATEGORY_QUOTIENT;
 
+/**
+ * Category that can capture server-response errors for 4XX status-code.
+ * */
 public class ClientErrorRetryReason extends RetryReasonCategory {
 
   @Override

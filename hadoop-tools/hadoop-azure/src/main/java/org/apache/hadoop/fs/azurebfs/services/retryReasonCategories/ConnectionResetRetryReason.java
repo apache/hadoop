@@ -21,6 +21,9 @@ package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_MESSAGE;
 
+/**
+ * Category that can capture server-response errors for connection-reset exception.
+ * */
 public class ConnectionResetRetryReason extends
     RetryReasonCategory {
 

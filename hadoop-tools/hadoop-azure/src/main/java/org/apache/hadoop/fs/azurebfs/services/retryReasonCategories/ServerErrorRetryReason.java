@@ -27,6 +27,9 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.INGRES
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OPERATION_BREACH_MESSAGE;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OPERATION_LIMIT_BREACH_ABBREVIATION;
 
+/**
+ * Category that can capture server-response errors for 5XX status-code.
+ * */
 public class ServerErrorRetryReason extends RetryReasonCategory {
 
   @Override
