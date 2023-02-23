@@ -256,7 +256,7 @@ public class AbfsRestOperation {
 
     try {
       // initialize the HTTP request and open the connection
-      httpOperation = new AbfsHttpOperation(timeoutOptimizer.getUrl(), method, requestHeaders, timeoutOptimizer);
+      httpOperation = createHttpOperationInstance();
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
       tracingContext.constructHeader(httpOperation);
 
@@ -352,5 +352,9 @@ public class AbfsRestOperation {
     if (abfsCounters != null) {
       abfsCounters.incrementCounter(statistic, value);
     }
+  }
+
+  public AbfsHttpOperation createHttpOperationInstance() throws IOException {
+    return new AbfsHttpOperation(timeoutOptimizer.getUrl(), method, requestHeaders, timeoutOptimizer);
   }
 }
