@@ -16,27 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation;
 
-import java.io.IOException;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.RetryReasonAbbreviationCreator;
 
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.readTimeoutJdkMessage;
 
-class UnknownIOExceptionRetryReason implements
-    RetryReasonAbbreviationCreator {
+public class ReadTimeoutRetryReason extends RetryReasonAbbreviationCreator {
 
   @Override
   public Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
-    if (ex instanceof IOException) {
-      return true;
-    }
-    return false;
+    return checkExceptionMessage(ex, readTimeoutJdkMessage);
   }
 
   @Override
   public String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
-    return "IOE";
+    return "RT";
   }
 }

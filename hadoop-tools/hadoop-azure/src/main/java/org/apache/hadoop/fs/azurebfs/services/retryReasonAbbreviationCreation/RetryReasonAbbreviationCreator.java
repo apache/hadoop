@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation;
 
 import java.util.Locale;
 
@@ -24,7 +24,7 @@ import java.util.Locale;
  * Provides methods to define if given exception can be categorised to certain category.
  * Each category has a different implementation of the interface.
  * */
-interface RetryReasonAbbreviationCreator {
+public abstract class RetryReasonAbbreviationCreator {
 
   /**
    * Returns if given server response error can be converted to an abbreviation
@@ -37,7 +37,7 @@ interface RetryReasonAbbreviationCreator {
    * @return <ol><li>true if server response error can be converted to abbreviation by the implementation</li>
    * <li>false if response error can not be abbreviated by the implementation</li></ol>
    */
-  Boolean canCapture(Exception ex,
+  abstract Boolean canCapture(Exception ex,
       Integer statusCode,
       String serverErrorMessage);
 
@@ -49,12 +49,19 @@ interface RetryReasonAbbreviationCreator {
    *
    * @return abbreviation on the basis of the statusCode and the serverErrorMessage
    */
-  String getAbbreviation(Integer statusCode, String serverErrorMessage);
+  abstract String getAbbreviation(Integer statusCode, String serverErrorMessage);
+
+  public String captureAndGetAbbreviation(Exception ex, Integer statusCode, String serverErrorMessage) {
+    if(canCapture(ex, statusCode, serverErrorMessage)) {
+      return getAbbreviation(statusCode, serverErrorMessage);
+    }
+    return null;
+  }
 
   /**
    * Checks if a required search-string is in the exception's message.
    */
-  default Boolean checkExceptionMessage(final Exception exceptionCaptured,
+  Boolean checkExceptionMessage(final Exception exceptionCaptured,
       final String search) {
     if(search == null) {
       return false;

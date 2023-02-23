@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation;
+
+import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.RetryReasonAbbreviationCreator;
 
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.connectionResetMessage;
 
-class ConnectionResetRetryReason implements
+public class ConnectionResetRetryReason extends
     RetryReasonAbbreviationCreator {
 
   @Override

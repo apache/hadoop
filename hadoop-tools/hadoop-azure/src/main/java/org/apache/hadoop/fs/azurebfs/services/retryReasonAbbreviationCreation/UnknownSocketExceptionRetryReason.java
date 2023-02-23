@@ -16,17 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation;
 
-import java.net.UnknownHostException;
+import java.net.SocketException;
 
-class UnknownHostRetryReason implements RetryReasonAbbreviationCreator {
+import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.RetryReasonAbbreviationCreator;
+
+
+public class UnknownSocketExceptionRetryReason extends
+    RetryReasonAbbreviationCreator {
 
   @Override
   public Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
-    if (ex instanceof UnknownHostException) {
+    if (ex instanceof SocketException) {
       return true;
     }
     return false;
@@ -35,6 +39,6 @@ class UnknownHostRetryReason implements RetryReasonAbbreviationCreator {
   @Override
   public String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
-    return "UH";
+    return "SE";
   }
 }

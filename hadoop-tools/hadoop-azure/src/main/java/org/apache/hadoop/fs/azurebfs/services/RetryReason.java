@@ -21,13 +21,25 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.ClientErrorRetryReason;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.ConnectionResetRetryReason;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.ConnectionTimeoutRetryReason;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.ReadTimeoutRetryReason;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.RetryReasonAbbreviationCreator;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.ServerErrorRetryReason;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.UnknownHostRetryReason;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.UnknownIOExceptionRetryReason;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.UnknownSocketExceptionRetryReason;
+
 
 /**
  * In case of retry, this enum would give the information on the reason for
  * previous API call.
  * */
 public class RetryReason {
-  private static List<RetryReasonAbbreviationCreator> rankedReasons = new LinkedList<RetryReasonAbbreviationCreator>() {{
+
+  private static List<RetryReasonAbbreviationCreator> rankedReasons
+      = new LinkedList<RetryReasonAbbreviationCreator>() {{
     add(new ServerErrorRetryReason());
     add(new ClientErrorRetryReason());
     add(new UnknownIOExceptionRetryReason());
@@ -43,10 +55,12 @@ public class RetryReason {
       String storageErrorMessage) {
     String result = null;
 
-    for(RetryReasonAbbreviationCreator retryReasonAbbreviationCreator : rankedReasons) {
-      Boolean canCapture = retryReasonAbbreviationCreator.canCapture(ex, statusCode, storageErrorMessage);
-      if(canCapture) {
-        result = retryReasonAbbreviationCreator.getAbbreviation(statusCode, storageErrorMessage);
+    for (RetryReasonAbbreviationCreator retryReasonAbbreviationCreator : rankedReasons) {
+      final String abbreviation
+          = retryReasonAbbreviationCreator.captureAndGetAbbreviation(ex,
+          statusCode, storageErrorMessage);
+      if (abbreviation != null) {
+        result = abbreviation;
       }
     }
     return result;
