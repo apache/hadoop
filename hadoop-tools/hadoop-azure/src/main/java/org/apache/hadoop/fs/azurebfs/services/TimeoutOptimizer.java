@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.http.client.utils.URIBuilder;
 
 import java.net.MalformedURLException;
@@ -41,8 +42,8 @@ public class TimeoutOptimizer {
     private ExponentialRetryPolicy retryPolicy;
     private int requestTimeout;
     private int readTimeout = -1;
-    private int maxReqTimeout;
-    private int timeoutIncRate;
+    private int maxReqTimeout = -1;
+    private int timeoutIncRate = -1;
     private boolean shouldOptimizeTimeout;
 
     /**
@@ -66,15 +67,22 @@ public class TimeoutOptimizer {
             }
             else {
                 this.shouldOptimizeTimeout = Boolean.parseBoolean(shouldOptimize);
+                if (this.shouldOptimizeTimeout) {
+                    // config is set to true
+                    if (abfsConfiguration.get(ConfigurationKeys.AZURE_MAX_REQUEST_TIMEOUT) != null) {
+                        this.maxReqTimeout = Integer.parseInt(abfsConfiguration.get(ConfigurationKeys.AZURE_MAX_REQUEST_TIMEOUT));
+                    }
+                    if (abfsConfiguration.get(ConfigurationKeys.AZURE_REQUEST_TIMEOUT_INCREASE_RATE) != null) {
+                        this.timeoutIncRate = Integer.parseInt(abfsConfiguration.get(ConfigurationKeys.AZURE_REQUEST_TIMEOUT_INCREASE_RATE));
+                    }
+                    if (this.maxReqTimeout == -1 || this.timeoutIncRate == -1) {
+                        this.shouldOptimizeTimeout = false;
+                    } else {
+                        initTimeouts();
+                        updateUrl();
+                    }
+                }
             }
-            if (this.shouldOptimizeTimeout) {
-                // config is set to true
-                this.maxReqTimeout = Integer.parseInt(abfsConfiguration.get(ConfigurationKeys.AZURE_MAX_REQUEST_TIMEOUT));
-                this.timeoutIncRate = Integer.parseInt(abfsConfiguration.get(ConfigurationKeys.AZURE_REQUEST_TIMEOUT_INCREASE_RATE));
-                initTimeouts();
-                updateUrl();
-            }
-
         } else {
             // optimization not required for opType == null
             this.shouldOptimizeTimeout = false;
@@ -122,7 +130,7 @@ public class TimeoutOptimizer {
 
         String query = url.getQuery();
         Integer timeoutPos = new Integer(query.indexOf("timeout"));
-        if (timeoutPos < 0) {
+        if (timeoutPos != null && timeoutPos < 0) {
             // no value of timeout exists in the URL
             // no optimization is needed for this particular request as well
             requestTimeout = -1;
