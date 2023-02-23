@@ -2090,7 +2090,7 @@ public class TestRouterRpc {
   public void testRealUserPropagationInCallerContext()
       throws IOException, InterruptedException {
     GenericTestUtils.LogCapturer auditlog =
-        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
     // Current callerContext is null
     assertNull(CallerContext.getCurrent());
