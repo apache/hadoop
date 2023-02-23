@@ -635,7 +635,7 @@ class DataXceiver extends Receiver implements Runnable {
       if (read < 0 || duration <= 0) {
         LOG.warn("Unexpected value for data transfer bytes={} duration={}", read, duration);
       } else {
-        datanode.metrics.addReadTransferRate(read * 1000 / duration);  
+        datanode.metrics.addReadTransferRate(read * 1000 / duration);
       }
     } catch ( SocketException ignored ) {
       LOG.trace("{}:Ignoring exception while serving {} to {}",
@@ -1130,7 +1130,7 @@ class DataXceiver extends Receiver implements Runnable {
       if (read < 0 || duration <= 0) {
         LOG.warn("Unexpected value for data transfer bytes={} duration={}", read, duration);
       } else {
-        datanode.metrics.addReadTransferRate(read * 1000 / duration);  
+        datanode.metrics.addReadTransferRate(read * 1000 / duration);
       }
       
       LOG.info("Copied {} to {}", block, peer.getRemoteAddressString());
