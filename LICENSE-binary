@@ -210,8 +210,8 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/data
 
 ch.qos.reload4j:reload4j:1.2.22
 com.aliyun:aliyun-java-sdk-core:4.5.10
-com.aliyun:aliyun-java-sdk-ecs:4.2.0
-com.aliyun:aliyun-java-sdk-ram:3.0.0
+com.aliyun:aliyun-java-sdk-kms:2.11.0
+com.aliyun:aliyun-java-sdk-ram:3.1.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
 com.aliyun.oss:aliyun-sdk-oss:3.13.0
 com.amazonaws:aws-java-sdk-bundle:1.12.316
