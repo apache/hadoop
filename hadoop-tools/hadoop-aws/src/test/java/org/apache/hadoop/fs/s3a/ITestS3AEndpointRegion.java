@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +43,7 @@ import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.BUCKET_REGION_HEADER;
+import static org.apache.hadoop.fs.s3a.Statistic.STORE_REGION_PROBE;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_301_MOVED_PERMANENTLY;
 
 /**
@@ -80,6 +82,25 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
         Assert.fail("Region not configured correctly, expected region: " + bucketRegion);
       }
     }
+  }
+
+  @Test
+  public void testRegionCache() throws IOException, URISyntaxException {
+    Configuration conf = getConfiguration();
+    conf.unset(AWS_REGION);
+    conf.unset("fs.s3a.bucket.landsat-pds.endpoint.region");
+    S3AFileSystem fs = new S3AFileSystem();
+
+    fs.initialize(new URI("s3a://landsat-pds"), conf);
+
+    Assertions.assertThat(fs.getInstrumentation().getCounterValue(STORE_REGION_PROBE))
+        .describedAs("Incorrect number of calls made to get bucket region").isEqualTo(1);
+
+    fs.initialize(new URI("s3a://landsat-pds"), conf);
+
+    // value should already be cached.
+    Assertions.assertThat(fs.getInstrumentation().getCounterValue(STORE_REGION_PROBE))
+        .describedAs("Incorrect number of calls made to get bucket region").isEqualTo(0);
   }
 
   @Test
@@ -196,25 +217,10 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
         .withEndpoint(endpoint)
         .withMetrics(new EmptyS3AStatisticsContext()
             .newStatisticsFromAwsSdk())
-        .withInvoker(new Invoker(new S3ARetryPolicy(conf),
-            this::operationRetried))
         .withExecutionInterceptors(interceptors);
     S3Client client = factory.createS3Client(
         getFileSystem().getUri(),
         parameters);
     return client;
-  }
-
-  /**
-   * Callback from {@link Invoker} when an operation is retried.
-   * @param text text of the operation
-   * @param ex exception
-   * @param retries number of retries
-   * @param idempotent is the method idempotent
-   */
-  void operationRetried(String text, Exception ex, int retries,
-      boolean idempotent) {
-    LOG.info("{}: Retried {}: {}", text, retries, ex.toString());
-    LOG.debug("Stack", ex);
   }
 }

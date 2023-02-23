@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.List;
 
 import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
 import org.slf4j.Logger;
@@ -38,9 +37,6 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
-import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
-import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
-import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
 import org.apache.commons.lang3.StringUtils;
@@ -52,13 +48,9 @@ import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
-import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
-import static org.apache.hadoop.fs.s3a.Constants.BUCKET_REGION_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_301_MOVED_PERMANENTLY;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404_NOT_FOUND;
 
 
 /**
@@ -137,7 +129,7 @@ public class DefaultS3ClientFactory extends Configured
       BuilderT builder, S3ClientCreationParameters parameters, Configuration conf, String bucket)
       throws IOException {
 
-    Region region = getS3Region(conf.getTrimmed(AWS_REGION), bucket, parameters);
+    Region region = parameters.getRegion();
     LOG.debug("Using region {}", region);
 
     URI endpoint = getS3Endpoint(parameters.getEndpoint(), conf);
@@ -227,61 +219,5 @@ public class DefaultS3ClientFactory extends Configured
     } catch (URISyntaxException e) {
       throw new IllegalArgumentException(e);
     }
-  }
-
-  /**
-   * Get the bucket region.
-   *
-   * @param region AWS S3 Region set in the config. This property may not be set, in which case
-   *               ask S3 for the region.
-   * @param bucket Bucket name.
-   * @param parameters parameter object.
-   * @return region of the bucket.
-   */
-  private static Region getS3Region(String region, String bucket,
-      S3ClientCreationParameters parameters) throws IOException {
-
-    if (!StringUtils.isBlank(region)) {
-      return Region.of(region);
-    }
-
-    ArnResource accessPoint = parameters.getAccessPoint();
-
-    if (accessPoint != null) {
-      return Region.of(accessPoint.getRegion());
-    }
-
-    Invoker invoker = parameters.getInvoker();
-
-    return invoker.retry("getS3Region", bucket, true, () -> {
-      try {
-        // build a s3 client with region eu-west-1 that can be used to get the region of the bucket.
-        // Using eu-west-1, as headBucket() doesn't work with us-east-1. This is because
-        // us-east-1 uses the endpoint s3.amazonaws.com, which resolves bucket.s3.amazonaws.com to
-        // the actual region the bucket is in. As the request is signed with us-east-1 and not the
-        // bucket's region, it fails.
-
-        S3Client s3Client = S3Client.builder().region(Region.EU_WEST_1)
-            .credentialsProvider(parameters.getCredentialSet()).build();
-
-        HeadBucketResponse headBucketResponse =
-            s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
-
-        return Region.of(
-            headBucketResponse.sdkHttpResponse().headers().get(BUCKET_REGION_HEADER).get(0));
-      } catch (S3Exception exception) {
-        if (exception.statusCode() == SC_301_MOVED_PERMANENTLY) {
-          List<String> bucketRegion =
-              exception.awsErrorDetails().sdkHttpResponse().headers().get(BUCKET_REGION_HEADER);
-          return Region.of(bucketRegion.get(0));
-        }
-
-        if (exception.statusCode() == SC_404_NOT_FOUND) {
-          throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does " + "not exist");
-        }
-
-        throw  exception;
-      }
-    });
   }
 }

@@ -28,6 +28,7 @@ import java.util.concurrent.Executor;
 
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
@@ -156,14 +157,10 @@ public interface S3ClientFactory {
     private Executor transferManagerExecutor;
 
     /**
-     * Invoker to be used.
+     * Region of the S3 bucket.
      */
-    private Invoker invoker;
+    private Region region;
 
-    /**
-     * Access point to be used.
-     */
-    private ArnResource accessPoint;
 
     /**
      * List of execution interceptors to include in the chain
@@ -360,44 +357,23 @@ public interface S3ClientFactory {
     }
 
     /**
-     * Set invoker.
+     * Set region.
      *
      * @param value new value
      * @return the builder
      */
-    public S3ClientCreationParameters withInvoker(
-        final Invoker value) {
-      invoker = value;
+    public S3ClientCreationParameters withRegion(
+        final Region value) {
+      region = value;
       return this;
     }
 
     /**
-     * Get the invoker.
+     * Get the region.
      * @return invoker
      */
-    public Invoker getInvoker() {
-      return invoker;
+    public Region getRegion() {
+      return region;
     }
-
-    /**
-     * Set access point.
-     *
-     * @param value new value
-     * @return the builder
-     */
-    public S3ClientCreationParameters withAccessPoint(
-        final ArnResource value) {
-      accessPoint = value;
-      return this;
-    }
-
-    /**
-     * Get the access point.
-     * @return invoker
-     */
-    public ArnResource getAccessPoint() {
-      return accessPoint;
-    }
-
   }
 }
