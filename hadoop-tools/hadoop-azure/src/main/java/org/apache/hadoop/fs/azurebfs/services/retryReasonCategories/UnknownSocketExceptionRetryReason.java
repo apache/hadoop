@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 
 import java.net.SocketException;
 
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.SOCKET_EXCEPTION_ABBREVIATION;
+
 
 public class UnknownSocketExceptionRetryReason extends
     RetryReasonCategory {
@@ -37,6 +39,6 @@ public class UnknownSocketExceptionRetryReason extends
   @Override
   public String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
-    return "SE";
+    return SOCKET_EXCEPTION_ABBREVIATION;
   }
 }

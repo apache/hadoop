@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.connectionResetMessage;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_MESSAGE;
 
 public class ConnectionResetRetryReason extends
     RetryReasonCategory {
@@ -27,12 +28,12 @@ public class ConnectionResetRetryReason extends
   public Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
-    return checkExceptionMessage(ex, connectionResetMessage);
+    return checkExceptionMessage(ex, CONNECTION_RESET_MESSAGE);
   }
 
   @Override
   public String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
-    return "CR";
+    return CONNECTION_RESET_ABBREVIATION;
   }
 }

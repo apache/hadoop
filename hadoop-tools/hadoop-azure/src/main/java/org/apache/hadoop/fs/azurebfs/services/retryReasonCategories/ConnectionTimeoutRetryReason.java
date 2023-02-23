@@ -19,7 +19,8 @@
 package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 
 
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.connectionTimeoutJdkMessage;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_JDK_MESSAGE;
 
 public class ConnectionTimeoutRetryReason extends
     RetryReasonCategory {
@@ -27,13 +28,13 @@ public class ConnectionTimeoutRetryReason extends
   @Override
   public String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
-    return "CT";
+    return CONNECTION_TIMEOUT_ABBREVIATION;
   }
 
   @Override
   public Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
-    return checkExceptionMessage(ex, connectionTimeoutJdkMessage);
+    return checkExceptionMessage(ex, CONNECTION_TIMEOUT_JDK_MESSAGE);
   }
 }

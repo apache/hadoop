@@ -20,6 +20,12 @@ package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_STATUS_CATEGORY_QUOTIENT;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.EGRESS_LIMIT_BREACH_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.INGRESS_LIMIT_BREACH_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OPERATION_BREACH_MESSAGE;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OPERATION_LIMIT_BREACH_ABBREVIATION;
 
 public class ServerErrorRetryReason extends RetryReasonCategory {
 
@@ -39,17 +45,17 @@ public class ServerErrorRetryReason extends RetryReasonCategory {
     if (statusCode == HTTP_UNAVAILABLE) {
       String splitedServerErrorMessage = serverErrorMessage.split(System.lineSeparator(),
           2)[0];
-      if ("Ingress is over the account limit.".equalsIgnoreCase(
+      if (INGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage().equalsIgnoreCase(
           splitedServerErrorMessage)) {
-        return "ING";
+        return INGRESS_LIMIT_BREACH_ABBREVIATION;
       }
-      if ("Egress is over the account limit.".equalsIgnoreCase(
+      if (EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage().equalsIgnoreCase(
           splitedServerErrorMessage)) {
-        return "EGR";
+        return EGRESS_LIMIT_BREACH_ABBREVIATION;
       }
-      if ("Operations per second is over the account limit.".equalsIgnoreCase(
+      if (OPERATION_BREACH_MESSAGE.equalsIgnoreCase(
           splitedServerErrorMessage)) {
-        return "OPR";
+        return OPERATION_LIMIT_BREACH_ABBREVIATION;
       }
       return HTTP_UNAVAILABLE + "";
     }

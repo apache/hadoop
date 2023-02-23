@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.readTimeoutJdkMessage;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_JDK_MESSAGE;
 
 public class ReadTimeoutRetryReason extends RetryReasonCategory {
 
@@ -26,12 +27,12 @@ public class ReadTimeoutRetryReason extends RetryReasonCategory {
   public Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
-    return checkExceptionMessage(ex, readTimeoutJdkMessage);
+    return checkExceptionMessage(ex, READ_TIMEOUT_JDK_MESSAGE);
   }
 
   @Override
   public String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
-    return "RT";
+    return READ_TIMEOUT_ABBREVIATION;
   }
 }

@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.IO_EXCEPTION_ABBREVIATION;
+
 
 public class UnknownIOExceptionRetryReason extends
     RetryReasonCategory {
@@ -37,6 +39,6 @@ public class UnknownIOExceptionRetryReason extends
   @Override
   public String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
-    return "IOE";
+    return IO_EXCEPTION_ABBREVIATION;
   }
 }

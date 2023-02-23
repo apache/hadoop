@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 
 import java.net.UnknownHostException;
 
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.UNKNOWN_HOST_EXCEPTION_ABBREVIATION;
+
 public class UnknownHostRetryReason extends RetryReasonCategory {
 
   @Override
@@ -35,6 +37,6 @@ public class UnknownHostRetryReason extends RetryReasonCategory {
   @Override
   public String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
-    return "UH";
+    return UNKNOWN_HOST_EXCEPTION_ABBREVIATION;
   }
 }
