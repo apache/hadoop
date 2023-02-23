@@ -42,7 +42,7 @@ public class ServerErrorRetryReason extends RetryReasonCategory {
   @Override
   public String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
-    if (statusCode == HTTP_UNAVAILABLE) {
+    if (statusCode == HTTP_UNAVAILABLE && serverErrorMessage != null) {
       String splitedServerErrorMessage = serverErrorMessage.split(System.lineSeparator(),
           2)[0];
       if (INGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage().equalsIgnoreCase(
