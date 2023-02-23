@@ -103,7 +103,7 @@ public class TestFSNamesystemLockReport {
     FSDataOutputStream os = testLockReport(() ->
         userfs.create(new Path("/file")),
         ".* by create \\(ugi=bob \\(auth:SIMPLE\\)," +
-        "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/file,dst=null," +
+        "ip=[a-zA-Z0-9.]+/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/file,dst=null," +
         "perm=bob:hadoop:rw-r--r--\\) .*");
     os.close();
 
@@ -111,7 +111,7 @@ public class TestFSNamesystemLockReport {
     // ip=/127.0.0.1,src=/file,dst=null,perm=null)"
     FSDataInputStream is = testLockReport(() -> userfs.open(new Path("/file")),
         ".* by open \\(ugi=bob \\(auth:SIMPLE\\)," +
-        "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/file,dst=null," +
+        "ip=[a-zA-Z0-9.]+/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/file,dst=null," +
         "perm=null\\) .*");
     is.close();
 
@@ -120,49 +120,49 @@ public class TestFSNamesystemLockReport {
     testLockReport(() ->
         userfs.setPermission(new Path("/file"), new FsPermission(644)),
         ".* by setPermission \\(ugi=bob \\(auth:SIMPLE\\)," +
-        "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/file,dst=null," +
+        "ip=[a-zA-Z0-9.]+/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/file,dst=null," +
         "perm=bob:hadoop:-w----r-T\\) .*");
 
     // The log output should contain "by setOwner (ugi=bob (auth:SIMPLE),
     // ip=/127.0.0.1,src=/file,dst=null,perm=alice:group1:-w----r-T)"
     testLockReport(() -> userfs.setOwner(new Path("/file"), "alice", "group1"),
         ".* by setOwner \\(ugi=bob \\(auth:SIMPLE\\)," +
-        "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/file,dst=null," +
+        "ip=[a-zA-Z0-9.]+/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/file,dst=null," +
         "perm=alice:group1:-w----r-T\\) .*");
 
     // The log output should contain "by listStatus (ugi=bob (auth:SIMPLE),
     // ip=/127.0.0.1,src=/,dst=null,perm=null)"
     testLockReport(() -> userfs.listStatus(new Path("/")),
         ".* by listStatus \\(ugi=bob \\(auth:SIMPLE\\)," +
-        "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/,dst=null," +
+        "ip=[a-zA-Z0-9.]+/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/,dst=null," +
         "perm=null\\) .*");
 
     // The log output should contain "by getfileinfo (ugi=bob (auth:SIMPLE),
     // ip=/127.0.0.1,src=/file,dst=null,perm=null)"
     testLockReport(() -> userfs.getFileStatus(new Path("/file")),
         ".* by getfileinfo \\(ugi=bob \\(auth:SIMPLE\\)," +
-        "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/file,dst=null," +
+        "ip=[a-zA-Z0-9.]+/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/file,dst=null," +
         "perm=null\\) .*");
 
     // The log output should contain "by mkdirs (ugi=bob (auth:SIMPLE),
     // ip=/127.0.0.1,src=/dir,dst=null,perm=bob:hadoop:rwxr-xr-x)"
     testLockReport(() -> userfs.mkdirs(new Path("/dir")),
         ".* by mkdirs \\(ugi=bob \\(auth:SIMPLE\\)," +
-        "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/dir,dst=null," +
+        "ip=[a-zA-Z0-9.]+/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/dir,dst=null," +
         "perm=bob:hadoop:rwxr-xr-x\\) .*");
 
     // The log output should contain "by delete (ugi=bob (auth:SIMPLE),
     // ip=/127.0.0.1,src=/file2,dst=null,perm=null)"
     testLockReport(() -> userfs.rename(new Path("/file"), new Path("/file2")),
         ".* by rename \\(ugi=bob \\(auth:SIMPLE\\)," +
-        "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/file,dst=/file2," +
+        "ip=[a-zA-Z0-9.]+/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/file,dst=/file2," +
         "perm=alice:group1:-w----r-T\\) .*");
 
     // The log output should contain "by rename (ugi=bob (auth:SIMPLE),
     // ip=/127.0.0.1,src=/file,dst=/file2,perm=alice:group1:-w----r-T)"
     testLockReport(() -> userfs.delete(new Path("/file2"), false),
         ".* by delete \\(ugi=bob \\(auth:SIMPLE\\)," +
-        "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/file2,dst=null," +
+        "ip=[a-zA-Z0-9.]+/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3},src=/file2,dst=null," +
         "perm=null\\) .*");
   }
 

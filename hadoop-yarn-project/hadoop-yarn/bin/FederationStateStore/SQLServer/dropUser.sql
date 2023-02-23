@@ -18,5 +18,11 @@
 
 -- Script to drop the user from Federation StateStore in MySQL
 
-DROP USER 'FederationUser';
+USE [FederationStateStore]
+GO
+
+DROP USER FederationUser;
+GO
+
+DROP LOGIN FederationUser;
 GO

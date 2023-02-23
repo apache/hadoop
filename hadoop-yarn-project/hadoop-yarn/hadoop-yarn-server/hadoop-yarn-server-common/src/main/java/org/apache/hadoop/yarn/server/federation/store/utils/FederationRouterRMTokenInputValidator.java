@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.yarn.server.federation.store.utils;
 
 import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
