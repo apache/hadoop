@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation;
+package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 
 import java.util.Locale;
 
@@ -24,7 +24,7 @@ import java.util.Locale;
  * Provides methods to define if given exception can be categorised to certain category.
  * Each category has a different implementation of the interface.
  * */
-public abstract class RetryReasonAbbreviationCreator {
+public abstract class RetryReasonCategory {
 
   /**
    * Returns if given server response error can be converted to an abbreviation

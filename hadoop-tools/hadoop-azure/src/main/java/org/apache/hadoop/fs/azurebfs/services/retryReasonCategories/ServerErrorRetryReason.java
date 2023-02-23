@@ -16,14 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation;
-
-import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.RetryReasonAbbreviationCreator;
+package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_STATUS_CATEGORY_QUOTIENT;
 
-public class ServerErrorRetryReason extends RetryReasonAbbreviationCreator {
+public class ServerErrorRetryReason extends RetryReasonCategory {
 
   @Override
   public Boolean canCapture(final Exception ex,

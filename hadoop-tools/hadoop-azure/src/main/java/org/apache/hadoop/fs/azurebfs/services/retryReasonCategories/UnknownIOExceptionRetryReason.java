@@ -16,27 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation;
+package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 
-import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.RetryReasonAbbreviationCreator;
+import java.io.IOException;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_STATUS_CATEGORY_QUOTIENT;
 
-public class ClientErrorRetryReason extends RetryReasonAbbreviationCreator {
+public class UnknownIOExceptionRetryReason extends
+    RetryReasonCategory {
 
   @Override
   public Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
-    if (statusCode == null || statusCode / HTTP_STATUS_CATEGORY_QUOTIENT != 4) {
-      return false;
+    if (ex instanceof IOException) {
+      return true;
     }
-    return true;
+    return false;
   }
 
   @Override
   public String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
-    return statusCode + "";
+    return "IOE";
   }
 }

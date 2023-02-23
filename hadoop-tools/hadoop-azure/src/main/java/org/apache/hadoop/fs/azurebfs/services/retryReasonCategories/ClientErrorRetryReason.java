@@ -16,29 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation;
+package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 
-import java.net.SocketException;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_STATUS_CATEGORY_QUOTIENT;
 
-import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.RetryReasonAbbreviationCreator;
-
-
-public class UnknownSocketExceptionRetryReason extends
-    RetryReasonAbbreviationCreator {
+public class ClientErrorRetryReason extends RetryReasonCategory {
 
   @Override
   public Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
-    if (ex instanceof SocketException) {
-      return true;
+    if (statusCode == null || statusCode / HTTP_STATUS_CATEGORY_QUOTIENT != 4) {
+      return false;
     }
-    return false;
+    return true;
   }
 
   @Override
   public String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
-    return "SE";
+    return statusCode + "";
   }
 }

@@ -16,25 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation;
+package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 
-import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.RetryReasonAbbreviationCreator;
 
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.connectionResetMessage;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.connectionTimeoutJdkMessage;
 
-public class ConnectionResetRetryReason extends
-    RetryReasonAbbreviationCreator {
+public class ConnectionTimeoutRetryReason extends
+    RetryReasonCategory {
+
+  @Override
+  public String getAbbreviation(final Integer statusCode,
+      final String serverErrorMessage) {
+    return "CT";
+  }
 
   @Override
   public Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
-    return checkExceptionMessage(ex, connectionResetMessage);
-  }
-
-  @Override
-  public String getAbbreviation(final Integer statusCode,
-      final String serverErrorMessage) {
-    return "CR";
+    return checkExceptionMessage(ex, connectionTimeoutJdkMessage);
   }
 }

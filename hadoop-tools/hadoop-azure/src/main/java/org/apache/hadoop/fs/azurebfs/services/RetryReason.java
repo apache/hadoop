@@ -21,25 +21,46 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.ClientErrorRetryReason;
-import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.ConnectionResetRetryReason;
-import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.ConnectionTimeoutRetryReason;
-import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.ReadTimeoutRetryReason;
-import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.RetryReasonAbbreviationCreator;
-import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.ServerErrorRetryReason;
-import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.UnknownHostRetryReason;
-import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.UnknownIOExceptionRetryReason;
-import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.UnknownSocketExceptionRetryReason;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.ClientErrorRetryReason;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.ConnectionResetRetryReason;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.ConnectionTimeoutRetryReason;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.ReadTimeoutRetryReason;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.RetryReasonCategory;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.ServerErrorRetryReason;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.UnknownHostRetryReason;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.UnknownIOExceptionRetryReason;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.UnknownSocketExceptionRetryReason;
 
 
 /**
- * In case of retry, this enum would give the information on the reason for
- * previous API call.
+ * This utility class exposes methods to convert a server response-error to a
+ * category of error.
  * */
-public class RetryReason {
+class RetryReason {
 
-  private static List<RetryReasonAbbreviationCreator> rankedReasons
-      = new LinkedList<RetryReasonAbbreviationCreator>() {{
+  /**
+   * Linked-list of the implementations of RetryReasonCategory. The objects in the
+   * list are arranged by the rank of their significance.
+   * <ul>
+   *   <li>ServerError (statusCode==5XX), ClientError (statusCode==4XX) are
+   *   independent of other retryReason categories.</li>
+   *   <li>Since {@link java.net.SocketException} is subclass of
+   *   {@link java.io.IOException},
+   *   hence, {@link UnknownIOExceptionRetryReason} is placed before
+   *   {@link UnknownSocketExceptionRetryReason}</li>
+   *   <li>Since, connectionTimeout, readTimeout, and connectionReset are
+   *   {@link java.net.SocketException} exceptions with different messages,
+   *   hence, {@link ConnectionTimeoutRetryReason}, {@link ReadTimeoutRetryReason},
+   *   {@link ConnectionResetRetryReason} are above {@link UnknownSocketExceptionRetryReason}.
+   *   There is no order between the three reasons as they are differentiated
+   *   by exception-message.</li>
+   *   <li>Since, {@link java.net.UnknownHostException} is subclass of
+   *   {@link java.io.IOException}, {@link UnknownHostRetryReason} is placed
+   *   over {@link UnknownIOExceptionRetryReason}</li>
+   * </ul>
+   * */
+  private static List<RetryReasonCategory> rankedReasonCategories
+      = new LinkedList<RetryReasonCategory>() {{
     add(new ServerErrorRetryReason());
     add(new ClientErrorRetryReason());
     add(new UnknownIOExceptionRetryReason());
@@ -50,14 +71,18 @@ public class RetryReason {
     add(new ConnectionResetRetryReason());
   }};
 
+  private RetryReason() {
+
+  }
+
   static String getAbbreviation(Exception ex,
       Integer statusCode,
       String storageErrorMessage) {
     String result = null;
 
-    for (RetryReasonAbbreviationCreator retryReasonAbbreviationCreator : rankedReasons) {
+    for (RetryReasonCategory retryReasonCategory : rankedReasonCategories) {
       final String abbreviation
-          = retryReasonAbbreviationCreator.captureAndGetAbbreviation(ex,
+          = retryReasonCategory.captureAndGetAbbreviation(ex,
           statusCode, storageErrorMessage);
       if (abbreviation != null) {
         result = abbreviation;

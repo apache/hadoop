@@ -16,26 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation;
+package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 
+import java.net.UnknownHostException;
 
-import org.apache.hadoop.fs.azurebfs.services.retryReasonAbbreviationCreation.RetryReasonAbbreviationCreator;
-
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.connectionTimeoutJdkMessage;
-
-public class ConnectionTimeoutRetryReason extends
-    RetryReasonAbbreviationCreator {
-
-  @Override
-  public String getAbbreviation(final Integer statusCode,
-      final String serverErrorMessage) {
-    return "CT";
-  }
+public class UnknownHostRetryReason extends RetryReasonCategory {
 
   @Override
   public Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
-    return checkExceptionMessage(ex, connectionTimeoutJdkMessage);
+    if (ex instanceof UnknownHostException) {
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  public String getAbbreviation(final Integer statusCode,
+      final String serverErrorMessage) {
+    return "UH";
   }
 }
