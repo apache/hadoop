@@ -458,8 +458,8 @@ public class TestDistCpSystem {
     ToolRunner.run(conf, distcpTool, args);
     final long bytesCopied = NumberUtils.toLong(distcpTool.getConf().
             get(CONF_LABEL_DISTCP_TOTAL_BYTES_COPIED), 0);
-    assertEquals("Bytes copied by distcp tool should match source file length",
-        bytesCopied, srcLen);
+    assertEquals("Bytes copied by distcp tool does not match source file length",
+        srcLen, bytesCopied);
 
     String realTgtPath = testDst;
     FileStatus[] dststat = getFileStatus(fs, realTgtPath, srcfiles);
