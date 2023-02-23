@@ -7,17 +7,20 @@ import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader;
 import java.io.IOException;
 
 public class QiniuKodoInputStream extends FSInputStream {
+    private final boolean useRandomReader;
     private final FSInputStream generalStrategy;
     private final FSInputStream randomStrategy;
     private FSInputStream currentStrategy;
 
     public QiniuKodoInputStream(
             String key,
+            boolean useRandomReader,
             IBlockReader generalReader,
             IBlockReader randomReader,
             long contentLength,
             FileSystem.Statistics statistics
     ) {
+        this.useRandomReader = useRandomReader;
         this.generalStrategy = new QiniuKodoCommonInputStream(key, generalReader, contentLength, statistics);
         this.randomStrategy = new QiniuKodoCommonInputStream(key, randomReader, contentLength, statistics);
         this.currentStrategy = randomStrategy;
@@ -30,7 +33,9 @@ public class QiniuKodoInputStream extends FSInputStream {
 
     @Override
     public void seek(long pos) throws IOException {
-        this.currentStrategy = randomStrategy;
+        if (useRandomReader) {
+            this.currentStrategy = randomStrategy;
+        }
         currentStrategy.seek(pos);
     }
 

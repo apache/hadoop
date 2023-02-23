@@ -51,7 +51,11 @@ download:
       enable: true  # 默认开启
       blocks: 25    # 默认设置LRU缓存块数25
 
-
+  # 随机读取策略优化, 当seek被调用时，切换至random模式
+  random:
+    enable: false     # 默认关闭
+    blockSize: 65536  # 随机读取策略模式下的单次请求块大小
+    maxBlocks: 100       # 随机读取策略模式下的内存缓存块数
 
 # 文件上传相关设置
 upload:

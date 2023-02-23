@@ -11,6 +11,7 @@ public class DownloadConfig extends AConfigBase {
     public final SignConfig sign;
     public final boolean useNoCacheHeader;
     public final boolean useHttps;
+    public final RandomConfig random;
 
     public DownloadConfig(Configuration conf, String namespace) {
         super(conf, namespace);
@@ -20,6 +21,11 @@ public class DownloadConfig extends AConfigBase {
         this.sign = new SignConfig(conf, namespace + ".sign");
         this.useNoCacheHeader = useNoCacheHeader();
         this.useHttps = useHttps();
+        this.random = random();
+    }
+
+    private RandomConfig random() {
+        return new RandomConfig(conf, namespace + ".random");
     }
 
     private boolean useHttps() {

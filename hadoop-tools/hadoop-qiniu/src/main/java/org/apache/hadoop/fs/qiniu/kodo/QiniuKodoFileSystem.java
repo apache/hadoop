@@ -66,7 +66,11 @@ public class QiniuKodoFileSystem extends FileSystem {
         }
 
         this.generalblockReader = new QiniuKodoGeneralBlockReader(fsConfig, kodoClient);
-        this.randomBlockReader = new QiniuKodoRandomBlockReader(kodoClient, 1024, 100);
+        this.randomBlockReader = new QiniuKodoRandomBlockReader(
+                kodoClient,
+                fsConfig.download.random.blockSize,
+                fsConfig.download.random.maxBlocks
+        );
     }
 
     private volatile boolean makeSureWorkdirCreatedFlag = false;
@@ -115,6 +119,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         return new FSDataInputStream(
                 new QiniuKodoInputStream(
                         key,
+                        fsConfig.download.random.enable,
                         generalblockReader,
                         randomBlockReader,
                         len, statistics
