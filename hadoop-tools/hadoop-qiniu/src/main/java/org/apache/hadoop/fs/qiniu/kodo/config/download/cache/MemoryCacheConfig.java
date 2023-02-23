@@ -15,7 +15,7 @@ public class MemoryCacheConfig extends AConfigBase {
     }
 
     private boolean enable() {
-        return conf.getBoolean(namespace + ".enable", false);
+        return conf.getBoolean(namespace + ".enable", true);
     }
 
     /**

@@ -9,8 +9,9 @@ import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoCachedClient;
 import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.download.EmptyInputStream;
-import org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.download.QiniuKodoInputStream;
+import org.apache.hadoop.fs.qiniu.kodo.download.blockreader.QiniuKodoGeneralBlockReader;
+import org.apache.hadoop.fs.qiniu.kodo.download.blockreader.QiniuKodoRandomBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.upload.QiniuKodoOutputStream;
 import org.apache.hadoop.fs.qiniu.kodo.util.QiniuKodoUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -39,7 +40,8 @@ public class QiniuKodoFileSystem extends FileSystem {
     private IQiniuKodoClient kodoClient;
 
     private QiniuKodoFsConfig fsConfig;
-    private QiniuKodoBlockReader blockReader;
+    private QiniuKodoGeneralBlockReader generalblockReader;
+    private QiniuKodoRandomBlockReader randomBlockReader;
     private ExecutorService uploadExecutorService;
 
     @Override
@@ -63,7 +65,8 @@ public class QiniuKodoFileSystem extends FileSystem {
             this.kodoClient = new QiniuKodoClient(bucket, fsConfig, statistics);
         }
 
-        this.blockReader = new QiniuKodoBlockReader(fsConfig, kodoClient);
+        this.generalblockReader = new QiniuKodoGeneralBlockReader(fsConfig, kodoClient);
+        this.randomBlockReader = new QiniuKodoRandomBlockReader(kodoClient, 1024, 100);
     }
 
     private volatile boolean makeSureWorkdirCreatedFlag = false;
@@ -112,7 +115,8 @@ public class QiniuKodoFileSystem extends FileSystem {
         return new FSDataInputStream(
                 new QiniuKodoInputStream(
                         key,
-                        blockReader,
+                        generalblockReader,
+                        randomBlockReader,
                         len, statistics
                 )
         );
@@ -121,7 +125,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     @Override
     public void close() throws IOException {
         super.close();
-        blockReader.close();
+        generalblockReader.close();
     }
 
     private synchronized ExecutorService getUploadExecutorService() {
@@ -148,7 +152,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
 
         if (overwrite) {
-            blockReader.deleteBlocks(key);
+            generalblockReader.deleteBlocks(key);
         }
 
         return new FSDataOutputStream(
@@ -173,7 +177,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         if (overwrite) {
-            blockReader.deleteBlocks(key);
+            generalblockReader.deleteBlocks(key);
         }
         return new FSDataOutputStream(
                 new QiniuKodoOutputStream(
@@ -321,7 +325,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     private boolean deleteFile(String fileKey) throws IOException {
         fileKey = QiniuKodoUtils.keyToFileKey(fileKey);
         LOG.debug("delete, fileKey:" + fileKey);
-        blockReader.deleteBlocks(fileKey);
+        generalblockReader.deleteBlocks(fileKey);
         return kodoClient.deleteKey(fileKey);
     }
 
@@ -332,7 +336,7 @@ public class QiniuKodoFileSystem extends FileSystem {
             // 若非递归且不止一个，那么抛异常
             throw new IOException("Dir is not empty");
         }
-        blockReader.deleteBlocks(dirKey);
+        generalblockReader.deleteBlocks(dirKey);
         return kodoClient.deleteKeys(dirKey);
     }
 

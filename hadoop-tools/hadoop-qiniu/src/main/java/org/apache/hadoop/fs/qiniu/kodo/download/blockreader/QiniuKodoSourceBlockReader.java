@@ -1,4 +1,4 @@
-package org.apache.hadoop.fs.qiniu.kodo.download;
+package org.apache.hadoop.fs.qiniu.kodo.download.blockreader;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.DataFetcherBlockReader;
@@ -8,10 +8,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
-public class QiniuKodoSourceDataFetcher extends DataFetcherBlockReader {
+public class QiniuKodoSourceBlockReader extends DataFetcherBlockReader {
     private final IQiniuKodoClient client;
 
-    public QiniuKodoSourceDataFetcher(
+    public QiniuKodoSourceBlockReader(
             int blockSize,
             IQiniuKodoClient client) {
         super(blockSize);

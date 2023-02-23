@@ -10,6 +10,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.function.Function;
 
 public class TestPrepareHelper {
     private final Path preparePath;
@@ -101,7 +102,6 @@ public class TestPrepareHelper {
      * @param length 文件大小
      */
     public void prepareBigFile(String path, int length) throws Exception {
-        boolean shouldCreate = false;
         try {
             if (fs.getFileStatus(new Path(path)).getLen() == length) {
                 return;
@@ -113,5 +113,14 @@ public class TestPrepareHelper {
         String oldPrefix = QiniuKodoUtils.pathToKey(fs.getWorkingDirectory(), p);
         String newPrefix = QiniuKodoUtils.pathToKey(fs.getWorkingDirectory(), new Path(path));
         client.copyKey(oldPrefix, newPrefix);
+    }
+
+    public void prepareFileByContent(String path, int length, Function<Integer, Integer> f) throws IOException {
+        Path p = new Path(path);
+        FSDataOutputStream fos = fs.create(p);
+        for (int i = 0; i < length; i++) {
+            fos.write(f.apply(i));
+        }
+        fos.close();
     }
 }

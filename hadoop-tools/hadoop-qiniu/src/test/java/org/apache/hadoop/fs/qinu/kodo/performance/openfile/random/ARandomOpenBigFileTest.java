@@ -4,7 +4,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.qinu.kodo.performance.QiniuKodoPerformanceBaseTest;
-import org.apache.hadoop.fs.qinu.kodo.performance.openfile.OpenBigFileCommonUtil;
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,14 +45,15 @@ public abstract class ARandomOpenBigFileTest extends QiniuKodoPerformanceBaseTes
 
     @Override
     protected long testImpl(String testDir, FileSystem fs, ExecutorService service) throws Exception {
-        Path p = OpenBigFileCommonUtil.makeSureExistsBigFile(testDir, fs, blockSize(), blocks());
-        long ms = System.currentTimeMillis();
+        String path = testDir + "/bigFile";
+        getPrepareHelper().prepareBigFile(path, blockSize() * blocks());
 
         for (int i = 0; i < readers(); i++) {
             service.submit(() -> {
                 try {
-                    FSDataInputStream fis = fs.open(p);
+                    FSDataInputStream fis = fs.open(new Path(path));
                     int len = fis.available();
+                    Assert.assertEquals(blockSize() * blocks(), len);
 
                     for (int j = 0; j < randomReadCount(); j++) {
                         int pos = (int) (Math.random() * len);
@@ -67,6 +68,7 @@ public abstract class ARandomOpenBigFileTest extends QiniuKodoPerformanceBaseTes
 
             });
         }
+        long ms = System.currentTimeMillis();
         awaitAllExecutors(service);
         return System.currentTimeMillis() - ms;
     }

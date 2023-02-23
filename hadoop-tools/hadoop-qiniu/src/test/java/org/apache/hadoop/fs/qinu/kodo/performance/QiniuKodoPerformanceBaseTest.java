@@ -38,13 +38,20 @@ public abstract class QiniuKodoPerformanceBaseTest {
         conf.addResource("core-site.xml");
         conf.addResource("contract-test-options.xml");
 
-        kodoFs.initialize(URI.create(conf.get("fs.contract.test.fs.kodo")), conf);
-        s3aFs.initialize(URI.create(conf.get("fs.contract.test.fs.s3a")), conf);
+        if (enableKodoTest()) {
+            kodoFs.initialize(URI.create(conf.get("fs.contract.test.fs.kodo")), conf);
+        }
+
+        if (enableS3ATest()) {
+            s3aFs.initialize(URI.create(conf.get("fs.contract.test.fs.s3a")), conf);
+        }
 
         if (!testResult.containsKey(getSceneString())) {
             testResult.put(getSceneString(), new HashMap<>());
         }
+
         testResult.get(getSceneString()).put("data", testInputData());
+        
         if (getSceneDescription() != null) {
             testResult.get(getSceneString()).put("description", getSceneDescription());
         }
@@ -120,8 +127,19 @@ public abstract class QiniuKodoPerformanceBaseTest {
         return null;
     }
 
+    protected boolean enableS3ATest() {
+        return true;
+    }
+
+    protected boolean enableKodoTest() {
+        return true;
+    }
+
     @Test
     public void testS3A() throws Exception {
+        if (!enableS3ATest()) {
+            return;
+        }
         long time = testS3AImpl(String.format("%s/%s", getS3ATestDir(), getSceneWorkDirName()), s3aFs);
         LOG.info(getSceneString() + " (S3A) " + "cost time: " + time);
         testResult.get(getSceneString()).put("s3aTime", time);
@@ -130,6 +148,9 @@ public abstract class QiniuKodoPerformanceBaseTest {
 
     @Test
     public void testKodo() throws Exception {
+        if (!enableKodoTest()) {
+            return;
+        }
         long time = testKodoImpl(String.format("%s/%s", getKodoTestDir(), getSceneWorkDirName()), kodoFs);
         LOG.info(getSceneString() + " (Kodo) " + "cost time: " + time);
 

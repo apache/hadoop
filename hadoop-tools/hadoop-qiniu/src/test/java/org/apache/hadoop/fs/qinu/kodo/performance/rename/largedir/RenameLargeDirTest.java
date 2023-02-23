@@ -28,6 +28,7 @@ public class RenameLargeDirTest extends QiniuKodoPerformanceBaseTest {
         });
         long ms = System.currentTimeMillis();
         awaitAllExecutors(service);
+        fs.close();
         return System.currentTimeMillis() - ms;
     }
 }
