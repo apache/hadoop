@@ -122,19 +122,12 @@ public class TimeoutOptimizer {
     }
 
     private void initTimeouts() {
-        if (!shouldOptimizeTimeout) {
-            requestTimeout = -1;
-            readTimeout = -1;
-            return;
-        }
 
         String query = url.getQuery();
         Integer timeoutPos = new Integer(query.indexOf("timeout"));
         if (timeoutPos != null && timeoutPos < 0) {
             // no value of timeout exists in the URL
             // no optimization is needed for this particular request as well
-            requestTimeout = -1;
-            readTimeout = -1;
             shouldOptimizeTimeout = false;
             return;
         }
@@ -228,6 +221,9 @@ public class TimeoutOptimizer {
 
     private void updateUrl() {
         // updates URL with existing request timeout value
+        if (!shouldOptimizeTimeout) {
+            return;
+        }
         URL updatedUrl = null;
         try {
             URIBuilder uriBuilder = new URIBuilder(url.toURI());
