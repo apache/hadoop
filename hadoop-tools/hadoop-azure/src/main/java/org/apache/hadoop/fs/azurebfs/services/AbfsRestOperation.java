@@ -25,6 +25,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,7 +96,8 @@ public class AbfsRestOperation {
     return url;
   }
 
-  public TimeoutOptimizer getTimeoutOptimizer() { return timeoutOptimizer; }
+  @VisibleForTesting
+  protected TimeoutOptimizer getTimeoutOptimizer() { return timeoutOptimizer; }
 
   public List<AbfsHttpHeader> getRequestHeaders() {
     return requestHeaders;

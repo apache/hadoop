@@ -122,7 +122,6 @@ public class TimeoutOptimizer {
     }
 
     private void initTimeouts() {
-
         String query = url.getQuery();
         Integer timeoutPos = new Integer(query.indexOf("timeout"));
         if (timeoutPos != null && timeoutPos < 0) {

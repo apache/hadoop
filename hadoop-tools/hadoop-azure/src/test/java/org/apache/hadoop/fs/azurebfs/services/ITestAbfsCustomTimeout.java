@@ -89,12 +89,12 @@ public class ITestAbfsCustomTimeout extends AbstractAbfsIntegrationTest {
             abfsConfig.set(config, Integer.toString(timeout));
             AbfsRestOperation op = getMockAbfsRestOp(opType, newFs);
             final int[] finalTimeout = {timeout};
+            final int requestCount[] = new int[1];
+            requestCount[0] = 4;
             Mockito.doAnswer(new Answer() {
-                int requestCount = 4;
-
                 public Object answer(InvocationOnMock invocation) {
-                    if (requestCount > 0) {
-                        requestCount--;
+                    if (requestCount[0] > 0) {
+                        requestCount[0] --;
                         assertEquals(finalTimeout[0], op.getTimeoutOptimizer().getRequestTimeout());
                         if (finalTimeout[0] * requestTimeoutIncRate > maxRequestTimeout) {
                             finalTimeout[0] = maxRequestTimeout;
@@ -122,11 +122,13 @@ public class ITestAbfsCustomTimeout extends AbstractAbfsIntegrationTest {
         AbfsRestOperation spyRestOp = Mockito.spy(new AbfsRestOperation(opType, spyClient, HTTP_METHOD_HEAD, url, new ArrayList<>()));
 
         AbfsHttpOperation mockHttpOp = Mockito.spy(spyRestOp.createHttpOperationInstance());
+
+        final int count[] = new int[1];
+        count[0] = 0;
         Mockito.doAnswer(new Answer() {
-            private int count = 0;
             @Override
             public Object answer(InvocationOnMock invocationOnMock) {
-                if (count++ == 4) {
+                if (count[0]++ == 4) {
                     return HTTP_OK;
                 } else {
                     return -1;

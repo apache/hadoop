@@ -28,6 +28,7 @@ import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
@@ -168,7 +169,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return connection.getHeaderField(httpHeader);
   }
 
-  public TimeoutOptimizer getTimeoutOptimizer() {
+  @VisibleForTesting
+  protected TimeoutOptimizer getTimeoutOptimizer() {
     return timeoutOptimizer;
   }
 
