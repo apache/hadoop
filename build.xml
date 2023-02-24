@@ -18,7 +18,7 @@
 			<arg value='--location' />
 			<arg value='https://api.github.com/repos/OpsHubTech/hadoop/pulls/${MRnumber}' />
 			<arg value='--header' />
-			<arg value='Authorization: Bearer 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' />
+			<arg value='Authorization: Bearer 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' />
 			<arg value='--silent' />
 		</exec>
 		
