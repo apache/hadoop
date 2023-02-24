@@ -20,4 +20,6 @@ jobs:
         java-version: '11'
         distribution: 'temurin'
     - name: Build with Ant
-      run: ant -noinput -buildfile build.xml
+      run: |
+        echo PR_Number=${{ github.event.number }} > .env
+        ant -noinput -buildfile build.xml

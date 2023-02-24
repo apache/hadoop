@@ -1,25 +1,24 @@
 <project name="Merge Request Quality Check" basedir="." default="uploadCoverageFile">
 
-	<!-- This ant target extracts the tags and source branchname from the Merge Request number using Gitlab API.-->
+	<!-- This ant target extracts the tags and source branchname from the Merge Request number using Github API.-->
 	<target name="getTagAndBranchDetailsFromMR" description="This ant target fetches the start tag, to tag and source branch name from the Merge request.">
 
-		<!-- Access the jenkins variables -->
-		<property environment="env" />
+		<!-- Access the variables from file -->
+		<property file=".env"/>
 
-		<!-- On production, the Merge request number can be accessed from ${env.CHANGE_ID}-->
-		<!-- Currently, Hardcoding the Merge request number. -->
-		<property name="MRnumber" value="5126" />
+		<!-- On production, the Merge request number can be accessed from ${PR_Number}-->
+		<property name="MRnumber" value="${PR_Number}" />
 		<echo message="Obtained Merge Request with MR number: ${MRnumber}" />
 		
-		<!-- Project id and gitlab PAT token needs to be set in the Gitlab API for whichever project the analysis is to be done.-->
+		<!-- Project id and github PAT token needs to be set in the Github API for whichever project the analysis is to be done.-->
 		<echo message="Initiating the curl request to fetch from tag and to tag from Merge Request."/>
 		<exec executable='curl' failonerror="true" outputproperty="reponse">
 			<arg value='--request' />
 			<arg value='GET'/>
 			<arg value='--location' />
-			<arg value='https://api.github.com/repos/apache/hadoop/pulls/${MRnumber}' />
+			<arg value='https://api.github.com/repos/OpsHubTech/hadoop/pulls/${MRnumber}' />
 			<arg value='--header' />
-			<arg value='Authorization: Bearer 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' />
+			<arg value='Authorization: Bearer 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' />
 			<arg value='--silent' />
 		</exec>
 		
@@ -58,7 +57,11 @@
 			<arg value='--form' />
 			<arg value='files=@jacoco.xml' />
 			<arg value='--form' />
-			<arg value='file_attributes={"reportType":"jacoco",  "fileTag":"merged"}' />
+			<arg value='files=@jacoco_2.xml' />
+			<arg value='--form' />
+			<arg value='file_attributes={"reportType":"jacoco",  "fileTag":"integrated"}' />
+			<arg value='--form' />
+			<arg value='file_attributes={"reportType":"jacoco",  "fileTag":"unit"}' />
 			<arg value='--form' />
 			<arg value='file_category=COVERAGE' />
 			<arg value='--form' />
@@ -73,8 +76,6 @@
 			<arg value='toTag=${toTag}' />
 			<arg value='--form' />
 			<arg value='branchName=${branchName}' />
-			<arg value='--form' />
-			<arg value='hardRefresh=1' />
 			<arg value='--silent' />
 		</exec>
 		
