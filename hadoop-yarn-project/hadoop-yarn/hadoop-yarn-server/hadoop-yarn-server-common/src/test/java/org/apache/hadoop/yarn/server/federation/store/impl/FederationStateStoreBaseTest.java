@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.TimeZone;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -164,12 +165,9 @@ public abstract class FederationStateStoreBaseTest {
 
     SubClusterDeregisterRequest deregisterRequest = SubClusterDeregisterRequest
         .newInstance(subClusterId, SubClusterState.SC_UNREGISTERED);
-    try {
-      stateStore.deregisterSubCluster(deregisterRequest);
-      Assert.fail();
-    } catch (FederationStateStoreException e) {
-      Assert.assertTrue(e.getMessage().startsWith("SubCluster SC not found"));
-    }
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "SubCluster SC not found", () -> stateStore.deregisterSubCluster(deregisterRequest));
   }
 
   @Test
@@ -266,13 +264,9 @@ public abstract class FederationStateStoreBaseTest {
     SubClusterHeartbeatRequest heartbeatRequest = SubClusterHeartbeatRequest
         .newInstance(subClusterId, SubClusterState.SC_RUNNING, "capability");
 
-    try {
-      stateStore.subClusterHeartbeat(heartbeatRequest);
-      Assert.fail();
-    } catch (FederationStateStoreException e) {
-      Assert.assertTrue(e.getMessage()
-          .startsWith("SubCluster SC does not exist; cannot heartbeat"));
-    }
+    LambdaTestUtils.intercept(YarnException.class,
+        "SubCluster SC does not exist; cannot heartbeat",
+        () -> stateStore.subClusterHeartbeat(heartbeatRequest));
   }
 
   // Test FederationApplicationHomeSubClusterStore
@@ -1049,5 +1043,25 @@ public abstract class FederationStateStoreBaseTest {
     Assert.assertEquals(storeToken.getTokenInfo(), getStoreTokenResp.getTokenInfo());
 
     checkRouterStoreToken(identifier, getStoreTokenResp);
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testGetCurrentVersion() {
+    stateStore.getCurrentVersion();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testStoreVersion() throws Exception {
+    stateStore.storeVersion();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testLoadVersion() throws Exception {
+    stateStore.loadVersion();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testCheckVersion() throws Exception {
+    stateStore.checkVersion();
   }
 }

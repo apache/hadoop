@@ -19,8 +19,8 @@
 package org.apache.hadoop.mapreduce.jobhistory;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -40,8 +40,7 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.Test;
 
 public class TestEvents {
 
@@ -51,9 +50,9 @@ public class TestEvents {
    * 
    * @throws Exception
    */
-  @Test
-  @Timeout(10000)
+  @Test(timeout = 10000)
   public void testTaskAttemptFinishedEvent() throws Exception {
+
     JobID jid = new JobID("001", 1);
     TaskID tid = new TaskID(jid, TaskType.REDUCE, 2);
     TaskAttemptID taskAttemptId = new TaskAttemptID(tid, 3);
@@ -80,18 +79,17 @@ public class TestEvents {
    * @throws Exception
    */
 
-  @Test
-  @Timeout(10000)
+  @Test(timeout = 10000)
   public void testJobPriorityChange() throws Exception {
     org.apache.hadoop.mapreduce.JobID jid = new JobID("001", 1);
     JobPriorityChangeEvent test = new JobPriorityChangeEvent(jid,
         JobPriority.LOW);
     assertThat(test.getJobId().toString()).isEqualTo(jid.toString());
     assertThat(test.getPriority()).isEqualTo(JobPriority.LOW);
-  }
 
-  @Test
-  @Timeout(10000)
+  }
+  
+  @Test(timeout = 10000)
   public void testJobQueueChange() throws Exception {
     org.apache.hadoop.mapreduce.JobID jid = new JobID("001", 1);
     JobQueueChangeEvent test = new JobQueueChangeEvent(jid,
@@ -105,14 +103,14 @@ public class TestEvents {
    * 
    * @throws Exception
    */
-  @Test
-  @Timeout(10000)
+  @Test(timeout = 10000)
   public void testTaskUpdated() throws Exception {
     JobID jid = new JobID("001", 1);
     TaskID tid = new TaskID(jid, TaskType.REDUCE, 2);
     TaskUpdatedEvent test = new TaskUpdatedEvent(tid, 1234L);
     assertThat(test.getTaskId().toString()).isEqualTo(tid.toString());
     assertThat(test.getFinishTime()).isEqualTo(1234L);
+
   }
 
   /*
@@ -120,9 +118,9 @@ public class TestEvents {
    * instance of HistoryEvent Different HistoryEvent should have a different
    * datum.
    */
-  @Test
-  @Timeout(10000)
+  @Test(timeout = 10000)
   public void testEvents() throws Exception {
+
     EventReader reader = new EventReader(new DataInputStream(
         new ByteArrayInputStream(getEvents())));
     HistoryEvent e = reader.getNextEvent();
