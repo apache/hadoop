@@ -8,6 +8,7 @@
 
 		<!-- On production, the Merge request number can be accessed from ${PR_Number}-->
 		<property name="MRnumber" value="${PR_Number}" />
+		<property name="Pat" value="ghp_${PAT}" />
 		<echo message="Obtained Merge Request with MR number: ${MRnumber}" />
 		
 		<!-- Project id and github PAT token needs to be set in the Github API for whichever project the analysis is to be done.-->
@@ -18,7 +19,7 @@
 			<arg value='--location' />
 			<arg value='https://api.github.com/repos/OpsHubTech/hadoop/pulls/${MRnumber}' />
 			<arg value='--header' />
-			<arg value='Authorization: Bearer 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' />
+			<arg value='Authorization: Bearer ${Pat}' />
 			<arg value='--silent' />
 		</exec>
 		
