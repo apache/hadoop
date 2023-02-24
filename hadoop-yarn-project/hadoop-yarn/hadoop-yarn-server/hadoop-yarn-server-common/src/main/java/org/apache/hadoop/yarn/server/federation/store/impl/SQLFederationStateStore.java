@@ -997,7 +997,17 @@ public class SQLFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public Version loadVersion() {
+  public Version loadVersion() throws Exception {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public void storeVersion() throws Exception {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public void checkVersion() throws Exception {
     throw new NotImplementedException("Code is not implemented");
   }
 
