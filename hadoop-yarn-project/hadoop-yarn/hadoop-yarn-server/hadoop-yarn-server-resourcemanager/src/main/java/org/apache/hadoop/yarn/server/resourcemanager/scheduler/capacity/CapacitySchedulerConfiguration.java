@@ -810,12 +810,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return Collections.unmodifiableSet(set);
   }
 
-  public void setCapacityVector(String queuePath, String label, String capacityVector) {
+  public void setCapacityVector(QueuePath queuePath, String label, String capacityVector) {
     String capacityPropertyName = getNodeLabelPrefix(queuePath, label) + CAPACITY;
     set(capacityPropertyName, capacityVector);
   }
 
-  public void setMaximumCapacityVector(String queuePath, String label, String capacityVector) {
+  public void setMaximumCapacityVector(QueuePath queuePath, String label, String capacityVector) {
     String capacityPropertyName = getNodeLabelPrefix(queuePath, label) + MAXIMUM_CAPACITY;
     set(capacityPropertyName, capacityVector);
   }
@@ -2687,7 +2687,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       QueuePath queuePath, Set<String> labels) {
     Map<String, QueueCapacityVector> queueResourceVectors = new HashMap<>();
     for (String label : labels) {
-      String propertyName = CapacitySchedulerConfiguration.getNodeLabelPrefix(
+      String propertyName = QueuePrefixes.getNodeLabelPrefix(
           queuePath, label) + CapacitySchedulerConfiguration.CAPACITY;
       String capacityString = get(propertyName);
       queueResourceVectors.put(label, queueCapacityConfigParser.parse(capacityString, queuePath));
@@ -2697,10 +2697,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   public Map<String, QueueCapacityVector> parseConfiguredMaximumCapacityVector(
-      String queuePath, Set<String> labels, QueueCapacityVector defaultVector) {
+      QueuePath queuePath, Set<String> labels, QueueCapacityVector defaultVector) {
     Map<String, QueueCapacityVector> queueResourceVectors = new HashMap<>();
     for (String label : labels) {
-      String propertyName = CapacitySchedulerConfiguration.getNodeLabelPrefix(
+      String propertyName = QueuePrefixes.getNodeLabelPrefix(
           queuePath, label) + CapacitySchedulerConfiguration.MAXIMUM_CAPACITY;
       String capacityString = get(propertyName);
       QueueCapacityVector capacityVector = queueCapacityConfigParser.parse(capacityString,

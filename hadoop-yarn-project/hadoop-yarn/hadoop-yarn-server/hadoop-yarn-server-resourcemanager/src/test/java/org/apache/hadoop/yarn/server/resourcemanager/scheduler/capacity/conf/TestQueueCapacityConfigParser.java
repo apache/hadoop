@@ -85,8 +85,7 @@ public class TestQueueCapacityConfigParser {
     Assert.assertEquals(PERCENTAGE_VALUE, vcore.getResourceValue(), EPSILON);
 
     QueueCapacityVector rootCapacityVector =
-        capacityConfigParser.parse(Float.toString(PERCENTAGE_VALUE),
-        CapacitySchedulerConfiguration.ROOT);
+        capacityConfigParser.parse(Float.toString(PERCENTAGE_VALUE), ROOT);
 
     QueueCapacityVectorEntry memoryRoot = rootCapacityVector.getResource(MEMORY_URI);
     QueueCapacityVectorEntry vcoreRoot = rootCapacityVector.getResource(VCORES_URI);

@@ -33,14 +33,15 @@ import java.io.IOException;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerAutoCreatedQueueBase.GB;
 
 public class CapacitySchedulerQueueCalculationTestBase {
-  protected static final String A = "root.a";
-  protected static final String A1 = "root.a.a1";
-  protected static final String A11 = "root.a.a1.a11";
-  protected static final String A12 = "root.a.a1.a12";
-  protected static final String A2 = "root.a.a2";
-  protected static final String B = "root.b";
-  protected static final String B1 = "root.b.b1";
-  protected static final String C = "root.c";
+  protected static final QueuePath ROOT = new QueuePath("root");
+  protected static final QueuePath A = new QueuePath("root.a");
+  protected static final QueuePath A1 = new QueuePath("root.a.a1");
+  protected static final QueuePath A11 = new QueuePath("root.a.a1.a11");
+  protected static final QueuePath A12 = new QueuePath("root.a.a1.a12");
+  protected static final QueuePath A2 = new QueuePath("root.a.a2");
+  protected static final QueuePath B = new QueuePath("root.b");
+  protected static final QueuePath B1 = new QueuePath("root.b.b1");
+  protected static final QueuePath C = new QueuePath("root.c");
 
   private static final String CAPACITY_VECTOR_TEMPLATE = "[memory=%s, vcores=%s]";
 
@@ -57,14 +58,14 @@ public class CapacitySchedulerQueueCalculationTestBase {
     csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
 
-    csConf.setQueues("root", new String[]{"a", "b"});
-    csConf.setCapacity("root.a", 50f);
-    csConf.setCapacity("root.b", 50f);
-    csConf.setQueues("root.a", new String[]{"a1", "a2"});
-    csConf.setCapacity("root.a.a1", 100f);
-    csConf.setQueues("root.a.a1", new String[]{"a11", "a12"});
-    csConf.setCapacity("root.a.a1.a11", 50f);
-    csConf.setCapacity("root.a.a1.a12", 50f);
+    csConf.setQueues(ROOT, new String[]{"a", "b"});
+    csConf.setCapacity(A, 50f);
+    csConf.setCapacity(B, 50f);
+    csConf.setQueues(A, new String[]{"a1", "a2"});
+    csConf.setCapacity(A1, 100f);
+    csConf.setQueues(A1, new String[]{"a11", "a12"});
+    csConf.setCapacity(A11, 50f);
+    csConf.setCapacity(A12, 50f);
 
     mgr = new NullRMNodeLabelsManager();
     mgr.init(csConf);
