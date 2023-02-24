@@ -59,15 +59,15 @@ Generic data is published by the YARN Resource Manager to the timeline store
 Current status
 
 1. The core functionality of the timeline server has been completed.
-1. It works in both secure and non secure clusters.
-1. The generic history service is built on the timeline store.
-1. The history can be stored in memory or in a leveldb database store;
+2. It works in both secure and non secure clusters.
+3. The generic history service is built on the timeline store.
+4. The history can be stored in memory or in a leveldb database store;
   the latter ensures the history is preserved over Timeline Server restarts.
-1. The ability to install framework specific UIs in YARN is not supported.
-1. Application specific information is only available via RESTful APIs using JSON type content.
-1. The "Timeline Server v1" REST API has been declared one of the REST APIs
+5. The ability to install framework specific UIs in YARN is not supported.
+6. Application specific information is only available via RESTful APIs using JSON type content.
+7. The "Timeline Server v1" REST API has been declared one of the REST APIs
   whose compatibility will be maintained in future releases.
-1. The single-server implementation of the Timeline Server places a limit on
+8. The single-server implementation of the Timeline Server places a limit on
   the scalability of the service; it also prevents the service being
   High-Availability component of the YARN infrastructure.
 
@@ -75,7 +75,7 @@ Future Plans
 
 1. Future releases will introduce a next generation timeline service
 which is scalable and reliable, ["Timeline Service v2"](./TimelineServiceV2.html).
-1. The expanded features of this service *may not* be available to
+2. The expanded features of this service *may not* be available to
 applications using the Timeline Server v1 REST API. That includes extended
 data structures as well as the ability of the client to failover between Timeline Server instances.
 
@@ -126,25 +126,25 @@ and cluster operators.
 
 #### Basic Configuration
 
-| Configuration Property | Description |
-|:---- |:---- |
-| `yarn.timeline-service.enabled` | In the server side it indicates whether timeline service is enabled or not. And in the client side, users can enable it to indicate whether client wants to use timeline service. If it's enabled in the client side along with security, then yarn client tries to fetch the delegation tokens for the timeline server. Defaults to `false`. |
-| `yarn.resourcemanager.system-metrics-publisher.enabled` | The setting that controls whether or not YARN system metrics are published on the timeline server by RM. Defaults to `false`. |
-| `yarn.timeline-service.generic-application-history.enabled` | Indicate to clients whether to query generic application data from timeline history-service or not. If not enabled then application data is queried only from Resource Manager. Defaults to `false`. |
+| Configuration Property                                      | Description                                                                                                                                                                                                                                                                                                                                   |
+|:------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.timeline-service.enabled`                             | In the server side it indicates whether timeline service is enabled or not. And in the client side, users can enable it to indicate whether client wants to use timeline service. If it's enabled in the client side along with security, then yarn client tries to fetch the delegation tokens for the timeline server. Defaults to `false`. |
+| `yarn.resourcemanager.system-metrics-publisher.enabled`     | The setting that controls whether or not YARN system metrics are published on the timeline server by RM. Defaults to `false`.                                                                                                                                                                                                                 |
+| `yarn.timeline-service.generic-application-history.enabled` | Indicate to clients whether to query generic application data from timeline history-service or not. If not enabled then application data is queried only from Resource Manager. Defaults to `false`.                                                                                                                                          |
 
 #### Timeline store and state store configuration
 
-| Configuration Property | Description |
-|:---- |:---- |
-| `yarn.timeline-service.store-class` | Store class name for timeline store. Defaults to `org.apache.hadoop.yarn.server.timeline.LeveldbTimelineStore`. |
-| `yarn.timeline-service.leveldb-timeline-store.path` | Store file name for leveldb timeline store. Defaults to `${hadoop.tmp.dir}/yarn/timeline`. |
-| `yarn.timeline-service.leveldb-timeline-store.ttl-interval-ms` | Length of time to wait between deletion cycles of leveldb timeline store in milliseconds. Defaults to `300000`. |
-| `yarn.timeline-service.leveldb-timeline-store.read-cache-size` | Size of read cache for uncompressed blocks for leveldb timeline store in bytes. Defaults to `104857600`. |
-| `yarn.timeline-service.leveldb-timeline-store.start-time-read-cache-size` | Size of cache for recently read entity start times for leveldb timeline store in number of entities. Defaults to `10000`. |
-| `yarn.timeline-service.leveldb-timeline-store.start-time-write-cache-size` | Size of cache for recently written entity start times for leveldb timeline store in number of entities. Defaults to `10000`. |
-| `yarn.timeline-service.recovery.enabled` | Defaults to `false`. |
-| `yarn.timeline-service.state-store-class` | Store class name for timeline state store. Defaults to `org.apache.hadoop.yarn.server.timeline.recovery.LeveldbTimelineStateStore`. |
-| `yarn.timeline-service.leveldb-state-store.path` | Store file name for leveldb timeline state store. |
+| Configuration Property                                                     | Description                                                                                                                         |
+|:---------------------------------------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.timeline-service.store-class`                                        | Store class name for timeline store. Defaults to `org.apache.hadoop.yarn.server.timeline.LeveldbTimelineStore`.                     |
+| `yarn.timeline-service.leveldb-timeline-store.path`                        | Store file name for leveldb timeline store. Defaults to `${hadoop.tmp.dir}/yarn/timeline`.                                          |
+| `yarn.timeline-service.leveldb-timeline-store.ttl-interval-ms`             | Length of time to wait between deletion cycles of leveldb timeline store in milliseconds. Defaults to `300000`.                     |
+| `yarn.timeline-service.leveldb-timeline-store.read-cache-size`             | Size of read cache for uncompressed blocks for leveldb timeline store in bytes. Defaults to `104857600`.                            |
+| `yarn.timeline-service.leveldb-timeline-store.start-time-read-cache-size`  | Size of cache for recently read entity start times for leveldb timeline store in number of entities. Defaults to `10000`.           |
+| `yarn.timeline-service.leveldb-timeline-store.start-time-write-cache-size` | Size of cache for recently written entity start times for leveldb timeline store in number of entities. Defaults to `10000`.        |
+| `yarn.timeline-service.recovery.enabled`                                   | Defaults to `false`.                                                                                                                |
+| `yarn.timeline-service.state-store-class`                                  | Store class name for timeline state store. Defaults to `org.apache.hadoop.yarn.server.timeline.recovery.LeveldbTimelineStateStore`. |
+| `yarn.timeline-service.leveldb-state-store.path`                           | Store file name for leveldb timeline state store.                                                                                   |
 
 #### Web and RPC Configuration
 
@@ -167,13 +167,13 @@ selected if this policy is `HTTPS_ONLY`.
 
 #### Advanced Server-side configuration
 
-| Configuration Property | Description |
-|:---- |:---- |
-| `yarn.timeline-service.ttl-enable` | Enable deletion of aged data within the timeline store. Defaults to `true`. |
-| `yarn.timeline-service.ttl-ms` | Time to live for timeline store data in milliseconds. Defaults to `604800000` (7 days). |
-| `yarn.timeline-service.handler-thread-count` | Handler thread count to serve the client RPC requests. Defaults to `10`. |
-| `yarn.timeline-service.client.max-retries` | The maximum number of retries for attempts to publish data to the timeline service.Defaults to `30`. |
-| `yarn.timeline-service.client.retry-interval-ms` | The interval in milliseconds between retries for the timeline service client. Defaults to `1000`. |
+| Configuration Property                                               | Description                                                                                                                                                 |
+|:---------------------------------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.timeline-service.ttl-enable`                                   | Enable deletion of aged data within the timeline store. Defaults to `true`.                                                                                 |
+| `yarn.timeline-service.ttl-ms`                                       | Time to live for timeline store data in milliseconds. Defaults to `604800000` (7 days).                                                                     |
+| `yarn.timeline-service.handler-thread-count`                         | Handler thread count to serve the client RPC requests. Defaults to `10`.                                                                                    |
+| `yarn.timeline-service.client.max-retries`                           | The maximum number of retries for attempts to publish data to the timeline service.Defaults to `30`.                                                        |
+| `yarn.timeline-service.client.retry-interval-ms`                     | The interval in milliseconds between retries for the timeline service client. Defaults to `1000`.                                                           |
 | `yarn.timeline-service.generic-application-history.max-applications` | The max number of applications could be fetched by using REST API or application history protocol and shown in timeline server web ui. Defaults to `10000`. |
 
 #### UI Hosting Configuration
@@ -194,16 +194,16 @@ Security can be enabled by setting `yarn.timeline-service.http-authentication.ty
 to `kerberos`, after which the following configuration options are available:
 
 
-| Configuration Property | Description |
-|:---- |:---- |
-| `yarn.timeline-service.http-authentication.type` | Defines authentication used for the timeline server HTTP endpoint. Supported values are: `simple` / `kerberos` / #AUTHENTICATION_HANDLER_CLASSNAME#. Defaults to `simple`. |
-| `yarn.timeline-service.http-authentication.simple.anonymous.allowed` | Indicates if anonymous requests are allowed by the timeline server when using 'simple' authentication. Defaults to `true`. |
-| `yarn.timeline-service.principal` | The Kerberos principal for the timeline server. |
-| `yarn.timeline-service.keytab` | The Kerberos keytab for the timeline server. Defaults on Unix to `/etc/krb5.keytab`. |
-| `yarn.timeline-service.delegation.key.update-interval` | Defaults to `86400000` (1 day). |
-| `yarn.timeline-service.delegation.token.renew-interval` | Defaults to `86400000` (1 day). |
-| `yarn.timeline-service.delegation.token.max-lifetime` | Defaults to `604800000` (7 days). |
-| `yarn.timeline-service.client.best-effort` | Should the failure to obtain a delegation token be considered an application failure (option = false),  or should the client attempt to continue to publish information without it (option=true). Default: `false` |
+| Configuration Property                                               | Description                                                                                                                                                                                                        |
+|:---------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.timeline-service.http-authentication.type`                     | Defines authentication used for the timeline server HTTP endpoint. Supported values are: `simple` / `kerberos` / #AUTHENTICATION_HANDLER_CLASSNAME#. Defaults to `simple`.                                         |
+| `yarn.timeline-service.http-authentication.simple.anonymous.allowed` | Indicates if anonymous requests are allowed by the timeline server when using 'simple' authentication. Defaults to `true`.                                                                                         |
+| `yarn.timeline-service.principal`                                    | The Kerberos principal for the timeline server.                                                                                                                                                                    |
+| `yarn.timeline-service.keytab`                                       | The Kerberos keytab for the timeline server. Defaults on Unix to `/etc/krb5.keytab`.                                                                                                                               |
+| `yarn.timeline-service.delegation.key.update-interval`               | Defaults to `86400000` (1 day).                                                                                                                                                                                    |
+| `yarn.timeline-service.delegation.token.renew-interval`              | Defaults to `86400000` (1 day).                                                                                                                                                                                    |
+| `yarn.timeline-service.delegation.token.max-lifetime`                | Defaults to `604800000` (7 days).                                                                                                                                                                                  |
+| `yarn.timeline-service.client.best-effort`                           | Should the failure to obtain a delegation token be considered an application failure (option = false),  or should the client attempt to continue to publish information without it (option=true). Default: `false` |
 
 #### Enabling the timeline service and the generic history service
 
@@ -311,22 +311,22 @@ Here is an example:
 
 
 1. Publishing of data to Timeline Server is a synchronous operation; the call will not return until successful.
-1. The `TimelineClient` implementation class is a subclass of the YARN `Service` API; it can be placed
+2. The `TimelineClient` implementation class is a subclass of the YARN `Service` API; it can be placed
 under a `CompositeService` to ease its lifecycle management.
-1. The result of a `putEntities()` call is a `TimelinePutResponse` object. This contains a
+3. The result of a `putEntities()` call is a `TimelinePutResponse` object. This contains a
 (hopefully empty) list of those timeline entities reject by the timeline server, along with
 an error code indicating the cause of each failure.
 
 In Hadoop 2.6 and 2.7, the error codes are:
 
-| Error Code | Description |
-|:---- |:---- |
-|1 | No start time |
-|2 | IOException |
-|3 | System Filter conflict (reserved filter key used) |
-|4 | Access Denied |
-|5 | No domain |
-|6 | Forbidden relation |
+| Error Code | Description                                       |
+|:-----------|:--------------------------------------------------|
+| 1          | No start time                                     |
+| 2          | IOException                                       |
+| 3          | System Filter conflict (reserved filter key used) |
+| 4          | Access Denied                                     |
+| 5          | No domain                                         |
+| 6          | Forbidden relation                                |
 
 Further error codes may be defined in future.
 
@@ -424,9 +424,9 @@ Retrieves a list of all domains of a user.
 
 If an owner is specified, that owner name overrides that of the caller.
 
-| Query Parameter | Description |
-|:---- |:---- |
-| `owner`| owner of the domains to list|
+| Query Parameter | Description                  |
+|:----------------|:-----------------------------|
+| `owner`         | owner of the domains to list |
 
 
     GET http://localhost:8188/ws/v1/timeline/domain?owner=alice
@@ -624,26 +624,26 @@ Use the following URI to obtain all the entity objects of a given
 ### Query Parameters Supported:
 
 1. `limit` - A limit on the number of entities to return. If null, defaults to 100.
-1. `windowStart` - The earliest start timestamp to retrieve (exclusive). If
+2. `windowStart` - The earliest start timestamp to retrieve (exclusive). If
   null, defaults to retrieving all entities until the limit is reached.
-1. `windowEnd` - The latest start timestamp to retrieve (inclusive). If null,
+3. `windowEnd` - The latest start timestamp to retrieve (inclusive). If null,
   defaults to the max value of Long.
-1. `fromId` - If `fromId` is not null, retrieve entities earlier than and
+4. `fromId` - If `fromId` is not null, retrieve entities earlier than and
   including the specified ID. If no start time is found for the specified ID,
   an empty list of entities will be returned. The `windowEnd` parameter will take
   precedence if the start time of this entity falls later than `windowEnd`.
-1. `fromTs` - If `fromTs` is not null, ignore entities that were inserted into the
+5. `fromTs` - If `fromTs` is not null, ignore entities that were inserted into the
   store after the given timestamp. The entity's insert timestamp used for this
   comparison is the store's system time when the first put for the entity was
   received (not the entity's start time).
-1. `primaryFilter` - Retrieves only entities that have the specified primary
+6. `primaryFilter` - Retrieves only entities that have the specified primary
   filter. If null, retrieves all entities. This is an indexed retrieval, and no
   entities that do not match the filter are scanned.
-1. `secondaryFilters` - Retrieves only entities that have exact matches for all
+7. `secondaryFilters` - Retrieves only entities that have exact matches for all
   the specified filters in their primary filters or other info. This is not an
   indexed retrieval, so all entities are scanned but only those matching the
   filters are returned.
-1. fields - Specifies which fields of the entity object to retrieve:
+8. fields - Specifies which fields of the entity object to retrieve:
   `EVENTS`, `RELATED_ENTITIES`, `PRIMARY_FILTERS`, `OTHER_INFO`, `LAST_EVENT_ONLY`. If
   the set of fields contains `LAST_EVENT_ONLY` and not `EVENTS`, the most recent
   event for each entity is retrieved. If null, retrieves all fields.
@@ -663,8 +663,8 @@ When you make a request for the list of timeline entities, the information
 will be returned as a collection of container objects. See also
 `Timeline Entity` for syntax of the timeline entity object.
 
-| Item | Data Type | Description|
-|:---- |:---- |:---- |
+| Item       | Data Type                              | Description                               |
+|:-----------|:---------------------------------------|:------------------------------------------|
 | `entities` | array of timeline entity objects(JSON) | The collection of timeline entity objects |
 
 ### Response Examples:
@@ -833,13 +833,13 @@ Use the following URI to obtain the event objects of the given `entityType`.
 
 1. `entityId` - The entity IDs to retrieve events for. If null, no events will be returned.
   Multiple entityIds can be given as comma separated values.
-1. `limit` - A limit on the number of events to return for each entity. If null,
+2. `limit` - A limit on the number of events to return for each entity. If null,
   defaults to 100 events per entity.
-1. `windowStart` - If not null, retrieves only events later than the given time
+3. `windowStart` - If not null, retrieves only events later than the given time
   (exclusive)
-1. `windowEnd` - If not null, retrieves only events earlier than the given time
+4. `windowEnd` - If not null, retrieves only events earlier than the given time
   (inclusive)
-1. `eventType` - Restricts the events returned to the given types. If null,
+5. `eventType` - Restricts the events returned to the given types. If null,
   events of all types will be returned. Multiple eventTypes can be given as
   comma separated values.
 
@@ -848,19 +848,19 @@ Use the following URI to obtain the event objects of the given `entityType`.
 When you make a request for the list of timeline events, the information
 will be returned as a collection of event objects.
 
-| Item | Data Type | Description|
-|:---- |:---- |:---- |
+| Item     | Data Type                             | Description                              |
+|:---------|:--------------------------------------|:-----------------------------------------|
 | `events` | array of timeline event objects(JSON) | The collection of timeline event objects |
 
 Below is the elements of a single event object.  Note that `value` of
 `eventinfo` and `otherinfo` is an Object instead of a String.
 
 
-| Item | Data Type | Description|
-|:---- |:---- |:---- |
-| `eventtype` | string  | The event type |
-| `eventinfo` | map | The information of the event, which is orgainzied in a map of `key` : `value` |
-| `timestamp` | long | The timestamp of the event |
+| Item        | Data Type | Description                                                                   |
+|:------------|:----------|:------------------------------------------------------------------------------|
+| `eventtype` | string    | The event type                                                                |
+| `eventinfo` | map       | The information of the event, which is orgainzied in a map of `key` : `value` |
+| `timestamp` | long      | The timestamp of the event                                                    |
 
 ### Response Examples:
 
@@ -931,15 +931,15 @@ None
 
 ### Elements of the `about` (Application) Object:
 
-| Item         | Data Type   | Description                   |
-|:---- |:----  |:---- |
-| `About` | string  | The description about the service |
-| `timeline-service-version` | string  | The timeline service version |
-| `timeline-service-build-version` | string  | The timeline service build version |
-| `timeline-service-version-built-on` | string  | On what time the timeline service is built |
-| `hadoop-version` | string  | Hadoop version |
-| `hadoop-build-version` | string  | Hadoop build version |
-| `hadoop-version-built-on` | string  | On what time Hadoop is built |
+| Item                                | Data Type | Description                                |
+|:------------------------------------|:----------|:-------------------------------------------|
+| `About`                             | string    | The description about the service          |
+| `timeline-service-version`          | string    | The timeline service version               |
+| `timeline-service-build-version`    | string    | The timeline service build version         |
+| `timeline-service-version-built-on` | string    | On what time the timeline service is built |
+| `hadoop-version`                    | string    | Hadoop version                             |
+| `hadoop-build-version`              | string    | Hadoop build version                       |
+| `hadoop-version-built-on`           | string    | On what time Hadoop is built               |
 
 ### Response Examples:
 
@@ -1012,28 +1012,28 @@ resource, you obtain a collection of application objects.
 1. `states` - applications matching the given application states, specified as a
 comma-separated list
 
-1. `finalStatus` - the final status of the application - reported by the
+2. `finalStatus` - the final status of the application - reported by the
 application itself
 
-1. `user` - user name
+3. `user` - user name
 
-1. `queue` - queue name
+4. `queue` - queue name
 
-1. `limit` - total number of app objects to be returned
+5. `limit` - total number of app objects to be returned
 
-1. `startedTimeBegin` - applications with start time beginning with this time,
+6. `startedTimeBegin` - applications with start time beginning with this time,
 specified in ms since epoch
 
-1. `startedTimeEnd` - applications with start time ending with this time,
+7. `startedTimeEnd` - applications with start time ending with this time,
 specified in ms since epoch
 
-1. `finishedTimeBegin` - applications with finish time beginning with this time,
+8. `finishedTimeBegin` - applications with finish time beginning with this time,
 specified in ms since epoch
 
-1. `finishedTimeEnd` - applications with finish time ending with this time,
+9. `finishedTimeEnd` - applications with finish time ending with this time,
 specified in ms since epoch
 
-1. `applicationTypes` - applications matching the given application types,
+10. `applicationTypes` - applications matching the given application types,
 specified as a comma-separated list
 
 ### Elements of the `apps` (Application List) Object

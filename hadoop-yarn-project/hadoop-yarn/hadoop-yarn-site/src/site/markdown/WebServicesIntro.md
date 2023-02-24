@@ -76,11 +76,11 @@ As specified in HTTP Response Codes, the response body can contain the data that
 
 After calling an HTTP request, an application should check the response status code to verify success or detect an error. If the response status code indicates an error, the response body contains an error message. The first field is the exception type, currently only RemoteException is returned. The following table lists the items within the RemoteException error message:
 
-|      Item | Data Type |          Description |
-|:---- |:---- |:---- |
-|   exception |   String |         Exception type |
-| javaClassName |   String |  Java class name of exception |
-|    message |   String | Detailed message of exception |
+| Item          | Data Type | Description                   |
+|:--------------|:----------|:------------------------------|
+| exception     | String    | Exception type                |
+| javaClassName | String    | Java class name of exception  |
+| message       | String    | Detailed message of exception |
 
 ### Response Examples
 

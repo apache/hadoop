@@ -39,11 +39,11 @@ Deployment
 
 ###Configurations
 
-| Configuration Property | Description |
-|:---- |:---- |
-| `yarn.web-proxy.address` | The address for the web proxy as HOST:PORT, if this is not given then the proxy will run as part of the RM. |
-| `yarn.web-proxy.keytab` | Keytab for WebAppProxy, if the proxy is not running as part of the RM. |
-| `yarn.web-proxy.principal` | The kerberos principal for the proxy, if the proxy is not running as part of the RM. |
+| Configuration Property     | Description                                                                                                 |
+|:---------------------------|:------------------------------------------------------------------------------------------------------------|
+| `yarn.web-proxy.address`   | The address for the web proxy as HOST:PORT, if this is not given then the proxy will run as part of the RM. |
+| `yarn.web-proxy.keytab`    | Keytab for WebAppProxy, if the proxy is not running as part of the RM.                                      |
+| `yarn.web-proxy.principal` | The kerberos principal for the proxy, if the proxy is not running as part of the RM.                        |
 
 
 ### Running Web Application Proxy

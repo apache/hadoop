@@ -43,8 +43,8 @@ In `yarn-site.xml`
 
 For `Capacity Scheduler`, use following property to configure `DominantResourceCalculator` (In `capacity-scheduler.xml`):
 
-| Property | Default value |
-| --- | --- |
+| Property                                     | Default value                                                   |
+|----------------------------------------------|-----------------------------------------------------------------|
 | 	yarn.scheduler.capacity.resource-calculator | org.apache.hadoop.yarn.util.resource.DominantResourceCalculator |
 
 
@@ -65,9 +65,9 @@ By default, YARN will automatically detect and config GPUs when above config is 
 
 **1) Allowed GPU Devices**
 
-| Property | Default value |
-| --- | --- |
-| yarn.nodemanager.resource-plugins.gpu.allowed-gpu-devices | auto |
+| Property                                                  | Default value |
+|-----------------------------------------------------------|---------------|
+| yarn.nodemanager.resource-plugins.gpu.allowed-gpu-devices | auto          |
 
   Specify GPU devices which can be managed by YARN NodeManager (split by comma).
   Number of GPU devices will be reported to RM to make scheduling decisions.
@@ -80,7 +80,7 @@ By default, YARN will automatically detect and config GPUs when above config is 
   device number of GPUs is using `nvidia-smi -q` and search `Minor Number`
   output.
 
-  When minor numbers are specified manually, admin needs to include indice of GPUs
+  When minor numbers are specified manually, admin needs to include indices of GPUs
   as well, format is `index:minor_number[,index:minor_number...]`. An example
   of manual specification is `0:0,1:1,2:2,3:4"`to allow YARN NodeManager to
   manage GPU devices with indices `0/1/2/3` and minor number `0/1/2/4`.
@@ -88,8 +88,8 @@ By default, YARN will automatically detect and config GPUs when above config is 
 
 **2) Executable to discover GPUs**
 
-| Property | value |
-| --- | --- |
+| Property                                                            | value                        |
+|---------------------------------------------------------------------|------------------------------|
 | yarn.nodemanager.resource-plugins.gpu.path-to-discovery-executables | /absolute/path/to/nvidia-smi |
 
 When `yarn.nodemanager.resource.gpu.allowed-gpu-devices=auto` specified,
@@ -103,14 +103,14 @@ An example of the config value is: `/usr/local/bin/nvidia-smi`
 
 Following configs can be customized when user needs to run GPU applications inside Docker container. They're not required if admin follows default installation/configuration of `nvidia-docker`.
 
-| Property | Default value |
-| --- | --- |
+| Property                                            | Default value    |
+|-----------------------------------------------------|------------------|
 | yarn.nodemanager.resource-plugins.gpu.docker-plugin | nvidia-docker-v1 |
 
 Specify docker command plugin for GPU. By default uses Nvidia docker V1.0, `nvidia-docker-v2` is available for V2.x.
 
-| Property | Default value |
-| --- | --- |
+| Property                                                                      | Default value                         |
+|-------------------------------------------------------------------------------|---------------------------------------|
 | yarn.nodemanager.resource-plugins.gpu.docker-plugin.nvidia-docker-v1.endpoint | http://localhost:3476/v1.0/docker/cli |
 
 Specify end point of `nvidia-docker-plugin`. Please find documentation: https://github.com/NVIDIA/nvidia-docker/wiki For more details.
@@ -119,9 +119,9 @@ Specify end point of `nvidia-docker-plugin`. Please find documentation: https://
 
 GPU isolation uses CGroup [devices controller](https://www.kernel.org/doc/Documentation/cgroup-v1/devices.txt) to do per-GPU device isolation. Following configs should be added to `yarn-site.xml` to automatically mount CGroup sub devices, otherwise admin has to manually create devices subfolder in order to use this feature.
 
-| Property | Default value |
-| --- | --- |
-| yarn.nodemanager.linux-container-executor.cgroups.mount | true |
+| Property                                                | Default value |
+|---------------------------------------------------------|---------------|
+| yarn.nodemanager.linux-container-executor.cgroups.mount | true          |
 
 
 ### In `container-executor.cfg`

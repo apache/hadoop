@@ -52,14 +52,14 @@ This section describes the configurations involved to enable RM Restart feature.
 
 ### Enable RM Restart
 
-| Property | Description |
-|:---- |:---- |
-| `yarn.resourcemanager.recovery.enabled` | `true` |
+| Property                                | Description |
+|:----------------------------------------|:------------|
+| `yarn.resourcemanager.recovery.enabled` | `true`      |
 
 ### Configure the state-store for persisting the RM state
 
-| Property | Description |
-|:---- |:---- |
+| Property                           | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+|:-----------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `yarn.resourcemanager.store.class` | The class name of the state-store to be used for saving application/attempt state and the credentials. The available state-store implementations are `org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore`, a ZooKeeper based state-store implementation and `org.apache.hadoop.yarn.server.resourcemanager.recovery.FileSystemRMStateStore`, a Hadoop FileSystem based state-store implementation like HDFS and local FS. `org.apache.hadoop.yarn.server.resourcemanager.recovery.LeveldbRMStateStore`, a LevelDB based state-store implementation. The default value is set to `org.apache.hadoop.yarn.server.resourcemanager.recovery.FileSystemRMStateStore`. |
 
 ### How to choose the state-store implementation
@@ -77,50 +77,50 @@ This section describes the configurations involved to enable RM Restart feature.
 
 * Configure the URI where the RM state will be saved in the Hadoop FileSystem state-store.
 
-| Property | Description |
-|:---- |:---- |
+| Property                                  | Description                                                                                                                                                                                                                                                                              |
+|:------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `yarn.resourcemanager.fs.state-store.uri` | URI pointing to the location of the FileSystem path where RM state will be stored (e.g. hdfs://localhost:9000/rmstore). Default value is `${hadoop.tmp.dir}/yarn/system/rmstore`. If FileSystem name is not provided, `fs.default.name` specified in **conf/core-site.xml* will be used. |
 
 * Configure the retry policy state-store client uses to connect with the Hadoop FileSystem.
 
-| Property | Description |
-|:---- |:---- |
+| Property                                                | Description                                                                                                                                                                                                                                                                                                                                           |
+|:--------------------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `yarn.resourcemanager.fs.state-store.retry-policy-spec` | Hadoop FileSystem client retry policy specification. Hadoop FileSystem client retry is always enabled. Specified in pairs of sleep-time and number-of-retries i.e. (t0, n0), (t1, n1), ..., the first n0 retries sleep t0 milliseconds on average, the following n1 retries sleep t1 milliseconds on average, and so on. Default value is (2000, 500) |
 
 ### Configurations for ZooKeeper based state-store implementation
 
 * Configure the ZooKeeper server address and the root path where the RM state is stored.
 
-| Property | Description |
-|:---- |:---- |
-| `hadoop.zk.address` | Comma separated list of Host:Port pairs. Each corresponds to a ZooKeeper server (e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002") to be used by the RM for storing RM state. |
-| `yarn.resourcemanager.zk-state-store.parent-path` | The full path of the root znode where RM state will be stored. Default value is /rmstore. |
+| Property                                          | Description                                                                                                                                                                      |
+|:--------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `hadoop.zk.address`                               | Comma separated list of Host:Port pairs. Each corresponds to a ZooKeeper server (e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002") to be used by the RM for storing RM state. |
+| `yarn.resourcemanager.zk-state-store.parent-path` | The full path of the root znode where RM state will be stored. Default value is /rmstore.                                                                                        |
 
 * Configure the retry policy state-store client uses to connect with the ZooKeeper server.
 
-| Property | Description |
-|:---- |:---- |
-| `hadoop.zk.num-retries` | Number of times RM tries to connect to ZooKeeper server if the connection is lost. Default value is 500. |
-| `hadoop.zk.retry-interval-ms` | The interval in milliseconds between retries when connecting to a ZooKeeper server. Default value is 2 seconds. |
-| `hadoop.zk.timeout-ms` | ZooKeeper session timeout in milliseconds. This configuration is used by the ZooKeeper server to determine when the session expires. Session expiration happens when the server does not hear from the client (i.e. no heartbeat) within the session timeout period specified by this configuration. Default value is 10 seconds |
+| Property                      | Description                                                                                                                                                                                                                                                                                                                      |
+|:------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `hadoop.zk.num-retries`       | Number of times RM tries to connect to ZooKeeper server if the connection is lost. Default value is 500.                                                                                                                                                                                                                         |
+| `hadoop.zk.retry-interval-ms` | The interval in milliseconds between retries when connecting to a ZooKeeper server. Default value is 2 seconds.                                                                                                                                                                                                                  |
+| `hadoop.zk.timeout-ms`        | ZooKeeper session timeout in milliseconds. This configuration is used by the ZooKeeper server to determine when the session expires. Session expiration happens when the server does not hear from the client (i.e. no heartbeat) within the session timeout period specified by this configuration. Default value is 10 seconds |
 
 * Configure the ACLs to be used for setting permissions on ZooKeeper znodes.
 
-| Property | Description |
-|:---- |:---- |
+| Property        | Description                                                                                        |
+|:----------------|:---------------------------------------------------------------------------------------------------|
 | `hadoop.zk.acl` | ACLs to be used for setting permissions on ZooKeeper znodes. Default value is `world:anyone:rwcda` |
 
 ### Configurations for LevelDB based state-store implementation
 
-| Property | Description |
-|:---- |:---- |
+| Property                                        | Description                                                                                            |
+|:------------------------------------------------|:-------------------------------------------------------------------------------------------------------|
 | `yarn.resourcemanager.leveldb-state-store.path` | Local path where the RM state will be stored. Default value is `${hadoop.tmp.dir}/yarn/system/rmstore` |
 
 ### Configurations for work-preserving RM recovery
 
-| Property | Description |
-|:---- |:---- |
-| `yarn.resourcemanager.work-preserving-recovery.scheduling-wait-ms` | Set the amount of time RM waits before allocating new containers on RM work-preserving recovery. Such wait period gives RM a chance to settle down resyncing with NMs in the cluster on recovery, before assigning new containers to applications.|
+| Property                                                           | Description                                                                                                                                                                                                                                        |
+|:-------------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.resourcemanager.work-preserving-recovery.scheduling-wait-ms` | Set the amount of time RM waits before allocating new containers on RM work-preserving recovery. Such wait period gives RM a chance to settle down resyncing with NMs in the cluster on recovery, before assigning new containers to applications. |
 
 Notes
 -----

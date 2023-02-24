@@ -45,7 +45,7 @@ The ```Node Labels``` supports the following features for now:
     * Node labels and node labels mapping can be recovered across RM restart
     * Update node labels - admin can update labels on nodes and labels on queues
       when RM is running
-* Mapping of NM to node labels can be done in three ways, but in all of the approaches Partition Label should be one among the valid node labels list configured in the RM.
+* Mapping of NM to node labels can be done in three ways, but in all the approaches Partition Label should be one among the valid node labels list configured in the RM.
     * **Centralized :** Node to labels mapping can be done through RM exposed CLI, REST or RPC.
     * **Distributed :** Node to labels mapping will be set by a configured Node Labels Provider in NM. We have two different providers in YARN: *Script* based provider and *Configuration* based provider. In case of script, NM can be configured with a script path and the script can emit the labels of the node. In case of config, node Labels can be directly configured in the NM's yarn-site.xml. In both of these options dynamic refresh of the label mapping is supported.
     * **Delegated-Centralized :** Node to labels mapping will be set by a configured Node Labels Provider in RM. This would be helpful when label mapping cannot be provided by each node due to security concerns and to avoid interaction through RM Interfaces for each node in a large cluster. Labels will be fetched from this interface during NM registration and periodical refresh is also supported.

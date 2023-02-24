@@ -87,7 +87,7 @@ returned by the method consists a plugin version and a resource type name
 like “nvidia.com/gpu”.
 
 
-The getDevices interface is used to get latest vendor device list in this NM
+The getDevices interface is used to get the latest vendor device list in this NM
 node.
 The resource count pre-defined in node-resources.xml will be overridden.
 And it’s recommended that the vendor plugin manages allowed devices reported
@@ -99,7 +99,7 @@ service to get the devices at your convenience.
 
 Please note that the `Device` object can describe a fake device. If the major
 device number, minor device number and device path is left unset, the
-framework won't do isolation for it. This provide feasibility for user to
+framework won't do isolation for it. This provides feasibility for user to
 define a fake device without real hardware.
 
 The onDevicesAllocated interface is invoked to tell the framework how to use these devices.
@@ -139,7 +139,7 @@ public interface DevicePluginScheduler {
 }
 ```
 The above code shows the `DevicePluginScheduler` interface that you might
-needed if you want to arm the plugin with a more efficient scheduler.
+be needed if you want to arm the plugin with a more efficient scheduler.
 This `allocateDevices` method is invoked by YARN each time when asking the
 plugin's recommendation devices for one container.
 This interface is optional because YARN will provide a very basic scheduler.
@@ -172,6 +172,6 @@ Once you build your project and package a jar which contains your plugin
 class and want to give it a try in your Hadoop cluster.
 
 
-Firstly, put the jar file under a directory in Hadooop classpath.
+Firstly, put the jar file under a directory in Hadoop classpath.
 (recommend $HADOOP_COMMOND_HOME/share/hadoop/yarn). Secondly,
 follow the configurations described in [Pluggable Device Framework](./PluggableDeviceFramework.html) and restart YARN.

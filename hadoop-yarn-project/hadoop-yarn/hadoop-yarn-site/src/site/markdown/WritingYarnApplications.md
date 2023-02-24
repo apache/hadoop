@@ -515,7 +515,7 @@ amRMClient.stop();
 FAQ
 ---
 
-### How can I distribute my application's jars to all of the nodes in the YARN cluster that need it?
+### How can I distribute my application's jars to all the nodes in the YARN cluster that need it?
 
 You can use the LocalResource to add resources to your application request. This will cause YARN to distribute the resource to the ApplicationMaster node. If the resource is a tgz, zip, or jar - you can have YARN unzip it. Then, all you need to do is add the unzipped folder to your classpath. For example, when creating your application request:
 

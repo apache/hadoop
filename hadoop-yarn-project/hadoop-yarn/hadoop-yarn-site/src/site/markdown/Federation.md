@@ -163,10 +163,10 @@ Configuration
 These are common configurations that should appear in the **conf/yarn-site.xml** at each machine in the federation.
 
 
-| Property | Example | Description |
-|:---- |:---- |:---- |
-|`yarn.federation.enabled` | `true` | Whether federation is enabled or not |
-|`yarn.resourcemanager.cluster-id` | `<unique-subcluster-id>` | The unique subcluster identifier for this RM (same as the one used for HA). |
+| Property                          | Example                  | Description                                                                 |
+|:----------------------------------|:-------------------------|:----------------------------------------------------------------------------|
+| `yarn.federation.enabled`         | `true`                   | Whether federation is enabled or not                                        |
+| `yarn.resourcemanager.cluster-id` | `<unique-subcluster-id>` | The unique subcluster identifier for this RM (same as the one used for HA). |
 
 ####State-Store:
 
@@ -176,20 +176,20 @@ Currently, we support ZooKeeper and SQL based implementations of the state-store
 
 ZooKeeper: one must set the ZooKeeper settings for Hadoop:
 
-| Property | Example | Description |
-|:---- |:---- |:---- |
-|`yarn.federation.state-store.class` | `org.apache.hadoop.yarn.server.federation.store.impl.ZookeeperFederationStateStore` | The type of state-store to use. |
-|`hadoop.zk.address` | `host:port` | The address for the ZooKeeper ensemble. |
+| Property                            | Example                                                                             | Description                             |
+|:------------------------------------|:------------------------------------------------------------------------------------|:----------------------------------------|
+| `yarn.federation.state-store.class` | `org.apache.hadoop.yarn.server.federation.store.impl.ZookeeperFederationStateStore` | The type of state-store to use.         |
+| `hadoop.zk.address`                 | `host:port`                                                                         | The address for the ZooKeeper ensemble. |
 
 SQL: one must setup the following parameters:
 
-| Property | Example | Description |
-|:---- |:---- |:---- |
-|`yarn.federation.state-store.class` | `org.apache.hadoop.yarn.server.federation.store.impl.SQLFederationStateStore` | The type of state-store to use. |
-|`yarn.federation.state-store.sql.url` | `jdbc:mysql://<host>:<port>/FederationStateStore` | For SQLFederationStateStore the name of the DB where the state is stored. |
-|`yarn.federation.state-store.sql.jdbc-class` | `com.mysql.jdbc.jdbc2.optional.MysqlDataSource` | For SQLFederationStateStore the jdbc class to use. |
-|`yarn.federation.state-store.sql.username` | `<dbuser>` | For SQLFederationStateStore the username for the DB connection. |
-|`yarn.federation.state-store.sql.password` | `<dbpass>` | For SQLFederationStateStore the password for the DB connection. |
+| Property                                     | Example                                                                       | Description                                                               |
+|:---------------------------------------------|:------------------------------------------------------------------------------|:--------------------------------------------------------------------------|
+| `yarn.federation.state-store.class`          | `org.apache.hadoop.yarn.server.federation.store.impl.SQLFederationStateStore` | The type of state-store to use.                                           |
+| `yarn.federation.state-store.sql.url`        | `jdbc:mysql://<host>:<port>/FederationStateStore`                             | For SQLFederationStateStore the name of the DB where the state is stored. |
+| `yarn.federation.state-store.sql.jdbc-class` | `com.mysql.jdbc.jdbc2.optional.MysqlDataSource`                               | For SQLFederationStateStore the jdbc class to use.                        |
+| `yarn.federation.state-store.sql.username`   | `<dbuser>`                                                                    | For SQLFederationStateStore the username for the DB connection.           |
+| `yarn.federation.state-store.sql.password`   | `<dbpass>`                                                                    | For SQLFederationStateStore the password for the DB connection.           |
 
 We provide scripts for **MySQL** and **Microsoft SQL Server**.
 
@@ -227,38 +227,38 @@ SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
 
 ####Optional:
 
-| Property | Example | Description |
-|:---- |:---- |:---- |
-|`yarn.federation.failover.enabled` | `true` | Whether should retry considering RM failover within each subcluster. |
-|`yarn.federation.blacklist-subclusters` | `<subcluster-id>` | A list of black-listed sub-clusters, useful to disable a sub-cluster |
-|`yarn.federation.policy-manager` | `org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager` | The choice of policy manager determines how Applications and ResourceRequests are routed through the system. |
-|`yarn.federation.policy-manager-params` | `<binary>` | The payload that configures the policy. In our example a set of weights for router and amrmproxy policies. This is typically generated by serializing a policymanager that has been configured programmatically, or by populating the state-store with the .json serialized form of it. |
-|`yarn.federation.subcluster-resolver.class` | `org.apache.hadoop.yarn.server.federation.resolver.DefaultSubClusterResolverImpl` | The class used to resolve which subcluster a node belongs to, and which subcluster(s) a rack belongs to. |
-|`yarn.federation.machine-list` | `<path of machine-list file>` | Path of machine-list file used by `SubClusterResolver`. Each line of the file is a node with sub-cluster and rack information. Below is the example: <br/> <br/> node1, subcluster1, rack1 <br/> node2, subcluster2, rack1 <br/> node3, subcluster3, rack2 <br/> node4, subcluster3, rack2 |
+| Property                                    | Example                                                                                   | Description                                                                                                                                                                                                                                                                                |
+|:--------------------------------------------|:------------------------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.federation.failover.enabled`          | `true`                                                                                    | Whether should retry considering RM failover within each subcluster.                                                                                                                                                                                                                       |
+| `yarn.federation.blacklist-subclusters`     | `<subcluster-id>`                                                                         | A list of black-listed sub-clusters, useful to disable a sub-cluster                                                                                                                                                                                                                       |
+| `yarn.federation.policy-manager`            | `org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager` | The choice of policy manager determines how Applications and ResourceRequests are routed through the system.                                                                                                                                                                               |
+| `yarn.federation.policy-manager-params`     | `<binary>`                                                                                | The payload that configures the policy. In our example a set of weights for router and amrmproxy policies. This is typically generated by serializing a policymanager that has been configured programmatically, or by populating the state-store with the .json serialized form of it.    |
+| `yarn.federation.subcluster-resolver.class` | `org.apache.hadoop.yarn.server.federation.resolver.DefaultSubClusterResolverImpl`         | The class used to resolve which subcluster a node belongs to, and which subcluster(s) a rack belongs to.                                                                                                                                                                                   |
+| `yarn.federation.machine-list`              | `<path of machine-list file>`                                                             | Path of machine-list file used by `SubClusterResolver`. Each line of the file is a node with sub-cluster and rack information. Below is the example: <br/> <br/> node1, subcluster1, rack1 <br/> node2, subcluster2, rack1 <br/> node3, subcluster3, rack2 <br/> node4, subcluster3, rack2 |
 
 ###ON RMs:
 
 These are extra configurations that should appear in the **conf/yarn-site.xml** at each ResourceManager.
 
-| Property | Example | Description |
-|:---- |:---- |:---- |
-|`yarn.resourcemanager.epoch` | `<unique-epoch>` | The seed value for the epoch. This is used to guarantee uniqueness of container-IDs generate by different RMs. It must therefore be unique among sub-clusters and `well-spaced` to allow for failures which increment epoch. Increments of 1000 allow for a large number of sub-clusters and practically ensure near-zero chance of collisions (a clash will only happen if a container is still alive for 1000 restarts of one RM, while the next RM never restarted, and an app requests more containers). |
+| Property                     | Example          | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|:-----------------------------|:-----------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.resourcemanager.epoch` | `<unique-epoch>` | The seed value for the epoch. This is used to guarantee uniqueness of container-IDs generate by different RMs. It must therefore be unique among sub-clusters and `well-spaced` to allow for failures which increment epoch. Increments of 1000 allow for a large number of sub-clusters and practically ensure near-zero chance of collisions (a clash will only happen if a container is still alive for 1000 restarts of one RM, while the next RM never restarted, and an app requests more containers). |
 
 Optional:
 
-| Property | Example | Description |
-|:---- |:---- |:---- |
-|`yarn.federation.state-store.heartbeat-interval-secs` | `60` | The rate at which RMs report their membership to the federation to the central state-store. |
+| Property                                              | Example | Description                                                                                 |
+|:------------------------------------------------------|:--------|:--------------------------------------------------------------------------------------------|
+| `yarn.federation.state-store.heartbeat-interval-secs` | `60`    | The rate at which RMs report their membership to the federation to the central state-store. |
 
 
 ###ON ROUTER:
 
 These are extra configurations that should appear in the **conf/yarn-site.xml** at each Router.
 
-| Property | Example | Description |
-|:---- |:---- |:---- |
-|`yarn.router.bind-host` | `0.0.0.0` | Host IP to bind the router to.  The actual address the server will bind to. If this optional address is set, the RPC and webapp servers will bind to this address and the port specified in yarn.router.*.address respectively. This is most useful for making Router listen to all interfaces by setting to 0.0.0.0. |
-| `yarn.router.clientrm.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor` | A comma-separated list of interceptor classes to be run at the router when interfacing with the client. The last step of this pipeline must be the Federation Client Interceptor. |
+| Property                                          | Example                                                                     | Description                                                                                                                                                                                                                                                                                                           |
+|:--------------------------------------------------|:----------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.router.bind-host`                           | `0.0.0.0`                                                                   | Host IP to bind the router to.  The actual address the server will bind to. If this optional address is set, the RPC and webapp servers will bind to this address and the port specified in yarn.router.*.address respectively. This is most useful for making Router listen to all interfaces by setting to 0.0.0.0. |
+| `yarn.router.clientrm.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor` | A comma-separated list of interceptor classes to be run at the router when interfacing with the client. The last step of this pipeline must be the Federation Client Interceptor.                                                                                                                                     |
 
 Optional:
 
@@ -279,20 +279,20 @@ Security:
 
 Kerberos supported in federation.
 
-| Property | Example | Description |
-|:---- |:---- |:---- |
-| `yarn.router.keytab.file` |  | The keytab file used by router to login as its service principal. The principal name is configured with 'yarn.router.kerberos.principal'.|
-| `yarn.router.kerberos.principal` | | The Router service principal. This is typically set to router/_HOST@REALM.TLD. Each Router will substitute _HOST with its own fully qualified hostname at startup. The _HOST placeholder allows using the same configuration setting on all Routers in setup. |
-| `yarn.router.kerberos.principal.hostname` |  | Optional. The hostname for the Router containing this configuration file.  Will be different for each machine. Defaults to current hostname. |
+| Property                                  | Example | Description                                                                                                                                                                                                                                                   |
+|:------------------------------------------|:--------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.router.keytab.file`                 |         | The keytab file used by router to login as its service principal. The principal name is configured with 'yarn.router.kerberos.principal'.                                                                                                                     |
+| `yarn.router.kerberos.principal`          |         | The Router service principal. This is typically set to router/_HOST@REALM.TLD. Each Router will substitute _HOST with its own fully qualified hostname at startup. The _HOST placeholder allows using the same configuration setting on all Routers in setup. |
+| `yarn.router.kerberos.principal.hostname` |         | Optional. The hostname for the Router containing this configuration file.  Will be different for each machine. Defaults to current hostname.                                                                                                                  |
 
 Enabling CORS support:
 
 To enable cross-origin support (CORS) for the Yarn Router, please set the following configuration parameters:
 
-| Property                                  | Example                                                      | Description                                                  |
-| ----------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Property                                  | Example                                                       | Description                                                                                              |
+|-------------------------------------------|---------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
 | `hadoop.http.filter.initializers`         | `org.apache.hadoop.security.HttpCrossOriginFilterInitializer` | Optional. Set the filter to HttpCrossOriginFilterInitializer, Configure this parameter in core-site.xml. |
-| `yarn.router.webapp.cross-origin.enabled` | `true`                                                       | Optional. Enable/disable CORS filter.Configure this parameter in yarn-site.xml. |
+| `yarn.router.webapp.cross-origin.enabled` | `true`                                                        | Optional. Enable/disable CORS filter.Configure this parameter in yarn-site.xml.                          |
 
 
 ###ON NMs:
@@ -300,27 +300,27 @@ To enable cross-origin support (CORS) for the Yarn Router, please set the follow
 These are extra configurations that should appear in the **conf/yarn-site.xml** at each NodeManager.
 
 
-| Property | Example | Description |
-|:---- |:---- |:---- |
-| `yarn.nodemanager.amrmproxy.enabled` | `true` | Whether or not the AMRMProxy is enabled. |
+| Property                                                | Example                                                                     | Description                                                                                                                                          |
+|:--------------------------------------------------------|:----------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.nodemanager.amrmproxy.enabled`                    | `true`                                                                      | Whether or not the AMRMProxy is enabled.                                                                                                             |
 | `yarn.nodemanager.amrmproxy.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.nodemanager.amrmproxy.FederationInterceptor` | A comma-separated list of interceptors to be run at the amrmproxy. For federation the last step in the pipeline should be the FederationInterceptor. |
 
 Optional:
 
-| Property | Example | Description |
-|:---- |:---- |:---- |
-| `yarn.nodemanager.amrmproxy.ha.enable` | `true` | Whether or not the AMRMProxy HA is enabled for multiple application attempt support. |
-| `yarn.federation.statestore.max-connections` | `1` | The maximum number of parallel connections from each AMRMProxy to the state-store. This value is typically lower than the router one, since we have many AMRMProxy that could burn-through many DB connections quickly. |
-| `yarn.federation.cache-ttl.secs` | `300` | The time to leave for the AMRMProxy cache. Typically larger than at the router, as the number of AMRMProxy is large, and we want to limit the load to the centralized state-store. |
+| Property                                     | Example | Description                                                                                                                                                                                                             |
+|:---------------------------------------------|:--------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.nodemanager.amrmproxy.ha.enable`       | `true`  | Whether or not the AMRMProxy HA is enabled for multiple application attempt support.                                                                                                                                    |
+| `yarn.federation.statestore.max-connections` | `1`     | The maximum number of parallel connections from each AMRMProxy to the state-store. This value is typically lower than the router one, since we have many AMRMProxy that could burn-through many DB connections quickly. |
+| `yarn.federation.cache-ttl.secs`             | `300`   | The time to leave for the AMRMProxy cache. Typically larger than at the router, as the number of AMRMProxy is large, and we want to limit the load to the centralized state-store.                                      |
 
 Running a Sample Job
 --------------------
 In order to submit jobs to a Federation cluster one must create a separate set of configs for the client from which jobs will be submitted. In these, the **conf/yarn-site.xml** should have the following additional configurations:
 
-| Property | Example | Description |
-|:--- |:--- |:---- |
-| `yarn.resourcemanager.address` | `<router_host>:8050` | Redirects jobs launched at the client to the router's client RM port. |
-| `yarn.resourcemanager.scheduler.address` | `localhost:8049` | Redirects jobs to the federation AMRMProxy port.|
+| Property                                 | Example              | Description                                                           |
+|:-----------------------------------------|:---------------------|:----------------------------------------------------------------------|
+| `yarn.resourcemanager.address`           | `<router_host>:8050` | Redirects jobs launched at the client to the router's client RM port. |
+| `yarn.resourcemanager.scheduler.address` | `localhost:8049`     | Redirects jobs to the federation AMRMProxy port.                      |
 
 Any YARN jobs for the cluster can be submitted from the client configurations described above. In order to launch a job through federation, first start up all the clusters involved in the federation as described [here](../../hadoop-project-dist/hadoop-common/ClusterSetup.html). Next, start up the router on the router machine with the following command:
 
