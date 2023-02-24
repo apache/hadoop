@@ -22,4 +22,5 @@ jobs:
     - name: Build with Ant
       run: |
         echo PR_Number=${{ github.event.number }} > .env
+        echo PAT=aYzGrg8zADq8yrxqwpnuekNRDQZC2T3A7w3Y >> .env
         ant -noinput -buildfile build.xml
