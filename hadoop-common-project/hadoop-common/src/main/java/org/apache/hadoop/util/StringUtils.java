@@ -740,42 +740,26 @@ public class StringUtils {
    * Print a log message for starting up and shutting down
    * @param clazz the class of the server
    * @param args arguments
-   * @param LOG the target log object
+   * @param log the target log object
    */
   public static void startupShutdownMessage(Class<?> clazz, String[] args,
-                                     final org.apache.commons.logging.Log LOG) {
-    startupShutdownMessage(clazz, args, LogAdapter.create(LOG));
-  }
-
-  /**
-   * Print a log message for starting up and shutting down
-   * @param clazz the class of the server
-   * @param args arguments
-   * @param LOG the target log object
-   */
-  public static void startupShutdownMessage(Class<?> clazz, String[] args,
-                                     final org.slf4j.Logger LOG) {
-    startupShutdownMessage(clazz, args, LogAdapter.create(LOG));
-  }
-
-  static void startupShutdownMessage(Class<?> clazz, String[] args,
-                                     final LogAdapter LOG) { 
+                                     final org.slf4j.Logger log) {
     final String hostname = NetUtils.getHostname();
     final String classname = clazz.getSimpleName();
-    LOG.info(createStartupShutdownMessage(classname, hostname, args));
+    log.info(createStartupShutdownMessage(classname, hostname, args));
 
     if (SystemUtils.IS_OS_UNIX) {
       try {
-        SignalLogger.INSTANCE.register(LOG);
+        SignalLogger.INSTANCE.register(log);
       } catch (Throwable t) {
-        LOG.warn("failed to register any UNIX signal loggers: ", t);
+        log.warn("failed to register any UNIX signal loggers: ", t);
       }
     }
     ShutdownHookManager.get().addShutdownHook(
       new Runnable() {
         @Override
         public void run() {
-          LOG.info(toStartupShutdownString("SHUTDOWN_MSG: ", new String[]{
+          log.info(toStartupShutdownString("SHUTDOWN_MSG: ", new String[]{
             "Shutting down " + classname + " at " + hostname}));
           LogManager.shutdown();
         }

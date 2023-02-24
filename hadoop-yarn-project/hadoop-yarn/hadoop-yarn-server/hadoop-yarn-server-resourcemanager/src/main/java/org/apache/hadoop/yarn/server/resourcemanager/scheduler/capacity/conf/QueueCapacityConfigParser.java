@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
@@ -63,21 +63,15 @@ public class QueueCapacityConfigParser {
   /**
    * Creates a {@code QueueCapacityVector} parsed from the capacity configuration
    * property set for a queue.
-   * @param conf configuration object
+   * @param capacityString capacity string to parse
    * @param queuePath queue for which the capacity property is parsed
-   * @param label node label
    * @return a parsed capacity vector
    */
-  public QueueCapacityVector parse(CapacitySchedulerConfiguration conf,
-                                   QueuePath queuePath, String label) {
+  public QueueCapacityVector parse(String capacityString, QueuePath queuePath) {
 
     if (queuePath.isRoot()) {
-      return QueueCapacityVector.of(100f, QueueCapacityType.PERCENTAGE);
+      return QueueCapacityVector.of(100f, ResourceUnitCapacityType.PERCENTAGE);
     }
-
-    String propertyName = QueuePrefixes.getNodeLabelPrefix(
-        queuePath, label) + CapacitySchedulerConfiguration.CAPACITY;
-    String capacityString = conf.get(propertyName);
 
     if (capacityString == null) {
       return new QueueCapacityVector();
@@ -103,13 +97,13 @@ public class QueueCapacityConfigParser {
    * @return a parsed capacity vector
    */
   private QueueCapacityVector uniformParser(Matcher matcher) {
-    QueueCapacityType capacityType = null;
+    ResourceUnitCapacityType capacityType = null;
     String value = matcher.group(1);
     if (matcher.groupCount() == 2) {
       String matchedSuffix = matcher.group(2);
-      for (QueueCapacityType suffix : QueueCapacityType.values()) {
+      for (ResourceUnitCapacityType suffix : ResourceUnitCapacityType.values()) {
         // Absolute uniform syntax is not supported
-        if (suffix.equals(QueueCapacityType.ABSOLUTE)) {
+        if (suffix.equals(ResourceUnitCapacityType.ABSOLUTE)) {
           continue;
         }
         // when capacity is given in percentage, we do not need % symbol
@@ -166,7 +160,7 @@ public class QueueCapacityConfigParser {
 
   private void setCapacityVector(
       QueueCapacityVector resource, String resourceName, String resourceValue) {
-    QueueCapacityType capacityType = QueueCapacityType.ABSOLUTE;
+    ResourceUnitCapacityType capacityType = ResourceUnitCapacityType.ABSOLUTE;
 
     // Extract suffix from a value e.g. for 6w extract w
     String suffix = resourceValue.replaceAll(FLOAT_DIGIT_REGEX, "");
@@ -182,7 +176,7 @@ public class QueueCapacityConfigParser {
       // Convert all incoming units to MB if units is configured.
       convertedValue = UnitsConversionUtil.convert(suffix, "Mi", (long) parsedResourceValue);
     } else {
-      for (QueueCapacityType capacityTypeSuffix : QueueCapacityType.values()) {
+      for (ResourceUnitCapacityType capacityTypeSuffix : ResourceUnitCapacityType.values()) {
         if (capacityTypeSuffix.getPostfix().equals(suffix)) {
           capacityType = capacityTypeSuffix;
         }
@@ -200,8 +194,12 @@ public class QueueCapacityConfigParser {
    * false otherwise
    */
   public boolean isCapacityVectorFormat(String configuredCapacity) {
-    return configuredCapacity != null
-        && RESOURCE_PATTERN.matcher(configuredCapacity).find();
+    if (configuredCapacity == null) {
+      return false;
+    }
+
+    String formattedCapacityString = configuredCapacity.replaceAll(" ", "");
+    return RESOURCE_PATTERN.matcher(formattedCapacityString).find();
   }
 
   private static class Parser {

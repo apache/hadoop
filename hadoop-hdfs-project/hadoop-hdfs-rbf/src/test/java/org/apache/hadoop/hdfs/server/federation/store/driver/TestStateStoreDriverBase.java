@@ -119,7 +119,7 @@ public class TestStateStoreDriverBase {
   }
 
   @SuppressWarnings("unchecked")
-  private <T extends BaseRecord> T generateFakeRecord(Class<T> recordClass)
+  protected  <T extends BaseRecord> T generateFakeRecord(Class<T> recordClass)
       throws IllegalArgumentException, IllegalAccessException, IOException {
 
     if (recordClass == MembershipState.class) {

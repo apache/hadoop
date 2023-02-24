@@ -61,7 +61,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import java.util.function.Supplier;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -252,7 +251,7 @@ public class TestFsck {
     if (file.exists()) {
       file.delete();
     }
-    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    Logger logger = FSNamesystem.AUDIT_LOG;
     logger.removeAllAppenders();
     logger.setLevel(Level.INFO);
     PatternLayout layout = new PatternLayout("%m%n");
@@ -291,7 +290,7 @@ public class TestFsck {
       if (reader != null) {
         reader.close();
       }
-      Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+      Logger logger = FSNamesystem.AUDIT_LOG;
       if (logger != null) {
         logger.removeAllAppenders();
       }

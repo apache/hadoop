@@ -138,6 +138,7 @@ import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretManagerState;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
@@ -1617,14 +1618,17 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     RouterRMDTSecretManagerState managerState = stateStore.getRouterRMSecretManagerState();
     Assert.assertNotNull(managerState);
 
-    Map<RMDelegationTokenIdentifier, Long> delegationTokenState = managerState.getTokenState();
+    Map<RMDelegationTokenIdentifier, RouterStoreToken> delegationTokenState =
+        managerState.getTokenState();
     Assert.assertNotNull(delegationTokenState);
     Assert.assertTrue(delegationTokenState.containsKey(rMDelegationTokenIdentifier));
 
     long tokenRenewInterval = this.getConf().getLong(
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
-    long renewDate = delegationTokenState.get(rMDelegationTokenIdentifier);
+    RouterStoreToken resultRouterStoreToken = delegationTokenState.get(rMDelegationTokenIdentifier);
+    Assert.assertNotNull(resultRouterStoreToken);
+    long renewDate = resultRouterStoreToken.getRenewDate();
     Assert.assertEquals(issueDate + tokenRenewInterval, renewDate);
   }
 
@@ -1667,10 +1671,13 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // Step3. Compare whether the expirationTime returned to
     // the client is consistent with the renewDate in the stateStore
     RouterRMDTSecretManagerState managerState = stateStore.getRouterRMSecretManagerState();
-    Map<RMDelegationTokenIdentifier, Long> delegationTokenState = managerState.getTokenState();
+    Map<RMDelegationTokenIdentifier, RouterStoreToken> delegationTokenState =
+        managerState.getTokenState();
     Assert.assertNotNull(delegationTokenState);
     Assert.assertTrue(delegationTokenState.containsKey(rMDelegationTokenIdentifier));
-    long renewDate = delegationTokenState.get(rMDelegationTokenIdentifier);
+    RouterStoreToken resultRouterStoreToken = delegationTokenState.get(rMDelegationTokenIdentifier);
+    Assert.assertNotNull(resultRouterStoreToken);
+    long renewDate = resultRouterStoreToken.getRenewDate();
     Assert.assertEquals(expDate, renewDate);
   }
 
@@ -1700,7 +1707,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // Step3. Query the data in the StateStore and confirm that the Delegation has been deleted.
     // At this point, the size of delegationTokenState should be 0.
     RouterRMDTSecretManagerState managerState = stateStore.getRouterRMSecretManagerState();
-    Map<RMDelegationTokenIdentifier, Long> delegationTokenState = managerState.getTokenState();
+    Map<RMDelegationTokenIdentifier, RouterStoreToken> delegationTokenState =
+        managerState.getTokenState();
     Assert.assertNotNull(delegationTokenState);
     Assert.assertEquals(0, delegationTokenState.size());
   }

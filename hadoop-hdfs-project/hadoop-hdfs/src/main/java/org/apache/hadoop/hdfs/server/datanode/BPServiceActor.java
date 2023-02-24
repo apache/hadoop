@@ -202,10 +202,13 @@ class BPServiceActor implements Runnable {
   Map<String, String> getActorInfoMap() {
     final Map<String, String> info = new HashMap<String, String>();
     info.put("NamenodeAddress", getNameNodeAddress());
+    info.put("NamenodeHaState", state != null ? state.toString() : "Unknown");
     info.put("BlockPoolID", bpos.getBlockPoolId());
     info.put("ActorState", getRunningState());
     info.put("LastHeartbeat",
         String.valueOf(getScheduler().getLastHearbeatTime()));
+    info.put("LastHeartbeatResponseTime",
+        String.valueOf(getScheduler().getLastHeartbeatResponseTime()));
     info.put("LastBlockReport",
         String.valueOf(getScheduler().getLastBlockReportTime()));
     info.put("maxBlockReportSize", String.valueOf(getMaxBlockReportSize()));
@@ -579,6 +582,8 @@ class BPServiceActor implements Runnable {
         slowPeers,
         slowDisks);
 
+    scheduler.updateLastHeartbeatResponseTime(monotonicNow());
+
     if (outliersReportDue) {
       // If the report was due and successfully sent, schedule the next one.
       scheduler.scheduleNextOutlierReport();
@@ -697,6 +702,8 @@ class BPServiceActor implements Runnable {
         // Every so often, send heartbeat or block-report
         //
         final boolean sendHeartbeat = scheduler.isHeartbeatDue(startTime);
+        LOG.debug("BP offer service run start time: {}, sendHeartbeat: {}", startTime,
+            sendHeartbeat);
         HeartbeatResponse resp = null;
         if (sendHeartbeat) {
           //
@@ -709,6 +716,8 @@ class BPServiceActor implements Runnable {
           boolean requestBlockReportLease = (fullBlockReportLeaseId == 0) &&
                   scheduler.isBlockReportDue(startTime);
           if (!dn.areHeartbeatsDisabledForTests()) {
+            LOG.debug("Before sending heartbeat to namenode {}, the state of the namenode known"
+                + " to datanode so far is {}", this.getNameNodeAddress(), state);
             resp = sendHeartBeat(requestBlockReportLease);
             assert resp != null;
             if (resp.getFullBlockReportLeaseId() != 0) {
@@ -733,7 +742,12 @@ class BPServiceActor implements Runnable {
             // that we should actually process.
             bpos.updateActorStatesFromHeartbeat(
                 this, resp.getNameNodeHaState());
-            state = resp.getNameNodeHaState().getState();
+            HAServiceState stateFromResp = resp.getNameNodeHaState().getState();
+            if (state != stateFromResp) {
+              LOG.info("After receiving heartbeat response, updating state of namenode {} to {}",
+                  this.getNameNodeAddress(), stateFromResp);
+            }
+            state = stateFromResp;
 
             if (state == HAServiceState.ACTIVE) {
               handleRollingUpgradeStatus(resp);
@@ -794,6 +808,7 @@ class BPServiceActor implements Runnable {
       long sleepTime = Math.min(1000, dnConf.heartBeatInterval);
       Thread.sleep(sleepTime);
     } catch (InterruptedException ie) {
+      LOG.info("BPServiceActor {} is interrupted", this);
       Thread.currentThread().interrupt();
     }
   }
@@ -995,6 +1010,8 @@ class BPServiceActor implements Runnable {
     while (!duplicateQueue.isEmpty()) {
       BPServiceActorAction actionItem = duplicateQueue.remove();
       try {
+        LOG.debug("BPServiceActor ( {} ) processing queued messages. Action item: {}", this,
+            actionItem);
         actionItem.reportTo(bpNamenode, bpRegistration);
       } catch (BPServiceActorActionException baae) {
         LOG.warn(baae.getMessage() + nnAddr , baae);
@@ -1190,6 +1207,9 @@ class BPServiceActor implements Runnable {
     volatile long lastHeartbeatTime = monotonicNow();
 
     @VisibleForTesting
+    private volatile long lastHeartbeatResponseTime = -1;
+
+    @VisibleForTesting
     boolean resetBlockReportTime = true;
 
     @VisibleForTesting
@@ -1237,6 +1257,10 @@ class BPServiceActor implements Runnable {
       lastHeartbeatTime = heartbeatTime;
     }
 
+    void updateLastHeartbeatResponseTime(long heartbeatTime) {
+      this.lastHeartbeatResponseTime = heartbeatTime;
+    }
+
     void updateLastBlockReportTime(long blockReportTime) {
       lastBlockReportTime = blockReportTime;
     }
@@ -1247,6 +1271,10 @@ class BPServiceActor implements Runnable {
 
     long getLastHearbeatTime() {
       return (monotonicNow() - lastHeartbeatTime)/1000;
+    }
+
+    private long getLastHeartbeatResponseTime() {
+      return (monotonicNow() - lastHeartbeatResponseTime) / 1000;
     }
 
     long getLastBlockReportTime() {
@@ -1471,7 +1499,7 @@ class BPServiceActor implements Runnable {
           dn.getMetrics().addNumProcessedCommands(processCommandsMs);
         }
         if (processCommandsMs > dnConf.getProcessCommandsThresholdMs()) {
-          LOG.info("Took {} ms to process {} commands from NN",
+          LOG.warn("Took {} ms to process {} commands from NN",
               processCommandsMs, cmds.length);
         }
       }

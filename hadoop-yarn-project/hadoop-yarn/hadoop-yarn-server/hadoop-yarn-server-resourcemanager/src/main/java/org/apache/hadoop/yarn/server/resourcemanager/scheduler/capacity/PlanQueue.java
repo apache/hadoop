@@ -189,7 +189,8 @@ public class PlanQueue extends AbstractManagedParentQueue {
   }
 
   /**
-   * Determine whether to hide/show the ReservationQueues
+   * Determine whether to hide/show the ReservationQueues.
+   * @return true, show ReservationQueues; false, hide ReservationQueues.
    */
   public boolean showReservationsAsQueues() {
     return showReservationsAsQueues;

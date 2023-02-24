@@ -21,8 +21,6 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -41,6 +39,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.junit.Assert.*;
@@ -52,7 +52,7 @@ import static org.junit.Assert.*;
  */
 @RunWith(Parameterized.class)
 public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
-  public static final Log LOG = LogFactory.getLog(TestPermission.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestPermission.class);
 
   private HdfsConfiguration conf;
   private MiniDFSCluster cluster;
