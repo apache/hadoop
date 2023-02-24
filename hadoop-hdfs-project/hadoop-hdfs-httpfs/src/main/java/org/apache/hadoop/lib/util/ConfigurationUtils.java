@@ -73,6 +73,7 @@ public abstract class ConfigurationUtils {
     for (Map.Entry<String, String> entry : conf) {
       resolved.set(entry.getKey(), conf.get(entry.getKey()));
     }
+    // Testing merge
     return resolved;
   }
 
