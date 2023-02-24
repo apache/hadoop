@@ -80,6 +80,23 @@ public class ConfigurationValidationAnnotations {
   }
 
   /**
+   * Describes the requirements when validating the annotated double field.
+   */
+  @Target({ ElementType.FIELD })
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface DoubleConfigurationValidatorAnnotation {
+    String ConfigurationKey();
+
+    double MaxValue() default Double.MAX_VALUE;
+
+    double MinValue() default Double.MIN_VALUE;
+
+    double DefaultValue();
+
+    boolean ThrowIfInvalid() default false;
+  }
+
+  /**
    * Describes the requirements when validating the annotated String field.
    */
   @Target({ ElementType.FIELD })

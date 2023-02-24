@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.DoubleConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.IntegerWithOutlierConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.LongConfigurationValidatorAnnotation;
@@ -271,6 +272,30 @@ public class AbfsConfiguration{
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ANALYSIS_PERIOD,
           DefaultValue = DEFAULT_ANALYSIS_PERIOD_MS)
   private int analysisPeriod;
+
+  @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MIN_ACCEPTABLE_ERROR_PERCENTAGE,
+      DefaultValue = DEFAULT_MIN_ACCEPTABLE_ERROR_PERCENTAGE)
+  private double minAcceptableErrorPercentage;
+
+  @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MAX_EQUILIBRIUM_ERROR_PERCENTAGE,
+          DefaultValue = DEFAULT_MAX_EQUILIBRIUM_ERROR_PERCENTAGE)
+  private double maxEquilibriumErrorPercentage;
+
+  @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_RAPID_SLEEP_DECREASE_FACTOR,
+          DefaultValue = DEFAULT_RAPID_SLEEP_DECREASE_FACTOR)
+  private double rapidSleepDecreaseFactor;
+
+  @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_RAPID_SLEEP_DECREASE_TRANSITION_MS,
+          DefaultValue = DEFAULT_RAPID_SLEEP_DECREASE_TRANSITION_PERIOD_MS)
+  private double rapidSleepDecreaseTransitionPeriodMs;
+
+  @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SLEEP_DECREASE_FACTOR,
+          DefaultValue = DEFAULT_SLEEP_DECREASE_FACTOR)
+  private double sleepDecreaseFactor;
+
+  @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SLEEP_INCREASE_FACTOR,
+          DefaultValue = DEFAULT_SLEEP_INCREASE_FACTOR)
+  private double sleepIncreaseFactor;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_IO_RATE_LIMIT,
       MinValue = 0,
@@ -758,6 +783,30 @@ public class AbfsConfiguration{
 
   public int getAnalysisPeriod() {
     return analysisPeriod;
+  }
+
+  public double getMinErrorPercentage() {
+    return minAcceptableErrorPercentage;
+  }
+
+  public double getMaxEquilibriumErrorPercentage() {
+    return maxEquilibriumErrorPercentage;
+  }
+
+  public double getRapidSleepDecreaseFactor() {
+    return rapidSleepDecreaseFactor;
+  }
+
+  public double getRapidSleepDecreaseTransitionPeriod() {
+    return rapidSleepDecreaseTransitionPeriodMs;
+  }
+
+  public double getSleepDecreaseFactor() {
+    return sleepDecreaseFactor;
+  }
+
+  public double getSleepIncreaseFactor() {
+    return sleepIncreaseFactor;
   }
 
   public int getRateLimit() {

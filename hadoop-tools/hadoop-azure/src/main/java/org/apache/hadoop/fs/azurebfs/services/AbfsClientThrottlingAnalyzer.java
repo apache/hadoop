@@ -47,7 +47,12 @@ class AbfsClientThrottlingAnalyzer {
   private static final double SLEEP_DECREASE_FACTOR = .975;
   private static final double SLEEP_INCREASE_FACTOR = 1.05;
   private int analysisPeriodMs;
-
+  private double minAcceptableError;
+  private double maxEquilibriumError;
+  private double rapidSleepDecreaseFactor;
+  private double rapidSleepDecreaseTransitionPeriodMs;
+  private double sleepDecreaseFactor;
+  private double sleepIncreaseFactor;
   private volatile int sleepDuration = 0;
   private long consecutiveNoErrorCount = 0;
   private String name = null;
@@ -84,6 +89,12 @@ class AbfsClientThrottlingAnalyzer {
     this.abfsConfiguration = abfsConfiguration;
     this.accountLevelThrottlingEnabled = abfsConfiguration.accountThrottlingEnabled();
     this.analysisPeriodMs = abfsConfiguration.getAnalysisPeriod();
+    this.minAcceptableError = abfsConfiguration.getMinErrorPercentage();
+    this.maxEquilibriumError = abfsConfiguration.getMaxEquilibriumErrorPercentage();
+    this.rapidSleepDecreaseFactor = abfsConfiguration.getRapidSleepDecreaseFactor();
+    this.rapidSleepDecreaseTransitionPeriodMs = abfsConfiguration.getRapidSleepDecreaseTransitionPeriod();
+    this.sleepDecreaseFactor = abfsConfiguration.getSleepDecreaseFactor();
+    this.sleepIncreaseFactor = abfsConfiguration.getSleepIncreaseFactor();
     this.lastExecutionTime = new AtomicLong(now());
     this.blobMetrics = new AtomicReference<AbfsOperationMetrics>(
         new AbfsOperationMetrics(System.currentTimeMillis()));
@@ -201,17 +212,17 @@ class AbfsClientThrottlingAnalyzer {
 
     double newSleepDuration;
 
-    if (errorPercentage < MIN_ACCEPTABLE_ERROR_PERCENTAGE) {
+    if (errorPercentage < minAcceptableError) {
       ++consecutiveNoErrorCount;
       // Decrease sleepDuration in order to increase throughput.
       double reductionFactor =
           (consecutiveNoErrorCount * analysisPeriodMs
-              >= RAPID_SLEEP_DECREASE_TRANSITION_PERIOD_MS)
-              ? RAPID_SLEEP_DECREASE_FACTOR
-              : SLEEP_DECREASE_FACTOR;
+              >= rapidSleepDecreaseTransitionPeriodMs)
+              ? rapidSleepDecreaseFactor
+              : sleepDecreaseFactor;
 
       newSleepDuration = sleepDuration * reductionFactor;
-    } else if (errorPercentage < MAX_EQUILIBRIUM_ERROR_PERCENTAGE) {
+    } else if (errorPercentage < maxEquilibriumError) {
       // Do not modify sleepDuration in order to stabilize throughput.
       newSleepDuration = sleepDuration;
     } else {
@@ -238,7 +249,7 @@ class AbfsClientThrottlingAnalyzer {
           / (operationsFailed + operationsSuccessful);
 
       final double maxSleepDuration = analysisPeriodMs;
-      final double minSleepDuration = sleepDuration * SLEEP_INCREASE_FACTOR;
+      final double minSleepDuration = sleepDuration * sleepIncreaseFactor;
 
       // Add 1 ms to avoid rounding down and to decrease proximity to the server
       // side ingress/egress limit.  Ensure that the new sleep duration is
