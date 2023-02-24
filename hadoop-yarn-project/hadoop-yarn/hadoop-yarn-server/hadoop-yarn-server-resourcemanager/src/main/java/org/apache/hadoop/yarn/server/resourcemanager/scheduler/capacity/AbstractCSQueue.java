@@ -659,6 +659,10 @@ public abstract class AbstractCSQueue implements CSQueue {
   /**
    * Returns whether we should continue to look at all heart beating nodes even
    * after the reservation limit was hit.
+   *
+   * @return true,
+   * continue to look at all heart beating nodes even after the reservation limit was hit.
+   * otherwise false.
    */
   @Private
   public boolean isReservationsContinueLooking() {

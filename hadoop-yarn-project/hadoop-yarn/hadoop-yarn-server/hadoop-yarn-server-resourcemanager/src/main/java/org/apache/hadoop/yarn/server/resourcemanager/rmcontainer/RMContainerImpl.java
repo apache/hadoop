@@ -922,8 +922,8 @@ public class RMContainerImpl implements RMContainer {
 
   /**
    * catch the InvalidStateTransition.
-   * @param state
-   * @param rmContainerEventType
+   * @param state RMContainerState.
+   * @param rmContainerEventType RMContainerEventType.
    */
   @VisibleForTesting
   protected void onInvalidStateTransition(

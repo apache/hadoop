@@ -1214,6 +1214,26 @@ public class MockDefaultRequestInterceptorREST
 
       return new RMQueueAclInfo(true, user.getUserName(), "");
     }
+
+    public String dumpSchedulerLogs(String time, HttpServletRequest hsr)
+        throws IOException {
+
+      int period = Integer.parseInt(time);
+      if (period <= 0) {
+        throw new BadRequestException("Period must be greater than 0");
+      }
+
+      return "Capacity scheduler logs are being created.";
+    }
+  }
+
+  @Override
+  public String dumpSchedulerLogs(String time, HttpServletRequest hsr) throws IOException {
+    ResourceManager mockResourceManager = mock(ResourceManager.class);
+    Configuration conf = new YarnConfiguration();
+    MockRMWebServices webSvc = new MockRMWebServices(mockResourceManager, conf,
+        mock(HttpServletResponse.class));
+    return webSvc.dumpSchedulerLogs(time, hsr);
   }
 
   @Override
