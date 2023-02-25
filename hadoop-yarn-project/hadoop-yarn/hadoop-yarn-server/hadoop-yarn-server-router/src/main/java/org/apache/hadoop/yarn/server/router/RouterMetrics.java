@@ -1329,7 +1329,7 @@ public final class RouterMetrics {
   public int getNumReplaceLabelsOnNodeFailedRetrieved() {
     return numReplaceLabelsOnNodeFailedRetrieved.value();
   }
-  
+
   public int getNumAddToClusterNodeLabelsFailedRetrieved() {
     return numAddToClusterNodeLabelsFailedRetrieved.value();
   }
