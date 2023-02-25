@@ -1100,11 +1100,10 @@ public class TestFsDatasetImpl {
       block = DFSTestUtil.getFirstBlock(fs, filePath);
       // Test for the overloaded method reportBadBlocks
       dataNode.reportBadBlocks(block, dataNode.getFSDataset().getFsVolumeReferences().get(0));
-      GenericTestUtils.waitFor(() -> {
-        BlockManagerTestUtil.updateState(cluster.getNamesystem().getBlockManager());
-        // Verify the bad block has been reported to namenode
-        return 1 == cluster.getNamesystem().getCorruptReplicaBlocks();
-      }, 100, 10000, "Corrupted replica blocks could not be found");
+      DataNodeTestUtils.triggerHeartbeat(dataNode);
+      BlockManagerTestUtil.updateState(cluster.getNamesystem().getBlockManager());
+      assertEquals("Corrupt replica blocks could not be reflected with the heartbeat", 1,
+          cluster.getNamesystem().getCorruptReplicaBlocks());
     }
   }
 
