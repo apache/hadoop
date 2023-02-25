@@ -129,6 +129,8 @@
     <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.3.1</ehcache.version>
     <hikari.version>4.0.3</hikari.version>
+    <derby.version>10.10.2.0</derby.version>
+    <mysql-connector-java.version>8.0.29</mysql-connector-java.version>
     <mssql.version>6.2.1.jre7</mssql.version>
     <okhttp3.version>4.10.0</okhttp3.version>
     <okio.version>3.2.0</okio.version>
@@ -212,7 +214,7 @@
     <nimbus-jose-jwt.version>9.8.1</nimbus-jose-jwt.version>
     <nodejs.version>v12.22.1</nodejs.version>
     <yarnpkg.version>v1.22.5</yarnpkg.version>
-    <apache-ant.version>1.10.11</apache-ant.version>
+    <apache-ant.version>1.10.13</apache-ant.version>
     <jmh.version>1.20</jmh.version>
   </properties>
 
@@ -1808,6 +1810,16 @@
           <groupId>com.zaxxer</groupId>
           <artifactId>HikariCP</artifactId>
           <version>${hikari.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.derby</groupId>
+          <artifactId>derby</artifactId>
+          <version>${derby.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>mysql</groupId>
+          <artifactId>mysql-connector-java</artifactId>
+          <version>${mysql-connector-java.version}</version>
         </dependency>
         <dependency>
           <groupId>com.microsoft.sqlserver</groupId>

@@ -199,6 +199,12 @@ public class SchedulerUtils {
   /**
    * Utility method to normalize a resource request, by ensuring that the
    * requested memory is a multiple of minMemory and is not zero.
+   *
+   * @param ask resource request.
+   * @param resourceCalculator {@link ResourceCalculator} the resource
+   * calculator to use.
+   * @param minimumResource minimum Resource.
+   * @param maximumResource maximum Resource.
    */
   @VisibleForTesting
   public static void normalizeRequest(
@@ -215,6 +221,12 @@ public class SchedulerUtils {
    * Utility method to normalize a resource request, by ensuring that the
    * requested memory is a multiple of increment resource and is not zero.
    *
+   * @param ask resource request.
+   * @param resourceCalculator {@link ResourceCalculator} the resource
+   * calculator to use.
+   * @param minimumResource minimum Resource.
+   * @param maximumResource maximum Resource.
+   * @param incrementResource increment Resource.
    * @return normalized resource
    */
   public static Resource getNormalizedResource(
@@ -531,7 +543,14 @@ public class SchedulerUtils {
 
   /**
    * Check queue label expression, check if node label in queue's
-   * node-label-expression existed in clusterNodeLabels if rmContext != null
+   * node-label-expression existed in clusterNodeLabels if rmContext != null.
+   *
+   * @param queueLabels queue Labels.
+   * @param labelExpression label expression.
+   * @param rmContext rmContext.
+   * @return true, if node label in queue's node-label-expression existed in clusterNodeLabels;
+   * otherwise false.
+   *
    */
   public static boolean checkQueueLabelExpression(Set<String> queueLabels,
       String labelExpression, RMContext rmContext) {
