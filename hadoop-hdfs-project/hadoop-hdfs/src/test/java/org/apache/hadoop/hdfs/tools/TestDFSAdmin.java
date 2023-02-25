@@ -22,11 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
@@ -90,6 +86,7 @@ import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
 
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -1238,36 +1235,44 @@ public class TestDFSAdmin {
     when(reconfigurationUtil.parseChangedProperties(any(Configuration.class),
         any(Configuration.class))).thenReturn(changes);
 
-    assertEquals(0, admin.startReconfiguration("datanode", "livenodes"));
+    int result = admin.startReconfiguration("datanode", "livenodes");
+    Assertions.assertThat(result).isEqualTo(0);
     final List<String> outsForStartReconf = new ArrayList<>();
     final List<String> errsForStartReconf = new ArrayList<>();
     reconfigurationOutErrFormatter("startReconfiguration", "datanode",
         "livenodes", outsForStartReconf, errsForStartReconf);
-    assertEquals(3, outsForStartReconf.size());
-    assertEquals(0, errsForStartReconf.size());
-    assertTrue(outsForStartReconf.get(0).startsWith("Started reconfiguration task on node"));
-    assertTrue(outsForStartReconf.get(1).startsWith("Started reconfiguration task on node"));
-    assertEquals("Starting of reconfiguration task successful on 2 nodes, failed on 0 nodes.",
-        outsForStartReconf.get(2));
+    String started = "Started reconfiguration task on node";
+    String starting =
+        "Starting of reconfiguration task successful on 2 nodes, failed on 0 nodes.";
+    Assertions.assertThat(outsForStartReconf.size()).isEqualTo(3);
+    Assertions.assertThat(errsForStartReconf.size()).isEqualTo(0);
+    Assertions.assertThat(outsForStartReconf.get(0)).startsWith(started);
+    Assertions.assertThat(outsForStartReconf.get(1)).startsWith(started);
+    Assertions.assertThat(outsForStartReconf.get(2)).startsWith(starting);
 
     Thread.sleep(1000);
     final List<String> outs = new ArrayList<>();
     final List<String> errs = new ArrayList<>();
     awaitReconfigurationFinished("datanode", "livenodes", outs, errs);
-    assertEquals(9, outs.size());
-    assertEquals(0, errs.size());
+    Assertions.assertThat(outs.size()).isEqualTo(9);
+    Assertions.assertThat(errs.size()).isEqualTo(0);
     LOG.info("dfsadmin -status -livenodes output:");
     outs.forEach(s -> LOG.info("{}", s));
-    assertTrue(outs.get(0).startsWith("Reconfiguring status for node"));
-    assertTrue("SUCCESS: Changed property dfs.datanode.peer.stats.enabled".equals(outs.get(2))
-        || "SUCCESS: Changed property dfs.datanode.peer.stats.enabled".equals(outs.get(1)));
-    assertTrue("\tFrom: \"false\"".equals(outs.get(3)) || "\tFrom: \"false\"".equals(outs.get(2)));
-    assertTrue("\tTo: \"true\"".equals(outs.get(4)) || "\tTo: \"true\"".equals(outs.get(3)));
-    assertEquals("SUCCESS: Changed property dfs.datanode.peer.stats.enabled", outs.get(5));
-    assertEquals("\tFrom: \"false\"", outs.get(6));
-    assertEquals("\tTo: \"true\"", outs.get(7));
-    assertEquals("Retrieval of reconfiguration status successful on 2 nodes, failed on 0 nodes.",
-        outs.get(8));
-  }
+    Assertions.assertThat(outs.get(0)).startsWith("Reconfiguring status for node");
 
+    String success = "SUCCESS: Changed property dfs.datanode.peer.stats.enabled";
+    String from = "\tFrom: \"false\"";
+    String to = "\tTo: \"true\"";
+    String retrieval =
+        "Retrieval of reconfiguration status successful on 2 nodes, failed on 0 nodes.";
+
+    Assertions.assertThat(Collections.singleton(success)).containsAnyOf(outs.get(1), outs.get(2));
+    Assertions.assertThat(Collections.singleton(from)).containsAnyOf(outs.get(3), outs.get(2));
+    Assertions.assertThat(Collections.singleton(to))
+        .containsAnyOf(outs.get(4), outs.get(3));
+    Assertions.assertThat(outs.get(5)).isEqualTo(success);
+    Assertions.assertThat(outs.get(6)).isEqualTo(from);
+    Assertions.assertThat(outs.get(7)).isEqualTo(to);
+    Assertions.assertThat(outs.get(8)).isEqualTo(retrieval);
+  }
 }
