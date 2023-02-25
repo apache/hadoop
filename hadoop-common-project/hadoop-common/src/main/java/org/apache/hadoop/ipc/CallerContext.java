@@ -49,6 +49,7 @@ public final class CallerContext {
   public static final String CLIENT_PORT_STR = "clientPort";
   public static final String CLIENT_ID_STR = "clientId";
   public static final String CLIENT_CALL_ID_STR = "clientCallId";
+  public static final String REAL_USER_STR = "realUser";
 
   /** The caller context.
    *

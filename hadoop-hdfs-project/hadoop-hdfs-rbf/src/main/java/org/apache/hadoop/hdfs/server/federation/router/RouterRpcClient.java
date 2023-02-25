@@ -491,7 +491,7 @@ public class RouterRpcClient {
           + router.getRouterId());
     }
 
-    addClientInfoToCallerContext();
+    addClientInfoToCallerContext(ugi);
 
     Object ret = null;
     if (rpcMonitor != null) {
@@ -627,14 +627,18 @@ public class RouterRpcClient {
   /**
    * For tracking some information about the actual client.
    * It adds trace info "clientIp:ip", "clientPort:port",
-   * "clientId:id" and "clientCallId:callId"
+   * "clientId:id", "clientCallId:callId" and "realUser:userName"
    * in the caller context, removing the old values if they were
    * already present.
    */
-  private void addClientInfoToCallerContext() {
+  private void addClientInfoToCallerContext(UserGroupInformation ugi) {
     CallerContext ctx = CallerContext.getCurrent();
     String origContext = ctx == null ? null : ctx.getContext();
     byte[] origSignature = ctx == null ? null : ctx.getSignature();
+    String realUser = null;
+    if (ugi.getRealUser() != null) {
+      realUser = ugi.getRealUser().getUserName();
+    }
     CallerContext.Builder builder =
         new CallerContext.Builder("", contextFieldSeparator)
             .append(CallerContext.CLIENT_IP_STR, Server.getRemoteAddress())
@@ -644,6 +648,7 @@ public class RouterRpcClient {
                 StringUtils.byteToHexString(Server.getClientId()))
             .append(CallerContext.CLIENT_CALL_ID_STR,
                 Integer.toString(Server.getCallId()))
+            .append(CallerContext.REAL_USER_STR, realUser)
             .setSignature(origSignature);
     // Append the original caller context
     if (origContext != null) {

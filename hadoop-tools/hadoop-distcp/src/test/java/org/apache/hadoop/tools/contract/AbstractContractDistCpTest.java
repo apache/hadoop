@@ -899,8 +899,7 @@ public abstract class AbstractContractDistCpTest
     // Creating a source file with certain dataset.
     byte[] sourceBlock = dataset(10, 'a', 'z');
 
-    // Write the dataset and as well create the target path.
-    ContractTestUtils.createFile(localFS, dest, true, sourceBlock);
+    // Write the dataset.
     ContractTestUtils
         .writeDataset(remoteFS, source, sourceBlock, sourceBlock.length,
             1024, true);
