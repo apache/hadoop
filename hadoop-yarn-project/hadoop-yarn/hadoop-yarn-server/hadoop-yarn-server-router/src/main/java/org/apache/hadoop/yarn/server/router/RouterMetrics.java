@@ -820,7 +820,7 @@ public final class RouterMetrics {
   public long getNumSucceededRefreshServiceAclsRetrieved() {
     return totalSucceededRefreshServiceAclsRetrieved.lastStat().numSamples();
   }
-  
+
   @VisibleForTesting
   public long getNumSucceededAddToClusterNodeLabelsRetrieved() {
     return totalSucceededAddToClusterNodeLabelsRetrieved.lastStat().numSamples();
@@ -1100,7 +1100,7 @@ public final class RouterMetrics {
   public double getLatencySucceededRefreshServiceAclsRetrieved() {
     return totalSucceededRefreshServiceAclsRetrieved.lastStat().mean();
   }
-  
+
   @VisibleForTesting
   public double getLatencySucceededAddToClusterNodeLabelsRetrieved() {
     return totalSucceededAddToClusterNodeLabelsRetrieved.lastStat().mean();
@@ -1321,7 +1321,7 @@ public final class RouterMetrics {
   public int getNumRefreshUserToGroupsMappingsFailedRetrieved() {
     return numRefreshUserToGroupsMappingsFailedRetrieved.value();
   }
-  
+
   public int getNumRefreshAdminAclsFailedRetrieved() {
     return numRefreshAdminAclsFailedRetrieved.value();
   }
@@ -1329,7 +1329,7 @@ public final class RouterMetrics {
   public int getNumRefreshServiceAclsFailedRetrieved() {
     return numRefreshServiceAclsFailedRetrieved.value();
   }
-  
+
   public int getNumAddToClusterNodeLabelsFailedRetrieved() {
     return numAddToClusterNodeLabelsFailedRetrieved.value();
   }
@@ -1630,7 +1630,7 @@ public final class RouterMetrics {
     totalSucceededRefreshServiceAclsRetrieved.add(duration);
     refreshServiceAclsLatency.add(duration);
   }
-  
+
   public void succeededAddToClusterNodeLabelsRetrieved(long duration) {
     totalSucceededAddToClusterNodeLabelsRetrieved.add(duration);
     addToClusterNodeLabelsLatency.add(duration);
@@ -1834,7 +1834,7 @@ public final class RouterMetrics {
   public void incrRefreshUserToGroupsMappingsFailedRetrieved() {
     numRefreshUserToGroupsMappingsFailedRetrieved.incr();
   }
-  
+
   public void incrRefreshAdminAclsFailedRetrieved() {
     numRefreshAdminAclsFailedRetrieved.incr();
   }
@@ -1842,7 +1842,7 @@ public final class RouterMetrics {
   public void incrRefreshServiceAclsFailedRetrieved() {
     numRefreshServiceAclsFailedRetrieved.incr();
   }
-  
+
   public void incrAddToClusterNodeLabelsFailedRetrieved() {
     numAddToClusterNodeLabelsFailedRetrieved.incr();
   }
