@@ -414,7 +414,14 @@ public class LocalDirAllocator {
         
             //build the "roulette wheel"
         for(int i =0; i < ctx.dirDF.length; ++i) {
-          availableOnDisk[i] = ctx.dirDF[i].getAvailable();
+          final DF target = ctx.dirDF[i];
+          // attempt to recreate the dir so that getAvailable() is valid
+          // if it fails, getAvailable() will return 0, so the dir will
+          // be declared unavailable.
+          // return value is logged at debug to keep spotbugs quiet.
+          final boolean b = new File(target.getDirPath()).mkdirs();
+          LOG.debug("mkdirs of {}={}", target, b);
+          availableOnDisk[i] = target.getAvailable();
           totalAvailable += availableOnDisk[i];
         }
 
