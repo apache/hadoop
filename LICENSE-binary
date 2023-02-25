@@ -210,9 +210,9 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/nvd3-1.8.5.* (css and js
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/AbstractFuture.java
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/TimeoutFuture.java
 
-com.aliyun:aliyun-java-sdk-core:3.4.0
-com.aliyun:aliyun-java-sdk-ecs:4.2.0
-com.aliyun:aliyun-java-sdk-ram:3.0.0
+com.aliyun:aliyun-java-sdk-core:4.5.10
+com.aliyun:aliyun-java-sdk-kms:2.11.0
+com.aliyun:aliyun-java-sdk-ram:3.1.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
 com.amazonaws:aws-java-sdk-bundle:1.12.316
@@ -289,8 +289,12 @@ io.netty:netty-resolver-dns-classes-macos:4.1.77.Final
 io.netty:netty-transport-native-epoll:4.1.77.Final
 io.netty:netty-transport-native-kqueue:4.1.77.Final
 io.netty:netty-resolver-dns-native-macos:4.1.77.Final
-io.opencensus:opencensus-api:0.12.3
-io.opencensus:opencensus-contrib-grpc-metrics:0.12.3
+io.opencensus:opencensus-api:0.24.0
+io.opencensus:opencensus-contrib-grpc-metrics:0.24.0
+io.opentracing:opentracing-api:0.33.0
+io.opentracing:opentracing-noop:0.33.0
+io.opentracing:opentracing-util:0.33.0
+io.perfmark:perfmark-api:0.19.0
 io.reactivex:rxjava:1.3.8
 io.reactivex:rxjava-string:1.1.1
 io.reactivex:rxnetty:0.4.20
@@ -357,6 +361,9 @@ org.eclipse.jetty:jetty-xml:9.4.48.v20220622
 org.eclipse.jetty.websocket:javax-websocket-client-impl:9.4.48.v20220622
 org.eclipse.jetty.websocket:javax-websocket-server-impl:9.4.48.v20220622
 org.ehcache:ehcache:3.3.1
+org.ini4j:ini4j:0.5.4
+org.jetbrains.kotlin:kotlin-stdlib:1.4.10
+org.jetbrains.kotlin:kotlin-stdlib-common:1.4.10
 org.lz4:lz4-java:1.7.1
 org.objenesis:objenesis:2.6
 org.xerial.snappy:snappy-java:1.0.5
@@ -516,6 +523,8 @@ Eclipse Public License 1.0
 --------------------------
 
 junit:junit:4.13.2
+org.jacoco:org.jacoco.agent:0.8.5
+
 
 
 HSQL License
