@@ -1076,7 +1076,7 @@ public class TestFsDatasetImpl {
   public void testReportBadBlocks() throws Exception {
     boolean threwException = false;
     final Configuration config = new HdfsConfiguration();
-    try (final MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
         .numDataNodes(1).build()) {
       cluster.waitActive();
 
