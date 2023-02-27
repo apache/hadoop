@@ -62,6 +62,7 @@ public class TracingContext {
   private Listener listener = null;  // null except when testing
   //final concatenated ID list set into x-ms-client-request-id header
   private String header = EMPTY_STRING;
+  private String primaryRequestIdForRetry;
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
@@ -161,8 +162,8 @@ public class TracingContext {
     case ALL_ID_FORMAT: // Optional IDs (e.g. streamId) may be empty
       header =
           clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID + ":"
-              + primaryRequestId + ":" + streamID + ":" + opType + ":"
-              + retryCount;
+              + getPrimaryRequestIdForHeader(previousFailure) + ":" + streamID
+              + ":" + opType + ":" + retryCount;
       header = addFailureReasons(header, previousFailure);
       break;
     case TWO_ID_FORMAT:
@@ -175,6 +176,17 @@ public class TracingContext {
       listener.callTracingHeaderValidator(header, format);
     }
     httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
+    if(primaryRequestId.isEmpty() && previousFailure == null) {
+      String[] clientRequestIdParts = clientRequestId.split(":");
+      primaryRequestIdForRetry = clientRequestIdParts[clientRequestIdParts.length - 1];
+    }
+  }
+
+  private String getPrimaryRequestIdForHeader(final String previousFailure) {
+    if(!primaryRequestId.isEmpty() || previousFailure == null) {
+      return primaryRequestId;
+    }
+    return primaryRequestIdForRetry;
   }
 
   private String addFailureReasons(final String header,
