@@ -199,13 +199,13 @@
 			parsedJsonResponse = JSON.parse(jsonResponse);
 			
 			var echo = project.createTask("echo");
-			echo.setMessage("Obtained cumulative changed code coverage percentage is : " + parsedJsonResponse.changedCodeCoveragePercentage);
+			echo.setMessage("Obtained cumulative changed code coverage percentage is : " + parsedJsonResponse.cumulativeCccDetails.changedCodeCoveragePercentage);
 			echo.perform();
-			echo.setMessage("Number of commit-files with CCC percentage below threshold is : " + parsedJsonResponse.commitFilesBelowCCCThreshold);
+			echo.setMessage("Number of commit-files with CCC percentage below threshold is : " + parsedJsonResponse.cumulativeCccDetails.commitFilesBelowCCCThreshold);
 			echo.perform();
 
 			// Build fails on not meeting criteria
-			if( parseInt(parsedJsonResponse.changedCodeCoveragePercentage,10) &lt; parseInt(project.getProperty("threshold"),10) || parseInt(parsedJsonResponse.commitFilesBelowCCCThreshold,10) != 0 ) {
+			if( parseInt(parsedJsonResponse.cumulativeCccDetails.changedCodeCoveragePercentage,10) &lt; parseInt(project.getProperty("threshold"),10) || parseInt(parsedJsonResponse.cumulativeCccDetails.commitFilesBelowCCCThreshold,10) != 0 ) {
 				throw new Error("MR blocked . This merge request does not meet quality checks. ");
 			}
 			
