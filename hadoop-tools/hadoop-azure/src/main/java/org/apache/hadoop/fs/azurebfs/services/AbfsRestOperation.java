@@ -122,7 +122,7 @@ public class AbfsRestOperation {
   AbfsRestOperation(final AbfsRestOperationType operationType,
                     final AbfsClient client,
                     final String method,
-                    URL url,
+                    final URL url,
                     final List<AbfsHttpHeader> requestHeaders) {
     this(operationType, client, method, url, requestHeaders, null);
     this.timeoutOptimizer = new TimeoutOptimizer(url, operationType, client.getRetryPolicy(), client.getAbfsConfiguration());
@@ -140,7 +140,7 @@ public class AbfsRestOperation {
   AbfsRestOperation(final AbfsRestOperationType operationType,
                     final AbfsClient client,
                     final String method,
-                    URL url,
+                    final URL url,
                     final List<AbfsHttpHeader> requestHeaders,
                     final String sasToken) {
     this.operationType = operationType;
