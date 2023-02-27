@@ -185,7 +185,7 @@
 			<arg value='--request' />
 			<arg value='GET'/>
 			<arg value='--location' />
-			<arg value='https://demoinsight.myopshub.com/OpsHubWS/rest/api/1.0/changed-code-coverage?eventUUID=d23d1226-b769-41a7-a745-b4c608ecab48&amp;testType=${testType}&amp;threshold=${threshold}' />
+			<arg value='https://demoinsight.myopshub.com/OpsHubWS/rest/api/1.0/changed-code-coverage?eventUUID=${eventUUid}&amp;testType=${testType}&amp;threshold=${threshold}' />
 			<arg value='--header' />
 			<arg value='Authorization: Basic YWRtaW46aW5zaWdodEBPcHNIdWI=' />
 			<arg value='--silent' />
