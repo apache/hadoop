@@ -107,7 +107,7 @@ public class NNThroughputBenchmark implements Tool {
       LoggerFactory.getLogger(NNThroughputBenchmark.class);
   private static final int BLOCK_SIZE = 16;
   private static final String GENERAL_OPTIONS_USAGE =
-      "[-keepResults] | [-logLevel L] | [-UGCacheRefreshCount G]";
+      "[-keepResults] | [-logLevel L] | [-UGCacheRefreshCount G] | [-baseDir Directory]";
 
   static Configuration config;
   static NameNode nameNode;
@@ -162,11 +162,10 @@ public class NNThroughputBenchmark implements Tool {
    * specific name-node operation.
    */
   abstract class OperationStatsBase {
-    protected static final String BASE_DIR_NAME = "/nnThroughputBenchmark";
     protected static final String OP_ALL_NAME = "all";
     protected static final String OP_ALL_USAGE = "-op all <other ops options>";
 
-    protected final String baseDir;
+    protected String baseDir = "/nnThroughputBenchmark";
     protected short replication;
     protected int blockSize;
     protected int  numThreads = 0;        // number of threads
@@ -228,7 +227,6 @@ public class NNThroughputBenchmark implements Tool {
     abstract void printResults();
 
     OperationStatsBase() {
-      baseDir = BASE_DIR_NAME + "/" + getOpName();
       replication = (short) config.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
       blockSize = config.getInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
       numOpsRequired = 10;
@@ -288,7 +286,7 @@ public class NNThroughputBenchmark implements Tool {
       clientProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
           false);
       if(!keepResults)
-        clientProto.delete(getBaseDir(), true);
+        clientProto.delete(getWorkDir(), true);
       else {
         clientProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER,
             true);
@@ -317,7 +315,11 @@ public class NNThroughputBenchmark implements Tool {
     }
 
     String getBaseDir() {
-      return baseDir;
+      return new File(baseDir).getPath();
+    }
+
+    String getWorkDir() {
+      return new File(baseDir, getOpName()).getPath();
     }
 
     String getClientName(int idx) {
@@ -355,6 +357,15 @@ public class NNThroughputBenchmark implements Tool {
         logLevel = Level.valueOf(args.get(llIndex+1));
         args.remove(llIndex+1);
         args.remove(llIndex);
+      }
+
+      int baseDirIndex = args.indexOf("-baseDir");
+      if(baseDirIndex >= 0) {
+        if(args.size() <= llIndex + 1)
+          printUsage();
+        baseDir = args.get(baseDirIndex + 1);
+        args.remove(baseDirIndex+1);
+        args.remove(baseDirIndex);
       }
 
       int ugrcIndex = args.indexOf("-UGCacheRefreshCount");
@@ -494,7 +505,7 @@ public class NNThroughputBenchmark implements Tool {
       clientProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
           false);
       long start = Time.now();
-      clientProto.delete(BASE_DIR_NAME, true);
+      clientProto.delete(getBaseDir(), true);
       long end = Time.now();
       return end-start;
     }
@@ -502,7 +513,7 @@ public class NNThroughputBenchmark implements Tool {
     @Override
     void printResults() {
       LOG.info("--- " + getOpName() + " inputs ---");
-      LOG.info("Remove directory " + BASE_DIR_NAME);
+      LOG.info("Remove directory " + getBaseDir());
       printStats();
     }
   }
@@ -558,7 +569,7 @@ public class NNThroughputBenchmark implements Tool {
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }
-      nameGenerator = new FileNameGenerator(getBaseDir(), nrFilesPerDir);
+      nameGenerator = new FileNameGenerator(getWorkDir(), nrFilesPerDir);
     }
 
     @Override
@@ -667,7 +678,7 @@ public class NNThroughputBenchmark implements Tool {
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }
-      nameGenerator = new FileNameGenerator(getBaseDir(), nrDirsPerDir);
+      nameGenerator = new FileNameGenerator(getWorkDir(), nrDirsPerDir);
     }
 
     @Override
@@ -783,12 +794,12 @@ public class NNThroughputBenchmark implements Tool {
       }
       // use the same files for open
       super.generateInputs(opsPerThread);
-      if(clientProto.getFileInfo(opCreate.getBaseDir()) != null
-          && clientProto.getFileInfo(getBaseDir()) == null) {
-        clientProto.rename(opCreate.getBaseDir(), getBaseDir());
+      if(clientProto.getFileInfo(opCreate.getWorkDir()) != null
+          && clientProto.getFileInfo(getWorkDir()) == null) {
+        clientProto.rename(opCreate.getWorkDir(), getWorkDir());
       }
-      if(clientProto.getFileInfo(getBaseDir()) == null) {
-        throw new IOException(getBaseDir() + " does not exist.");
+      if(clientProto.getFileInfo(getWorkDir()) == null) {
+        throw new IOException(getWorkDir() + " does not exist.");
       }
     }
 
@@ -1209,7 +1220,7 @@ public class NNThroughputBenchmark implements Tool {
       // create files 
       LOG.info("Creating " + nrFiles + " files with " + blocksPerFile + " blocks each.");
       FileNameGenerator nameGenerator;
-      nameGenerator = new FileNameGenerator(getBaseDir(), 100);
+      nameGenerator = new FileNameGenerator(getWorkDir(), 100);
       String clientName = getClientName(007);
       clientProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
           false);
