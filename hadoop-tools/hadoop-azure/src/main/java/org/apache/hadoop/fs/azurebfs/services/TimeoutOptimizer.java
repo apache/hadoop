@@ -18,11 +18,10 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.http.client.utils.URIBuilder;
 
 import java.net.MalformedURLException;
