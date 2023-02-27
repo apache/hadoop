@@ -286,7 +286,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
         // 生产者
         ListingProducer producer = new ListingProducer(
-                fileInfoQueue, bucketManager, bucket, prefixKey,
+                fileInfoQueue, bucketManager, bucket, prefixKey, false,
                 listConfig.singleRequestLimit,
                 useDirectory, listConfig.useListV2,
                 listConfig.offerTimeout
@@ -337,7 +337,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
         // 生产者
         ListingProducer producer = new ListingProducer(
-                fileInfoQueue, bucketManager, bucket, prefixKey,
+                fileInfoQueue, bucketManager, bucket, prefixKey, false,
                 listConfig.singleRequestLimit,
                 useDirectory, listConfig.useListV2,
                 listConfig.offerTimeout
@@ -393,7 +393,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
         // 对象列举生产者
         ListingProducer producer = new ListingProducer(
-                fileInfoQueue, bucketManager, bucket, prefixKey,
+                fileInfoQueue, bucketManager, bucket, prefixKey, true,
                 config.listProducer.singleRequestLimit, false,
                 config.listProducer.useListV2,
                 config.listProducer.offerTimeout

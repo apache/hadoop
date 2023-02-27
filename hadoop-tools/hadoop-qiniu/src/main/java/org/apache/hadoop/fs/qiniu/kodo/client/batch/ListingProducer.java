@@ -20,6 +20,7 @@ public class ListingProducer implements Callable<Exception> {
     private final boolean useDirectory;
     private final boolean useV2;
     private final long offerTimeout;
+    private final boolean containKeyPrefixSelf;
 
     /**
      * 对象列举生产者
@@ -36,6 +37,7 @@ public class ListingProducer implements Callable<Exception> {
             BucketManager bucketManager,
             String bucketName,
             String keyPrefix,
+            boolean containKeyPrefixSelf,
             int singleRequestLimit,
             boolean useDirectory,
             boolean useV2,
@@ -49,6 +51,7 @@ public class ListingProducer implements Callable<Exception> {
         this.useDirectory = useDirectory;
         this.useV2 = useV2;
         this.offerTimeout = offerTimeout;
+        this.containKeyPrefixSelf = containKeyPrefixSelf;
     }
 
 
@@ -87,7 +90,13 @@ public class ListingProducer implements Callable<Exception> {
             fileListing = listFiles(marker);
             if (fileListing.items != null) {
                 for (FileInfo file : fileListing.items) {
-                    offer(file);
+                    if (containKeyPrefixSelf) {
+                        offer(file);
+                    } else {
+                        if (!file.key.equals(keyPrefix)) {
+                            offer(file);
+                        }
+                    }
                 }
             }
 
@@ -95,7 +104,14 @@ public class ListingProducer implements Callable<Exception> {
                 for (String dirPath : fileListing.commonPrefixes) {
                     FileInfo dir = new FileInfo();
                     dir.key = dirPath;
-                    offer(dir);
+
+                    if (containKeyPrefixSelf) {
+                        offer(dir);
+                    } else {
+                        if (!dir.key.equals(keyPrefix)) {
+                            offer(dir);
+                        }
+                    }
                 }
             }
 

@@ -7,6 +7,7 @@ import org.apache.hadoop.fs.qiniu.kodo.util.QiniuKodoUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Iterator;
 import java.util.List;
 
 public class QiniuKodoCachedClient implements IQiniuKodoClient {
@@ -145,5 +146,10 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
             cache.put(key, fileInfo);
         }
         return fileInfo;
+    }
+
+    @Override
+    public Iterator<FileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException {
+        return source.listStatusIterator(prefixKey, useDirectory);
     }
 }

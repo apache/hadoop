@@ -22,10 +22,7 @@ import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -375,8 +372,21 @@ public class QiniuKodoFileSystem extends FileSystem {
     }
 
     @Override
-    public RemoteIterator<FileStatus> listStatusIterator(Path p) throws IOException {
-        return super.listStatusIterator(p);
+    public RemoteIterator<FileStatus> listStatusIterator(Path path) throws IOException {
+        String key = QiniuKodoUtils.pathToKey(workingDir, path);
+        key = QiniuKodoUtils.keyToDirKey(key);
+        Iterator<FileInfo> it = kodoClient.listStatusIterator(key, true);
+        return new RemoteIterator<FileStatus>() {
+            @Override
+            public boolean hasNext() throws IOException {
+                return it.hasNext();
+            }
+
+            @Override
+            public FileStatus next() throws IOException {
+                return fileInfoToFileStatus(it.next());
+            }
+        };
     }
 
     @Override
@@ -389,8 +399,6 @@ public class QiniuKodoFileSystem extends FileSystem {
     public Path getWorkingDirectory() {
         return workingDir;
     }
-
-    ExecutorService es = Executors.newFixedThreadPool(4);
 
     /**
      * 递归地创建文件夹

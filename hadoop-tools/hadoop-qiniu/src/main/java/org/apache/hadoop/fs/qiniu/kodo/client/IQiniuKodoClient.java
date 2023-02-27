@@ -5,6 +5,7 @@ import com.qiniu.storage.model.FileInfo;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Iterator;
 import java.util.List;
 
 public interface IQiniuKodoClient {
@@ -21,6 +22,8 @@ public interface IQiniuKodoClient {
     List<FileInfo> listNStatus(String keyPrefix, int n) throws IOException;
 
     List<FileInfo> listStatus(String key, boolean useDirectory) throws IOException;
+
+    Iterator<FileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException;
 
     boolean copyKey(String oldKey, String newKey) throws IOException;
 

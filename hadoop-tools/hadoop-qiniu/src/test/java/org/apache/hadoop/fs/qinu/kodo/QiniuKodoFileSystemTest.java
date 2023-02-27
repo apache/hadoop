@@ -130,4 +130,19 @@ public class QiniuKodoFileSystemTest {
         }
         os.close();
     }
+
+    @Test
+    public void testListIterator() throws IOException {
+        Path dir = new Path("testListIterator/");
+        for (int i = 0; i < 10; i++) {
+            fs.create(new Path(dir, Integer.toString(i))).close();
+        }
+        int i = 0;
+        RemoteIterator<FileStatus> ri = fs.listStatusIterator(dir);
+        while (ri.hasNext()) {
+            FileStatus status = ri.next();
+            assertEquals(new Path(dir, Integer.toString(i)).makeQualified(fs.getUri(), fs.getWorkingDirectory()), status.getPath());
+            i++;
+        }
+    }
 }
