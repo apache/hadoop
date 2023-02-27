@@ -1,7 +1,7 @@
 <project name="Merge Request Quality Check" basedir="." default="uploadCoverageFile">
 
 	<!-- This ant target extracts the tags and source branchname from the Merge Request number using Github API.-->
-	<target name="getTagAndBranchDetailsFromMR" description="This ant target fetches the start tag, to tag and source branch name from the Merge request.">
+	<target name="changedCodeCoverage" description="This ant target fetches the start tag, to tag and source branch name from the Merge request.">
 
 		<!-- Access the variables from file -->
 		<property file=".env"/>
@@ -185,7 +185,7 @@
 			<arg value='--request' />
 			<arg value='GET'/>
 			<arg value='--location' />
-			<arg value='https://demoinsight.myopshub.com/OpsHubWS/rest/api/1.0/changed-code-coverage?eventUUID=${eventUUid}&amp;testType=${testType}&amp;threshold=${threshold}' />
+			<arg value='https://demoinsight.myopshub.com/OpsHubWS/rest/api/1.0/changed-code-coverage?eventUUID=dee9d458-9598-4fb2-a59d-35ad6359d9d5&amp;testType=${testType}&amp;threshold=${threshold}' />
 			<arg value='--header' />
 			<arg value='Authorization: Basic YWRtaW46aW5zaWdodEBPcHNIdWI=' />
 			<arg value='--silent' />
