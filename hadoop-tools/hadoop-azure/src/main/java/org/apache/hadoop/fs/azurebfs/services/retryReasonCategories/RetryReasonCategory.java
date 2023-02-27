@@ -22,20 +22,19 @@ import java.util.Locale;
 
 /**
  * Provides methods to define if given exception can be categorised to certain category.
- * Each category has a different implementation of the interface.
+ * Each category has a different implementation of the abstract class.
  * */
 public abstract class RetryReasonCategory {
 
   /**
-   * Returns if given server response error can be converted to an abbreviation
-   * by the implementation.
+   * Returns if given server response error can be categorised by the implementation.
    *
    * @param ex exception captured in the server response.
    * @param statusCode statusCode on the server response
    * @param serverErrorMessage serverErrorMessage on the server response.
    *
-   * @return <ol><li>true if server response error can be converted to abbreviation by the implementation</li>
-   * <li>false if response error can not be abbreviated by the implementation</li></ol>
+   * @return <ol><li>true if server response error can be categorised by the implementation</li>
+   * <li>false if response error can not be categorised by the implementation</li></ol>
    */
   abstract Boolean canCapture(Exception ex,
       Integer statusCode,
@@ -51,6 +50,17 @@ public abstract class RetryReasonCategory {
    */
   abstract String getAbbreviation(Integer statusCode, String serverErrorMessage);
 
+  /**
+   * Converts the server-error response to an abbreviation if the response can be
+   * categorised by the implementation.
+   *
+   * @param ex exception received while making API request
+   * @param statusCode statusCode received in the server-response
+   * @param serverErrorMessage error-message received in the server-response
+   *
+   * @return abbreviation if the server-response can be categorised by the implementation.
+   * null if the server-response can not be categorised by the implementation.
+   * */
   public String captureAndGetAbbreviation(Exception ex, Integer statusCode, String serverErrorMessage) {
     if(canCapture(ex, statusCode, serverErrorMessage)) {
       return getAbbreviation(statusCode, serverErrorMessage);
