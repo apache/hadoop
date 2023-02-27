@@ -37,9 +37,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static java.net.HttpURLConnection.HTTP_OK;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FILESYSTEM;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_HEAD;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_RESOURCE;
 import static org.mockito.ArgumentMatchers.nullable;
 
 
@@ -89,12 +87,12 @@ public class ITestAbfsCustomTimeout extends AbstractAbfsIntegrationTest {
             abfsConfig.set(config, Integer.toString(timeout));
             AbfsRestOperation op = getMockAbfsRestOp(opType, newFs);
             final int[] finalTimeout = {timeout};
-            final int requestCount[] = new int[1];
+            final int[] requestCount = new int[1];
             requestCount[0] = 4;
             Mockito.doAnswer(new Answer() {
                 public Object answer(InvocationOnMock invocation) {
                     if (requestCount[0] > 0) {
-                        requestCount[0] --;
+                        requestCount[0]--;
                         assertEquals(finalTimeout[0], op.getTimeoutOptimizer().getRequestTimeout());
                         if (finalTimeout[0] * requestTimeoutIncRate > maxRequestTimeout) {
                             finalTimeout[0] = maxRequestTimeout;
@@ -123,7 +121,7 @@ public class ITestAbfsCustomTimeout extends AbstractAbfsIntegrationTest {
 
         AbfsHttpOperation mockHttpOp = Mockito.spy(spyRestOp.createHttpOperationInstance());
 
-        final int count[] = new int[1];
+        final int[] count = new int[1];
         count[0] = 0;
         Mockito.doAnswer(new Answer() {
             @Override
@@ -212,8 +210,8 @@ public class ITestAbfsCustomTimeout extends AbstractAbfsIntegrationTest {
                 ConfigurationKeys.AZURE_SET_OWNER_REQUEST_TIMEOUT, ConfigurationKeys.AZURE_SET_PERMISSIONS_REQUEST_TIMEOUT,
                 ConfigurationKeys.AZURE_SET_PATH_PROPERTIES_REQUEST_TIMEOUT, ConfigurationKeys.AZURE_CHECK_ACCESS_REQUEST_TIMEOUT
         ));
-        for(int i = 0; i < opType.size(); i ++) {
-            opMap.put(opType.get(i),timeoutValues.get(i));
+        for (int i = 0; i < opType.size(); i++) {
+            opMap.put(opType.get(i), timeoutValues.get(i));
             opTimeoutConfigMap.put(opType.get(i), opTypeConfig.get(i));
         }
     }

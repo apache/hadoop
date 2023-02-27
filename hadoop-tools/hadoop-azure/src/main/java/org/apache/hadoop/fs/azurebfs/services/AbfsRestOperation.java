@@ -97,7 +97,9 @@ public class AbfsRestOperation {
   }
 
   @VisibleForTesting
-  TimeoutOptimizer getTimeoutOptimizer() { return timeoutOptimizer; }
+  TimeoutOptimizer getTimeoutOptimizer() {
+    return timeoutOptimizer;
+  }
 
   public List<AbfsHttpHeader> getRequestHeaders() {
     return requestHeaders;

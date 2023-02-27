@@ -190,6 +190,8 @@ public class TimeoutOptimizer {
             case LeasePath:
                 timeout = abfsConfiguration.get(ConfigurationKeys.AZURE_LEASE_PATH_REQUEST_TIMEOUT);
                 break;
+            default:
+                timeout = DEFAULT_TIMEOUT;
         }
         if (timeout == null || timeout.isEmpty()) {
             // if any of the timeout values are not set
