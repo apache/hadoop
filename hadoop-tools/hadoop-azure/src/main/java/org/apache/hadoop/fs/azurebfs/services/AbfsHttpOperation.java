@@ -170,7 +170,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   }
 
   @VisibleForTesting
-  protected TimeoutOptimizer getTimeoutOptimizer() {
+  TimeoutOptimizer getTimeoutOptimizer() {
     return timeoutOptimizer;
   }
 
