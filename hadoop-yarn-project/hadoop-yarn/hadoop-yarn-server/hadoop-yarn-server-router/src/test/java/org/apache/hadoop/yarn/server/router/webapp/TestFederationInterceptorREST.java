@@ -99,6 +99,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntry;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService.RequestInterceptorChainWrapper;
@@ -1784,6 +1786,102 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Response cancelResponse = interceptor.cancelDelegationToken(request);
     Assert.assertNotNull(cancelResponse);
     Assert.assertEquals(response.getStatus(), Status.OK.getStatusCode());
+  }
+
+  @Test
+  public void testReplaceLabelsOnNodes() throws Exception {
+    // subCluster0 -> node0:0 -> label:NodeLabel0
+    // subCluster1 -> node1:1 -> label:NodeLabel1
+    // subCluster2 -> node2:2 -> label:NodeLabel2
+    // subCluster3 -> node3:3 -> label:NodeLabel3
+    NodeToLabelsEntryList nodeToLabelsEntryList = new NodeToLabelsEntryList();
+    for (int i = 0; i < NUM_SUBCLUSTER; i++) {
+      // labels
+      List<String> labels = new ArrayList<>();
+      labels.add("NodeLabel" + i);
+      // nodes
+      String nodeId = "node" + i + ":" + i;
+      NodeToLabelsEntry nodeToLabelsEntry = new NodeToLabelsEntry(nodeId, labels);
+      List<NodeToLabelsEntry> nodeToLabelsEntries = nodeToLabelsEntryList.getNodeToLabels();
+      nodeToLabelsEntries.add(nodeToLabelsEntry);
+    }
+
+    // one of the results:
+    // subCluster#0:Success;subCluster#1:Success;subCluster#3:Success;subCluster#2:Success;
+    // We can't confirm the complete return order.
+    Response response = interceptor.replaceLabelsOnNodes(nodeToLabelsEntryList, null);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(200, response.getStatus());
+
+    Object entityObject = response.getEntity();
+    Assert.assertNotNull(entityObject);
+
+    String entityValue = String.valueOf(entityObject);
+    String[] entities = entityValue.split(",");
+    Assert.assertNotNull(entities);
+    Assert.assertEquals(4, entities.length);
+    String expectValue =
+        "subCluster-0:Success,subCluster-1:Success,subCluster-2:Success,subCluster-3:Success,";
+    for (String entity : entities) {
+      Assert.assertTrue(expectValue.contains(entity));
+    }
+  }
+
+  @Test
+  public void testReplaceLabelsOnNodesError() throws Exception {
+    // newNodeToLabels is null
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, newNodeToLabels must not be empty.",
+        () -> interceptor.replaceLabelsOnNodes(null, null));
+
+    // nodeToLabelsEntryList is Empty
+    NodeToLabelsEntryList nodeToLabelsEntryList = new NodeToLabelsEntryList();
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, nodeToLabelsEntries must not be empty.",
+        () -> interceptor.replaceLabelsOnNodes(nodeToLabelsEntryList, null));
+  }
+
+  @Test
+  public void testReplaceLabelsOnNode() throws Exception {
+    // subCluster3 -> node3:3 -> label:NodeLabel3
+    String nodeId = "node3:3";
+    Set<String> labels = Collections.singleton("NodeLabel3");
+
+    // We expect the following result: subCluster#3:Success;
+    String expectValue = "subCluster#3:Success;";
+    Response response = interceptor.replaceLabelsOnNode(labels, null, nodeId);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(200, response.getStatus());
+
+    Object entityObject = response.getEntity();
+    Assert.assertNotNull(entityObject);
+
+    String entityValue = String.valueOf(entityObject);
+    Assert.assertNotNull(entityValue);
+    Assert.assertEquals(expectValue, entityValue);
+  }
+
+  @Test
+  public void testReplaceLabelsOnNodeError() throws Exception {
+    // newNodeToLabels is null
+    String nodeId = "node3:3";
+    Set<String> labels = Collections.singleton("NodeLabel3");
+    Set<String> labelsEmpty = new HashSet<>();
+
+    // nodeId is null
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, nodeId must not be null or empty.",
+        () -> interceptor.replaceLabelsOnNode(labels, null, null));
+
+    // labels is null
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, newNodeLabelsName must not be empty.",
+        () -> interceptor.replaceLabelsOnNode(null, null, nodeId));
+
+    // labels is empty
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, newNodeLabelsName must not be empty.",
+        () -> interceptor.replaceLabelsOnNode(labelsEmpty, null, nodeId));
   }
 
   @Test
