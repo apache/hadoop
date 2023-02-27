@@ -793,6 +793,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: successful GetBulkActivities call with duration {}", duration);
       metrics.succeededGetBulkActivitiesRetrieved(duration);
     }
+
+    public void addToClusterNodeLabelsRetrieved(long duration) {
+      LOG.info("Mocked: successful AddToClusterNodeLabels call with duration {}", duration);
+      metrics.succeededAddToClusterNodeLabelsRetrieved(duration);
+    }
   }
 
   @Test
@@ -1695,5 +1700,20 @@ public class TestRouterMetrics {
     badSubCluster.getBulkActivitiesFailed();
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getBulkActivitiesFailedRetrieved());
+  }
+
+  @Test
+  public void testAddToClusterNodeLabelsRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededAddToClusterNodeLabelsRetrieved();
+    goodSubCluster.addToClusterNodeLabelsRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededAddToClusterNodeLabelsRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededAddToClusterNodeLabelsRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.addToClusterNodeLabelsRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededAddToClusterNodeLabelsRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededAddToClusterNodeLabelsRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 }

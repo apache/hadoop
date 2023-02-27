@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.Comparator;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -366,12 +367,22 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
   @Override
   public Version getCurrentVersion() {
-    return null;
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
-  public Version loadVersion() {
-    return null;
+  public Version loadVersion() throws Exception {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public void storeVersion() throws Exception {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public void checkVersion() throws Exception {
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
