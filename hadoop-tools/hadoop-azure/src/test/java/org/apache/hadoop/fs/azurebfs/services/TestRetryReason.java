@@ -26,6 +26,7 @@ import java.net.UnknownHostException;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT;
@@ -48,9 +49,9 @@ public class TestRetryReason {
 
   @Test
   public void test4xxStatusRetryReason() {
-    Assertions.assertThat(RetryReason.getAbbreviation(null, 403, null))
+    Assertions.assertThat(RetryReason.getAbbreviation(null, HTTP_FORBIDDEN, null))
         .describedAs("Abbreviation for 4xx should be equal to 4xx")
-        .isEqualTo("403");
+        .isEqualTo(HTTP_FORBIDDEN + "");
   }
 
   @Test

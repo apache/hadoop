@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.UnknownSocke
  * This utility class exposes methods to convert a server response-error to a
  * category of error.
  * */
-class RetryReason {
+final class RetryReason {
 
   /**
    * Linked-list of the implementations of RetryReasonCategory. The objects in the

@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-public class RetryReasonConstants {
+public final class RetryReasonConstants {
+
+  private RetryReasonConstants() {
+
+  }
   public static final String CONNECTION_TIMEOUT_JDK_MESSAGE = "connect timed out";
   public static final String READ_TIMEOUT_JDK_MESSAGE = "Read timed out";
   public static final String CONNECTION_RESET_MESSAGE = "Connection reset";

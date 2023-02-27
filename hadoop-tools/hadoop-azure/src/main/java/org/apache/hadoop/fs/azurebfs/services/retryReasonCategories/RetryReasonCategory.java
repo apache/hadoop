@@ -61,8 +61,10 @@ public abstract class RetryReasonCategory {
    * @return abbreviation if the server-response can be categorised by the implementation.
    * null if the server-response can not be categorised by the implementation.
    * */
-  public String captureAndGetAbbreviation(Exception ex, Integer statusCode, String serverErrorMessage) {
-    if(canCapture(ex, statusCode, serverErrorMessage)) {
+  public String captureAndGetAbbreviation(Exception ex,
+      Integer statusCode,
+      String serverErrorMessage) {
+    if (canCapture(ex, statusCode, serverErrorMessage)) {
       return getAbbreviation(statusCode, serverErrorMessage);
     }
     return null;
@@ -73,12 +75,14 @@ public abstract class RetryReasonCategory {
    */
   Boolean checkExceptionMessage(final Exception exceptionCaptured,
       final String search) {
-    if(search == null) {
+    if (search == null) {
       return false;
     }
     if (exceptionCaptured != null
         && exceptionCaptured.getMessage() != null
-        && exceptionCaptured.getMessage().toLowerCase(Locale.US).contains(search.toLowerCase(Locale.US))) {
+        && exceptionCaptured.getMessage()
+        .toLowerCase(Locale.US)
+        .contains(search.toLowerCase(Locale.US))) {
       return true;
     }
     return false;
