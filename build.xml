@@ -1,7 +1,7 @@
-<project name="Merge Request Quality Check" basedir="." default="uploadCoverageFile">
+<project name="Merge Request Quality Check" basedir="." default="changedCodeCoverage">
 
 	<!-- This ant target extracts the tags and source branchname from the Merge Request number using Github API.-->
-	<target name="changedCodeCoverage" description="This ant target fetches the start tag, to tag and source branch name from the Merge request.">
+	<target name="getTagAndBranchDetailsFromMR" description="This ant target fetches the start tag, to tag and source branch name from the Merge request.">
 
 		<!-- Access the variables from file -->
 		<property file=".env"/>
