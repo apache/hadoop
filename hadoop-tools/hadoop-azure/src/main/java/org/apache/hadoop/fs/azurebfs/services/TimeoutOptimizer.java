@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
@@ -197,6 +198,8 @@ public class TimeoutOptimizer {
             timeout = DEFAULT_TIMEOUT;
         }
         requestTimeout = Integer.parseInt(timeout);
+        Preconditions.checkArgument((requestTimeout <= maxReqTimeout),
+                "Value of request timeout cannot be greater than the maximum allowed value.");
         readTimeout = requestTimeout * 1000;
         updateUrl();
     }
