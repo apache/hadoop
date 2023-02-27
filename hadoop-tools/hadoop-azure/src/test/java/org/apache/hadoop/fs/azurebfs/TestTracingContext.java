@@ -205,13 +205,13 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
   @Test
   public void testRetryPrimaryRequestIdWhenInitiallySuppliedEmpty() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final String fileSystemId = UUID.randomUUID().toString();
-    final String clientCorrelationId = "abcd";
+    final String fileSystemId = fs.getFileSystemId();
+    final String clientCorrelationId = fs.getClientCorrelationId();
     final TracingHeaderFormat tracingHeaderFormat = TracingHeaderFormat.ALL_ID_FORMAT;
     TracingContext tracingContext = new TracingContext(clientCorrelationId,
         fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, new TracingHeaderValidator(
         fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
-        fs.getFileSystemId(), FSOperationType.HAS_PATH_CAPABILITY, false,
+        fs.getFileSystemId(), FSOperationType.CREATE_FILESYSTEM, false,
         0));
     AbfsHttpOperation abfsHttpOperation = Mockito.mock(AbfsHttpOperation.class);
     Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito.anyString(), Mockito.anyString());
@@ -220,6 +220,46 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     String clientRequestIdUsed = header.split(":")[1];
     String[] clientRequestIdUsedParts = clientRequestIdUsed.split("-");
     String assertionPrimaryId = clientRequestIdUsedParts[clientRequestIdUsedParts.length - 1];
+
+    tracingContext.setRetryCount(1);
+    tracingContext.setListener(new TracingHeaderValidator(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+        fs.getFileSystemId(), FSOperationType.CREATE_FILESYSTEM, false,
+        1));
+
+    tracingContext.constructHeader(abfsHttpOperation, "RT");
+    header = tracingContext.getHeader();
+    String primaryRequestId = header.split(":")[3];
+
+    Assertions.assertThat(primaryRequestId)
+        .describedAs("PrimaryRequestId in a retried request's "
+            + "tracingContext should be equal to last part of original "
+            + "request's clientRequestId UUID").isEqualTo(assertionPrimaryId);
+  }
+
+  @Test
+  public void testRetryPrimaryRequestIdWhenInitiallySuppliedNonEmpty() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final String fileSystemId = fs.getFileSystemId();
+    final String clientCorrelationId = fs.getClientCorrelationId();
+    final TracingHeaderFormat tracingHeaderFormat = TracingHeaderFormat.ALL_ID_FORMAT;
+    TracingContext tracingContext = new TracingContext(clientCorrelationId,
+        fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, new TracingHeaderValidator(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+        fs.getFileSystemId(), FSOperationType.CREATE_FILESYSTEM, false,
+        0));
+    tracingContext.setPrimaryRequestID();
+    AbfsHttpOperation abfsHttpOperation = Mockito.mock(AbfsHttpOperation.class);
+    Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito.anyString(), Mockito.anyString());
+    tracingContext.constructHeader(abfsHttpOperation, null);
+    String header = tracingContext.getHeader();
+    String assertionPrimaryId = header.split(":")[3];;
+
+    tracingContext.setRetryCount(1);
+    tracingContext.setListener(new TracingHeaderValidator(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+        fs.getFileSystemId(), FSOperationType.CREATE_FILESYSTEM, false,
+        1));
 
     tracingContext.constructHeader(abfsHttpOperation, "RT");
     header = tracingContext.getHeader();

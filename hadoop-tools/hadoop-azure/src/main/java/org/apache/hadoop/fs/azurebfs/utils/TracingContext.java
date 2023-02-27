@@ -177,7 +177,7 @@ public class TracingContext {
     }
     httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
     if(primaryRequestId.isEmpty() && previousFailure == null) {
-      String[] clientRequestIdParts = clientRequestId.split(":");
+      String[] clientRequestIdParts = clientRequestId.split("-");
       primaryRequestIdForRetry = clientRequestIdParts[clientRequestIdParts.length - 1];
     }
   }
