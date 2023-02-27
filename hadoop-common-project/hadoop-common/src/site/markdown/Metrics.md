@@ -368,6 +368,9 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 |:---- |:---- |
 | `BytesWritten` | Total number of bytes written to DataNode |
 | `BytesRead` | Total number of bytes read from DataNode |
+| `ReadTransferRateNumOps` | Total number of data read transfers |
+| `ReadTransferRateAvgTime` | Average transfer rate of bytes read from DataNode, measured in bytes per second. |
+| `ReadTransferRate`*num*`s(50/75/90/95/99)thPercentileRate` | The 50/75/90/95/99th percentile of the transfer rate of bytes read from DataNode, measured in bytes per second. |
 | `BlocksWritten` | Total number of blocks written to DataNode |
 | `BlocksRead` | Total number of blocks read from DataNode |
 | `BlocksReplicated` | Total number of blocks replicated |

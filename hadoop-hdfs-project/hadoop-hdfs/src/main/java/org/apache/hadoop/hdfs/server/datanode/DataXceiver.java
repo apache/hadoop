@@ -24,6 +24,7 @@ import javax.crypto.SecretKey;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.net.Peer;
@@ -633,6 +634,7 @@ class DataXceiver extends Receiver implements Runnable {
       datanode.metrics.incrBytesRead((int) read);
       datanode.metrics.incrBlocksRead();
       datanode.metrics.incrTotalReadTime(duration);
+      DFSUtil.addTransferRateMetric(datanode.metrics, read, duration);
     } catch ( SocketException ignored ) {
       LOG.trace("{}:Ignoring exception while serving {} to {}",
           dnR, block, remoteAddress, ignored);
@@ -1122,6 +1124,7 @@ class DataXceiver extends Receiver implements Runnable {
       datanode.metrics.incrBytesRead((int) read);
       datanode.metrics.incrBlocksRead();
       datanode.metrics.incrTotalReadTime(duration);
+      DFSUtil.addTransferRateMetric(datanode.metrics, read, duration);
       
       LOG.info("Copied {} to {}", block, peer.getRemoteAddressString());
     } catch (IOException ioe) {

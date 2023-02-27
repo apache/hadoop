@@ -274,6 +274,7 @@ public class TestDataNodeMetrics {
   @Test(timeout=120000)
   public void testDataNodeTimeSpend() throws Exception {
     Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY, "" + 60);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       final FileSystem fs = cluster.getFileSystem();
@@ -285,6 +286,7 @@ public class TestDataNodeMetrics {
 
       final long startWriteValue = getLongCounter("TotalWriteTime", rb);
       final long startReadValue = getLongCounter("TotalReadTime", rb);
+      assertCounter("ReadTransferRateNumOps", 0L, rb);
       final AtomicInteger x = new AtomicInteger(0);
 
       // Lets Metric system update latest metrics
@@ -304,6 +306,8 @@ public class TestDataNodeMetrics {
           MetricsRecordBuilder rbNew = getMetrics(datanode.getMetrics().name());
           final long endWriteValue = getLongCounter("TotalWriteTime", rbNew);
           final long endReadValue = getLongCounter("TotalReadTime", rbNew);
+          assertCounter("ReadTransferRateNumOps", 1L, rbNew);
+          assertQuantileGauges("ReadTransferRate" + "60s", rbNew, "Rate");
           return endWriteValue > startWriteValue
               && endReadValue > startReadValue;
         }
