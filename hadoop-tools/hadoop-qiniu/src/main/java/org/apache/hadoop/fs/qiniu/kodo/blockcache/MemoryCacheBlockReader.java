@@ -22,7 +22,7 @@ public class MemoryCacheBlockReader implements IBlockReader, IBlockManager {
     }
 
     @Override
-    public byte[] readBlock(String key, int blockId) {
+    public byte[] readBlock(String key, int blockId) throws IOException {
         KeyBlockIdCacheKey kbck = KeyBlockIdCacheKey.get(key, blockId);
         if (lruCache.containsKey(kbck)) return lruCache.get(kbck);
         byte[] blockData = source.readBlock(key, blockId);
@@ -32,11 +32,15 @@ public class MemoryCacheBlockReader implements IBlockReader, IBlockManager {
 
     @Override
     public void close() throws IOException {
+        source.close();
         lruCache.clear();
     }
 
     @Override
     public void deleteBlocks(String key) {
+        if (source instanceof IBlockManager) {
+            ((IBlockManager) source).deleteBlocks(key);
+        }
         for (KeyBlockIdCacheKey kbck : lruCache.keySet()) {
             if (kbck.key.equals(key)) {
                 lruCache.remove(kbck);

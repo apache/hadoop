@@ -68,7 +68,7 @@ public class QiniuKodoOutputStream extends OutputStream {
             }
             throw uploadException;
         } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
+            throw new IOException(e);
         }
     }
 }

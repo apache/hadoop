@@ -19,13 +19,11 @@ public class QiniuKodoSourceBlockReader extends DataFetcherBlockReader {
     }
 
     @Override
-    public byte[] fetch(String key, long offset, int size) {
+    public byte[] fetch(String key, long offset, int size) throws IOException {
         try (InputStream is = client.fetch(key, offset, size)) {
             byte[] buf = new byte[size];
             int cnt = IOUtils.read(is, buf);
             return Arrays.copyOf(buf, cnt);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 }

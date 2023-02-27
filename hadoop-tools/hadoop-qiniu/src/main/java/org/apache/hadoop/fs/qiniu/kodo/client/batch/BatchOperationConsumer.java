@@ -84,7 +84,7 @@ public class BatchOperationConsumer implements Callable<Exception> {
                 try {
                     submitBatchOperations();
                 } catch (QiniuException e) {
-                    throw new RuntimeException(e);
+                    return e;
                 }
             }
             return null;

@@ -30,7 +30,7 @@ public class QiniuKodoRandomBlockReader implements IBlockReader, IBlockManager {
     }
 
     @Override
-    public byte[] readBlock(String key, int blockId) {
+    public byte[] readBlock(String key, int blockId) throws IOException {
         return this.memoryCacheReader.readBlock(key, blockId);
     }
 

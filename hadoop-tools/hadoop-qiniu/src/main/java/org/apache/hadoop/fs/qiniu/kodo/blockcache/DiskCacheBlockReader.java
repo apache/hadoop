@@ -48,6 +48,9 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
     @Override
     public void deleteBlocks(String key) {
         LOG.debug("key: {}", key);
+        if (source instanceof IBlockManager) {
+            ((IBlockManager) source).deleteBlocks(key);
+        }
         synchronized (lruCache) {
             for (KeyBlockIdCacheKey kbck : lruCache.keySet()) {
                 if (kbck.key.equals(key)) {
@@ -224,30 +227,26 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
     }
 
     @Override
-    public byte[] readBlock(String key, int blockId) {
+    public byte[] readBlock(String key, int blockId) throws IOException {
         LOG.debug("readBlockId: {}", blockId);
         KeyBlockIdCacheKey kbck = KeyBlockIdCacheKey.get(key, blockId);
 
-        IOException exception = null;
-        for (int i = 0; i < 3; i++) {
-            try {
-                if (expires > 0) {
-                    byte[] cachedBlockData = readBlockFromCache(kbck);
-                    if (cachedBlockData != null) {
-                        return cachedBlockData;
-                    }
+        try {
+            if (expires > 0) {
+                byte[] cachedBlockData = readBlockFromCache(kbck);
+                if (cachedBlockData != null) {
+                    return cachedBlockData;
                 }
-                // 可能没有缓存, 缓存过期, 缓存有效期为0，直接穿透至下一层数据源获取数据
-                return readBlockFromSourceAndCache(kbck);
-            } catch (IOException e) {
-                exception = e;
-                // 缓存可能有问题，删了
-                LOG.warn("IO", e);
-                LOG.info("delete cache: {}", kbck);
-                lruCache.remove(kbck);
             }
+            // 可能没有缓存, 缓存过期, 缓存有效期为0，直接穿透至下一层数据源获取数据
+            return readBlockFromSourceAndCache(kbck);
+        } catch (IOException e) {
+            // 缓存可能有问题，删了
+            LOG.warn("IO", e);
+            LOG.info("delete cache: {}", kbck);
+            lruCache.remove(kbck);
+            return readBlockFromSourceAndCache(kbck);
         }
-        throw new RuntimeException(exception);
     }
 
     private void deleteFile(Path path) {
@@ -281,6 +280,7 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
     @Override
     public void close() throws IOException {
         saveBlockCacheMetaFile();
+        source.close();
         LOG.debug("Disk cache has been closed");
     }
 }

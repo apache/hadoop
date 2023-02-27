@@ -13,11 +13,7 @@ import java.io.IOException;
 
 public class QiniuKodoGeneralBlockReader implements IBlockReader, IBlockManager {
 
-    private IBlockReader sourceReader = null;
-    private DiskCacheBlockReader diskCacheReader = null;
-    private MemoryCacheBlockReader memoryCacheReader = null;
-
-    private IBlockReader finalReader = null;
+    private IBlockReader finalReader;
     private final int blockSize;
 
     public QiniuKodoGeneralBlockReader(
@@ -29,27 +25,24 @@ public class QiniuKodoGeneralBlockReader implements IBlockReader, IBlockManager 
         MemoryCacheConfig memoryCache = fsConfig.download.cache.memory;
 
         // 构造原始数据获取器
-        this.sourceReader = new QiniuKodoSourceBlockReader(blockSize, client);
-        this.finalReader = sourceReader;
+        this.finalReader = new QiniuKodoSourceBlockReader(blockSize, client);
 
         if (diskCache.enable) {
             // 添加磁盘缓存层
-            this.diskCacheReader = new DiskCacheBlockReader(
-                    sourceReader,
+            this.finalReader = new DiskCacheBlockReader(
+                    this.finalReader,
                     diskCache.blocks,
                     diskCache.dir,
                     diskCache.expires
             );
-            this.finalReader = this.diskCacheReader;
         }
 
         if (memoryCache.enable) {
             // 添加内存缓存
-            this.memoryCacheReader = new MemoryCacheBlockReader(
-                    diskCacheReader == null ? sourceReader : diskCacheReader,
+            this.finalReader = new MemoryCacheBlockReader(
+                    this.finalReader,
                     memoryCache.blocks
             );
-            this.finalReader = this.memoryCacheReader;
         }
         this.blockSize = finalReader.getBlockSize();
     }
@@ -60,20 +53,19 @@ public class QiniuKodoGeneralBlockReader implements IBlockReader, IBlockManager 
     }
 
     @Override
-    public byte[] readBlock(String key, int blockId) {
+    public byte[] readBlock(String key, int blockId) throws IOException {
         return finalReader.readBlock(key, blockId);
     }
 
     @Override
     public void close() throws IOException {
-        if (sourceReader != null) sourceReader.close();
-        if (diskCacheReader != null) diskCacheReader.close();
-        if (memoryCacheReader != null) memoryCacheReader.close();
+        this.finalReader.close();
     }
 
     @Override
     public void deleteBlocks(String key) {
-        if (memoryCacheReader != null) memoryCacheReader.deleteBlocks(key);
-        if (diskCacheReader != null) diskCacheReader.deleteBlocks(key);
+        if (finalReader instanceof IBlockManager) {
+            ((IBlockManager) finalReader).deleteBlocks(key);
+        }
     }
 }

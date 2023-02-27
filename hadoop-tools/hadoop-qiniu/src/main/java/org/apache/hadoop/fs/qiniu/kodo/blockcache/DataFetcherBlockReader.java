@@ -22,12 +22,12 @@ public class DataFetcherBlockReader implements IBlockReader, IDataFetcher {
     }
 
     @Override
-    public byte[] readBlock(String key, int blockId) {
+    public byte[] readBlock(String key, int blockId) throws IOException {
         return fetch(key, (long) blockId * getBlockSize(), getBlockSize());
     }
 
     @Override
-    public byte[] fetch(String key, long offset, int size) {
+    public byte[] fetch(String key, long offset, int size) throws IOException {
         if (dataFetcher != null) {
             return dataFetcher.fetch(key, offset, size);
         }

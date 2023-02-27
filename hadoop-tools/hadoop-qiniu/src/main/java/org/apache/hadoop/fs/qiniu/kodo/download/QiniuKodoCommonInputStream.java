@@ -72,7 +72,7 @@ public class QiniuKodoCommonInputStream extends FSInputStream {
     /**
      * 根据当前的 position 刷新缓存的 block 块
      */
-    private void refreshCurrentBlock() {
+    private void refreshCurrentBlock() throws IOException {
         int blockId = (int) (position / (long) blockSize);
 
         // 单块缓存, blockId不变直接走缓存
