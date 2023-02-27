@@ -314,6 +314,7 @@ public abstract class AbstractYarnScheduler
    * Add blacklisted NodeIds to the list that is passed.
    *
    * @param app application attempt.
+   * @return blacklisted NodeIds.
    */
   public List<N> getBlacklistedNodes(final SchedulerApplicationAttempt app) {
 
@@ -850,6 +851,9 @@ public abstract class AbstractYarnScheduler
 
   /**
    * Process resource update on a node.
+   *
+   * @param nm RMNode.
+   * @param resourceOption resourceOption.
    */
   public void updateNodeResource(RMNode nm,
       ResourceOption resourceOption) {
@@ -1329,6 +1333,7 @@ public abstract class AbstractYarnScheduler
    * Normalize a list of resource requests
    * using queue maximum resource allocations.
    * @param asks resource requests
+   * @param queueName queue Name.
    */
   protected void normalizeResourceRequests(List<ResourceRequest> asks,
       String queueName) {

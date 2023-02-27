@@ -435,7 +435,7 @@ The service is expected to return a response in JSON format:
 
 ### Delegation token support in WASB
 
-Delegation token support support can be enabled in WASB using the following configuration:
+Delegation token support can be enabled in WASB using the following configuration:
 
 ```xml
 <property>
@@ -507,7 +507,7 @@ The cache is maintained at a filesystem object level.
     </property>
 ```
 
-The maximum number of entries that that cache can hold can be customized using the following setting:
+The maximum number of entries that the cache can hold can be customized using the following setting:
 ```
     <property>
       <name>fs.azure.authorization.caching.maxentries</name>

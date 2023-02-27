@@ -189,6 +189,11 @@ public class AllocationFileLoaderService extends AbstractService {
    * Path to XML file containing allocations. If the
    * path is relative, it is searched for in the
    * classpath, but loaded like a regular File.
+   *
+   * @param conf configuration.
+   * @return Allocation File Path.
+   * @throws UnsupportedFileSystemException
+   *    File system for a given file system name/scheme is not supported.
    */
   @VisibleForTesting
   public Path getAllocationFile(Configuration conf)

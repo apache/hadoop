@@ -143,7 +143,7 @@ public abstract class ApplicationAttemptStateData {
 
   /**
    * Set the final tracking Url of the AM.
-   * @param url
+   * @param url tracking url.
    */
   public abstract void setFinalTrackingUrl(String url);
   /**

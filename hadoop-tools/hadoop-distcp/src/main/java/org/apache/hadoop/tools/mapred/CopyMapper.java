@@ -41,6 +41,8 @@ import org.apache.hadoop.tools.mapred.RetriableFileCopyCommand.CopyReadException
 import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.tools.DistCpConstants.CONF_LABEL_UPDATE_MOD_TIME_DEFAULT;
+
 /**
  * Mapper class that executes the DistCp copy operation.
  * Implements the o.a.h.mapreduce.Mapper interface.
@@ -74,6 +76,15 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
     OVERWRITE,    // Overwrite the whole file
   }
 
+  /**
+   * Indicates the checksum comparison result.
+   */
+  public enum ChecksumComparison {
+    TRUE,           // checksum comparison is compatible and true.
+    FALSE,          // checksum comparison is compatible and false.
+    INCOMPATIBLE,   // checksum comparison is not compatible.
+  }
+
   private static Logger LOG = LoggerFactory.getLogger(CopyMapper.class);
 
   private Configuration conf;
@@ -85,6 +96,7 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
   private boolean append = false;
   private boolean verboseLog = false;
   private boolean directWrite = false;
+  private boolean useModTimeToUpdate;
   private EnumSet<FileAttribute> preserve = EnumSet.noneOf(FileAttribute.class);
 
   private FileSystem targetFS = null;
@@ -114,6 +126,9 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
         PRESERVE_STATUS.getConfigLabel()));
     directWrite = conf.getBoolean(
         DistCpOptionSwitch.DIRECT_WRITE.getConfigLabel(), false);
+    useModTimeToUpdate =
+        conf.getBoolean(DistCpConstants.CONF_LABEL_UPDATE_MOD_TIME,
+            CONF_LABEL_UPDATE_MOD_TIME_DEFAULT);
 
     targetWorkPath = new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
     Path targetFinalPath = new Path(conf.get(
@@ -354,13 +369,65 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
     boolean sameLength = target.getLen() == source.getLen();
     boolean sameBlockSize = source.getBlockSize() == target.getBlockSize()
         || !preserve.contains(FileAttribute.BLOCKSIZE);
-    if (sameLength && sameBlockSize) {
-      return skipCrc ||
-          DistCpUtils.checksumsAreEqual(sourceFS, source.getPath(), null,
-              targetFS, target.getPath(), source.getLen());
-    } else {
-      return false;
+    // Skip the copy if a 0 size file is being copied.
+    if (sameLength && source.getLen() == 0) {
+      return true;
     }
+    // If the src and target file have same size and block size, we would
+    // check if the checkCrc flag is enabled or not. If enabled, and the
+    // modTime comparison is enabled then return true if target file is older
+    // than the source file, since this indicates that the target file is
+    // recently updated and the source is not changed more recently than the
+    // update, we can skip the copy else we would copy.
+    // If skipCrc flag is disabled, we would check the checksum comparison
+    // which is an enum representing 3 values, of which if the comparison
+    // returns NOT_COMPATIBLE, we'll try to check modtime again, else return
+    // the result of checksum comparison which are compatible(true or false).
+    //
+    // Note: Different object stores can have different checksum algorithms
+    // resulting in no checksum comparison that results in return true
+    // always, having the modification time enabled can help in these
+    // scenarios to not incorrectly skip a copy. Refer: HADOOP-18596.
+
+    if (sameLength && sameBlockSize) {
+      if (skipCrc) {
+        return maybeUseModTimeToCompare(source, target);
+      } else {
+        ChecksumComparison checksumComparison = DistCpUtils
+            .checksumsAreEqual(sourceFS, source.getPath(), null,
+                targetFS, target.getPath(), source.getLen());
+        LOG.debug("Result of checksum comparison between src {} and target "
+            + "{} : {}", source, target, checksumComparison);
+        if (checksumComparison.equals(ChecksumComparison.INCOMPATIBLE)) {
+          return maybeUseModTimeToCompare(source, target);
+        }
+        // if skipCrc is disabled and checksumComparison is compatible we
+        // need not check the mod time.
+        return checksumComparison.equals(ChecksumComparison.TRUE);
+      }
+    }
+    return false;
+  }
+
+  /**
+   * If the mod time comparison is enabled, check the mod time else return
+   * false.
+   * Comparison: If the target file perceives to have greater or equal mod time
+   * (older) than the source file, we can assume that there has been no new
+   * changes that occurred in the source file, hence we should return true to
+   * skip the copy of the file.
+   *
+   * @param source Source fileStatus.
+   * @param target Target fileStatus.
+   * @return boolean representing result of modTime check.
+   */
+  private boolean maybeUseModTimeToCompare(
+      CopyListingFileStatus source, FileStatus target) {
+    if (useModTimeToUpdate) {
+      return source.getModificationTime() <= target.getModificationTime();
+    }
+    // if we cannot check mod time, return true (skip the copy).
+    return true;
   }
 
   @Override
