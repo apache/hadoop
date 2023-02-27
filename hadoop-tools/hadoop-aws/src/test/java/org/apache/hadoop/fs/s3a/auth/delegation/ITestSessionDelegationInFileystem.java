@@ -26,6 +26,7 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import org.junit.AfterClass;
@@ -587,8 +588,6 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     DefaultS3ClientFactory factory
         = new DefaultS3ClientFactory();
     Configuration conf = delegatedFS.getConf();
-    removeBaseAndBucketOverrides(conf, AWS_REGION);
-    conf.set(AWS_REGION, "us-west-2");
     factory.setConf(conf);
     String host = landsat.getHost();
     S3ClientFactory.S3ClientCreationParameters parameters = null;
@@ -597,7 +596,8 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
         .withPathUri(new URI("s3a://localhost/"))
         .withMetrics(new EmptyS3AStatisticsContext()
             .newStatisticsFromAwsSdk())
-        .withUserAgentSuffix("ITestSessionDelegationInFileystem");
+        .withUserAgentSuffix("ITestSessionDelegationInFileystem")
+        .withRegion(Region.US_WEST_2);
     S3Client s3 = factory.createS3Client(landsat, parameters);
 
     return Invoker.once("HEAD", host,
