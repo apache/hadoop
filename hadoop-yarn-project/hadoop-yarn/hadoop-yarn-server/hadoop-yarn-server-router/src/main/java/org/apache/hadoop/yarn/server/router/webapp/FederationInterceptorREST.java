@@ -584,7 +584,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     long startTime = clock.getTime();
 
-    ApplicationId applicationId = null;
+    ApplicationId applicationId;
     try {
       applicationId = ApplicationId.fromString(appId);
     } catch (IllegalArgumentException e) {
@@ -592,17 +592,16 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       return null;
     }
 
-    SubClusterInfo subClusterInfo = null;
-    SubClusterId subClusterId = null;
+    SubClusterInfo subClusterInfo;
     try {
-      subClusterId = federationFacade.getApplicationHomeSubCluster(applicationId);
-      if (subClusterId == null) {
+      subClusterInfo = getHomeSubClusterInfoByAppId(appId);
+      if (subClusterInfo == null) {
         routerMetrics.incrAppsFailedRetrieved();
         return null;
       }
-      subClusterInfo = federationFacade.getSubCluster(subClusterId);
     } catch (YarnException e) {
       routerMetrics.incrAppsFailedRetrieved();
+      LOG.error("getApp Error, applicationId = {}.", appId, e);
       return null;
     }
 
@@ -637,7 +636,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     long startTime = clock.getTime();
 
-    ApplicationId applicationId = null;
+    ApplicationId applicationId;
     try {
       applicationId = ApplicationId.fromString(appId);
     } catch (IllegalArgumentException e) {
@@ -648,8 +647,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           .build();
     }
 
-    SubClusterInfo subClusterInfo = null;
-    SubClusterId subClusterId = null;
+    SubClusterInfo subClusterInfo;
+    SubClusterId subClusterId;
     try {
       subClusterId =
           federationFacade.getApplicationHomeSubCluster(applicationId);
@@ -795,14 +794,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       return null;
     }
     @SuppressWarnings("unchecked")
-    final Map<String, String[]> parameterMap =
-        (Map<String, String[]>) hsr.getParameterMap();
+    final Map<String, String[]> parameterMap = hsr.getParameterMap();
     final String pathInfo = hsr.getPathInfo();
     final String user = hsr.getRemoteUser();
     final Principal principal = hsr.getUserPrincipal();
-    final String mediaType =
-        RouterWebServiceUtil.getMediaTypeFromHttpServletRequest(
-            hsr, AppsInfo.class);
+    final String mediaType = RouterWebServiceUtil.getMediaTypeFromHttpServletRequest(
+       hsr, AppsInfo.class);
     return new HttpServletRequestWrapper(hsr) {
         public Map<String, String[]> getParameterMap() {
           return parameterMap;
@@ -914,6 +911,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   /**
    * Get the subcluster a node belongs to.
+   *
    * @param nodeId Identifier of the node we are looking for.
    * @return The subcluster containing the node.
    * @throws NotFoundException If the node cannot be found.
@@ -988,6 +986,17 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     return RouterWebServiceUtil.deleteDuplicateNodesInfo(nodes.getNodes());
   }
 
+  /**
+   * This method changes the resources of a specific node, and it is reachable
+   * by using {@link RMWSConsts#NODE_RESOURCE}.
+   *
+   * @param hsr The servlet request.
+   * @param nodeId The node we want to retrieve the information for.
+   *               It is a PathParam.
+   * @param resourceOption The resource change.
+   * @throws AuthorizationException If the user is not authorized.
+   * @return the resources of a specific node.
+   */
   @Override
   public ResourceInfo updateNodeResource(HttpServletRequest hsr,
       String nodeId, ResourceOptionInfo resourceOption) {
@@ -1048,29 +1057,24 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public AppState getAppState(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
 
-    ApplicationId applicationId = null;
+    // Check that the appId format is accurate
     try {
-      applicationId = ApplicationId.fromString(appId);
+      RouterServerUtil.validateApplicationId(appId);
     } catch (IllegalArgumentException e) {
-      return null;
+      throw e;
     }
 
-    SubClusterInfo subClusterInfo = null;
-    SubClusterId subClusterId = null;
+    // Get SubCluster according to appId.
+    SubClusterInfo subClusterInfo;
     try {
-      subClusterId =
-          federationFacade.getApplicationHomeSubCluster(applicationId);
-      if (subClusterId == null) {
-        return null;
-      }
-      subClusterInfo = federationFacade.getSubCluster(subClusterId);
+      subClusterInfo = getHomeSubClusterInfoByAppId(appId);
     } catch (YarnException e) {
+      LOG.error("getHomeSubClusterInfoByAppId error, applicationId = {}.", appId, e);
       return null;
     }
 
-    DefaultRequestInterceptorREST interceptor =
-        getOrCreateInterceptorForSubCluster(subClusterId,
-            subClusterInfo.getRMWebServiceAddress());
+    // Call the appState interface.
+    DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(subClusterInfo);
     return interceptor.getAppState(hsr, appId);
   }
 
@@ -1321,7 +1325,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       long startTime = clock.getTime();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+          subClusterInfo);
       final HttpServletRequest hsrCopy = clone(hsr);
       AppActivitiesInfo appActivitiesInfo = interceptor.getAppActivities(hsrCopy, appId, time,
           requestPriorities, allocationRequestIds, groupBy, limit, actions, summarize);
@@ -1552,13 +1556,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     try {
       long startTime = clock.getTime();
-      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      Collection<SubClusterInfo> subClustersActives = federationFacade.getActiveSubClusters();
       final HttpServletRequest hsrCopy = clone(hsr);
       Class[] argsClasses = new Class[]{NodeLabelsInfo.class, HttpServletRequest.class};
       Object[] args = new Object[]{newNodeLabels, hsrCopy};
       ClientMethod remoteMethod = new ClientMethod("addToClusterNodeLabels", argsClasses, args);
       Map<SubClusterInfo, Response> responseInfoMap =
-          invokeConcurrent(subClustersActive.values(), remoteMethod, Response.class);
+          invokeConcurrent(subClustersActives, remoteMethod, Response.class);
       StringBuffer buffer = new StringBuffer();
       // SubCluster-0:SUCCESS,SubCluster-1:SUCCESS
       responseInfoMap.forEach((subClusterInfo, response) -> {
@@ -1600,14 +1604,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     try {
       long startTime = clock.getTime();
-      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      Collection<SubClusterInfo> subClustersActives = federationFacade.getActiveSubClusters();
       final HttpServletRequest hsrCopy = clone(hsr);
       Class[] argsClasses = new Class[]{Set.class, HttpServletRequest.class};
       Object[] args = new Object[]{oldNodeLabels, hsrCopy};
       ClientMethod remoteMethod =
           new ClientMethod("removeFromClusterNodeLabels", argsClasses, args);
       Map<SubClusterInfo, Response> responseInfoMap =
-          invokeConcurrent(subClustersActive.values(), remoteMethod, Response.class);
+          invokeConcurrent(subClustersActives, remoteMethod, Response.class);
       StringBuffer buffer = new StringBuffer();
       // SubCluster-0:SUCCESS,SubCluster-1:SUCCESS
       responseInfoMap.forEach((subClusterInfo, response) -> {
@@ -1629,7 +1633,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   /**
-   * Bbulid Append information.
+   * Build Append information.
    *
    * @param subClusterInfo subCluster information.
    * @param buffer StringBuffer.

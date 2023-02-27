@@ -1213,6 +1213,11 @@ public final class FederationStateStoreFacade {
     return false;
   }
 
+  /**
+   * Get active subclusters.
+   *
+   * @return We will return a list of active subclusters as a Collection.
+   */
   public Collection<SubClusterInfo> getActiveSubClusters() {
     try {
       Map<SubClusterId, SubClusterInfo> subClusterMap = getSubClusters(true);
