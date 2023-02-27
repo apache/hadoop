@@ -53,15 +53,7 @@ public abstract class ConfigurationUtils {
    * @param source source configuration.
    * @param target target configuration.
    */
-  public static void injectDefaults(Configuration source, Configuration target) {
-    Check.notNull(source, "source");
-    Check.notNull(target, "target");
-    for (Map.Entry<String, String> entry : source) {
-      if (target.get(entry.getKey()) == null) {
-        target.set(entry.getKey(), entry.getValue());
-      }
-    }
-  }
+  
 
   /**
    * Returns a new ConfigurationUtils instance with all inline values resolved.
