@@ -45,7 +45,6 @@ import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MAX_ERROR_RETRIES;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_REQUEST_TIMEOUT;
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
@@ -54,10 +53,10 @@ import static org.apache.hadoop.fs.s3a.Constants.PROXY_DOMAIN;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_HOST;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_PASSWORD;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_PORT;
+import static org.apache.hadoop.fs.s3a.Constants.PROXY_SECURED;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_USERNAME;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_WORKSTATION;
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
-import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_STS;
@@ -184,9 +183,10 @@ public final class AWSClientConfig {
 
     if (!proxyHost.isEmpty()) {
       if (proxyPort >= 0) {
-        proxyConfigBuilder.endpoint(buildURI("https", proxyHost, proxyPort));
+        String scheme = conf.getBoolean(PROXY_SECURED, false) ? "https" : "http";
+        proxyConfigBuilder.endpoint(buildURI(scheme, proxyHost, proxyPort));
       } else {
-        if (conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS)) {
+        if (conf.getBoolean(PROXY_SECURED, false)) {
           LOG.warn("Proxy host set without port. Using HTTPS default 443");
           proxyConfigBuilder.endpoint(buildURI("https", proxyHost, 443));
         } else {
@@ -243,17 +243,21 @@ public final class AWSClientConfig {
 
     if (!proxyHost.isEmpty()) {
       if (proxyPort >= 0) {
+        String scheme = conf.getBoolean(PROXY_SECURED, false) ? "https" : "http";
         proxyConfigBuilder.host(proxyHost);
         proxyConfigBuilder.port(proxyPort);
+        proxyConfigBuilder.scheme(scheme);
       } else {
-        if (conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS)) {
+        if (conf.getBoolean(PROXY_SECURED, false)) {
           LOG.warn("Proxy host set without port. Using HTTPS default 443");
           proxyConfigBuilder.host(proxyHost);
           proxyConfigBuilder.port(443);
+          proxyConfigBuilder.scheme("https");
         } else {
           LOG.warn("Proxy host set without port. Using HTTP default 80");
           proxyConfigBuilder.host(proxyHost);
           proxyConfigBuilder.port(80);
+          proxyConfigBuilder.scheme("http");
         }
       }
       final String proxyUsername = S3AUtils.lookupPassword(bucket, conf, PROXY_USERNAME,

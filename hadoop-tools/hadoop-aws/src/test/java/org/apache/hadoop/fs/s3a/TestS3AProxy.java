@@ -80,7 +80,12 @@ public class TestS3AProxy extends AbstractHadoopTestBase {
       throws IOException {
     ProxyConfiguration config =
         AWSClientConfig.createProxyConfiguration(proxyConfig, "testBucket");
+    ProxyConfiguration asyncConfig =
+        AWSClientConfig.createProxyConfiguration(proxyConfig, "testBucket");
     Assertions.assertThat(config.scheme())
+        .describedAs("Proxy protocol not as expected")
+        .isEqualTo(isExpectedSecured ? "https" : "http");
+    Assertions.assertThat(asyncConfig.scheme())
         .describedAs("Proxy protocol not as expected")
         .isEqualTo(isExpectedSecured ? "https" : "http");
   }
