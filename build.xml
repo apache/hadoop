@@ -199,6 +199,8 @@
 			parsedJsonResponse = JSON.parse(jsonResponse);
 			
 			var echo = project.createTask("echo");
+			echo.setMessage("ParsedJSON: " + parsedJsonResponse);
+			echo.perform();
 			echo.setMessage("Obtained cumulative changed code coverage percentage is : " + parsedJsonResponse.cumulativeCccDetails.changedCodeCoveragePercentage);
 			echo.perform();
 			echo.setMessage("Number of commit-files with CCC percentage below threshold is : " + parsedJsonResponse.cumulativeCccDetails.commitFilesBelowCCCThreshold);
