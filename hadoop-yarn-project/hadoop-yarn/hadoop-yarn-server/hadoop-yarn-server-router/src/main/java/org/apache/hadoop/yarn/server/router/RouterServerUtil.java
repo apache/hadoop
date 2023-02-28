@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.thirdparty.protobuf.GeneratedMessageV3;
@@ -654,14 +655,14 @@ public final class RouterServerUtil {
       Configuration conf) throws IOException, YarnException {
     // Prevents DoS over the ApplicationClientProtocol by checking the context
     // the application was submitted with for any excessively large fields.
-    long maxAscSize = conf.getLong(YarnConfiguration.ROUTER_ASC_INTERCEPTOR_MAX_SIZE,
-        YarnConfiguration.DEFAULT_ROUTER_ASC_INTERCEPTOR_MAX_SIZE);
+    double maxAscSize = conf.getStorageSize(YarnConfiguration.ROUTER_ASC_INTERCEPTOR_MAX_SIZE,
+        YarnConfiguration.DEFAULT_ROUTER_ASC_INTERCEPTOR_MAX_SIZE, StorageUnit.KB);
     if (appContext != null) {
       int size = appContext.getProto().getSerializedSize();
       if (size >= maxAscSize) {
         logContainerLaunchContext(appContext);
         String errMsg = "The size of the ApplicationSubmissionContext of the application " +
-            appContext.getApplicationId() + " is above the limit. Size= " + size;
+            appContext.getApplicationId() + " is above the limit. Size = " + StringUtils.byteDesc(size);
         throw new YarnException(errMsg);
       }
     }

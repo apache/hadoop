@@ -34,7 +34,7 @@ import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConsta
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UNKNOWN;
 
 /**
- * It prevents DoS attack over the ApplicationClientProtocol. Currently it
+ * It prevents DoS attack over the ApplicationClientProtocol. Currently, it
  * checks the size of the ApplicationSubmissionContext. If it exceeds the limit
  * it can cause Zookeeper failures.
  */
