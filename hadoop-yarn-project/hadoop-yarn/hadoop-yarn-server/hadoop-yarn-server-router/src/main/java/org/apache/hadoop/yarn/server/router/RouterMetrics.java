@@ -147,6 +147,10 @@ public final class RouterMetrics {
   private MutableGaugeInt numRefreshSuperUserGroupsConfigurationFailedRetrieved;
   @Metric("# of refreshUserToGroupsMappings failed to be retrieved")
   private MutableGaugeInt numRefreshUserToGroupsMappingsFailedRetrieved;
+  @Metric("# of refreshAdminAcls failed to be retrieved")
+  private MutableGaugeInt numRefreshAdminAclsFailedRetrieved;
+  @Metric("# of refreshServiceAcls failed to be retrieved")
+  private MutableGaugeInt numRefreshServiceAclsFailedRetrieved;
   @Metric("# of replaceLabelsOnNodes failed to be retrieved")
   private MutableGaugeInt numReplaceLabelsOnNodesFailedRetrieved;
   @Metric("# of replaceLabelsOnNode failed to be retrieved")
@@ -267,6 +271,10 @@ public final class RouterMetrics {
   private MutableRate totalSucceededReplaceLabelsOnNodeRetrieved;
   @Metric("Total number of successful Retrieved GetSchedulerInfo and latency(ms)")
   private MutableRate totalSucceededGetSchedulerInfoRetrieved;
+  @Metric("Total number of successful Retrieved RefreshAdminAcls and latency(ms)")
+  private MutableRate totalSucceededRefreshAdminAclsRetrieved;
+  @Metric("Total number of successful Retrieved RefreshServiceAcls and latency(ms)")
+  private MutableRate totalSucceededRefreshServiceAclsRetrieved;
   @Metric("Total number of successful Retrieved AddToClusterNodeLabels and latency(ms)")
   private MutableRate totalSucceededAddToClusterNodeLabelsRetrieved;
   @Metric("Total number of successful Retrieved RemoveFromClusterNodeLabels and latency(ms)")
@@ -328,6 +336,8 @@ public final class RouterMetrics {
   private MutableQuantiles getSchedulerInfoRetrievedLatency;
   private MutableQuantiles refreshSuperUserGroupsConfLatency;
   private MutableQuantiles refreshUserToGroupsMappingsLatency;
+  private MutableQuantiles refreshAdminAclsLatency;
+  private MutableQuantiles refreshServiceAclsLatency;
   private MutableQuantiles replaceLabelsOnNodesLatency;
   private MutableQuantiles replaceLabelsOnNodeLatency;
   private MutableQuantiles addToClusterNodeLabelsLatency;
@@ -523,6 +533,12 @@ public final class RouterMetrics {
 
     refreshUserToGroupsMappingsLatency = registry.newQuantiles("refreshUserToGroupsMappingsLatency",
         "latency of refresh user to groups mappings timeouts", "ops", "latency", 10);
+
+    refreshAdminAclsLatency = registry.newQuantiles("refreshAdminAclsLatency",
+        "latency of refresh admin acls timeouts", "ops", "latency", 10);
+
+    refreshServiceAclsLatency = registry.newQuantiles("refreshServiceAclsLatency",
+        "latency of refresh service acls timeouts", "ops", "latency", 10);
 
     replaceLabelsOnNodesLatency = registry.newQuantiles("replaceLabelsOnNodesLatency",
         "latency of replace labels on nodes timeouts", "ops", "latency", 10);
@@ -812,6 +828,16 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededRefreshAdminAclsRetrieved() {
+    return totalSucceededRefreshAdminAclsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededRefreshServiceAclsRetrieved() {
+    return totalSucceededRefreshServiceAclsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public long getNumSucceededAddToClusterNodeLabelsRetrieved() {
     return totalSucceededAddToClusterNodeLabelsRetrieved.lastStat().numSamples();
   }
@@ -1092,6 +1118,16 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededRefreshAdminAclsRetrieved() {
+    return totalSucceededRefreshAdminAclsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededRefreshServiceAclsRetrieved() {
+    return totalSucceededRefreshServiceAclsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededAddToClusterNodeLabelsRetrieved() {
     return totalSucceededAddToClusterNodeLabelsRetrieved.lastStat().mean();
   }
@@ -1320,6 +1356,14 @@ public final class RouterMetrics {
 
   public int getNumRefreshUserToGroupsMappingsFailedRetrieved() {
     return numRefreshUserToGroupsMappingsFailedRetrieved.value();
+  }
+
+  public int getNumRefreshAdminAclsFailedRetrieved() {
+    return numRefreshAdminAclsFailedRetrieved.value();
+  }
+
+  public int getNumRefreshServiceAclsFailedRetrieved() {
+    return numRefreshServiceAclsFailedRetrieved.value();
   }
 
   public int getNumReplaceLabelsOnNodesFailedRetrieved() {
@@ -1621,6 +1665,16 @@ public final class RouterMetrics {
     getSchedulerInfoRetrievedLatency.add(duration);
   }
 
+  public void succeededRefreshAdminAclsRetrieved(long duration) {
+    totalSucceededRefreshAdminAclsRetrieved.add(duration);
+    refreshAdminAclsLatency.add(duration);
+  }
+
+  public void succeededRefreshServiceAclsRetrieved(long duration) {
+    totalSucceededRefreshServiceAclsRetrieved.add(duration);
+    refreshServiceAclsLatency.add(duration);
+  }
+
   public void succeededAddToClusterNodeLabelsRetrieved(long duration) {
     totalSucceededAddToClusterNodeLabelsRetrieved.add(duration);
     addToClusterNodeLabelsLatency.add(duration);
@@ -1833,6 +1887,14 @@ public final class RouterMetrics {
 
   public void incrRefreshUserToGroupsMappingsFailedRetrieved() {
     numRefreshUserToGroupsMappingsFailedRetrieved.incr();
+  }
+
+  public void incrRefreshAdminAclsFailedRetrieved() {
+    numRefreshAdminAclsFailedRetrieved.incr();
+  }
+
+  public void incrRefreshServiceAclsFailedRetrieved() {
+    numRefreshServiceAclsFailedRetrieved.incr();
   }
 
   public void incrAddToClusterNodeLabelsFailedRetrieved() {
