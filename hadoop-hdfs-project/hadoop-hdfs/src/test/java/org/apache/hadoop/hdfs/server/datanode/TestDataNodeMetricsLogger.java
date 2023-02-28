@@ -30,7 +30,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
-import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,12 +39,11 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.PatternMatchingAppender;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Appender;
-import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.AsyncAppender;
-import org.apache.log4j.spi.LoggingEvent;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -151,9 +149,9 @@ public class TestDataNodeMetricsLogger {
         metricsProvider);
     startDNForTest(true);
     assertNotNull(dn);
-    final PatternMatchingAppender appender = new PatternMatchingAppender(
-        "^.*FakeMetric.*$");
-    addAppender(org.apache.log4j.Logger.getLogger(DataNode.METRICS_LOG_NAME), appender);
+    final PatternMatchingAppender appender =
+        (PatternMatchingAppender) org.apache.log4j.Logger.getLogger(DataNode.METRICS_LOG_NAME)
+            .getAppender("PATTERNMATCHERAPPENDER");
 
     // Ensure that the supplied pattern was matched.
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
@@ -186,37 +184,4 @@ public class TestDataNodeMetricsLogger {
     }
   }
 
-  /**
-   * An appender that matches logged messages against the given regular
-   * expression.
-   */
-  public static class PatternMatchingAppender extends AppenderSkeleton {
-    private final Pattern pattern;
-    private volatile boolean matched;
-
-    public PatternMatchingAppender(String pattern) {
-      this.pattern = Pattern.compile(pattern);
-      this.matched = false;
-    }
-
-    public boolean isMatched() {
-      return matched;
-    }
-
-    @Override
-    protected void append(LoggingEvent event) {
-      if (pattern.matcher(event.getMessage().toString()).matches()) {
-        matched = true;
-      }
-    }
-
-    @Override
-    public void close() {
-    }
-
-    @Override
-    public boolean requiresLayout() {
-      return false;
-    }
-  }
 }
