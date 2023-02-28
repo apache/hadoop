@@ -1365,7 +1365,7 @@ public final class RouterMetrics {
   public int getNumRefreshServiceAclsFailedRetrieved() {
     return numRefreshServiceAclsFailedRetrieved.value();
   }
-  
+
   public int getNumReplaceLabelsOnNodesFailedRetrieved() {
     return numReplaceLabelsOnNodesFailedRetrieved.value();
   }

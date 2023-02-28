@@ -543,7 +543,7 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed refreshServiceAcls call");
       metrics.incrRefreshServiceAclsFailedRetrieved();
     }
-    
+
     public void getReplaceLabelsOnNodesFailed() {
       LOG.info("Mocked: failed replaceLabelsOnNodes call");
       metrics.incrReplaceLabelsOnNodesFailedRetrieved();
@@ -808,7 +808,7 @@ public class TestRouterMetrics {
       LOG.info("Mocked: successful RefreshServiceAcls call with duration {}", duration);
       metrics.succeededRefreshServiceAclsRetrieved(duration);
     }
-    
+
     public void getNumSucceededReplaceLabelsOnNodesRetrieved(long duration) {
       LOG.info("Mocked: successful ReplaceLabelsOnNodes call with duration {}", duration);
       metrics.succeededReplaceLabelsOnNodesRetrieved(duration);
@@ -1718,7 +1718,7 @@ public class TestRouterMetrics {
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getNumRefreshServiceAclsFailedRetrieved());
   }
-  
+
   @Test
   public void testReplaceLabelsOnNodesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededReplaceLabelsOnNodesRetrieved();
