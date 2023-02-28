@@ -23,7 +23,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -253,7 +252,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito.anyString(), Mockito.anyString());
     tracingContext.constructHeader(abfsHttpOperation, null);
     String header = tracingContext.getHeader();
-    String assertionPrimaryId = header.split(":")[3];;
+    String assertionPrimaryId = header.split(":")[3];
 
     tracingContext.setRetryCount(1);
     tracingContext.setListener(new TracingHeaderValidator(

@@ -176,14 +176,15 @@ public class TracingContext {
       listener.callTracingHeaderValidator(header, format);
     }
     httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
-    if(primaryRequestId.isEmpty() && previousFailure == null) {
+    if (primaryRequestId.isEmpty() && previousFailure == null) {
       String[] clientRequestIdParts = clientRequestId.split("-");
-      primaryRequestIdForRetry = clientRequestIdParts[clientRequestIdParts.length - 1];
+      primaryRequestIdForRetry = clientRequestIdParts[
+          clientRequestIdParts.length - 1];
     }
   }
 
   private String getPrimaryRequestIdForHeader(final String previousFailure) {
-    if(!primaryRequestId.isEmpty() || previousFailure == null) {
+    if (!primaryRequestId.isEmpty() || previousFailure == null) {
       return primaryRequestId;
     }
     return primaryRequestIdForRetry;
