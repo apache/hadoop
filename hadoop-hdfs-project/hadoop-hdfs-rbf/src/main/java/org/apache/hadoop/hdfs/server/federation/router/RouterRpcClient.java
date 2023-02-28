@@ -57,6 +57,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAccumulator;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -86,6 +87,7 @@ import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -136,6 +138,14 @@ public class RouterRpcClient {
   private final boolean observerReadEnabledDefault;
   /** Nameservice specific overrides of the default setting for enabling observer reads. */
   private HashSet<String> observerReadEnabledOverrides = new HashSet<>();
+  /**
+   * Period to refresh namespace stateID using active namenode.
+   * This ensures the namespace stateID is fresh even when an
+   * observer is trailing behind.
+   */
+  private long activeNNStateIdRefreshPeriodMs;
+  /** Last msync times for each namespace. */
+  private final ConcurrentHashMap<String, LongAccumulator> lastActiveNNRefreshTimes;
 
   /** Pattern to parse a stack trace line. */
   private static final Pattern STACK_TRACE_PATTERN =
@@ -211,13 +221,25 @@ public class RouterRpcClient {
     this.observerReadEnabledDefault = conf.getBoolean(
         RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY,
         RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_VALUE);
-    String[] observerReadOverrides = conf.getStrings(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES);
+    String[] observerReadOverrides =
+        conf.getStrings(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES);
     if (observerReadOverrides != null) {
       observerReadEnabledOverrides.addAll(Arrays.asList(observerReadOverrides));
     }
     if (this.observerReadEnabledDefault) {
       LOG.info("Observer read is enabled for router.");
     }
+    this.activeNNStateIdRefreshPeriodMs = conf.getTimeDuration(
+        RBFConfigKeys.DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_KEY,
+        RBFConfigKeys.DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
+    if (activeNNStateIdRefreshPeriodMs < 0) {
+      LOG.info("Periodic stateId freshness check is disabled"
+              + " since '{}' is {}ms, which is less than 0.",
+          RBFConfigKeys.DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_KEY,
+          activeNNStateIdRefreshPeriodMs);
+    }
+    this.lastActiveNNRefreshTimes = new ConcurrentHashMap<>();
   }
 
   /**
@@ -1707,10 +1729,13 @@ public class RouterRpcClient {
       boolean isObserverRead) throws IOException {
     final List<? extends FederationNamenodeContext> namenodes;
 
-    if (RouterStateIdContext.getClientStateIdFromCurrentCall(nsId) > Long.MIN_VALUE) {
-      namenodes = namenodeResolver.getNamenodesForNameserviceId(nsId, isObserverRead);
-    } else {
-      namenodes = namenodeResolver.getNamenodesForNameserviceId(nsId, false);
+    boolean listObserverNamenodesFirst = isObserverRead
+        && isNamespaceStateIdFresh(nsId)
+        && (RouterStateIdContext.getClientStateIdFromCurrentCall(nsId) > Long.MIN_VALUE);
+    namenodes = namenodeResolver.getNamenodesForNameserviceId(nsId, listObserverNamenodesFirst);
+    if (!listObserverNamenodesFirst) {
+      // Refresh time of last call to active NameNode.
+      getTimeOfLastCallToActive(nsId).accumulate(Time.monotonicNow());
     }
 
     if (namenodes == null || namenodes.isEmpty()) {
@@ -1721,7 +1746,8 @@ public class RouterRpcClient {
   }
 
   private boolean isObserverReadEligible(String nsId, Method method) {
-    boolean isReadEnabledForNamespace = observerReadEnabledDefault != observerReadEnabledOverrides.contains(nsId);
+    boolean isReadEnabledForNamespace =
+        observerReadEnabledDefault != observerReadEnabledOverrides.contains(nsId);
     return isReadEnabledForNamespace && isReadCall(method);
   }
 
@@ -1734,5 +1760,25 @@ public class RouterRpcClient {
       return false;
     }
     return !method.getAnnotationsByType(ReadOnly.class)[0].activeOnly();
+  }
+
+  /**
+   * Checks and sets last refresh time for a namespace's stateId.
+   * Returns true if refresh time is newer than threshold.
+   * Otherwise, return false and call should be handled by active namenode.
+   * @param nsId namespaceID
+   */
+  @VisibleForTesting
+  boolean isNamespaceStateIdFresh(String nsId) {
+    if (activeNNStateIdRefreshPeriodMs < 0) {
+      return true;
+    }
+    long timeSinceRefreshMs = Time.monotonicNow() - getTimeOfLastCallToActive(nsId).get();
+    return (timeSinceRefreshMs <= activeNNStateIdRefreshPeriodMs);
+  }
+
+  private LongAccumulator getTimeOfLastCallToActive(String namespaceId) {
+    return lastActiveNNRefreshTimes
+        .computeIfAbsent(namespaceId, key -> new LongAccumulator(Math::max, 0));
   }
 }
