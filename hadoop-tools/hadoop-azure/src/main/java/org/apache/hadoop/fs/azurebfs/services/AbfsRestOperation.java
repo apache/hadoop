@@ -74,7 +74,11 @@ public class AbfsRestOperation {
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
 
-  private String failureReason = null;
+  /**
+   * This variable contains the reason of last API call within the same
+   * AbfsRestOperation object.
+   * */
+  private String failureReason;
 
   /**
    * Checks if there is non-null HTTP response.
@@ -242,7 +246,7 @@ public class AbfsRestOperation {
 
   @VisibleForTesting
   String getClientLatency() {
-    return this.client.getAbfsPerfTracker().getClientLatency();
+    return client.getAbfsPerfTracker().getClientLatency();
   }
 
   /**
@@ -256,7 +260,7 @@ public class AbfsRestOperation {
 
     try {
       // initialize the HTTP request and open the connection
-      httpOperation = getHttpOperation();
+      httpOperation = createHttpOperation();
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
       tracingContext.constructHeader(httpOperation, failureReason);
 
@@ -347,8 +351,12 @@ public class AbfsRestOperation {
     return true;
   }
 
+  /**
+   * Creates new object of {@link AbfsHttpOperation} with the url, method, and
+   * requestHeaders fields of the AbfsRestOperation object.
+   * */
   @VisibleForTesting
-  AbfsHttpOperation getHttpOperation() throws IOException {
+  AbfsHttpOperation createHttpOperation() throws IOException {
     return new AbfsHttpOperation(url, method, requestHeaders);
   }
 
