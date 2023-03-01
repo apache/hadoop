@@ -56,7 +56,7 @@ public class TestQueueStateManager {
   private final static QueuePath ROOT_QUEUE_PATH = new QueuePath(CapacitySchedulerConfiguration.ROOT);
   private final static QueuePath Q1_QUEUE_PATH = new QueuePath(Q1_PATH);
   private final static QueuePath Q2_QUEUE_PATH = new QueuePath(Q2_PATH);
-  private final static QueuePath Q3_QUEUE_PATH = new QueuePath(Q1_PATH);
+  private final static QueuePath Q3_QUEUE_PATH = new QueuePath(Q3_PATH);
   private CapacityScheduler cs;
   private YarnConfiguration conf;
 

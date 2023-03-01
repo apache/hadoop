@@ -264,9 +264,8 @@ public class TestLeafQueue {
   private static final String C1 = "c1";
   private static final String D = "d";
   private static final String E = "e";
-  final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
-  private static final QueuePath A_QUEUE_PATH =
-      new QueuePath(CapacitySchedulerConfiguration.ROOT + A);
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath A_QUEUE_PATH = ROOT.createNewLeaf(A);
   private void setupQueueConfiguration(
       CapacitySchedulerConfiguration conf, 
       final String newRootName, boolean withNodeLabels) {
@@ -309,7 +308,7 @@ public class TestLeafQueue {
     conf.setAcl(b, QueueACL.SUBMIT_APPLICATIONS, "*");
 
     final String cPath = newRootPath + "." + C;
-    final QueuePath c = new QueuePath(newRootPath);
+    final QueuePath c = new QueuePath(cPath);
     conf.setCapacity(c, 1.5f);
     conf.setMaximumCapacity(c, 10);
     conf.setAcl(c, QueueACL.SUBMIT_APPLICATIONS, " ");

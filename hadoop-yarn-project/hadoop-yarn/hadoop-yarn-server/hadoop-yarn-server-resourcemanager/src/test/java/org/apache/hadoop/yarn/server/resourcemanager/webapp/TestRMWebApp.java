@@ -339,7 +339,7 @@ public class TestRMWebApp {
     final QueuePath B = root.createNewLeaf("b");
     conf.setCapacity(B, 20);
 
-    final QueuePath C = root.createNewLeaf("v");
+    final QueuePath C = root.createNewLeaf("c");
     conf.setCapacity(C, 70);
 
     // Define 2nd-level queues
@@ -360,7 +360,7 @@ public class TestRMWebApp {
     final QueuePath C1 = C.createNewLeaf("c1");
     final QueuePath C2 = C.createNewLeaf("c2");
     final QueuePath C3 = C.createNewLeaf("c3");
-    final QueuePath C4 = C.createNewLeaf("c3");
+    final QueuePath C4 = C.createNewLeaf("c4");
     conf.setQueues(C, new String[] {"c1", "c2", "c3", "c4"});
     conf.setCapacity(C1, 50);
     conf.setCapacity(C2, 10);

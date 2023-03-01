@@ -55,7 +55,6 @@ public class CapacitySchedulerQueueInfo {
   static final float EPSILON = 1e-8f;
 
   protected String queuePath;
-  protected QueuePath queuePathObject;
   protected float capacity;
   protected float usedCapacity;
   protected float maxCapacity;
@@ -104,7 +103,7 @@ public class CapacitySchedulerQueueInfo {
   CapacitySchedulerQueueInfo(CapacityScheduler cs, CSQueue q) {
 
     queuePath = q.getQueuePath();
-    queuePathObject = q.getQueuePathObject();
+    QueuePath queuePathObject = new QueuePath(queuePath);
     capacity = q.getCapacity() * 100;
     usedCapacity = q.getUsedCapacity() * 100;
 

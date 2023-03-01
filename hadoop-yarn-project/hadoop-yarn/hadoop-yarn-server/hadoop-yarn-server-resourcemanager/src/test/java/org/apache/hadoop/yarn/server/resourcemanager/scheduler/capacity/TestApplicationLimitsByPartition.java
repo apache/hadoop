@@ -78,8 +78,8 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 public class TestApplicationLimitsByPartition {
   final static int GB = 1024;
   final static String A1_PATH = CapacitySchedulerConfiguration.ROOT + ".a" + ".a1";
-  final static String B1_PATH = CapacitySchedulerConfiguration.ROOT + ".a" + ".a1";
-  final static String B2_PATH = CapacitySchedulerConfiguration.ROOT + ".a" + ".b2";
+  final static String B1_PATH = CapacitySchedulerConfiguration.ROOT + ".b" + ".b1";
+  final static String B2_PATH = CapacitySchedulerConfiguration.ROOT + ".b" + ".b2";
   final static String C1_PATH = CapacitySchedulerConfiguration.ROOT + ".c" + ".c1";
   final static QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
   final static QueuePath A1 = new QueuePath(A1_PATH);
@@ -942,7 +942,7 @@ public class TestApplicationLimitsByPartition {
     String queueName = "a1";
     csconf.setQueues(ROOT,
         new String[] {queueName});
-    csconf.setCapacity(A1, 100);
+    csconf.setCapacity(new QueuePath("root.a1"), 100);
 
     ResourceInformation res0 = ResourceInformation.newInstance("memory-mb",
         ResourceInformation.MEMORY_MB.getUnits(), GB, Long.MAX_VALUE);

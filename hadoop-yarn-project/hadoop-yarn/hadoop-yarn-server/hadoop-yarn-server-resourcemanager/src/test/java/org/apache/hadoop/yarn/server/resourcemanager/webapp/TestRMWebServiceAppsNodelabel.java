@@ -118,8 +118,8 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
 
     // Define top-level queues
     QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
-    QueuePath queueA = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".a");
-    QueuePath defaultQueue = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".default");
+    QueuePath queueA = root.createNewLeaf("a");
+    QueuePath defaultQueue = root.createNewLeaf("default");
 
     config.setQueues(root,
         new String[]{"a", "default"});
