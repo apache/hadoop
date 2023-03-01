@@ -266,8 +266,18 @@ public class FederationStateStoreService extends AbstractService
   }
 
   @Override
-  public Version loadVersion() {
+  public Version loadVersion() throws Exception {
     return stateStoreClient.getCurrentVersion();
+  }
+
+  @Override
+  public void storeVersion() throws Exception {
+    stateStoreClient.storeVersion();
+  }
+
+  @Override
+  public void checkVersion() throws Exception {
+    stateStoreClient.checkVersion();
   }
 
   @Override

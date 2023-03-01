@@ -47,7 +47,7 @@ import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 public class TestKillAMPreemptionPolicy {
   private final RecordFactory recordFactory = RecordFactoryProvider

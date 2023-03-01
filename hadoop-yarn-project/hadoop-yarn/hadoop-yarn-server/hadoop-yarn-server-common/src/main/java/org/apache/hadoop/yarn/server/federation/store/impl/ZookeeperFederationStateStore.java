@@ -30,6 +30,7 @@ import java.util.TimeZone;
 import java.util.Comparator;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.curator.framework.recipes.shared.SharedCount;
 import org.apache.curator.framework.recipes.shared.VersionedValue;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -642,12 +643,22 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   @Override
   public Version getCurrentVersion() {
-    return null;
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
-  public Version loadVersion() {
-    return null;
+  public Version loadVersion() throws Exception {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public void storeVersion() throws Exception {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public void checkVersion() throws Exception {
+    throw new NotImplementedException("Code is not implemented");
   }
 
   /**
