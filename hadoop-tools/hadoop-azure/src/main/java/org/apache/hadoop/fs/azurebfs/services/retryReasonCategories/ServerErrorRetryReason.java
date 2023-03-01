@@ -33,7 +33,7 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OPERAT
 public class ServerErrorRetryReason extends RetryReasonCategory {
 
   @Override
-  public Boolean canCapture(final Exception ex,
+  Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
     if (statusCode == null || statusCode / HTTP_STATUS_CATEGORY_QUOTIENT != 5) {
@@ -43,7 +43,7 @@ public class ServerErrorRetryReason extends RetryReasonCategory {
   }
 
   @Override
-  public String getAbbreviation(final Integer statusCode,
+  String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
     if (statusCode == HTTP_UNAVAILABLE && serverErrorMessage != null) {
       String splitedServerErrorMessage = serverErrorMessage.split(System.lineSeparator(),

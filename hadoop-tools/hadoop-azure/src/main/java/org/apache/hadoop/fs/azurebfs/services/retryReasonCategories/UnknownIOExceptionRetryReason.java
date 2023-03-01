@@ -30,7 +30,7 @@ public class UnknownIOExceptionRetryReason extends
     RetryReasonCategory {
 
   @Override
-  public Boolean canCapture(final Exception ex,
+  Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
     if (ex instanceof IOException) {
@@ -40,7 +40,7 @@ public class UnknownIOExceptionRetryReason extends
   }
 
   @Override
-  public String getAbbreviation(final Integer statusCode,
+  String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
     return IO_EXCEPTION_ABBREVIATION;
   }

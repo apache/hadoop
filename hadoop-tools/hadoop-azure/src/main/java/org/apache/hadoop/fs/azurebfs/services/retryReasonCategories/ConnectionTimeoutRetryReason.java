@@ -29,13 +29,13 @@ public class ConnectionTimeoutRetryReason extends
     RetryReasonCategory {
 
   @Override
-  public String getAbbreviation(final Integer statusCode,
+  String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
     return CONNECTION_TIMEOUT_ABBREVIATION;
   }
 
   @Override
-  public Boolean canCapture(final Exception ex,
+  Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
     return checkExceptionMessage(ex, CONNECTION_TIMEOUT_JDK_MESSAGE);

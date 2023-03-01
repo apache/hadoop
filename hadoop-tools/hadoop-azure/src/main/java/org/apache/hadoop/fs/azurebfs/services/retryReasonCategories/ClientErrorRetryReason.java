@@ -26,7 +26,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_STA
 public class ClientErrorRetryReason extends RetryReasonCategory {
 
   @Override
-  public Boolean canCapture(final Exception ex,
+  Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
     if (statusCode == null || statusCode / HTTP_STATUS_CATEGORY_QUOTIENT != 4) {
@@ -36,7 +36,7 @@ public class ClientErrorRetryReason extends RetryReasonCategory {
   }
 
   @Override
-  public String getAbbreviation(final Integer statusCode,
+  String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
     return statusCode + "";
   }

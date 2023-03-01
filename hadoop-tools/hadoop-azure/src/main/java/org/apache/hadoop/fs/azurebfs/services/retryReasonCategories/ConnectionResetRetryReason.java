@@ -28,14 +28,14 @@ public class ConnectionResetRetryReason extends
     RetryReasonCategory {
 
   @Override
-  public Boolean canCapture(final Exception ex,
+  Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
     return checkExceptionMessage(ex, CONNECTION_RESET_MESSAGE);
   }
 
   @Override
-  public String getAbbreviation(final Integer statusCode,
+  String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
     return CONNECTION_RESET_ABBREVIATION;
   }

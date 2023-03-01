@@ -29,7 +29,7 @@ public class UnknownSocketExceptionRetryReason extends
     RetryReasonCategory {
 
   @Override
-  public Boolean canCapture(final Exception ex,
+  Boolean canCapture(final Exception ex,
       final Integer statusCode,
       final String serverErrorMessage) {
     if (ex instanceof SocketException) {
@@ -39,7 +39,7 @@ public class UnknownSocketExceptionRetryReason extends
   }
 
   @Override
-  public String getAbbreviation(final Integer statusCode,
+  String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
     return SOCKET_EXCEPTION_ABBREVIATION;
   }
