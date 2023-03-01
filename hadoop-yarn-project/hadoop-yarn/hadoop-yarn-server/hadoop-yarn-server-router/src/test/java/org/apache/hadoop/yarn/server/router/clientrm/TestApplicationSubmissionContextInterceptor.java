@@ -69,7 +69,7 @@ public class TestApplicationSubmissionContextInterceptor extends BaseRouterClien
         MockClientRequestInterceptor.class.getName());
 
     // Lower the max application context size
-    conf.set(YarnConfiguration.ROUTER_ASC_INTERCEPTOR_MAX_SIZE, "500K");
+    conf.set(YarnConfiguration.ROUTER_ASC_INTERCEPTOR_MAX_SIZE, "512B");
 
     return conf;
   }
