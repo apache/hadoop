@@ -41,9 +41,9 @@ public final class RouterDelegationTokenSupport {
     try {
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
       DataOutputStream out = new DataOutputStream(bos);
-      WritableUtils.writeVInt(out, token.password.length);
-      out.write(token.password);
-      out.writeLong(token.renewDate);
+      WritableUtils.writeVInt(out, token.getPassword().length);
+      out.write(token.getPassword());
+      out.writeLong(token.getRenewDate());
       out.flush();
       byte[] tokenInfoBytes = bos.toByteArray();
       return Base64.getUrlEncoder().encodeToString(tokenInfoBytes);
@@ -55,11 +55,11 @@ public final class RouterDelegationTokenSupport {
   public static DelegationTokenInformation decodeDelegationTokenInformation(byte[] tokenBytes)
       throws IOException {
     DataInputStream in = new DataInputStream(new ByteArrayInputStream(tokenBytes));
-    DelegationTokenInformation token = new DelegationTokenInformation(0, null);
     int len = WritableUtils.readVInt(in);
-    token.password = new byte[len];
-    in.readFully(token.password);
-    token.renewDate = in.readLong();
+    byte[] password = new byte[len];
+    in.readFully(password);
+    long renewDate = in.readLong();
+    DelegationTokenInformation token = new DelegationTokenInformation(renewDate, password);
     return token;
   }
 }

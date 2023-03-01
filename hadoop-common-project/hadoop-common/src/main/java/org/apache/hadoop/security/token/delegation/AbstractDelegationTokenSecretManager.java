@@ -112,12 +112,12 @@ extends AbstractDelegationTokenIdentifier>
   /**
    * Access to currentKey is protected by this object lock
    */
-  private DelegationKey currentKey;
-  
-  private long keyUpdateInterval;
-  private long tokenMaxLifetime;
-  private long tokenRemoverScanInterval;
-  private long tokenRenewInterval;
+  private volatile DelegationKey currentKey;
+
+  private final long keyUpdateInterval;
+  private final long tokenMaxLifetime;
+  private final long tokenRemoverScanInterval;
+  private final long tokenRenewInterval;
   /**
    * Whether to store a token's tracking ID in its TokenInformation.
    * Can be overridden by a subclass.
@@ -193,7 +193,7 @@ extends AbstractDelegationTokenIdentifier>
    * @param key delegation key.
    * @throws IOException raised on errors performing I/O.
    */
-  public synchronized void addKey(DelegationKey key) throws IOException {
+  protected synchronized void addKey(DelegationKey key) throws IOException {
     if (running) // a safety check
       throw new IOException("Can't add delegation key to a running SecretManager.");
     if (key.getKeyId() > getCurrentKeyId()) {
@@ -248,6 +248,13 @@ extends AbstractDelegationTokenIdentifier>
    */
   protected synchronized int getCurrentKeyId() {
     return currentId;
+  }
+
+  /**
+   * Generate & return a new key id for a new master key
+   */
+  protected int generateNewKeyId() {
+    return incrementCurrentKeyId();
   }
 
   /**
@@ -307,7 +314,7 @@ extends AbstractDelegationTokenIdentifier>
    * @param keyId keyId.
    * @return DelegationKey.
    */
-  protected DelegationKey getDelegationKey(int keyId) {
+  protected DelegationKey getDelegationKey(int keyId) throws IOException {
     return allKeys.get(keyId);
   }
 
@@ -319,8 +326,9 @@ extends AbstractDelegationTokenIdentifier>
    * @throws IOException raised on errors performing I/O.
    */
   protected void storeDelegationKey(DelegationKey key) throws IOException {
-    allKeys.put(key.getKeyId(), key);
     storeNewMasterKey(key);
+    // Update keys only if storeNewMasterKey is successful (doesn't throw an exception)
+    allKeys.put(key.getKeyId(), key);
   }
 
   /**
@@ -341,7 +349,7 @@ extends AbstractDelegationTokenIdentifier>
    * @param ident ident.
    * @return DelegationTokenInformation.
    */
-  protected DelegationTokenInformation getTokenInfo(TokenIdent ident) {
+  protected DelegationTokenInformation getTokenInfo(TokenIdent ident) throws IOException {
     return currentTokens.get(ident);
   }
 
@@ -420,29 +428,30 @@ extends AbstractDelegationTokenIdentifier>
    * This is called once by startThreads before tokenRemoverThread is created, 
    * and only by tokenRemoverThread afterwards.
    */
-  private void updateCurrentKey() throws IOException {
+  protected void updateCurrentKey() throws IOException {
     LOG.info("Updating the current master key for generating delegation tokens");
     /* Create a new currentKey with an estimated expiry date. */
     int newCurrentId;
     synchronized (this) {
-      newCurrentId = incrementCurrentKeyId();
+      newCurrentId = generateNewKeyId();
     }
     DelegationKey newKey = new DelegationKey(newCurrentId, System
         .currentTimeMillis()
         + keyUpdateInterval + tokenMaxLifetime, generateSecret());
+    synchronized (this) {
+      storeDelegationKey(newKey);
+      // Set current key only if storeDelegationKey is successful (doesn't throw an exception)
+      currentKey = newKey;
+    }
     //Log must be invoked outside the lock on 'this'
     logUpdateMasterKey(newKey);
-    synchronized (this) {
-      currentKey = newKey;
-      storeDelegationKey(currentKey);
-    }
   }
   
   /** 
    * Update the current master key for generating delegation tokens 
    * It should be called only by tokenRemoverThread.
    */
-  void rollMasterKey() throws IOException {
+  protected void rollMasterKey() throws IOException {
     synchronized (this) {
       removeExpiredKeys();
       /* set final expiry date for retiring currentKey */
@@ -471,11 +480,19 @@ extends AbstractDelegationTokenIdentifier>
       }
     }
   }
-  
+
   @Override
   protected synchronized byte[] createPassword(TokenIdent identifier) {
     int sequenceNum;
     long now = Time.now();
+
+    // If creating new keys repeatedly fails due to state store issues, key can be expired but not yet rolled over.
+    // In this case, fail new token creation
+    if (currentKey.getExpiryDate() < now) {
+      String err = "Master key is expired, so unable to generate new tokens";
+      LOG.error(err);
+      throw new RuntimeException(err);
+    }
     sequenceNum = incrementDelegationTokenSeqNum();
     identifier.setIssueDate(now);
     identifier.setMaxDate(now + tokenMaxLifetime);
@@ -491,6 +508,9 @@ extends AbstractDelegationTokenIdentifier>
     } catch (IOException ioe) {
       LOG.error("Could not store token " + formatTokenId(identifier) + "!!",
           ioe);
+      // TODO - Throw IOException & handle in all clients appropriately
+      // Currently wrapping this as runtime exception to preserve createPassword contracts
+      throw new RuntimeException(ioe);
     }
     return password;
   }
@@ -499,8 +519,7 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * Find the DelegationTokenInformation for the given token id, and verify that
-   * if the token is expired. Note that this method should be called with 
-   * acquiring the secret manager's monitor.
+   * if the token is expired.
    *
    * @param identifier identifier.
    * @throws InvalidToken invalid token exception.
@@ -508,8 +527,15 @@ extends AbstractDelegationTokenIdentifier>
    */
   protected DelegationTokenInformation checkToken(TokenIdent identifier)
       throws InvalidToken {
-    assert Thread.holdsLock(this);
-    DelegationTokenInformation info = getTokenInfo(identifier);
+    DelegationTokenInformation info = null;
+    try {
+      info = getTokenInfo(identifier);
+    } catch (IOException e) {
+      e.printStackTrace();
+      // Converting IOException to InvalidTokenException as that's the current contract with checkToken
+      // TODO - Change this so that clients can handle accordingly
+      throw new InvalidToken("Token for real user: " + identifier.getRealUser() + ", can't be found in database");
+    }
     String err;
     if (info == null) {
       err = "Token for real user: " + identifier.getRealUser() + ", can't be found in cache";
@@ -526,9 +552,9 @@ extends AbstractDelegationTokenIdentifier>
     }
     return info;
   }
-  
+
   @Override
-  public synchronized byte[] retrievePassword(TokenIdent identifier)
+  public byte[] retrievePassword(TokenIdent identifier)
       throws InvalidToken {
     return checkToken(identifier).getPassword();
   }
@@ -541,7 +567,12 @@ extends AbstractDelegationTokenIdentifier>
   }
 
   public synchronized String getTokenTrackingId(TokenIdent identifier) {
-    DelegationTokenInformation info = getTokenInfo(identifier);
+    DelegationTokenInformation info = null;
+    try {
+      info = getTokenInfo(identifier);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
     if (info == null) {
       return null;
     }
@@ -554,7 +585,7 @@ extends AbstractDelegationTokenIdentifier>
    * @param password Password in the token.
    * @throws InvalidToken InvalidToken.
    */
-  public synchronized void verifyToken(TokenIdent identifier, byte[] password)
+  public void verifyToken(TokenIdent identifier, byte[] password)
       throws InvalidToken {
     byte[] storedPassword = retrievePassword(identifier);
     if (!MessageDigest.isEqual(password, storedPassword)) {
@@ -562,7 +593,7 @@ extends AbstractDelegationTokenIdentifier>
           + " is invalid, password doesn't match");
     }
   }
-  
+
   /**
    * Renew a delegation token.
    * @param token the token to renew
@@ -572,7 +603,7 @@ extends AbstractDelegationTokenIdentifier>
    * @throws AccessControlException if the user can't renew token
    */
   public synchronized long renewToken(Token<TokenIdent> token,
-                         String renewer) throws InvalidToken, IOException {
+                         String renewer) throws IOException {
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
     TokenIdent id = createIdentifier();
@@ -678,9 +709,9 @@ extends AbstractDelegationTokenIdentifier>
   /** Class to encapsulate a token's renew date and password. */
   @InterfaceStability.Evolving
   public static class DelegationTokenInformation {
-    long renewDate;
-    byte[] password;
-    String trackingId;
+    private final long renewDate;
+    private final byte[] password;
+    private final String trackingId;
 
     public DelegationTokenInformation(long renewDate, byte[] password) {
       this(renewDate, password, null);

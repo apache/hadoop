@@ -1501,7 +1501,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * @return SequenceNum.
    */
   @Override
-  public int incrementDelegationTokenSeqNum() {
+  public int getNewDelegationTokenKey() {
     // The secret manager will keep a local range of seq num which won't be
     // seen by peers, so only when the range is exhausted it will ask zk for
     // another range again
@@ -1543,46 +1543,12 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   }
 
   /**
-   * Get DelegationToken SeqNum.
-   *
-   * @return delegationTokenSeqNum.
-   */
-  @Override
-  public int getDelegationTokenSeqNum() {
-    return delTokSeqCounter.getCount();
-  }
-
-  /**
-   * Set DelegationToken SeqNum.
-   *
-   * @param seqNum sequenceNum.
-   */
-  @Override
-  public void setDelegationTokenSeqNum(int seqNum) {
-    try {
-      delTokSeqCounter.setCount(seqNum);
-    } catch (Exception e) {
-      throw new RuntimeException("Could not set shared counter !!", e);
-    }
-  }
-
-  /**
-   * Get Current KeyId.
-   *
-   * @return currentKeyId.
-   */
-  @Override
-  public int getCurrentKeyId() {
-    return keyIdSeqCounter.getCount();
-  }
-
-  /**
    * The Router Supports incrementCurrentKeyId.
    *
    * @return CurrentKeyId.
    */
   @Override
-  public int incrementCurrentKeyId() {
+  public int generateNewKeyId() {
     try {
       // It should be noted that the BatchSize of MasterKeyId defaults to 1.
       incrSharedCount(keyIdSeqCounter, 1);

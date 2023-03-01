@@ -1836,47 +1836,8 @@ public class SQLFederationStateStore implements FederationStateStore {
    * @return delegationTokenSeqNum.
    */
   @Override
-  public int incrementDelegationTokenSeqNum() {
+  public int getNewDelegationTokenKey() {
     return querySequenceTable(YARN_ROUTER_SEQUENCE_NUM, true);
-  }
-
-  /**
-   * Get DelegationToken SeqNum.
-   *
-   * @return delegationTokenSeqNum.
-   */
-  @Override
-  public int getDelegationTokenSeqNum() {
-    return querySequenceTable(YARN_ROUTER_SEQUENCE_NUM, false);
-  }
-
-  @Override
-  public void setDelegationTokenSeqNum(int seqNum) {
-    Connection connection = null;
-    try {
-      connection = getConnection(false);
-      FederationQueryRunner runner = new FederationQueryRunner();
-      runner.updateSequenceTable(connection, YARN_ROUTER_SEQUENCE_NUM, seqNum);
-    } catch (Exception e) {
-      throw new RuntimeException("Could not update sequence table!!", e);
-    } finally {
-      // Return to the pool the CallableStatement
-      try {
-        FederationStateStoreUtils.returnToPool(LOG, null, connection);
-      } catch (YarnException e) {
-        LOG.error("close connection error.", e);
-      }
-    }
-  }
-
-  /**
-   * Get Current KeyId.
-   *
-   * @return currentKeyId.
-   */
-  @Override
-  public int getCurrentKeyId() {
-    return querySequenceTable(YARN_ROUTER_CURRENT_KEY_ID, false);
   }
 
   /**
@@ -1885,7 +1846,7 @@ public class SQLFederationStateStore implements FederationStateStore {
    * @return CurrentKeyId.
    */
   @Override
-  public int incrementCurrentKeyId() {
+  public int generateNewKeyId() {
     return querySequenceTable(YARN_ROUTER_CURRENT_KEY_ID, true);
   }
 

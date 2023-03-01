@@ -114,37 +114,16 @@ public interface FederationDelegationTokenStateStore {
       throws YarnException, IOException;
 
   /**
-   * The Router Supports incrementDelegationTokenSeqNum.
+   * Return a new unique integer lookup key for a new delegation token
    *
    * @return DelegationTokenSeqNum.
    */
-  int incrementDelegationTokenSeqNum();
+  int getNewDelegationTokenKey();
 
   /**
-   * The Router Supports getDelegationTokenSeqNum.
-   *
-   * @return DelegationTokenSeqNum.
-   */
-  int getDelegationTokenSeqNum();
-
-  /**
-   * The Router Supports setDelegationTokenSeqNum.
-   *
-   * @param seqNum DelegationTokenSeqNum.
-   */
-  void setDelegationTokenSeqNum(int seqNum);
-
-  /**
-   * The Router Supports getCurrentKeyId.
+   * Return a new unique integer master key id
    *
    * @return CurrentKeyId.
    */
-  int getCurrentKeyId();
-
-  /**
-   * The Router Supports incrementCurrentKeyId.
-   *
-   * @return CurrentKeyId.
-   */
-  int incrementCurrentKeyId();
+  int generateNewKeyId();
 }

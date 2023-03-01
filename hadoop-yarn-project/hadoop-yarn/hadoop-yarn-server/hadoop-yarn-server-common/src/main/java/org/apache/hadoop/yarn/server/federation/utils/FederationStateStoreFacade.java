@@ -780,17 +780,14 @@ public final class FederationStateStoreFacade {
   /**
    * The Router Supports GetMasterKeyByDelegationKey.
    *
-   * @param newKey Key used for generating and verifying delegation tokens
+   * @param keyId Master Key identifer that is used to generate the delegation tokens
    * @throws YarnException if the call to the state store is unsuccessful
    * @throws IOException An IO Error occurred
    * @return RouterMasterKeyResponse
    */
-  public RouterMasterKeyResponse getMasterKeyByDelegationKey(DelegationKey newKey)
-      throws YarnException, IOException {
-    LOG.info("Storing master key with keyID {}.", newKey.getKeyId());
-    ByteBuffer keyBytes = ByteBuffer.wrap(newKey.getEncodedKey());
-    RouterMasterKey masterKey = RouterMasterKey.newInstance(newKey.getKeyId(),
-        keyBytes, newKey.getExpiryDate());
+  public RouterMasterKeyResponse getMasterKey(int keyId) throws YarnException, IOException {
+    // TODO - Change interfaces with state store to get master key from key id
+    RouterMasterKey masterKey = RouterMasterKey.newInstance(keyId, null, 0L);
     RouterMasterKeyRequest keyRequest = RouterMasterKeyRequest.newInstance(masterKey);
     return stateStore.getMasterKeyByDelegationKey(keyRequest);
   }
@@ -904,34 +901,7 @@ public final class FederationStateStoreFacade {
    * @return delegationTokenSequenceNumber.
    */
   public int incrementDelegationTokenSeqNum() {
-    return stateStore.incrementDelegationTokenSeqNum();
-  }
-
-  /**
-   * Get SeqNum from stateStore.
-   *
-   * @return delegationTokenSequenceNumber.
-   */
-  public int getDelegationTokenSeqNum() {
-    return stateStore.getDelegationTokenSeqNum();
-  }
-
-  /**
-   * Set SeqNum from stateStore.
-   *
-   * @param seqNum delegationTokenSequenceNumber.
-   */
-  public void setDelegationTokenSeqNum(int seqNum) {
-    stateStore.setDelegationTokenSeqNum(seqNum);
-  }
-
-  /**
-   * Get CurrentKeyId from stateStore.
-   *
-   * @return currentKeyId.
-   */
-  public int getCurrentKeyId() {
-    return stateStore.getCurrentKeyId();
+    return stateStore.getNewDelegationTokenKey();
   }
 
   /**
@@ -939,8 +909,8 @@ public final class FederationStateStoreFacade {
    *
    * @return currentKeyId.
    */
-  public int incrementCurrentKeyId() {
-    return stateStore.incrementCurrentKeyId();
+  public int generateNewKeyId() {
+    return stateStore.generateNewKeyId();
   }
 
   /**

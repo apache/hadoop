@@ -505,9 +505,9 @@ public class MemoryFederationStateStore implements FederationStateStore {
     RouterStoreToken storeToken = request.getRouterStoreToken();
     RMDelegationTokenIdentifier tokenIdentifier =
         (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
-    Map<RMDelegationTokenIdentifier, RouterStoreToken> rmDTState =
+    Map<Integer, RouterStoreToken> rmDTState =
         routerRMSecretManagerState.getTokenState();
-    rmDTState.remove(tokenIdentifier);
+    rmDTState.remove(tokenIdentifier.getSequenceNumber());
     storeOrUpdateRouterRMDT(tokenIdentifier, storeToken, true);
     return RouterRMTokenResponse.newInstance(storeToken);
   }
@@ -518,9 +518,9 @@ public class MemoryFederationStateStore implements FederationStateStore {
     RouterStoreToken storeToken = request.getRouterStoreToken();
     RMDelegationTokenIdentifier tokenIdentifier =
         (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
-    Map<RMDelegationTokenIdentifier, RouterStoreToken> rmDTState =
+    Map<Integer, RouterStoreToken> rmDTState =
         routerRMSecretManagerState.getTokenState();
-    rmDTState.remove(tokenIdentifier);
+    rmDTState.remove(tokenIdentifier.getSequenceNumber());
     return RouterRMTokenResponse.newInstance(storeToken);
   }
 
@@ -530,50 +530,35 @@ public class MemoryFederationStateStore implements FederationStateStore {
     RouterStoreToken storeToken = request.getRouterStoreToken();
     RMDelegationTokenIdentifier tokenIdentifier =
         (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
-    Map<RMDelegationTokenIdentifier, RouterStoreToken> rmDTState =
+    Map<Integer, RouterStoreToken> rmDTState =
         routerRMSecretManagerState.getTokenState();
-    if (!rmDTState.containsKey(tokenIdentifier)) {
+    if (!rmDTState.containsKey(tokenIdentifier.getSequenceNumber())) {
       LOG.info("Router RMDelegationToken: {} does not exist.", tokenIdentifier);
       throw new IOException("Router RMDelegationToken: " + tokenIdentifier + " does not exist.");
     }
-    RouterStoreToken resultToken = rmDTState.get(tokenIdentifier);
+    RouterStoreToken resultToken = rmDTState.get(tokenIdentifier.getSequenceNumber());
     return RouterRMTokenResponse.newInstance(resultToken);
   }
 
   @Override
-  public int incrementDelegationTokenSeqNum() {
+  public int getNewDelegationTokenKey() {
     return sequenceNum.incrementAndGet();
   }
 
   @Override
-  public int getDelegationTokenSeqNum() {
-    return sequenceNum.get();
-  }
-
-  @Override
-  public void setDelegationTokenSeqNum(int seqNum) {
-    sequenceNum.set(seqNum);
-  }
-
-  @Override
-  public int getCurrentKeyId() {
-    return masterKeyId.get();
-  }
-
-  @Override
-  public int incrementCurrentKeyId() {
+  public int generateNewKeyId() {
     return masterKeyId.incrementAndGet();
   }
 
   private void storeOrUpdateRouterRMDT(RMDelegationTokenIdentifier rmDTIdentifier,
       RouterStoreToken routerStoreToken, boolean isUpdate) throws IOException {
-    Map<RMDelegationTokenIdentifier, RouterStoreToken> rmDTState =
+    Map<Integer, RouterStoreToken> rmDTState =
         routerRMSecretManagerState.getTokenState();
-    if (rmDTState.containsKey(rmDTIdentifier)) {
+    if (rmDTState.containsKey(rmDTIdentifier.getSequenceNumber())) {
       LOG.info("Error storing info for RMDelegationToken: {}.", rmDTIdentifier);
       throw new IOException("Router RMDelegationToken: " + rmDTIdentifier + "is already stored.");
     }
-    rmDTState.put(rmDTIdentifier, routerStoreToken);
+    rmDTState.put(rmDTIdentifier.getSequenceNumber(), routerStoreToken);
     if (!isUpdate) {
       routerRMSecretManagerState.setDtSequenceNumber(rmDTIdentifier.getSequenceNumber());
     }

@@ -17,12 +17,10 @@
  */
 package org.apache.hadoop.yarn.server.router.security;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.security.token.delegation.RouterDelegationTokenSupport;
-import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
@@ -37,16 +35,27 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 import java.util.Base64;
 
 /**
- * A Router specific delegation token secret manager.
+ * A Router specific delegation token secret manager & is designed to be stateless.
  * The secret manager is responsible for generating and accepting the password
  * for each token.
+ *
+ * Behavioural Differences from AbstractDelegationTokenSecretManager
+ * 1) Master Key - Each instance of Router will have its own master key & each instance rolls its own master key.
+ *    Thus there is no concept of a global current key.
+ *    The requirement to generate new master keys / delegation tokens is to generate unique INTEGER keys,
+ *    which the state store is responsible for (Autoincrement is one of the ways to achieve this).
+ *    This key will be regenerated on service restart & thus there is no requirement of an explicit restore mechanism.
+ *    Current master key will be stored in memory on each instance & will be used to generate new tokens.
+ *    Master key will be looked up from the state store for Validation / renewal, etc of tokens.
+ *
+ * 2) Token Expiry - It doesn't take care of token removal on expiry.
+ *    Each state store can implement its own way to manage token deletion on expiry.
+ *
+ * This pretty much replaces all methods of AbstractDelegationTokenSecretManager which is designed for stateful managers
+ * TODO - Refactor Secret Manager interfaces to support stateful & stateless secret management
  */
 public class RouterDelegationTokenSecretManager
     extends AbstractDelegationTokenSecretManager<RMDelegationTokenIdentifier> {
@@ -76,12 +85,31 @@ public class RouterDelegationTokenSecretManager
   }
 
   @Override
-  public RMDelegationTokenIdentifier createIdentifier() {
-    return new RMDelegationTokenIdentifier();
+  public void reset() {
+    // no-op
   }
 
-  private boolean shouldIgnoreException(Exception e) {
-    return !running && e.getCause() instanceof InterruptedException;
+  @Override
+  public long getCurrentTokensSize() {
+    throw new NotImplementedException("Get current token size is not implemented");
+  }
+
+  /**
+   * no-op as this method is required for stateful secret managers only
+   */
+  @Override
+  protected void addKey(DelegationKey key) {
+
+  }
+
+  @Override
+  public DelegationKey[] getAllKeys() {
+    throw new NotImplementedException("Get all keys is not implemented");
+  }
+
+  @Override
+  public RMDelegationTokenIdentifier createIdentifier() {
+    return new RMDelegationTokenIdentifier();
   }
 
   /**
@@ -91,283 +119,169 @@ public class RouterDelegationTokenSecretManager
    * @param newKey DelegationKey
    */
   @Override
-  public void storeNewMasterKey(DelegationKey newKey) {
+  protected void storeNewMasterKey(DelegationKey newKey) throws IOException {
     try {
       federationFacade.storeNewMasterKey(newKey);
-    } catch (Exception e) {
-      if (!shouldIgnoreException(e)) {
-        LOG.error("Error in storing master key with KeyID: {}.", newKey.getKeyId());
-        ExitUtil.terminate(1, e);
-      }
+    } catch (YarnException e) {
+      e.printStackTrace();
+      throw new IOException(e); // Wrap YarnException as an IOException to adhere to storeNewMasterKey contract
     }
   }
 
   /**
-   * The Router Supports Remove the master key.
-   * During this Process, Facade will call the specific StateStore to remove the MasterKey.
-   *
-   * @param delegationKey DelegationKey
+   * no-op as expiry of stored keys is upto the state store in a stateless secret manager
    */
   @Override
   public void removeStoredMasterKey(DelegationKey delegationKey) {
-    try {
-      federationFacade.removeStoredMasterKey(delegationKey);
-    } catch (Exception e) {
-      if (!shouldIgnoreException(e)) {
-        LOG.error("Error in removing master key with KeyID: {}.", delegationKey.getKeyId());
-        ExitUtil.terminate(1, e);
-      }
-    }
+
   }
 
   /**
-   * The Router Supports Store new Token.
-   *
-   * @param identifier RMDelegationToken
-   * @param renewDate renewDate
-   * @throws IOException IO exception occurred.
+   * no-op as we are storing entire token with info in storeToken()
    */
   @Override
-  public void storeNewToken(RMDelegationTokenIdentifier identifier,
-      long renewDate) throws IOException {
-    try {
-      federationFacade.storeNewToken(identifier, renewDate);
-    } catch (Exception e) {
-      if (!shouldIgnoreException(e)) {
-        LOG.error("Error in storing RMDelegationToken with sequence number: {}.",
-            identifier.getSequenceNumber());
-        ExitUtil.terminate(1, e);
-      }
-    }
+  public void storeNewToken(RMDelegationTokenIdentifier identifier, long renewDate) {
+
   }
 
   /**
-   * The Router Supports Store new Token.
-   *
-   * @param identifier RMDelegationToken.
-   * @param tokenInfo DelegationTokenInformation.
-   */
-  public void storeNewToken(RMDelegationTokenIdentifier identifier,
-      DelegationTokenInformation tokenInfo) {
-    try {
-      String token =
-          RouterDelegationTokenSupport.encodeDelegationTokenInformation(tokenInfo);
-      long renewDate = tokenInfo.getRenewDate();
-
-      federationFacade.storeNewToken(identifier, renewDate, token);
-    } catch (Exception e) {
-      if (!shouldIgnoreException(e)) {
-        LOG.error("Error in storing RMDelegationToken with sequence number: {}.",
-            identifier.getSequenceNumber());
-        ExitUtil.terminate(1, e);
-      }
-    }
-  }
-
-  /**
-   * The Router Supports Update Token.
-   *
-   * @param id RMDelegationToken
-   * @param renewDate renewDate
-   * @throws IOException IO exception occurred
+   * no-op as expiry of stored tokens is upto the state store in a stateless secret manager
    */
   @Override
-  public void updateStoredToken(RMDelegationTokenIdentifier id, long renewDate) throws IOException {
-    try {
-      federationFacade.updateStoredToken(id, renewDate);
-    } catch (Exception e) {
-      if (!shouldIgnoreException(e)) {
-        LOG.error("Error in updating persisted RMDelegationToken with sequence number: {}.",
-            id.getSequenceNumber());
-        ExitUtil.terminate(1, e);
-      }
-    }
+  public void removeStoredToken(RMDelegationTokenIdentifier identifier) {
+
   }
 
   /**
-   * The Router Supports Update Token.
-   *
-   * @param identifier RMDelegationToken.
-   * @param tokenInfo DelegationTokenInformation.
-   */
-  public void updateStoredToken(RMDelegationTokenIdentifier identifier,
-      DelegationTokenInformation tokenInfo) {
-    try {
-      long renewDate = tokenInfo.getRenewDate();
-      String token = RouterDelegationTokenSupport.encodeDelegationTokenInformation(tokenInfo);
-      federationFacade.updateStoredToken(identifier, renewDate, token);
-    } catch (Exception e) {
-      if (!shouldIgnoreException(e)) {
-        LOG.error("Error in updating persisted RMDelegationToken with sequence number: {}.",
-            identifier.getSequenceNumber());
-        ExitUtil.terminate(1, e);
-      }
-    }
-  }
-
-  /**
-   * The Router Supports Remove Token.
-   *
-   * @param identifier Delegation Token
-   * @throws IOException IO exception occurred.
+   * no-op as we are storing entire token with info in updateToken()
    */
   @Override
-  public void removeStoredToken(RMDelegationTokenIdentifier identifier) throws IOException {
-    try {
-      federationFacade.removeStoredToken(identifier);
-    } catch (Exception e) {
-      if (!shouldIgnoreException(e)) {
-        LOG.error("Error in removing RMDelegationToken with sequence number: {}",
-            identifier.getSequenceNumber());
-        ExitUtil.terminate(1, e);
-      }
-    }
+  public void updateStoredToken(RMDelegationTokenIdentifier id, long renewDate) {
+
   }
 
-  /**
-   * The Router supports obtaining the DelegationKey stored in the Router StateStote
-   * according to the DelegationKey.
-   *
-   * @param key Param DelegationKey
-   * @return Delegation Token
-   * @throws YarnException An internal conversion error occurred when getting the Token
-   * @throws IOException IO exception occurred
-   */
-  public DelegationKey getMasterKeyByDelegationKey(DelegationKey key)
-      throws YarnException, IOException {
+  @Override
+  public DelegationKey getDelegationKey(int keyId) throws IOException {
     try {
-      RouterMasterKeyResponse response = federationFacade.getMasterKeyByDelegationKey(key);
+      RouterMasterKeyResponse response = federationFacade.getMasterKey(keyId);
       RouterMasterKey masterKey = response.getRouterMasterKey();
       ByteBuffer keyByteBuf = masterKey.getKeyBytes();
       byte[] keyBytes = new byte[keyByteBuf.remaining()];
       keyByteBuf.get(keyBytes);
-      DelegationKey delegationKey =
-          new DelegationKey(masterKey.getKeyId(), masterKey.getExpiryDate(), keyBytes);
-      return delegationKey;
-    } catch (IOException ex) {
-      throw new IOException(ex);
+      return new DelegationKey(masterKey.getKeyId(), masterKey.getExpiryDate(), keyBytes);
     } catch (YarnException ex) {
-      throw new YarnException(ex);
+      ex.printStackTrace();
+      throw new IOException(ex);
     }
   }
 
-  /**
-   * Get RMDelegationTokenIdentifier according to RouterStoreToken.
-   *
-   * @param identifier RMDelegationTokenIdentifier
-   * @return RMDelegationTokenIdentifier
-   * @throws YarnException An internal conversion error occurred when getting the Token
-   * @throws IOException IO exception occurred
-   */
-  public RMDelegationTokenIdentifier getTokenByRouterStoreToken(
-      RMDelegationTokenIdentifier identifier) throws YarnException, IOException {
-    try {
-      RouterRMTokenResponse response = federationFacade.getTokenByRouterStoreToken(identifier);
-      YARNDelegationTokenIdentifier responseIdentifier =
-          response.getRouterStoreToken().getTokenIdentifier();
-      return (RMDelegationTokenIdentifier) responseIdentifier;
-    } catch (Exception ex) {
-      throw new YarnException(ex);
-    }
-  }
-
-  public void setFederationFacade(FederationStateStoreFacade federationFacade) {
-    this.federationFacade = federationFacade;
-  }
-
-  @Public
-  @VisibleForTesting
-  public int getLatestDTSequenceNumber() {
-    return delegationTokenSequenceNumber;
-  }
-
-  @Public
-  @VisibleForTesting
-  public synchronized Set<DelegationKey> getAllMasterKeys() {
-    return new HashSet<>(allKeys.values());
-  }
-
-  @Public
-  @VisibleForTesting
-  public synchronized Map<RMDelegationTokenIdentifier, Long> getAllTokens() {
-    Map<RMDelegationTokenIdentifier, Long> allTokens = new HashMap<>();
-    for (Map.Entry<RMDelegationTokenIdentifier,
-         DelegationTokenInformation> entry : currentTokens.entrySet()) {
-      RMDelegationTokenIdentifier keyIdentifier = entry.getKey();
-      DelegationTokenInformation tokenInformation = entry.getValue();
-      allTokens.put(keyIdentifier, tokenInformation.getRenewDate());
-    }
-    return allTokens;
-  }
-
-  public long getRenewDate(RMDelegationTokenIdentifier ident)
-      throws InvalidToken {
-    DelegationTokenInformation info = currentTokens.get(ident);
-    if (info == null) {
-      throw new InvalidToken("token (" + ident.toString()
-          + ") can't be found in cache");
-    }
+  public long getRenewDate(RMDelegationTokenIdentifier ident) throws IOException {
+    DelegationTokenInformation info = getTokenInfo(ident);
     return info.getRenewDate();
   }
 
   @Override
-  protected synchronized int incrementDelegationTokenSeqNum() {
+  protected int incrementDelegationTokenSeqNum() {
     return federationFacade.incrementDelegationTokenSeqNum();
   }
 
   @Override
   protected void storeToken(RMDelegationTokenIdentifier rmDelegationTokenIdentifier,
       DelegationTokenInformation tokenInfo) throws IOException {
-    this.currentTokens.put(rmDelegationTokenIdentifier, tokenInfo);
     this.addTokenForOwnerStats(rmDelegationTokenIdentifier);
-    storeNewToken(rmDelegationTokenIdentifier, tokenInfo);
+    try {
+      storeNewToken(rmDelegationTokenIdentifier, tokenInfo);
+    } catch (YarnException e) {
+      e.printStackTrace();
+      throw new IOException(e); // Wrap YarnException as an IOException to adhere to storeToken contract
+    }
   }
 
   @Override
   protected void updateToken(RMDelegationTokenIdentifier rmDelegationTokenIdentifier,
       DelegationTokenInformation tokenInfo) throws IOException {
-    this.currentTokens.put(rmDelegationTokenIdentifier, tokenInfo);
-    updateStoredToken(rmDelegationTokenIdentifier, tokenInfo);
+    try {
+      updateStoredToken(rmDelegationTokenIdentifier, tokenInfo);
+    } catch (YarnException e) {
+      e.printStackTrace();
+      throw new IOException(e); // Wrap YarnException as an IOException to adhere to updateToken contract
+    }
   }
 
   @Override
-  protected DelegationTokenInformation getTokenInfo(
-      RMDelegationTokenIdentifier ident) {
-    // First check if I have this..
-    DelegationTokenInformation tokenInfo = currentTokens.get(ident);
-    if (tokenInfo == null) {
+  protected DelegationTokenInformation getTokenInfo(RMDelegationTokenIdentifier ident) throws IOException {
       try {
         RouterRMTokenResponse response = federationFacade.getTokenByRouterStoreToken(ident);
         RouterStoreToken routerStoreToken = response.getRouterStoreToken();
         String tokenStr = routerStoreToken.getTokenInfo();
         byte[] tokenBytes = Base64.getUrlDecoder().decode(tokenStr);
-        tokenInfo = RouterDelegationTokenSupport.decodeDelegationTokenInformation(tokenBytes);
-      } catch (Exception e) {
-        LOG.error("Error retrieving tokenInfo [" + ident.getSequenceNumber()
-            + "] from StateStore.", e);
-        throw new YarnRuntimeException(e);
+        return RouterDelegationTokenSupport.decodeDelegationTokenInformation(tokenBytes);
+      } catch (YarnException ex) {
+        ex.printStackTrace();
+        throw new IOException(ex);
       }
-    }
-    return tokenInfo;
   }
 
   @Override
-  protected synchronized int getDelegationTokenSeqNum() {
-    return federationFacade.getDelegationTokenSeqNum();
+  protected void rollMasterKey() throws IOException {
+    updateCurrentKey();
   }
 
   @Override
-  protected synchronized void setDelegationTokenSeqNum(int seqNum) {
-    federationFacade.setDelegationTokenSeqNum(seqNum);
+  public void addPersistedDelegationToken(RMDelegationTokenIdentifier identifier, long renewDate) {
+    throw new NotImplementedException("Recovery of tokens is not a valid use case for stateless secret managers");
   }
 
   @Override
-  protected synchronized int getCurrentKeyId() {
-    return federationFacade.getCurrentKeyId();
+  protected int getDelegationTokenSeqNum() {
+    throw new NotImplementedException("Get sequence number is not a valid use case for stateless secret managers");
   }
 
   @Override
-  protected synchronized int incrementCurrentKeyId() {
-    return federationFacade.incrementCurrentKeyId();
+  protected void setDelegationTokenSeqNum(int seqNum) {
+    throw new NotImplementedException("Set sequence number is not a valid use case for stateless secret managers");
   }
+
+  @Override
+  protected int getCurrentKeyId() {
+    throw new NotImplementedException("Get current key id is not a valid use case for stateless secret managers");
+  }
+
+  @Override
+  protected int generateNewKeyId() {
+    return federationFacade.generateNewKeyId();
+  }
+
+  @Override
+  protected int incrementCurrentKeyId() {
+    throw new NotImplementedException("Increment current key id is not a valid use case for stateless secret managers");
+  }
+
+  @Override
+  protected void setCurrentKeyId(int keyId) {
+    throw new NotImplementedException("Set current key id is not a valid use case for stateless secret managers");
+  }
+
+  @Override
+  protected void storeDelegationKey(DelegationKey key) throws IOException {
+    storeNewMasterKey(key);
+  }
+
+  @Override
+  protected void updateDelegationKey(DelegationKey key) {
+    throw new NotImplementedException("Update delegation key is not a valid use case for stateless secret managers");
+  }
+
+  private void storeNewToken(RMDelegationTokenIdentifier identifier, DelegationTokenInformation tokenInfo) throws YarnException, IOException {
+    long renewDate = tokenInfo.getRenewDate();
+    String token = RouterDelegationTokenSupport.encodeDelegationTokenInformation(tokenInfo);
+    federationFacade.storeNewToken(identifier, renewDate, token);
+  }
+
+  private void updateStoredToken(RMDelegationTokenIdentifier identifier, DelegationTokenInformation tokenInfo) throws YarnException, IOException {
+    long renewDate = tokenInfo.getRenewDate();
+    String token = RouterDelegationTokenSupport.encodeDelegationTokenInformation(tokenInfo);
+    federationFacade.updateStoredToken(identifier, renewDate, token);
+  }
+
 }
