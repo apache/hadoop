@@ -383,7 +383,7 @@ class BPServiceActor implements Runnable {
     triggerHeartbeatForTests();
     while (!bpServiceActorActions.isEmpty()) {
       BPServiceActorAction bpServiceActorAction = bpServiceActorActions.remove();
-      int retries = 3;
+      int retries = 5;
       while (!bpServiceActorAction.isReportSuccessfullySent() && retries > 0) {
         LOG.info("{} has not yet successfully sent report", bpServiceActorAction);
         Thread.sleep(1000);
