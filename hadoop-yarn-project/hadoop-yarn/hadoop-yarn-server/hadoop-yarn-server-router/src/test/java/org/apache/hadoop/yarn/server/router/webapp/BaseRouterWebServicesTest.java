@@ -82,7 +82,8 @@ public abstract class BaseRouterWebServicesTest {
   public static final String QUEUE_DEDICATED = "dedicated";
   public static final String QUEUE_DEDICATED_FULL = CapacitySchedulerConfiguration.ROOT +
       CapacitySchedulerConfiguration.DOT + QUEUE_DEDICATED;
-  public static final QueuePath ROOT_QUEUE_PATH = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  public static final QueuePath ROOT_QUEUE_PATH =
+      new QueuePath(CapacitySchedulerConfiguration.ROOT);
   public static final QueuePath DEFAULT_QUEUE_PATH = new QueuePath(QUEUE_DEFAULT_FULL);
   public static final QueuePath DEDICATED_QUEUE_PATH = new QueuePath(QUEUE_DEDICATED_FULL);
 

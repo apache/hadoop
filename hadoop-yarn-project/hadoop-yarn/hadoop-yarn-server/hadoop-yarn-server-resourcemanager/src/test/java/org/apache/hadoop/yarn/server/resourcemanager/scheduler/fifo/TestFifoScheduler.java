@@ -862,7 +862,7 @@ public class TestFifoScheduler {
   public void testReconnectedNode() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     QueuePath defaultQueuePath = new QueuePath("default");
-    conf.setQueues(defaultQueuePath, new String[] { "default" });
+    conf.setQueues(defaultQueuePath, new String[] {"default"});
     conf.setCapacity(defaultQueuePath, 100);
     FifoScheduler fs = new FifoScheduler();
     fs.init(conf);

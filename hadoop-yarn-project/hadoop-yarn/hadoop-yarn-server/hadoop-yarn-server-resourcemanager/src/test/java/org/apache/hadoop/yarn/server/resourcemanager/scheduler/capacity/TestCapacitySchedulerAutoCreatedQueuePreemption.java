@@ -62,7 +62,7 @@ public class TestCapacitySchedulerAutoCreatedQueuePreemption
     //setup new queues with one of them auto enabled
     // Define top-level queues
     // Set childQueue for root
-    conf.setQueues(ROOT, new String[] { "c" });
+    conf.setQueues(ROOT, new String[] {"c"});
     conf.setCapacity(C, 100f);
 
     conf.setUserLimitFactor(C, 1.0f);

@@ -134,7 +134,7 @@ public class TestQueueParsing {
       CapacitySchedulerConfiguration conf) {
     // Define top-level queues
     conf.set(
-      QueuePrefixes
+        QueuePrefixes
             .getQueuePrefix(ROOT)
             + CapacitySchedulerConfiguration.QUEUES, " a ,b, c");
 
@@ -151,7 +151,7 @@ public class TestQueueParsing {
       CapacitySchedulerConfiguration conf) {
     // Define top-level queues
     conf.set(
-      QueuePrefixes
+        QueuePrefixes
             .getQueuePrefix(ROOT)
             + CapacitySchedulerConfiguration.QUEUES, " a ,b, c");
 
@@ -278,8 +278,8 @@ public class TestQueueParsing {
     
     fail = false;
     try {
-    LeafQueue a = (LeafQueue)capacityScheduler.getQueue(A_PATH);
-    a.setMaxCapacity(45);
+      LeafQueue a = (LeafQueue)capacityScheduler.getQueue(A_PATH);
+      a.setMaxCapacity(45);
     } catch  (IllegalArgumentException iae) {
       fail = true;
     }
@@ -1021,8 +1021,8 @@ public class TestQueueParsing {
     YarnConfiguration conf = new YarnConfiguration();
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration(conf);
-    csConf.setQueues(ROOT, new String[] { "a" });
-    csConf.setQueues(A, new String[] { "x", "y" });
+    csConf.setQueues(ROOT, new String[] {"a"});
+    csConf.setQueues(A, new String[] {"x", "y"});
     csConf.setCapacity(A, 100);
     csConf.setCapacity(AX, 50);
     csConf.setCapacity(AY, 50);
@@ -1039,8 +1039,8 @@ public class TestQueueParsing {
     capacityScheduler.init(csConf);
     capacityScheduler.start();
     
-    csConf.setQueues(ROOT, new String[] { "a", "x" });
-    csConf.setQueues(A, new String[] { "y" });
+    csConf.setQueues(ROOT, new String[] {"a", "x"});
+    csConf.setQueues(A, new String[] {"y"});
     csConf.setCapacity(X, 50);
     csConf.setCapacity(A, 50);
     csConf.setCapacity(AY, 100);
@@ -1059,7 +1059,7 @@ public class TestQueueParsing {
         new CapacitySchedulerConfiguration(config);
 
     // Define top-level queues
-    conf.setQueues(ROOT, new String[] { "a" });
+    conf.setQueues(ROOT, new String[] {"a"});
     conf.setCapacityByLabel(ROOT, "x", 100);
     conf.setCapacityByLabel(ROOT, "y", 100);
     conf.setCapacityByLabel(ROOT, "z", 100);
@@ -1135,7 +1135,7 @@ public class TestQueueParsing {
         new CapacitySchedulerConfiguration(config);
 
     // Define top-level queues
-    conf.setQueues(ROOT, new String[] { "a" });
+    conf.setQueues(ROOT, new String[] {"a"});
     conf.setLabeledQueueWeight(ROOT, "x", 100);
     conf.setLabeledQueueWeight(ROOT, "y", 100);
     conf.setLabeledQueueWeight(ROOT, "z", 100);

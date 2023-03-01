@@ -582,7 +582,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   private static final QueuePath B2_QUEUE_PATH = new QueuePath(Q_B2_PATH);
 
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
-    conf.setQueues(ROOT, new String[] { R });
+    conf.setQueues(ROOT, new String[] {R});
     conf.setCapacity(R_QUEUE_PATH, 100);
     conf.setQueues(R_QUEUE_PATH, new String[] {A, B});
     conf.setCapacity(A_QUEUE_PATH, 50);
@@ -593,7 +593,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   
   private void setupQueueConfigurationOnlyA(
       CapacitySchedulerConfiguration conf) {
-    conf.setQueues(ROOT, new String[] { R });
+    conf.setQueues(ROOT, new String[] {R});
     conf.setCapacity(R_QUEUE_PATH, 10);
     conf.setQueues(R_QUEUE_PATH, new String[] {A});
     conf.setCapacity(A_QUEUE_PATH, 100);
@@ -602,7 +602,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   }
 
   private void setupQueueConfigurationChildOfB(CapacitySchedulerConfiguration conf) {
-    conf.setQueues(ROOT, new String[] { R });
+    conf.setQueues(ROOT, new String[] {R});
     conf.setCapacity(R_QUEUE_PATH, 100);
     conf.setQueues(R_QUEUE_PATH, new String[] {A, B});
     conf.setCapacity(A_QUEUE_PATH, 50);

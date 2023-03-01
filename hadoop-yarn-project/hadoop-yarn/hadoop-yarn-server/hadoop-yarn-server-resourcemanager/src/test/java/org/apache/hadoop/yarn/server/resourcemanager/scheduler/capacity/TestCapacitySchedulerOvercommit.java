@@ -31,7 +31,7 @@ public class TestCapacitySchedulerOvercommit extends TestSchedulerOvercommit {
 
   private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
   private static final QueuePath DEFAULT = new QueuePath(CapacitySchedulerConfiguration.ROOT
-    + ".default");
+      + ".default");
   @Override
   protected Configuration getConfiguration() {
     Configuration conf = super.getConfiguration();

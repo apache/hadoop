@@ -66,7 +66,7 @@ public class TestQueueMappings {
 
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
     // Define top-level queues
-    conf.setQueues(ROOT, new String[] { Q1, Q2 });
+    conf.setQueues(ROOT, new String[] {Q1, Q2});
 
     conf.setCapacity(Q1_QUEUE_PATH, 10);
     conf.setCapacity(Q2_QUEUE_PATH, 90);

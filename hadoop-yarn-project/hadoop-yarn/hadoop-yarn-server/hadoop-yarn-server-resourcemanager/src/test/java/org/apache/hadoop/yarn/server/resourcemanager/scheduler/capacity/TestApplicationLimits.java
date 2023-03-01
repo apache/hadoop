@@ -149,17 +149,15 @@ public class TestApplicationLimits {
   private static final  String AA1 = "a1";
   private static final  String AA2 = "a2";
   private static final  String AA3 = "a3";
-  private static final QueuePath ROOT_QUEUE_PATH = new QueuePath(CapacitySchedulerConfiguration.ROOT);
-  private static final QueuePath A_QUEUE_PATH = new QueuePath(CapacitySchedulerConfiguration.ROOT, A);
-  private static final QueuePath B_QUEUE_PATH = new QueuePath(CapacitySchedulerConfiguration.ROOT, B);
-  private static final QueuePath C_QUEUE_PATH = new QueuePath(CapacitySchedulerConfiguration.ROOT, C);
-  private static final QueuePath D_QUEUE_PATH = new QueuePath(CapacitySchedulerConfiguration.ROOT, D);
-  private static final QueuePath AA1_QUEUE_PATH = QueuePath.createFromQueues(
-    CapacitySchedulerConfiguration.ROOT, A, AA1);
-  private static final QueuePath AA2_QUEUE_PATH = QueuePath.createFromQueues(
-    CapacitySchedulerConfiguration.ROOT, A, AA2);
-  private static final QueuePath AA3_QUEUE_PATH = QueuePath.createFromQueues(
-    CapacitySchedulerConfiguration.ROOT, A, AA3);
+  private static final QueuePath ROOT_QUEUE_PATH =
+      new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath A_QUEUE_PATH = ROOT_QUEUE_PATH.createNewLeaf(A);
+  private static final QueuePath B_QUEUE_PATH = ROOT_QUEUE_PATH.createNewLeaf(B);
+  private static final QueuePath C_QUEUE_PATH = ROOT_QUEUE_PATH.createNewLeaf(C);
+  private static final QueuePath D_QUEUE_PATH = ROOT_QUEUE_PATH.createNewLeaf(D);
+  private static final QueuePath AA1_QUEUE_PATH = A_QUEUE_PATH.createNewLeaf(AA1);
+  private static final QueuePath AA2_QUEUE_PATH = A_QUEUE_PATH.createNewLeaf(AA2);
+  private static final QueuePath AA3_QUEUE_PATH = A_QUEUE_PATH.createNewLeaf(AA3);
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues

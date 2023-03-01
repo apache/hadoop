@@ -85,13 +85,13 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     conf.setCapacityByLabel(ROOT, "y", 100);
     conf.setCapacityByLabel(ROOT, "z", 100);
 
-    final String A_PATH = CapacitySchedulerConfiguration.ROOT + ".a";
-    final QueuePath A = new QueuePath(A_PATH);
-    conf.setCapacity(A, 100);
-    conf.setAccessibleNodeLabels(A, ImmutableSet.of("x", "y", "z"));
-    conf.setCapacityByLabel(A, "x", 100);
-    conf.setCapacityByLabel(A, "y", 100);
-    conf.setCapacityByLabel(A, "z", 100);
+    final String aPath = CapacitySchedulerConfiguration.ROOT + ".a";
+    final QueuePath a = new QueuePath(aPath);
+    conf.setCapacity(a, 100);
+    conf.setAccessibleNodeLabels(a, ImmutableSet.of("x", "y", "z"));
+    conf.setCapacityByLabel(a, "x", 100);
+    conf.setCapacityByLabel(a, "y", 100);
+    conf.setCapacityByLabel(a, "z", 100);
     
     return conf;
   }

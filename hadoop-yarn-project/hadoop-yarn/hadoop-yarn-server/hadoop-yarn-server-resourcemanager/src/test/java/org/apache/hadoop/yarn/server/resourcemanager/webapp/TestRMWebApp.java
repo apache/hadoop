@@ -333,48 +333,48 @@ public class TestRMWebApp {
     QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
     conf.setQueues(root, new String[] {"a", "b", "c"});
 
-    final QueuePath A = root.createNewLeaf("a");
-    conf.setCapacity(A, 10);
+    final QueuePath a = root.createNewLeaf("a");
+    conf.setCapacity(a, 10);
 
-    final QueuePath B = root.createNewLeaf("b");
-    conf.setCapacity(B, 20);
+    final QueuePath b = root.createNewLeaf("b");
+    conf.setCapacity(b, 20);
 
-    final QueuePath C = root.createNewLeaf("c");
-    conf.setCapacity(C, 70);
+    final QueuePath c = root.createNewLeaf("c");
+    conf.setCapacity(c, 70);
 
     // Define 2nd-level queues
-    final QueuePath A1 = A.createNewLeaf("a1");
-    final QueuePath A2 = A.createNewLeaf("a2");
-    conf.setQueues(A, new String[] {"a1", "a2"});
-    conf.setCapacity(A1, 30);
-    conf.setCapacity(A2, 70);
+    final QueuePath a1 = a.createNewLeaf("a1");
+    final QueuePath a2 = a.createNewLeaf("a2");
+    conf.setQueues(a, new String[] {"a1", "a2"});
+    conf.setCapacity(a1, 30);
+    conf.setCapacity(a2, 70);
 
-    final QueuePath B1 = B.createNewLeaf("b1");
-    final QueuePath B2 = B.createNewLeaf("b2");
-    final QueuePath B3 = B.createNewLeaf("b3");
-    conf.setQueues(B, new String[] {"b1", "b2", "b3"});
-    conf.setCapacity(B1, 50);
-    conf.setCapacity(B2, 30);
-    conf.setCapacity(B3, 20);
+    final QueuePath b1 = b.createNewLeaf("b1");
+    final QueuePath b2 = b.createNewLeaf("b2");
+    final QueuePath b3 = b.createNewLeaf("b3");
+    conf.setQueues(b, new String[] {"b1", "b2", "b3"});
+    conf.setCapacity(b1, 50);
+    conf.setCapacity(b2, 30);
+    conf.setCapacity(b3, 20);
 
-    final QueuePath C1 = C.createNewLeaf("c1");
-    final QueuePath C2 = C.createNewLeaf("c2");
-    final QueuePath C3 = C.createNewLeaf("c3");
-    final QueuePath C4 = C.createNewLeaf("c4");
-    conf.setQueues(C, new String[] {"c1", "c2", "c3", "c4"});
-    conf.setCapacity(C1, 50);
-    conf.setCapacity(C2, 10);
-    conf.setCapacity(C3, 35);
-    conf.setCapacity(C4, 5);
+    final QueuePath c1 = c.createNewLeaf("c1");
+    final QueuePath c2 = c.createNewLeaf("c2");
+    final QueuePath c3 = c.createNewLeaf("c3");
+    final QueuePath c4 = c.createNewLeaf("c4");
+    conf.setQueues(c, new String[] {"c1", "c2", "c3", "c4"});
+    conf.setCapacity(c1, 50);
+    conf.setCapacity(c2, 10);
+    conf.setCapacity(c3, 35);
+    conf.setCapacity(c4, 5);
 
     // Define 3rd-level queues
-    final QueuePath C11 = C1.createNewLeaf("c11");
-    final QueuePath C12 = C1.createNewLeaf("c12");
-    final QueuePath C13 = C1.createNewLeaf("c13");
-    conf.setQueues(C1, new String[] {"c11", "c12", "c13"});
-    conf.setCapacity(C11, 15);
-    conf.setCapacity(C12, 45);
-    conf.setCapacity(C13, 40);
+    final QueuePath c11 = c1.createNewLeaf("c11");
+    final QueuePath c12 = c1.createNewLeaf("c12");
+    final QueuePath c13 = c1.createNewLeaf("c13");
+    conf.setQueues(c1, new String[] {"c11", "c12", "c13"});
+    conf.setCapacity(c11, 15);
+    conf.setCapacity(c12, 45);
+    conf.setCapacity(c13, 40);
     if (useDRC) {
       conf.set("yarn.scheduler.capacity.resource-calculator",
           "org.apache.hadoop.yarn.util.resource.DominantResourceCalculator");

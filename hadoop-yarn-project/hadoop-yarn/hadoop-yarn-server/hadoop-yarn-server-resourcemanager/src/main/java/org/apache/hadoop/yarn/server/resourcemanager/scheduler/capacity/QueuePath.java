@@ -65,7 +65,7 @@ public class QueuePath implements Iterable<String> {
 
   /**
    * Creates a new {@code QueuePath} with the current object as  a parent, and appends the
-   * child to its queue path
+   * child to its queue path.
    * @param childName Name of the child which will be added to the queue path
    * @return QueuePath object
    */
@@ -256,7 +256,7 @@ public class QueuePath implements Iterable<String> {
   }
 
   /**
-   * Returns the supported wildcard level for this queue path
+   * Returns the supported wildcard level for this queue path.
    * @param maxAutoCreatedQueueDepth the maximum depth of auto-created queues stored in the
    *                                 configuration
    * @return int value of the supported wildcard level

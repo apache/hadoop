@@ -100,7 +100,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   private static final String QUEUE_A = "Qa";
   private static final String LABEL_LY = "Ly";
   private static final String LABEL_LX = "Lx";
-  private static final QueuePath ROOT_QUEUE_PATH = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath ROOT_QUEUE_PATH =
+      new QueuePath(CapacitySchedulerConfiguration.ROOT);
   private static final ImmutableSet<String> CLUSTER_LABELS =
       ImmutableSet.of(LABEL_LX, LABEL_LY, DEFAULT_PARTITION);
   private static final String DOT = ".";

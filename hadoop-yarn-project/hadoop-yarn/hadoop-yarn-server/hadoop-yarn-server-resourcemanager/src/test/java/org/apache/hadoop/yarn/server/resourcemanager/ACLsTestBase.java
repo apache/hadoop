@@ -49,12 +49,12 @@ public abstract class ACLsTestBase {
   protected static final String QUEUEA = "queueA";
   protected static final String QUEUEB = "queueB";
   protected static final String QUEUEC = "queueC";
-  protected static QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
-  protected static QueuePath A_QUEUE_PATH = new QueuePath(
+  protected static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  protected static final QueuePath A_QUEUE_PATH = new QueuePath(
       CapacitySchedulerConfiguration.ROOT + "." + QUEUEA);
-  protected static QueuePath B_QUEUE_PATH = new QueuePath(
+  protected static final QueuePath B_QUEUE_PATH = new QueuePath(
       CapacitySchedulerConfiguration.ROOT + "." + QUEUEB);
-  protected static QueuePath C_QUEUE_PATH = new QueuePath(
+  protected static final QueuePath C_QUEUE_PATH = new QueuePath(
       CapacitySchedulerConfiguration.ROOT + "." + QUEUEC);
 
   protected static final Logger LOG =

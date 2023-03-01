@@ -133,8 +133,8 @@ public class TestProportionalCapacityPreemptionPolicy {
   private static final QueuePath QUEUE_A_QUEUE_B = new QueuePath("root.queueA.queueB");
   private static final QueuePath QUEUE_B = new QueuePath("root.queueB");
   private static final QueuePath QUEUE_D = new QueuePath("root.queueD");
-  private static final QueuePath QUEUE_D_QUEUE_E = new QueuePath( "root.queueD.queueE");
-  private static final QueuePath QUEUE_A_QUEUE_C = new QueuePath( "root.queueA.queueC");
+  private static final QueuePath QUEUE_D_QUEUE_E = new QueuePath("root.queueD.queueE");
+  private static final QueuePath QUEUE_A_QUEUE_C = new QueuePath("root.queueA.queueC");
 
 
   public enum priority {

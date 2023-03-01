@@ -1730,8 +1730,7 @@ public class TestNodeLabelContainerAllocation {
         new CapacitySchedulerConfiguration(this.conf);
 
     // Define top-level queues
-    csConf.setQueues(ROOT, new String[] { "a",
-        "b" });
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
     csConf.setCapacityByLabel(ROOT, "x", 100);
 
     csConf.setCapacity(A, 50);
@@ -1880,8 +1879,7 @@ public class TestNodeLabelContainerAllocation {
         new CapacitySchedulerConfiguration(this.conf);
 
     // Define top-level queues
-    csConf.setQueues(ROOT, new String[] { "a",
-        "b" });
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
     csConf.setCapacityByLabel(ROOT, "x", 100);
 
     /**
@@ -2137,8 +2135,7 @@ public class TestNodeLabelContainerAllocation {
         new CapacitySchedulerConfiguration(this.conf);
 
     // Define top-level queues
-    csConf.setQueues(ROOT, new String[] { "a",
-        "b", "c", "d" });
+    csConf.setQueues(ROOT, new String[] {"a", "b", "c", "d"});
     csConf.setCapacityByLabel(ROOT, "x", 100);
 
     csConf.setCapacity(A, 25);
@@ -2420,8 +2417,7 @@ public class TestNodeLabelContainerAllocation {
         new CapacitySchedulerConfiguration(this.conf);
 
     // Define top-level queues
-    csConf.setQueues(ROOT, new String[] { "a",
-        "b"});
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
     csConf.setCapacityByLabel(ROOT, "x", 100);
 
     csConf.setCapacity(A, 10);
@@ -3305,8 +3301,7 @@ public class TestNodeLabelContainerAllocation {
     csConf.setMaximumCapacityByLabel(B, "x", 100);
 
     // Define 2nd-level queues
-    csConf.setQueues(A, new String[] { "a1",
-        "a2"});
+    csConf.setQueues(A, new String[] {"a1", "a2"});
 
     csConf.setCapacity(A1, 20);
     csConf.setMaximumCapacity(A1, 60);

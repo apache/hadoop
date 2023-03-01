@@ -172,11 +172,11 @@ public class TestReservations {
     QueuePath newRootPath = root.createNewLeaf(newRoot);
     QueuePath aQueuePath = newRootPath.createNewLeaf(A);
 
-    conf.setQueues(root, new String[] { newRoot });
+    conf.setQueues(root, new String[] {newRoot});
     conf.setMaximumCapacity(root, 100);
     conf.setAcl(root, QueueACL.SUBMIT_APPLICATIONS, " ");
 
-    conf.setQueues(newRootPath, new String[] { A });
+    conf.setQueues(newRootPath, new String[] {A});
     conf.setCapacity(newRootPath, 100);
     conf.setMaximumCapacity(newRootPath, 100);
     conf.setAcl(newRootPath, QueueACL.SUBMIT_APPLICATIONS, " ");

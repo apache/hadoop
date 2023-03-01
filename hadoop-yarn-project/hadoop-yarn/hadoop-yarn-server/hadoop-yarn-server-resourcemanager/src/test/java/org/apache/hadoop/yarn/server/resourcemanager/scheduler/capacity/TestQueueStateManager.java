@@ -53,7 +53,8 @@ public class TestQueueStateManager {
       Q1_PATH + "." + Q2;
   private final static String Q3_PATH =
       Q1_PATH + "." + Q3;
-  private final static QueuePath ROOT_QUEUE_PATH = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private final static QueuePath ROOT_QUEUE_PATH =
+      new QueuePath(CapacitySchedulerConfiguration.ROOT);
   private final static QueuePath Q1_QUEUE_PATH = new QueuePath(Q1_PATH);
   private final static QueuePath Q2_QUEUE_PATH = new QueuePath(Q2_PATH);
   private final static QueuePath Q3_QUEUE_PATH = new QueuePath(Q3_PATH);

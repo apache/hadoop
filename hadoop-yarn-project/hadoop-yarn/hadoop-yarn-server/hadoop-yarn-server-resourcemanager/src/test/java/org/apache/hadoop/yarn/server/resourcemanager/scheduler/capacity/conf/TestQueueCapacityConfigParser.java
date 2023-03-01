@@ -115,7 +115,8 @@ public class TestQueueCapacityConfigParser {
   @Test
   public void testAbsoluteCapacityVectorConfig() {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
-    conf.set(getQueuePrefix(QUEUE_PATH) + CapacitySchedulerConfiguration.CAPACITY, ABSOLUTE_RESOURCE);
+    conf.set(getQueuePrefix(QUEUE_PATH) + CapacitySchedulerConfiguration.CAPACITY,
+        ABSOLUTE_RESOURCE);
     conf.set(YarnConfiguration.RESOURCE_TYPES, RESOURCE_TYPES);
     ResourceUtils.resetResourceTypes(conf);
 

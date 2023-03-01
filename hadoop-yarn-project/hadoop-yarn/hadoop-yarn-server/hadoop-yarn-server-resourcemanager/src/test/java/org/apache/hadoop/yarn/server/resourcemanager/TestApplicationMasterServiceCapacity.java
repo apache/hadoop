@@ -261,26 +261,26 @@ public class TestApplicationMasterServiceCapacity extends
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration(config);
 
     // Define top-level queues
-    final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
-    conf.setQueues(ROOT, new String[] {"a", "b"});
-    conf.setCapacityByLabel(ROOT, "x", 100);
-    conf.setCapacityByLabel(ROOT, "y", 100);
+    final QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    conf.setQueues(root, new String[] {"a", "b"});
+    conf.setCapacityByLabel(root, "x", 100);
+    conf.setCapacityByLabel(root, "y", 100);
 
-    final String A_PATH = CapacitySchedulerConfiguration.ROOT + ".a";
-    final QueuePath A = new QueuePath(A_PATH);
-    conf.setCapacity(A, 50);
-    conf.setMaximumCapacity(A, 100);
-    conf.setAccessibleNodeLabels(A, toSet("x"));
-    conf.setDefaultNodeLabelExpression(A, "x");
-    conf.setCapacityByLabel(A, "x", 100);
+    final String aPath = CapacitySchedulerConfiguration.ROOT + ".a";
+    final QueuePath a = new QueuePath(aPath);
+    conf.setCapacity(a, 50);
+    conf.setMaximumCapacity(a, 100);
+    conf.setAccessibleNodeLabels(a, toSet("x"));
+    conf.setDefaultNodeLabelExpression(a, "x");
+    conf.setCapacityByLabel(a, "x", 100);
 
-    final String B_PATH = CapacitySchedulerConfiguration.ROOT + ".b";
-    final QueuePath B = new QueuePath(B_PATH);
-    conf.setCapacity(B, 50);
-    conf.setMaximumCapacity(B, 100);
-    conf.setAccessibleNodeLabels(B, toSet("y"));
-    conf.setDefaultNodeLabelExpression(B, "y");
-    conf.setCapacityByLabel(B, "y", 100);
+    final String bPath = CapacitySchedulerConfiguration.ROOT + ".b";
+    final QueuePath b = new QueuePath(bPath);
+    conf.setCapacity(b, 50);
+    conf.setMaximumCapacity(b, 100);
+    conf.setAccessibleNodeLabels(b, toSet("y"));
+    conf.setDefaultNodeLabelExpression(b, "y");
+    conf.setCapacityByLabel(b, "y", 100);
 
     return conf;
   }
