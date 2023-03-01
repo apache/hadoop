@@ -40,6 +40,7 @@ public class ReportBadBlockAction implements BPServiceActorAction {
   private final ExtendedBlock block;
   private final String storageUuid;
   private final StorageType storageType;
+  private boolean isReportSuccessfullySent = false;
 
   public ReportBadBlockAction(ExtendedBlock block, String storageUuid, 
       StorageType storageType) {
@@ -63,6 +64,7 @@ public class ReportBadBlockAction implements BPServiceActorAction {
 
     try {
       bpNamenode.reportBadBlocks(locatedBlock);
+      isReportSuccessfullySent = true;
     } catch (RemoteException re) {
       DataNode.LOG.info("reportBadBlock encountered RemoteException for "
           + "block:  " + block , re);
@@ -70,6 +72,11 @@ public class ReportBadBlockAction implements BPServiceActorAction {
       throw new BPServiceActorActionException("Failed to report bad block "
           + block + " to namenode.", e);
     }
+  }
+
+  @Override
+  public boolean isReportSuccessfullySent() {
+    return isReportSuccessfullySent;
   }
 
   @Override

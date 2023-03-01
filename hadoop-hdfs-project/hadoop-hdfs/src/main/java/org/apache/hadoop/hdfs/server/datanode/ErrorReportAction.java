@@ -34,7 +34,8 @@ public class ErrorReportAction implements BPServiceActorAction {
 
   final int errorCode;
   final String errorMessage;
-  
+  private boolean isReportSuccessfullySent = false;
+
   public ErrorReportAction(int errorCode, String errorMessage) {
     this.errorCode = errorCode;
     this.errorMessage = errorMessage;
@@ -45,6 +46,7 @@ public class ErrorReportAction implements BPServiceActorAction {
     DatanodeRegistration bpRegistration) throws BPServiceActorActionException {
     try {
       bpNamenode.errorReport(bpRegistration, errorCode, errorMessage);
+      isReportSuccessfullySent = true;
     } catch (RemoteException re) {
       DataNode.LOG.info("trySendErrorReport encountered RemoteException  "
           + "errorMessage: " + errorMessage + "  errorCode: " + errorCode, re);
@@ -52,6 +54,11 @@ public class ErrorReportAction implements BPServiceActorAction {
       throw new BPServiceActorActionException("Error reporting "
           + "an error to namenode.", e);
     }
+  }
+
+  @Override
+  public boolean isReportSuccessfullySent() {
+    return isReportSuccessfullySent;
   }
 
   @Override
