@@ -457,10 +457,10 @@ public class MiniYARNCluster extends CompositeService {
   }
 
   /**
-   * Stop a MiniYarnCluster can take more than 30s what blocks the test execution,
-   * so to prevent that we can start the cluster stop asynchronously,
-   * what can decrease the test execution time.
-   * @param owner the Test class, what owns the instance of MiniYarnCluster
+   * Stopping MiniYarnCluster can take more than 30 seconds and it's a blocking operation so it blocks test execution,
+   * so to prevent that we can stop the cluster asynchronously,
+   * that can ultimately save test execution time.
+   * @param owner the Test class that owns the instance of MiniYarnCluster
    */
   public void asyncStop(Object owner) {
     new Thread(
