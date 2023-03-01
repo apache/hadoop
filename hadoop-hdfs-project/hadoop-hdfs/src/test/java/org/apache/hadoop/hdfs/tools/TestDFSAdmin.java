@@ -1249,8 +1249,8 @@ public class TestDFSAdmin {
     String started = "Started reconfiguration task on node";
     String starting =
         "Starting of reconfiguration task successful on 2 nodes, failed on 0 nodes.";
-    Assertions.assertThat(outsForStartReconf.size()).isEqualTo(3);
-    Assertions.assertThat(errsForStartReconf.size()).isEqualTo(0);
+    Assertions.assertThat(outsForStartReconf).hasSize(3);
+    Assertions.assertThat(errsForStartReconf).hasSize(0);
     Assertions.assertThat(outsForStartReconf.get(0)).startsWith(started);
     Assertions.assertThat(outsForStartReconf.get(1)).startsWith(started);
     Assertions.assertThat(outsForStartReconf.get(2)).startsWith(starting);
@@ -1259,8 +1259,8 @@ public class TestDFSAdmin {
     final List<String> outs = new ArrayList<>();
     final List<String> errs = new ArrayList<>();
     awaitReconfigurationFinished("datanode", "livenodes", outs, errs);
-    Assertions.assertThat(outs.size()).isEqualTo(9);
-    Assertions.assertThat(errs.size()).isEqualTo(0);
+    Assertions.assertThat(outs).hasSize(9);
+    Assertions.assertThat(errs).hasSize(0);
     LOG.info("dfsadmin -status -livenodes output:");
     outs.forEach(s -> LOG.info("{}", s));
     Assertions.assertThat(outs.get(0)).startsWith("Reconfiguring status for node");
@@ -1271,13 +1271,7 @@ public class TestDFSAdmin {
     String retrieval =
         "Retrieval of reconfiguration status successful on 2 nodes, failed on 0 nodes.";
 
-    Assertions.assertThat(Collections.singleton(success)).containsAnyOf(outs.get(1), outs.get(2));
-    Assertions.assertThat(Collections.singleton(from)).containsAnyOf(outs.get(3), outs.get(2));
-    Assertions.assertThat(Collections.singleton(to))
-        .containsAnyOf(outs.get(4), outs.get(3));
-    Assertions.assertThat(outs.get(5)).isEqualTo(success);
-    Assertions.assertThat(outs.get(6)).isEqualTo(from);
-    Assertions.assertThat(outs.get(7)).isEqualTo(to);
-    Assertions.assertThat(outs.get(8)).isEqualTo(retrieval);
+    Assertions.assertThat(outs.subList(1, 5)).containsSubsequence(success, from, to);
+    Assertions.assertThat(outs.subList(5, 9)).containsSubsequence(success, from, to, retrieval);
   }
 }
