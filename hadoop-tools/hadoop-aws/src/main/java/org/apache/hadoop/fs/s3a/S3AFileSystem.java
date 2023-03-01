@@ -997,21 +997,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           try {
 
             LOG.warn(
-                "Getting region for bucket {} from S3, this will slow down FS initialisation. To avoid "
-                    + "this, set the region using property {}", bucket,
+                "Getting region for bucket {} from S3, this will slow down FS initialisation. "
+                    + "To avoid this, set the region using property {}", bucket,
                 FS_S3A_BUCKET_PREFIX + bucket + ".endpoint.region");
 
-            // build a s3 client with region eu-west-1 that can be used to get the region of the bucket.
-            // Using eu-west-1, as headBucket() doesn't work with us-east-1. This is because
-            // us-east-1 uses the endpoint s3.amazonaws.com, which resolves bucket.s3.amazonaws.com to
-            // the actual region the bucket is in. As the request is signed with us-east-1 and not the
-            // bucket's region, it fails.
-            S3Client s3Client =
+            // build a s3 client with region eu-west-1 that can be used to get the region of the
+            // bucket. Using eu-west-1, as headBucket() doesn't work with us-east-1. This is because
+            // us-east-1 uses the endpoint s3.amazonaws.com, which resolves bucket.s3.amazonaws.com
+            // to the actual region the bucket is in. As the request is signed with us-east-1 and
+            // not the bucket's region, it fails.
+            S3Client getRegionS3Client =
                 S3Client.builder().region(Region.EU_WEST_1).credentialsProvider(credentials)
                     .build();
 
             HeadBucketResponse headBucketResponse =
-                s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
+                getRegionS3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
 
             Region bucketRegion = Region.of(
                 headBucketResponse.sdkHttpResponse().headers().get(BUCKET_REGION_HEADER).get(0));
