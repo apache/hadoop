@@ -4269,18 +4269,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   private CopyObjectResponse copyFile(String srcKey, String dstKey, long size,
       S3ObjectAttributes srcAttributes, S3AReadOpContext readContext)
-      throws IOException, InterruptedIOException  {
+      throws IOException {
     LOG.debug("copyFile {} -> {} ", srcKey, dstKey);
-
-    // TODO: Transfer manager currently only provides transfer listeners for upload,
-    //  add progress listener for copy when this is supported.
-// TODO: Is the above still valid? Try to enable when logger issue is resolved.
-//    TransferListener progressListener = new TransferListener() {
-//      @Override
-//      public void transferComplete(Context.TransferComplete context) {
-//        incrementWriteOperations();
-//      }
-//    };
 
     ChangeTracker changeTracker = new ChangeTracker(
         keyToQualifiedPath(srcKey).toString(),
@@ -4324,10 +4314,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           Copy copy = transferManager.copy(
               CopyRequest.builder()
                   .copyObjectRequest(copyObjectRequestBuilder.build())
-// TODO: Enable when logger issue is resolved.
-//                  .overrideConfiguration(c -> c
-//                      .addListener(getAuditManager().createTransferListener())
-//                      .addListener(progressListener))
                   .build());
 
           try {
