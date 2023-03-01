@@ -287,6 +287,13 @@
 </property>
 
 <property>
+  <name>mapreduce.task.ping-for-liveliness-check.enabled</name>
+  <value>false</value>
+  <description>Whether to consider ping from tasks in liveliness check.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.map.memory.mb</name>
   <value>-1</value>
   <description>The amount of memory to request from the scheduler for each
@@ -1653,14 +1660,18 @@
   <name>yarn.app.mapreduce.client-am.ipc.max-retries</name>
   <value>3</value>
   <description>The number of client retries to the AM - before reconnecting
-    to the RM to fetch Application Status.</description>
+    to the RM to fetch Application Status.
+    In other words, it is the ipc.client.connect.max.retries to be used during
+    reconnecting to the RM and fetching Application Status.</description>
 </property>
 
 <property>
   <name>yarn.app.mapreduce.client-am.ipc.max-retries-on-timeouts</name>
   <value>3</value>
   <description>The number of client retries on socket timeouts to the AM - before
-    reconnecting to the RM to fetch Application Status.</description>
+    reconnecting to the RM to fetch Application Status.
+    In other words, it is the ipc.client.connect.max.retries.on.timeouts to be used during
+    reconnecting to the RM and fetching Application Status.</description>
 </property>
 
 <property>
@@ -1715,7 +1726,7 @@
   must specify the appropriate classpath for that archive, and the name of
   the archive must be present in the classpath.
   If mapreduce.app-submission.cross-platform is false, platform-specific
-  environment vairable expansion syntax would be used to construct the default
+  environment variable expansion syntax would be used to construct the default
   CLASSPATH entries.
   For Linux:
   $HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,

@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
@@ -38,6 +39,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 
@@ -178,4 +181,12 @@ public class FederationStateStoreTestUtil {
         .newInstance(subClusterId, SubClusterState.SC_UNREGISTERED));
   }
 
+  public SubClusterId queryReservationHomeSC(ReservationId reservationId)
+      throws YarnException {
+    GetReservationHomeSubClusterRequest request =
+        GetReservationHomeSubClusterRequest.newInstance(reservationId);
+    GetReservationHomeSubClusterResponse response =
+        stateStore.getReservationHomeSubCluster(request);
+    return response.getReservationHomeSubCluster().getHomeSubCluster();
+  }
 }

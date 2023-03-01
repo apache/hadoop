@@ -24,7 +24,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.registry.client.exceptions.InvalidPathnameException;
 import org.apache.hadoop.registry.client.impl.zk.RegistryInternalConstants;
-import org.apache.hadoop.registry.server.dns.BaseServiceRecordProcessor;
 import org.apache.zookeeper.common.PathUtils;
 
 import java.net.IDN;

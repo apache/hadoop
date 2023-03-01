@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayDeque;
 import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
@@ -52,6 +53,12 @@ public abstract class DatanodeAdminMonitorBase
 
   private final PriorityQueue<DatanodeDescriptor> pendingNodes = new PriorityQueue<>(
       PENDING_NODES_QUEUE_COMPARATOR);
+
+  /**
+   * Any nodes where decommission or maintenance has been cancelled are added
+   * to this queue for later processing.
+   */
+  private final Queue<DatanodeDescriptor> cancelledNodes = new ArrayDeque<>();
 
   /**
    * The maximum number of nodes to track in outOfServiceNodeBlocks.
@@ -116,6 +123,10 @@ public abstract class DatanodeAdminMonitorBase
           DFSConfigKeys
               .DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES_DEFAULT;
     }
+
+    LOG.debug("Activating DatanodeAdminMonitor with {} max concurrently tracked nodes.",
+        maxConcurrentTrackedNodes);
+
     processConf();
   }
 
@@ -161,6 +172,11 @@ public abstract class DatanodeAdminMonitorBase
   @Override
   public Queue<DatanodeDescriptor> getPendingNodes() {
     return pendingNodes;
+  }
+
+  @Override
+  public Queue<DatanodeDescriptor> getCancelledNodes() {
+    return cancelledNodes;
   }
 
   /**

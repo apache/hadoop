@@ -19,6 +19,11 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DU_INTERVAL_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DU_INTERVAL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_GETSPACEUSED_JITTER_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_GETSPACEUSED_JITTER_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_GETSPACEUSED_CLASSNAME;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY;
@@ -40,6 +45,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -49,15 +55,21 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
+import org.apache.hadoop.fs.CachingGetSpaceUsed;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.GetSpaceUsed;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.BlockPoolSlice;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -76,6 +88,7 @@ public class TestDataNodeReconfiguration {
   private final int NUM_NAME_NODE = 1;
   private final int NUM_DATA_NODE = 10;
   private MiniDFSCluster cluster;
+  private static long counter = 0;
 
   @Before
   public void Setup() throws IOException {
@@ -624,13 +637,15 @@ public class TestDataNodeReconfiguration {
       String[] slowDisksParameters2 = {
           DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY,
           DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY,
-          DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY};
+          DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY,
+          DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY};
       for (String parameter : slowDisksParameters2) {
         dn.reconfigureProperty(parameter, "99");
       }
       // Assert diskMetrics.
       assertEquals(99, dn.getDiskMetrics().getMinOutlierDetectionDisks());
       assertEquals(99, dn.getDiskMetrics().getLowThresholdMs());
+      assertEquals(99, dn.getDiskMetrics().getMaxSlowDisksToExclude());
       // Assert dnConf.
       assertTrue(dn.getDnConf().diskStatsEnabled);
       // Assert profilingEventHook.
@@ -661,16 +676,122 @@ public class TestDataNodeReconfiguration {
       dn.reconfigureProperty(DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY, "1");
       dn.reconfigureProperty(DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY, null);
       dn.reconfigureProperty(DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY, null);
+      dn.reconfigureProperty(DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY, null);
       assertEquals(String.format("expect %s is not configured",
           DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY), null,
           dn.getConf().get(DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY));
       assertEquals(String.format("expect %s is not configured",
           DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY), null,
           dn.getConf().get(DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY));
+      assertEquals(String.format("expect %s is not configured",
+          DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY), null,
+          dn.getConf().get(DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY));
       assertEquals(DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_DEFAULT,
           dn.getDiskMetrics().getSlowDiskDetector().getMinOutlierDetectionNodes());
       assertEquals(DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_DEFAULT,
           dn.getDiskMetrics().getSlowDiskDetector().getLowThresholdMs());
     }
+  }
+
+  @Test
+  public void testDfsUsageParameters() throws ReconfigurationException {
+    String[] dfsUsageParameters = {
+        FS_DU_INTERVAL_KEY,
+        FS_GETSPACEUSED_JITTER_KEY};
+
+    for (int i = 0; i < NUM_DATA_NODE; i++) {
+      DataNode dn = cluster.getDataNodes().get(i);
+
+      // Try invalid values.
+      for (String parameter : dfsUsageParameters) {
+        try {
+          dn.reconfigureProperty(parameter, "text");
+          fail("ReconfigurationException expected");
+        } catch (ReconfigurationException expected) {
+          assertTrue("expecting NumberFormatException",
+              expected.getCause() instanceof NumberFormatException);
+        }
+
+        try {
+          dn.reconfigureProperty(parameter, String.valueOf(-1));
+          fail("ReconfigurationException expected");
+        } catch (ReconfigurationException expected) {
+          assertTrue("expecting IllegalArgumentException",
+              expected.getCause() instanceof IllegalArgumentException);
+        }
+      }
+
+      // Change and verify properties.
+      for (String parameter : dfsUsageParameters) {
+        dn.reconfigureProperty(parameter, "99");
+      }
+      List<FsVolumeImpl> volumeList = dn.data.getVolumeList();
+      for (FsVolumeImpl fsVolume : volumeList) {
+        Map<String, BlockPoolSlice> blockPoolSlices = fsVolume.getBlockPoolSlices();
+        for (Map.Entry<String, BlockPoolSlice> entry : blockPoolSlices.entrySet()) {
+          GetSpaceUsed dfsUsage = entry.getValue().getDfsUsage();
+          if (dfsUsage instanceof CachingGetSpaceUsed) {
+            assertEquals(99,
+                ((CachingGetSpaceUsed) entry.getValue().getDfsUsage()).getRefreshInterval());
+            assertEquals(99,
+                ((CachingGetSpaceUsed) entry.getValue().getDfsUsage()).getJitter());
+          }
+        }
+      }
+
+      // Revert to default and verify.
+      for (String parameter : dfsUsageParameters) {
+        dn.reconfigureProperty(parameter, null);
+      }
+      for (FsVolumeImpl fsVolume : volumeList) {
+        Map<String, BlockPoolSlice> blockPoolSlices = fsVolume.getBlockPoolSlices();
+        for (Map.Entry<String, BlockPoolSlice> entry : blockPoolSlices.entrySet()) {
+          GetSpaceUsed dfsUsage = entry.getValue().getDfsUsage();
+          if (dfsUsage instanceof CachingGetSpaceUsed) {
+            assertEquals(String.format("expect %s is not configured",
+                FS_DU_INTERVAL_KEY), FS_DU_INTERVAL_DEFAULT,
+                ((CachingGetSpaceUsed) entry.getValue().getDfsUsage()).getRefreshInterval());
+            assertEquals(String.format("expect %s is not configured",
+                FS_GETSPACEUSED_JITTER_KEY), FS_GETSPACEUSED_JITTER_DEFAULT,
+                ((CachingGetSpaceUsed) entry.getValue().getDfsUsage()).getJitter());
+          }
+          assertEquals(String.format("expect %s is not configured",
+              FS_DU_INTERVAL_KEY), null,
+              dn.getConf().get(FS_DU_INTERVAL_KEY));
+          assertEquals(String.format("expect %s is not configured",
+              FS_GETSPACEUSED_JITTER_KEY), null,
+              dn.getConf().get(FS_GETSPACEUSED_JITTER_KEY));
+        }
+      }
+    }
+  }
+
+  public static class DummyCachingGetSpaceUsed extends CachingGetSpaceUsed {
+    public DummyCachingGetSpaceUsed(Builder builder) throws IOException {
+      super(builder.setInterval(1000).setJitter(0L));
+    }
+
+    @Override
+    protected void refresh() {
+      counter++;
+    }
+  }
+
+  @Test
+  public void testDfsUsageKlass() throws ReconfigurationException, InterruptedException {
+
+    long lastCounter = counter;
+    Thread.sleep(5000);
+    assertEquals(lastCounter, counter);
+
+    for (int i = 0; i < NUM_DATA_NODE; i++) {
+      DataNode dn = cluster.getDataNodes().get(i);
+      dn.reconfigurePropertyImpl(FS_GETSPACEUSED_CLASSNAME,
+              DummyCachingGetSpaceUsed.class.getName());
+    }
+
+    lastCounter = counter;
+    Thread.sleep(5000);
+    assertTrue(counter > lastCounter);
   }
 }

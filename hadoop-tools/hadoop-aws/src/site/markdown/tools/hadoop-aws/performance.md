@@ -55,6 +55,45 @@ it isn't, and some attempts to preserve the metaphor are "aggressively suboptima
 
 To make most efficient use of S3, care is needed.
 
+## <a name="vectoredIO"></a> Improving read performance using Vectored IO
+The S3A FileSystem supports implementation of vectored read api using which
+a client can provide a list of file ranges to read returning a future read
+object associated with each range. For full api specification please see
+[FSDataInputStream](../../hadoop-common-project/hadoop-common/filesystem/fsdatainputstream.html).
+
+The following properties can be configured to optimise vectored reads based
+on the client requirements.
+
+```xml
+<property>
+  <name>fs.s3a.vectored.read.min.seek.size</name>
+  <value>4K</value>
+  <description>
+     What is the smallest reasonable seek in bytes such
+     that we group ranges together during vectored
+     read operation.
+   </description>
+</property>
+<property>
+   <name>fs.s3a.vectored.read.max.merged.size</name>
+   <value>1M</value>
+   <description>
+      What is the largest merged read size in bytes such
+      that we group ranges together during vectored read.
+      Setting this value to 0 will disable merging of ranges.
+   </description>
+<property>
+   <name>fs.s3a.vectored.active.ranged.reads</name>
+   <value>4</value>
+   <description>
+      Maximum number of range reads a single input stream can have
+      active (downloading, or queued) to the central FileSystem
+      instance's pool of queued operations.
+      This stops a single stream overloading the shared thread pool.
+   </description>
+</property>
+```
+
 ## <a name="fadvise"></a> Improving data input performance through fadvise
 
 The S3A Filesystem client supports the notion of input policies, similar
@@ -83,7 +122,7 @@ Optimised for random IO, specifically the Hadoop `PositionedReadable`
 operations —though `seek(offset); read(byte_buffer)` also benefits.
 
 Rather than ask for the whole file, the range of the HTTP request is
-set to that that of the length of data desired in the `read` operation
+set to the length of data desired in the `read` operation
 (Rounded up to the readahead value set in `setReadahead()` if necessary).
 
 By reducing the cost of closing existing HTTP requests, this is
@@ -133,7 +172,7 @@ sequential to `random`.
 This policy essentially recognizes the initial read pattern of columnar
 storage formats (e.g. Apache ORC and Apache Parquet), which seek to the end
 of a file, read in index data and then seek backwards to selectively read
-columns. The first seeks may be be expensive compared to the random policy,
+columns. The first seeks may be expensive compared to the random policy,
 however the overall process is much less expensive than either sequentially
 reading through a file with the `random` policy, or reading columnar data
 with the `sequential` policy.
@@ -345,7 +384,7 @@ data loss.
 Amazon S3 uses a set of front-end servers to provide access to the underlying data.
 The choice of which front-end server to use is handled via load-balancing DNS
 service: when the IP address of an S3 bucket is looked up, the choice of which
-IP address to return to the client is made based on the the current load
+IP address to return to the client is made based on the current load
 of the front-end servers.
 
 Over time, the load across the front-end changes, so those servers considered

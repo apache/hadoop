@@ -37,6 +37,7 @@ import java.util.Arrays;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -88,7 +89,7 @@ public class TestSynthJobGeneration {
     }
 
     Assert.assertTrue(bucket0 > 0);
-    Assert.assertTrue(bucket1 == 0);
+    assertEquals(0, bucket1);
     Assert.assertTrue(bucket2 > 0);
     Assert.assertTrue(bucket3 > 0);
     Assert.assertTrue(bucket2 > bucket0);
@@ -255,7 +256,7 @@ public class TestSynthJobGeneration {
     assertTrue(js.getTasks().size() > 0);
 
     for (SynthJob.SynthTask t : js.getTasks()) {
-      assertTrue(t.getType() != null);
+      assertNotNull(t.getType());
       assertTrue(t.getTime() > 0);
       assertTrue(t.getMemory() > 0);
       assertTrue(t.getVcores() > 0);

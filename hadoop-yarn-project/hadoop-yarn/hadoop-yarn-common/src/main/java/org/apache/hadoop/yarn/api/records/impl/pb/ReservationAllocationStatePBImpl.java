@@ -62,7 +62,7 @@ import java.util.List;
 public class ReservationAllocationStatePBImpl extends
         ReservationAllocationState {
   private ReservationAllocationStateProto proto =
-          ReservationAllocationStateProto.getDefaultInstance();;
+          ReservationAllocationStateProto.getDefaultInstance();
   private ReservationAllocationStateProto.Builder builder = null;
   private boolean viaProto = false;
 

@@ -548,6 +548,10 @@ public class FsVolumeImpl implements FsVolumeSpi {
     return recentReserved;
   }
 
+  public Map<String, BlockPoolSlice> getBlockPoolSlices() {
+    return bpSlices;
+  }
+
   long getReserved(){
     return reserved != null ? reserved.getReserved() : 0;
   }

@@ -164,7 +164,7 @@ public class Dispatcher {
       }
     }
 
-    /** Aloocate a single lot of items */
+    /** Allocate a single lot of items. */
     int allocate() {
       return allocate(lotSize);
     }
@@ -241,6 +241,7 @@ public class Dispatcher {
     private DDatanode proxySource;
     private StorageGroup target;
 
+    @VisibleForTesting
     PendingMove(Source source, StorageGroup target) {
       this.source = source;
       this.target = target;
@@ -282,6 +283,7 @@ public class Dispatcher {
     /**
      * @return true if the given block is good for the tentative move.
      */
+    @VisibleForTesting
     boolean markMovedIfGoodBlock(DBlock block, StorageType targetStorageType) {
       synchronized (block) {
         synchronized (movedBlocks) {
@@ -1125,7 +1127,7 @@ public class Dispatcher {
     return nnc.getBytesMoved().get();
   }
 
-  long getBblocksMoved() {
+  long getBlocksMoved() {
     return nnc.getBlocksMoved().get();
   }
 
@@ -1232,7 +1234,7 @@ public class Dispatcher {
    */
   private long dispatchBlockMoves() throws InterruptedException {
     final long bytesLastMoved = getBytesMoved();
-    final long blocksLastMoved = getBblocksMoved();
+    final long blocksLastMoved = getBlocksMoved();
     final Future<?>[] futures = new Future<?>[sources.size()];
 
     int concurrentThreads = Math.min(sources.size(),
@@ -1282,7 +1284,7 @@ public class Dispatcher {
     waitForMoveCompletion(targets);
     LOG.info("Total bytes (blocks) moved in this iteration {} ({})",
         StringUtils.byteDesc(getBytesMoved() - bytesLastMoved),
-        (getBblocksMoved() - blocksLastMoved));
+        (getBlocksMoved() - blocksLastMoved));
 
     return getBytesMoved() - bytesLastMoved;
   }
@@ -1361,6 +1363,7 @@ public class Dispatcher {
    * 2. the block does not have a replica/internalBlock on the target;
    * 3. doing the move does not reduce the number of racks that the block has
    */
+  @VisibleForTesting
   boolean isGoodBlockCandidate(StorageGroup source, StorageGroup target,
       StorageType targetStorageType, DBlock block) {
     if (source.equals(target)) {

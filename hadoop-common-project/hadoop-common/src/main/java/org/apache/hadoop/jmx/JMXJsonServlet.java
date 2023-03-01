@@ -64,27 +64,31 @@ import java.util.Set;
  * functionality is provided through the
  * {@link MBeanServer#queryNames(ObjectName, javax.management.QueryExp)}
  * method.
+ * </p>
  * <p>
  * For example <code>http://.../jmx?qry=Hadoop:*</code> will return
  * all hadoop metrics exposed through JMX.
+ * </p>
  * <p>
  * The optional <code>get</code> parameter is used to query an specific 
  * attribute of a JMX bean.  The format of the URL is
  * <code>http://.../jmx?get=MXBeanName::AttributeName</code>
+ * </p>
  * <p>
  * For example 
  * <code>
  * http://../jmx?get=Hadoop:service=NameNode,name=NameNodeInfo::ClusterId
  * </code> will return the cluster id of the namenode mxbean.
+ * </p>
  * <p>
  * If the <code>qry</code> or the <code>get</code> parameter is not formatted 
- * correctly then a 400 BAD REQUEST http response code will be returned. 
+ * correctly then a 400 BAD REQUEST http response code will be returned.
+ * </p>
  * <p>
  * If a resouce such as a mbean or attribute can not be found, 
  * a 404 SC_NOT_FOUND http response code will be returned. 
- * <p>
+ * </p>
  * The return format is JSON and in the form
- * <p>
  *  <pre><code>
  *  {
  *    "beans" : [
@@ -95,7 +99,6 @@ import java.util.Set;
  *    ]
  *  }
  *  </code></pre>
- *  <p>
  *  The servlet attempts to convert the the JMXBeans into JSON. Each
  *  bean's attributes will be converted to a JSON object member.
  *  

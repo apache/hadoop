@@ -18,55 +18,75 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.FEDERATION_POLICY_MANAGER;
+import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE;
 
 /**
  * Extends the {@code BaseRouterClientRMTest} and overrides methods in order to
  * use the {@code RouterClientRMService} pipeline test cases for testing the
  * {@code FederationInterceptor} class. The tests for
  * {@code RouterClientRMService} has been written cleverly so that it can be
- * reused to validate different request intercepter chains.
+ * reused to validate different request interceptor chains.
  *
  * It tests the case with SubClusters down and the Router logic of retries. We
  * have 1 good SubCluster and 2 bad ones for all the tests.
  */
+@RunWith(Parameterized.class)
 public class TestFederationClientInterceptorRetry
     extends BaseRouterClientRMTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFederationClientInterceptorRetry.class);
 
+  @Parameters
+  public static Collection<String[]> getParameters() {
+    return Arrays.asList(new String[][] {{UniformBroadcastPolicyManager.class.getName()},
+        {TestSequentialBroadcastPolicyManager.class.getName()}});
+  }
+
   private TestableFederationClientInterceptor interceptor;
   private MemoryFederationStateStore stateStore;
   private FederationStateStoreTestUtil stateStoreUtil;
+  private String routerPolicyManagerName;
 
   private String user = "test-user";
 
@@ -77,7 +97,11 @@ public class TestFederationClientInterceptorRetry
   private static SubClusterId bad1;
   private static SubClusterId bad2;
 
-  private static List<SubClusterId> scs = new ArrayList<SubClusterId>();
+  private static List<SubClusterId> scs = new ArrayList<>();
+
+  public TestFederationClientInterceptorRetry(String policyManagerName) {
+    this.routerPolicyManagerName = policyManagerName;
+  }
 
   @Override
   public void setUp() throws IOException {
@@ -114,8 +138,7 @@ public class TestFederationClientInterceptorRetry
     super.tearDown();
   }
 
-  private void setupCluster(List<SubClusterId> scsToRegister)
-      throws YarnException {
+  private void setupCluster(List<SubClusterId> scsToRegister) throws YarnException {
 
     try {
       // Clean up the StateStore before every test
@@ -132,21 +155,21 @@ public class TestFederationClientInterceptorRetry
 
   @Override
   protected YarnConfiguration createConfiguration() {
+
     YarnConfiguration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
     String mockPassThroughInterceptorClass =
         PassThroughClientRequestInterceptor.class.getName();
 
-    // Create a request intercepter pipeline for testing. The last one in the
-    // chain is the federation intercepter that calls the mock resource manager.
+    // Create a request interceptor pipeline for testing. The last one in the
+    // chain is the federation interceptor that calls the mock resource manager.
     // The others in the chain will simply forward it to the next one in the
     // chain
     conf.set(YarnConfiguration.ROUTER_CLIENTRM_INTERCEPTOR_CLASS_PIPELINE,
         mockPassThroughInterceptorClass + "," + mockPassThroughInterceptorClass
             + "," + TestableFederationClientInterceptor.class.getName());
 
-    conf.set(YarnConfiguration.FEDERATION_POLICY_MANAGER,
-        UniformBroadcastPolicyManager.class.getName());
+    conf.set(FEDERATION_POLICY_MANAGER, this.routerPolicyManagerName);
 
     // Disable StateStoreFacade cache
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
@@ -159,20 +182,14 @@ public class TestFederationClientInterceptorRetry
    * cluster is composed of only 1 bad SubCluster.
    */
   @Test
-  public void testGetNewApplicationOneBadSC()
-      throws YarnException, IOException, InterruptedException {
+  public void testGetNewApplicationOneBadSC() throws Exception {
 
-    System.out.println("Test getNewApplication with one bad SubCluster");
+    LOG.info("Test getNewApplication with one bad SubCluster");
     setupCluster(Arrays.asList(bad2));
 
-    try {
-      interceptor.getNewApplication(GetNewApplicationRequest.newInstance());
-      Assert.fail();
-    } catch (Exception e) {
-      System.out.println(e.toString());
-      Assert.assertTrue(e.getMessage()
-          .equals(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE));
-    }
+    GetNewApplicationRequest request = GetNewApplicationRequest.newInstance();
+    LambdaTestUtils.intercept(YarnException.class, NO_ACTIVE_SUBCLUSTER_AVAILABLE,
+        () -> interceptor.getNewApplication(request));
   }
 
   /**
@@ -180,19 +197,14 @@ public class TestFederationClientInterceptorRetry
    * cluster is composed of only 2 bad SubClusters.
    */
   @Test
-  public void testGetNewApplicationTwoBadSCs()
-      throws YarnException, IOException, InterruptedException {
-    System.out.println("Test getNewApplication with two bad SubClusters");
+  public void testGetNewApplicationTwoBadSCs() throws Exception {
+
+    LOG.info("Test getNewApplication with two bad SubClusters");
     setupCluster(Arrays.asList(bad1, bad2));
 
-    try {
-      interceptor.getNewApplication(GetNewApplicationRequest.newInstance());
-      Assert.fail();
-    } catch (Exception e) {
-      System.out.println(e.toString());
-      Assert.assertTrue(e.getMessage()
-          .equals(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE));
-    }
+    GetNewApplicationRequest request = GetNewApplicationRequest.newInstance();
+    LambdaTestUtils.intercept(YarnException.class, NO_ACTIVE_SUBCLUSTER_AVAILABLE,
+        () -> interceptor.getNewApplication(request));
   }
 
   /**
@@ -200,17 +212,14 @@ public class TestFederationClientInterceptorRetry
    * cluster is composed of only 1 bad SubCluster and 1 good one.
    */
   @Test
-  public void testGetNewApplicationOneBadOneGood()
-      throws YarnException, IOException, InterruptedException {
-    System.out.println("Test getNewApplication with one bad, one good SC");
+  public void testGetNewApplicationOneBadOneGood() throws YarnException, IOException {
+
+    LOG.info("Test getNewApplication with one bad, one good SC");
     setupCluster(Arrays.asList(good, bad2));
-    GetNewApplicationResponse response = null;
-    try {
-      response =
-          interceptor.getNewApplication(GetNewApplicationRequest.newInstance());
-    } catch (Exception e) {
-      Assert.fail();
-    }
+    GetNewApplicationRequest request = GetNewApplicationRequest.newInstance();
+    GetNewApplicationResponse response = interceptor.getNewApplication(request);
+
+    Assert.assertNotNull(response);
     Assert.assertEquals(ResourceManager.getClusterTimeStamp(),
         response.getApplicationId().getClusterTimestamp());
   }
@@ -220,38 +229,27 @@ public class TestFederationClientInterceptorRetry
    * cluster is composed of only 1 bad SubCluster.
    */
   @Test
-  public void testSubmitApplicationOneBadSC()
-      throws YarnException, IOException, InterruptedException {
+  public void testSubmitApplicationOneBadSC() throws Exception {
 
-    System.out.println("Test submitApplication with one bad SubCluster");
+    LOG.info("Test submitApplication with one bad SubCluster");
     setupCluster(Arrays.asList(bad2));
 
     final ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
-    final SubmitApplicationRequest request = mockSubmitApplicationRequest(
-        appId);
-    try {
-      interceptor.submitApplication(request);
-      Assert.fail();
-    } catch (Exception e) {
-      System.out.println(e);
-      Assert.assertTrue(e.getMessage()
-          .equals(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE));
-    }
+    final SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+    LambdaTestUtils.intercept(YarnException.class, NO_ACTIVE_SUBCLUSTER_AVAILABLE,
+        () -> interceptor.submitApplication(request));
   }
 
-  private SubmitApplicationRequest mockSubmitApplicationRequest(
-      ApplicationId appId) {
+  private SubmitApplicationRequest mockSubmitApplicationRequest(ApplicationId appId) {
     ContainerLaunchContext amContainerSpec = mock(ContainerLaunchContext.class);
     ApplicationSubmissionContext context = ApplicationSubmissionContext
         .newInstance(appId, MockApps.newAppName(), "q1",
-            Priority.newInstance(0), amContainerSpec, false, false, -1,
-            Resources.createResource(
-                YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB),
-            "MockApp");
-    SubmitApplicationRequest request = SubmitApplicationRequest
-        .newInstance(context);
+        Priority.newInstance(0), amContainerSpec, false, false, -1,
+        Resources.createResource(YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB),
+        "MockApp");
+    SubmitApplicationRequest request = SubmitApplicationRequest.newInstance(context);
     return request;
   }
 
@@ -260,24 +258,17 @@ public class TestFederationClientInterceptorRetry
    * cluster is composed of only 2 bad SubClusters.
    */
   @Test
-  public void testSubmitApplicationTwoBadSCs()
-      throws YarnException, IOException, InterruptedException {
-    System.out.println("Test submitApplication with two bad SubClusters");
+  public void testSubmitApplicationTwoBadSCs() throws Exception {
+
+    LOG.info("Test submitApplication with two bad SubClusters.");
     setupCluster(Arrays.asList(bad1, bad2));
 
     final ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
-    final SubmitApplicationRequest request = mockSubmitApplicationRequest(
-        appId);
-    try {
-      interceptor.submitApplication(request);
-      Assert.fail();
-    } catch (Exception e) {
-      System.out.println(e.toString());
-      Assert.assertTrue(e.getMessage()
-          .equals(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE));
-    }
+    final SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+    LambdaTestUtils.intercept(YarnException.class, NO_ACTIVE_SUBCLUSTER_AVAILABLE,
+        () -> interceptor.submitApplication(request));
   }
 
   /**
@@ -287,24 +278,79 @@ public class TestFederationClientInterceptorRetry
   @Test
   public void testSubmitApplicationOneBadOneGood()
       throws YarnException, IOException, InterruptedException {
-    System.out.println("Test submitApplication with one bad, one good SC");
+
+    LOG.info("Test submitApplication with one bad, one good SC.");
     setupCluster(Arrays.asList(good, bad2));
 
     final ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
-    final SubmitApplicationRequest request = mockSubmitApplicationRequest(
-        appId);
-    try {
-      interceptor.submitApplication(request);
-    } catch (Exception e) {
-      Assert.fail();
-    }
-    Assert.assertEquals(good,
-        stateStore
-            .getApplicationHomeSubCluster(
-                GetApplicationHomeSubClusterRequest.newInstance(appId))
-            .getApplicationHomeSubCluster().getHomeSubCluster());
+    final SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+    SubmitApplicationResponse response = interceptor.submitApplication(request);
+    Assert.assertNotNull(response);
+
+    GetApplicationHomeSubClusterRequest getAppRequest =
+        GetApplicationHomeSubClusterRequest.newInstance(appId);
+    GetApplicationHomeSubClusterResponse getAppResponse =
+        stateStore.getApplicationHomeSubCluster(getAppRequest);
+    Assert.assertNotNull(getAppResponse);
+
+    ApplicationHomeSubCluster responseHomeSubCluster =
+        getAppResponse.getApplicationHomeSubCluster();
+    Assert.assertNotNull(responseHomeSubCluster);
+    SubClusterId respSubClusterId = responseHomeSubCluster.getHomeSubCluster();
+    Assert.assertEquals(good, respSubClusterId);
   }
 
+  @Test
+  public void testSubmitApplicationTwoBadOneGood() throws Exception {
+
+    LOG.info("Test submitApplication with two bad, one good SC.");
+
+    // This test must require the TestSequentialRouterPolicy policy
+    Assume.assumeThat(routerPolicyManagerName,
+        is(TestSequentialBroadcastPolicyManager.class.getName()));
+
+    setupCluster(Arrays.asList(bad1, bad2, good));
+    final ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+
+    // Use the TestSequentialRouterPolicy strategy,
+    // which will sort the SubClusterId because good=0, bad1=1, bad2=2
+    // We will get 2, 1, 0 [bad2, bad1, good]
+    // Set the retryNum to 1
+    // 1st time will use bad2, 2nd time will use bad1
+    // bad1 is updated to stateStore
+    interceptor.setNumSubmitRetries(1);
+    final SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+    LambdaTestUtils.intercept(YarnException.class, "RM is stopped",
+        () -> interceptor.submitApplication(request));
+
+    // We will get bad1
+    checkSubmitSubCluster(appId, bad1);
+
+    // Set the retryNum to 2
+    // 1st time will use bad2, 2nd time will use bad1, 3rd good
+    interceptor.setNumSubmitRetries(2);
+    SubmitApplicationResponse submitAppResponse = interceptor.submitApplication(request);
+    Assert.assertNotNull(submitAppResponse);
+
+    // We will get good
+    checkSubmitSubCluster(appId, good);
+  }
+
+  private void checkSubmitSubCluster(ApplicationId appId, SubClusterId expectSubCluster)
+      throws YarnException {
+    GetApplicationHomeSubClusterRequest getAppRequest =
+        GetApplicationHomeSubClusterRequest.newInstance(appId);
+    GetApplicationHomeSubClusterResponse getAppResponse =
+        stateStore.getApplicationHomeSubCluster(getAppRequest);
+    Assert.assertNotNull(getAppResponse);
+    Assert.assertNotNull(getAppResponse);
+    ApplicationHomeSubCluster responseHomeSubCluster =
+        getAppResponse.getApplicationHomeSubCluster();
+    Assert.assertNotNull(responseHomeSubCluster);
+    SubClusterId respSubClusterId = responseHomeSubCluster.getHomeSubCluster();
+    Assert.assertEquals(expectSubCluster, respSubClusterId);
+  }
 }

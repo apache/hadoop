@@ -21,12 +21,13 @@
 Common problems working with S3 are:
 
 1. [Classpath setup](#classpath)
-1. [Authentication](#authentication)
-1. [Access Denial](#access_denied)
-1. [Connectivity Problems](#connectivity)
-1. [File System Semantics](#semantics)
-1. [Encryption](#encryption)
-1. [Other Errors](#other)
+2. [Authentication](#authentication)
+3. [Access Denial](#access_denied)
+4. [Connectivity Problems](#connectivity)
+5. [File System Semantics](#semantics)
+6. [Encryption](#encryption)
+7. [Other Errors](#other)
+8. [SDK Upgrade Warnings](#upgrade_warnings)
 
 This document also includes some [best pactises](#best) to aid troubleshooting.
 
@@ -323,7 +324,7 @@ There's two main causes
 
 If you see this and you are trying to use the S3A connector with Spark, then the cause can
 be that the isolated classloader used to load Hive classes is interfering with the S3A
-connector's dynamic loading of `com.amazonaws` classes. To fix this, declare that that
+connector's dynamic loading of `com.amazonaws` classes. To fix this, declare that
 the classes in the aws SDK are loaded from the same classloader which instantiated
 the S3A FileSystem instance:
 
@@ -547,24 +548,55 @@ When trying to write or read SEE-KMS-encrypted data, the client gets a
 The caller does not have the permissions to access
 the key with which the data was encrypted.
 
+### <a name="access_denied_requester_pays"></a>`AccessDeniedException` when using a "Requester Pays" enabled bucket
+
+When making cross-account requests to a requester pays enabled bucket, all calls must acknowledge via a header that the requester will be billed.
+
+If you don't enable this acknowledgement within S3A, then you will see a message similar to this:
+
+```
+java.nio.file.AccessDeniedException: s3a://my-bucket/my-object: getFileStatus on s3a://my-bucket/my-object:
+com.amazonaws.services.s3.model.AmazonS3Exception: Forbidden (Service: Amazon S3; Status Code: 403;
+Error Code: 403 Forbidden; Request ID: myshortreqid; S3 Extended Request ID: mylongreqid):403 Forbidden
+```
+
+To enable requester pays, set `fs.s3a.requester.pays.enabled` property to `true`.
+
+### <a name="access_denied_archive_storage_class"></a>`AccessDeniedException` "InvalidObjectState" when trying to read files
+
+```
+java.nio.file.AccessDeniedException: file1: copyFile(file1, file2) on file1: com.amazonaws.services.s3.model.AmazonS3Exception: Operation is not valid for the source object's storage class (Service: Amazon S3; Status Code: 403; Error Code: InvalidObjectState; Request ID: SK9EMPC1YRX75VZR; S3 Extended Request ID: /nhUfdwJ+y5DLz6B4YR2FdA0FnQWwhDAkSCakn42zs2JssK3qWTrfwdNDiy6bOyXHOvJY0VAlHw=; Proxy: null), S3 Extended Request ID: /nhUfdwJ+y5DLz6B4YR2FdA0FnQWwhDAkSCakn42zs2JssK3qWTrfwdNDiy6bOyXHOvJY0VAlHw=:InvalidObjectState
+
+Caused by: com.amazonaws.services.s3.model.AmazonS3Exception: Operation is not valid for the source object's storage class (Service: Amazon S3; Status Code: 403; Error Code: InvalidObjectState; Request ID: SK9EMPC1YRX75VZR; S3 Extended Request ID: /nhUfdwJ+y5DLz6B4YR2FdA0FnQWwhDAkSCakn42zs2JssK3qWTrfwdNDiy6bOyXHOvJY0VAlHw=; Proxy: null), S3 Extended Request ID: /nhUfdwJ+y5DLz6B4YR2FdA0FnQWwhDAkSCakn42zs2JssK3qWTrfwdNDiy6bOyXHOvJY0VAlHw=
+```
+
+This happens when you're trying to read or copy files that have archive storage class such as
+Glacier.
+
+If you want to access the file with S3A after writes, do not set `fs.s3a.create.storage.class` to `glacier` or `deep_archive`.
+
 ### <a name="no_region_session_credentials"></a> "Unable to find a region via the region provider chain." when using session credentials.
 
-Region must be provided when requesting session credentials, or an exception will be thrown with the message:
+Region must be provided when requesting session credentials, or an exception will be thrown with the
+message:
+
 ```
 com.amazonaws.SdkClientException: Unable to find a region via the region provider
 chain. Must provide an explicit region in the builder or setup environment to supply a region.
 ```
-In this case you have to set the `fs.s3a.assumed.role.sts.endpoint` property to a valid
-S3 sts endpoint and region like the following:
+
+In this case you have to set the `fs.s3a.assumed.role.sts.endpoint` property to a valid S3 sts
+endpoint and region like the following:
 
 ```xml
+
 <property>
     <name>fs.s3a.assumed.role.sts.endpoint</name>
     <value>${sts.endpoint}</value>
 </property>
 <property>
-    <name>fs.s3a.assumed.role.sts.endpoint.region</name>
-    <value>${sts.region}</value>
+<name>fs.s3a.assumed.role.sts.endpoint.region</name>
+<value>${sts.region}</value>
 </property>
 ```
 
@@ -1958,3 +1990,51 @@ com.amazonaws.SdkClientException: Unable to execute HTTP request:
 
 When this happens, try to set `fs.s3a.connection.request.timeout` to a larger value or disable it
 completely by setting it to `0`.
+
+## <a name="upgrade_warnings"></a> SDK Upgrade Warnings
+
+S3A will soon be upgraded to [AWS's Java SDK V2](https://github.com/aws/aws-sdk-java-v2).
+For more information on the upgrade and what's changing, see
+[Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade.html).
+
+S3A logs the following warnings for things that will be changing in the upgrade. To disable these
+logs, comment out `log4j.logger.org.apache.hadoop.fs.s3a.SDKV2Upgrade` in log4j.properties.
+
+### <a name="ProviderReferenced"></a>  `Directly referencing AWS SDK V1 credential provider`
+
+This will be logged when an AWS credential provider is referenced directly in
+`fs.s3a.aws.credentials.provider`.
+For example, `com.amazonaws.auth.AWSSessionCredentialsProvider`
+
+To stop this warning, remove any AWS credential providers from `fs.s3a.aws.credentials.provider`.
+Instead, use S3A's credential providers.
+
+### <a name="ClientRequested"></a>  `getAmazonS3ClientForTesting() will be removed`
+
+This will be logged when `getAmazonS3ClientForTesting()` is called to get the S3 Client. With V2,
+the S3 client will change from type `com.amazonaws.services.s3.AmazonS3` to
+`software.amazon.awssdk.services.s3.S3Client`, and so this method will be removed.
+
+### <a name="DelegationTokenProvider"></a>
+### `Custom credential providers used in delegation tokens binding classes will need to be updated`
+
+This will be logged when delegation tokens are used.
+Delegation tokens allow the use of custom binding classes which can implement custom credential
+providers.
+These credential providers will currently be implementing
+`com.amazonaws.auth.AWSCredentialsProvider` and will need to be updated to implement
+`software.amazon.awssdk.auth.credentials.AwsCredentialsProvider`.
+
+### <a name="CustomSignerUsed"></a>
+### `The signer interface has changed in AWS SDK V2, custom signers will need to be updated`
+
+This will be logged when a custom signer is used.
+Custom signers will currently be implementing `com.amazonaws.auth.Signer` and will need to be
+updated to implement `software.amazon.awssdk.core.signer.Signer`.
+
+### <a name="GetObjectMetadataCalled"></a>
+### `getObjectMetadata() called. This operation and it's response will be changed`
+
+This will be logged when `getObjectMetadata` is called. In SDK V2, this operation has changed to
+`headObject()` and will return a response of the type `HeadObjectResponse`.
+

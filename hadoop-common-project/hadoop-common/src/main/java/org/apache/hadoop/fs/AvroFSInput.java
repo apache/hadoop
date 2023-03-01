@@ -25,6 +25,10 @@ import org.apache.avro.file.SeekableInput;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
+
 /** Adapts an {@link FSDataInputStream} to Avro's SeekableInput interface. */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -32,17 +36,30 @@ public class AvroFSInput implements Closeable, SeekableInput {
   private final FSDataInputStream stream;
   private final long len;
 
-  /** Construct given an {@link FSDataInputStream} and its length. */
+  /**
+   * Construct given an {@link FSDataInputStream} and its length.
+   *
+   * @param in inputstream.
+   * @param len len.
+   */
   public AvroFSInput(final FSDataInputStream in, final long len) {
     this.stream = in;
     this.len = len;
   }
 
-  /** Construct given a {@link FileContext} and a {@link Path}. */
+  /** Construct given a {@link FileContext} and a {@link Path}.
+   * @param fc filecontext.
+   * @param p the path.
+   * @throws IOException If an I/O error occurred.
+   * */
   public AvroFSInput(final FileContext fc, final Path p) throws IOException {
     FileStatus status = fc.getFileStatus(p);
     this.len = status.getLen();
-    this.stream = fc.open(p);
+    this.stream = awaitFuture(fc.openFile(p)
+        .opt(FS_OPTION_OPENFILE_READ_POLICY,
+            FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)
+        .withFileStatus(status)
+        .build());
   }
 
   @Override

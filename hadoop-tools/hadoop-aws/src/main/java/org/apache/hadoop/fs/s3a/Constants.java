@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import java.util.concurrent.TimeUnit;
@@ -139,6 +140,7 @@ public final class Constants {
   public static final String ASSUMED_ROLE_POLICY =
       "fs.s3a.assumed.role.policy";
 
+  @SuppressWarnings("deprecation")
   public static final String ASSUMED_ROLE_CREDENTIALS_DEFAULT =
       SimpleAWSCredentialsProvider.NAME;
 
@@ -156,6 +158,15 @@ public final class Constants {
   public static final String SECURE_CONNECTIONS =
       "fs.s3a.connection.ssl.enabled";
   public static final boolean DEFAULT_SECURE_CONNECTIONS = true;
+
+  /**
+   * Configuration option for S3 Requester Pays feature: {@value}.
+   */
+  public static final String ALLOW_REQUESTER_PAYS = "fs.s3a.requester.pays.enabled";
+  /**
+   * Default configuration for {@value ALLOW_REQUESTER_PAYS}: {@value}.
+   */
+  public static final boolean DEFAULT_ALLOW_REQUESTER_PAYS = false;
 
   // use OpenSSL or JSEE for secure connections
   public static final String SSL_CHANNEL_MODE =  "fs.s3a.ssl.channel.mode";
@@ -201,6 +212,8 @@ public final class Constants {
   public static final String PROXY_PASSWORD = "fs.s3a.proxy.password";
   public static final String PROXY_DOMAIN = "fs.s3a.proxy.domain";
   public static final String PROXY_WORKSTATION = "fs.s3a.proxy.workstation";
+  /** Is the proxy secured(proxyProtocol = HTTPS)? */
+  public static final String PROXY_SECURED = "fs.s3a.proxy.ssl.enabled";
 
   /**
    * Number of times the AWS client library should retry errors before
@@ -238,12 +251,12 @@ public final class Constants {
   public static final boolean EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT =
       true;
 
-  // seconds until we give up trying to establish a connection to s3
+  // milliseconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT =
       "fs.s3a.connection.establish.timeout";
   public static final int DEFAULT_ESTABLISH_TIMEOUT = 50000;
 
-  // seconds until we give up on a connection to s3
+  // milliseconds until we give up on a connection to s3
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
   public static final int DEFAULT_SOCKET_TIMEOUT = 200000;
 
@@ -418,6 +431,57 @@ public final class Constants {
    * Value {@value}.
    */
   public static final String CONTENT_ENCODING = "fs.s3a.object.content.encoding";
+
+  /**
+   * S3 storage class: standard, reduced_redundancy, intelligent_tiering etc.
+   * Value {@value }.
+   */
+  public static final String STORAGE_CLASS = "fs.s3a.create.storage.class";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_STANDARD = "standard";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_REDUCED_REDUNDANCY = "reduced_redundancy";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_GLACIER = "glacier";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_STANDARD_INFREQUENT_ACCESS = "standard_ia";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_ONEZONE_INFREQUENT_ACCESS = "onezone_ia";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_INTELLIGENT_TIERING = "intelligent_tiering";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_DEEP_ARCHIVE = "deep_archive";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_OUTPOSTS = "outposts";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_GLACIER_INSTANT_RETRIEVAL = "glacier_ir";
 
   // should we try to purge old multipart uploads when starting up
   public static final String PURGE_EXISTING_MULTIPART =
@@ -594,36 +658,68 @@ public final class Constants {
   public static final long DEFAULT_READAHEAD_RANGE = 64 * 1024;
 
   /**
+   * The threshold at which drain operations switch
+   * to being asynchronous with the schedule/wait overhead
+   * compared to synchronous.
+   * Value: {@value}
+   */
+  public static final String ASYNC_DRAIN_THRESHOLD = "fs.s3a.input.async.drain.threshold";
+
+  /**
+   * This is a number based purely on experimentation in
+   * {@code ITestS3AInputStreamPerformance}.
+   * Value: {@value}
+   */
+  public static final int DEFAULT_ASYNC_DRAIN_THRESHOLD = 16_000;
+
+  /**
    * Which input strategy to use for buffering, seeking and similar when
    * reading data.
    * Value: {@value}
    */
-  @InterfaceStability.Unstable
   public static final String INPUT_FADVISE =
       "fs.s3a.experimental.input.fadvise";
 
   /**
+   * The default value for this FS.
+   * Which for S3A, is adaptive.
+   * Value: {@value}
+   * @deprecated use the {@link Options.OpenFileOptions} value
+   * in code which only needs to be compiled against newer hadoop
+   * releases.
+   */
+  public static final String INPUT_FADV_DEFAULT =
+      Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT;
+
+  /**
    * General input. Some seeks, some reads.
+   * The policy name "default" is standard across different stores,
+   * and should be preferred.
    * Value: {@value}
    */
-  @InterfaceStability.Unstable
   public static final String INPUT_FADV_NORMAL = "normal";
 
   /**
    * Optimized for sequential access.
    * Value: {@value}
+   * @deprecated use the {@link Options.OpenFileOptions} value
+   * in code which only needs to be compiled against newer hadoop
+   * releases.
    */
-  @InterfaceStability.Unstable
-  public static final String INPUT_FADV_SEQUENTIAL = "sequential";
+  public static final String INPUT_FADV_SEQUENTIAL =
+      Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
 
   /**
    * Optimized purely for random seek+read/positionedRead operations;
    * The performance of sequential IO may be reduced in exchange for
    * more efficient {@code seek()} operations.
    * Value: {@value}
+   * @deprecated use the {@link Options.OpenFileOptions} value
+   * in code which only needs to be compiled against newer hadoop
+   * releases.
    */
-  @InterfaceStability.Unstable
-  public static final String INPUT_FADV_RANDOM = "random";
+  public static final String INPUT_FADV_RANDOM =
+      Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_RANDOM;
 
   /**
    * Gauge name for the input policy : {@value}.
@@ -639,6 +735,7 @@ public final class Constants {
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
+  @SuppressWarnings("deprecation")
   public static final Class<? extends S3ClientFactory>
       DEFAULT_S3_CLIENT_FACTORY_IMPL =
           DefaultS3ClientFactory.class;
@@ -1066,4 +1163,96 @@ public final class Constants {
    * Require that all S3 access is made through Access Points.
    */
   public static final String AWS_S3_ACCESSPOINT_REQUIRED = "fs.s3a.accesspoint.required";
+
+  /**
+   * Flag for create performance.
+   * This is *not* a configuration option; it is for use in the
+   * {code createFile()} builder.
+   * Value {@value}.
+   */
+  public static final String FS_S3A_CREATE_PERFORMANCE = "fs.s3a.create.performance";
+
+  /**
+   * Prefix for adding a header to the object when created.
+   * The actual value must have a "." suffix and then the actual header.
+   * This is *not* a configuration option; it is only for use in the
+   * {code createFile()} builder.
+   * Value {@value}.
+   */
+  public static final String FS_S3A_CREATE_HEADER = "fs.s3a.create.header";
+
+  /**
+   * What is the smallest reasonable seek in bytes such
+   * that we group ranges together during vectored read operation.
+   * Value : {@value}.
+   */
+  public static final String AWS_S3_VECTOR_READS_MIN_SEEK_SIZE =
+          "fs.s3a.vectored.read.min.seek.size";
+
+  /**
+   * What is the largest merged read size in bytes such
+   * that we group ranges together during vectored read.
+   * Setting this value to 0 will disable merging of ranges.
+   * Value : {@value}.
+   */
+  public static final String AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE =
+          "fs.s3a.vectored.read.max.merged.size";
+
+  /**
+   * Default minimum seek in bytes during vectored reads : {@value}.
+   */
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE = 4896; // 4K
+
+  /**
+   * Default maximum read size in bytes during vectored reads : {@value}.
+   */
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1253376; //1M
+
+  /**
+   * Maximum number of range reads a single input stream can have
+   * active (downloading, or queued) to the central FileSystem
+   * instance's pool of queued operations.
+   * This stops a single stream overloading the shared thread pool.
+   * {@value}
+   * <p>
+   * Default is {@link #DEFAULT_AWS_S3_VECTOR_ACTIVE_RANGE_READS}
+   */
+  public static final String AWS_S3_VECTOR_ACTIVE_RANGE_READS =
+          "fs.s3a.vectored.active.ranged.reads";
+
+  /**
+   * Limit of queued range data download operations during vectored
+   * read. Value: {@value}
+   */
+  public static final int DEFAULT_AWS_S3_VECTOR_ACTIVE_RANGE_READS = 4;
+
+  /**
+   * Prefix of auth classes in AWS SDK V1.
+   */
+  public static final String AWS_AUTH_CLASS_PREFIX = "com.amazonaws.auth";
+
+  /**
+   * Controls whether the prefetching input stream is enabled.
+   */
+  public static final String PREFETCH_ENABLED_KEY = "fs.s3a.prefetch.enabled";
+
+  /**
+   * Default option as to whether the prefetching input stream is enabled.
+   */
+  public static final boolean  PREFETCH_ENABLED_DEFAULT = false;
+
+  // If the default values are used, each file opened for reading will consume
+  // 64 MB of heap space (8 blocks x 8 MB each).
+
+  /**
+   * The size of a single prefetched block in number of bytes.
+   */
+  public static final String PREFETCH_BLOCK_SIZE_KEY = "fs.s3a.prefetch.block.size";
+  public static final int PREFETCH_BLOCK_DEFAULT_SIZE = 8 * 1024 * 1024;
+
+  /**
+   * Maximum number of blocks prefetched at any given time.
+   */
+  public static final String PREFETCH_BLOCK_COUNT_KEY = "fs.s3a.prefetch.block.count";
+  public static final int PREFETCH_BLOCK_DEFAULT_COUNT = 8;
 }

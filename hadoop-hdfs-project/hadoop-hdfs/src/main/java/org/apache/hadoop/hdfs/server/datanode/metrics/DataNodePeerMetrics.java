@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.metrics2.MetricsJsonBuilder;
 import org.apache.hadoop.metrics2.lib.MutableRollingAverages;
 import org.apache.hadoop.util.Preconditions;
@@ -54,6 +55,8 @@ public class DataNodePeerMetrics {
 
   private final String name;
 
+  // Strictly to be used by test code only. Source code is not supposed to use this.
+  private Map<String, OutlierMetrics> testOutlier = null;
 
   private final OutlierDetector slowNodeDetector;
 
@@ -141,15 +144,29 @@ public class DataNodePeerMetrics {
    * Retrieve the set of dataNodes that look significantly slower
    * than their peers.
    */
-  public Map<String, Double> getOutliers() {
-    // This maps the metric name to the aggregate latency.
-    // The metric name is the datanode ID.
-    final Map<String, Double> stats =
-        sendPacketDownstreamRollingAverages.getStats(
-            minOutlierDetectionSamples);
-    LOG.trace("DataNodePeerMetrics: Got stats: {}", stats);
+  public Map<String, OutlierMetrics> getOutliers() {
+    // outlier must be null for source code.
+    if (testOutlier == null) {
+      // This maps the metric name to the aggregate latency.
+      // The metric name is the datanode ID.
+      final Map<String, Double> stats =
+          sendPacketDownstreamRollingAverages.getStats(minOutlierDetectionSamples);
+      LOG.trace("DataNodePeerMetrics: Got stats: {}", stats);
+      return slowNodeDetector.getOutlierMetrics(stats);
+    } else {
+      // this happens only for test code.
+      return testOutlier;
+    }
+  }
 
-    return slowNodeDetector.getOutliers(stats);
+  /**
+   * Strictly to be used by test code only. Source code is not supposed to use this. This method
+   * directly sets outlier mapping so that aggregate latency metrics are not calculated for tests.
+   *
+   * @param outlier outlier directly set by tests.
+   */
+  public void setTestOutliers(Map<String, OutlierMetrics> outlier) {
+    this.testOutlier = outlier;
   }
 
   public MutableRollingAverages getSendPacketDownstreamRollingAverages() {

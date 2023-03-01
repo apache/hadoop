@@ -95,6 +95,10 @@ class StripedBlockReconstructor extends StripedReconstructor
           (int) Math.min(getStripedReader().getBufferSize(), remaining);
 
       long start = Time.monotonicNow();
+      long bytesToRead = (long) toReconstructLen * getStripedReader().getMinRequiredSources();
+      if (getDatanode().getEcReconstuctReadThrottler() != null) {
+        getDatanode().getEcReconstuctReadThrottler().throttle(bytesToRead);
+      }
       // step1: read from minimum source DNs required for reconstruction.
       // The returned success list is the source DNs we do real read from
       getStripedReader().readMinimumSources(toReconstructLen);
@@ -105,6 +109,10 @@ class StripedBlockReconstructor extends StripedReconstructor
       long decodeEnd = Time.monotonicNow();
 
       // step3: transfer data
+      long bytesToWrite = (long) toReconstructLen * stripedWriter.getTargets();
+      if (getDatanode().getEcReconstuctWriteThrottler() != null) {
+        getDatanode().getEcReconstuctWriteThrottler().throttle(bytesToWrite);
+      }
       if (stripedWriter.transferData2Targets() == 0) {
         String error = "Transfer failed for all targets.";
         throw new IOException(error);

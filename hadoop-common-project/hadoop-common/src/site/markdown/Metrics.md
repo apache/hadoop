@@ -104,6 +104,8 @@ The default timeunit used for RPC metrics is milliseconds (as per the below desc
 | `rpcLockWaitTime`*num*`s90thPercentileLatency` | Shows the 90th percentile of RPC lock wait time in milliseconds (*num* seconds granularity) if `rpc.metrics.quantile.enable` is set to true. *num* is specified by `rpc.metrics.percentiles.intervals`. |
 | `rpcLockWaitTime`*num*`s95thPercentileLatency` | Shows the 95th percentile of RPC lock wait time in milliseconds (*num* seconds granularity) if `rpc.metrics.quantile.enable` is set to true. *num* is specified by `rpc.metrics.percentiles.intervals`. |
 | `rpcLockWaitTime`*num*`s99thPercentileLatency` | Shows the 99th percentile of RPC lock wait time in milliseconds (*num* seconds granularity) if `rpc.metrics.quantile.enable` is set to true. *num* is specified by `rpc.metrics.percentiles.intervals`. |
+| `TotalRequests` | Total num of requests served by the RPC server. |
+| `TotalRequestsPerSeconds` | Total num of requests per second served by the RPC server. |
 
 RetryCache/NameNodeRetryCache
 -----------------------------
@@ -218,7 +220,7 @@ Each metrics record contains tags such as ProcessName, SessionId, and Hostname a
 | `WarmUpEDEKTimeNumOps` | Total number of warming up EDEK |
 | `WarmUpEDEKTimeAvgTime` | Average time of warming up EDEK in milliseconds |
 | `WarmUpEDEKTime`*num*`s(50/75/90/95/99)thPercentileLatency` | The 50/75/90/95/99th percentile of time spent in warming up EDEK in milliseconds (*num* seconds granularity). Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
-| `ResourceCheckTime`*num*`s(50/75/90/95/99)thPercentileLatency` | The 50/75/90/95/99th percentile of of NameNode resource check latency in milliseconds (*num* seconds granularity). Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `ResourceCheckTime`*num*`s(50/75/90/95/99)thPercentileLatency` | The 50/75/90/95/99th percentile of NameNode resource check latency in milliseconds (*num* seconds granularity). Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
 | `EditLogTailTimeNumOps` | Total number of times the standby NameNode tailed the edit log |
 | `EditLogTailTimeAvgTime` | Average time (in milliseconds) spent by standby NameNode in tailing edit log |
 | `EditLogTailTime`*num*`s(50/75/90/95/99)thPercentileLatency` | The 50/75/90/95/99th percentile of time spent in tailing edit logs by standby NameNode in milliseconds (*num* seconds granularity). Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
@@ -299,6 +301,7 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `FSN(Read/Write)Lock`*OperationName*`NanosAvgTime` | Average time of holding the lock by operations in nanoseconds |
 | `FSN(Read/Write)LockOverallNanosNumOps`  | Total number of acquiring lock by all operations |
 | `FSN(Read/Write)LockOverallNanosAvgTime` | Average time of holding the lock by all operations in nanoseconds |
+| `PendingSPSPaths` | The number of paths to be processed by storage policy satisfier |
 
 JournalNode
 -----------
@@ -367,6 +370,9 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 |:---- |:---- |
 | `BytesWritten` | Total number of bytes written to DataNode |
 | `BytesRead` | Total number of bytes read from DataNode |
+| `ReadTransferRateNumOps` | Total number of data read transfers |
+| `ReadTransferRateAvgTime` | Average transfer rate of bytes read from DataNode, measured in bytes per second. |
+| `ReadTransferRate`*num*`s(50/75/90/95/99)thPercentileRate` | The 50/75/90/95/99th percentile of the transfer rate of bytes read from DataNode, measured in bytes per second. |
 | `BlocksWritten` | Total number of blocks written to DataNode |
 | `BlocksRead` | Total number of blocks read from DataNode |
 | `BlocksReplicated` | Total number of blocks replicated |
@@ -480,6 +486,8 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `PacketsSlowWriteToMirror` | Total number of packets whose write to other Datanodes in the pipeline takes more than a certain time (300ms by default) |
 | `PacketsSlowWriteToDisk` | Total number of packets whose write to disk takes more than a certain time (300ms by default) |
 | `PacketsSlowWriteToOsCache` | Total number of packets whose write to os cache takes more than a certain time (300ms by default) |
+| `slowFlushOrSyncCount` | Total number of packets whose sync/flush takes more than a certain time (300ms by default) |
+| `slowAckToUpstreamCount` | Total number of packets whose upstream ack takes more than a certain time (300ms by default) |
 
 FsVolume
 --------

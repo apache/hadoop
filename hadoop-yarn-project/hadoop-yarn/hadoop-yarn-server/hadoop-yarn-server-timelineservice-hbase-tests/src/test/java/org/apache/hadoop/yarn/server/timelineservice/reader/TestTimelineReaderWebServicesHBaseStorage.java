@@ -2610,4 +2610,20 @@ public class TestTimelineReaderWebServicesHBaseStorage
       client.destroy();
     }
   }
+
+  @Test
+  public void testGetEntityWithSystemEntityType() throws Exception {
+    Client client = createClient();
+    try {
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
+          "timeline/apps/application_1111111111_1111/" +
+          "entities/YARN_APPLICATION");
+      ClientResponse resp = getResponse(client, uri);
+      Set<TimelineEntity> entities =
+          resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
+      assertEquals(0, entities.size());
+    } finally {
+      client.destroy();
+    }
+  }
 }

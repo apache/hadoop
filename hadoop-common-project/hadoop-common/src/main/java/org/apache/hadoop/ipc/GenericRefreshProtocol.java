@@ -41,7 +41,11 @@ public interface GenericRefreshProtocol {
 
   /**
    * Refresh the resource based on identity passed in.
-   * @throws IOException
+   *
+   * @param identifier input identifier.
+   * @param args input args.
+   * @throws IOException raised on errors performing I/O.
+   * @return Collection RefreshResponse.
    */
   @Idempotent
   Collection<RefreshResponse> refresh(String identifier, String[] args)

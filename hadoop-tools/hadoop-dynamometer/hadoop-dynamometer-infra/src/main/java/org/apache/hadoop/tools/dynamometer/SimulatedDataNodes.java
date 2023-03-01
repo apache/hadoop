@@ -131,7 +131,7 @@ public class SimulatedDataNodes extends Configured implements Tool {
           + " block listing files; launching DataNodes accordingly.");
       mc.startDataNodes(getConf(), blockListFiles.size(), null, false,
           StartupOption.REGULAR, null, null, null, null, false, true, true,
-          null);
+          null, null, null);
       long startTime = Time.monotonicNow();
       System.out.println("Waiting for DataNodes to connect to NameNode and "
           + "init storage directories.");

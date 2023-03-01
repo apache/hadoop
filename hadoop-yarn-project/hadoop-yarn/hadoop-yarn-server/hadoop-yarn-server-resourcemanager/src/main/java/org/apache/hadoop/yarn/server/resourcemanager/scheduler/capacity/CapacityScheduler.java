@@ -455,6 +455,7 @@ public class CapacityScheduler extends
         reinitializeQueues(this.conf);
       } catch (Throwable t) {
         this.conf = oldConf;
+        reinitializeQueues(this.conf);
         refreshMaximumAllocation(
             ResourceUtils.fetchMaximumAllocationFromConfig(this.conf));
         throw new IOException("Failed to re-init queues : " + t.getMessage(),
@@ -2678,7 +2679,12 @@ public class CapacityScheduler extends
       if (application == null) {
         throw new YarnException("App to be moved " + appId + " not found.");
       }
-      String sourceQueueName = application.getQueue().getQueueName();
+      if (!(application.getQueue() instanceof CSQueue)) {
+        throw new YarnException("Source queue is not a Capacity Scheduler queue");
+      }
+
+      CSQueue csQueue = (CSQueue) application.getQueue();
+      String sourceQueueName = csQueue.getQueuePath();
       AbstractLeafQueue source =
           this.queueManager.getAndCheckLeafQueue(sourceQueueName);
       String destQueueName = handleMoveToPlanQueue(targetQueueName);

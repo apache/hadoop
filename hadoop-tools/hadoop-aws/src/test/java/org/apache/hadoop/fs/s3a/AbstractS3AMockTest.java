@@ -62,6 +62,7 @@ public abstract class AbstractS3AMockTest {
     s3 = fs.getAmazonS3ClientForTesting("mocking");
   }
 
+  @SuppressWarnings("deprecation")
   public Configuration createConfiguration() {
     Configuration conf = new Configuration();
     conf.setClass(S3_CLIENT_FACTORY_IMPL, MockS3ClientFactory.class,
@@ -70,6 +71,10 @@ public abstract class AbstractS3AMockTest {
     // use minimum multipart size for faster triggering
     conf.setLong(Constants.MULTIPART_SIZE, MULTIPART_MIN_SIZE);
     conf.setInt(Constants.S3A_BUCKET_PROBE, 1);
+    // this is so stream draining is always blocking, allowing
+    // assertions to be safely made without worrying
+    // about any race conditions
+    conf.setInt(ASYNC_DRAIN_THRESHOLD, Integer.MAX_VALUE);
     return conf;
   }
 

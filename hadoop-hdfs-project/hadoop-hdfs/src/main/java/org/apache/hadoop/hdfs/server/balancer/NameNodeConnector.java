@@ -21,6 +21,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -260,13 +261,15 @@ public class NameNodeConnector implements Closeable {
     }
     boolean isRequestStandby = false;
     NamenodeProtocol nnProxy = null;
+    InetSocketAddress standbyAddress = null;
     try {
       ProxyPair proxyPair = getProxy();
       isRequestStandby = proxyPair.isRequestStandby;
       ClientProtocol proxy = proxyPair.clientProtocol;
       if (isRequestStandby) {
+        standbyAddress = RPC.getServerAddress(proxy);
         nnProxy = NameNodeProxies.createNonHAProxy(
-            config, RPC.getServerAddress(proxy), NamenodeProtocol.class,
+            config, standbyAddress, NamenodeProtocol.class,
             UserGroupInformation.getCurrentUser(), false).getProxy();
       } else {
         nnProxy = namenode;
@@ -274,7 +277,8 @@ public class NameNodeConnector implements Closeable {
       return nnProxy.getBlocks(datanode, size, minBlockSize, timeInterval);
     } finally {
       if (isRequestStandby) {
-        LOG.info("Request #getBlocks to Standby NameNode success.");
+        LOG.info("Request #getBlocks to Standby NameNode success. " +
+            "remoteAddress: {}", standbyAddress.getHostString());
       }
     }
   }
@@ -297,15 +301,19 @@ public class NameNodeConnector implements Closeable {
   public DatanodeStorageReport[] getLiveDatanodeStorageReport()
       throws IOException {
     boolean isRequestStandby = false;
+    InetSocketAddress standbyAddress = null;
     try {
       ProxyPair proxyPair = getProxy();
       isRequestStandby = proxyPair.isRequestStandby;
       ClientProtocol proxy = proxyPair.clientProtocol;
+      if (isRequestStandby) {
+        standbyAddress = RPC.getServerAddress(proxy);
+      }
       return proxy.getDatanodeStorageReport(DatanodeReportType.LIVE);
     } finally {
       if (isRequestStandby) {
         LOG.info("Request #getLiveDatanodeStorageReport to Standby " +
-            "NameNode success.");
+            "NameNode success. remoteAddress: {}", standbyAddress.getHostString());
       }
     }
   }

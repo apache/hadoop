@@ -496,7 +496,7 @@ public class ProportionalCapacityPreemptionPolicy
     Map<ApplicationAttemptId, Set<RMContainer>> toPreempt =
         new HashMap<>();
     Map<PreemptionCandidatesSelector, Map<ApplicationAttemptId,
-        Set<RMContainer>>> toPreemptPerSelector =  new HashMap<>();;
+        Set<RMContainer>>> toPreemptPerSelector =  new HashMap<>();
     for (PreemptionCandidatesSelector selector :
         candidatesSelectionPolicies) {
       long startTime = 0;

@@ -747,7 +747,7 @@ public class TestTrash {
     Path myPath = new Path(TEST_DIR, "test/mkdirs");
     mkdir(fs, myPath);
     int fileIndex = 0;
-    Set<String> checkpoints = new HashSet<String>();
+    Set<String> checkpoints = new HashSet<>();
     while (true)  {
       // Create a file with a new name
       Path myFile = new Path(TEST_DIR, "test/mkdirs/myFile" + fileIndex++);

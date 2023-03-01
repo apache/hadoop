@@ -656,7 +656,7 @@ final class FSDirEncryptionZoneOp {
     Preconditions.checkNotNull(ezKeyName);
 
     // Generate EDEK while not holding the fsn lock.
-    fsn.writeUnlock();
+    fsn.writeUnlock("getEncryptionKeyInfo");
     try {
       EncryptionFaultInjector.getInstance().startFileBeforeGenerateKey();
       return new EncryptionKeyInfo(protocolVersion, suite, ezKeyName,
@@ -733,7 +733,7 @@ final class FSDirEncryptionZoneOp {
       dir.ezManager.checkEncryptionZoneRoot(iip.getLastINode(), zone);
       return dir.ezManager.getKeyName(iip);
     } finally {
-      dir.getFSNamesystem().readUnlock();
+      dir.getFSNamesystem().readUnlock("getKeyNameForZone");
     }
   }
 }

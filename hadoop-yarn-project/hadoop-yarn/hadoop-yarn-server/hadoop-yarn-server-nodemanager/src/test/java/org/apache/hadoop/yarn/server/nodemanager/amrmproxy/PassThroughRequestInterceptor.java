@@ -29,8 +29,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
- * Mock intercepter that does not do anything other than forwarding it to the
- * next intercepter in the chain
+ * Mock interceptor that does not do anything other than forwarding it to the
+ * next interceptor in the chain
  *
  */
 public class PassThroughRequestInterceptor extends

@@ -199,7 +199,7 @@ public class Lz4Decompressor implements Decompressor {
    * @param off Start offset of the data
    * @param len Size of the buffer
    * @return The actual number of bytes of uncompressed data.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public synchronized int decompress(byte[] b, int off, int len)

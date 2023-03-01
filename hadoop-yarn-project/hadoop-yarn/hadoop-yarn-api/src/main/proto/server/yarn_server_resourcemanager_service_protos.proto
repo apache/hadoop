@@ -18,7 +18,7 @@
 
 /**
  * These .proto interfaces are private and stable.
- * Please see http://wiki.apache.org/hadoop/Compatibility
+ * Please see https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html
  * for what changes are allowed for a *stable* .proto interface.
  */
 
@@ -32,6 +32,7 @@ package hadoop.yarn;
 import "yarn_protos.proto";
 
 message RefreshQueuesRequestProto {
+  optional string sub_cluster_id = 1;
 }
 message RefreshQueuesResponseProto {
 }
@@ -39,26 +40,31 @@ message RefreshQueuesResponseProto {
 message RefreshNodesRequestProto {
   optional DecommissionTypeProto decommissionType = 1 [default = NORMAL];
   optional int32 decommissionTimeout = 2;
+  optional string sub_cluster_id = 3;
 }
 message RefreshNodesResponseProto {
 }
 
 message RefreshSuperUserGroupsConfigurationRequestProto {
+  optional string sub_cluster_id = 1;
 }
 message RefreshSuperUserGroupsConfigurationResponseProto {
 }
 
 message RefreshUserToGroupsMappingsRequestProto {
+  optional string sub_cluster_id = 1;
 }
 message RefreshUserToGroupsMappingsResponseProto {
 }
 
 message RefreshAdminAclsRequestProto {
+  optional string sub_cluster_id = 1;
 }
 message RefreshAdminAclsResponseProto {
 }
 
 message RefreshServiceAclsRequestProto {
+  optional string sub_cluster_id = 1;
 }
 message RefreshServiceAclsResponseProto {
 }

@@ -36,7 +36,6 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.serializer.JavaSerialization;
 import org.apache.hadoop.io.serializer.JavaSerializationComparator;
-import org.apache.hadoop.io.serializer.Serialization;
 import org.apache.hadoop.io.serializer.WritableSerialization;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.junit.Test;

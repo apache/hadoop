@@ -302,7 +302,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
       rescanCachedBlockMap();
       blockManager.getDatanodeManager().resetLastCachingDirectiveSentTime();
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("cacheReplicationMonitorRescan");
     }
   }
 

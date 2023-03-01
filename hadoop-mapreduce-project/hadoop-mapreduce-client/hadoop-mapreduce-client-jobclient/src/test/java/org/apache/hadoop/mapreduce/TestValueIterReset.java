@@ -437,7 +437,7 @@ public class TestValueIterReset {
     int count = 0;
 
     while (values.hasNext()) {
-      i = values.next();;
+      i = values.next();
       LOG.info(key + ":" + i);
       
       if (count == 5) {

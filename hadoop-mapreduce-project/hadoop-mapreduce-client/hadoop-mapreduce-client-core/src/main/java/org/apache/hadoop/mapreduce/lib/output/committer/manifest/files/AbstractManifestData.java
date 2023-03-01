@@ -70,7 +70,6 @@ public abstract class AbstractManifestData<T extends AbstractManifestData>
       throw new RuntimeException(
           "Failed to parse \"" + path + "\" : " + e,
           e);
-
     }
   }
 

@@ -42,6 +42,7 @@ import javax.management.StandardMBean;
 
 import org.apache.hadoop.hdfs.server.common.AutoCloseDataSetLock;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MountVolumeMap;
 import org.apache.hadoop.thirdparty.com.google.common.math.LongMath;
 import org.apache.commons.lang3.ArrayUtils;
@@ -356,6 +357,10 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     }
 
     @Override
+    public void releaseReplicaInfoBytesReserved() {
+    }
+
+    @Override
     synchronized public long getBytesOnDisk() {
       if (finalized) {
         return theBlock.getNumBytes();
@@ -417,7 +422,6 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       } while (deadLine > System.currentTimeMillis());
       throw new IOException("Minimum length was not achieved within timeout");
     }
-
     @Override
     public FsVolumeSpi getVolume() {
       return getStorage(theBlock).getVolume();
@@ -1603,6 +1607,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public MountVolumeMap getMountVolumeMap() {
+    return null;
+  }
+
+  @Override
+  public List<FsVolumeImpl> getVolumeList() {
     return null;
   }
 }

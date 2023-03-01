@@ -490,6 +490,10 @@ public interface HdfsFileStatus
    */
   int compareTo(FileStatus stat);
 
+  void setNamespace(String namespace);
+
+  String getNamespace();
+
   /**
    * Set redundant flags for compatibility with existing applications.
    */

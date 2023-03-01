@@ -20,10 +20,16 @@ package org.apache.hadoop.yarn.server.uam;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.service.Service;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -39,6 +45,7 @@ import org.apache.hadoop.yarn.server.AMHeartbeatRequestHandler;
 import org.apache.hadoop.yarn.server.AMRMClientRelayer;
 import org.apache.hadoop.yarn.server.MockResourceManagerFacade;
 import org.apache.hadoop.yarn.util.AsyncCallback;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,6 +65,9 @@ public class TestUnmanagedApplicationManager {
 
   private ApplicationAttemptId attemptId;
 
+  private UnmanagedAMPoolManager uamPool;
+  private ExecutorService threadpool;
+
   @Before
   public void setup() {
     conf.set(YarnConfiguration.RM_CLUSTER_ID, "subclusterId");
@@ -69,6 +79,29 @@ public class TestUnmanagedApplicationManager {
     uam = new TestableUnmanagedApplicationManager(conf,
         attemptId.getApplicationId(), null, "submitter", "appNameSuffix", true,
         "rm");
+
+    threadpool = Executors.newCachedThreadPool();
+    uamPool = new TestableUnmanagedAMPoolManager(this.threadpool);
+    uamPool.init(conf);
+    uamPool.start();
+  }
+
+  @After
+  public void tearDown() throws IOException, InterruptedException {
+    if (uam != null) {
+      uam.shutDownConnections();
+      uam = null;
+    }
+    if (uamPool != null) {
+      if (uamPool.isInState(Service.STATE.STARTED)) {
+        uamPool.stop();
+      }
+      uamPool = null;
+    }
+    if (threadpool != null) {
+      threadpool.shutdownNow();
+      threadpool = null;
+    }
   }
 
   protected void waitForCallBackCountAndCheckZeroPending(
@@ -464,4 +497,49 @@ public class TestUnmanagedApplicationManager {
     }
   }
 
+  protected class TestableUnmanagedAMPoolManager extends UnmanagedAMPoolManager {
+    public TestableUnmanagedAMPoolManager(ExecutorService threadpool) {
+      super(threadpool);
+    }
+
+    @Override
+    public UnmanagedApplicationManager createUAM(Configuration configuration,
+        ApplicationId appId, String queueName, String submitter, String appNameSuffix,
+        boolean keepContainersAcrossApplicationAttempts, String rmId) {
+      return new TestableUnmanagedApplicationManager(configuration, appId, queueName, submitter,
+          appNameSuffix, keepContainersAcrossApplicationAttempts, rmId);
+    }
+  }
+
+  @Test
+  public void testSeparateThreadWithoutBlockServiceStop() throws Exception {
+    ApplicationAttemptId attemptId1 =
+        ApplicationAttemptId.newInstance(ApplicationId.newInstance(Time.now(), 1), 1);
+    Token<AMRMTokenIdentifier> token1 = uamPool.launchUAM("SC-1", this.conf,
+        attemptId1.getApplicationId(), "default", "test-user", "SC-HOME", true, "SC-1");
+    Assert.assertNotNull(token1);
+
+    ApplicationAttemptId attemptId2 =
+        ApplicationAttemptId.newInstance(ApplicationId.newInstance(Time.now(), 2), 1);
+    Token<AMRMTokenIdentifier> token2 = uamPool.launchUAM("SC-2", this.conf,
+        attemptId2.getApplicationId(), "default", "test-user", "SC-HOME", true, "SC-2");
+    Assert.assertNotNull(token2);
+
+    Map<String, UnmanagedApplicationManager> unmanagedAppMasterMap =
+        uamPool.getUnmanagedAppMasterMap();
+    Assert.assertNotNull(unmanagedAppMasterMap);
+    Assert.assertEquals(2, unmanagedAppMasterMap.size());
+
+    // try to stop uamPool
+    uamPool.stop();
+    Assert.assertTrue(uamPool.waitForServiceToStop(2000));
+    // process force finish Application in a separate thread, not blocking the main thread
+    Assert.assertEquals(Service.STATE.STOPPED, uamPool.getServiceState());
+
+    // Wait for the thread to terminate, check if uamPool#unmanagedAppMasterMap is 0
+    Thread finishApplicationThread = uamPool.getFinishApplicationThread();
+    GenericTestUtils.waitFor(() -> !finishApplicationThread.isAlive(),
+        100, 2000);
+    Assert.assertEquals(0, unmanagedAppMasterMap.size());
+  }
 }

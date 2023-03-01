@@ -72,7 +72,7 @@ public class SocketOutputStream extends OutputStream
    *        Channel for writing, should also be a {@link SelectableChannel}.  
    *        The channel will be configured to be non-blocking.
    * @param timeout timeout in milliseconds. must not be negative.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public SocketOutputStream(WritableByteChannel channel, long timeout) 
                                                          throws IOException {
@@ -91,7 +91,7 @@ public class SocketOutputStream extends OutputStream
    *  
    * @param socket should have a channel associated with it.
    * @param timeout timeout timeout in milliseconds. must not be negative.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public SocketOutputStream(Socket socket, long timeout) 
                                          throws IOException {
@@ -138,7 +138,7 @@ public class SocketOutputStream extends OutputStream
   }
 
   /**
-   * Returns underlying channel used by this stream.
+   * @return Returns underlying channel used by this stream.
    * This is useful in certain cases like channel for 
    * {@link FileChannel#transferTo(long, long, WritableByteChannel)}
    */
@@ -254,7 +254,12 @@ public class SocketOutputStream extends OutputStream
    * Call
    * {@link #transferToFully(FileChannel, long, int, LongWritable, LongWritable)
    * }
-   * with null <code>waitForWritableTime</code> and <code>transferToTime</code>
+   * with null <code>waitForWritableTime</code> and <code>transferToTime</code>.
+   *
+   * @param fileCh input fileCh.
+   * @param position input position.
+   * @param count input count.
+   * @throws IOException raised on errors performing I/O.
    */
   public void transferToFully(FileChannel fileCh, long position, int count)
       throws IOException {

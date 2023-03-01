@@ -46,6 +46,7 @@ import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
+import org.apache.hadoop.fs.s3a.impl.V2Migration;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
@@ -88,6 +89,7 @@ import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateDeleteException;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
+import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
 
 /**
  * Utility methods for S3A code.
@@ -377,6 +379,7 @@ public final class S3AUtils {
     } else {
       String name = innerCause.getClass().getName();
       if (name.endsWith(".ConnectTimeoutException")
+          || name.endsWith(".ConnectionPoolTimeoutException")
           || name.endsWith("$ConnectTimeoutException")) {
         // TCP connection http timeout from the shaded or unshaded filenames
         // com.amazonaws.thirdparty.apache.http.conn.ConnectTimeoutException
@@ -550,6 +553,7 @@ public final class S3AUtils {
   /**
    * The standard AWS provider list for AWS connections.
    */
+  @SuppressWarnings("deprecation")
   public static final List<Class<?>>
       STANDARD_AWS_PROVIDERS = Collections.unmodifiableList(
       Arrays.asList(
@@ -635,6 +639,13 @@ public final class S3AUtils {
     // each provider
     AWSCredentialProviderList providers = new AWSCredentialProviderList();
     for (Class<?> aClass : awsClasses) {
+
+      // List of V1 credential providers that will be migrated with V2 upgrade
+      if (!Arrays.asList("EnvironmentVariableCredentialsProvider",
+              "EC2ContainerCredentialsProviderWrapper", "InstanceProfileCredentialsProvider")
+          .contains(aClass.getSimpleName()) && aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)) {
+        V2Migration.v1ProviderReferenced(aClass.getName());
+      }
 
       if (forbidden.contains(aClass)) {
         throw new IOException(E_FORBIDDEN_AWS_PROVIDER
@@ -1340,13 +1351,17 @@ public final class S3AUtils {
         LOG.error(msg);
         throw new IllegalArgumentException(msg);
       }
+      boolean isProxySecured = conf.getBoolean(PROXY_SECURED, false);
       awsConf.setProxyUsername(proxyUsername);
       awsConf.setProxyPassword(proxyPassword);
       awsConf.setProxyDomain(conf.getTrimmed(PROXY_DOMAIN));
       awsConf.setProxyWorkstation(conf.getTrimmed(PROXY_WORKSTATION));
+      awsConf.setProxyProtocol(isProxySecured ? Protocol.HTTPS : Protocol.HTTP);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Using proxy server {}:{} as user {} with password {} on " +
-                "domain {} as workstation {}", awsConf.getProxyHost(),
+        LOG.debug("Using proxy server {}://{}:{} as user {} with password {} "
+                + "on domain {} as workstation {}",
+            awsConf.getProxyProtocol(),
+            awsConf.getProxyHost(),
             awsConf.getProxyPort(),
             String.valueOf(awsConf.getProxyUsername()),
             awsConf.getProxyPassword(), awsConf.getProxyDomain(),
@@ -1467,17 +1482,22 @@ public final class S3AUtils {
   /**
    * List located files and filter them as a classic listFiles(path, filter)
    * would do.
+   * This will be incremental, fetching pages async.
+   * While it is rare for job to have many thousands of files, jobs
+   * against versioned buckets may return earlier if there are many
+   * non-visible objects.
    * @param fileSystem filesystem
    * @param path path to list
    * @param recursive recursive listing?
    * @param filter filter for the filename
-   * @return the filtered list of entries
+   * @return interator over the entries.
    * @throws IOException IO failure.
    */
-  public static List<LocatedFileStatus> listAndFilter(FileSystem fileSystem,
+  public static RemoteIterator<LocatedFileStatus> listAndFilter(FileSystem fileSystem,
       Path path, boolean recursive, PathFilter filter) throws IOException {
-    return flatmapLocatedFiles(fileSystem.listFiles(path, recursive),
-        status -> maybe(filter.accept(status.getPath()), status));
+    return filteringRemoteIterator(
+        fileSystem.listFiles(path, recursive),
+        status -> filter.accept(status.getPath()));
   }
 
   /**

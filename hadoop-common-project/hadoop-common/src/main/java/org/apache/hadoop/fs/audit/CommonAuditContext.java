@@ -124,11 +124,15 @@ public final class CommonAuditContext {
   /**
    * Put a context entry.
    * @param key key
-   * @param value new value
+   * @param value new value., If null, triggers removal.
    * @return old value or null
    */
   public Supplier<String> put(String key, String value) {
-    return evaluatedEntries.put(key, () -> value);
+    if (value != null) {
+      return evaluatedEntries.put(key, () -> value);
+    } else {
+      return evaluatedEntries.remove(key);
+    }
   }
 
   /**

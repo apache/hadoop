@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor;
-import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import java.io.IOException;
+
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
@@ -845,7 +846,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
             "-b(=[40 100 40 120 0])"; // b
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user(optional))
         "a\t" // app1 in a
             + "(1,1,n1,,5,false,25);" + // app1 a
             "a\t" // app2 in a

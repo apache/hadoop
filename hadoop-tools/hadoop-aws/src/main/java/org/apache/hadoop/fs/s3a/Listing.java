@@ -31,7 +31,9 @@ import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
 import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.util.functional.RemoteIterators;
@@ -333,7 +335,7 @@ public class Listing extends AbstractStoreOperation {
    * Thread safety: None.
    */
   class FileStatusListingIterator
-      implements RemoteIterator<S3AFileStatus>, IOStatisticsSource {
+      implements RemoteIterator<S3AFileStatus>, IOStatisticsSource, Closeable {
 
     /** Source of objects. */
     private final ObjectListingIterator source;
@@ -403,6 +405,14 @@ public class Listing extends AbstractStoreOperation {
       return status;
     }
 
+    /**
+     * Close, if called, will update
+     * the thread statistics context with the value.
+     */
+    @Override
+    public void close() {
+      source.close();
+    }
     /**
      * Try to retrieve another batch.
      * Note that for the initial batch,
@@ -545,6 +555,11 @@ public class Listing extends AbstractStoreOperation {
 
     private final AuditSpan span;
 
+    /**
+     * Context statistics aggregator.
+     */
+    private final IOStatisticsAggregator aggregator;
+
     /** The most recent listing results. */
     private S3ListResult objects;
 
@@ -601,6 +616,8 @@ public class Listing extends AbstractStoreOperation {
       this.span = span;
       this.s3ListResultFuture = listingOperationCallbacks
           .listObjectsAsync(request, iostats, span);
+      this.aggregator = IOStatisticsContext.getCurrentIOStatisticsContext()
+          .getAggregator();
     }
 
     /**
@@ -693,11 +710,12 @@ public class Listing extends AbstractStoreOperation {
     }
 
     /**
-     * Close, if actually called, will close the span
-     * this listing was created with.
+     * Close, if called, will update
+     * the thread statistics context with the value.
      */
     @Override
     public void close() {
+      aggregator.aggregate(getIOStatistics());
     }
   }
 

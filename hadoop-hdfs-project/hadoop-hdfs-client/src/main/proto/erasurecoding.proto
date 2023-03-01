@@ -108,6 +108,7 @@ message BlockECReconstructionInfoProto {
   required StorageTypesProto targetStorageTypes = 5;
   required bytes liveBlockIndices = 6;
   required ErasureCodingPolicyProto ecPolicy = 7;
+  optional bytes excludeReconstructedIndices = 8;
 }
 
 /**

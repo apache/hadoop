@@ -93,6 +93,10 @@ public class VersionInfo {
     return info.getProperty("protocVersion", "Unknown");
   }
 
+  protected String _getCompilePlatform() {
+    return info.getProperty("compilePlatform", "Unknown");
+  }
+
   private static VersionInfo COMMON_VERSION_INFO = new VersionInfo("common");
   /**
    * Get the Hadoop version.
@@ -167,12 +171,21 @@ public class VersionInfo {
     return COMMON_VERSION_INFO._getProtocVersion();
   }
 
+  /**
+   * Returns the OS platform used for the build.
+   * @return the OS platform
+   */
+  public static String getCompilePlatform() {
+    return COMMON_VERSION_INFO._getCompilePlatform();
+  }
+
   public static void main(String[] args) {
     LOG.debug("version: "+ getVersion());
     System.out.println("Hadoop " + getVersion());
     System.out.println("Source code repository " + getUrl() + " -r " +
         getRevision());
     System.out.println("Compiled by " + getUser() + " on " + getDate());
+    System.out.println("Compiled on platform " + getCompilePlatform());
     System.out.println("Compiled with protoc " + getProtocVersion());
     System.out.println("From source with checksum " + getSrcChecksum());
     System.out.println("This command was run using " + 

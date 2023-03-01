@@ -46,6 +46,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.MultipartUtils;
@@ -81,7 +82,7 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.*;
 
 /**
  * CLI to manage S3Guard Metadata Store.
- * <p></p>
+ * <p>
  * Some management tools invoke this class directly.
  */
 @InterfaceAudience.LimitedPrivate("management tools")
@@ -426,7 +427,8 @@ public abstract class S3GuardTool extends Configured implements Tool,
       String encryption =
           printOption(out, "\tEncryption", Constants.S3_ENCRYPTION_ALGORITHM,
               "none");
-      printOption(out, "\tInput seek policy", INPUT_FADVISE, INPUT_FADV_NORMAL);
+      printOption(out, "\tInput seek policy", INPUT_FADVISE,
+          Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT);
       printOption(out, "\tChange Detection Source", CHANGE_DETECT_SOURCE,
           CHANGE_DETECT_SOURCE_DEFAULT);
       printOption(out, "\tChange Detection Mode", CHANGE_DETECT_MODE,
@@ -524,7 +526,6 @@ public abstract class S3GuardTool extends Configured implements Tool,
      * Validate the marker options.
      * @param out output stream
      * @param fs filesystem
-     * @param path test path
      * @param marker desired marker option -may be null.
      */
     private void processMarkerOption(final PrintStream out,

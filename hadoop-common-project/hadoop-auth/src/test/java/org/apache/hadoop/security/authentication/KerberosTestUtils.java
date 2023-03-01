@@ -108,9 +108,9 @@ public class KerberosTestUtils {
   public static <T> T doAs(String principal, final Callable<T> callable) throws Exception {
     LoginContext loginContext = null;
     try {
-      Set<Principal> principals = new HashSet<Principal>();
+      Set<Principal> principals = new HashSet<>();
       principals.add(new KerberosPrincipal(KerberosTestUtils.getClientPrincipal()));
-      Subject subject = new Subject(false, principals, new HashSet<Object>(), new HashSet<Object>());
+      Subject subject = new Subject(false, principals, new HashSet<>(), new HashSet<>());
       loginContext = new LoginContext("", subject, null, new KerberosConfiguration(principal));
       loginContext.login();
       subject = loginContext.getSubject();

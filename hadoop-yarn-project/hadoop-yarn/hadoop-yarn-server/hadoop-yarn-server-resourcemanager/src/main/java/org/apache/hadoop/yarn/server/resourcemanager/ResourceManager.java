@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
+import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -916,6 +917,7 @@ public class ResourceManager extends CompositeService
         }
         federationStateStoreService = createFederationStateStoreService();
         addIfService(federationStateStoreService);
+        rmAppManager.setFederationStateStoreService(federationStateStoreService);
         LOG.info("Initialized Federation membership.");
       }
 
@@ -995,6 +997,13 @@ public class ResourceManager extends CompositeService
           RMState state = rmStore.loadState();
           recover(state);
           LOG.info("Recovery ended");
+
+          // Make sure that the App is cleaned up after the RM memory is restored.
+          if (HAUtil.isFederationEnabled(conf)) {
+            federationStateStoreService.
+                createCleanUpFinishApplicationThread("Recovery");
+          }
+
         } catch (Exception e) {
           // the Exception from loadState() needs to be handled for
           // HA and we need to give up master status if we got fenced
@@ -1440,7 +1449,12 @@ public class ResourceManager extends CompositeService
         IsResourceManagerActiveServlet.PATH_SPEC,
         IsResourceManagerActiveServlet.class);
 
-    webApp = builder.start(new RMWebApp(this), uiWebAppContext);
+    try {
+      webApp = builder.start(new RMWebApp(this), uiWebAppContext);
+    } catch (WebAppException e) {
+      webApp = e.getWebApp();
+      throw e;
+    }
   }
 
   private String getWebAppsPath(String appName) {
@@ -1643,6 +1657,7 @@ public class ResourceManager extends CompositeService
 
   /**
    * Create RMDelegatedNodeLabelsUpdater based on configuration.
+   * @return RMDelegatedNodeLabelsUpdater.
    */
   protected RMDelegatedNodeLabelsUpdater createRMDelegatedNodeLabelsUpdater() {
     if (conf.getBoolean(YarnConfiguration.NODE_LABELS_ENABLED,
@@ -1799,9 +1814,9 @@ public class ResourceManager extends CompositeService
   }
 
   /**
-   * Retrieve RM bind address from configuration
+   * Retrieve RM bind address from configuration.
    * 
-   * @param conf
+   * @param conf Configuration.
    * @return InetSocketAddress
    */
   public static InetSocketAddress getBindAddress(Configuration conf) {
@@ -1812,8 +1827,8 @@ public class ResourceManager extends CompositeService
   /**
    * Deletes the RMStateStore
    *
-   * @param conf
-   * @throws Exception
+   * @param conf Configuration.
+   * @throws Exception error occur.
    */
   @VisibleForTesting
   static void deleteRMStateStore(Configuration conf) throws Exception {

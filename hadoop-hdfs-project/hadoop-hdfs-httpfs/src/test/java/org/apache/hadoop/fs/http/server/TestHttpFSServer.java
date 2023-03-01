@@ -36,12 +36,14 @@ import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.web.JsonUtil;
+import org.apache.hadoop.hdfs.web.JsonUtilClient;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.authentication.util.StringSignerSecretProviderCreator;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
 import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticationHandler;
+import org.apache.hadoop.util.JsonSerialization;
 import org.json.simple.JSONArray;
 import org.junit.Assert;
 
@@ -70,6 +72,7 @@ import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
@@ -2002,5 +2005,39 @@ public class TestHttpFSServer extends HFSTestCase {
             + "is incompatible with \"application/json\"",
         () -> HttpFSUtils.jsonParse(conn));
     conn.disconnect();
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testGetFileBlockLocations() throws Exception {
+    createHttpFSServer(false, false);
+    // Create a test directory
+    String pathStr = "/tmp/tmp-get-block-location-test";
+    createDirWithHttp(pathStr, "700", null);
+
+    Path path = new Path(pathStr);
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .get(path.toUri(), TestHdfsHelper.getHdfsConf());
+
+    String file1 = pathStr + "/file1";
+    createWithHttp(file1, null);
+    HttpURLConnection conn = sendRequestToHttpFSServer(file1,
+        "GETFILEBLOCKLOCATIONS", "length=10&offset10");
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    BlockLocation[] locations1 = dfs.getFileBlockLocations(new Path(file1), 0, 1);
+    Assert.assertNotNull(locations1);
+
+    Map<?, ?> jsonMap = JsonSerialization.mapReader().readValue(conn.getInputStream());
+
+    BlockLocation[] httpfsBlockLocations = JsonUtilClient.toBlockLocationArray(jsonMap);
+
+    assertEquals(locations1.length, httpfsBlockLocations.length);
+    for (int i = 0; i < locations1.length; i++) {
+      assertEquals(locations1[i].toString(), httpfsBlockLocations[i].toString());
+    }
+
+    conn.getInputStream().close();
   }
 }

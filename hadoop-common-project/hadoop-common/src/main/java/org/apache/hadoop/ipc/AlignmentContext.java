@@ -46,7 +46,7 @@ public interface AlignmentContext {
   void updateResponseState(RpcResponseHeaderProto.Builder header);
 
   /**
-   * This is the intended client method call to implement to recieve state info
+   * This is the intended client method call to implement to receive state info
    * during RPC response processing.
    *
    * @param header The RPC response header.
@@ -71,7 +71,7 @@ public interface AlignmentContext {
    *        misaligned with the client state.
    *        See implementation for more details.
    * @return state id required for the server to execute the call.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   long receiveRequestState(RpcRequestHeaderProto header, long threshold)
       throws IOException;

@@ -128,7 +128,7 @@ public class TestDistCpOptions {
         new Path("hdfs://localhost:8020/target/"));
     Assert.assertFalse(builder.build().shouldSkipCRC());
 
-    final DistCpOptions options = builder.withSyncFolder(true).withCRC(true)
+    final DistCpOptions options = builder.withSyncFolder(true).withSkipCRC(true)
         .build();
     Assert.assertTrue(options.shouldSyncFolder());
     Assert.assertTrue(options.shouldSkipCRC());
@@ -391,7 +391,7 @@ public class TestDistCpOptions {
           new Path("hdfs://localhost:8020/target/"))
           .withSyncFolder(true)
           .withAppend(true)
-          .withCRC(true)
+          .withSkipCRC(true)
           .build();
       fail("Append should fail if skipCrc option is specified");
     } catch (IllegalArgumentException e) {

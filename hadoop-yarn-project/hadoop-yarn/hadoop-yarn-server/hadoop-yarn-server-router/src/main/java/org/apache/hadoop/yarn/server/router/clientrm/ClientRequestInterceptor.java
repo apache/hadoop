@@ -20,16 +20,17 @@ package org.apache.hadoop.yarn.server.router.clientrm;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 
 /**
- * Defines the contract to be implemented by the request intercepter classes,
+ * Defines the contract to be implemented by the request interceptor classes,
  * that can be used to intercept and inspect messages sent from the client to
  * the resource manager.
  */
 public interface ClientRequestInterceptor
     extends ApplicationClientProtocol, Configurable {
   /**
-   * This method is called for initializing the intercepter. This is guaranteed
+   * This method is called for initializing the interceptor. This is guaranteed
    * to be called only once in the lifetime of this instance.
    *
    * @param user the name of the client
@@ -37,29 +38,43 @@ public interface ClientRequestInterceptor
   void init(String user);
 
   /**
-   * This method is called to release the resources held by the intercepter.
+   * This method is called to release the resources held by the interceptor.
    * This will be called when the application pipeline is being destroyed. The
    * concrete implementations should dispose the resources and forward the
-   * request to the next intercepter, if any.
+   * request to the next interceptor, if any.
    */
   void shutdown();
 
   /**
-   * Sets the next intercepter in the pipeline. The concrete implementation of
+   * Sets the next interceptor in the pipeline. The concrete implementation of
    * this interface should always pass the request to the nextInterceptor after
-   * inspecting the message. The last intercepter in the chain is responsible to
+   * inspecting the message. The last interceptor in the chain is responsible to
    * send the messages to the resource manager service and so the last
-   * intercepter will not receive this method call.
+   * interceptor will not receive this method call.
    *
    * @param nextInterceptor the ClientRequestInterceptor to set in the pipeline
    */
   void setNextInterceptor(ClientRequestInterceptor nextInterceptor);
 
   /**
-   * Returns the next intercepter in the chain.
+   * Returns the next interceptor in the chain.
    *
-   * @return the next intercepter in the chain
+   * @return the next interceptor in the chain
    */
   ClientRequestInterceptor getNextInterceptor();
 
+  /**
+   * Set RouterDelegationTokenSecretManager for specific interceptor to support Token operations,
+   * including create Token, update Token, and delete Token.
+   *
+   * @param tokenSecretManager Router DelegationTokenSecretManager
+   */
+  void setTokenSecretManager(RouterDelegationTokenSecretManager tokenSecretManager);
+
+  /**
+   * Get RouterDelegationTokenSecretManager.
+   *
+   * @return Router DelegationTokenSecretManager.
+   */
+  RouterDelegationTokenSecretManager getTokenSecretManager();
 }

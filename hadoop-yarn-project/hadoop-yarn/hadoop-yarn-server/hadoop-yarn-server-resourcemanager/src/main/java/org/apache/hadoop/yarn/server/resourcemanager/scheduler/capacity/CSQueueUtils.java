@@ -19,9 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.util.Set;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.util.Sets;
-import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -99,6 +97,11 @@ public class CSQueueUtils {
   /**
    * Update partitioned resource usage, if nodePartition == null, will update
    * used resource for all partitions of this queue.
+   *
+   * @param rc resource calculator.
+   * @param totalPartitionResource total Partition Resource.
+   * @param nodePartition node label.
+   * @param childQueue child queue.
    */
   public static void updateUsedCapacity(final ResourceCalculator rc,
       final Resource totalPartitionResource, String nodePartition,
@@ -214,6 +217,12 @@ public class CSQueueUtils {
    * When nodePartition is null, all partition of
    * used-capacity/absolute-used-capacity will be updated.
    * </p>
+   *
+   * @param rc resource calculator.
+   * @param cluster cluster resource.
+   * @param childQueue child queue.
+   * @param nlm RMNodeLabelsManager.
+   * @param nodePartition node label.
    */
   @Lock(CSQueue.class)
   public static void updateQueueStatistics(
@@ -224,8 +233,8 @@ public class CSQueueUtils {
     ResourceUsage queueResourceUsage = childQueue.getQueueResourceUsage();
 
     if (nodePartition == null) {
-      for (String partition : Sets.union(queueCapacities.getNodePartitionsSet(),
-          queueResourceUsage.getNodePartitionsSet())) {
+      for (String partition : Sets.union(queueCapacities.getExistingNodeLabels(),
+          queueResourceUsage.getExistingNodeLabels())) {
         updateUsedCapacity(rc, nlm.getResourceByLabel(partition, cluster),
             partition, childQueue);
 

@@ -401,8 +401,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     fs.create(new Path(src)).close();
     AbfsRestOperation abfsHttpRestOperation = fs.getAbfsClient()
         .renamePath(src, "/testABC" + "/abc.txt", null,
-            getTestTracingContext(fs, false), null)
-        .getLeft();
+            getTestTracingContext(fs, false), null, false)
+        .getOp();
     AbfsHttpOperation result = abfsHttpRestOperation.getResult();
     String url = result.getMaskedUrl();
     String encodedUrl = result.getMaskedEncodedUrl();
@@ -419,7 +419,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     intercept(IOException.class, "sig=XXXX",
         () -> getFileSystem().getAbfsClient()
             .renamePath("testABC/test.xt", "testABC/abc.txt", null,
-                getTestTracingContext(getFileSystem(), false), null));
+                getTestTracingContext(getFileSystem(), false), null, false));
   }
 
   @Test
@@ -478,5 +478,18 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     assertEquals("The permissions are not expected.",
         "r--r-----",
         fileStatus.getPermission().toString());
+  }
+
+  @Test
+  public void testSASQuesMarkPrefix() throws Exception {
+    AbfsConfiguration testConfig = this.getConfiguration();
+    // the SAS Token Provider is changed
+    testConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, "org.apache.hadoop.fs.azurebfs.extensions.MockWithPrefixSASTokenProvider");
+
+    AzureBlobFileSystem testFs = (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration());
+    Path testFile = new Path("/testSASPrefixQuesMark");
+
+    // the creation of this filesystem should work correctly even when a SAS Token is generated with a ? prefix
+    testFs.create(testFile).close();
   }
 }

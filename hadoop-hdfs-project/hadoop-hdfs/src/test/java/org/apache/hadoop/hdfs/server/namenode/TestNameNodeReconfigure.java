@@ -19,11 +19,16 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminBackoffMonitor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminMonitorInterface;
 import org.junit.Test;
 import org.junit.Before;
 import org.junit.After;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY;
 import static org.junit.Assert.*;
 
@@ -40,12 +45,15 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.SlowPeerTracker;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
+import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
@@ -56,6 +64,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DEFAULT;
 
 public class TestNameNodeReconfigure {
@@ -482,6 +492,164 @@ public class TestNameNodeReconfigure {
     // Hence, invalid block limit should be reset to 10000
     assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY + " is not reconfigured correctly", 10000,
         datanodeManager.getBlockInvalidateLimit());
+  }
+
+  @Test
+  public void testSlowPeerTrackerEnabled() throws Exception {
+    final NameNode nameNode = cluster.getNameNode();
+    final DatanodeManager datanodeManager = nameNode.namesystem.getBlockManager()
+        .getDatanodeManager();
+
+    assertFalse("SlowNode tracker is already enabled. It should be disabled by default",
+        datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
+
+    try {
+      nameNode.reconfigurePropertyImpl(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "non-boolean");
+      fail("should not reach here");
+    } catch (ReconfigurationException e) {
+      assertEquals(
+          "Could not change property dfs.datanode.peer.stats.enabled from 'false' to 'non-boolean'",
+          e.getMessage());
+    }
+
+    nameNode.reconfigurePropertyImpl(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "True");
+    assertTrue("SlowNode tracker is still disabled. Reconfiguration could not be successful",
+        datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
+
+    nameNode.reconfigurePropertyImpl(DFS_DATANODE_PEER_STATS_ENABLED_KEY, null);
+    assertFalse("SlowNode tracker is still enabled. Reconfiguration could not be successful",
+        datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
+
+  }
+
+  @Test
+  public void testSlowPeerMaxNodesToReportReconf() throws Exception {
+    final NameNode nameNode = cluster.getNameNode();
+    final DatanodeManager datanodeManager = nameNode.namesystem.getBlockManager()
+        .getDatanodeManager();
+    nameNode.reconfigurePropertyImpl(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "true");
+    assertTrue("SlowNode tracker is still disabled. Reconfiguration could not be successful",
+        datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
+
+    SlowPeerTracker tracker = datanodeManager.getSlowPeerTracker();
+
+    OutlierMetrics outlierMetrics1 = new OutlierMetrics(0.0, 0.0, 0.0, 1.1);
+    tracker.addReport("node1", "node70", outlierMetrics1);
+    OutlierMetrics outlierMetrics2 = new OutlierMetrics(0.0, 0.0, 0.0, 1.23);
+    tracker.addReport("node2", "node71", outlierMetrics2);
+    OutlierMetrics outlierMetrics3 = new OutlierMetrics(0.0, 0.0, 0.0, 2.13);
+    tracker.addReport("node3", "node72", outlierMetrics3);
+    OutlierMetrics outlierMetrics4 = new OutlierMetrics(0.0, 0.0, 0.0, 1.244);
+    tracker.addReport("node4", "node73", outlierMetrics4);
+    OutlierMetrics outlierMetrics5 = new OutlierMetrics(0.0, 0.0, 0.0, 0.2);
+    tracker.addReport("node5", "node74", outlierMetrics4);
+    OutlierMetrics outlierMetrics6 = new OutlierMetrics(0.0, 0.0, 0.0, 1.244);
+    tracker.addReport("node6", "node75", outlierMetrics4);
+
+    String jsonReport = tracker.getJson();
+    LOG.info("Retrieved slow peer json report: {}", jsonReport);
+
+    List<Boolean> containReport = validatePeerReport(jsonReport);
+    assertEquals(1, containReport.stream().filter(reportVal -> !reportVal).count());
+
+    nameNode.reconfigurePropertyImpl(DFS_DATANODE_MAX_NODES_TO_REPORT_KEY, "2");
+    jsonReport = tracker.getJson();
+    LOG.info("Retrieved slow peer json report: {}", jsonReport);
+
+    containReport = validatePeerReport(jsonReport);
+    assertEquals(4, containReport.stream().filter(reportVal -> !reportVal).count());
+  }
+
+  private List<Boolean> validatePeerReport(String jsonReport) {
+    List<Boolean> containReport = new ArrayList<>();
+    containReport.add(jsonReport.contains("node1"));
+    containReport.add(jsonReport.contains("node2"));
+    containReport.add(jsonReport.contains("node3"));
+    containReport.add(jsonReport.contains("node4"));
+    containReport.add(jsonReport.contains("node5"));
+    containReport.add(jsonReport.contains("node6"));
+    return containReport;
+  }
+
+  @Test
+  public void testReconfigureDecommissionBackoffMonitorParameters()
+      throws ReconfigurationException, IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setClass(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MONITOR_CLASS,
+        DatanodeAdminBackoffMonitor.class, DatanodeAdminMonitorInterface.class);
+    int defaultPendingRepLimit = 1000;
+    conf.setInt(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT, defaultPendingRepLimit);
+    int defaultBlocksPerLock = 1000;
+    conf.setInt(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK,
+        defaultBlocksPerLock);
+
+    try (MiniDFSCluster newCluster = new MiniDFSCluster.Builder(conf).build()) {
+      newCluster.waitActive();
+      final NameNode nameNode = newCluster.getNameNode();
+      final DatanodeManager datanodeManager = nameNode.namesystem
+          .getBlockManager().getDatanodeManager();
+
+      // verify defaultPendingRepLimit.
+      assertEquals(datanodeManager.getDatanodeAdminManager().getPendingRepLimit(),
+          defaultPendingRepLimit);
+
+      // try invalid pendingRepLimit.
+      try {
+        nameNode.reconfigureProperty(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT,
+            "non-numeric");
+        fail("Should not reach here");
+      } catch (ReconfigurationException e) {
+        assertEquals("Could not change property " +
+            "dfs.namenode.decommission.backoff.monitor.pending.limit from '" +
+            defaultPendingRepLimit + "' to 'non-numeric'", e.getMessage());
+      }
+
+      try {
+        nameNode.reconfigureProperty(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT,
+            "-1");
+        fail("Should not reach here");
+      } catch (ReconfigurationException e) {
+        assertEquals("Could not change property " +
+            "dfs.namenode.decommission.backoff.monitor.pending.limit from '" +
+            defaultPendingRepLimit + "' to '-1'", e.getMessage());
+      }
+
+      // try correct pendingRepLimit.
+      nameNode.reconfigureProperty(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT,
+          "20000");
+      assertEquals(datanodeManager.getDatanodeAdminManager().getPendingRepLimit(), 20000);
+
+      // verify defaultBlocksPerLock.
+      assertEquals(datanodeManager.getDatanodeAdminManager().getBlocksPerLock(),
+          defaultBlocksPerLock);
+
+      // try invalid blocksPerLock.
+      try {
+        nameNode.reconfigureProperty(
+            DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK,
+            "non-numeric");
+        fail("Should not reach here");
+      } catch (ReconfigurationException e) {
+        assertEquals("Could not change property " +
+            "dfs.namenode.decommission.backoff.monitor.pending.blocks.per.lock from '" +
+            defaultBlocksPerLock + "' to 'non-numeric'", e.getMessage());
+      }
+
+      try {
+        nameNode.reconfigureProperty(
+            DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK, "-1");
+        fail("Should not reach here");
+      } catch (ReconfigurationException e) {
+        assertEquals("Could not change property " +
+            "dfs.namenode.decommission.backoff.monitor.pending.blocks.per.lock from '" +
+            defaultBlocksPerLock + "' to '-1'", e.getMessage());
+      }
+
+      // try correct blocksPerLock.
+      nameNode.reconfigureProperty(
+          DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK, "10000");
+      assertEquals(datanodeManager.getDatanodeAdminManager().getBlocksPerLock(), 10000);
+    }
   }
 
   @After

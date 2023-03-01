@@ -200,7 +200,7 @@ public class ValueAggregatorJob {
     conf.setInt(ValueAggregatorJobBase.DESCRIPTOR_NUM, descriptors.length);
     //specify the aggregator descriptors
     for(int i=0; i< descriptors.length; i++) {
-      conf.set(ValueAggregatorJobBase.DESCRIPTOR + i, 
+      conf.set(ValueAggregatorJobBase.DESCRIPTOR + "." + i,
                "UserDefined," + descriptors[i].getName());
     }
     return conf;

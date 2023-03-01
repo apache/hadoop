@@ -176,7 +176,6 @@ public class RMNodeWrapper implements RMNode {
 
   @Override
   public List<Container> pullNewlyIncreasedContainers() {
-    // TODO Auto-generated method stub
     return Collections.emptyList();
   }
 

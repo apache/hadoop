@@ -157,7 +157,7 @@ public class ITestS3ACommitterFactory extends AbstractCommitITest {
   }
 
   /**
-   * Create an invalid committer via the FS binding,
+   * Create an invalid committer via the FS binding.
    */
   public void testInvalidFileBinding() throws Throwable {
     taskConfRef.unset(FS_S3A_COMMITTER_NAME);

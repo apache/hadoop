@@ -74,7 +74,7 @@ public abstract class FSLinkResolver<T> {
    * @param fc FileContext used to access file systems.
    * @param path The path to resolve symlinks on.
    * @return Generic type determined by the implementation of next.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public T resolve(final FileContext fc, final Path path) throws IOException {
     int count = 0;

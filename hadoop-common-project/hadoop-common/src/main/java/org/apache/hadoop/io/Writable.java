@@ -71,7 +71,7 @@ public interface Writable {
    * Serialize the fields of this object to <code>out</code>.
    * 
    * @param out <code>DataOuput</code> to serialize this object into.
-   * @throws IOException
+   * @throws IOException any other problem for write.
    */
   void write(DataOutput out) throws IOException;
 
@@ -82,7 +82,7 @@ public interface Writable {
    * existing object where possible.</p>
    * 
    * @param in <code>DataInput</code> to deseriablize this object from.
-   * @throws IOException
+   * @throws IOException any other problem for readFields.
    */
   void readFields(DataInput in) throws IOException;
 }

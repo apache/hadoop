@@ -45,7 +45,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
- * The the safe mode for the {@link Router} controlled by
+ * The safe mode for the {@link Router} controlled by
  * {@link SafeModeTimer}.
  */
 public class TestRouter {

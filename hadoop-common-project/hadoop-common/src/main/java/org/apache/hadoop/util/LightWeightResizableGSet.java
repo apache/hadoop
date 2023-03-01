@@ -33,7 +33,7 @@ import java.util.function.Consumer;
  *
  * This class does not support null element.
  *
- * This class is not thread safe.
+ * This class is thread safe.
  *
  * @param <K> Key type for looking up the elements
  * @param <E> Element type, which must be
@@ -116,6 +116,8 @@ public class LightWeightResizableGSet<K, E extends K>
 
   /**
    * Resize the internal table to given capacity.
+   *
+   * @param cap capacity.
    */
   @SuppressWarnings("unchecked")
   protected synchronized void resize(int cap) {

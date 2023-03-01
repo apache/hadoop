@@ -101,7 +101,7 @@ public class BlockDispatcher {
    */
   public BlockMovementStatus moveBlock(BlockMovingInfo blkMovingInfo,
       SaslDataTransferClient saslClient, ExtendedBlock eb, Socket sock,
-      DataEncryptionKeyFactory km, Token<BlockTokenIdentifier> accessToken) {
+      DataEncryptionKeyFactory km, Token<BlockTokenIdentifier> accessToken) throws IOException {
     LOG.info("Start moving block:{} from src:{} to destin:{} to satisfy "
         + "storageType, sourceStoragetype:{} and destinStoragetype:{}",
         blkMovingInfo.getBlock(), blkMovingInfo.getSource(),
@@ -149,14 +149,6 @@ public class BlockDispatcher {
       LOG.debug("Pinned block can't be moved, so skipping block:{}",
           blkMovingInfo.getBlock(), e);
       return BlockMovementStatus.DN_BLK_STORAGE_MOVEMENT_SUCCESS;
-    } catch (IOException e) {
-      // TODO: handle failure retries
-      LOG.warn(
-          "Failed to move block:{} from src:{} to destin:{} to satisfy "
-              + "storageType:{}",
-          blkMovingInfo.getBlock(), blkMovingInfo.getSource(),
-          blkMovingInfo.getTarget(), blkMovingInfo.getTargetStorageType(), e);
-      return BlockMovementStatus.DN_BLK_STORAGE_MOVEMENT_FAILURE;
     } finally {
       IOUtils.closeStream(out);
       IOUtils.closeStream(in);

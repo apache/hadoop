@@ -123,6 +123,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.data.write.bandwidthPerSec";
   // A value of zero indicates no limit
   public static final long DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_DEFAULT = 0;
+  public static final String DFS_DATANODE_EC_RECONSTRUCT_READ_BANDWIDTHPERSEC_KEY =
+      "dfs.datanode.ec.reconstruct.read.bandwidthPerSec";
+  public static final long DFS_DATANODE_EC_RECONSTRUCT_READ_BANDWIDTHPERSEC_DEFAULT =
+      0; // A value of zero indicates no limit
+  public static final String DFS_DATANODE_EC_RECONSTRUCT_WRITE_BANDWIDTHPERSEC_KEY =
+      "dfs.datanode.ec.reconstruct.write.bandwidthPerSec";
+  public static final long DFS_DATANODE_EC_RECONSTRUCT_WRITE_BANDWIDTHPERSEC_DEFAULT =
+      0; // A value of zero indicates no limit
   @Deprecated
   public static final String  DFS_DATANODE_READAHEAD_BYTES_KEY =
       HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_KEY;
@@ -476,10 +484,16 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_KEY = "dfs.namenode.startup.delay.block.deletion.sec";
   public static final long    DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_DEFAULT = 0L;
 
-  /** Block deletion increment. */
-  public static final String DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY =
-      "dfs.namenode.block.deletion.increment";
-  public static final int DFS_NAMENODE_BLOCK_DELETION_INCREMENT_DEFAULT = 1000;
+  /** The limit of single lock holding duration.*/
+  public static final String DFS_NAMENODE_BLOCK_DELETION_LOCK_THRESHOLD_MS =
+      "dfs.namenode.block.deletion.lock.threshold.ms";
+  public static final int DFS_NAMENODE_BLOCK_DELETION_LOCK_THRESHOLD_MS_DEFAULT =
+      50;
+  /** The sleep interval for releasing lock.*/
+  public static final String DFS_NAMENODE_BLOCK_DELETION_UNLOCK_INTERVAL_MS =
+      "dfs.namenode.block.deletion.unlock.interval.ms";
+  public static final int DFS_NAMENODE_BLOCK_DELETION_UNLOCK_INTERVAL_MS_DEFAULT =
+      10;
 
   public static final String DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES =
       HdfsClientConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES;
@@ -543,7 +557,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // This value uses the times of heartbeat interval to define the minimum value for stale interval.  
   public static final String DFS_NAMENODE_STALE_DATANODE_MINIMUM_INTERVAL_KEY = "dfs.namenode.stale.datanode.minimum.interval";
   public static final int DFS_NAMENODE_STALE_DATANODE_MINIMUM_INTERVAL_DEFAULT = 3; // i.e. min_interval is 3 * heartbeat_interval = 9s
-  
+  public static final String DFS_NAMENODE_REMOVE_DEAD_DATANODE_BATCHNUM_KEY
+      = "dfs.namenode.remove.dead.datanode.batchnum";
+  public static final int DFS_NAMENODE_REMOVE_BAD_BATCH_NUM_DEFAULT = 10;
   // When the percentage of stale datanodes reaches this ratio,
   // allow writing to stale nodes to prevent hotspots.
   public static final String DFS_NAMENODE_USE_STALE_DATANODE_FOR_WRITE_RATIO_KEY = "dfs.namenode.write.stale.datanode.ratio";
@@ -612,6 +628,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY =
       "dfs.namenode.read-lock-reporting-threshold-ms";
   public static final long    DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_DEFAULT = 5000L;
+
+  public static final String DFS_NAMENODE_ACCESS_CONTROL_ENFORCER_REPORTING_THRESHOLD_MS_KEY
+      = "dfs.namenode.access-control-enforcer-reporting-threshold-ms";
+  public static final long   DFS_NAMENODE_ACCESS_CONTROL_ENFORCER_REPORTING_THRESHOLD_MS_DEFAULT
+      = 1000L;
+
   // Threshold for how long the lock warnings must be suppressed
   public static final String DFS_LOCK_SUPPRESS_WARNING_INTERVAL_KEY =
       "dfs.lock.suppress.warning.interval";
@@ -620,14 +642,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_DATANODE_LOCK_FAIR_KEY =
       "dfs.datanode.lock.fair";
   public static final boolean DFS_DATANODE_LOCK_FAIR_DEFAULT = true;
-  public static final String DFS_DATANODE_LOCK_READ_WRITE_ENABLED_KEY =
-      "dfs.datanode.lock.read.write.enabled";
-  public static final Boolean DFS_DATANODE_LOCK_READ_WRITE_ENABLED_DEFAULT =
-      true;
-  public static final String  DFS_DATANODE_LOCK_REPORTING_THRESHOLD_MS_KEY =
-      "dfs.datanode.lock-reporting-threshold-ms";
-  public static final long
-      DFS_DATANODE_LOCK_REPORTING_THRESHOLD_MS_DEFAULT = 300L;
 
   public static final String  DFS_UPGRADE_DOMAIN_FACTOR = "dfs.namenode.upgrade.domain.factor";
   public static final int DFS_UPGRADE_DOMAIN_FACTOR_DEFAULT = DFS_REPLICATION_DEFAULT;
@@ -719,12 +733,43 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_DEFAULT_AUDIT_LOGGER_NAME = "default";
   public static final String  DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY = "dfs.namenode.audit.log.token.tracking.id";
   public static final boolean DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT = false;
-  public static final String  DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY = "dfs.namenode.audit.log.async";
+  /**
+   * Deprecated. Use log4j properties instead.
+   * Set system env variable HDFS_AUDIT_LOGGER, which in tern assigns the value to
+   * "hdfs.audit.logger" for log4j properties to determine log level and appender.
+   */
+  @Deprecated
+  public static final String DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY = "dfs.namenode.audit.log.async";
+  @Deprecated
   public static final boolean DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT = false;
-  public static final String  DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_KEY = "dfs.namenode.audit.log.async.blocking";
+
+  /**
+   * Deprecated. Use log4j properties instead.
+   * Set value to Async appender "blocking" property as part of log4j properties configuration.
+   * <p>
+   * For example,
+   * log4j.appender.ASYNCAPPENDER=org.apache.log4j.AsyncAppender
+   * log4j.appender.ASYNCAPPENDER.blocking=false
+   */
+  @Deprecated
+  public static final String DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_KEY =
+      "dfs.namenode.audit.log.async.blocking";
+  @Deprecated
   public static final boolean DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_DEFAULT = true;
-  public static final String  DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_KEY = "dfs.namenode.audit.log.async.buffer.size";
-  public static final int     DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_DEFAULT = 128;
+
+  /**
+   * Deprecated. Use log4j properties instead.
+   * Set value to Async appender "bufferSize" property as part of log4j properties configuration.
+   * <p>
+   * For example,
+   * log4j.appender.ASYNCAPPENDER=org.apache.log4j.AsyncAppender
+   * log4j.appender.ASYNCAPPENDER.bufferSize=128
+   */
+  @Deprecated
+  public static final String DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_KEY =
+      "dfs.namenode.audit.log.async.buffer.size";
+  @Deprecated
+  public static final int DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_DEFAULT = 128;
   public static final String  DFS_NAMENODE_AUDIT_LOG_DEBUG_CMDLIST = "dfs.namenode.audit.log.debug.cmdlist";
   public static final String  DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_KEY =
       "dfs.namenode.metrics.logger.period.seconds";
@@ -826,6 +871,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_KEY =
       "dfs.storage.policy.satisfier.retry.max.attempts";
   public static final int DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_DEFAULT =
+      3;
+  public static final String DFS_STORAGE_POLICY_SATISFIER_MOVE_TASK_MAX_RETRY_ATTEMPTS_KEY =
+      "dfs.storage.policy.satisfier.move.task.retry.max.attempts";
+  public static final int DFS_STORAGE_POLICY_SATISFIER_MOVE_TASK_MAX_RETRY_ATTEMPTS_DEFAULT =
       3;
   public static final String DFS_STORAGE_DEFAULT_POLICY =
       "dfs.storage.default.policy";
@@ -1386,6 +1435,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.journalnode.edits.dir.perm";
   public static final String DFS_JOURNAL_EDITS_DIR_PERMISSION_DEFAULT =
       "700";
+  public static final String  DFS_JOURNALNODE_HANDLER_COUNT_KEY =
+      "dfs.journalnode.handler.count";
+  public static final int     DFS_JOURNALNODE_HANDLER_COUNT_DEFAULT = 5;
+
 
   public static final String  DFS_JOURNALNODE_HTTP_ADDRESS_KEY = "dfs.journalnode.http-address";
   public static final int     DFS_JOURNALNODE_HTTP_PORT_DEFAULT = 8480;
@@ -1408,7 +1461,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long DFS_JOURNALNODE_SYNC_INTERVAL_DEFAULT = 2*60*1000L;
   public static final String DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY =
       "dfs.journalnode.edit-cache-size.bytes";
-  public static final int DFS_JOURNALNODE_EDIT_CACHE_SIZE_DEFAULT = 1024 * 1024;
+
+  public static final String DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_KEY =
+          "dfs.journalnode.edit-cache-size.fraction";
+  public static final float DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_DEFAULT = 0.5f;
 
   // Journal-node related configs for the client side.
   public static final String  DFS_QJOURNAL_QUEUE_SIZE_LIMIT_KEY = "dfs.qjournal.queued-edits.limit.mb";

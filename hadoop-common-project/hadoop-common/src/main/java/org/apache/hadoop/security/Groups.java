@@ -465,7 +465,7 @@ public class Groups {
 
   /**
    * Get the groups being used to map user-to-groups.
-   * @param conf
+   * @param conf configuration.
    * @return the groups being used to map user-to-groups.
    */
   public static synchronized Groups getUserToGroupsMappingService(
@@ -482,7 +482,7 @@ public class Groups {
 
   /**
    * Create new groups used to map user-to-groups with loaded configuration.
-   * @param conf
+   * @param conf configuration.
    * @return the groups being used to map user-to-groups.
    */
   @Private

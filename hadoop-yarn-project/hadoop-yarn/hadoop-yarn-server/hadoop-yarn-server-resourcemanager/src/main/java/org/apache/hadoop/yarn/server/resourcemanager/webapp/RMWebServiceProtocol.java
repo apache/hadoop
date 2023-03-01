@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 
 /**
  * <p>
@@ -97,6 +98,7 @@ public interface RMWebServiceProtocol {
    * This method retrieves the cluster user information, and it is reachable by using
    * {@link RMWSConsts#CLUSTER_USER_INFO}.
    *
+   * @param hsr the servlet request
    * @return the cluster user information
    */
   ClusterUserInfo getClusterUserInfo(HttpServletRequest hsr);
@@ -160,6 +162,7 @@ public interface RMWebServiceProtocol {
    *               It is a PathParam.
    * @param resourceOption The resource change.
    * @throws AuthorizationException If the user is not authorized.
+   * @return the resources of a specific node.
    */
   ResourceInfo updateNodeResource(HttpServletRequest hsr, String nodeId,
       ResourceOptionInfo resourceOption) throws AuthorizationException;
@@ -214,7 +217,7 @@ public interface RMWebServiceProtocol {
       String groupBy);
 
   /**
-   * This method retrieve the last n activities inside scheduler and it is
+   * This method retrieve the last n activities inside scheduler, and it is
    * reachable by using {@link RMWSConsts#SCHEDULER_BULK_ACTIVITIES}.
    *
    * @param hsr the servlet request
@@ -222,6 +225,7 @@ public interface RMWebServiceProtocol {
    *        aggregated. It is a QueryParam.
    * @param activitiesCount number of activities
    * @return last n activities
+   * @throws InterruptedException if interrupted.
    */
   BulkActivitiesInfo getBulkActivities(HttpServletRequest hsr,
       String groupBy, int activitiesCount) throws InterruptedException;
@@ -323,6 +327,8 @@ public interface RMWebServiceProtocol {
    * @throws IOException if an IOException happened
    */
   NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr) throws IOException;
+
+  NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) throws IOException;
 
   /**
    * This method retrieves all the node within multiple node labels in the
@@ -630,7 +636,7 @@ public interface RMWebServiceProtocol {
    * @throws IOException when a {@link ReservationDeleteRequest} cannot be
    *           created from the {@link ReservationDeleteRequestInfo}. This
    *           exception is also thrown on
-   *           {@code ClientRMService.deleteReservation} invokation failure.
+   *           {@code ClientRMService.deleteReservation} invocation failure.
    * @throws InterruptedException if doAs action throws an InterruptedException.
    */
   Response deleteReservation(ReservationDeleteRequestInfo resContext,
@@ -716,7 +722,7 @@ public interface RMWebServiceProtocol {
   AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId);
 
   /**
-   * This method verifies if an user has access to a specified queue.
+   * This method verifies if a user has access to a specified queue.
    *
    * @return Response containing the status code.
    *
@@ -745,4 +751,31 @@ public interface RMWebServiceProtocol {
    */
   Response signalToContainer(String containerId, String command,
       HttpServletRequest req) throws AuthorizationException;
+
+  /**
+   * This method updates the Scheduler configuration, and it is reachable by
+   * using {@link RMWSConsts#SCHEDULER_CONF}.
+   *
+   * @param mutationInfo th information for making scheduler configuration
+   *        changes (supports adding, removing, or updating a queue, as well
+   *        as global scheduler conf changes)
+   * @param hsr the servlet request
+   * @return Response containing the status code
+   * @throws AuthorizationException if the user is not authorized to invoke this
+   *         method
+   * @throws InterruptedException if interrupted
+   */
+  Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
+      HttpServletRequest hsr) throws AuthorizationException, InterruptedException;
+
+  /**
+   * This method retrieves all the Scheduler configuration, and it is reachable
+   * by using {@link RMWSConsts#SCHEDULER_CONF}.
+   *
+   * @param hsr the servlet request
+   * @return Response containing the status code
+   * @throws AuthorizationException if the user is not authorized to invoke this
+   *         method.
+   */
+  Response getSchedulerConfiguration(HttpServletRequest hsr) throws AuthorizationException;
 }

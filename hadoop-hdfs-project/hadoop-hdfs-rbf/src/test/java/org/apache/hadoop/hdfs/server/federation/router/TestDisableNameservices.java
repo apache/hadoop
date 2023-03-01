@@ -159,7 +159,7 @@ public class TestDisableNameservices {
   public void testWithoutDisabling() throws IOException {
     // ns0 is slow and renewLease should take a long time
     long t0 = monotonicNow();
-    routerProtocol.renewLease("client0");
+    routerProtocol.renewLease("client0", null);
     long t = monotonicNow() - t0;
     assertTrue("It took too little: " + t + "ms",
         t > TimeUnit.SECONDS.toMillis(1));
@@ -178,7 +178,7 @@ public class TestDisableNameservices {
 
     // renewLease should be fast as we are skipping ns0
     long t0 = monotonicNow();
-    routerProtocol.renewLease("client0");
+    routerProtocol.renewLease("client0", null);
     long t = monotonicNow() - t0;
     assertTrue("It took too long: " + t + "ms",
         t < TimeUnit.SECONDS.toMillis(1));

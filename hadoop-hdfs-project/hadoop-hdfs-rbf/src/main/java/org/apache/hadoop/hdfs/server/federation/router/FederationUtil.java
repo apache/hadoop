@@ -231,7 +231,7 @@ public final class FederationUtil {
   }
 
   /**
-   * Add the the number of children for an existing HdfsFileStatus object.
+   * Add the number of children for an existing HdfsFileStatus object.
    * @param dirStatus HdfsfileStatus object.
    * @param children number of children to be added.
    * @return HdfsFileStatus with the number of children specified.

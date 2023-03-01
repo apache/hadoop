@@ -423,6 +423,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   private static final QueueCapacityConfigParser queueCapacityConfigParser
       = new QueueCapacityConfigParser();
+  private static final String LEGACY_QUEUE_MODE_ENABLED = PREFIX + "legacy-queue-mode.enabled";
+  public static final boolean DEFAULT_LEGACY_QUEUE_MODE = true;
 
   private ConfigurationProperties configurationProperties;
 
@@ -572,8 +574,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     String configuredCapacity = get(getQueuePrefix(queue.getFullPath()) + CAPACITY);
     boolean absoluteResourceConfigured = (configuredCapacity != null)
         && RESOURCE_PATTERN.matcher(configuredCapacity).find();
+    boolean isCapacityVectorFormat = queueCapacityConfigParser
+        .isCapacityVectorFormat(configuredCapacity);
     if (absoluteResourceConfigured || configuredWeightAsCapacity(
-        configuredCapacity)) {
+        configuredCapacity) || isCapacityVectorFormat) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
       // root.From AbstractCSQueue, absolute resource will be parsed and
       // updated. Once nodes are added/removed in cluster, capacity in
@@ -623,7 +627,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public float getNonLabeledQueueMaximumCapacity(QueuePath queue) {
     String configuredCapacity = get(getQueuePrefix(queue.getFullPath()) + MAXIMUM_CAPACITY);
     boolean matcher = (configuredCapacity != null)
-        && RESOURCE_PATTERN.matcher(configuredCapacity).find();
+        && RESOURCE_PATTERN.matcher(configuredCapacity).find()
+        || queueCapacityConfigParser.isCapacityVectorFormat(configuredCapacity);
     if (matcher) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
       // root.From AbstractCSQueue, absolute resource will be parsed and
@@ -819,6 +824,16 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return Collections.unmodifiableSet(set);
   }
 
+  public void setCapacityVector(String queuePath, String label, String capacityVector) {
+    String capacityPropertyName = getNodeLabelPrefix(queuePath, label) + CAPACITY;
+    set(capacityPropertyName, capacityVector);
+  }
+
+  public void setMaximumCapacityVector(String queuePath, String label, String capacityVector) {
+    String capacityPropertyName = getNodeLabelPrefix(queuePath, label) + MAXIMUM_CAPACITY;
+    set(capacityPropertyName, capacityVector);
+  }
+
   private boolean configuredWeightAsCapacity(String configureValue) {
     if (configureValue == null) {
       return false;
@@ -843,7 +858,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         (configuredCapacity != null) && RESOURCE_PATTERN.matcher(
             configuredCapacity).find();
     if (absoluteResourceConfigured || configuredWeightAsCapacity(
-        configuredCapacity)) {
+        configuredCapacity) || queueCapacityConfigParser.isCapacityVectorFormat(configuredCapacity)) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
       // root.From AbstractCSQueue, absolute resource, and weight will be parsed
       // and updated separately. Once nodes are added/removed in cluster,
@@ -939,6 +954,90 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   private static String getAclKey(AccessType acl) {
     return "acl_" + StringUtils.toLowerCase(acl.toString());
+  }
+
+  /**
+   * Creates a mapping of queue ACLs for a Legacy Auto Created Leaf Queue.
+   *
+   * @param parentQueuePath the parent's queue path
+   * @return A mapping of the queue ACLs.
+   */
+  public Map<AccessType, AccessControlList> getACLsForLegacyAutoCreatedLeafQueue(
+      String parentQueuePath) {
+    final String prefix =
+        getQueuePrefix(getAutoCreatedQueueTemplateConfPrefix(
+            parentQueuePath));
+
+    Map<String, String> properties = new HashMap<>();
+    for (QueueACL acl : QueueACL.values()) {
+      final String key = getAclKey(acl);
+      final String value = get(prefix + key);
+      if (value != null) {
+        properties.put(key, get(prefix + key));
+      }
+    }
+    return getACLsFromProperties(properties);
+  }
+
+  /**
+   * Creates a mapping of queue ACLs for a Flexible Auto Created Parent Queue.
+   * The .parent-template is preferred to .template ACLs.
+   *
+   * @param aqc The AQC templates to use.
+   * @return A mapping of the queue ACLs.
+   */
+  public static Map<AccessType, AccessControlList> getACLsForFlexibleAutoCreatedParentQueue(
+      AutoCreatedQueueTemplate aqc) {
+    return getACLsFromProperties(aqc.getParentOnlyProperties(),
+        aqc.getTemplateProperties());
+  }
+
+  /**
+   * Creates a mapping of queue ACLs for a Flexible Auto Created Leaf Queue.
+   * The .leaf-template is preferred to .template ACLs.
+   *
+   * @param aqc The AQC templates to use.
+   * @return A mapping of the queue ACLs.
+   */
+  public static Map<AccessType, AccessControlList> getACLsForFlexibleAutoCreatedLeafQueue(
+      AutoCreatedQueueTemplate aqc) {
+    return getACLsFromProperties(aqc.getLeafOnlyProperties(),
+        aqc.getTemplateProperties());
+  }
+
+  /**
+   * Transforms the string ACL properties to AccessType and AccessControlList mapping.
+   *
+   * @param properties The ACL properties.
+   * @return A mapping of the queue ACLs.
+   */
+  private static Map<AccessType, AccessControlList> getACLsFromProperties(
+      Map<String, String> properties) {
+    return getACLsFromProperties(properties, new HashMap<>());
+  }
+
+  /**
+   * Transforms the string ACL properties to AccessType and AccessControlList mapping.
+   *
+   * @param properties The ACL properties.
+   * @param fallbackProperties The fallback properties to use.
+   * @return A mapping of the queue ACLs.
+   */
+  private static Map<AccessType, AccessControlList> getACLsFromProperties(
+      Map<String, String> properties, Map<String, String> fallbackProperties) {
+    Map<AccessType, AccessControlList> acls = new HashMap<>();
+    for (QueueACL acl : QueueACL.values()) {
+      String aclStr = properties.get(getAclKey(acl));
+      if (aclStr == null) {
+        aclStr = fallbackProperties.get(getAclKey(acl));
+        if (aclStr == null) {
+          aclStr = NONE_ACL;
+        }
+      }
+      acls.put(SchedulerUtils.toAccessType(acl),
+          new AccessControlList(aclStr));
+    }
+    return acls;
   }
 
   @Override
@@ -1610,7 +1709,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   /**
-   * Get configured node labels in a given queuePath
+   * Get configured node labels in a given queuePath.
+   *
+   * @param queuePath queue path.
+   * @return configured node labels.
    */
   public Set<String> getConfiguredNodeLabels(String queuePath) {
     Set<String> configuredNodeLabels = new HashSet<String>();
@@ -2617,7 +2719,28 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       String queuePath, Set<String> labels) {
     Map<String, QueueCapacityVector> queueResourceVectors = new HashMap<>();
     for (String label : labels) {
-      queueResourceVectors.put(label, queueCapacityConfigParser.parse(this, queuePath, label));
+      String propertyName = CapacitySchedulerConfiguration.getNodeLabelPrefix(
+          queuePath, label) + CapacitySchedulerConfiguration.CAPACITY;
+      String capacityString = get(propertyName);
+      queueResourceVectors.put(label, queueCapacityConfigParser.parse(capacityString, queuePath));
+    }
+
+    return queueResourceVectors;
+  }
+
+  public Map<String, QueueCapacityVector> parseConfiguredMaximumCapacityVector(
+      String queuePath, Set<String> labels, QueueCapacityVector defaultVector) {
+    Map<String, QueueCapacityVector> queueResourceVectors = new HashMap<>();
+    for (String label : labels) {
+      String propertyName = CapacitySchedulerConfiguration.getNodeLabelPrefix(
+          queuePath, label) + CapacitySchedulerConfiguration.MAXIMUM_CAPACITY;
+      String capacityString = get(propertyName);
+      QueueCapacityVector capacityVector = queueCapacityConfigParser.parse(capacityString,
+          queuePath);
+      if (capacityVector.isEmpty()) {
+        capacityVector = defaultVector;
+      }
+      queueResourceVectors.put(label, capacityVector);
     }
 
     return queueResourceVectors;
@@ -2722,6 +2845,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
 
     String units = getUnits(splits[1]);
+
+    if (!UnitsConversionUtil.KNOWN_UNITS.contains(units)) {
+      return;
+    }
+
     Long resourceValue = Long
         .valueOf(splits[1].substring(0, splits[1].length() - units.length()));
 
@@ -2802,6 +2930,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
 
     return normalizePolicyName(policyClassName.trim());
+  }
+
+  public boolean isLegacyQueueMode() {
+    return getBoolean(LEGACY_QUEUE_MODE_ENABLED, DEFAULT_LEGACY_QUEUE_MODE);
+  }
+
+  public void setLegacyQueueModeEnabled(boolean value) {
+    setBoolean(LEGACY_QUEUE_MODE_ENABLED, value);
   }
 
   public boolean getMultiNodePlacementEnabled() {

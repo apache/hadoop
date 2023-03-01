@@ -44,6 +44,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.net.DomainNameResolver;
+import org.apache.hadoop.net.DomainNameResolverFactory;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
@@ -81,6 +83,8 @@ public final class SecurityUtil {
   @VisibleForTesting
   static HostResolver hostResolver;
 
+  private static DomainNameResolver domainNameResolver;
+
   private static boolean logSlowLookups;
   private static int slowLookupThresholdMs;
 
@@ -112,10 +116,15 @@ public final class SecurityUtil {
             .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_KEY,
         CommonConfigurationKeys
             .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_DEFAULT);
+
+    domainNameResolver = DomainNameResolverFactory.newInstance(conf,
+        CommonConfigurationKeys.HADOOP_SECURITY_RESOLVER_IMPL);
   }
 
   /**
-   * For use only by tests and initialization
+   * For use only by tests and initialization.
+   *
+   * @param flag flag.
    */
   @InterfaceAudience.Private
   @VisibleForTesting
@@ -210,7 +219,7 @@ public final class SecurityUtil {
         throw new IOException("Can't replace " + HOSTNAME_PATTERN
             + " pattern since client address is null");
       }
-      return replacePattern(components, addr.getCanonicalHostName());
+      return replacePattern(components, domainNameResolver.getHostnameByIP(addr));
     }
   }
   
@@ -305,7 +314,8 @@ public final class SecurityUtil {
     
     String keytabFilename = conf.get(keytabFileKey);
     if (keytabFilename == null || keytabFilename.length() == 0) {
-      throw new IOException("Running in secure mode, but config doesn't have a keytab");
+      throw new IOException(
+          "Running in secure mode, but config doesn't have a keytab for key: " + keytabFileKey);
     }
 
     String principalConfig = conf.get(userNameKey, System
@@ -487,6 +497,10 @@ public final class SecurityUtil {
    * Perform the given action as the daemon's login user. If the login
    * user cannot be determined, this will log a FATAL error and exit
    * the whole JVM.
+   *
+   * @param action action.
+   * @param <T> generic type T.
+   * @return generic type T.
    */
   public static <T> T doAsLoginUserOrFatal(PrivilegedAction<T> action) { 
     if (UserGroupInformation.isSecurityEnabled()) {
@@ -509,6 +523,7 @@ public final class SecurityUtil {
    * InterruptedException is thrown, it is converted to an IOException.
    *
    * @param action the action to perform
+   * @param <T> Generics Type T.
    * @return the result of the action
    * @throws IOException in the event of error
    */
@@ -522,6 +537,7 @@ public final class SecurityUtil {
    * InterruptedException is thrown, it is converted to an IOException.
    *
    * @param action the action to perform
+   * @param <T> generic type T.
    * @return the result of the action
    * @throws IOException in the event of error
    */
@@ -745,9 +761,13 @@ public final class SecurityUtil {
 
   /**
    * Utility method to fetch ZK auth info from the configuration.
+   *
+   * @param conf configuration.
+   * @param configKey config key.
    * @throws java.io.IOException if the Zookeeper ACLs configuration file
    * cannot be read
    * @throws ZKUtil.BadAuthFormatException if the auth format is invalid
+   * @return ZKAuthInfo List.
    */
   public static List<ZKUtil.ZKAuthInfo> getZKAuthInfos(Configuration conf,
       String configKey) throws IOException {

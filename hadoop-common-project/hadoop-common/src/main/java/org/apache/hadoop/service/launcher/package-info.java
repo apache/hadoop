@@ -192,9 +192,8 @@
  during the {@code execute()} method takes priority over any exit codes
  returned by the method. This allows services to signal failures simply
  by raising exceptions with exit codes.
- <p>
+ </p>
 
- <p>
  To view the workflow in sequence, it is:
  <ol>
  <li>(prepare configuration files &mdash;covered later)</li>
@@ -221,7 +220,7 @@
  <p>
  For a basic service, the return code is 0 unless an exception
  was raised. 
- <p>
+ </p>
  For a {@link org.apache.hadoop.service.launcher.LaunchableService}, the return
  code is the number returned from the
  {@link org.apache.hadoop.service.launcher.LaunchableService#execute()}
@@ -235,7 +234,7 @@
  of returning error codes to signal failures and for
  normal Services to return any error code at all.
 
- <p>
+ </p>
  Any exception which implements the
  {@link org.apache.hadoop.util.ExitCodeProvider}
  interface is considered be a provider of the exit code: the method
@@ -269,7 +268,7 @@
  Note that {@link org.apache.hadoop.util.ExitUtil.ExitException} itself
  implements {@link org.apache.hadoop.util.ExitCodeProvider#getExitCode()}
 
- <p>
+ </p>
  If an exception does not implement
  {@link org.apache.hadoop.util.ExitCodeProvider#getExitCode()},
  it will be wrapped in an {@link org.apache.hadoop.util.ExitUtil.ExitException}
@@ -324,7 +323,7 @@
  when received, attempts to stop the service in a limited period of time.
  It then triggers a JVM shutdown by way of
  {@link org.apache.hadoop.util.ExitUtil#terminate(int, String)}
- <p>
+
  If a second signal is received, the
  {@link org.apache.hadoop.service.launcher.InterruptEscalator}
  reacts by triggering an immediate JVM halt, invoking 
@@ -342,7 +341,7 @@
  stop the service if a shutdown request is received, so ensuring that
  if the JVM is exited by any thread, an attempt to shut down the service
  will be made.
- 
+ </p>
 
  <h2>Configuration class creation</h2>
 
@@ -355,12 +354,12 @@
  What the launcher does do is use reflection to try and create instances of
  these classes simply to force in the common resources. If the classes are
  not on the classpath this fact will be logged.
- <p>
+ </p>
  Applications may consider it essential to either force load in the relevant
  configuration, or pass it down to the service being created. In which
  case further measures may be needed.
  
- <p><b>1: Creation in an extended {@code ServiceLauncher}</b>
+ <b>1: Creation in an extended {@code ServiceLauncher}</b>
  
  <p>
  Subclass the Service launcher and override its
@@ -371,9 +370,9 @@
  HDFS or YARN. It does imply a dedicated script to invoke the custom
  {@code main()} method.
 
- <p><b>2: Creation in {@code bindArgs()}</b>
+ <b>2: Creation in {@code bindArgs()}</b>
 
- <p>
+ </p>
  In
  {@link org.apache.hadoop.service.launcher.LaunchableService#bindArgs(Configuration, List)},
  a new configuration is created:
@@ -390,7 +389,7 @@
  instances created via the service launcher. It does imply that this is
  expected to be only way that services will be launched.
 
- <p><b>3: Creation in {@code serviceInit()}</b>
+ <p><b>3: Creation in {@code serviceInit()}</b></p>
 
  <pre>
  protected void serviceInit(Configuration conf) throws Exception {
@@ -406,7 +405,7 @@
  propagating information between peer services in a
  {@link org.apache.hadoop.service.CompositeService}.
  While a dangerous practice, it does happen.
-
+ </p>
 
  <b>Summary</b>: the ServiceLauncher makes a best-effort attempt to load the
  standard Configuration subclasses, but does not fail if they are not present.
@@ -429,7 +428,7 @@
  If this argument is repeated multiple times, all configuration
  files are merged with the latest file on the command line being the
  last one to be applied.
- <p>
+ </p>
  All the {@code --conf &lt;file&gt;} argument pairs are stripped off
  the argument list provided to the instantiated service; they get the
  merged configuration, but not the commands used to create it.

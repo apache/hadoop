@@ -410,7 +410,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
    * @param path Path to check.
    * @param op Operation to perform.
    * @param openOffset Offset for opening a file.
-   * @param excludeDatanodes Blocks to excluded.
+   * @param excludeDatanodes Blocks to exclude.
    * @param parameters Other parameters.
    * @return Redirection URI.
    * @throws URISyntaxException If it cannot parse the URI.

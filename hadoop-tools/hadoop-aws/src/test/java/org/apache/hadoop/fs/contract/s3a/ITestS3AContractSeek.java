@@ -44,11 +44,11 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_RANDOM;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_NORMAL;
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_RANDOM;
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_SEQUENTIAL;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.fs.s3a.Constants.SSL_CHANNEL_MODE;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.FS_S3A_IMPL_DISABLE_CACHE;
@@ -87,9 +87,9 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
   @Parameterized.Parameters
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {INPUT_FADV_SEQUENTIAL, Default_JSSE},
-        {INPUT_FADV_RANDOM, OpenSSL},
-        {INPUT_FADV_NORMAL, Default_JSSE_with_GCM},
+        {FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL, Default_JSSE},
+        {FS_OPTION_OPENFILE_READ_POLICY_RANDOM, OpenSSL},
+        {FS_OPTION_OPENFILE_READ_POLICY_DEFAULT, Default_JSSE_with_GCM},
     });
   }
 
@@ -215,7 +215,8 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
   public void testReadPolicyInFS() throws Throwable {
     describe("Verify the read policy is being consistently set");
     S3AFileSystem fs = getFileSystem();
-    assertEquals(S3AInputPolicy.getPolicy(seekPolicy), fs.getInputPolicy());
+    assertEquals(S3AInputPolicy.getPolicy(seekPolicy, S3AInputPolicy.Normal),
+        fs.getInputPolicy());
   }
 
   /**

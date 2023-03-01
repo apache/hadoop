@@ -31,6 +31,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +74,6 @@ class FsDatasetAsyncDiskService {
   
   private final DataNode datanode;
   private final FsDatasetImpl fsdatasetImpl;
-  private final ThreadGroup threadGroup;
   private Map<String, ThreadPoolExecutor> executors
       = new HashMap<String, ThreadPoolExecutor>();
   private Map<String, Set<Long>> deletedBlockIds 
@@ -91,7 +91,6 @@ class FsDatasetAsyncDiskService {
   FsDatasetAsyncDiskService(DataNode datanode, FsDatasetImpl fsdatasetImpl) {
     this.datanode = datanode;
     this.fsdatasetImpl = fsdatasetImpl;
-    this.threadGroup = new ThreadGroup(getClass().getSimpleName());
     maxNumThreadsPerVolume = datanode.getConf().getInt(
       DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_KEY,
           DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_DEFAULT);
@@ -110,7 +109,7 @@ class FsDatasetAsyncDiskService {
         synchronized (this) {
           thisIndex = counter++;
         }
-        Thread t = new Thread(threadGroup, r);
+        Thread t = new Thread(r);
         t.setName("Async disk worker #" + thisIndex +
             " for volume " + volume);
         return t;
@@ -218,16 +217,20 @@ class FsDatasetAsyncDiskService {
     }
   }
 
-  public void submitSyncFileRangeRequest(FsVolumeImpl volume,
-      final ReplicaOutputStreams streams, final long offset, final long nbytes,
-      final int flags) {
-    execute(volume, new Runnable() {
-      @Override
-      public void run() {
+  public void submitSyncFileRangeRequest(FsVolumeImpl volume, final ReplicaOutputStreams streams,
+      final long offset, final long nbytes, final int flags) {
+    execute(volume, () -> {
+      try {
+        streams.syncFileRangeIfPossible(offset, nbytes, flags);
+      } catch (NativeIOException e) {
         try {
-          streams.syncFileRangeIfPossible(offset, nbytes, flags);
-        } catch (NativeIOException e) {
-          LOG.warn("sync_file_range error", e);
+          LOG.warn("sync_file_range error. Volume: {}, Capacity: {}, Available space: {}, "
+                  + "File range offset: {}, length: {}, flags: {}", volume, volume.getCapacity(),
+              volume.getAvailable(), offset, nbytes, flags, e);
+        } catch (IOException ioe) {
+          LOG.warn("sync_file_range error. Volume: {}, Capacity: {}, "
+                  + "File range offset: {}, length: {}, flags: {}", volume, volume.getCapacity(),
+              offset, nbytes, flags, e);
         }
       }
     });
@@ -332,6 +335,13 @@ class FsDatasetAsyncDiskService {
     @Override
     public void run() {
       try {
+        // For testing, simulate the case asynchronously deletion of the
+        // replica task stacked pending.
+        DataNodeFaultInjector.get().delayDeleteReplica();
+        if (!fsdatasetImpl.removeReplicaFromMem(block, volume)) {
+          return;
+        }
+
         final long blockLength = replicaToDelete.getBlockDataLength();
         final long metaLength = replicaToDelete.getMetadataLength();
         boolean result;

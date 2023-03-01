@@ -63,7 +63,7 @@ import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.TRASH;
  * dst sub-namespace with distcp.
  *
  * 1. Move data from the source path to the destination path with distcp.
- * 2. Update the the mount entry.
+ * 2. Update the mount entry.
  * 3. Delete the source path to trash.
  */
 public class RouterFedBalance extends Configured implements Tool {
@@ -77,7 +77,7 @@ public class RouterFedBalance extends Configured implements Tool {
   private static final String TRASH_PROCEDURE = "trash-procedure";
 
   /**
-   * This class helps building the balance job.
+   * This class helps to build the balance job.
    */
   private class Builder {
     /* Force close all open files while there is no diff. */

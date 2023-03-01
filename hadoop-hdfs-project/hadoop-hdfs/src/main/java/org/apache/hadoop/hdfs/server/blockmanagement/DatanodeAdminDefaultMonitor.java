@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.util.CyclicIteration;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
 import org.apache.hadoop.util.ChunkedArrayList;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -113,6 +114,15 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
       numBlocksPerCheck =
           DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BLOCKS_PER_INTERVAL_DEFAULT;
     }
+
+    final String deprecatedKey = "dfs.namenode.decommission.nodes.per.interval";
+    final String strNodes = conf.get(deprecatedKey);
+    if (strNodes != null) {
+      LOG.warn("Deprecated configuration key {} will be ignored.", deprecatedKey);
+      LOG.warn("Please update your configuration to use {} instead.",
+          DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BLOCKS_PER_INTERVAL_KEY);
+    }
+
     LOG.info("Initialized the Default Decommission and Maintenance monitor");
   }
 
@@ -124,7 +134,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
   @Override
   public void stopTrackingNode(DatanodeDescriptor dn) {
     getPendingNodes().remove(dn);
-    outOfServiceNodeBlocks.remove(dn);
+    getCancelledNodes().add(dn);
   }
 
   @Override
@@ -135,6 +145,28 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
   @Override
   public int getNumNodesChecked() {
     return numNodesChecked;
+  }
+
+  @VisibleForTesting
+  @Override
+  public int getPendingRepLimit() {
+    return 0;
+  }
+
+  @Override
+  public void setPendingRepLimit(int pendingRepLimit) {
+    // nothing.
+  }
+
+  @VisibleForTesting
+  @Override
+  public int getBlocksPerLock() {
+    return 0;
+  }
+
+  @Override
+  public void setBlocksPerLock(int blocksPerLock) {
+    // nothing.
   }
 
   @Override
@@ -152,13 +184,14 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
     // Check decommission or maintenance progress.
     namesystem.writeLock();
     try {
+      processCancelledNodes();
       processPendingNodes();
       check();
     } catch (Exception e) {
       LOG.warn("DatanodeAdminMonitor caught exception when processing node.",
           e);
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("DatanodeAdminMonitorThread");
     }
     if (numBlocksChecked + numNodesChecked > 0) {
       LOG.info("Checked {} blocks and {} nodes this tick. {} nodes are now " +
@@ -180,12 +213,27 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
     }
   }
 
+  /**
+   * Process any nodes which have had their decommission or maintenance mode
+   * cancelled by an administrator.
+   *
+   * This method must be executed under the write lock to prevent the
+   * internal structures being modified concurrently.
+   */
+  private void processCancelledNodes() {
+    while(!getCancelledNodes().isEmpty()) {
+      DatanodeDescriptor dn = getCancelledNodes().poll();
+      outOfServiceNodeBlocks.remove(dn);
+    }
+  }
+
   private void check() {
     final Iterator<Map.Entry<DatanodeDescriptor, AbstractList<BlockInfo>>>
         it = new CyclicIteration<>(outOfServiceNodeBlocks,
         iterkey).iterator();
     final List<DatanodeDescriptor> toRemove = new ArrayList<>();
     final List<DatanodeDescriptor> unhealthyDns = new ArrayList<>();
+    boolean isValidState = true;
 
     while (it.hasNext() && !exceededNumBlocksPerCheck() && namesystem
         .isRunning()) {
@@ -250,6 +298,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
               // to track maintenance expiration.
               dnAdmin.setInMaintenance(dn);
             } else {
+              isValidState  = false;
               Preconditions.checkState(false,
                   "Node %s is in an invalid state! "
                       + "Invalid state: %s %s blocks are on this dn.",
@@ -273,7 +322,11 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         // an invalid state.
         LOG.warn("DatanodeAdminMonitor caught exception when processing node "
             + "{}.", dn, e);
-        getPendingNodes().add(dn);
+        if(isValidState){
+          getPendingNodes().add(dn);
+        } else {
+          LOG.warn("Ignoring the node {} which is in invalid state", dn);
+        }
         toRemove.add(dn);
         unhealthyDns.remove(dn);
       } finally {
@@ -373,7 +426,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         // lock.
         // Yielding is required in case of block number is greater than the
         // configured per-iteration-limit.
-        namesystem.writeUnlock();
+        namesystem.writeUnlock("processBlocksInternal");
         try {
           LOG.debug("Yielded lock during decommission/maintenance check");
           Thread.sleep(0, 500);
@@ -390,8 +443,10 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
       // Remove the block from the list if it's no longer in the block map,
       // e.g. the containing file has been deleted
       if (blockManager.blocksMap.getStoredBlock(block) == null) {
-        LOG.trace("Removing unknown block {}", block);
-        it.remove();
+        if (pruneReliableBlocks) {
+          LOG.trace("Removing unknown block {}", block);
+          it.remove();
+        }
         continue;
       }
 

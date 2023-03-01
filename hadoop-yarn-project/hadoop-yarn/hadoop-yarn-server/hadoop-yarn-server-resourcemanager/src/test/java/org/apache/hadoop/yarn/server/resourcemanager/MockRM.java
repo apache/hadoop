@@ -20,7 +20,9 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -54,8 +56,13 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
@@ -64,6 +71,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -787,6 +795,7 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected AdminService createAdminService() {
+    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
     return new AdminService(this) {
       @Override
       protected void startServer() {
@@ -796,6 +805,19 @@ public class MockRM extends ResourceManager {
       @Override
       protected void stopServer() {
         // don't do anything
+      }
+
+      @Override
+      public RefreshServiceAclsResponse refreshServiceAcls(RefreshServiceAclsRequest request)
+          throws YarnException, IOException {
+        Configuration config = this.getConfig();
+        boolean authorization =
+            config.getBoolean(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, false);
+        if (!authorization) {
+          throw RPCUtil.getRemoteException(new IOException("Service Authorization (" +
+              CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION + ") not enabled."));
+        }
+        return recordFactory.newRecordInstance(RefreshServiceAclsResponse.class);
       }
     };
   }
@@ -1009,6 +1031,31 @@ public class MockRM extends ResourceManager {
     LOG.info("app is removed from scheduler, " + appId);
   }
 
+  /**
+   * Wait until a container has reached a completion state.
+   * The timeout is 20 seconds.
+   * @param nm A mock nodemanager
+   * @param rm A mock resourcemanager
+   * @param amContainerId The id of an am container
+   * @param container A container
+   * @throws Exception
+   *         if interrupted while waiting for the completion transition
+   *         or an unexpected error while MockNM is hearbeating.
+   */
+  public static void waitForContainerCompletion(MockRM rm, MockNM nm,
+    ContainerId amContainerId, RMContainer container) throws Exception {
+    ContainerId containerId = container.getContainerId();
+    if (null != rm.scheduler.getRMContainer(containerId)) {
+      if (containerId.equals(amContainerId)) {
+        rm.waitForState(nm, containerId, RMContainerState.COMPLETED);
+      } else {
+        rm.waitForState(nm, containerId, RMContainerState.KILLED);
+      }
+    } else {
+      rm.drainEvents();
+    }
+  }
+
   private void drainEventsImplicitly() {
     if (!disableDrainEventsImplicitly) {
       drainEvents();
@@ -1034,5 +1081,10 @@ public class MockRM extends ResourceManager {
 
   public RMStateStore getRMStateStore() {
     return getRMContext().getStateStore();
+  }
+
+  @VisibleForTesting
+  public ReservationSystem getReservationSystem(){
+    return this.reservationSystem;
   }
 }

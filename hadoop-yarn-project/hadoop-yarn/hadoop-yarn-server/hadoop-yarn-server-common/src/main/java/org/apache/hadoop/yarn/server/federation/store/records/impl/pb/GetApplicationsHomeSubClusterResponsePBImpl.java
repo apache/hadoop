@@ -122,6 +122,7 @@ public class GetApplicationsHomeSubClusterResponsePBImpl
       return;
     }
     this.appsHomeSubCluster = appsHomeSubClusters;
+    addSubClustersInfoToProto();
   }
 
   private void initSubClustersInfoList() {
@@ -132,7 +133,7 @@ public class GetApplicationsHomeSubClusterResponsePBImpl
         viaProto ? proto : builder;
     List<ApplicationHomeSubClusterProto> subClusterInfosList =
         p.getAppSubclusterMapList();
-    appsHomeSubCluster = new ArrayList<ApplicationHomeSubCluster>();
+    appsHomeSubCluster = new ArrayList<>();
 
     for (ApplicationHomeSubClusterProto r : subClusterInfosList) {
       appsHomeSubCluster.add(convertFromProtoFormat(r));

@@ -65,6 +65,7 @@ public class DecayRpcSchedulerDetailedMetrics {
 
   /**
    * Initialize the metrics for JMX with priority levels.
+   * @param numLevels input numLevels.
    */
   public void init(int numLevels) {
     LOG.info("Initializing RPC stats for {} priority levels", numLevels);
@@ -106,14 +107,16 @@ public class DecayRpcSchedulerDetailedMetrics {
   }
 
   /**
-   * Returns the rate name inside the metric.
+   * @return Returns the rate name inside the metric.
+   * @param priority input priority.
    */
   public String getQueueName(int priority) {
     return "DecayRPCSchedulerPriority."+priority+".RpcQueueTime";
   }
 
   /**
-   * Returns the rate name inside the metric.
+   * @return Returns the rate name inside the metric.
+   * @param priority input priority.
    */
   public String getProcessingName(int priority) {
     return "DecayRPCSchedulerPriority."+priority+".RpcProcessingTime";

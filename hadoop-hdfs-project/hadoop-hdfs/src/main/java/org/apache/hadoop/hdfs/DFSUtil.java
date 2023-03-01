@@ -69,6 +69,7 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -76,7 +77,6 @@ import org.apache.hadoop.net.DomainNameResolver;
 import org.apache.hadoop.net.DomainNameResolverFactory;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -725,8 +725,9 @@ public class DFSUtil {
     } else {
       // Ensure that the internal service is indeed in the list of all available
       // nameservices.
-      Set<String> availableNameServices = Sets.newHashSet(conf
-          .getTrimmedStringCollection(DFSConfigKeys.DFS_NAMESERVICES));
+      Collection<String> namespaces = conf
+          .getTrimmedStringCollection(DFSConfigKeys.DFS_NAMESERVICES);
+      Set<String> availableNameServices = new HashSet<>(namespaces);
       for (String nsId : parentNameServices) {
         if (!availableNameServices.contains(nsId)) {
           throw new IOException("Unknown nameservice: " + nsId);
@@ -1935,5 +1936,19 @@ public class DFSUtil {
 
     return path.charAt(parent.length()) == Path.SEPARATOR_CHAR
         || parent.equals(Path.SEPARATOR);
+  }
+
+  /**
+   * Add transfer rate metrics for valid data read and duration values.
+   * @param metrics metrics for datanodes
+   * @param read bytes read
+   * @param duration read duration
+   */
+  public static void addTransferRateMetric(final DataNodeMetrics metrics, final long read, final long duration) {
+    if (read >= 0 && duration > 0) {
+        metrics.addReadTransferRate(read * 1000 / duration);
+    } else {
+      LOG.warn("Unexpected value for data transfer bytes={} duration={}", read, duration);
+    }
   }
 }

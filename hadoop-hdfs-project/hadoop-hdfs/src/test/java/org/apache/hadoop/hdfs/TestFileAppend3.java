@@ -26,7 +26,6 @@ import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.hdfs.server.datanode.FsDatasetTestUtils.MaterializedReplica;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.mockito.invocation.InvocationOnMock;
 import static org.mockito.Mockito.spy;

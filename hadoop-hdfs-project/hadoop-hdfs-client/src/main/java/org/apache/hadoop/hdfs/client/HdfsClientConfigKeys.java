@@ -78,6 +78,8 @@ public interface HdfsClientConfigKeys {
   int     DFS_NAMENODE_HTTPS_PORT_DEFAULT = 9871;
   String  DFS_NAMENODE_HTTPS_ADDRESS_KEY = "dfs.namenode.https-address";
   String DFS_HA_NAMENODES_KEY_PREFIX = "dfs.ha.namenodes";
+  String DFS_RBF_OBSERVER_READ_ENABLE = "dfs.client.rbf.observer.read.enable";
+  boolean DFS_RBF_OBSERVER_READ_ENABLE_DEFAULT = false;
   int DFS_NAMENODE_RPC_PORT_DEFAULT = 8020;
   String DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY =
       "dfs.namenode.kerberos.principal";
@@ -272,6 +274,18 @@ public interface HdfsClientConfigKeys {
 
   String DFS_LEASE_HARDLIMIT_KEY = "dfs.namenode.lease-hard-limit-sec";
   long DFS_LEASE_HARDLIMIT_DEFAULT = 20 * 60;
+
+  String DFS_CLIENT_FSCK_CONNECT_TIMEOUT =
+      "dfs.client.fsck.connect.timeout";
+  int DFS_CLIENT_FSCK_CONNECT_TIMEOUT_DEFAULT = 60 * 1000;
+
+  String DFS_CLIENT_FSCK_READ_TIMEOUT =
+      "dfs.client.fsck.read.timeout";
+  int DFS_CLIENT_FSCK_READ_TIMEOUT_DEFAULT = 60 * 1000;
+
+  String DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY =
+      "dfs.client.output.stream.uniq.default.key";
+  String DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY_DEFAULT = "DEFAULT";
 
   /**
    * These are deprecated config keys to client code.

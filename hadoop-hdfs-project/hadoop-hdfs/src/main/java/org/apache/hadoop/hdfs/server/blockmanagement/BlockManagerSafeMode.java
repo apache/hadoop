@@ -670,7 +670,7 @@ class BlockManagerSafeMode {
             break;
           }
         } finally {
-          namesystem.writeUnlock();
+          namesystem.writeUnlock("leaveSafeMode");
         }
 
         try {

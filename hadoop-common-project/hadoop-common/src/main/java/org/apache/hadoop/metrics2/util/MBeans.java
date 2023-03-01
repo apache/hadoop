@@ -63,8 +63,8 @@ public final class MBeans {
    * Where the {@literal <serviceName> and <nameName>} are the supplied
    * parameters.
    *
-   * @param serviceName
-   * @param nameName
+   * @param serviceName serviceName.
+   * @param nameName nameName.
    * @param theMbean - the MBean to register
    * @return the named used to register the MBean
    */
@@ -79,8 +79,8 @@ public final class MBeans {
    * Where the {@literal <serviceName> and <nameName>} are the supplied
    * parameters.
    *
-   * @param serviceName
-   * @param nameName
+   * @param serviceName serviceName.
+   * @param nameName nameName.
    * @param properties - Key value pairs to define additional JMX ObjectName
    *                     properties.
    * @param theMbean    - the MBean to register

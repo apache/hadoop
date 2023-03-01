@@ -34,7 +34,7 @@ import static java.util.Objects.requireNonNull;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public final class CloseableTaskPoolSubmitter implements TaskPool.Submitter,
+public class CloseableTaskPoolSubmitter implements TaskPool.Submitter,
     Closeable {
 
   /** Executors. */

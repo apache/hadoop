@@ -553,7 +553,7 @@ public class TestServiceAM extends ServiceTestUtils{
       am.stop();
       am.close();
     } catch (Exception e) {
-      LOG.error("Fail to sync sysfs: {}", e);
+      LOG.error("Fail to sync sysfs.", e);
       Assert.fail("Fail to sync sysfs.");
     }
   }

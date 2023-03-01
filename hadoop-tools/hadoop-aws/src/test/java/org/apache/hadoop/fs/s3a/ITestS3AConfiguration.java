@@ -414,6 +414,7 @@ public class ITestS3AConfiguration {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testCloseIdempotent() throws Throwable {
     conf = new Configuration();
     fs = S3ATestUtils.createTestFileSystem(conf);
@@ -454,17 +455,6 @@ public class ITestS3AConfiguration {
     tmp2.delete();
     assertNotEquals("round robin not working",
         tmp1.getParent(), tmp2.getParent());
-  }
-
-  @Test
-  public void testReadAheadRange() throws Exception {
-    conf = new Configuration();
-    conf.set(Constants.READAHEAD_RANGE, "300K");
-    fs = S3ATestUtils.createTestFileSystem(conf);
-    assertNotNull(fs);
-    long readAheadRange = fs.getReadAheadRange();
-    assertNotNull(readAheadRange);
-    assertEquals("Read Ahead Range Incorrect.", 300 * 1024, readAheadRange);
   }
 
   @Test

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -30,6 +31,7 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.util.functional.RemoteIterators;
@@ -154,6 +156,38 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
           listStatusCalls,
           getFileStatusCalls);
 
+      describe("Get content summary for directory");
+
+      NanoTimer getContentSummaryTimer = new NanoTimer();
+
+      ContentSummary rootPathSummary = fs.getContentSummary(scaleTestDir);
+      ContentSummary testPathSummary = fs.getContentSummary(listDir);
+
+      getContentSummaryTimer.end("getContentSummary of %s", created);
+
+      // only two list operations should have taken place
+      print(LOG,
+          metadataRequests,
+          listRequests,
+          listContinueRequests,
+          listStatusCalls,
+          getFileStatusCalls);
+      assertEquals(listRequests.toString(), 2, listRequests.diff());
+      reset(metadataRequests,
+          listRequests,
+          listContinueRequests,
+          listStatusCalls,
+          getFileStatusCalls);
+
+      assertTrue("Root directory count should be > test path",
+          rootPathSummary.getDirectoryCount() > testPathSummary.getDirectoryCount());
+      assertTrue("Root file count should be >= to test path",
+          rootPathSummary.getFileCount() >= testPathSummary.getFileCount());
+      assertEquals("Incorrect directory count", created.getDirCount() + 1,
+          testPathSummary.getDirectoryCount());
+      assertEquals("Incorrect file count", created.getFileCount(),
+          testPathSummary.getFileCount());
+
     } finally {
       describe("deletion");
       // deletion at the end of the run
@@ -224,9 +258,9 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
         ObjectMetadata om = fs.newObjectMetadata(0L);
         PutObjectRequest put = requestFactory
             .newPutObjectRequest(fs.pathToKey(file), om,
-                new FailingInputStream());
+                null, new FailingInputStream());
         futures.add(submit(executorService, () ->
-            writeOperationHelper.putObject(put)));
+            writeOperationHelper.putObject(put, PutObjectOptions.keepingDirs())));
       }
       LOG.info("Waiting for PUTs to complete");
       waitForCompletion(futures);

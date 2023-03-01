@@ -90,7 +90,7 @@ Usage
 
 ### Command Options
 
-Command `submit` has 4 options:
+Command `submit` has the following options:
 
 | Option key                     | Description                          | Default |
 | ------------------------------ | ------------------------------------ | ------- |

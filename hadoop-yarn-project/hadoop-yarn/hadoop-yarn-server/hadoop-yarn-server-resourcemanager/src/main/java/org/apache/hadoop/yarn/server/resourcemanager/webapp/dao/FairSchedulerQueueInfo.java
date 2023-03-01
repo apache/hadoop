@@ -154,6 +154,7 @@ public class FairSchedulerQueueInfo {
   
   /**
    * Returns the steady fair share as a fraction of the entire cluster capacity.
+   * @return steady fairshare memoryfraction.
    */
   public float getSteadyFairShareMemoryFraction() {
     return fractionMemSteadyFairShare;
@@ -161,6 +162,7 @@ public class FairSchedulerQueueInfo {
 
   /**
    * Returns the fair share as a fraction of the entire cluster capacity.
+   * @return fair share memory fraction.
    */
   public float getFairShareMemoryFraction() {
     return fractionMemFairShare;
@@ -168,13 +170,15 @@ public class FairSchedulerQueueInfo {
 
   /**
    * Returns the steady fair share of this queue in megabytes.
+   * @return steady fair share.
    */
   public ResourceInfo getSteadyFairShare() {
     return steadyFairResources;
   }
 
   /**
-   * Returns the fair share of this queue in megabytes
+   * Returns the fair share of this queue in megabytes.
+   * @return fair share.
    */
   public ResourceInfo getFairShare() {
     return fairResources;
@@ -232,6 +236,7 @@ public class FairSchedulerQueueInfo {
   /**
    * Returns the memory used by this queue as a fraction of the entire 
    * cluster capacity.
+   * @return used memory fraction.
    */
   public float getUsedMemoryFraction() {
     return fractionMemUsed;
@@ -240,6 +245,7 @@ public class FairSchedulerQueueInfo {
   /**
    * Returns the capacity of this queue as a fraction of the entire cluster 
    * capacity.
+   * @return max resources fraction.
    */
   public float getMaxResourcesFraction() {
     return fractionMemMaxShare;
@@ -247,6 +253,7 @@ public class FairSchedulerQueueInfo {
   
   /**
    * Returns the name of the scheduling policy used by this queue.
+   * @return SchedulingPolicy.
    */
   public String getSchedulingPolicy() {
     return schedulingPolicy;

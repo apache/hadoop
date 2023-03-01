@@ -22,7 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreSerializer;
 
 /**
- * API request for retrieving a all non-expired router registrations present in
+ * API request for retrieving an all non-expired router registrations present in
  * the state store.
  */
 public abstract class GetRouterRegistrationsRequest {

@@ -57,10 +57,17 @@ public final class OperationCost {
   public static final int DELETE_MARKER_REQUEST = DELETE_OBJECT_REQUEST;
 
   /**
-   * No IO takes place.
+   * No Head or List IO takes place; other operations
+   * may still take place.
    */
   public static final OperationCost NO_IO =
       new OperationCost(0, 0);
+
+  /**
+   * More detailed description of the NO_IO cost.
+   */
+  public static final OperationCost NO_HEAD_OR_LIST =
+      NO_IO;
 
   /** A HEAD operation. */
   public static final OperationCost HEAD_OPERATION = new OperationCost(1, 0);
@@ -81,7 +88,7 @@ public final class OperationCost {
   /**
    * Cost of getFileStatus on root directory.
    */
-  public static final OperationCost ROOT_FILE_STATUS_PROBE = NO_IO;
+  public static final OperationCost ROOT_FILE_STATUS_PROBE = NO_HEAD_OR_LIST;
 
   /**
    * Cost of {@link org.apache.hadoop.fs.s3a.impl.StatusProbeEnum#ALL}.

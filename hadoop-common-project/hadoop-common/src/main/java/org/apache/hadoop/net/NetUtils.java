@@ -133,7 +133,8 @@ public class NetUtils {
    * Get the socket factory corresponding to the given proxy URI. If the
    * given proxy URI corresponds to an absence of configuration parameter,
    * returns null. If the URI is malformed raises an exception.
-   * 
+   *
+   * @param conf configuration.
    * @param propValue the property which is the class name of the
    *        SocketFactory to instantiate; assumed non null and non empty.
    * @return a socket factory as defined in the property value.
@@ -151,19 +152,26 @@ public class NetUtils {
   }
 
   /**
-   * Util method to build socket addr from either:
+   * Util method to build socket addr from either.
    *   {@literal <host>:<port>}
    *   {@literal <fs>://<host>:<port>/<path>}
+   *
+   * @param target target.
+   * @return socket addr.
    */
   public static InetSocketAddress createSocketAddr(String target) {
     return createSocketAddr(target, -1);
   }
 
   /**
-   * Util method to build socket addr from either:
+   * Util method to build socket addr from either.
    *   {@literal <host>}
    *   {@literal <host>:<port>}
    *   {@literal <fs>://<host>:<port>/<path>}
+   *
+   * @param target target.
+   * @param defaultPort default port.
+   * @return socket addr.
    */
   public static InetSocketAddress createSocketAddr(String target,
                                                    int defaultPort) {
@@ -183,6 +191,7 @@ public class NetUtils {
    * @param configName the name of the configuration from which
    *                   <code>target</code> was loaded. This is used in the
    *                   exception message in the case that parsing fails.
+   * @return socket addr.
    */
   public static InetSocketAddress createSocketAddr(String target,
                                                    int defaultPort,
@@ -204,6 +213,7 @@ public class NetUtils {
    *                   <code>target</code> was loaded. This is used in the
    *                   exception message in the case that parsing fails.
    * @param useCacheIfPresent Whether use cache when create URI
+   * @return  socket addr
    */
   public static InetSocketAddress createSocketAddr(String target,
                                                    int defaultPort,
@@ -361,8 +371,8 @@ public class NetUtils {
    * daemons, one can set up mappings from those hostnames to "localhost".
    * {@link NetUtils#getStaticResolution(String)} can be used to query for
    * the actual hostname. 
-   * @param host
-   * @param resolvedName
+   * @param host the hostname or IP use to instantiate the object.
+   * @param resolvedName resolved name.
    */
   public static void addStaticResolution(String host, String resolvedName) {
     synchronized (hostToResolved) {
@@ -374,7 +384,7 @@ public class NetUtils {
    * Retrieves the resolved name for the passed host. The resolved name must
    * have been set earlier using 
    * {@link NetUtils#addStaticResolution(String, String)}
-   * @param host
+   * @param host the hostname or IP use to instantiate the object.
    * @return the resolution
    */
   public static String getStaticResolution(String host) {
@@ -410,7 +420,7 @@ public class NetUtils {
    * the server binds to "0.0.0.0". This returns "hostname:port" of the server,
    * or "127.0.0.1:port" when the getListenerAddress() returns "0.0.0.0:port".
    * 
-   * @param server
+   * @param server server.
    * @return socket address that a client can use to connect to the server.
    */
   public static InetSocketAddress getConnectAddress(Server server) {
@@ -438,8 +448,10 @@ public class NetUtils {
   
   /**
    * Same as <code>getInputStream(socket, socket.getSoTimeout()).</code>
-   * <br><br>
-   * 
+   *
+   * @param socket socket.
+   * @throws IOException raised on errors performing I/O.
+   * @return SocketInputWrapper for reading from the socket.
    * @see #getInputStream(Socket, long)
    */
   public static SocketInputWrapper getInputStream(Socket socket) 
@@ -462,11 +474,11 @@ public class NetUtils {
    *
    * @see Socket#getChannel()
    * 
-   * @param socket
+   * @param socket socket.
    * @param timeout timeout in milliseconds. zero for waiting as
    *                long as necessary.
    * @return SocketInputWrapper for reading from the socket.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static SocketInputWrapper getInputStream(Socket socket, long timeout) 
                                            throws IOException {
@@ -494,9 +506,9 @@ public class NetUtils {
    * 
    * @see #getOutputStream(Socket, long)
    * 
-   * @param socket
+   * @param socket socket.
    * @return OutputStream for writing to the socket.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */  
   public static OutputStream getOutputStream(Socket socket) 
                                              throws IOException {
@@ -516,11 +528,11 @@ public class NetUtils {
    * 
    * @see Socket#getChannel()
    * 
-   * @param socket
+   * @param socket socket.
    * @param timeout timeout in milliseconds. This may not always apply. zero
    *        for waiting as long as necessary.
    * @return OutputStream for writing to the socket.
-   * @throws IOException   
+   * @throws IOException raised on errors performing I/O.
    */
   public static OutputStream getOutputStream(Socket socket, long timeout) 
                                              throws IOException {
@@ -541,9 +553,10 @@ public class NetUtils {
    * 
    * @see java.net.Socket#connect(java.net.SocketAddress, int)
    * 
-   * @param socket
+   * @param socket socket.
    * @param address the remote address
    * @param timeout timeout in milliseconds
+   * @throws IOException raised on errors performing I/O.
    */
   public static void connect(Socket socket,
       SocketAddress address,
@@ -555,10 +568,11 @@ public class NetUtils {
    * Like {@link NetUtils#connect(Socket, SocketAddress, int)} but
    * also takes a local address and port to bind the socket to. 
    * 
-   * @param socket
+   * @param socket socket.
    * @param endpoint the remote address
    * @param localAddr the local address to bind the socket to
    * @param timeout timeout in milliseconds
+   * @throws IOException raised on errors performing I/O.
    */
   public static void connect(Socket socket, 
                              SocketAddress endpoint,
@@ -644,7 +658,7 @@ public class NetUtils {
    * Performs a sanity check on the list of hostnames/IPs to verify they at least
    * appear to be valid.
    * @param names - List of hostnames/IPs
-   * @throws UnknownHostException
+   * @throws UnknownHostException Unknown Host Exception.
    */
   public static void verifyHostnames(String[] names) throws UnknownHostException {
     for (String name: names) {
@@ -735,6 +749,9 @@ public class NetUtils {
 
   /**
    * Compose a "host:port" string from the address.
+   *
+   * @param addr address.
+   * @return hort port string.
    */
   public static String getHostPortString(InetSocketAddress addr) {
     return addr.getHostName() + ":" + addr.getPort();
@@ -969,6 +986,8 @@ public class NetUtils {
   }
 
   /**
+   * isValidSubnet.
+   * @param subnet subnet.
    * @return true if the given string is a subnet specified
    *     using CIDR notation, false otherwise
    */
@@ -1004,6 +1023,7 @@ public class NetUtils {
    * @param returnSubinterfaces
    *            whether to return IPs associated with subinterfaces
    * @throws IllegalArgumentException if subnet is invalid
+   * @return ips.
    */
   public static List<InetAddress> getIPs(String subnet,
       boolean returnSubinterfaces) {
@@ -1083,8 +1103,8 @@ public class NetUtils {
    * Return an @{@link InetAddress} to bind to. If bindWildCardAddress is true
    * than returns null.
    *
-   * @param localAddr
-   * @param bindWildCardAddress
+   * @param localAddr local addr.
+   * @param bindWildCardAddress bind wildcard address.
    * @return InetAddress
    */
   public static InetAddress bindToLocalAddress(InetAddress localAddr, boolean

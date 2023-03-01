@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.server.datanode.BPServiceActor.Scheduler;
@@ -202,6 +203,18 @@ public class TestBpServiceActorScheduler {
       assertTrue(scheduler.isLifelineDue(now));
       assertThat(scheduler.getLifelineWaitTime(), is(0L));
     }
+  }
+
+  @Test
+  public void testScheduleLifelineScheduleTime() {
+    Scheduler mockScheduler = spy(new Scheduler(
+        HEARTBEAT_INTERVAL_MS, LIFELINE_INTERVAL_MS,
+        BLOCK_REPORT_INTERVAL_MS, OUTLIER_REPORT_INTERVAL_MS));
+    long now = Time.monotonicNow();
+    mockScheduler.scheduleNextLifeline(now);
+    long mockMonotonicNow = now + LIFELINE_INTERVAL_MS * 2;
+    doReturn(mockMonotonicNow).when(mockScheduler).monotonicNow();
+    assertTrue(mockScheduler.getLifelineWaitTime() >= 0);
   }
 
   @Test

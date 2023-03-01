@@ -42,7 +42,11 @@ public class MultipleIOException extends IOException {
   /** @return the underlying exceptions */
   public List<IOException> getExceptions() {return exceptions;}
 
-  /** A convenient method to create an {@link IOException}. */
+  /**
+   * A convenient method to create an {@link IOException}.
+   * @param exceptions IOException List.
+   * @return IOException.
+   */
   public static IOException createIOException(List<IOException> exceptions) {
     if (exceptions == null || exceptions.isEmpty()) {
       return null;
@@ -60,7 +64,10 @@ public class MultipleIOException extends IOException {
   public static class Builder {
     private List<IOException> exceptions;
     
-    /** Add the given {@link Throwable} to the exception list. */
+    /**
+     * Add the given {@link Throwable} to the exception list.
+     * @param t Throwable.
+     */
     public void add(Throwable t) {
       if (exceptions == null) {
         exceptions = new ArrayList<>();

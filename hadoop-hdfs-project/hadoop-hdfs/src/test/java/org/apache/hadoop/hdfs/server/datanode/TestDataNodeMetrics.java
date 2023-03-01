@@ -380,6 +380,7 @@ public class TestDataNodeMetrics {
   @Test(timeout=120000)
   public void testDataNodeTimeSpend() throws Exception {
     Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY, "" + 60);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       final FileSystem fs = cluster.getFileSystem();
@@ -391,6 +392,7 @@ public class TestDataNodeMetrics {
 
       final long startWriteValue = getLongCounter("TotalWriteTime", rb);
       final long startReadValue = getLongCounter("TotalReadTime", rb);
+      assertCounter("ReadTransferRateNumOps", 0L, rb);
       final AtomicInteger x = new AtomicInteger(0);
 
       // Lets Metric system update latest metrics
@@ -410,6 +412,8 @@ public class TestDataNodeMetrics {
           MetricsRecordBuilder rbNew = getMetrics(datanode.getMetrics().name());
           final long endWriteValue = getLongCounter("TotalWriteTime", rbNew);
           final long endReadValue = getLongCounter("TotalReadTime", rbNew);
+          assertCounter("ReadTransferRateNumOps", 1L, rbNew);
+          assertQuantileGauges("ReadTransferRate" + "60s", rbNew, "Rate");
           return endWriteValue > startWriteValue
               && endReadValue > startReadValue;
         }
@@ -602,6 +606,60 @@ public class TestDataNodeMetrics {
     DataNode dn = cluster.getDataNodes().get(0);
     MetricsRecordBuilder rb = getMetrics(dn.getMetrics().name());
     assertCounter("HeartbeatsNumOps", 1L, rb);
+  }
+  @Test(timeout = 60000)
+  public void testSlowMetrics() throws Exception {
+    DataNodeFaultInjector dnFaultInjector = new DataNodeFaultInjector() {
+      @Override public void delay() {
+        try {
+          Thread.sleep(310);
+        } catch (InterruptedException e) {
+        }
+      }
+    };
+    DataNodeFaultInjector oldDnInjector = DataNodeFaultInjector.get();
+    DataNodeFaultInjector.set(dnFaultInjector);
+
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      final FileSystem fs = cluster.getFileSystem();
+      List<DataNode> datanodes = cluster.getDataNodes();
+      assertEquals(datanodes.size(), 3);
+      final DataNode datanode = datanodes.get(0);
+      MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
+      final long longFileLen = 10;
+      final long startFlushOrSyncValue =
+          getLongCounter("SlowFlushOrSyncCount", rb);
+      final long startAckToUpstreamValue =
+          getLongCounter("SlowAckToUpstreamCount", rb);
+      final AtomicInteger x = new AtomicInteger(0);
+
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override public Boolean get() {
+          x.getAndIncrement();
+          try {
+            DFSTestUtil
+                .createFile(fs, new Path("/time.txt." + x.get()), longFileLen,
+                    (short) 3, Time.monotonicNow());
+          } catch (IOException ioe) {
+            LOG.error("Caught IOException while ingesting DN metrics", ioe);
+            return false;
+          }
+          MetricsRecordBuilder rbNew = getMetrics(datanode.getMetrics().name());
+          final long endFlushOrSyncValue = getLongCounter("SlowFlushOrSyncCount", rbNew);
+          final long endAckToUpstreamValue = getLongCounter("SlowAckToUpstreamCount", rbNew);
+          return endFlushOrSyncValue > startFlushOrSyncValue
+              && endAckToUpstreamValue > startAckToUpstreamValue;
+        }
+      }, 30, 30000);
+    } finally {
+      DataNodeFaultInjector.set(oldDnInjector);
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 
   @Test

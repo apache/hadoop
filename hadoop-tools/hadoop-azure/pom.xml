@@ -164,6 +164,19 @@
           <groupId>org.apache.commons</groupId>
           <artifactId>commons-lang3</artifactId>
         </exclusion>
+        <!-- comes with hadoop-common -->
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -604,6 +617,7 @@
                     <exclude>**/azurebfs/ITestAzureBlobFileSystemListStatus.java</exclude>
                     <exclude>**/azurebfs/extensions/ITestAbfsDelegationTokens.java</exclude>
                     <exclude>**/azurebfs/ITestSmallWriteOptimization.java</exclude>
+                    <exclude>**/azurebfs/ITestAbfsStreamStatistics*.java</exclude>
                     <exclude>**/azurebfs/services/ITestReadBufferManager.java</exclude>
                     <exclude>**/azurebfs/commit/*.java</exclude>
                   </excludes>
@@ -647,6 +661,7 @@
                     <include>**/azurebfs/extensions/ITestAbfsDelegationTokens.java</include>
                     <include>**/azurebfs/ITestSmallWriteOptimization.java</include>
                     <include>**/azurebfs/services/ITestReadBufferManager.java</include>
+                    <include>**/azurebfs/ITestAbfsStreamStatistics*.java</include>
                     <include>**/azurebfs/commit/*.java</include>
                   </includes>
                 </configuration>

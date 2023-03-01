@@ -75,7 +75,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 /**
- * The the RPC interface of the {@link getRouter()} implemented by
+ * The RPC interface of the {@link getRouter()} implemented by
  * {@link RouterRpcServer}.
  */
 public class TestRouterRpcMultiDestination extends TestRouterRpc {
@@ -440,7 +440,7 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
   @Test
   public void testCallerContextWithMultiDestinations() throws IOException {
     GenericTestUtils.LogCapturer auditLog =
-        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
     // set client context
     CallerContext.setCurrent(

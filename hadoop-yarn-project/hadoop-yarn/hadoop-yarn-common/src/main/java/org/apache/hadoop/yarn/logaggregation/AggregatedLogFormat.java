@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -76,6 +77,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
+
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 @Public
 @Evolving
@@ -576,9 +582,16 @@ public class AggregatedLogFormat {
       try {
         FileContext fileContext =
             FileContext.getFileContext(remoteAppLogFile.toUri(), conf);
-        this.fsDataIStream = fileContext.open(remoteAppLogFile);
+        FileStatus status = fileContext.getFileStatus(remoteAppLogFile);
+        this.fsDataIStream = awaitFuture(
+            fileContext.openFile(remoteAppLogFile)
+                .opt(FS_OPTION_OPENFILE_READ_POLICY,
+                    FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)
+                .opt(FS_OPTION_OPENFILE_LENGTH,
+                    status.getLen())   // file length hint for object stores
+                .build());
         reader = new TFile.Reader(this.fsDataIStream,
-            fileContext.getFileStatus(remoteAppLogFile).getLen(), conf);
+            status.getLen(), conf);
         this.scanner = reader.createScanner();
       } catch (IOException ioe) {
         close();
@@ -906,6 +919,7 @@ public class AggregatedLogFormat {
      * @param logUploadedTime the log uploaded time stamp
      * @param logType the given log type
      * @throws IOException if we can not read the container logs
+     * @return If logType contains fileType, return 1, otherwise return 0.
      */
     public static int readContainerLogsForALogType(
         DataInputStream valueStream, PrintStream out, long logUploadedTime,
@@ -921,7 +935,9 @@ public class AggregatedLogFormat {
      * @param out the output print stream
      * @param logUploadedTime the log uploaded time stamp
      * @param logType the given log type
+     * @param bytes log bytes.
      * @throws IOException if we can not read the container logs
+     * @return If logType contains fileType, return 1, otherwise return 0.
      */
     public static int readContainerLogsForALogType(
         DataInputStream valueStream, PrintStream out, long logUploadedTime,

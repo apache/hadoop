@@ -46,6 +46,7 @@ public interface VersionedProtocol {
    *         a list of its supported methods
    * @see ProtocolSignature#getProtocolSignature(VersionedProtocol, String, 
    *                long, int) for a default implementation
+   * @throws IOException raised on errors performing I/O.
    */
   public ProtocolSignature getProtocolSignature(String protocol, 
                                  long clientVersion,

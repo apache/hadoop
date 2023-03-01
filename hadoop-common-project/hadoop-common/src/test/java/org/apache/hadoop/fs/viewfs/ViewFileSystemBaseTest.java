@@ -460,6 +460,148 @@ abstract public class ViewFileSystemBaseTest {
         .assertIsFile(fsTarget, new Path(targetTestRoot, "data/fooBar"));
   }
 
+
+  // rename across nested mount points that point to same target also fail
+  @Test
+  public void testRenameAcrossNestedMountPointSameTarget() throws IOException {
+    setUpNestedMountPoint();
+    fileSystemTestHelper.createFile(fsView, "/user/foo");
+    try {
+      // Nested mount points point to the same target should fail
+      // /user -> /user
+      // /user/userA -> /user
+      // Rename strategy: SAME_MOUNTPOINT
+      fsView.rename(new Path("/user/foo"), new Path("/user/userA/foo"));
+      ContractTestUtils.fail("IOException is not thrown on rename operation");
+    } catch (IOException e) {
+      GenericTestUtils
+          .assertExceptionContains("Renames across Mount points not supported",
+              e);
+    }
+  }
+
+
+  // rename across nested mount points fail if the mount link targets are different
+  // even if the targets are part of the same target FS
+  @Test
+  public void testRenameAcrossMountPointDifferentTarget() throws IOException {
+    setUpNestedMountPoint();
+    fileSystemTestHelper.createFile(fsView, "/data/foo");
+    // /data -> /data
+    // /data/dataA -> /dataA
+    // Rename strategy: SAME_MOUNTPOINT
+    try {
+      fsView.rename(new Path("/data/foo"), new Path("/data/dataA/fooBar"));
+      ContractTestUtils.fail("IOException is not thrown on rename operation");
+    } catch (IOException e) {
+      GenericTestUtils
+          .assertExceptionContains("Renames across Mount points not supported",
+              e);
+    }
+  }
+
+  // RenameStrategy SAME_TARGET_URI_ACROSS_MOUNTPOINT enabled
+  // to rename across nested mount points that point to same target URI
+  @Test
+  public void testRenameAcrossNestedMountPointSameTargetUriAcrossMountPoint() throws IOException {
+    setUpNestedMountPoint();
+    //  /user/foo -> /user
+    // /user/userA/fooBarBar -> /user
+    // Rename strategy: SAME_TARGET_URI_ACROSS_MOUNTPOINT
+    Configuration conf2 = new Configuration(conf);
+    conf2.set(Constants.CONFIG_VIEWFS_RENAME_STRATEGY,
+        ViewFileSystem.RenameStrategy.SAME_TARGET_URI_ACROSS_MOUNTPOINT
+            .toString());
+    FileSystem fsView2 = FileSystem.newInstance(FsConstants.VIEWFS_URI, conf2);
+    fileSystemTestHelper.createFile(fsView2, "/user/foo");
+    fsView2.rename(new Path("/user/foo"), new Path("/user/userA/fooBarBar"));
+    ContractTestUtils.assertPathDoesNotExist(fsView2, "src should not exist after rename",
+        new Path("/user/foo"));
+    ContractTestUtils.assertPathDoesNotExist(fsTarget, "src should not exist after rename",
+        new Path(targetTestRoot, "user/foo"));
+    ContractTestUtils.assertIsFile(fsView2, fileSystemTestHelper.getTestRootPath(fsView2, "/user/userA/fooBarBar"));
+    ContractTestUtils.assertIsFile(fsTarget, new Path(targetTestRoot, "user/fooBarBar"));
+  }
+
+  // RenameStrategy SAME_FILESYSTEM_ACROSS_MOUNTPOINT enabled
+  // to rename across mount points where the mount link targets are different
+  // but are part of the same target FS
+  @Test
+  public void testRenameAcrossNestedMountPointSameFileSystemAcrossMountPoint() throws IOException {
+    setUpNestedMountPoint();
+    // /data/foo -> /data
+    // /data/dataA/fooBar -> /dataA
+    // Rename strategy: SAME_FILESYSTEM_ACROSS_MOUNTPOINT
+    Configuration conf2 = new Configuration(conf);
+    conf2.set(Constants.CONFIG_VIEWFS_RENAME_STRATEGY,
+        ViewFileSystem.RenameStrategy.SAME_FILESYSTEM_ACROSS_MOUNTPOINT
+            .toString());
+    FileSystem fsView2 = FileSystem.newInstance(FsConstants.VIEWFS_URI, conf2);
+    fileSystemTestHelper.createFile(fsView2, "/data/foo");
+    fsView2.rename(new Path("/data/foo"), new Path("/data/dataB/fooBar"));
+    ContractTestUtils
+        .assertPathDoesNotExist(fsView2, "src should not exist after rename",
+            new Path("/data/foo"));
+    ContractTestUtils
+        .assertPathDoesNotExist(fsTarget, "src should not exist after rename",
+            new Path(targetTestRoot, "data/foo"));
+    ContractTestUtils.assertIsFile(fsView2,
+        fileSystemTestHelper.getTestRootPath(fsView2, "/user/fooBar"));
+    ContractTestUtils
+        .assertIsFile(fsTarget, new Path(targetTestRoot, "user/fooBar"));
+  }
+
+  @Test
+  public void testOperationsThroughNestedMountPointsInternal()
+      throws IOException {
+    setUpNestedMountPoint();
+    // Create file with nested mount point
+    fileSystemTestHelper.createFile(fsView, "/user/userB/foo");
+    Assert.assertTrue("Created file should be type file",
+        fsView.getFileStatus(new Path("/user/userB/foo")).isFile());
+    Assert.assertTrue("Target of created file should be type file",
+        fsTarget.getFileStatus(new Path(targetTestRoot,"userB/foo")).isFile());
+
+    // Delete the created file with nested mount point
+    Assert.assertTrue("Delete should succeed",
+        fsView.delete(new Path("/user/userB/foo"), false));
+    Assert.assertFalse("File should not exist after delete",
+        fsView.exists(new Path("/user/userB/foo")));
+    Assert.assertFalse("Target File should not exist after delete",
+        fsTarget.exists(new Path(targetTestRoot,"userB/foo")));
+
+    // Create file with a 2 component dirs with nested mount point
+    fileSystemTestHelper.createFile(fsView, "/internalDir/linkToDir2/linkToDir2/foo");
+    Assert.assertTrue("Created file should be type file",
+        fsView.getFileStatus(new Path("/internalDir/linkToDir2/linkToDir2/foo")).isFile());
+    Assert.assertTrue("Target of created file should be type file",
+        fsTarget.getFileStatus(new Path(targetTestRoot,"linkToDir2/foo")).isFile());
+
+    // Delete the created file with nested mount point
+    Assert.assertTrue("Delete should succeed",
+        fsView.delete(new Path("/internalDir/linkToDir2/linkToDir2/foo"), false));
+    Assert.assertFalse("File should not exist after delete",
+        fsView.exists(new Path("/internalDir/linkToDir2/linkToDir2/foo")));
+    Assert.assertFalse("Target File should not exist after delete",
+        fsTarget.exists(new Path(targetTestRoot,"linkToDir2/foo")));
+  }
+
+  private void setUpNestedMountPoint() throws IOException {
+    // Enable nested mount point, ViewFilesystem should support both non-nested and nested mount points
+    ConfigUtil.setIsNestedMountPointSupported(conf, true);
+    ConfigUtil.addLink(conf, "/user/userA",
+        new Path(targetTestRoot, "user").toUri());
+    ConfigUtil.addLink(conf, "/user/userB",
+        new Path(targetTestRoot, "userB").toUri());
+    ConfigUtil.addLink(conf, "/data/dataA",
+        new Path(targetTestRoot, "dataA").toUri());
+    ConfigUtil.addLink(conf, "/data/dataB",
+        new Path(targetTestRoot, "user").toUri());
+    ConfigUtil.addLink(conf, "/internalDir/linkToDir2/linkToDir2",
+        new Path(targetTestRoot,"linkToDir2").toUri());
+    fsView = FileSystem.get(FsConstants.VIEWFS_URI, conf);
+  }
+
   static protected boolean SupportsBlocks = false; //  local fs use 1 block
                                                    // override for HDFS
   @Test

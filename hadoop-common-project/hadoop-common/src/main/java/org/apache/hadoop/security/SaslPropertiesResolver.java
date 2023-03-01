@@ -46,7 +46,7 @@ public class SaslPropertiesResolver implements Configurable{
    * Looks up the configuration to see if there is custom class specified.
    * Constructs the instance by passing the configuration directly to the
    * constructor to achieve thread safety using final fields.
-   * @param conf
+   * @param conf configuration.
    * @return SaslPropertiesResolver
    */
   public static SaslPropertiesResolver getInstance(Configuration conf) {
