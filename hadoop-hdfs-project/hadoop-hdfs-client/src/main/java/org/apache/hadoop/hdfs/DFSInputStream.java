@@ -197,15 +197,6 @@ public class DFSInputStream extends FSInputStream
     deadNodes.clear();
   }
 
-  /**
-   * Clear list of ignored nodes used for hedged reads.
-   */
-  private void clearIgnoredNodes(Collection<DatanodeInfo> ignoredNodes) {
-    if (ignoredNodes != null) {
-      ignoredNodes.clear();
-    }
-  }
-
   protected DFSClient getDFSClient() {
     return dfsClient;
   }
@@ -967,7 +958,11 @@ public class DFSInputStream extends FSInputStream
 
   /**
    * RefetchLocations should only be called when there are no active requests
-   * to datanodes. In the hedged read case this means futures should be empty
+   * to datanodes. In the hedged read case this means futures should be empty.
+   * @param block The locatedBlock to get new datanode locations for.
+   * @param ignoredNodes A list of ignored nodes. This list can be null and can be cleared.
+   * @return the locatedBlock with updated datanode locations.
+   * @throws IOException
    */
   private LocatedBlock refetchLocations(LocatedBlock block,
       Collection<DatanodeInfo> ignoredNodes) throws IOException {
@@ -1013,12 +1008,22 @@ public class DFSInputStream extends FSInputStream
       throw new InterruptedIOException(
           "Interrupted while choosing DataNode for read.");
     }
-    clearLocalDeadNodes(); //2nd option is to remove only nodes[blockId]
-    clearIgnoredNodes(ignoredNodes);
+    clearCachedNodeState(ignoredNodes);
     openInfo(true);
     block = refreshLocatedBlock(block);
     failures++;
     return block;
+  }
+
+  /**
+   * Clear both the dead nodes and the ignored nodes
+   * @param ignoredNodes is cleared
+   */
+  private void clearCachedNodeState(Collection<DatanodeInfo> ignoredNodes) {
+    clearLocalDeadNodes(); //2nd option is to remove only nodes[blockId]
+    if (ignoredNodes != null) {
+      ignoredNodes.clear();
+    }
   }
 
   /**
