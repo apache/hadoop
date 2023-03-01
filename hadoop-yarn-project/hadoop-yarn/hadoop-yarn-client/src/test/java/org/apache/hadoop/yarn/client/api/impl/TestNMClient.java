@@ -82,6 +82,12 @@ import static org.junit.Assert.fail;
 public class TestNMClient {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestNMClient.class);
+
+  private static final String IS_NOT_HANDLED_BY_THIS_NODEMANAGER =
+      "is not handled by this NodeManager";
+  private static final String UNKNOWN_NODEMANAGER =
+      "Unknown container";
+
   private static final int MAX_EARLY_FINISH = 3;
   private static final int NUMBER_OF_CONTAINERS = 5;
   private Configuration conf;
@@ -92,6 +98,8 @@ public class TestNMClient {
   private List<NodeReport> nodeReports;
   private NMTokenCache nmTokenCache;
   private RMAppAttempt appAttempt;
+
+  private int earlyFinishCounter;
 
   /**
    * Container State transition listener to track the number of times
@@ -155,6 +163,7 @@ public class TestNMClient {
     yarnClient.start();
     assertEquals(STATE.STARTED, yarnClient.getServiceState());
     nodeReports = yarnClient.getNodeReports(NodeState.RUNNING);
+
     ApplicationSubmissionContext appContext =
         yarnClient.createApplication().getApplicationSubmissionContext();
     ApplicationId appId = appContext.getApplicationId();
@@ -165,6 +174,7 @@ public class TestNMClient {
     ContainerLaunchContext amContainer = Records.newRecord(ContainerLaunchContext.class);
     appContext.setAMContainerSpec(amContainer);
     appContext.setUnmanagedAM(true);
+
     SubmitApplicationRequest appRequest = Records.newRecord(SubmitApplicationRequest.class);
     appRequest.setApplicationSubmissionContext(appContext);
     yarnClient.submitApplication(appContext);
@@ -200,51 +210,40 @@ public class TestNMClient {
   @Test (timeout = 180_000 * MAX_EARLY_FINISH)
   public void testNMClientNoCleanupOnStop()
       throws YarnException, IOException, InterruptedException, TimeoutException {
-    int earlyFinishCounter = MAX_EARLY_FINISH;
-    while (0 < earlyFinishCounter) {
-      try {
-        setup();
-        rmClient.registerApplicationMaster("Host", 10_000, "");
-        testContainerManagement(nmClient, allocateContainers(rmClient));
-        rmClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, null, null);
-        stopNmClient();
-        assertFalse(nmClient.startedContainers.isEmpty());
-        nmClient.cleanupRunningContainers();
-        assertEquals(0, nmClient.startedContainers.size());
-        return;
-      } catch (EarlyFinishException e) {
-        --earlyFinishCounter;
-      } finally {
-        tearDown();
-      }
-    }
-    if (earlyFinishCounter == 0) {
-      fail("Too many early finish exception happened");
-    }
+    runTest(() -> {
+      stopNmClient();
+      assertFalse(nmClient.startedContainers.isEmpty());
+      nmClient.cleanupRunningContainers();
+      assertEquals(0, nmClient.startedContainers.size());
+    });
   }
 
   @Test (timeout = 200_000 * MAX_EARLY_FINISH)
   public void testNMClient()
       throws YarnException, IOException, InterruptedException, TimeoutException {
+    runTest(() -> {
+      // stop the running containers on close
+      assertFalse(nmClient.startedContainers.isEmpty());
+      nmClient.cleanupRunningContainersOnStop(true);
+      assertTrue(nmClient.getCleanupRunningContainers().get());
+      nmClient.stop();
+    });
+  }
+
+  public void runTest(
+      Runnable test
+  ) throws IOException, InterruptedException, YarnException, TimeoutException {
     int earlyFinishCounter = MAX_EARLY_FINISH;
-    while (0 < earlyFinishCounter) {
-      try {
-        setup();
-        rmClient.registerApplicationMaster("Host", 10_000, "");
-        testContainerManagement(nmClient, allocateContainers(rmClient));
-        rmClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, null, null);
-        // stop the running containers on close
-        assertFalse(nmClient.startedContainers.isEmpty());
-        nmClient.cleanupRunningContainersOnStop(true);
-        assertTrue(nmClient.getCleanupRunningContainers().get());
-        nmClient.stop();
-        return;
-      } catch (EarlyFinishException e) {
-        --earlyFinishCounter;
-      } finally {
-        tearDown();
-      }
-    }
+    int earlyFinishCounterWhenTestWasStarted;
+    do {
+      earlyFinishCounterWhenTestWasStarted = earlyFinishCounter;
+      setup();
+      rmClient.registerApplicationMaster("Host", 10_000, "");
+      testContainerManagement(nmClient, allocateContainers(rmClient));
+      rmClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, null, null);
+      test.run();
+      tearDown();
+    } while (earlyFinishCounter != 0 && earlyFinishCounter != earlyFinishCounterWhenTestWasStarted);
     if (earlyFinishCounter == 0) {
       fail("Too many early finish exception happened");
     }
@@ -272,23 +271,23 @@ public class TestNMClient {
           Priority.newInstance(0)
       ));
     }
-    Set<Container> allocateContainers = new TreeSet<>();
-    while (allocateContainers.size() < NUMBER_OF_CONTAINERS) {
+    Set<Container> allocatedContainers = new TreeSet<>();
+    while (allocatedContainers.size() < NUMBER_OF_CONTAINERS) {
       AllocateResponse allocResponse = rmClient.allocate(0.1f);
-      allocateContainers.addAll(allocResponse.getAllocatedContainers());
+      allocatedContainers.addAll(allocResponse.getAllocatedContainers());
       for (NMToken token : allocResponse.getNMTokens()) {
         rmClient.getNMTokenCache().setToken(token.getNodeId().toString(), token.getToken());
       }
-      if (allocateContainers.size() < NUMBER_OF_CONTAINERS) {
+      if (allocatedContainers.size() < NUMBER_OF_CONTAINERS) {
         sleep(100);
       }
     }
-    return allocateContainers;
+    return allocatedContainers;
   }
 
   private void testContainerManagement(
       NMClientImpl client, Set<Container> containers
-  ) throws YarnException, IOException, EarlyFinishException {
+  ) throws YarnException, IOException {
     int size = containers.size();
     int i = 0;
     for (Container container : containers) {
@@ -296,32 +295,32 @@ public class TestNMClient {
       // otherwise, NodeManager cannot find the container
       assertYarnException(
           () -> client.getContainerStatus(container.getId(), container.getNodeId()),
-          "is not handled by this NodeManager");
+          IS_NOT_HANDLED_BY_THIS_NODEMANAGER);
       // upadateContainerResource shouldn't be called before startContainer,
       // otherwise, NodeManager cannot find the container
       assertYarnException(
           () -> client.updateContainerResource(container),
-          "is not handled by this NodeManager");
+          IS_NOT_HANDLED_BY_THIS_NODEMANAGER);
       // restart shouldn't be called before startContainer,
       // otherwise, NodeManager cannot find the container
       assertYarnException(
           () -> client.restartContainer(container.getId()),
-          "Unknown container");
+          UNKNOWN_NODEMANAGER);
       // rollback shouldn't be called before startContainer,
       // otherwise, NodeManager cannot find the container
       assertYarnException(
           () -> client.rollbackLastReInitialization(container.getId()),
-          "Unknown container");
+          UNKNOWN_NODEMANAGER);
       // commit shouldn't be called before startContainer,
       // otherwise, NodeManager cannot find the container
       assertYarnException(
           () -> client.commitLastReInitialization(container.getId()),
-          "Unknown container");
+          UNKNOWN_NODEMANAGER);
       // stopContainer shouldn't be called before startContainer,
       // otherwise, an exception will be thrown
       assertYarnException(
           () -> client.stopContainer(container.getId(), container.getNodeId()),
-          "is not handled by this NodeManager");
+          IS_NOT_HANDLED_BY_THIS_NODEMANAGER);
 
       Credentials ts = new Credentials();
       DataOutputBuffer dob = new DataOutputBuffer();
@@ -343,7 +342,7 @@ public class TestNMClient {
 
   private void testContainer(
       NMClientImpl client, int i, Container container, ContainerLaunchContext clc
-  ) throws YarnException, IOException, EarlyFinishException {
+  ) throws YarnException, IOException {
     testContainerStatusRunning(container);
     waitForContainerRunningTransitionCount(container, 1);
     testIncreaseContainerResource(container);
@@ -382,7 +381,7 @@ public class TestNMClient {
 
   private void testContainerStatusRunning(
       Container container, String... diagnostics
-  ) throws YarnException, IOException, EarlyFinishException {
+  ) throws YarnException, IOException {
     ContainerStatus actualStatus = nmClient
         .getContainerStatus(container.getId(), container.getNodeId());
     while (ContainerState.NEW == actualStatus.getState()) {
@@ -392,7 +391,8 @@ public class TestNMClient {
     if (ContainerState.COMPLETE == actualStatus.getState()) {
       LOG.warn("The container finished earlier than expected, EXIT_CODE[{}], DIAGNOSTIC[{}]",
           actualStatus.getExitStatus(), actualStatus.getDiagnostics());
-      throw new EarlyFinishException();
+      --earlyFinishCounter;
+      return;
     }
     assertEquals(container.getId(), actualStatus.getContainerId());
     assertEquals(actualStatus.getExitStatus(), ContainerExitStatus.INVALID);
@@ -473,6 +473,4 @@ public class TestNMClient {
       throw new RuntimeException(e);
     }
   }
-  private static class EarlyFinishException extends Exception {}
-
 }
