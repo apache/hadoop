@@ -56,9 +56,9 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     private final int downloadSignExpires;
 
     private final int uploadSignExpires;
-    private final boolean useNoCacheHeader;
     private final QiniuKodoFsConfig fsConfig;
     private final ExecutorService service;
+    private final DownloadHttpClient downloadHttpClient;
 
     public QiniuKodoClient(String bucket, QiniuKodoFsConfig fsConfig, FileSystem.Statistics statistics) throws QiniuException, AuthorizationException {
         this.bucket = bucket;
@@ -133,7 +133,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         this.downloadUseSign = fsConfig.download.sign.enable;
         this.downloadSignExpires = fsConfig.download.sign.expires;
         this.uploadSignExpires = fsConfig.upload.sign.expires;
-        this.useNoCacheHeader = fsConfig.download.useNoCacheHeader;
+        this.downloadHttpClient = new DownloadHttpClient(configuration, fsConfig.download.useNoCacheHeader);
     }
 
     private static Auth getAuth(QiniuKodoFsConfig fsConfig) throws AuthorizationException {
@@ -238,22 +238,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      */
     @Override
     public InputStream fetch(String key, long offset, int size) throws IOException {
-        try {
-            StringMap header = new StringMap();
-            header.put("Range", String.format("bytes=%d-%d", offset, offset + size - 1));
-            if (useNoCacheHeader) {
-                header.put("X-QN-NOCACHE", 1);
-            }
-            String url = getFileUrlByKey(key);
-            LOG.debug("fetch content by url: {}", url);
-            Response response = this.client.get(url, header);
-            return response.bodyStream();
-        } catch (QiniuException e) {
-            if (e.response == null) {
-                throw e;
-            }
-            throw new IOException(e.response.toString());
-        }
+        return downloadHttpClient.fetch(getFileUrlByKey(key), offset, size);
     }
 
     /**

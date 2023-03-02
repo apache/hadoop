@@ -32,13 +32,11 @@ def dict2xml(dic):
     </property>
         """
         pass
-    return f"""
-<?xml version="1.0"?>
+    return f"""<?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
     {content}
-</configuration>
-    """
+</configuration>"""
 
 
 flatten_dict = flat_map(yml)
