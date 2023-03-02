@@ -4174,7 +4174,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, src);
       throw e;
     }
-    if (needLocation && isObserver()) {
+    if (dl != null && needLocation && isObserver()) {
       for (HdfsFileStatus fs : dl.getPartialListing()) {
         if (fs instanceof HdfsLocatedFileStatus) {
           LocatedBlocks lbs = ((HdfsLocatedFileStatus) fs).getLocatedBlocks();
