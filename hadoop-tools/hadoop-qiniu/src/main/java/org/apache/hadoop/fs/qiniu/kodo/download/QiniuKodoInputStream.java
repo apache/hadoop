@@ -23,7 +23,9 @@ public class QiniuKodoInputStream extends FSInputStream {
         this.useRandomReader = useRandomReader;
         this.generalStrategy = new QiniuKodoCommonInputStream(key, generalReader, contentLength, statistics);
         this.randomStrategy = new QiniuKodoCommonInputStream(key, randomReader, contentLength, statistics);
-        this.currentStrategy = randomStrategy;
+
+        // 默认通用块
+        this.currentStrategy = generalStrategy;
     }
 
     @Override
