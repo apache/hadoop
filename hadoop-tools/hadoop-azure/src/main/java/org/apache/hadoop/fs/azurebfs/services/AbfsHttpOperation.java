@@ -265,7 +265,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @param url The full URL including query string parameters.
    * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
    * @param requestHeaders The HTTP request headers.READ_TIMEOUT
-   *
+   * @param timeoutOptimizer The TimeoutOptimizer instance for current request.
    * @throws IOException if an error occurs.
    */
   public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders, final TimeoutOptimizer timeoutOptimizer)

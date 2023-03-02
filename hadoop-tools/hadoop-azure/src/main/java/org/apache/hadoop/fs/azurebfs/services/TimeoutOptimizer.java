@@ -123,7 +123,7 @@ public class TimeoutOptimizer {
 
     private void initTimeouts() {
         String query = url.getQuery();
-        Integer timeoutPos = new Integer(query.indexOf("timeout"));
+        Integer timeoutPos = Integer.valueOf(query.indexOf("timeout"));
         if (timeoutPos != null && timeoutPos < 0) {
             // no value of timeout exists in the URL
             // no optimization is needed for this particular request as well

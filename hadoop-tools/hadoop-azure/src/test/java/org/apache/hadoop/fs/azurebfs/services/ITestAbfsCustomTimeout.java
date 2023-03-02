@@ -121,18 +121,6 @@ public class ITestAbfsCustomTimeout extends AbstractAbfsIntegrationTest {
 
         AbfsHttpOperation mockHttpOp = Mockito.spy(spyRestOp.createHttpOperationInstance());
 
-        final int[] count = new int[1];
-        count[0] = 0;
-        Mockito.doAnswer(new Answer() {
-            @Override
-            public Object answer(InvocationOnMock invocationOnMock) {
-                if (count[0]++ == 4) {
-                    return HTTP_OK;
-                } else {
-                    return -1;
-                }
-            }}).when(mockHttpOp).getStatusCode();
-
         Mockito.doReturn(-1)
                 .doReturn(-1)
                 .doReturn(-1)
@@ -146,7 +134,6 @@ public class ITestAbfsCustomTimeout extends AbstractAbfsIntegrationTest {
         Mockito.doReturn(mockHttpOp).when(spyRestOp).getResult();
 
         return spyRestOp;
-
     }
     public void testInitTimeoutOptimizer(AbfsRestOperationType opType,
                                          int maxRetryCount,
@@ -193,13 +180,13 @@ public class ITestAbfsCustomTimeout extends AbstractAbfsIntegrationTest {
                 AbfsRestOperationType.SetPathProperties, AbfsRestOperationType.CheckAccess
         ));
         ArrayList<Integer> timeoutValues = new ArrayList<Integer>(Arrays.asList(
-                new Integer(5), new Integer(5),
-                new Integer(5), new Integer(10),
-                new Integer(5), new Integer(5),
-                new Integer(5), new Integer(5),
-                new Integer(5), new Integer(5),
-                new Integer(5), new Integer(5),
-                new Integer(5), new Integer(5)
+                Integer.valueOf(5), Integer.valueOf(5),
+                Integer.valueOf(5), Integer.valueOf(10),
+                Integer.valueOf(5), Integer.valueOf(5),
+                Integer.valueOf(5), Integer.valueOf(5),
+                Integer.valueOf(5), Integer.valueOf(5),
+                Integer.valueOf(5), Integer.valueOf(5),
+                Integer.valueOf(5), Integer.valueOf(5)
         ));
         ArrayList<String> opTypeConfig = new ArrayList<String>(Arrays.asList(
                 ConfigurationKeys.AZURE_GET_FS_REQUEST_TIMEOUT, ConfigurationKeys.AZURE_SET_FS_REQUEST_TIMEOUT,
