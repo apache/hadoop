@@ -184,6 +184,7 @@ public class WebHdfsFileSystem extends FileSystem
   private boolean isTLSKrb;
 
   private boolean isServerHCFSCompatible = true;
+  private String pathPrefix = "";
 
   /**
    * Return the protocol scheme for the FileSystem.
@@ -238,17 +239,19 @@ public class WebHdfsFileSystem extends FileSystem
     if(isOAuth) {
       LOG.debug("Enabling OAuth2 in WebHDFS");
       connectionFactory = URLConnectionFactory
-          .newOAuth2URLConnectionFactory(connectTimeout, readTimeout, conf);
+          .newOAuth2URLConnectionFactory(connectTimeout, readTimeout, conf, uri.getUserInfo());
     } else {
       LOG.debug("Not enabling OAuth2 in WebHDFS");
       connectionFactory = URLConnectionFactory
-          .newDefaultURLConnectionFactory(connectTimeout, readTimeout, conf);
+          .newDefaultURLConnectionFactory(connectTimeout, readTimeout, conf, uri.getUserInfo());
     }
 
     this.isTLSKrb = "HTTPS_ONLY".equals(conf.get(DFS_HTTP_POLICY_KEY));
 
     ugi = UserGroupInformation.getCurrentUser();
-    this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
+    // Drop path and user:password from URI.
+    this.uri = URI.create(uri.getScheme() + "://" + uri.getHost()
+            + (uri.getPort() == -1 ? "" : ":" + uri.getPort()));
     this.nnAddrs = resolveNNAddr();
 
     boolean isHA = HAUtilClient.isClientFailoverConfigured(conf, this.uri);
@@ -307,6 +310,20 @@ public class WebHdfsFileSystem extends FileSystem
                 return new DFSOpsCountStatistics();
               }
             });
+    pathPrefix = PATH_PREFIX;
+    boolean useBasePath = conf.getBoolean(
+        HdfsClientConfigKeys.DFS_CLIENT_WEBHDFS_USE_BASE_PATH_KEY,
+        HdfsClientConfigKeys.DFS_CLIENT_WEBHDFS_USE_BASE_PATH_DEFAULT
+    );
+    if (uri.getPath() != null && !uri.getPath().equals("") && useBasePath) {
+      pathPrefix = uri.getPath();
+      if (pathPrefix.endsWith("/")) {
+        pathPrefix = pathPrefix.substring(0, pathPrefix.length() - 1);
+      }
+      if (!pathPrefix.endsWith(PATH_PREFIX)) {
+        pathPrefix += PATH_PREFIX;
+      }
+    }
   }
 
   /**
@@ -634,7 +651,7 @@ public class WebHdfsFileSystem extends FileSystem
       final Param<?,?>... parameters) throws IOException {
     //initialize URI path and query
 
-    final String path = PATH_PREFIX
+    final String path = pathPrefix
         + (fspath == null? "/": makeQualified(fspath).toUri().getRawPath());
     final String query = op.toQueryString()
         + Param.toSortedString("&", getAuthParameters(op))
