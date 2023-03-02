@@ -60,7 +60,21 @@ public interface FederationStateStore extends
    * Load the version information from the federation state store.
    *
    * @return the {@link Version} of the federation state store
+   * @throws Exception an exception occurred in load version.
    */
-  Version loadVersion();
+  Version loadVersion() throws Exception;
 
+  /**
+   * Store the Version information in federation state store.
+   *
+   * @throws Exception an exception occurred in store version.
+   */
+  void storeVersion() throws Exception;
+
+  /**
+   * Check the version of federation stateStore.
+   *
+   * @throws Exception an exception occurred in check version.
+   */
+  void checkVersion() throws Exception;
 }
