@@ -25,6 +25,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -282,9 +283,9 @@ public class AbfsRestOperation {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
-      if (retryCount == 0) {
-        intercept.sendingRequest(operationType, abfsCounters);
-      }
+
+      applyThrottlingBackoff(retryCount, operationType, abfsCounters);
+
       if (hasRequestBody) {
         // HttpUrlConnection requires
         httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
@@ -334,6 +335,21 @@ public class AbfsRestOperation {
     result = httpOperation;
 
     return true;
+  }
+
+  /**
+   * Makes a call for client side throttling based on
+   * the request count.
+   * @param operationType operation type of current request
+   * @param abfsCounters AbfsCounters instance
+   */
+  @VisibleForTesting
+  boolean applyThrottlingBackoff(int retryCount, AbfsRestOperationType operationType, AbfsCounters abfsCounters) {
+    if (retryCount == 0) {
+      intercept.sendingRequest(operationType, abfsCounters);
+      return true;
+    }
+    return false;
   }
 
   /**
