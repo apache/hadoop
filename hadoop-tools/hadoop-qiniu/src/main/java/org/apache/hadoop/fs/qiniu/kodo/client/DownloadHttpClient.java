@@ -6,6 +6,8 @@ import okhttp3.*;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -35,6 +37,24 @@ public class DownloadHttpClient {
         builder.connectTimeout(configuration.connectTimeout, TimeUnit.SECONDS);
         builder.readTimeout(configuration.readTimeout, TimeUnit.SECONDS);
         builder.writeTimeout(configuration.writeTimeout, TimeUnit.SECONDS);
+
+        if (configuration.proxy != null) {
+            builder.proxy(
+                    new Proxy(configuration.proxy.type,
+                            new InetSocketAddress(
+                                    configuration.proxy.hostAddress,
+                                    configuration.proxy.port)
+                    )
+            );
+            if (configuration.proxy.user != null && configuration.proxy.password != null) {
+                builder.proxyAuthenticator((route, response) -> {
+                    String credential = Credentials.basic(configuration.proxy.user, configuration.proxy.password);
+                    return response.request().newBuilder().
+                            header("Proxy-Authorization", credential).
+                            header("Proxy-Connection", "Keep-Alive").build();
+                });
+            }
+        }
 
         this.httpClient = builder.build();
         this.useNoCacheHeader = useNoCacheHeader;
