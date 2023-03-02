@@ -21,6 +21,7 @@ import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 /**
@@ -52,7 +53,7 @@ public class BasicAuthConfigurator implements ConnectionConfigurator {
     if (credentials != null && !credentials.equals("")) {
       conn.setRequestProperty(
           "AUTHORIZATION",
-          "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes())
+          "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8))
       );
     }
 
