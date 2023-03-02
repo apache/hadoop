@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
+import static java.net.HttpURLConnection.HTTP_OK;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
@@ -32,16 +33,23 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
 import static org.junit.Assume.assumeTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 
+import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.mockito.Mockito;
 
+import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.Random;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -283,6 +291,67 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     Assert.assertEquals("Min backoff interval was not set as expected.", expectedMinBackoff, policy.getMinBackoff());
     Assert.assertEquals("Max backoff interval was not set as expected.", expectedMaxBackoff, policy.getMaxBackoff());
     Assert.assertEquals("Delta backoff interval was not set as expected.", expectedDeltaBackoff, policy.getDeltaBackoff());
+  }
+
+//  public void testClientBackoffOnlyNewRequest() throws IOException {
+@Test
+public void testClientBackoffOnlyNewWriteRequest() throws IOException, InterruptedException {
+  AzureBlobFileSystem fs = getFileSystem();
+  AbfsClient client = fs.getAbfsStore().getClient();
+  AbfsConfiguration configuration = client.getAbfsConfiguration();
+  Assume.assumeTrue(configuration.isAutoThrottlingEnabled());
+  AbfsCounters counters = client.getAbfsCounters();
+
+  URL dummyUrl = client.createRequestUrl("/", "");
+  String dummyMethod = AbfsHttpConstants.HTTP_METHOD_PUT;
+
+  AbfsRestOperationType testOperationType = AbfsRestOperationType.Append;
+
+  AbfsRestOperation restOp = new AbfsRestOperation(testOperationType, client, dummyMethod, dummyUrl, new ArrayList<>());
+
+  Long writeThrottleStatBefore = counters.toMap().get(AbfsStatistic.WRITE_THROTTLES.getStatName());
+  Thread.sleep(10000);
+  boolean appliedBackoff = restOp.applyThrottlingBackoff(0, testOperationType, counters);
+  assertEquals(true, appliedBackoff);
+  Long writeThrottleStatAfter = counters.toMap().get(AbfsStatistic.WRITE_THROTTLES.getStatName());
+  assertEquals(new Long(writeThrottleStatBefore+1), writeThrottleStatAfter);
+
+
+  writeThrottleStatBefore = counters.toMap().get(AbfsStatistic.WRITE_THROTTLES.getStatName());
+  appliedBackoff = restOp.applyThrottlingBackoff(1, testOperationType, counters);
+  assertEquals(false, appliedBackoff);
+  writeThrottleStatAfter = counters.toMap().get(AbfsStatistic.WRITE_THROTTLES.getStatName());
+  assertEquals(writeThrottleStatBefore, writeThrottleStatAfter);
+}
+
+  @Test
+  public void testClientBackoffOnlyNewReadRequest() throws IOException, InterruptedException {
+    AzureBlobFileSystem fs = getFileSystem();
+    AbfsClient client = fs.getAbfsStore().getClient();
+    AbfsConfiguration configuration = client.getAbfsConfiguration();
+    Assume.assumeTrue(configuration.isAutoThrottlingEnabled());
+    AbfsCounters counters = client.getAbfsCounters();
+
+    URL dummyUrl = client.createRequestUrl("/", "");
+    String dummyMethod = AbfsHttpConstants.HTTP_METHOD_GET;
+
+    AbfsRestOperationType testOperationType = AbfsRestOperationType.ReadFile;
+
+    AbfsRestOperation restOp = new AbfsRestOperation(testOperationType, client, dummyMethod, dummyUrl, new ArrayList<>());
+
+    Long readThrottleStatBefore = counters.toMap().get(AbfsStatistic.READ_THROTTLES.getStatName());
+    Thread.sleep(10000);
+    boolean appliedBackoff = restOp.applyThrottlingBackoff(0, testOperationType, counters);
+    assertEquals(true, appliedBackoff);
+    Long readThrottleStatAfter = counters.toMap().get(AbfsStatistic.READ_THROTTLES.getStatName());
+    assertEquals(new Long(readThrottleStatBefore+1), readThrottleStatAfter);
+
+
+    readThrottleStatBefore = counters.toMap().get(AbfsStatistic.READ_THROTTLES.getStatName());
+    appliedBackoff = restOp.applyThrottlingBackoff(1, testOperationType, counters);
+    assertEquals(false, appliedBackoff);
+    readThrottleStatAfter = counters.toMap().get(AbfsStatistic.READ_THROTTLES.getStatName());
+    assertEquals(readThrottleStatBefore, readThrottleStatAfter);
   }
 
   private AbfsConfiguration getAbfsConfig() throws Exception {
