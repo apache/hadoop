@@ -29,6 +29,7 @@ import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -41,6 +42,7 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -159,7 +161,7 @@ public class TestShuffleHandler extends TestShuffleHandlerBase {
     shuffleHandler.init(conf);
     shuffleHandler.start();
     final String port = shuffleHandler.getConfig().get(SHUFFLE_PORT_CONFIG_KEY);
-    final SecretKey secretKey = shuffleHandler.addTestApp();
+    final SecretKey secretKey = shuffleHandler.addTestApp(TEST_USER);
 
     // setup connections
     HttpURLConnection[] conns = new HttpURLConnection[connAttempts];
@@ -237,7 +239,7 @@ public class TestShuffleHandler extends TestShuffleHandlerBase {
     shuffleHandler.init(conf);
     shuffleHandler.start();
     final String port = shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY);
-    final SecretKey secretKey = shuffleHandler.addTestApp();
+    final SecretKey secretKey = shuffleHandler.addTestApp(TEST_USER);
 
     HttpURLConnection conn1 = createRequest(
         geURL(port, TEST_JOB_ID, 0, Collections.singletonList(TEST_ATTEMPT_1), true),
@@ -278,18 +280,34 @@ public class TestShuffleHandler extends TestShuffleHandlerBase {
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
 
+    final String randomUser = "randomUser";
+    final String attempt = "attempt_1111111111111_0004_m_000004_0";
+    generateMapOutput(randomUser, tempDir.toAbsolutePath().toString(), attempt,
+            Arrays.asList(TEST_DATA_C, TEST_DATA_B, TEST_DATA_A));
+
     ShuffleHandlerMock shuffleHandler = new ShuffleHandlerMock();
     shuffleHandler.init(conf);
     try {
       shuffleHandler.start();
       final String port = shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY);
-      final SecretKey secretKey = shuffleHandler.addTestApp();
+      final SecretKey secretKey = shuffleHandler.addTestApp(randomUser);
 
       HttpURLConnection conn = createRequest(
-          geURL(port, TEST_JOB_ID, 0, Collections.singletonList(TEST_ATTEMPT_1), false),
+          geURL(port, TEST_JOB_ID, 0, Collections.singletonList(attempt), false),
           secretKey);
       conn.connect();
-      BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+
+      InputStream is = null;
+      try {
+        is = conn.getInputStream();
+      } catch (IOException ioe) {
+        if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+          is = conn.getErrorStream();
+        }
+      }
+
+      assertNotNull(is);
+      BufferedReader in = new BufferedReader(new InputStreamReader(is));
       StringBuilder builder = new StringBuilder();
       String inputLine;
       while ((inputLine = in.readLine()) != null) {
@@ -299,7 +317,7 @@ public class TestShuffleHandler extends TestShuffleHandlerBase {
       String receivedString = builder.toString();
 
       //Retrieve file owner name
-      String indexFilePath = getIndexFile(tempDir.toAbsolutePath().toString(), TEST_ATTEMPT_1);
+      String indexFilePath = getIndexFile(randomUser, tempDir.toAbsolutePath().toString(), attempt);
       String owner;
       try (FileInputStream fis = new FileInputStream(indexFilePath)) {
         owner = NativeIO.POSIX.getFstat(fis.getFD()).getOwner();
@@ -307,11 +325,11 @@ public class TestShuffleHandler extends TestShuffleHandlerBase {
 
       String message =
           "Owner '" + owner + "' for path " + indexFilePath
-              + " did not match expected owner '" + TEST_USER + "'";
+              + " did not match expected owner '" + randomUser + "'";
       assertTrue(String.format("Received string '%s' should contain " +
               "message '%s'", receivedString, message),
           receivedString.contains(message));
-      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, conn.getResponseCode());
       LOG.info("received: " + receivedString);
       assertNotEquals("", receivedString);
     } finally {
@@ -334,7 +352,7 @@ public class TestShuffleHandler extends TestShuffleHandlerBase {
       shuffle.init(conf);
       shuffle.start();
       final String port = shuffle.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY);
-      final SecretKey secretKey = shuffle.addTestApp();
+      final SecretKey secretKey = shuffle.addTestApp(TEST_USER);
 
       // verify we are authorized to shuffle
       int rc = getShuffleResponseCode(port, secretKey);
@@ -387,7 +405,7 @@ public class TestShuffleHandler extends TestShuffleHandlerBase {
       shuffle.init(conf);
       shuffle.start();
       final String port = shuffle.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY);
-      final SecretKey secretKey = shuffle.addTestApp();
+      final SecretKey secretKey = shuffle.addTestApp(TEST_USER);
 
       // verify we are authorized to shuffle
       int rc = getShuffleResponseCode(port, secretKey);
@@ -489,14 +507,14 @@ public class TestShuffleHandler extends TestShuffleHandlerBase {
 
   class ShuffleHandlerMock extends ShuffleHandler {
 
-    public SecretKey addTestApp() throws IOException {
+    public SecretKey addTestApp(String user) throws IOException {
       DataOutputBuffer outputBuffer = new DataOutputBuffer();
       outputBuffer.reset();
       Token<JobTokenIdentifier> jt = new Token<>(
-          "identifier".getBytes(), "password".getBytes(), new Text(TEST_USER),
+          "identifier".getBytes(), "password".getBytes(), new Text(user),
           new Text("shuffleService"));
       jt.write(outputBuffer);
-      initializeApplication(new ApplicationInitializationContext(TEST_USER, TEST_APP_ID,
+      initializeApplication(new ApplicationInitializationContext(user, TEST_APP_ID,
           ByteBuffer.wrap(outputBuffer.getData(), 0,
               outputBuffer.getLength())));
 
