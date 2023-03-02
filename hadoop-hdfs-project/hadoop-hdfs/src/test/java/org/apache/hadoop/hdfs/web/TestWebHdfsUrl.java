@@ -373,7 +373,7 @@ public class TestWebHdfsUrl {
   }
 
   private WebHdfsFileSystem getWebHdfsFileSystem(UserGroupInformation ugi,
-      Configuration conf, URI uri) throws IOException {
+      Configuration conf, URI fsUri) throws IOException {
     if (UserGroupInformation.isSecurityEnabled()) {
       DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(new Text(
           ugi.getUserName()), null, null);
@@ -384,11 +384,11 @@ public class TestWebHdfsUrl {
       Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>(
           dtId, dtSecretManager);
       SecurityUtil.setTokenService(
-          token, NetUtils.createSocketAddr(uri.getAuthority()));
+          token, NetUtils.createSocketAddr(fsUri.getAuthority()));
       token.setKind(WebHdfsConstants.WEBHDFS_TOKEN_KIND);
       ugi.addToken(token);
     }
-    return (WebHdfsFileSystem) FileSystem.get(uri, conf);
+    return (WebHdfsFileSystem) FileSystem.get(fsUri, conf);
   }
 
   private WebHdfsFileSystem getWebHdfsFileSystem(UserGroupInformation ugi,
