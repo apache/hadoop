@@ -21,7 +21,7 @@ if [ "$HADOOP_HOME" = "" ]; then
   exit 1
 fi
 export FUSEDFS_PATH="$HADOOP_HOME/hadoop-hdfs-project/hadoop-hdfs-native-client/target/main/native/fuse-dfs"
-export LIBHDFS_PATH="$HADOOP_HOME/hadoop-hdfs-project/hadoop-hdfs-native-client/target/usr/local/lib"
+export LIBHDFS_PATH="$HADOOP_HOME/hadoop-hdfs-project/hadoop-hdfs-native-client/target/native/target/usr/local/lib"
 
 if [ "$OS_ARCH" = "" ]; then
 export OS_ARCH=amd64
@@ -31,22 +31,13 @@ if [ "$JAVA_HOME" = "" ]; then
 export  JAVA_HOME=/usr/local/java
 fi
 
-if [ "$LD_LIBRARY_PATH" = "" ]; then
-export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/$OS_ARCH/server:/usr/local/lib
-fi
-
 while IFS= read -r -d '' file
 do
   export CLASSPATH=$CLASSPATH:$file
-done < <(find "$HADOOP_HOME/hadoop-client" -name "*.jar" -print0)
-
-while IFS= read -r -d '' file
-do
-  export CLASSPATH=$CLASSPATH:$file
-done < <(find "$HADOOP_HOME/hadoop-hdfs-project" -name "*.jar" -print0)
+done < <(find "$HADOOP_HOME/hadoop-tools/hadoop-distcp" -name "*.jar" -print0)
 
 export CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH
 export PATH=$FUSEDFS_PATH:$PATH
-export LD_LIBRARY_PATH=$LIBHDFS_PATH:$JAVA_HOME/jre/lib/$OS_ARCH/server
+export LD_LIBRARY_PATH=$LIBHDFS_PATH:$JAVA_HOME/jre/lib/$OS_ARCH/server:$JAVA_HOME/lib/server
 
 fuse_dfs "$@"
