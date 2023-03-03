@@ -534,6 +534,26 @@ public class TestRouterMetrics {
       metrics.incrRenewDelegationTokenFailedRetrieved();
     }
 
+    public void getRefreshAdminAclsFailedRetrieved() {
+      LOG.info("Mocked: failed refreshAdminAcls call");
+      metrics.incrRefreshAdminAclsFailedRetrieved();
+    }
+
+    public void getRefreshServiceAclsFailedRetrieved() {
+      LOG.info("Mocked: failed refreshServiceAcls call");
+      metrics.incrRefreshServiceAclsFailedRetrieved();
+    }
+
+    public void getReplaceLabelsOnNodesFailed() {
+      LOG.info("Mocked: failed replaceLabelsOnNodes call");
+      metrics.incrReplaceLabelsOnNodesFailedRetrieved();
+    }
+
+    public void getReplaceLabelsOnNodeFailed() {
+      LOG.info("Mocked: failed ReplaceLabelOnNode call");
+      metrics.incrReplaceLabelsOnNodeFailedRetrieved();
+    }
+
     public void getDumpSchedulerLogsFailed() {
       LOG.info("Mocked: failed DumpSchedulerLogs call");
       metrics.incrDumpSchedulerLogsFailedRetrieved();
@@ -777,6 +797,26 @@ public class TestRouterMetrics {
     public void getRenewDelegationTokenRetrieved(long duration) {
       LOG.info("Mocked: successful RenewDelegationToken call with duration {}", duration);
       metrics.succeededRenewDelegationTokenRetrieved(duration);
+    }
+
+    public void getRefreshAdminAclsRetrieved(long duration) {
+      LOG.info("Mocked: successful RefreshAdminAcls call with duration {}", duration);
+      metrics.succeededRefreshAdminAclsRetrieved(duration);
+    }
+
+    public void getRefreshServiceAclsRetrieved(long duration) {
+      LOG.info("Mocked: successful RefreshServiceAcls call with duration {}", duration);
+      metrics.succeededRefreshServiceAclsRetrieved(duration);
+    }
+
+    public void getNumSucceededReplaceLabelsOnNodesRetrieved(long duration) {
+      LOG.info("Mocked: successful ReplaceLabelsOnNodes call with duration {}", duration);
+      metrics.succeededReplaceLabelsOnNodesRetrieved(duration);
+    }
+
+    public void getNumSucceededReplaceLabelsOnNodeRetrieved(long duration) {
+      LOG.info("Mocked: successful ReplaceLabelOnNode call with duration {}", duration);
+      metrics.succeededReplaceLabelsOnNodeRetrieved(duration);
     }
 
     public void getDumpSchedulerLogsRetrieved(long duration) {
@@ -1631,6 +1671,98 @@ public class TestRouterMetrics {
     badSubCluster.getRenewDelegationTokenFailed();
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getRenewDelegationTokenFailedRetrieved());
+  }
+
+  @Test
+  public void testRefreshAdminAclsRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededRefreshAdminAclsRetrieved();
+    goodSubCluster.getRefreshAdminAclsRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededRefreshAdminAclsRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededRefreshAdminAclsRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getRefreshAdminAclsRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededRefreshAdminAclsRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededRefreshAdminAclsRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testRefreshAdminAclsRetrievedFailed() {
+    long totalBadBefore = metrics.getNumRefreshAdminAclsFailedRetrieved();
+    badSubCluster.getRefreshAdminAclsFailedRetrieved();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getNumRefreshAdminAclsFailedRetrieved());
+  }
+
+  @Test
+  public void testRefreshServiceAclsRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededRefreshServiceAclsRetrieved();
+    goodSubCluster.getRefreshServiceAclsRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededRefreshServiceAclsRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededRefreshServiceAclsRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getRefreshServiceAclsRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededRefreshServiceAclsRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededRefreshServiceAclsRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testRefreshServiceAclsRetrievedFailed() {
+    long totalBadBefore = metrics.getNumRefreshServiceAclsFailedRetrieved();
+    badSubCluster.getRefreshServiceAclsFailedRetrieved();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getNumRefreshServiceAclsFailedRetrieved());
+  }
+
+  @Test
+  public void testReplaceLabelsOnNodesRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededReplaceLabelsOnNodesRetrieved();
+    goodSubCluster.getNumSucceededReplaceLabelsOnNodesRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededReplaceLabelsOnNodesRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededReplaceLabelsOnNodesRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getNumSucceededReplaceLabelsOnNodesRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededReplaceLabelsOnNodesRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededReplaceLabelsOnNodesRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testReplaceLabelsOnNodesRetrievedFailed() {
+    long totalBadBefore = metrics.getNumReplaceLabelsOnNodesFailedRetrieved();
+    badSubCluster.getReplaceLabelsOnNodesFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getNumReplaceLabelsOnNodesFailedRetrieved());
+  }
+
+  @Test
+  public void testReplaceLabelsOnNodeRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededReplaceLabelsOnNodeRetrieved();
+    goodSubCluster.getNumSucceededReplaceLabelsOnNodeRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededReplaceLabelsOnNodeRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededReplaceLabelsOnNodeRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getNumSucceededReplaceLabelsOnNodeRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededReplaceLabelsOnNodeRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededReplaceLabelsOnNodeRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testReplaceLabelOnNodeRetrievedFailed() {
+    long totalBadBefore = metrics.getNumReplaceLabelsOnNodeFailedRetrieved();
+    badSubCluster.getReplaceLabelsOnNodeFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getNumReplaceLabelsOnNodeFailedRetrieved());
   }
 
   @Test
