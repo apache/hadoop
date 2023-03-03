@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
@@ -28,6 +30,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MI
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_AUTOTHROTTLING;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.IF_MATCH;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.RANGE;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT1_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
@@ -39,6 +43,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -49,6 +54,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -294,35 +300,35 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   }
 
 //  public void testClientBackoffOnlyNewRequest() throws IOException {
-@Test
-public void testClientBackoffOnlyNewWriteRequest() throws IOException, InterruptedException {
-  AzureBlobFileSystem fs = getFileSystem();
-  AbfsClient client = fs.getAbfsStore().getClient();
-  AbfsConfiguration configuration = client.getAbfsConfiguration();
-  Assume.assumeTrue(configuration.isAutoThrottlingEnabled());
-  AbfsCounters counters = client.getAbfsCounters();
+  @Test
+  public void testClientBackoffOnlyNewWriteRequest() throws IOException, InterruptedException {
+    AzureBlobFileSystem fs = getFileSystem();
+    AbfsClient client = fs.getAbfsStore().getClient();
+    AbfsConfiguration configuration = client.getAbfsConfiguration();
+    Assume.assumeTrue(configuration.isAutoThrottlingEnabled());
+    AbfsCounters counters = client.getAbfsCounters();
 
-  URL dummyUrl = client.createRequestUrl("/", "");
-  String dummyMethod = AbfsHttpConstants.HTTP_METHOD_PUT;
+    URL dummyUrl = client.createRequestUrl("/", "");
+    String dummyMethod = HTTP_METHOD_PUT;
 
-  AbfsRestOperationType testOperationType = AbfsRestOperationType.Append;
+    AbfsRestOperationType testOperationType = AbfsRestOperationType.Append;
 
-  AbfsRestOperation restOp = new AbfsRestOperation(testOperationType, client, dummyMethod, dummyUrl, new ArrayList<>());
+    AbfsRestOperation restOp = new AbfsRestOperation(testOperationType, client, dummyMethod, dummyUrl, new ArrayList<>());
 
-  Long writeThrottleStatBefore = counters.toMap().get(AbfsStatistic.WRITE_THROTTLES.getStatName());
-  Thread.sleep(10000);
-  boolean appliedBackoff = restOp.applyThrottlingBackoff(0, testOperationType, counters);
-  assertEquals(true, appliedBackoff);
-  Long writeThrottleStatAfter = counters.toMap().get(AbfsStatistic.WRITE_THROTTLES.getStatName());
-  assertEquals(new Long(writeThrottleStatBefore+1), writeThrottleStatAfter);
+    Long writeThrottleStatBefore = counters.toMap().get(AbfsStatistic.WRITE_THROTTLES.getStatName());
+    Thread.sleep(10000);
+    boolean appliedBackoff = restOp.applyThrottlingBackoff(0, testOperationType, counters);
+    assertEquals(true, appliedBackoff);
+    Long writeThrottleStatAfter = counters.toMap().get(AbfsStatistic.WRITE_THROTTLES.getStatName());
+    assertEquals(new Long(writeThrottleStatBefore+1), writeThrottleStatAfter);
 
 
-  writeThrottleStatBefore = counters.toMap().get(AbfsStatistic.WRITE_THROTTLES.getStatName());
-  appliedBackoff = restOp.applyThrottlingBackoff(1, testOperationType, counters);
-  assertEquals(false, appliedBackoff);
-  writeThrottleStatAfter = counters.toMap().get(AbfsStatistic.WRITE_THROTTLES.getStatName());
-  assertEquals(writeThrottleStatBefore, writeThrottleStatAfter);
-}
+    writeThrottleStatBefore = counters.toMap().get(AbfsStatistic.WRITE_THROTTLES.getStatName());
+    appliedBackoff = restOp.applyThrottlingBackoff(1, testOperationType, counters);
+    assertEquals(false, appliedBackoff);
+    writeThrottleStatAfter = counters.toMap().get(AbfsStatistic.WRITE_THROTTLES.getStatName());
+    assertEquals(writeThrottleStatBefore, writeThrottleStatAfter);
+  }
 
   @Test
   public void testClientBackoffOnlyNewReadRequest() throws IOException, InterruptedException {
@@ -353,6 +359,93 @@ public void testClientBackoffOnlyNewWriteRequest() throws IOException, Interrupt
     readThrottleStatAfter = counters.toMap().get(AbfsStatistic.READ_THROTTLES.getStatName());
     assertEquals(readThrottleStatBefore, readThrottleStatAfter);
   }
+
+  @Test
+  public void testReadThrottleNewRequest() throws IOException {
+    AzureBlobFileSystem fs = getFileSystem();
+    AbfsClient client = Mockito.spy(fs.getAbfsStore().getClient());
+    AbfsConfiguration configuration = client.getAbfsConfiguration();
+    Assume.assumeTrue(configuration.isAutoThrottlingEnabled());
+    AbfsCounters counters = client.getAbfsCounters();
+
+    AbfsThrottlingIntercept intercept = Mockito.mock(AbfsThrottlingIntercept.class);
+    Mockito.doNothing().when(intercept).sendingRequest(Mockito.any(AbfsRestOperationType.class), Mockito.any(AbfsCounters.class));
+    Mockito.doReturn(intercept).when(client).getIntercept();
+
+    // setting up the spy AbfsRestOperation class for read
+    final List<AbfsHttpHeader> requestHeaders = client.createDefaultHeaders();
+
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = client.createDefaultUriQueryBuilder();
+
+    final URL url = client.createRequestUrl("/dummyReadFile", abfsUriQueryBuilder.toString());
+    final AbfsRestOperation mockRestOp = Mockito.spy(new AbfsRestOperation(
+            AbfsRestOperationType.ReadFile,
+            client,
+            HTTP_METHOD_GET,
+            url,
+            requestHeaders));
+
+    // setting up mock behavior for the AbfsHttpOperation class
+    AbfsHttpOperation mockHttpOp = Mockito.spy(mockRestOp.createHttpOperationInstance());
+    Mockito.doReturn(-1)
+            .doReturn(-1)
+            .doReturn(-1)
+            .doReturn(HTTP_OK)
+            .when(mockHttpOp).getStatusCode();
+    Mockito.doNothing().when(mockHttpOp).setRequestProperty(nullable(String.class), nullable(String.class));
+    Mockito.doNothing().when(mockHttpOp).sendRequest(nullable(byte[].class), nullable(int.class), nullable(int.class));
+    Mockito.doNothing().when(mockHttpOp).processResponse(nullable(byte[].class), nullable(int.class), nullable(int.class));
+
+    Mockito.doReturn(mockHttpOp).when(mockRestOp).createHttpOperationInstance();
+    Mockito.doReturn(mockHttpOp).when(mockRestOp).getResult();
+
+    mockRestOp.execute(getTestTracingContext(fs, false));
+    Mockito.verify(intercept, times(1)).sendingRequest(Mockito.any(AbfsRestOperationType.class), Mockito.any(AbfsCounters.class));
+  }
+
+  @Test
+  public void testWriteThrottleNewRequest() throws IOException {
+    AzureBlobFileSystem fs = getFileSystem();
+    AbfsClient client = Mockito.spy(fs.getAbfsStore().getClient());
+    AbfsConfiguration configuration = client.getAbfsConfiguration();
+    Assume.assumeTrue(configuration.isAutoThrottlingEnabled());
+    AbfsCounters counters = client.getAbfsCounters();
+
+    AbfsThrottlingIntercept intercept = Mockito.mock(AbfsThrottlingIntercept.class);
+    Mockito.doNothing().when(intercept).sendingRequest(Mockito.any(AbfsRestOperationType.class), Mockito.any(AbfsCounters.class));
+    Mockito.doReturn(intercept).when(client).getIntercept();
+
+    // setting up the spy AbfsRestOperation class for write
+    final List<AbfsHttpHeader> requestHeaders = client.createDefaultHeaders();
+
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = client.createDefaultUriQueryBuilder();
+
+    final URL url = client.createRequestUrl("/dummyWriteFile", abfsUriQueryBuilder.toString());
+    final AbfsRestOperation mockRestOp = Mockito.spy(new AbfsRestOperation(
+            AbfsRestOperationType.Append,
+            client,
+            HTTP_METHOD_PUT,
+            url,
+            requestHeaders));
+
+    // setting up mock behavior for the AbfsHttpOperation class
+    AbfsHttpOperation mockHttpOp = Mockito.spy(mockRestOp.createHttpOperationInstance());
+    Mockito.doReturn(-1)
+            .doReturn(-1)
+            .doReturn(-1)
+            .doReturn(HTTP_OK)
+            .when(mockHttpOp).getStatusCode();
+    Mockito.doNothing().when(mockHttpOp).setRequestProperty(nullable(String.class), nullable(String.class));
+    Mockito.doNothing().when(mockHttpOp).sendRequest(nullable(byte[].class), nullable(int.class), nullable(int.class));
+    Mockito.doNothing().when(mockHttpOp).processResponse(nullable(byte[].class), nullable(int.class), nullable(int.class));
+
+    Mockito.doReturn(mockHttpOp).when(mockRestOp).createHttpOperationInstance();
+    Mockito.doReturn(mockHttpOp).when(mockRestOp).getResult();
+
+    mockRestOp.execute(getTestTracingContext(fs, false));
+    Mockito.verify(intercept, times(1)).sendingRequest(Mockito.any(AbfsRestOperationType.class), Mockito.any(AbfsCounters.class));
+  }
+
 
   private AbfsConfiguration getAbfsConfig() throws Exception {
     Configuration
