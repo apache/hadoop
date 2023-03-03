@@ -240,7 +240,7 @@ public class TestFsck {
 
   private void verifyAuditLogs() {
     String[] auditLogOutputLines = AUDIT_LOG_CAPTURE.getOutput().split("\\n");
-    int getFileStatusSuccess = 0;
+    int fileStatusSuccess = 0;
     int fsckCount = 0;
     for (String auditLogLine : auditLogOutputLines) {
       if (!auditLogLine.contains("allowed=")) {
@@ -250,14 +250,14 @@ public class TestFsck {
       LOG.info("Line: {}", extractedAuditLog);
       if (extractedAuditLog.contains("cmd=getfileinfo") && GET_FILE_INFO_PATTERN.matcher(
           extractedAuditLog).matches()) {
-        getFileStatusSuccess++;
+        fileStatusSuccess++;
       } else if (FSCK_PATTERN.matcher(extractedAuditLog).matches()) {
         fsckCount++;
       }
     }
-    if (getFileStatusSuccess < 2) {
+    if (fileStatusSuccess < 2) {
       throw new AssertionError(
-          "getfileinfo cmd should occur at least 2 times. Actual count: " + getFileStatusSuccess);
+          "getfileinfo cmd should occur at least 2 times. Actual count: " + fileStatusSuccess);
     }
     if (fsckCount < 1) {
       throw new AssertionError("fsck should be present at least once. Actual count: " + fsckCount);
