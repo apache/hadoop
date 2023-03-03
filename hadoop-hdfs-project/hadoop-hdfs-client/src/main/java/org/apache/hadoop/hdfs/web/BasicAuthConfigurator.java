@@ -53,7 +53,9 @@ public class BasicAuthConfigurator implements ConnectionConfigurator {
     if (credentials != null && !credentials.equals("")) {
       conn.setRequestProperty(
           "AUTHORIZATION",
-          "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8))
+          "Basic " + Base64.getEncoder().encodeToString(
+              credentials.getBytes(StandardCharsets.UTF_8)
+          )
       );
     }
 
