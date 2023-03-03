@@ -138,10 +138,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
   @Override
   public void close() {
-    membership = null;
-    applications = null;
-    reservations = null;
-    policies = null;
+    init(new Configuration());
   }
 
   @Override
@@ -464,13 +461,13 @@ public class MemoryFederationStateStore implements FederationStateStore {
     RouterMasterKey masterKey = request.getRouterMasterKey();
     DelegationKey delegationKey = getDelegationKeyByMasterKey(masterKey);
 
-    Set<DelegationKey> rmDTMasterKeyState = routerRMSecretManagerState.getMasterKeyState();
-    if (rmDTMasterKeyState.contains(delegationKey)) {
+    Map<Integer, DelegationKey> rmDTMasterKeyState = routerRMSecretManagerState.getMasterKeyState();
+    if (rmDTMasterKeyState.containsKey(delegationKey.getKeyId())) {
       FederationStateStoreUtils.logAndThrowStoreException(LOG,
           "Error storing info for RMDTMasterKey with keyID: %s.", delegationKey.getKeyId());
     }
 
-    routerRMSecretManagerState.getMasterKeyState().add(delegationKey);
+    routerRMSecretManagerState.getMasterKeyState().put(delegationKey.getKeyId(), delegationKey);
     LOG.info("Store Router-RMDT master key with key id: {}. Currently rmDTMasterKeyState size: {}",
         delegationKey.getKeyId(), rmDTMasterKeyState.size());
 
@@ -485,8 +482,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
     DelegationKey delegationKey = getDelegationKeyByMasterKey(masterKey);
 
     LOG.info("Remove Router-RMDT master key with key id: {}.", delegationKey.getKeyId());
-    Set<DelegationKey> rmDTMasterKeyState = routerRMSecretManagerState.getMasterKeyState();
-    rmDTMasterKeyState.remove(delegationKey);
+    Map<Integer, DelegationKey> rmDTMasterKeyState = routerRMSecretManagerState.getMasterKeyState();
+    rmDTMasterKeyState.remove(delegationKey.getKeyId());
 
     return RouterMasterKeyResponse.newInstance(masterKey);
   }
@@ -494,12 +491,10 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @Override
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    // Restore the DelegationKey from the request
     RouterMasterKey masterKey = request.getRouterMasterKey();
-    DelegationKey delegationKey = getDelegationKeyByMasterKey(masterKey);
-
-    Set<DelegationKey> rmDTMasterKeyState = routerRMSecretManagerState.getMasterKeyState();
-    if (!rmDTMasterKeyState.contains(delegationKey)) {
+    Map<Integer, DelegationKey> rmDTMasterKeyState = routerRMSecretManagerState.getMasterKeyState();
+    DelegationKey delegationKey = rmDTMasterKeyState.get(masterKey.getKeyId());
+    if (delegationKey == null) {
       throw new IOException("GetMasterKey with keyID: " + masterKey.getKeyId() +
           " does not exist.");
     }

@@ -145,7 +145,7 @@ public class RouterDelegationTokenSecretManager
   }
 
   /**
-   * no-op as expiry of stored tokens is upto the state store in a stateless secret manager
+   * no-op as removal of tokens is handled in removeToken()
    */
   @Override
   public void removeStoredToken(RMDelegationTokenIdentifier identifier) {
@@ -188,7 +188,6 @@ public class RouterDelegationTokenSecretManager
   @Override
   protected void storeToken(RMDelegationTokenIdentifier rmDelegationTokenIdentifier,
       DelegationTokenInformation tokenInfo) throws IOException {
-    this.addTokenForOwnerStats(rmDelegationTokenIdentifier);
     try {
       storeNewToken(rmDelegationTokenIdentifier, tokenInfo);
     } catch (YarnException e) {
@@ -205,6 +204,16 @@ public class RouterDelegationTokenSecretManager
     } catch (YarnException e) {
       e.printStackTrace();
       throw new IOException(e); // Wrap YarnException as an IOException to adhere to updateToken contract
+    }
+  }
+
+  @Override
+  protected void removeToken(RMDelegationTokenIdentifier identifier) throws IOException {
+    try {
+      federationFacade.removeStoredToken(identifier);
+    } catch (YarnException e) {
+      e.printStackTrace();
+      throw new IOException(e); // Wrap YarnException as an IOException to adhere to removeToken contract
     }
   }
 

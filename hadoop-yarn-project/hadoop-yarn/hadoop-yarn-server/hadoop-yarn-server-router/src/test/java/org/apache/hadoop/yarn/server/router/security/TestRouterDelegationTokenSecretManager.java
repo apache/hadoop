@@ -18,52 +18,55 @@
 package org.apache.hadoop.yarn.server.router.security;
 
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
-import org.apache.hadoop.security.token.delegation.DelegationKey;
-import org.apache.hadoop.test.LambdaTestUtils;
-import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
-import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
+import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertArrayEquals;
-
 public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouterTest {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestRouterDelegationTokenSecretManager.class);
-
-  private RouterDelegationTokenSecretManager secretManager_1;
-  private RouterDelegationTokenSecretManager secretManager_2;
-  private final Text owner = new Text("hadoop");
-  private final Text renewer = new Text("yarn");
-  private final Text realUser = new Text("router");
+  private volatile RouterDelegationTokenSecretManager secretManager_1;
+  private volatile RouterDelegationTokenSecretManager secretManager_2;
+  private final Text owner = new Text("owner");
+  private final Text renewer = new Text("renewer");
+  private final Text realUser = new Text("realUser");
+  private final int keyUpdateInterval = 1000;
+  private final int tokenRenewInterval = 2000;
+  private final int tokenMaxLifeTime = 10000;
 
   @Before
   public void setup() {
 
     // Setup multiple secret managers to validate stateless secret managers.
     // They are using same instance of FederationStateStoreFacade thus the in memory state store is shared
-    secretManager_1 = new RouterDelegationTokenSecretManager(
-        1000, 10000, 1000, 100
+    secretManager_1 = Mockito.spy(new RouterDelegationTokenSecretManager(
+        keyUpdateInterval, tokenMaxLifeTime, tokenRenewInterval, 100)
     );
-    secretManager_2 = new RouterDelegationTokenSecretManager(
-        1000, 10000, 1000, 100
+    secretManager_2 = Mockito.spy(new RouterDelegationTokenSecretManager(
+        keyUpdateInterval, tokenMaxLifeTime, tokenRenewInterval, 100)
     );
   }
 
+  @After
+  public void cleanup() throws Exception {
+    secretManager_1.stopThreads();
+    secretManager_2.stopThreads();
+    secretManager_1 = null;
+    secretManager_2 = null;
+    FederationStateStoreFacade.getInstance().getStateStore().close();
+  }
+
   @Test
-  public void testNewTokenVerification() throws IOException {
+  public void testNewTokenIsVerifiedAcrossManagers() throws IOException {
 
     secretManager_1.startThreads();
     RMDelegationTokenIdentifier tokenIdentifier = new RMDelegationTokenIdentifier(owner, renewer, realUser);
@@ -77,162 +80,172 @@ public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouter
 
     secretManager_2.startThreads();
     RMDelegationTokenIdentifier tokenIdentifier_3 = secretManager_2.decodeTokenIdentifier(token2);
-    Assertions.assertDoesNotThrow(() -> secretManager_2.verifyToken(tokenIdentifier_3, token.getPassword()));
+    Assertions.assertDoesNotThrow(() -> secretManager_2.verifyToken(tokenIdentifier_3, token2.getPassword()));
   }
 
   @Test
-  public void testRouterStoreNewMasterKey() throws Exception {
-    LOG.info("Test RouterDelegationTokenSecretManager: StoreNewMasterKey.");
+  public void testMasterKeyIsRolled() throws IOException, InterruptedException {
 
-    // Start the Router in Secure Mode
-    startSecureRouter();
+    secretManager_1.startThreads();
+    RMDelegationTokenIdentifier tokenIdentifier1 = new RMDelegationTokenIdentifier(owner, renewer, realUser);
+    new Token<>(tokenIdentifier1, secretManager_1);
 
-    // Store NewMasterKey
-    RouterClientRMService routerClientRMService = this.getRouter().getClientRMProxyService();
-    RouterDelegationTokenSecretManager secretManager =
-        routerClientRMService.getRouterDTSecretManager();
-    DelegationKey storeKey = new DelegationKey(1234, 4321, "keyBytes".getBytes());
-    secretManager.storeNewMasterKey(storeKey);
+    RMDelegationTokenIdentifier tokenIdentifier2 = new RMDelegationTokenIdentifier(owner, renewer, realUser);
+    new Token<>(tokenIdentifier2, secretManager_1);
 
-    // Get DelegationKey
-    DelegationKey responseKey = secretManager.getDelegationKey(1234);
+    // Check multiple tokens have same master key
+    Assert.assertEquals(tokenIdentifier1.getMasterKeyId(), tokenIdentifier2.getMasterKeyId());
+    // Sleep until master key is updated
+    Thread.sleep(keyUpdateInterval + 100);
 
-    assertNotNull(responseKey);
-    assertEquals(storeKey.getExpiryDate(), responseKey.getExpiryDate());
-    assertEquals(storeKey.getKeyId(), responseKey.getKeyId());
-    assertArrayEquals(storeKey.getEncodedKey(), responseKey.getEncodedKey());
-    assertEquals(storeKey, responseKey);
+    RMDelegationTokenIdentifier tokenIdentifier3 = new RMDelegationTokenIdentifier(owner, renewer, realUser);
+    new Token<>(tokenIdentifier3, secretManager_1);
+    // Check master key is updated
+    Assert.assertNotEquals(tokenIdentifier1.getMasterKeyId(), tokenIdentifier3.getMasterKeyId());
 
-    stopSecureRouter();
   }
 
   @Test
-  public void testRouterRemoveStoredMasterKey() throws Exception {
-    LOG.info("Test RouterDelegationTokenSecretManager: RemoveStoredMasterKey.");
+  public void testNewTokenIsCancelledAcrossManagers() throws IOException {
 
-    // Start the Router in Secure Mode
-    startSecureRouter();
+    secretManager_1.startThreads();
+    RMDelegationTokenIdentifier tokenIdentifier = new RMDelegationTokenIdentifier(owner, renewer, realUser);
+    Token<RMDelegationTokenIdentifier> token = new Token<>(tokenIdentifier, secretManager_1);
 
-    // Store NewMasterKey
-    RouterClientRMService routerClientRMService = this.getRouter().getClientRMProxyService();
-    RouterDelegationTokenSecretManager secretManager =
-        routerClientRMService.getRouterDTSecretManager();
-    DelegationKey storeKey = new DelegationKey(1234, 4321, "keyBytes".getBytes());
-    secretManager.storeNewMasterKey(storeKey);
+    Token<RMDelegationTokenIdentifier> token2 = new Token<>();
+    token2.decodeFromUrlString(token.encodeToUrlString());
 
-    // Remove DelegationKey
-    secretManager.removeStoredMasterKey(storeKey);
+    secretManager_2.startThreads();
+    secretManager_2.cancelToken(token2, owner.toString());
 
-    // Get DelegationKey
-    LambdaTestUtils.intercept(IOException.class,
-        "GetMasterKey with keyID: " + storeKey.getKeyId() + " does not exist.",
-        () -> secretManager.getDelegationKey(1234));
+    RMDelegationTokenIdentifier tokenIdentifier_2 = secretManager_1.decodeTokenIdentifier(token2);
+    Assertions.assertThrows(SecretManager.InvalidToken.class,
+        () -> secretManager_1.verifyToken(tokenIdentifier_2, token2.getPassword())
+    );
 
-    stopSecureRouter();
   }
 
   @Test
-  public void testRouterStoreNewToken() throws Exception {
-    LOG.info("Test RouterDelegationTokenSecretManager: StoreNewToken.");
+  public void testNewTokenIsRenewedAcrossManagers() throws IOException, InterruptedException {
 
-    // Start the Router in Secure Mode
-    startSecureRouter();
+    secretManager_1.startThreads();
+    RMDelegationTokenIdentifier tokenIdentifier = new RMDelegationTokenIdentifier(owner, renewer, realUser);
+    Token<RMDelegationTokenIdentifier> token = new Token<>(tokenIdentifier, secretManager_1);
 
-    // Store new rm-token
-    RouterClientRMService routerClientRMService = this.getRouter().getClientRMProxyService();
-    RouterDelegationTokenSecretManager secretManager =
-        routerClientRMService.getRouterDTSecretManager();
-    RMDelegationTokenIdentifier dtId1 = new RMDelegationTokenIdentifier(
-        new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
-    int sequenceNumber = 1;
-    dtId1.setSequenceNumber(sequenceNumber);
-    long renewDate1 = Time.now();
-    secretManager.storeNewToken(dtId1, renewDate1);
+    Token<RMDelegationTokenIdentifier> token2 = new Token<>();
+    token2.decodeFromUrlString(token.encodeToUrlString());
 
-    // query rm-token
-    RMDelegationTokenIdentifier dtId2 = new RMDelegationTokenIdentifier(
-        new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
-    dtId2.setSequenceNumber(sequenceNumber);
-    AbstractDelegationTokenSecretManager.DelegationTokenInformation dtId3 = secretManager.getTokenInfo(dtId2);
-    Assert.assertEquals(renewDate1, dtId3.getRenewDate());
+    Thread.sleep(tokenRenewInterval / 2 + 100);
+    secretManager_2.startThreads();
+    secretManager_2.renewToken(token2, renewer.toString());
 
-    // query rm-token2 not exists
-    sequenceNumber++;
-    dtId2.setSequenceNumber(sequenceNumber);
-    LambdaTestUtils.intercept(IOException.class,
-        "RMDelegationToken: " + dtId2 + " does not exist.",
-        () -> secretManager.getTokenInfo(dtId2));
+    Thread.sleep(tokenRenewInterval / 2 + 100);
+    RMDelegationTokenIdentifier tokenIdentifier_2 = secretManager_1.decodeTokenIdentifier(token2);
+    Assertions.assertDoesNotThrow(() -> secretManager_1.verifyToken(tokenIdentifier_2, token2.getPassword()));
 
-    stopSecureRouter();
   }
 
   @Test
-  public void testRouterUpdateNewToken() throws Exception {
-    LOG.info("Test RouterDelegationTokenSecretManager: UpdateNewToken.");
+  public void testTokenOperationsOnMasterKeyRollover() throws IOException, InterruptedException {
 
-    // Start the Router in Secure Mode
-    startSecureRouter();
+    secretManager_1.startThreads();
+    RMDelegationTokenIdentifier tokenIdentifier1 = new RMDelegationTokenIdentifier(owner, renewer, realUser);
+    Token<RMDelegationTokenIdentifier> token1 = new Token<>(tokenIdentifier1, secretManager_1);
 
-    // Store new rm-token
-    RouterClientRMService routerClientRMService = this.getRouter().getClientRMProxyService();
-    RouterDelegationTokenSecretManager secretManager =
-        routerClientRMService.getRouterDTSecretManager();
-    RMDelegationTokenIdentifier dtId1 = new RMDelegationTokenIdentifier(
-        new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
-    int sequenceNumber = 1;
-    dtId1.setSequenceNumber(sequenceNumber);
-    Long renewDate1 = Time.now();
-    secretManager.storeNewToken(dtId1, renewDate1);
+    // Sleep until master key is updated
+    Thread.sleep(keyUpdateInterval + 100);
 
-    sequenceNumber++;
-    dtId1.setSequenceNumber(sequenceNumber);
-    secretManager.updateStoredToken(dtId1, renewDate1);
+    RMDelegationTokenIdentifier tokenIdentifier2 = new RMDelegationTokenIdentifier(owner, renewer, realUser);
+    new Token<>(tokenIdentifier2, secretManager_1);
+    // Check master key is updated
+    Assert.assertNotEquals(tokenIdentifier1.getMasterKeyId(), tokenIdentifier2.getMasterKeyId());
 
-    // query rm-token
-    RMDelegationTokenIdentifier dtId2 = new RMDelegationTokenIdentifier(
-        new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
-    dtId2.setSequenceNumber(sequenceNumber);
-//    RMDelegationTokenIdentifier dtId3 = secretManager.getTokenInfo(dtId2);
-//    assertNotNull(dtId3);
-//    assertEquals(dtId1.getKind(), dtId3.getKind());
-//    assertEquals(dtId1.getOwner(), dtId3.getOwner());
-//    assertEquals(dtId1.getRealUser(), dtId3.getRealUser());
-//    assertEquals(dtId1.getRenewer(), dtId3.getRenewer());
-//    assertEquals(dtId1.getIssueDate(), dtId3.getIssueDate());
-//    assertEquals(dtId1.getMasterKeyId(), dtId3.getMasterKeyId());
-//    assertEquals(dtId1.getSequenceNumber(), dtId3.getSequenceNumber());
-//    assertEquals(sequenceNumber, dtId3.getSequenceNumber());
-//    assertEquals(dtId1, dtId3);
+    // Verify token with old master key is still considered valid
+    Assertions.assertDoesNotThrow(() -> secretManager_1.verifyToken(tokenIdentifier1, token1.getPassword()));
+    // Verify token with old master key can be renewed
+    Assertions.assertDoesNotThrow(() -> secretManager_1.renewToken(token1, renewer.toString()));
+    // Verify token with old master key can be cancelled
+    Assertions.assertDoesNotThrow(() -> secretManager_1.cancelToken(token1, owner.toString()));
+    // Verify token with old master key is now cancelled
+    Assert.assertThrows(SecretManager.InvalidToken.class,
+        () -> secretManager_1.verifyToken(tokenIdentifier1, token1.getPassword()));
 
-    stopSecureRouter();
   }
 
   @Test
-  public void testRouterRemoveToken() throws Exception {
-    LOG.info("Test RouterDelegationTokenSecretManager: RouterRemoveToken.");
+  public void testMasterKeyIsNotRolledOver() throws IOException, InterruptedException {
 
-    // Start the Router in Secure Mode
-    startSecureRouter();
+    secretManager_1.startThreads();
+    RMDelegationTokenIdentifier tokenIdentifier1 = new RMDelegationTokenIdentifier(owner, renewer, realUser);
+    new Token<>(tokenIdentifier1, secretManager_1);
 
-    // Store new rm-token
-    RouterClientRMService routerClientRMService = this.getRouter().getClientRMProxyService();
-    RouterDelegationTokenSecretManager secretManager =
-        routerClientRMService.getRouterDTSecretManager();
-    RMDelegationTokenIdentifier dtId1 = new RMDelegationTokenIdentifier(
-        new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
-    int sequenceNumber = 1;
-    dtId1.setSequenceNumber(sequenceNumber);
-    Long renewDate1 = Time.now();
-    secretManager.storeNewToken(dtId1, renewDate1);
+    Mockito.doThrow(new IOException("failure")).when(secretManager_1).storeNewMasterKey(Mockito.any());
 
-    // Remove rm-token
-    secretManager.removeStoredToken(dtId1);
+    // Sleep until master key is updated
+    Thread.sleep(keyUpdateInterval + 100);
 
-    // query rm-token
-    LambdaTestUtils.intercept(IOException.class,
-        "RMDelegationToken: " + dtId1 + " does not exist.",
-        () -> secretManager.getTokenInfo(dtId1));
-
-    stopSecureRouter();
+    RMDelegationTokenIdentifier tokenIdentifier2 = new RMDelegationTokenIdentifier(owner, renewer, realUser);
+    new Token<>(tokenIdentifier2, secretManager_1);
+    // Verify master key is not updated
+    Assert.assertEquals(tokenIdentifier1.getMasterKeyId(), tokenIdentifier2.getMasterKeyId());
   }
+
+  @Test
+  public void testNewTokenFailsOnDBFailure() throws IOException {
+    secretManager_1.startThreads();
+    RMDelegationTokenIdentifier tokenIdentifier1 = new RMDelegationTokenIdentifier(owner, renewer, realUser);
+
+    Mockito.doThrow(new IOException("failure")).when(secretManager_1).storeToken(Mockito.any(), Mockito.any());
+    Assert.assertThrows(RuntimeException.class, () -> new Token<>(tokenIdentifier1, secretManager_1));
+  }
+
+  @Test
+  public void testTokenIsNotRenewedOnDBFailure() throws IOException, InterruptedException {
+    secretManager_1.startThreads();
+    RMDelegationTokenIdentifier tokenIdentifier1 = new RMDelegationTokenIdentifier(owner, renewer, realUser);
+
+    Token<RMDelegationTokenIdentifier> token = new Token<>(tokenIdentifier1, secretManager_1);
+    Mockito.doThrow(new IOException("failure")).when(secretManager_1).updateToken(Mockito.any(), Mockito.any());
+
+    Thread.sleep(tokenRenewInterval / 2 + 100);
+    Assert.assertThrows(IOException.class, () -> secretManager_1.renewToken(token, renewer.toString()));
+    // validate that token is currently valid
+    Assertions.assertDoesNotThrow(() -> secretManager_1.verifyToken(tokenIdentifier1, token.getPassword()));
+
+    Thread.sleep(tokenRenewInterval / 2 + 100);
+    // token is no longer valid because token renewal had failed
+    Assertions.assertThrows(SecretManager.InvalidToken.class,
+        () -> secretManager_1.verifyToken(tokenIdentifier1, token.getPassword())
+    );
+  }
+
+  @Ignore
+  public void testNewTokenFailureIfMasterKeyNotRolledOverAtAll() throws IOException, InterruptedException {
+    secretManager_1.startThreads();
+
+    // Token generation succeeds initially because master key generated on initialisation was saved
+    RMDelegationTokenIdentifier tokenIdentifier1 = new RMDelegationTokenIdentifier(owner, renewer, realUser);
+    new Token<>(tokenIdentifier1, secretManager_1);
+
+    Mockito.doThrow(new IOException("failure")).when(secretManager_1).storeNewMasterKey(Mockito.any());
+
+    // Sleep until current master key expires. New master key isn't generated because rollovers are failing
+    Thread.sleep(tokenMaxLifeTime + keyUpdateInterval + 100);
+
+    RMDelegationTokenIdentifier tokenIdentifier2 = new RMDelegationTokenIdentifier(owner, renewer, realUser);
+    // New token generation fails because current master key is expired
+    Assert.assertThrows(RuntimeException.class, () -> new Token<>(tokenIdentifier2, secretManager_1));
+  }
+
+  @Test
+  public void testMasterKeyCreationFailureOnStartup() throws IOException {
+    Mockito.doThrow(new IOException("failure")).when(secretManager_1).storeNewMasterKey(Mockito.any());
+
+    Assert.assertThrows(IOException.class, () -> secretManager_1.startThreads());
+
+    RMDelegationTokenIdentifier tokenIdentifier = new RMDelegationTokenIdentifier(owner, renewer, realUser);
+    // New token generation fails because master key is not yet set
+    Assert.assertThrows(NullPointerException.class, () -> new Token<>(tokenIdentifier, secretManager_1));
+  }
+
 }

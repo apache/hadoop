@@ -237,7 +237,7 @@ extends AbstractDelegationTokenIdentifier>
 
   // RM
   protected void removeStoredToken(TokenIdent ident) throws IOException {
-
+    return;
   }
   // RM
   protected void updateStoredToken(TokenIdent ident, long renewDate) throws IOException {
@@ -384,6 +384,15 @@ extends AbstractDelegationTokenIdentifier>
       DelegationTokenInformation tokenInfo) throws IOException {
     currentTokens.put(ident, tokenInfo);
     updateStoredToken(ident, tokenInfo.getRenewDate());
+  }
+
+  protected void removeToken(TokenIdent ident) throws IOException {
+    DelegationTokenInformation info = currentTokens.remove(ident);
+    if (info == null) {
+      throw new InvalidToken("Token not found " + formatTokenId(ident));
+    }
+    removeTokenForOwnerStats(ident);
+    removeStoredToken(ident);
   }
 
   /**
@@ -691,13 +700,8 @@ extends AbstractDelegationTokenIdentifier>
       throw new AccessControlException(canceller
           + " is not authorized to cancel the token " + formatTokenId(id));
     }
-    DelegationTokenInformation info = currentTokens.remove(id);
-    if (info == null) {
-      throw new InvalidToken("Token not found " + formatTokenId(id));
-    }
     METRICS.trackRemoveToken(() -> {
-      removeTokenForOwnerStats(id);
-      removeStoredToken(id);
+      removeToken(id);
     });
     return id;
   }

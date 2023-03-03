@@ -30,7 +30,7 @@ public class RouterRMDTSecretManagerState {
   // DTIdentifier -> renewDate
   private Map<Integer, RouterStoreToken> delegationTokenState = new HashMap<>();
 
-  private Set<DelegationKey> masterKeyState = new HashSet<>();
+  private Map<Integer, DelegationKey> masterKeyState = new HashMap<>();
 
   private int dtSequenceNumber = 0;
 
@@ -38,7 +38,7 @@ public class RouterRMDTSecretManagerState {
     return delegationTokenState;
   }
 
-  public Set<DelegationKey> getMasterKeyState() {
+  public Map<Integer, DelegationKey> getMasterKeyState() {
     return masterKeyState;
   }
 

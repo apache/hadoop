@@ -59,10 +59,10 @@ public class TestMemoryFederationStateStore extends FederationStateStoreBaseTest
         memoryStateStore.getRouterRMSecretManagerState();
     assertNotNull(secretManagerState);
 
-    Set<DelegationKey> delegationKeys = secretManagerState.getMasterKeyState();
+    Map<Integer, DelegationKey> delegationKeys = secretManagerState.getMasterKeyState();
     assertNotNull(delegationKeys);
 
-    assertTrue(delegationKeys.contains(delegationKey));
+    assertTrue(delegationKeys.containsKey(delegationKey.getKeyId()));
 
     RouterMasterKey resultRouterMasterKey = RouterMasterKey.newInstance(delegationKey.getKeyId(),
         ByteBuffer.wrap(delegationKey.getEncodedKey()), delegationKey.getExpiryDate());

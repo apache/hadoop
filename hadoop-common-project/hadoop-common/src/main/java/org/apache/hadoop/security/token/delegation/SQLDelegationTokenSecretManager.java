@@ -161,7 +161,7 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
    *         null if it doesn't exist in the database.
    */
   @Override
-  protected DelegationTokenInformation getTokenInfo(TokenIdent ident) {
+  protected DelegationTokenInformation getTokenInfo(TokenIdent ident) throws IOException {
     // Look for token in local cache
     DelegationTokenInformation tokenInfo = super.getTokenInfo(ident);
 
@@ -302,7 +302,7 @@ public abstract class SQLDelegationTokenSecretManager<TokenIdent
    *         if it doesn't exist in the database.
    */
   @Override
-  protected DelegationKey getDelegationKey(int keyId) {
+  protected DelegationKey getDelegationKey(int keyId) throws IOException {
     // Look for delegation key in local cache
     DelegationKey delegationKey = super.getDelegationKey(keyId);
 
