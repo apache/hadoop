@@ -479,7 +479,7 @@ public class TestLeafQueue {
       "testPolicyRoot" + System.currentTimeMillis();
 
     OrderingPolicy<FiCaSchedulerApp> comPol =    
-      testConf.<FiCaSchedulerApp>getAppOrderingPolicy(new QueuePath(tproot));
+        testConf.<FiCaSchedulerApp>getAppOrderingPolicy(new QueuePath(tproot));
     
     
   }

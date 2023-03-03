@@ -526,8 +526,8 @@ public class TestAppManager extends AppManagerTestBase{
         "1w");
     csConf.set(ROOT_PARENT_PATH + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "acl_administer_queue",
         "user3");
-    csConf.set(ROOT_PARENT_PATH + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "acl_submit_applications",
-        "user3");
+    csConf.set(ROOT_PARENT_PATH + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX
+        + "acl_submit_applications", "user3");
 
     MockRM newMockRM = new MockRM(csConf);
 
@@ -617,8 +617,8 @@ public class TestAppManager extends AppManagerTestBase{
         "1w");
     csConf.set(ROOT_PARENT_PATH + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "acl_administer_queue",
         "user3");
-    csConf.set(ROOT_PARENT_PATH + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "acl_submit_applications",
-        "user3");
+    csConf.set(ROOT_PARENT_PATH + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX
+        + "acl_submit_applications", "user3");
 
     testFlexibleAQCDWithMixedTemplatesDynamicParentACLScenario(conf, csConf);
   }

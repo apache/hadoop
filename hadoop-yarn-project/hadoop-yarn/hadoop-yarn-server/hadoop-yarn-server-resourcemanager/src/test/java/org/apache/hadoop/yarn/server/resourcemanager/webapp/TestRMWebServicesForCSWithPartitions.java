@@ -161,7 +161,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     config.setMaximumCapacity(leafQueueAPath, 50);
 
     String leafQueueB = CapacitySchedulerConfiguration.ROOT + "." + QUEUE_B;
-    QueuePath leafQueueBPath = new QueuePath(leafQueueA);
+    QueuePath leafQueueBPath = new QueuePath(leafQueueB);
     config.setCapacity(leafQueueBPath, 30);
     config.setMaximumCapacity(leafQueueBPath, 50);
 
@@ -169,12 +169,12 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     config.setMaximumCapacity(interMediateQueueCPath, 50);
 
     String leafQueueC1 = interMediateQueueC + "." + LEAF_QUEUE_C1;
-    QueuePath leafQueueC1Path = new QueuePath(leafQueueA);
+    QueuePath leafQueueC1Path = new QueuePath(leafQueueC1);
     config.setCapacity(leafQueueC1Path, 50);
     config.setMaximumCapacity(leafQueueC1Path, 60);
 
     String leafQueueC2 = interMediateQueueC + "." + LEAF_QUEUE_C2;
-    QueuePath leafQueueC2Path = new QueuePath(leafQueueA);
+    QueuePath leafQueueC2Path = new QueuePath(leafQueueC2);
     config.setCapacity(leafQueueC2Path, 50);
     config.setMaximumCapacity(leafQueueC2Path, 70);
 

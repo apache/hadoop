@@ -594,7 +594,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   private void setupQueueConfigurationOnlyA(
       CapacitySchedulerConfiguration conf) {
     conf.setQueues(ROOT, new String[] {R});
-    conf.setCapacity(R_QUEUE_PATH, 10);
+    conf.setCapacity(R_QUEUE_PATH, 100);
     conf.setQueues(R_QUEUE_PATH, new String[] {A});
     conf.setCapacity(A_QUEUE_PATH, 100);
     conf.setDouble(CapacitySchedulerConfiguration

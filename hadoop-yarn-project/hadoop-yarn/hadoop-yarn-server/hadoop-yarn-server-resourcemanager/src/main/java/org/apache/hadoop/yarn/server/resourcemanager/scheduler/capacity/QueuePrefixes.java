@@ -42,8 +42,8 @@ public final class QueuePrefixes {
   }
 
   /**
-   * Get the auto created leaf queue's template configuration prefix
-   * Leaf queue's template capacities are configured at the parent queue
+   * Get the auto created leaf queue's template configuration prefix.
+   * Leaf queue's template capacities are configured at the parent queue.
    *
    * @param queuePath parent queue's path
    * @return Config prefix for leaf queue template configurations
