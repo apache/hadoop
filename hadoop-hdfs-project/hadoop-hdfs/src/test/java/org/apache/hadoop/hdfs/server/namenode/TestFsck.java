@@ -30,12 +30,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -117,6 +115,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Assert;
@@ -131,10 +130,7 @@ public class TestFsck {
   private static final org.slf4j.Logger LOG =
       LoggerFactory.getLogger(TestFsck.class.getName());
 
-  private static final File AUDIT_LOG_FILE =
-      new File(System.getProperty("hadoop.log.dir"), "hdfs-audit.log");
-
-  // Pattern for: 
+  // Pattern for:
   // allowed=true ugi=name ip=/address cmd=FSCK src=/ dst=null perm=null
   static final Pattern FSCK_PATTERN = Pattern.compile(
       "allowed=.*?\\s" +
@@ -157,6 +153,9 @@ public class TestFsck {
   
   private static final String LINE_SEPARATOR =
       System.getProperty("line.separator");
+
+  private static final LogCapturer AUDIT_LOG_CAPTURE =
+      LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
   public static String runFsck(Configuration conf, int expectedErrCode,
                         boolean checkErrorCode, String... path)
@@ -239,28 +238,29 @@ public class TestFsck {
     util.cleanup(fs, "/srcdat");
   }
 
-  private void verifyAuditLogs() throws IOException {
-    try (BufferedReader reader = new BufferedReader(new FileReader(AUDIT_LOG_FILE))) {
-      // Audit log should contain one getfileinfo and one fsck
-      String line;
-      int getFileStatusSuccess = 0;
-      int fsckCount = 0;
-      while ((line = reader.readLine()) != null) {
-        LOG.info("Line: {}", line);
-        if (line.contains("cmd=getfileinfo") && GET_FILE_INFO_PATTERN.matcher(line).matches()) {
-          getFileStatusSuccess++;
-        } else if (FSCK_PATTERN.matcher(line).matches()) {
-          fsckCount++;
-        }
+  private void verifyAuditLogs() {
+    String[] auditLogOutputLines = AUDIT_LOG_CAPTURE.getOutput().split("\\n");
+    int getFileStatusSuccess = 0;
+    int fsckCount = 0;
+    for (String auditLogLine : auditLogOutputLines) {
+      if (!auditLogLine.contains("allowed=")) {
+        continue;
       }
-      if (getFileStatusSuccess < 2) {
-        throw new AssertionError(
-            "getfileinfo cmd should occur at least 2 times. Actual count: " + getFileStatusSuccess);
+      String extractedAuditLog = "allowed=" + auditLogLine.split("allowed=")[1];
+      LOG.info("Line: {}", extractedAuditLog);
+      if (extractedAuditLog.contains("cmd=getfileinfo") && GET_FILE_INFO_PATTERN.matcher(
+          extractedAuditLog).matches()) {
+        getFileStatusSuccess++;
+      } else if (FSCK_PATTERN.matcher(extractedAuditLog).matches()) {
+        fsckCount++;
       }
-      if (fsckCount < 1) {
-        throw new AssertionError(
-            "fsck should be present at least once. Actual count: " + fsckCount);
-      }
+    }
+    if (getFileStatusSuccess < 2) {
+      throw new AssertionError(
+          "getfileinfo cmd should occur at least 2 times. Actual count: " + getFileStatusSuccess);
+    }
+    if (fsckCount < 1) {
+      throw new AssertionError("fsck should be present at least once. Actual count: " + fsckCount);
     }
   }
   
