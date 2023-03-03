@@ -224,7 +224,7 @@ public class DFSInputStream extends FSInputStream
   }
 
   /**
-   * Grab the open-file info from namenode
+   * Grab the open-file info from namenode.
    * @param refreshLocatedBlocks whether to re-fetch locatedblocks
    */
   void openInfo(boolean refreshLocatedBlocks) throws IOException {
@@ -940,7 +940,8 @@ public class DFSInputStream extends FSInputStream
    * @return Returns chosen DNAddrPair; Can be null if refetchIfRequired is
    * false.
    */
-  private DNAddrPair chooseDataNode(LocatedBlock block,
+  @VisibleForTesting
+  DNAddrPair chooseDataNode(LocatedBlock block,
       Collection<DatanodeInfo> ignoredNodes, boolean refetchIfRequired)
       throws IOException {
     while (true) {
@@ -955,6 +956,14 @@ public class DFSInputStream extends FSInputStream
     }
   }
 
+  /**
+   * RefetchLocations should only be called when there are no active requests
+   * to datanodes. In the hedged read case this means futures should be empty.
+   * @param block The locatedBlock to get new datanode locations for.
+   * @param ignoredNodes A list of ignored nodes. This list can be null and can be cleared.
+   * @return the locatedBlock with updated datanode locations.
+   * @throws IOException
+   */
   private LocatedBlock refetchLocations(LocatedBlock block,
       Collection<DatanodeInfo> ignoredNodes) throws IOException {
     String errMsg = getBestNodeDNAddrPairErrorString(block.getLocations(),
@@ -999,11 +1008,22 @@ public class DFSInputStream extends FSInputStream
       throw new InterruptedIOException(
           "Interrupted while choosing DataNode for read.");
     }
-    clearLocalDeadNodes(); //2nd option is to remove only nodes[blockId]
+    clearCachedNodeState(ignoredNodes);
     openInfo(true);
     block = refreshLocatedBlock(block);
     failures++;
     return block;
+  }
+
+  /**
+   * Clear both the dead nodes and the ignored nodes
+   * @param ignoredNodes is cleared
+   */
+  private void clearCachedNodeState(Collection<DatanodeInfo> ignoredNodes) {
+    clearLocalDeadNodes(); //2nd option is to remove only nodes[blockId]
+    if (ignoredNodes != null) {
+      ignoredNodes.clear();
+    }
   }
 
   /**
@@ -1337,8 +1357,12 @@ public class DFSInputStream extends FSInputStream
         } catch (InterruptedException ie) {
           // Ignore and retry
         }
-        if (refetch) {
-          refetchLocations(block, ignored);
+        // If refetch is true, then all nodes are in deadNodes or ignoredNodes.
+        // We should loop through all futures and remove them, so we do not
+        // have concurrent requests to the same node.
+        // Once all futures are cleared, we can clear the ignoredNodes and retry.
+        if (refetch && futures.isEmpty()) {
+          block = refetchLocations(block, ignored);
         }
         // We got here if exception. Ignore this node on next go around IFF
         // we found a chosenNode to hedge read against.

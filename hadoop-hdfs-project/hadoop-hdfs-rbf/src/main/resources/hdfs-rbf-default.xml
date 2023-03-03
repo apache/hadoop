@@ -884,4 +884,14 @@
       of namespaces in use and the latency of the msync requests.
     </description>
   </property>
+
+  <property>
+    <name>dfs.federation.router.observer.state.id.refresh.period</name>
+    <value>15s</value>
+    <description>
+      Period to refresh namespace stateID using active namenode. This ensures the
+      namespace stateID is refresh even when an observer is trailing behind.
+      If this is below 0, the auto-refresh is disabled.
+    </description>
+  </property>
 </configuration>
