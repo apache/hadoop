@@ -119,7 +119,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -189,11 +188,6 @@ public class TestFsck {
   @After
   public void tearDown() throws Exception {
     shutdownCluster();
-  }
-
-  @AfterClass
-  public static void afterClass() throws Exception {
-    assertTrue(AUDIT_LOG_FILE.delete());
   }
 
   private void shutdownCluster() throws Exception {
