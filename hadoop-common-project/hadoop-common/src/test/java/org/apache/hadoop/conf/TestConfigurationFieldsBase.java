@@ -19,6 +19,7 @@
 package org.apache.hadoop.conf;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -38,6 +39,7 @@ import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -191,7 +193,7 @@ public abstract class TestConfigurationFieldsBase {
     if (fields == null)
       return null;
 
-    HashMap<String,String> retVal = new HashMap<>();
+    HashMap<String, String> retVal = new HashMap<>();
 
     // Setup regexp for valid properties
     String propRegex = "^[A-Za-z][A-Za-z0-9_-]+(\\.[A-Za-z%s0-9_-]+)+$";
@@ -199,6 +201,7 @@ public abstract class TestConfigurationFieldsBase {
 
     // Iterate through class member variables
     String value;
+    Set<String> fieldsNotPassedRegex = new HashSet<>();
     for (Field f : fields) {
       LOG_CONFIG.debug("Field: {}", f);
       // Filter out anything that isn't "public static final"
@@ -251,13 +254,14 @@ public abstract class TestConfigurationFieldsBase {
       Matcher m = p.matcher(value);
       if (!m.find()) {
         LOG_CONFIG.debug("  Passes Regex: false");
+        fieldsNotPassedRegex.add(f.getName());
         continue;
       }
       LOG_CONFIG.debug("  Passes Regex: true");
 
       // Save member variable/value as hash
       if (!retVal.containsKey(value)) {
-        retVal.put(value,f.getName());
+        retVal.put(value, f.getName());
       } else {
         LOG_CONFIG.debug("ERROR: Already found key for property " + value);
       }
@@ -414,6 +418,7 @@ public abstract class TestConfigurationFieldsBase {
    */
   @Before
   public void setupTestConfigurationFields() throws Exception {
+    GenericTestUtils.setLogLevel(LOG_CONFIG, Level.DEBUG);
     initializeMemberVariables();
 
     // Error if subclass hasn't set class members
