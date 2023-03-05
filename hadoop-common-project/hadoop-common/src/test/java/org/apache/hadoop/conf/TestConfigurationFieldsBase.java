@@ -286,7 +286,7 @@ public abstract class TestConfigurationFieldsBase {
    * @param filename XML filename
    * @return HashMap containing &lt;Property,Value&gt; entries from XML file
    */
-  private HashMap<String, String> extractPropertiesFromXml(String filename) {
+  private Map<String, String> extractPropertiesFromXml(String filename) {
     if (filename == null) {
       return null;
     }
@@ -296,7 +296,7 @@ public abstract class TestConfigurationFieldsBase {
     conf.setAllowNullValueProperties(true);
     conf.addResource(filename);
 
-    HashMap<String, String> retVal = new HashMap<>();
+    Map<String, String> retVal = new HashMap<>();
     Iterator<Map.Entry<String, String>> kvItr = conf.iterator();
     while (kvItr.hasNext()) {
       Map.Entry<String, String> entry = kvItr.next();
@@ -313,11 +313,11 @@ public abstract class TestConfigurationFieldsBase {
       }
       if (conf.onlyKeyExists(key)) {
         retVal.put(key, null);
-        LOG_XML.debug("  XML Key,Null Value: " + key);
+        LOG_XML.debug("  XML Key, Null Value: " + key);
       } else {
         if (conf.get(key) != null) {
           retVal.put(key, entry.getValue());
-          LOG_XML.debug("  XML Key,Valid Value: " + key);
+          LOG_XML.debug("  XML Key, Valid Value: " + key);
         }
       }
       kvItr.remove();
@@ -343,14 +343,14 @@ public abstract class TestConfigurationFieldsBase {
    * @param fields The class member variables
    * @return HashMap containing (DefaultVariableName, DefaultValue) entries
    */
-  private HashMap<String, String>
+  private Map<String, String>
       extractDefaultVariablesFromConfigurationFields(Field[] fields) {
     // Sanity Check
     if (fields == null) {
       return null;
     }
 
-    HashMap<String, String> retVal = new HashMap<>();
+    Map<String, String> retVal = new HashMap<>();
 
     // Setup regexp for valid properties
 
@@ -405,8 +405,8 @@ public abstract class TestConfigurationFieldsBase {
     initializeMemberVariables();
 
     // Error if subclass hasn't set class members
-    assertNotNull(xmlFilename);
-    assertNotNull(configurationClasses);
+    assertNotNull("XML file name is null", xmlFilename);
+    assertNotNull("Configuration classes array is null", configurationClasses);
 
     // Create class member/value map
     configurationMemberVariables = new HashMap<>();
@@ -452,15 +452,16 @@ public abstract class TestConfigurationFieldsBase {
   @Test
   public void testCompareConfigurationClassAgainstXml() {
     // Error if subclass hasn't set class members
-    assertNotNull(xmlFilename);
-    assertNotNull(configurationClasses);
+    assertNotNull("XML file name is null", xmlFilename);
+    assertNotNull("Configuration classes array is null", configurationClasses);
 
     final int missingXmlSize = configurationFieldsMissingInXmlFile.size();
 
     for (Class c : configurationClasses) {
-      LOG.info(c.toString());
+      LOG.info("Configuration class: {}", c.toString());
     }
     LOG.info("({} member variables)\n", configurationMemberVariables.size());
+
     StringBuilder xmlErrorMsg = new StringBuilder();
     for (Class c : configurationClasses) {
       xmlErrorMsg.append(c);
@@ -471,6 +472,7 @@ public abstract class TestConfigurationFieldsBase {
     xmlErrorMsg.append(" variables missing in ");
     xmlErrorMsg.append(xmlFilename);
     LOG.error(xmlErrorMsg.toString());
+
     if (missingXmlSize == 0) {
       LOG.info("  (None)");
     } else {
@@ -504,8 +506,8 @@ public abstract class TestConfigurationFieldsBase {
   @Test
   public void testCompareXmlAgainstConfigurationClass() {
     // Error if subclass hasn't set class members
-    assertNotNull(xmlFilename);
-    assertNotNull(configurationClasses);
+    assertNotNull("XML file name is null", xmlFilename);
+    assertNotNull("Configuration classes array is null", configurationClasses);
 
     final int missingConfigSize = xmlFieldsMissingInConfiguration.size();
 
@@ -536,17 +538,15 @@ public abstract class TestConfigurationFieldsBase {
   @Test
   public void testXmlAgainstDefaultValuesInConfigurationClass() {
     // Error if subclass hasn't set class members
-    assertNotNull(xmlFilename);
-    assertNotNull(configurationMemberVariables);
-    assertNotNull(configurationDefaultVariables);
+    assertNotNull("XML file name is null", xmlFilename);
+    assertNotNull("Configuration member variables is null", configurationMemberVariables);
+    assertNotNull("Configuration default variables is null", configurationMemberVariables);
 
-    TreeSet<String> xmlPropertiesWithEmptyValue = new TreeSet<>();
-    TreeSet<String> configPropertiesWithNoDefaultConfig = new TreeSet<>();
-    HashMap<String, String> xmlPropertiesMatchingConfigDefault =
-        new HashMap<>();
+    Set<String> xmlPropertiesWithEmptyValue = new TreeSet<>();
+    Set<String> configPropertiesWithNoDefaultConfig = new TreeSet<>();
+    Map<String, String> xmlPropertiesMatchingConfigDefault = new HashMap<>();
     // Ugly solution.  Should have tuple-based solution.
-    HashMap<HashMap<String, String>, HashMap<String, String>> mismatchingXmlConfig
-        = new HashMap<>();
+    Map<Map<String, String>, Map<String, String>> mismatchingXmlConfig = new HashMap<>();
 
     for (Map.Entry<String, String> xEntry : xmlKeyValueMap.entrySet()) {
       String xmlProperty = xEntry.getKey();
@@ -589,9 +589,9 @@ public abstract class TestConfigurationFieldsBase {
           if (xmlDefaultValue == null) {
             xmlPropertiesWithEmptyValue.add(xmlProperty);
           } else if (!xmlDefaultValue.equals(defaultConfigValue)) {
-            HashMap<String, String> xmlEntry = new HashMap<>();
+            Map<String, String> xmlEntry = new HashMap<>();
             xmlEntry.put(xmlProperty, xmlDefaultValue);
-            HashMap<String, String> configEntry = new HashMap<>();
+            Map<String, String> configEntry = new HashMap<>();
             configEntry.put(defaultConfigName, defaultConfigValue);
             mismatchingXmlConfig.put(xmlEntry, configEntry);
           } else {
@@ -610,7 +610,7 @@ public abstract class TestConfigurationFieldsBase {
     if (mismatchingXmlConfig.isEmpty()) {
       LOG.info("  (None)");
     } else {
-      for (Map.Entry<HashMap<String, String>, HashMap<String, String>> xcEntry :
+      for (Map.Entry<Map<String, String>, Map<String, String>> xcEntry :
           mismatchingXmlConfig.entrySet()) {
         xcEntry.getKey().forEach((key, value) -> {
           LOG.info("XML Property: {}", key);
@@ -697,7 +697,5 @@ public abstract class TestConfigurationFieldsBase {
       }
       LOG.info("Checked {} default values for collision.", valuesChecked);
     }
-
-
   }
 }
