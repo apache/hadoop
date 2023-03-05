@@ -225,7 +225,7 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
     final ShuffleTest t = createShuffleTest();
     final EmbeddedChannel shuffle = t.createShuffleHandlerChannelFileRegion();
 
-    String dataFile = getDataFile(tempDir.toAbsolutePath().toString(), TEST_ATTEMPT_2);
+    String dataFile = getDataFile(TEST_USER, tempDir.toAbsolutePath().toString(), TEST_ATTEMPT_2);
     assertTrue("should delete", new File(dataFile).delete());
 
     FullHttpRequest req = t.createRequest(getUri(TEST_JOB_ID, 0,
