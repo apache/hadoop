@@ -20,6 +20,7 @@ package org.apache.hadoop.conf;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.ReflectionUtils;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -346,12 +347,8 @@ public abstract class TestConfigurationFieldsBase {
     HashMap<String, String> retVal = new HashMap<>();
 
     // Setup regexp for valid properties
-    String propRegex = "^[A-Za-z][A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)+$";
-    Pattern p = Pattern.compile(propRegex);
 
     // Iterate through class member variables
-    int totalFields = 0;
-    String value;
     for (Field f : fields) {
       // Filter out anything that isn't "public static final"
       if (!Modifier.isStatic(f.getModifiers()) ||
@@ -366,40 +363,8 @@ public abstract class TestConfigurationFieldsBase {
           continue;
         }
         try {
-          switch (f.getType().getName()) {
-          case "java.lang.String":
-            String sValue = (String) f.get(null);
-            retVal.put(f.getName(), sValue);
-            break;
-          case "short":
-            short shValue = (short) f.get(null);
-            retVal.put(f.getName(), Integer.toString(shValue));
-            break;
-          case "int":
-            int iValue = (int) f.get(null);
-            retVal.put(f.getName(), Integer.toString(iValue));
-            break;
-          case "long":
-            long lValue = (long) f.get(null);
-            retVal.put(f.getName(), Long.toString(lValue));
-            break;
-          case "float":
-            float fValue = (float) f.get(null);
-            retVal.put(f.getName(), Float.toString(fValue));
-            break;
-          case "double":
-            double dValue = (double) f.get(null);
-            retVal.put(f.getName(), Double.toString(dValue));
-            break;
-          case "boolean":
-            boolean bValue = (boolean) f.get(null);
-            retVal.put(f.getName(), Boolean.toString(bValue));
-            break;
-          default:
-            LOG.debug("Config variable {} has unknown type {}",
-                f.getName(), f.getType().getName());
-            break;
-          }
+          String s = ReflectionUtils.getStringValueOfField(f);
+          retVal.put(f.getName(), s);
         } catch (IllegalAccessException iaException) {
           LOG.error("{}", f, iaException);
         }
