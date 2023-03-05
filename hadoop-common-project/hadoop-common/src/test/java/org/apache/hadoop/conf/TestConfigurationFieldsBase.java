@@ -366,30 +366,39 @@ public abstract class TestConfigurationFieldsBase {
           continue;
         }
         try {
-          if (f.getType().getName().equals("java.lang.String")) {
+          switch (f.getType().getName()) {
+          case "java.lang.String":
             String sValue = (String) f.get(null);
             retVal.put(f.getName(), sValue);
-          } else if (f.getType().getName().equals("short")) {
+            break;
+          case "short":
             short shValue = (short) f.get(null);
             retVal.put(f.getName(), Integer.toString(shValue));
-          } else if (f.getType().getName().equals("int")) {
+            break;
+          case "int":
             int iValue = (int) f.get(null);
             retVal.put(f.getName(), Integer.toString(iValue));
-          } else if (f.getType().getName().equals("long")) {
+            break;
+          case "long":
             long lValue = (long) f.get(null);
             retVal.put(f.getName(), Long.toString(lValue));
-          } else if (f.getType().getName().equals("float")) {
+            break;
+          case "float":
             float fValue = (float) f.get(null);
             retVal.put(f.getName(), Float.toString(fValue));
-          } else if (f.getType().getName().equals("double")) {
+            break;
+          case "double":
             double dValue = (double) f.get(null);
             retVal.put(f.getName(), Double.toString(dValue));
-          } else if (f.getType().getName().equals("boolean")) {
+            break;
+          case "boolean":
             boolean bValue = (boolean) f.get(null);
             retVal.put(f.getName(), Boolean.toString(bValue));
-          } else {
+            break;
+          default:
             LOG.debug("Config variable {} has unknown type {}",
                 f.getName(), f.getType().getName());
+            break;
           }
         } catch (IllegalAccessException iaException) {
           LOG.error("{}", f, iaException);
