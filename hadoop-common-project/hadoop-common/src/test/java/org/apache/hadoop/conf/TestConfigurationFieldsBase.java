@@ -190,14 +190,14 @@ public abstract class TestConfigurationFieldsBase {
    * @param fields The class member variables
    * @return HashMap containing (StringValue, MemberVariableName) entries
    */
-  private HashMap<String, String>
+  private Map<String, String>
       extractMemberVariablesFromConfigurationFields(Field[] fields) {
     // Sanity Check
     if (fields == null) {
       return null;
     }
 
-    HashMap<String, String> retVal = new HashMap<>();
+    Map<String, String> validConfigProperties = new HashMap<>();
 
    
     // Iterate through class member variables
@@ -261,16 +261,15 @@ public abstract class TestConfigurationFieldsBase {
       }
       LOG_CONFIG.debug("  Passes Regex: true");
 
-      // Save member variable/value as hash
-      if (!retVal.containsKey(value)) {
-        retVal.put(value, f.getName());
+      if (!validConfigProperties.containsKey(value)) {
+        validConfigProperties.put(value, f.getName());
       } else {
         LOG_CONFIG.debug("ERROR: Already found key for property " + value);
       }
     }
 
     LOG_CONFIG.debug("Listing fields did not pass regex pattern: {}", fieldsNotPassedRegex);
-    return retVal;
+    return validConfigProperties;
   }
 
   /**
