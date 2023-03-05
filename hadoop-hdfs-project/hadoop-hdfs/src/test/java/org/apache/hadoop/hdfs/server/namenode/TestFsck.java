@@ -118,8 +118,10 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
@@ -154,7 +156,7 @@ public class TestFsck {
   private static final String LINE_SEPARATOR =
       System.getProperty("line.separator");
 
-  private static final LogCapturer AUDIT_LOG_CAPTURE =
+  private static LogCapturer auditLogCapture =
       LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
   public static String runFsck(Configuration conf, int expectedErrCode,
@@ -176,6 +178,16 @@ public class TestFsck {
 
   private MiniDFSCluster cluster = null;
   private Configuration conf = null;
+
+  @BeforeClass
+  public static void beforeClass() {
+    auditLogCapture = LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
+  }
+
+  @AfterClass
+  public static void afterClass() {
+    auditLogCapture.stopCapturing();
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -239,7 +251,7 @@ public class TestFsck {
   }
 
   private void verifyAuditLogs() {
-    String[] auditLogOutputLines = AUDIT_LOG_CAPTURE.getOutput().split("\\n");
+    String[] auditLogOutputLines = auditLogCapture.getOutput().split("\\n");
     int fileStatusSuccess = 0;
     int fsckCount = 0;
     for (String auditLogLine : auditLogOutputLines) {
