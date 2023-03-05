@@ -209,16 +209,19 @@ public abstract class TestConfigurationFieldsBase {
       if (!Modifier.isStatic(f.getModifiers()) ||
           !Modifier.isPublic(f.getModifiers()) ||
           !Modifier.isFinal(f.getModifiers())) {
+        LOG_CONFIG.debug("  Is skipped as it is not public static final");
         continue;
       }
       // Filter out anything that isn't a string.  int/float are generally
       // default values
       if (!f.getType().getName().equals("java.lang.String")) {
+        LOG_CONFIG.debug("  Is skipped as it is not type of String");
         continue;
       }
 
       // filter out default-value fields
       if (isFieldADefaultValue(f)) {
+        LOG_CONFIG.debug("  Is skipped as it is a 'default value field'");
         continue;
       }
 
@@ -226,6 +229,7 @@ public abstract class TestConfigurationFieldsBase {
       try {
         value = (String) f.get(null);
       } catch (IllegalAccessException iaException) {
+        LOG_CONFIG.debug("  Is skipped as it cannot be converted to a String");
         continue;
       }
       LOG_CONFIG.debug("  Value: {}", value);
@@ -234,10 +238,12 @@ public abstract class TestConfigurationFieldsBase {
       if (value.endsWith(".xml") ||
           value.endsWith(".")    ||
           value.endsWith("-")) {
+        LOG_CONFIG.debug("  Is skipped as it a 'partial property'");
         continue;
       }
       // Ignore known configuration props
       if (configurationPropsToSkipCompare.contains(value)) {
+        LOG_CONFIG.debug("  Is skipped as it is registered as a property to be skipped");
         continue;
       }
       // Ignore known configuration prefixes
@@ -245,6 +251,8 @@ public abstract class TestConfigurationFieldsBase {
       for (String cfgPrefix : configurationPrefixToSkipCompare) {
         if (value.startsWith(cfgPrefix)) {
           skipPrefix = true;
+          LOG_CONFIG.debug("  Is skipped as it is starts with a " +
+              "registered property prefix to skip: {}", cfgPrefix);
           break;
         }
       }
