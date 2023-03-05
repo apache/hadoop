@@ -136,6 +136,8 @@ public class YarnConfiguration extends Configuration {
   /////////////////////////////
   // Resource types configs
   ////////////////////////////
+  
+  public static final String MISSING_PROP_IN_YARN_DEF = "yarn.missingprop.in.yarndefault";
 
   public static final String RESOURCE_TYPES =
       YarnConfiguration.YARN_PREFIX + "resource-types";
