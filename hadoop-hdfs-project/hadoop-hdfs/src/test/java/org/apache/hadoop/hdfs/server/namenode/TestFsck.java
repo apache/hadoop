@@ -156,8 +156,7 @@ public class TestFsck {
   private static final String LINE_SEPARATOR =
       System.getProperty("line.separator");
 
-  private static LogCapturer auditLogCapture =
-      LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
+  private static LogCapturer auditLogCapture;
 
   public static String runFsck(Configuration conf, int expectedErrCode,
                         boolean checkErrorCode, String... path)
