@@ -93,7 +93,9 @@ public abstract class TestConfigurationFieldsBase {
 
   private static final Logger LOG_XML = LoggerFactory.getLogger(
       "org.apache.hadoop.conf.TestConfigurationFieldsBase.xml");
-
+  private static final String VALID_PROP_REGEX = "^[A-Za-z][A-Za-z0-9_-]+(\\.[A-Za-z%s0-9_-]+)+$";
+  private static Pattern VALID_PROPERTIES_PATTERN = Pattern.compile(VALID_PROP_REGEX);
+  
   /**
    * Member variable for storing xml filename.
    */
@@ -197,10 +199,7 @@ public abstract class TestConfigurationFieldsBase {
 
     HashMap<String, String> retVal = new HashMap<>();
 
-    // Setup regexp for valid properties
-    String propRegex = "^[A-Za-z][A-Za-z0-9_-]+(\\.[A-Za-z%s0-9_-]+)+$";
-    Pattern p = Pattern.compile(propRegex);
-
+   
     // Iterate through class member variables
     String value;
     Set<String> fieldsNotPassedRegex = new HashSet<>();
@@ -254,7 +253,7 @@ public abstract class TestConfigurationFieldsBase {
       }
       // Positive Filter: Look only for property values.  Expect it to look
       //                  something like: blah.blah2(.blah3.blah4...)
-      Matcher m = p.matcher(value);
+      Matcher m = VALID_PROPERTIES_PATTERN.matcher(value);
       if (!m.find()) {
         LOG_CONFIG.debug("  Passes Regex: false");
         fieldsNotPassedRegex.add(f.getName());
