@@ -142,17 +142,17 @@ public abstract class TestConfigurationFieldsBase {
   /**
    * Member variable to store Configuration variables for later comparison.
    */
-  private Map<String,String> configurationMemberVariables = null;
+  private Map<String, String> configurationMemberVariables = null;
 
   /**
    * Member variable to store Configuration variables for later reference.
    */
-  private Map<String,String> configurationDefaultVariables = null;
+  private Map<String, String> configurationDefaultVariables = null;
 
   /**
    * Member variable to store XML properties for later comparison.
    */
-  private Map<String,String> xmlKeyValueMap = null;
+  private Map<String, String> xmlKeyValueMap = null;
 
   /**
    * Member variable to store Configuration variables that are not in the
@@ -187,11 +187,12 @@ public abstract class TestConfigurationFieldsBase {
    * @param fields The class member variables
    * @return HashMap containing (StringValue, MemberVariableName) entries
    */
-  private HashMap<String,String>
+  private HashMap<String, String>
       extractMemberVariablesFromConfigurationFields(Field[] fields) {
     // Sanity Check
-    if (fields == null)
+    if (fields == null) {
       return null;
+    }
 
     HashMap<String, String> retVal = new HashMap<>();
 
@@ -232,8 +233,9 @@ public abstract class TestConfigurationFieldsBase {
       //               or file properties (ending in .xml)
       if (value.endsWith(".xml") ||
           value.endsWith(".")    ||
-          value.endsWith("-"))
+          value.endsWith("-")) {
         continue;
+      }
       // Ignore known configuration props
       if (configurationPropsToSkipCompare.contains(value)) {
         continue;
@@ -277,7 +279,7 @@ public abstract class TestConfigurationFieldsBase {
    * @param filename XML filename
    * @return HashMap containing &lt;Property,Value&gt; entries from XML file
    */
-  private HashMap<String,String> extractPropertiesFromXml(String filename) {
+  private HashMap<String, String> extractPropertiesFromXml(String filename) {
     if (filename == null) {
       return null;
     }
@@ -287,10 +289,10 @@ public abstract class TestConfigurationFieldsBase {
     conf.setAllowNullValueProperties(true);
     conf.addResource(filename);
 
-    HashMap<String,String> retVal = new HashMap<>();
-    Iterator<Map.Entry<String,String>> kvItr = conf.iterator();
+    HashMap<String, String> retVal = new HashMap<>();
+    Iterator<Map.Entry<String, String>> kvItr = conf.iterator();
     while (kvItr.hasNext()) {
-      Map.Entry<String,String> entry = kvItr.next();
+      Map.Entry<String, String> entry = kvItr.next();
       String key = entry.getKey();
       // Ignore known xml props
       if (xmlPropsToSkipCompare.contains(key)) {
@@ -334,14 +336,14 @@ public abstract class TestConfigurationFieldsBase {
    * @param fields The class member variables
    * @return HashMap containing (DefaultVariableName, DefaultValue) entries
    */
-  private HashMap<String,String>
+  private HashMap<String, String>
       extractDefaultVariablesFromConfigurationFields(Field[] fields) {
     // Sanity Check
     if (fields == null) {
       return null;
     }
 
-    HashMap<String,String> retVal = new HashMap<String,String>();
+    HashMap<String, String> retVal = new HashMap<>();
 
     // Setup regexp for valid properties
     String propRegex = "^[A-Za-z][A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)+$";
@@ -366,25 +368,25 @@ public abstract class TestConfigurationFieldsBase {
         try {
           if (f.getType().getName().equals("java.lang.String")) {
             String sValue = (String) f.get(null);
-            retVal.put(f.getName(),sValue);
+            retVal.put(f.getName(), sValue);
           } else if (f.getType().getName().equals("short")) {
             short shValue = (short) f.get(null);
-            retVal.put(f.getName(),Integer.toString(shValue));
+            retVal.put(f.getName(), Integer.toString(shValue));
           } else if (f.getType().getName().equals("int")) {
             int iValue = (int) f.get(null);
-            retVal.put(f.getName(),Integer.toString(iValue));
+            retVal.put(f.getName(), Integer.toString(iValue));
           } else if (f.getType().getName().equals("long")) {
             long lValue = (long) f.get(null);
-            retVal.put(f.getName(),Long.toString(lValue));
+            retVal.put(f.getName(), Long.toString(lValue));
           } else if (f.getType().getName().equals("float")) {
             float fValue = (float) f.get(null);
-            retVal.put(f.getName(),Float.toString(fValue));
+            retVal.put(f.getName(), Float.toString(fValue));
           } else if (f.getType().getName().equals("double")) {
             double dValue = (double) f.get(null);
-            retVal.put(f.getName(),Double.toString(dValue));
+            retVal.put(f.getName(), Double.toString(dValue));
           } else if (f.getType().getName().equals("boolean")) {
             boolean bValue = (boolean) f.get(null);
-            retVal.put(f.getName(),Boolean.toString(bValue));
+            retVal.put(f.getName(), Boolean.toString(bValue));
           } else {
             LOG.debug("Config variable {} has unknown type {}",
                 f.getName(), f.getType().getName());
@@ -406,7 +408,7 @@ public abstract class TestConfigurationFieldsBase {
    * @return Returns set operation keyMap1-keyMap2
    */
   private static Set<String> compareConfigurationToXmlFields(
-      Map<String,String> keyMap1, Map<String,String> keyMap2) {
+      Map<String, String> keyMap1, Map<String, String> keyMap2) {
     Set<String> retVal = new HashSet<>(keyMap1.keySet());
     retVal.removeAll(keyMap2.keySet());
 
@@ -418,7 +420,7 @@ public abstract class TestConfigurationFieldsBase {
    * class and the XML properties file.
    */
   @Before
-  public void setupTestConfigurationFields() throws Exception {
+  public void setupTestConfigurationFields() {
     GenericTestUtils.setLogLevel(LOG_CONFIG, Level.DEBUG);
     initializeMemberVariables();
 
@@ -431,7 +433,7 @@ public abstract class TestConfigurationFieldsBase {
     LOG_CONFIG.debug("Reading configuration classes\n");
     for (Class c : configurationClasses) {
       Field[] fields = c.getDeclaredFields();
-      Map<String,String> memberMap =
+      Map<String, String> memberMap =
           extractMemberVariablesFromConfigurationFields(fields);
       if (memberMap != null) {
         configurationMemberVariables.putAll(memberMap);
@@ -455,12 +457,12 @@ public abstract class TestConfigurationFieldsBase {
     LOG.debug("\n=====\n");
 
     // Find class members not in the XML file
-    configurationFieldsMissingInXmlFile = compareConfigurationToXmlFields
-        (configurationMemberVariables, xmlKeyValueMap);
+    configurationFieldsMissingInXmlFile = compareConfigurationToXmlFields(
+        configurationMemberVariables, xmlKeyValueMap);
 
     // Find XML properties not in the class
-    xmlFieldsMissingInConfiguration = compareConfigurationToXmlFields
-        (xmlKeyValueMap, configurationMemberVariables);
+    xmlFieldsMissingInConfiguration = compareConfigurationToXmlFields(
+        xmlKeyValueMap, configurationMemberVariables);
   }
 
   /**
@@ -560,13 +562,13 @@ public abstract class TestConfigurationFieldsBase {
 
     TreeSet<String> xmlPropertiesWithEmptyValue = new TreeSet<>();
     TreeSet<String> configPropertiesWithNoDefaultConfig = new TreeSet<>();
-    HashMap<String,String> xmlPropertiesMatchingConfigDefault =
+    HashMap<String, String> xmlPropertiesMatchingConfigDefault =
         new HashMap<>();
     // Ugly solution.  Should have tuple-based solution.
-    HashMap<HashMap<String,String>, HashMap<String,String>> mismatchingXmlConfig
+    HashMap<HashMap<String, String>, HashMap<String, String>> mismatchingXmlConfig
         = new HashMap<>();
 
-    for (Map.Entry<String,String> xEntry : xmlKeyValueMap.entrySet()) {
+    for (Map.Entry<String, String> xEntry : xmlKeyValueMap.entrySet()) {
       String xmlProperty = xEntry.getKey();
       String xmlDefaultValue = xEntry.getValue();
       String configProperty = configurationMemberVariables.get(xmlProperty);
@@ -628,18 +630,18 @@ public abstract class TestConfigurationFieldsBase {
     if (mismatchingXmlConfig.isEmpty()) {
       LOG.info("  (None)");
     } else {
-       for (Map.Entry<HashMap<String,String>,HashMap<String,String>> xcEntry :
-           mismatchingXmlConfig.entrySet()) {
-         xcEntry.getKey().forEach((key, value) -> {
-           LOG.info("XML Property: {}", key);
-           LOG.info("XML Value:    {}", value);
-         });
-         xcEntry.getValue().forEach((key, value) -> {
-           LOG.info("Config Name:  {}", key);
-           LOG.info("Config Value: {}", value);
-         });
-         LOG.info("");
-       }
+      for (Map.Entry<HashMap<String, String>, HashMap<String, String>> xcEntry :
+          mismatchingXmlConfig.entrySet()) {
+        xcEntry.getKey().forEach((key, value) -> {
+          LOG.info("XML Property: {}", key);
+          LOG.info("XML Value:    {}", value);
+        });
+        xcEntry.getValue().forEach((key, value) -> {
+          LOG.info("Config Name:  {}", key);
+          LOG.info("Config Value: {}", value);
+        });
+        LOG.info("");
+      }
     }
     LOG.info("\n");
 
