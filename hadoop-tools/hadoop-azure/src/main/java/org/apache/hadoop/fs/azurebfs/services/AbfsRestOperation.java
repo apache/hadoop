@@ -284,7 +284,9 @@ public class AbfsRestOperation {
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
 
-      applyThrottlingBackoff(retryCount, operationType, abfsCounters);
+      if (retryCount == 0 || client.shouldThrottleRetries()) {
+        intercept.sendingRequest(operationType, abfsCounters);
+      }
 
       if (hasRequestBody) {
         // HttpUrlConnection requires
@@ -335,22 +337,6 @@ public class AbfsRestOperation {
     result = httpOperation;
 
     return true;
-  }
-
-  /**
-   * Makes a call for client side throttling based on
-   * the request count.
-   * @param operationType operation type of current request
-   * @param abfsCounters AbfsCounters instance
-   */
-  @VisibleForTesting
-  boolean applyThrottlingBackoff(int retryCount, AbfsRestOperationType operationType, AbfsCounters abfsCounters) {
-    if (retryCount == 0 || client.shouldThrottleRetries()) {
-      intercept.sendingRequest(operationType, abfsCounters);
-      return true;
-    }
-
-    return false;
   }
 
   int getRetryCount() {
