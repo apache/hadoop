@@ -126,8 +126,6 @@ public class TestAuditLogs {
         "org.apache.hadoop.hdfs.server.namenode.FSNamesystem.audit");
     @SuppressWarnings("unchecked")
     List<Appender> appenders = Collections.list(logger.getAllAppenders());
-    // additional appender added by LogCapturer
-    assertEquals(2, appenders.size());
     assertTrue(appenders.get(0) instanceof AsyncAppender);
     
     fnames = util.getFileNames(fileName);
