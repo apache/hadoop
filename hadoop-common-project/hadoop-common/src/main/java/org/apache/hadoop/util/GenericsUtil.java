@@ -89,10 +89,30 @@ public class GenericsUtil {
     }
     Logger log = LoggerFactory.getLogger(clazz);
     try {
-      Class log4jClass = Class.forName("org.slf4j.impl.Log4jLoggerAdapter");
+      Class<?> log4jClass = Class.forName("org.slf4j.impl.Log4jLoggerAdapter");
       return log4jClass.isInstance(log);
     } catch (ClassNotFoundException e) {
       return false;
     }
   }
+
+  /**
+   * Determine whether the log of the given logger is of Log4J implementation.
+   *
+   * @param logger the logger name, usually class name as string.
+   * @return true if the logger uses Log4J implementation.
+   */
+  public static boolean isLog4jLogger(String logger) {
+    if (logger == null) {
+      return false;
+    }
+    Logger log = LoggerFactory.getLogger(logger);
+    try {
+      Class<?> log4jClass = Class.forName("org.slf4j.impl.Log4jLoggerAdapter");
+      return log4jClass.isInstance(log);
+    } catch (ClassNotFoundException e) {
+      return false;
+    }
+  }
+
 }
