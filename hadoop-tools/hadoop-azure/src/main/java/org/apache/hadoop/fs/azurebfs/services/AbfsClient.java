@@ -1308,6 +1308,14 @@ public class AbfsClient implements Closeable {
     Futures.addCallback(future, callback, executorService);
   }
 
+  /**
+   * Gets the current active configuration instance.
+   * @return active AbfsConfiguration instance.
+   */
+  public AbfsConfiguration getAbfsConfiguration() {
+    return abfsConfiguration;
+  }
+
   @VisibleForTesting
   protected AccessTokenProvider getTokenProvider() {
     return tokenProvider;
