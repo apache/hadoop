@@ -373,7 +373,7 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
     return remove(block, priLevel, block.getReplication());
   }
 
-  boolean remove(BlockInfo block, int priLevel, int oldExpectedReplicas) {
+  synchronized boolean remove(BlockInfo block, int priLevel, int oldExpectedReplicas) {
     if(priLevel >= 0 && priLevel < LEVEL
         && priorityQueues.get(priLevel).remove(block)) {
       NameNode.blockStateChangeLog.debug(
