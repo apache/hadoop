@@ -253,7 +253,7 @@ public enum DistCpOptionSwitch {
 
   FAVORED_NODES(DistCpConstants.CONF_LABEL_FAVORED_NODES,
       new Option("favoredNodes", true,
-          "Specify favored nodes in target cluster."));
+          "Specify favored nodes in target hdfs filesystem."));
 
   public static final String PRESERVE_STATUS_DEFAULT = "-prbugpct";
   private final String confLabel;

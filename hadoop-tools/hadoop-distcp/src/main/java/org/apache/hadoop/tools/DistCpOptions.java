@@ -164,6 +164,7 @@ public final class DistCpOptions {
 
   private final boolean updateRoot;
 
+  /** Favored nodes in target hdfs filesystem. */
   private final String favoredNodes;
 
   /**

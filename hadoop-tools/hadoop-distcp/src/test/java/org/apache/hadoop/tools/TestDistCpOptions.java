@@ -29,6 +29,7 @@ import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.tools.DistCpOptions.MAX_NUM_LISTSTATUS_THREADS;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 
 /**
@@ -577,12 +578,14 @@ public class TestDistCpOptions {
 
   @Test
   public void testFavoredNodes() {
+    String favoredNodes = "localhost:50010,localhost:50011";
     final DistCpOptions options = new DistCpOptions.Builder(
         Collections.singletonList(
             new Path("hdfs://localhost:8020/source")),
         new Path("hdfs://localhost:8020/target/"))
-        .withFavoredNodes("localhost:50010")
+        .withFavoredNodes(favoredNodes)
         .build();
-    Assert.assertNotNull(options.getFavoredNodes());
+    assertThat(options.getFavoredNodes()).isNotNull();
+    assertThat(options.getFavoredNodes()).isEqualTo(favoredNodes);
   }
 }

@@ -60,6 +60,7 @@ import org.apache.hadoop.tools.util.ThrottledInputStream;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
 import static org.apache.hadoop.tools.mapred.CopyMapper.getFileAttributeSettings;
@@ -276,15 +277,23 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         context);
   }
 
+  /**
+   * Map the favored nodes string to IP Socket Address array.
+   *
+   * @param favoredNodesStr favored nodes
+   * @return the IP Socket Address array of favored nodes.
+   * @throws UnknownHostException when favored nodes can not be resolved.
+   */
   private InetSocketAddress[] toFavoredNodes(String favoredNodesStr) throws UnknownHostException {
+    checkArgument(StringUtils.isNotEmpty(favoredNodesStr),
+        "Empty favoredNodes parameter: %s", favoredNodesStr);
     List<InetSocketAddress> result = new ArrayList<>();
     for (String hostAndPort : favoredNodesStr.split(",")) {
       String[] split = hostAndPort.split(":");
-      if (split.length != 2) {
-        throw new IllegalArgumentException("Illegal favoredNodes parameter: " + hostAndPort);
-      }
+      checkArgument(split.length == 2, "Illegal favoredNodes parameter: %s", hostAndPort);
       InetAddress hostname = InetAddress.getByName(split[0]);
       int port = Integer.parseInt(split[1]);
+      LOG.info("DistCp favored node, hostname: {}, port: {}", hostname, port);
       result.add(new InetSocketAddress(hostname, port));
     }
     Collections.shuffle(result);
