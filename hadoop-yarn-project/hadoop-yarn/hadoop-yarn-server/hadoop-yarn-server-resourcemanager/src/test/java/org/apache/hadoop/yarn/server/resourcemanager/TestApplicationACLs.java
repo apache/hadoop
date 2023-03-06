@@ -75,7 +75,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreFactor
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -246,7 +246,7 @@ public class TestApplicationACLs extends ParameterizedSchedulerTestBase {
 
     ContainerLaunchContext amContainer = recordFactory
         .newRecordInstance(ContainerLaunchContext.class);
-    Resource resource = BuilderUtils.newResource(1024, 1);
+    Resource resource = Resources.createResource(1024);
     context.setResource(resource);
     amContainer.setApplicationACLs(acls);
     if (conf.get(YarnConfiguration.RM_SCHEDULER)
@@ -456,7 +456,7 @@ public class TestApplicationACLs extends ParameterizedSchedulerTestBase {
         new HashMap<ApplicationAccessType, String>();
     ContainerLaunchContext amContainer =
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
-    Resource resource = BuilderUtils.newResource(1024, 1);
+    Resource resource = Resources.createResource(1024);
     context.setResource(resource);
     amContainer.setApplicationACLs(acls);
     context.setQueue("InvalidQueue");

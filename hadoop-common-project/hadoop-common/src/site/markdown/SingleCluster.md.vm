@@ -35,6 +35,8 @@ These instructions do not cover integration with any Kerberos services,
 -everyone bringing up a production cluster should include connecting to their
 organisation's Kerberos infrastructure as a key part of the deployment.
 
+See [Security](./SecureMode.html) for details on how to secure a cluster.
+
 Prerequisites
 -------------
 

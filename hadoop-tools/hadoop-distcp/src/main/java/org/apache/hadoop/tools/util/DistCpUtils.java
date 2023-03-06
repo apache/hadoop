@@ -41,6 +41,7 @@ import org.apache.hadoop.tools.CopyListing.XAttrsNotSupportedException;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCpContext;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
+import org.apache.hadoop.tools.mapred.CopyMapper;
 import org.apache.hadoop.tools.mapred.UniformSizeInputFormat;
 import org.apache.hadoop.util.StringUtils;
 
@@ -568,10 +569,12 @@ public class DistCpUtils {
    * and false otherwise.
    * @throws IOException if there's an exception while retrieving checksums.
    */
-  public static boolean checksumsAreEqual(FileSystem sourceFS, Path source,
-                                          FileChecksum sourceChecksum,
-                                          FileSystem targetFS,
-                                          Path target, long sourceLen)
+  public static CopyMapper.ChecksumComparison checksumsAreEqual(
+      FileSystem sourceFS,
+      Path source,
+      FileChecksum sourceChecksum,
+      FileSystem targetFS,
+      Path target, long sourceLen)
       throws IOException {
     FileChecksum targetChecksum = null;
     try {
@@ -585,8 +588,15 @@ public class DistCpUtils {
     } catch (IOException e) {
       LOG.error("Unable to retrieve checksum for " + source + " or " + target, e);
     }
-    return (sourceChecksum == null || targetChecksum == null ||
-            sourceChecksum.equals(targetChecksum));
+    // If the source or target checksum is null, that means there is no
+    // comparison that took place and return not compatible.
+    // else if matched, return compatible with the matched result.
+    if (sourceChecksum == null || targetChecksum == null) {
+      return CopyMapper.ChecksumComparison.INCOMPATIBLE;
+    } else if (sourceChecksum.equals(targetChecksum)) {
+      return CopyMapper.ChecksumComparison.TRUE;
+    }
+    return CopyMapper.ChecksumComparison.FALSE;
   }
 
   /**
@@ -613,8 +623,12 @@ public class DistCpUtils {
 
     //At this point, src & dest lengths are same. if length==0, we skip checksum
     if ((srcLen != 0) && (!skipCrc)) {
-      if (!checksumsAreEqual(sourceFS, source, sourceChecksum,
-          targetFS, target, srcLen)) {
+      CopyMapper.ChecksumComparison
+          checksumComparison = checksumsAreEqual(sourceFS, source, sourceChecksum,
+              targetFS, target, srcLen);
+      // If Checksum comparison is false set it to false, else set to true.
+      boolean checksumResult = !checksumComparison.equals(CopyMapper.ChecksumComparison.FALSE);
+      if (!checksumResult) {
         StringBuilder errorMessage =
             new StringBuilder(DistCpConstants.CHECKSUM_MISMATCH_ERROR_MSG)
                 .append(source).append(" and ").append(target).append(".");
