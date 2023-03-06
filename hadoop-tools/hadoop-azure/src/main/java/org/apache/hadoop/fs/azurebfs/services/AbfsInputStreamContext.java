@@ -22,6 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.util.Preconditions;
 
+import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
+
 /**
  * Class to hold extra input stream configs.
  */
@@ -50,6 +52,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   private boolean optimizeFooterRead;
 
   private boolean bufferedPreadDisabled;
+
+  private EncryptionAdapter encryptionAdapter = null;
 
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -122,6 +126,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsInputStreamContext withEncryptionAdapter(
+      EncryptionAdapter encryptionAdapter) {
+    this.encryptionAdapter = encryptionAdapter;
+    return this;
+  }
+
   public AbfsInputStreamContext build() {
     if (readBufferSize > readAheadBlockSize) {
       LOG.debug(
@@ -179,5 +189,9 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   public boolean isBufferedPreadDisabled() {
     return bufferedPreadDisabled;
+  }
+
+  public EncryptionAdapter getEncryptionAdapter() {
+    return encryptionAdapter;
   }
 }
