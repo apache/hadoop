@@ -51,8 +51,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Set;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.*;
-
 public class TestCapacitySchedulerWeightMode {
   private static final String DEFAULT_PATH = CapacitySchedulerConfiguration.ROOT + ".default";
   private static final String A_PATH = CapacitySchedulerConfiguration.ROOT + ".a";

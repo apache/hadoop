@@ -162,7 +162,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.*;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.DEDICATED_QUEUE_PATH;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.DEFAULT_QUEUE_PATH;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.ROOT_QUEUE_PATH;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEDICATED;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEDICATED_FULL;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
