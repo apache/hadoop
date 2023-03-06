@@ -1846,7 +1846,7 @@ public class SQLFederationStateStore implements FederationStateStore {
    * @return delegationTokenSeqNum.
    */
   @Override
-  public int getNewDelegationTokenKey() {
+  public int incrementDelegationTokenSeqNum() {
     return querySequenceTable(YARN_ROUTER_SEQUENCE_NUM, true);
   }
 
@@ -1856,7 +1856,7 @@ public class SQLFederationStateStore implements FederationStateStore {
    * @return CurrentKeyId.
    */
   @Override
-  public int generateNewKeyId() {
+  public int incrementCurrentKeyId() {
     return querySequenceTable(YARN_ROUTER_CURRENT_KEY_ID, true);
   }
 

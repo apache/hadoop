@@ -727,7 +727,7 @@ public class TestDelegationToken {
     if (expectError) {
       LambdaTestUtils.intercept(IOException.class, callable);
     } else {
-      callable.call();
+      Assert.assertThrows(Exception.class, () -> callable.call());
     }
     assertEquals(counterBefore + 1, counter.value());
     assertEquals(statBefore + 1, failureStat.getSamples());

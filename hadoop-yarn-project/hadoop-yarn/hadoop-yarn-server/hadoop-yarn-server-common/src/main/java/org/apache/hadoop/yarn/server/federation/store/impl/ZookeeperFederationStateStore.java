@@ -1512,7 +1512,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * @return SequenceNum.
    */
   @Override
-  public int getNewDelegationTokenKey() {
+  public int incrementDelegationTokenSeqNum() {
     // The secret manager will keep a local range of seq num which won't be
     // seen by peers, so only when the range is exhausted it will ask zk for
     // another range again
@@ -1559,7 +1559,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * @return CurrentKeyId.
    */
   @Override
-  public int generateNewKeyId() {
+  public int incrementCurrentKeyId() {
     try {
       // It should be noted that the BatchSize of MasterKeyId defaults to 1.
       incrSharedCount(keyIdSeqCounter, 1);

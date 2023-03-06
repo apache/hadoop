@@ -434,13 +434,13 @@ public class FederationStateStoreService extends AbstractService
   }
 
   @Override
-  public int getNewDelegationTokenKey() {
-    return stateStoreClient.getNewDelegationTokenKey();
+  public int incrementDelegationTokenSeqNum() {
+    return stateStoreClient.incrementDelegationTokenSeqNum();
   }
 
   @Override
-  public int generateNewKeyId() {
-    return stateStoreClient.generateNewKeyId();
+  public int incrementCurrentKeyId() {
+    return stateStoreClient.incrementCurrentKeyId();
   }
 
   /**

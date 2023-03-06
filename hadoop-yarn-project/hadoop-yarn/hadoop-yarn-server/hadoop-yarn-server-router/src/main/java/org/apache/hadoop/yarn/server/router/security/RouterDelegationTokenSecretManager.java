@@ -22,9 +22,7 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecret
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.security.token.delegation.RouterDelegationTokenSupport;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
@@ -257,13 +255,8 @@ public class RouterDelegationTokenSecretManager
   }
 
   @Override
-  protected int generateNewKeyId() {
-    return federationFacade.generateNewKeyId();
-  }
-
-  @Override
   protected int incrementCurrentKeyId() {
-    throw new NotImplementedException("Increment current key id is not a valid use case for stateless secret managers");
+    return federationFacade.incrementCurrentKeyId();
   }
 
   @Override

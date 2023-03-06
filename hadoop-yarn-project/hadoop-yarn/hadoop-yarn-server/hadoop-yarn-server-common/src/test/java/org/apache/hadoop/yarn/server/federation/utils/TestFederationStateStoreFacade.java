@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
@@ -248,8 +249,8 @@ public class TestFederationStateStoreFacade {
   public void testStoreNewMasterKey() throws YarnException, IOException {
     // store delegation key;
     DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
-    Set<DelegationKey> keySet = new HashSet<>();
-    keySet.add(key);
+    Map<Integer, DelegationKey> keySet = new HashMap<>();
+    keySet.put(key.getKeyId(), key);
     facade.storeNewMasterKey(key);
 
     MemoryFederationStateStore federationStateStore =
@@ -263,8 +264,8 @@ public class TestFederationStateStoreFacade {
   public void testRemoveStoredMasterKey() throws YarnException, IOException {
     // store delegation key;
     DelegationKey key = new DelegationKey(4567, 7654, "keyBytes".getBytes());
-    Set<DelegationKey> keySet = new HashSet<>();
-    keySet.add(key);
+    Map<Integer, DelegationKey> keySet = new HashMap<>();
+    keySet.put(key.getKeyId(), key);
     facade.storeNewMasterKey(key);
 
     // check to delete delegationKey

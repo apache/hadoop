@@ -118,12 +118,12 @@ public interface FederationDelegationTokenStateStore {
    *
    * @return DelegationTokenSeqNum.
    */
-  int getNewDelegationTokenKey();
+  int incrementDelegationTokenSeqNum();
 
   /**
    * Return a new unique integer master key id
    *
    * @return CurrentKeyId.
    */
-  int generateNewKeyId();
+  int incrementCurrentKeyId();
 }

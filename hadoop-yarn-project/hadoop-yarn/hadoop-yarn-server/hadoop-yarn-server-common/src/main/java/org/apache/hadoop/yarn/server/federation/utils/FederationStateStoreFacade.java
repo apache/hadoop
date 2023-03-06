@@ -901,7 +901,7 @@ public final class FederationStateStoreFacade {
    * @return delegationTokenSequenceNumber.
    */
   public int incrementDelegationTokenSeqNum() {
-    return stateStore.getNewDelegationTokenKey();
+    return stateStore.incrementDelegationTokenSeqNum();
   }
 
   /**
@@ -909,8 +909,8 @@ public final class FederationStateStoreFacade {
    *
    * @return currentKeyId.
    */
-  public int generateNewKeyId() {
-    return stateStore.generateNewKeyId();
+  public int incrementCurrentKeyId() {
+    return stateStore.incrementCurrentKeyId();
   }
 
   /**

@@ -555,12 +555,12 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public int getNewDelegationTokenKey() {
+  public int incrementDelegationTokenSeqNum() {
     return sequenceNum.incrementAndGet();
   }
 
   @Override
-  public int generateNewKeyId() {
+  public int incrementCurrentKeyId() {
     return masterKeyId.incrementAndGet();
   }
 
