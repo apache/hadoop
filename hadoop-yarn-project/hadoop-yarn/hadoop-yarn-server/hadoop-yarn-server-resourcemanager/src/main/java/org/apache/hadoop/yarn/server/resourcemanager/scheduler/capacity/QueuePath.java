@@ -64,16 +64,6 @@ public class QueuePath implements Iterable<String> {
   }
 
   /**
-   * Creates a new {@code QueuePath} with the current object as  a parent, and appends the
-   * child to its queue path.
-   * @param childName Name of the child which will be added to the queue path
-   * @return QueuePath object
-   */
-  public QueuePath createChild(String childName) {
-    return new QueuePath(getFullPath(), childName);
-  }
-
-  /**
    * Constructor to create Queue path from queue names.
    * The provided queue names will be concatenated by dots, giving a full queue path.
    * @param parts Parts of queue path
