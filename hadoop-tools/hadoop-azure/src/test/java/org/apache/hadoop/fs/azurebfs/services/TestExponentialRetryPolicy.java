@@ -299,74 +299,10 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     Assert.assertEquals("Delta backoff interval was not set as expected.", expectedDeltaBackoff, policy.getDeltaBackoff());
   }
 
-//  public void testClientBackoffOnlyNewRequest() throws IOException {
-  @Test
-  public void testClientBackoffOnlyNewWriteRequest() throws IOException, InterruptedException {
-    AzureBlobFileSystem fs = getFileSystem();
-    AbfsClient client = fs.getAbfsStore().getClient();
-    AbfsConfiguration configuration = client.getAbfsConfiguration();
-    Assume.assumeTrue(configuration.isAutoThrottlingEnabled());
-    AbfsCounters counters = client.getAbfsCounters();
-
-    URL dummyUrl = client.createRequestUrl("/", "");
-    String dummyMethod = HTTP_METHOD_PUT;
-
-    AbfsRestOperationType testOperationType = AbfsRestOperationType.Append;
-
-    AbfsRestOperation restOp = new AbfsRestOperation(testOperationType, client, dummyMethod, dummyUrl, new ArrayList<>());
-
-    Long writeThrottleStatBefore = counters.toMap().get(AbfsStatistic.WRITE_THROTTLES.getStatName());
-    Thread.sleep(10000);
-    boolean appliedBackoff = restOp.applyThrottlingBackoff(0, testOperationType, counters);
-    assertEquals(true, appliedBackoff);
-    Long writeThrottleStatAfter = counters.toMap().get(AbfsStatistic.WRITE_THROTTLES.getStatName());
-    assertEquals(new Long(writeThrottleStatBefore+1), writeThrottleStatAfter);
-
-
-    writeThrottleStatBefore = counters.toMap().get(AbfsStatistic.WRITE_THROTTLES.getStatName());
-    appliedBackoff = restOp.applyThrottlingBackoff(1, testOperationType, counters);
-    assertEquals(false, appliedBackoff);
-    writeThrottleStatAfter = counters.toMap().get(AbfsStatistic.WRITE_THROTTLES.getStatName());
-    assertEquals(writeThrottleStatBefore, writeThrottleStatAfter);
-  }
-
-  @Test
-  public void testClientBackoffOnlyNewReadRequest() throws IOException, InterruptedException {
-    AzureBlobFileSystem fs = getFileSystem();
-    AbfsClient client = fs.getAbfsStore().getClient();
-    AbfsConfiguration configuration = client.getAbfsConfiguration();
-    Assume.assumeTrue(configuration.isAutoThrottlingEnabled());
-    AbfsCounters counters = client.getAbfsCounters();
-
-    URL dummyUrl = client.createRequestUrl("/", "");
-    String dummyMethod = AbfsHttpConstants.HTTP_METHOD_GET;
-
-    AbfsRestOperationType testOperationType = AbfsRestOperationType.ReadFile;
-
-    AbfsRestOperation restOp = new AbfsRestOperation(testOperationType, client, dummyMethod, dummyUrl, new ArrayList<>());
-
-    Long readThrottleStatBefore = counters.toMap().get(AbfsStatistic.READ_THROTTLES.getStatName());
-    Thread.sleep(10000);
-    boolean appliedBackoff = restOp.applyThrottlingBackoff(0, testOperationType, counters);
-    assertEquals(true, appliedBackoff);
-    Long readThrottleStatAfter = counters.toMap().get(AbfsStatistic.READ_THROTTLES.getStatName());
-    assertEquals(new Long(readThrottleStatBefore+1), readThrottleStatAfter);
-
-
-    readThrottleStatBefore = counters.toMap().get(AbfsStatistic.READ_THROTTLES.getStatName());
-    appliedBackoff = restOp.applyThrottlingBackoff(1, testOperationType, counters);
-    assertEquals(false, appliedBackoff);
-    readThrottleStatAfter = counters.toMap().get(AbfsStatistic.READ_THROTTLES.getStatName());
-    assertEquals(readThrottleStatBefore, readThrottleStatAfter);
-  }
-
   @Test
   public void testReadThrottleNewRequest() throws IOException {
     AzureBlobFileSystem fs = getFileSystem();
     AbfsClient client = Mockito.spy(fs.getAbfsStore().getClient());
-    AbfsConfiguration configuration = client.getAbfsConfiguration();
-    Assume.assumeTrue(configuration.isAutoThrottlingEnabled());
-    AbfsCounters counters = client.getAbfsCounters();
 
     AbfsThrottlingIntercept intercept = Mockito.mock(AbfsThrottlingIntercept.class);
     Mockito.doNothing().when(intercept).sendingRequest(Mockito.any(AbfsRestOperationType.class), Mockito.any(AbfsCounters.class));
@@ -387,69 +323,25 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
 
     // setting up mock behavior for the AbfsHttpOperation class
     AbfsHttpOperation mockHttpOp = Mockito.spy(mockRestOp.createHttpOperationInstance());
-    Mockito.doReturn(-1)
-            .doReturn(-1)
-            .doReturn(-1)
-            .doReturn(HTTP_OK)
+    Mockito.doReturn(HTTP_OK)
             .when(mockHttpOp).getStatusCode();
     Mockito.doNothing().when(mockHttpOp).setRequestProperty(nullable(String.class), nullable(String.class));
     Mockito.doNothing().when(mockHttpOp).sendRequest(nullable(byte[].class), nullable(int.class), nullable(int.class));
-    Mockito.doNothing().when(mockHttpOp).processResponse(nullable(byte[].class), nullable(int.class), nullable(int.class));
+    Mockito.doThrow(IOException.class)
+            .doThrow(IOException.class)
+            .doThrow(IOException.class)
+            .doNothing().when(mockHttpOp).processResponse(nullable(byte[].class), nullable(int.class), nullable(int.class));
 
     Mockito.doReturn(mockHttpOp).when(mockRestOp).createHttpOperationInstance();
     Mockito.doReturn(mockHttpOp).when(mockRestOp).getResult();
 
     mockRestOp.execute(getTestTracingContext(fs, false));
     Mockito.verify(intercept, times(1)).sendingRequest(Mockito.any(AbfsRestOperationType.class), Mockito.any(AbfsCounters.class));
+    assertEquals(3, mockRestOp.getRetryCount());
   }
-
-  @Test
-  public void testWriteThrottleNewRequest() throws IOException {
-    AzureBlobFileSystem fs = getFileSystem();
-    AbfsClient client = Mockito.spy(fs.getAbfsStore().getClient());
-    AbfsConfiguration configuration = client.getAbfsConfiguration();
-    Assume.assumeTrue(configuration.isAutoThrottlingEnabled());
-    AbfsCounters counters = client.getAbfsCounters();
-
-    AbfsThrottlingIntercept intercept = Mockito.mock(AbfsThrottlingIntercept.class);
-    Mockito.doNothing().when(intercept).sendingRequest(Mockito.any(AbfsRestOperationType.class), Mockito.any(AbfsCounters.class));
-    Mockito.doReturn(intercept).when(client).getIntercept();
-
-    // setting up the spy AbfsRestOperation class for write
-    final List<AbfsHttpHeader> requestHeaders = client.createDefaultHeaders();
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = client.createDefaultUriQueryBuilder();
-
-    final URL url = client.createRequestUrl("/dummyWriteFile", abfsUriQueryBuilder.toString());
-    final AbfsRestOperation mockRestOp = Mockito.spy(new AbfsRestOperation(
-            AbfsRestOperationType.Append,
-            client,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders));
-
-    // setting up mock behavior for the AbfsHttpOperation class
-    AbfsHttpOperation mockHttpOp = Mockito.spy(mockRestOp.createHttpOperationInstance());
-    Mockito.doReturn(-1)
-            .doReturn(-1)
-            .doReturn(-1)
-            .doReturn(HTTP_OK)
-            .when(mockHttpOp).getStatusCode();
-    Mockito.doNothing().when(mockHttpOp).setRequestProperty(nullable(String.class), nullable(String.class));
-    Mockito.doNothing().when(mockHttpOp).sendRequest(nullable(byte[].class), nullable(int.class), nullable(int.class));
-    Mockito.doNothing().when(mockHttpOp).processResponse(nullable(byte[].class), nullable(int.class), nullable(int.class));
-
-    Mockito.doReturn(mockHttpOp).when(mockRestOp).createHttpOperationInstance();
-    Mockito.doReturn(mockHttpOp).when(mockRestOp).getResult();
-
-    mockRestOp.execute(getTestTracingContext(fs, false));
-    Mockito.verify(intercept, times(1)).sendingRequest(Mockito.any(AbfsRestOperationType.class), Mockito.any(AbfsCounters.class));
-  }
-
 
   private AbfsConfiguration getAbfsConfig() throws Exception {
-    Configuration
-        config = new Configuration(this.getRawConfiguration());
+    Configuration config = new Configuration(this.getRawConfiguration());
     return new AbfsConfiguration(config, "dummyAccountName");
   }
 

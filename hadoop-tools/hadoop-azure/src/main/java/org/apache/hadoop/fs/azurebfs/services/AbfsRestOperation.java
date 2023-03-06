@@ -353,7 +353,11 @@ public class AbfsRestOperation {
     return false;
   }
 
-  public AbfsHttpOperation createHttpOperationInstance() throws IOException {
+  int getRetryCount() {
+    return retryCount;
+  }
+
+  AbfsHttpOperation createHttpOperationInstance() throws IOException {
     return new AbfsHttpOperation(url, method, requestHeaders);
   }
 
