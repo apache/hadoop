@@ -33,9 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 
-import org.apache.hadoop.util.Preconditions;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
  * The OptionsParser parses out the command-line options passed to DistCp,
@@ -69,7 +67,7 @@ public class OptionsParser {
   }
 
   private static void checkSnapshotsArgs(final String[] snapshots) {
-    Preconditions.checkArgument(snapshots != null && snapshots.length == 2
+    checkArgument(snapshots != null && snapshots.length == 2
         && !StringUtils.isBlank(snapshots[0])
         && !StringUtils.isBlank(snapshots[1]),
         "Must provide both the starting and ending snapshot names");

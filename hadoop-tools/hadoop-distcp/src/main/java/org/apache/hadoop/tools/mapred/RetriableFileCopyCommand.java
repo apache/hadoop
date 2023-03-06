@@ -60,10 +60,10 @@ import org.apache.hadoop.tools.util.ThrottledInputStream;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
 import static org.apache.hadoop.tools.mapred.CopyMapper.getFileAttributeSettings;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /**
