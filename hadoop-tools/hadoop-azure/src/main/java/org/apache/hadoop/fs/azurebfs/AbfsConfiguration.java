@@ -269,54 +269,61 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ACCOUNT_OPERATION_IDLE_TIMEOUT_MS)
   private int accountOperationIdleTimeout;
 
-  /*
-  Analysis Period for client-side throttling
+  /**
+  * Analysis Period for client-side throttling
    */
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ANALYSIS_PERIOD,
           DefaultValue = DEFAULT_ANALYSIS_PERIOD_MS)
   private int analysisPeriod;
 
-  /*
-  Lower limit of acceptable error percentage
+  /**
+  * Lower limit of acceptable error percentage
    */
   @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MIN_ACCEPTABLE_ERROR_PERCENTAGE,
       DefaultValue = DEFAULT_MIN_ACCEPTABLE_ERROR_PERCENTAGE)
   private double minAcceptableErrorPercentage;
 
-  /*
-  Maximum equilibrium error percentage
+  /**
+  * Maximum equilibrium error percentage
    */
   @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MAX_EQUILIBRIUM_ERROR_PERCENTAGE,
           DefaultValue = DEFAULT_MAX_EQUILIBRIUM_ERROR_PERCENTAGE)
   private double maxEquilibriumErrorPercentage;
 
-  /*
-  Rapid sleep decrease factor to increase throughput
+  /**
+  * Rapid sleep decrease factor to increase throughput
    */
   @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_RAPID_SLEEP_DECREASE_FACTOR,
           DefaultValue = DEFAULT_RAPID_SLEEP_DECREASE_FACTOR)
   private double rapidSleepDecreaseFactor;
 
-  /*
-  Rapid sleep decrease transition period in milliseconds
+  /**
+  * Rapid sleep decrease transition period in milliseconds
    */
   @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_RAPID_SLEEP_DECREASE_TRANSITION_MS,
           DefaultValue = DEFAULT_RAPID_SLEEP_DECREASE_TRANSITION_PERIOD_MS)
   private double rapidSleepDecreaseTransitionPeriodMs;
 
-  /*
-  Sleep decrease factor to increase throughput
+  /**
+  * Sleep decrease factor to increase throughput
    */
   @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SLEEP_DECREASE_FACTOR,
           DefaultValue = DEFAULT_SLEEP_DECREASE_FACTOR)
   private double sleepDecreaseFactor;
 
-  /*
-  Sleep increase factor to reduce throughput
+  /**
+  * Sleep increase factor to reduce throughput
    */
   @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SLEEP_INCREASE_FACTOR,
           DefaultValue = DEFAULT_SLEEP_INCREASE_FACTOR)
   private double sleepIncreaseFactor;
+
+  /**
+   * Enable throttling for retried requests
+   */
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_THROTTLE_RETRIES,
+  DefaultValue = false)
+  private boolean throttleRetries;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_IO_RATE_LIMIT,
       MinValue = 0,
@@ -829,7 +836,10 @@ public class AbfsConfiguration{
   public double getSleepIncreaseFactor() {
     return sleepIncreaseFactor;
   }
-
+  
+  public boolean shouldThrottleRetriedRequests() {
+    return throttleRetries;
+  }
   public int getRateLimit() {
     return rateLimit;
   }

@@ -103,6 +103,7 @@ public class AbfsClient implements Closeable {
   private final AbfsCounters abfsCounters;
   private final AbfsThrottlingIntercept intercept;
 
+  private final boolean throttleRetries;
   private final ListeningScheduledExecutorService executorService;
 
   /** logging the rename failure if metadata is in an incomplete state. */
@@ -122,6 +123,7 @@ public class AbfsClient implements Closeable {
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
     this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
+    this.throttleRetries = this.abfsConfiguration.shouldThrottleRetriedRequests();
 
     String encryptionKey = this.abfsConfiguration
         .getClientProvidedEncryptionKey();
@@ -220,6 +222,10 @@ public class AbfsClient implements Closeable {
 
   AbfsThrottlingIntercept getIntercept() {
     return intercept;
+  }
+
+  boolean shouldThrottleRetries() {
+    return throttleRetries;
   }
 
   List<AbfsHttpHeader> createDefaultHeaders() {

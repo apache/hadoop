@@ -125,6 +125,7 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_RAPID_SLEEP_DECREASE_TRANSITION_MS = "fs.azure.rapid.sleep.decrease.transition.ms";
   public static final String FS_AZURE_SLEEP_DECREASE_FACTOR = "fs.azure.sleep.decrease.factor";
   public static final String FS_AZURE_SLEEP_INCREASE_FACTOR = "fs.azure.sleep.increase.factor";
+  public static final String FS_AZURE_THROTTLE_RETRIES = "fs.azure.throttle.retries";
   public static final String FS_AZURE_ALWAYS_USE_HTTPS = "fs.azure.always.use.https";
   public static final String FS_AZURE_ATOMIC_RENAME_KEY = "fs.azure.atomic.rename.key";
   /** This config ensures that during create overwrite an existing file will be

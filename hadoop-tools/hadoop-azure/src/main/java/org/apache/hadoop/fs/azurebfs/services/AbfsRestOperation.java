@@ -345,10 +345,11 @@ public class AbfsRestOperation {
    */
   @VisibleForTesting
   boolean applyThrottlingBackoff(int retryCount, AbfsRestOperationType operationType, AbfsCounters abfsCounters) {
-    if (retryCount == 0) {
+    if (retryCount == 0 || client.shouldThrottleRetries()) {
       intercept.sendingRequest(operationType, abfsCounters);
       return true;
     }
+
     return false;
   }
 
