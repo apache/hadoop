@@ -33,4 +33,27 @@ public abstract class RefreshServiceAclsRequest {
         Records.newRecord(RefreshServiceAclsRequest.class);
     return request;
   }
+
+  @Public
+  @Stable
+  public static RefreshServiceAclsRequest newInstance(String subClusterId) {
+    RefreshServiceAclsRequest request =
+        Records.newRecord(RefreshServiceAclsRequest.class);
+    request.setSubClusterId(subClusterId);
+    return request;
+  }
+
+  /**
+   * Get the subClusterId.
+   *
+   * @return subClusterId.
+   */
+  public abstract String getSubClusterId();
+
+  /**
+   * Set the subClusterId.
+   *
+   * @param subClusterId subCluster Id.
+   */
+  public abstract void setSubClusterId(String subClusterId);
 }
