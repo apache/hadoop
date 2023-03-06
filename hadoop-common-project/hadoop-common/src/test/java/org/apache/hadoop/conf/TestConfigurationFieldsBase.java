@@ -401,7 +401,6 @@ public abstract class TestConfigurationFieldsBase {
    */
   @Before
   public void setupTestConfigurationFields() {
-    GenericTestUtils.setLogLevel(LOG_CONFIG, Level.DEBUG);
     initializeMemberVariables();
 
     // Error if subclass hasn't set class members
