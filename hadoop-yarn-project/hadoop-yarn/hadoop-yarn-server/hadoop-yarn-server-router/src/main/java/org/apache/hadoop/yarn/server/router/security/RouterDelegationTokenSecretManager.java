@@ -36,24 +36,24 @@ import java.nio.ByteBuffer;
 import java.util.Base64;
 
 /**
- * A Router specific delegation token secret manager & is designed to be stateless.
+ * A Router specific delegation token secret manager and is designed to be stateless.
  * The secret manager is responsible for generating and accepting the password
  * for each token.
  *
  * Behavioural Differences from AbstractDelegationTokenSecretManager
- * 1) Master Key - Each instance of Router will have its own master key & each instance rolls its own master key.
+ * 1) Master Key - Each instance of Router will have its own master key and each instance rolls its own master key.
  *    Thus there is no concept of a global current key.
  *    The requirement to generate new master keys / delegation tokens is to generate unique INTEGER keys,
  *    which the state store is responsible for (Autoincrement is one of the ways to achieve this).
- *    This key will be regenerated on service restart & thus there is no requirement of an explicit restore mechanism.
- *    Current master key will be stored in memory on each instance & will be used to generate new tokens.
+ *    This key will be regenerated on service restart and thus there is no requirement of an explicit restore mechanism.
+ *    Current master key will be stored in memory on each instance and will be used to generate new tokens.
  *    Master key will be looked up from the state store for Validation / renewal, etc of tokens.
  *
  * 2) Token Expiry - It doesn't take care of token removal on expiry.
  *    Each state store can implement its own way to manage token deletion on expiry.
  *
  * This pretty much replaces all methods of AbstractDelegationTokenSecretManager which is designed for stateful managers
- * TODO - Refactor Secret Manager interfaces to support stateful & stateless secret management
+ * TODO - Refactor Secret Manager interfaces to support stateful and stateless secret management
  */
 public class RouterDelegationTokenSecretManager
     extends AbstractDelegationTokenSecretManager<RMDelegationTokenIdentifier> {

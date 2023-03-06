@@ -31,7 +31,6 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
-import java.util.Set;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -82,7 +81,7 @@ public class TestMemoryFederationStateStore extends FederationStateStoreBaseTest
         secretManagerState.getTokenState();
     assertNotNull(tokenStateMap);
 
-    assertTrue(tokenStateMap.containsKey(identifier));
+    assertTrue(tokenStateMap.containsKey(identifier.getSequenceNumber()));
 
     YARNDelegationTokenIdentifier tokenIdentifier = token.getTokenIdentifier();
     assertTrue(tokenIdentifier instanceof RMDelegationTokenIdentifier);
