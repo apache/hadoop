@@ -46,6 +46,32 @@ public final class ConfigurationKeys {
   public static final String AZURE_BACKOFF_INTERVAL = "fs.azure.io.retry.backoff.interval";
   public static final String AZURE_MAX_IO_RETRIES = "fs.azure.io.retry.max.retries";
   public static final String AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT = "fs.azure.custom.token.fetch.retry.count";
+  public static final String AZURE_REQUEST_TIMEOUT_INCREASE_RATE = "fs.azure.timeout.increase.rate";
+  public static final String AZURE_MAX_REQUEST_TIMEOUT = "fs.azure.max.request.timeout";
+
+  // API-specific request timeout configurations
+  public static final String AZURE_CREATE_FS_REQUEST_TIMEOUT = "fs.azure.createfs.request.timeout";
+  public static final String AZURE_GET_FS_REQUEST_TIMEOUT = "fs.azure.getfs.request.timeout";
+  public static final String AZURE_SET_FS_REQUEST_TIMEOUT = "fs.azure.setfs.request.timeout";
+  public static final String AZURE_DELETE_FS_REQUEST_TIMEOUT = "fs.azure.deletefs.request.timeout";
+  public static final String AZURE_LIST_PATH_REQUEST_TIMEOUT = "fs.azure.list.path.request.timeout";
+  public static final String AZURE_CREATE_PATH_REQUEST_TIMEOUT = "fs.azure.create.path.request.timeout";
+  public static final String AZURE_RENAME_PATH_REQUEST_TIMEOUT = "fs.azure.rename.path.request.timeout";
+  public static final String AZURE_GET_ACL_REQUEST_TIMEOUT = "fs.azure.get.acl.request.timeout";
+  public static final String AZURE_SET_ACL_REQUEST_TIMEOUT = "fs.azure.set.acl.request.timeout";
+  public static final String AZURE_GET_PATH_PROPERTIES_REQUEST_TIMEOUT = "fs.azure.get.path.properties.request.timeout";
+  public static final String AZURE_GET_PATH_STATUS_REQUEST_TIMEOUT = "fs.azure.get.path.status.request.timeout";
+  public static final String AZURE_SET_OWNER_REQUEST_TIMEOUT = "fs.azure.set.owner.request.timeout";
+  public static final String AZURE_SET_PERMISSIONS_REQUEST_TIMEOUT = "fs.azure.set.permissions.request.timeout";
+  public static final String AZURE_SET_PATH_PROPERTIES_REQUEST_TIMEOUT = "fs.azure.set.path.properties.request.timeout";
+  public static final String AZURE_APPEND_REQUEST_TIMEOUT = "fs.azure.append.request.timeout";
+  public static final String AZURE_FLUSH_REQUEST_TIMEOUT = "fs.azure.flush.request.timeout";
+  public static final String AZURE_READFILE_REQUEST_TIMEOUT = "fs.azure.readfile.request.timeout";
+  public static final String AZURE_CHECK_ACCESS_REQUEST_TIMEOUT = "fs.azure.check.access.request.timeout";
+  public static final String AZURE_LEASE_PATH_REQUEST_TIMEOUT = "fs.azure.lease.path.request_timeout";
+  public static final String AZURE_OPTIMIZE_TIMEOUTS = "fs.azure.optimize.timeouts";
+
+
 
   //  Retry strategy for getToken calls
   public static final String AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT = "fs.azure.oauth.token.fetch.retry.max.retries";

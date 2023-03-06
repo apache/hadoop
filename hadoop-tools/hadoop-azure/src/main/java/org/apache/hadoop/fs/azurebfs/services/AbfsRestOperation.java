@@ -25,6 +25,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,6 +73,7 @@ public class AbfsRestOperation {
 
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
+  private TimeoutOptimizer timeoutOptimizer;
 
   /**
    * Checks if there is non-null HTTP response.
@@ -92,6 +94,11 @@ public class AbfsRestOperation {
 
   public URL getUrl() {
     return url;
+  }
+
+  @VisibleForTesting
+  TimeoutOptimizer getTimeoutOptimizer() {
+    return timeoutOptimizer;
   }
 
   public List<AbfsHttpHeader> getRequestHeaders() {
@@ -120,6 +127,7 @@ public class AbfsRestOperation {
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders) {
     this(operationType, client, method, url, requestHeaders, null);
+    this.timeoutOptimizer = new TimeoutOptimizer(url, operationType, client.getRetryPolicy(), client.getAbfsConfiguration());
   }
 
   /**
@@ -148,6 +156,7 @@ public class AbfsRestOperation {
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
     this.intercept = client.getIntercept();
+    this.timeoutOptimizer = new TimeoutOptimizer(url, operationType, client.getRetryPolicy(), client.getAbfsConfiguration());
   }
 
   /**
@@ -178,6 +187,7 @@ public class AbfsRestOperation {
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
     this.abfsCounters = client.getAbfsCounters();
+    this.timeoutOptimizer = new TimeoutOptimizer(url, operationType, client.getRetryPolicy(), client.getAbfsConfiguration());
   }
 
   /**
@@ -216,10 +226,12 @@ public class AbfsRestOperation {
     }
 
     retryCount = 0;
+
     LOG.debug("First execution of REST operation - {}", operationType);
     while (!executeHttpOperation(retryCount, tracingContext)) {
       try {
         ++retryCount;
+        timeoutOptimizer.updateRetryTimeout(retryCount);
         tracingContext.setRetryCount(retryCount);
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
@@ -248,7 +260,7 @@ public class AbfsRestOperation {
 
     try {
       // initialize the HTTP request and open the connection
-      httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
+      httpOperation = createHttpOperationInstance();
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
       tracingContext.constructHeader(httpOperation);
 
@@ -344,5 +356,9 @@ public class AbfsRestOperation {
     if (abfsCounters != null) {
       abfsCounters.incrementCounter(statistic, value);
     }
+  }
+
+  public AbfsHttpOperation createHttpOperationInstance() throws IOException {
+    return new AbfsHttpOperation(timeoutOptimizer.getUrl(), method, requestHeaders, timeoutOptimizer);
   }
 }

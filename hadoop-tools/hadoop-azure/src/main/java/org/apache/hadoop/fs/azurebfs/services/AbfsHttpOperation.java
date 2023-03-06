@@ -28,6 +28,7 @@ import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
@@ -81,6 +82,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private long sendRequestTimeMs;
   private long recvResponseTimeMs;
   private boolean shouldMask = false;
+  private TimeoutOptimizer timeoutOptimizer;
 
   public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
       final URL url,
@@ -165,6 +167,11 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public String getResponseHeader(String httpHeader) {
     return connection.getHeaderField(httpHeader);
+  }
+
+  @VisibleForTesting
+  TimeoutOptimizer getTimeoutOptimizer() {
+    return timeoutOptimizer;
   }
 
   // Returns a trace message for the request
@@ -258,14 +265,15 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @param url The full URL including query string parameters.
    * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
    * @param requestHeaders The HTTP request headers.READ_TIMEOUT
-   *
+   * @param timeoutOptimizer The TimeoutOptimizer instance for current request.
    * @throws IOException if an error occurs.
    */
-  public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders)
+  public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders, final TimeoutOptimizer timeoutOptimizer)
       throws IOException {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
+    this.timeoutOptimizer = timeoutOptimizer;
 
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
@@ -277,7 +285,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     }
 
     this.connection.setConnectTimeout(CONNECT_TIMEOUT);
-    this.connection.setReadTimeout(READ_TIMEOUT);
+    this.connection.setReadTimeout(timeoutOptimizer.getReadTimeout(READ_TIMEOUT));
 
     this.connection.setRequestMethod(method);
 
