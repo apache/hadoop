@@ -24,7 +24,7 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNEC
 
 /**
  * Category that can capture server-response errors for connection-timeout.
- * */
+ */
 public class ConnectionTimeoutRetryReason extends
     RetryReasonCategory {
 

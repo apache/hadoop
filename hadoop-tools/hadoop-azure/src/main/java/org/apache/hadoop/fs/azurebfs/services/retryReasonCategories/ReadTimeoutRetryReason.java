@@ -23,7 +23,7 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_T
 
 /**
  * Category that can capture server-response errors for read-timeout.
- * */
+ */
 public class ReadTimeoutRetryReason extends RetryReasonCategory {
 
   @Override

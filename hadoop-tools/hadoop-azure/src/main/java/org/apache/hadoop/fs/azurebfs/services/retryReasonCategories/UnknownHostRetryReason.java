@@ -24,7 +24,7 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.UNKNOW
 
 /**
  * Category that can capture server-response errors for {@link UnknownHostException}.
- * */
+ */
 public class UnknownHostRetryReason extends RetryReasonCategory {
 
   @Override

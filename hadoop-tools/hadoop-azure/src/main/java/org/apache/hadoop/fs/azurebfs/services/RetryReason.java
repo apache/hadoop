@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.UnknownSocke
 /**
  * This utility class exposes methods to convert a server response-error to a
  * category of error.
- * */
+ */
 final class RetryReason {
 
   /**
@@ -58,7 +58,7 @@ final class RetryReason {
    *   {@link java.io.IOException}, {@link UnknownHostRetryReason} is placed
    *   over {@link UnknownIOExceptionRetryReason}</li>
    * </ul>
-   * */
+   */
   private static List<RetryReasonCategory> rankedReasonCategories
       = new LinkedList<RetryReasonCategory>() {{
     add(new ServerErrorRetryReason());
@@ -84,7 +84,7 @@ final class RetryReason {
    * @param storageErrorMessage storageErrorMessage in the server response.
    *
    * @return abbreviation for the the given set of exception, statusCode, storageStatusCode.
-   * */
+   */
   static String getAbbreviation(Exception ex,
       Integer statusCode,
       String storageErrorMessage) {

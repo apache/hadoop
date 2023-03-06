@@ -29,7 +29,7 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OPERAT
 
 /**
  * Category that can capture server-response errors for 5XX status-code.
- * */
+ */
 public class ServerErrorRetryReason extends RetryReasonCategory {
 
   @Override

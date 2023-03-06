@@ -120,7 +120,7 @@ public final class AbfsHttpConstants {
    * 400 - 499 : Client error responses
    * 500 - 599 : Server error responses
    * </pre>
-   * */
+   */
   public static final Integer HTTP_STATUS_CATEGORY_QUOTIENT = 100;
 
   private AbfsHttpConstants() {}

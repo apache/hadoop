@@ -23,7 +23,7 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNEC
 
 /**
  * Category that can capture server-response errors for connection-reset exception.
- * */
+ */
 public class ConnectionResetRetryReason extends
     RetryReasonCategory {
 

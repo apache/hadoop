@@ -22,7 +22,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_STA
 
 /**
  * Category that can capture server-response errors for 4XX status-code.
- * */
+ */
 public class ClientErrorRetryReason extends RetryReasonCategory {
 
   @Override
