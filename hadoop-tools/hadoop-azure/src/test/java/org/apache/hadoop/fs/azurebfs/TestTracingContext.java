@@ -98,16 +98,12 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         TracingHeaderFormat.ALL_ID_FORMAT, null);
     boolean isNamespaceEnabled = fs.getIsNamespaceEnabled(tracingContext);
     String path = getRelativePath(new Path("/testDir"));
-    String permission = isNamespaceEnabled
-        ? getOctalNotation(FsPermission.getDirDefault())
-        : null;
-    String umask = isNamespaceEnabled
-        ? getOctalNotation(FsPermission.getUMask(fs.getConf()))
-        : null;
+    AzureBlobFileSystemStore.Permissions permissions = new AzureBlobFileSystemStore.Permissions(isNamespaceEnabled,
+        FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()));
 
     //request should not fail for invalid clientCorrelationID
     AbfsRestOperation op = fs.getAbfsClient()
-        .createPath(path, false, true, permission, umask, false, null,
+        .createPath(path, false, true, permissions, false, null, null,
             tracingContext);
 
     int statusCode = op.getResult().getStatusCode();
