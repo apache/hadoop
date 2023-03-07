@@ -655,15 +655,15 @@ public final class RouterServerUtil {
       Configuration conf) throws IOException, YarnException {
     // Prevents DoS over the ApplicationClientProtocol by checking the context
     // the application was submitted with for any excessively large fields.
-    double maxAscSize = conf.getStorageSize(YarnConfiguration.ROUTER_ASC_INTERCEPTOR_MAX_SIZE,
+    double bytesOfMaxAscSize = conf.getStorageSize(YarnConfiguration.ROUTER_ASC_INTERCEPTOR_MAX_SIZE,
         YarnConfiguration.DEFAULT_ROUTER_ASC_INTERCEPTOR_MAX_SIZE, StorageUnit.BYTES);
     if (appContext != null) {
-      int size = appContext.getProto().getSerializedSize();
-      if (size >= maxAscSize) {
+      int bytesOfSerializedSize = appContext.getProto().getSerializedSize();
+      if (bytesOfSerializedSize >= bytesOfMaxAscSize) {
         logContainerLaunchContext(appContext);
         String applicationId = appContext.getApplicationId().toString();
-        String limit = StringUtils.byteDesc((long) maxAscSize);
-        String appContentSize = StringUtils.byteDesc(size);
+        String limit = StringUtils.byteDesc((long) bytesOfMaxAscSize);
+        String appContentSize = StringUtils.byteDesc(bytesOfSerializedSize);
         String errMsg = String.format(
             "The size of the ApplicationSubmissionContext of the application %s is " +
             "above the limit %s, size = %s.", applicationId, limit, appContentSize);
