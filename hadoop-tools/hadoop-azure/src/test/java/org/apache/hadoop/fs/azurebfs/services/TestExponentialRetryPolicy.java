@@ -322,7 +322,13 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
             requestHeaders));
 
     // setting up mock behavior for the AbfsHttpOperation class
-    AbfsHttpOperation mockHttpOp = Mockito.spy(mockRestOp.createHttpOperationInstance());
+    AbfsHttpOperation mockHttpOp = Mockito.mock(AbfsHttpOperation.class);
+    HttpURLConnection mockUrlConnection = Mockito.mock(HttpURLConnection.class);
+    Mockito.doNothing().when(mockUrlConnection).setRequestProperty(nullable(String.class), nullable(String.class));
+    SharedKeyCredentials mockSharedKeyCreds = Mockito.mock(SharedKeyCredentials.class);
+    Mockito.doNothing().when(mockSharedKeyCreds).signRequest(Mockito.any(HttpURLConnection.class), Mockito.any(long.class));
+    Mockito.doReturn(mockSharedKeyCreds).when(client).getSharedKeyCredentials();
+    Mockito.doReturn(mockUrlConnection).when(mockHttpOp).getConnection();
     Mockito.doReturn(HTTP_OK)
             .when(mockHttpOp).getStatusCode();
     Mockito.doNothing().when(mockHttpOp).setRequestProperty(nullable(String.class), nullable(String.class));
