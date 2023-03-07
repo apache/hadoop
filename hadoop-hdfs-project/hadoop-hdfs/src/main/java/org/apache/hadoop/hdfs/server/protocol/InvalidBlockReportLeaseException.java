@@ -31,7 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class InvalidBlockReportLeaseException extends IOException {
-  /** for java.io.Serializable */
+  /** for java.io.Serializable. */
   private static final long serialVersionUID = 1L;
 
   public InvalidBlockReportLeaseException() {
