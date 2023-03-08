@@ -655,7 +655,8 @@ public final class RouterServerUtil {
       Configuration conf) throws IOException, YarnException {
     // Prevents DoS over the ApplicationClientProtocol by checking the context
     // the application was submitted with for any excessively large fields.
-    double bytesOfMaxAscSize = conf.getStorageSize(YarnConfiguration.ROUTER_ASC_INTERCEPTOR_MAX_SIZE,
+    double bytesOfMaxAscSize = conf.getStorageSize(
+        YarnConfiguration.ROUTER_ASC_INTERCEPTOR_MAX_SIZE,
         YarnConfiguration.DEFAULT_ROUTER_ASC_INTERCEPTOR_MAX_SIZE, StorageUnit.BYTES);
     if (appContext != null) {
       int bytesOfSerializedSize = appContext.getProto().getSerializedSize();
