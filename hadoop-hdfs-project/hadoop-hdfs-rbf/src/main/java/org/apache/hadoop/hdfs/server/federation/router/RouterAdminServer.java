@@ -112,6 +112,8 @@ public class RouterAdminServer extends AbstractService
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterAdminServer.class);
+      private static final Logger AUDITLOG =
+      LoggerFactory.getLogger(RouterAdminServer.class.getName() + ".audit");
 
   private Configuration conf;
 
@@ -514,11 +516,11 @@ public class RouterAdminServer extends AbstractService
       safeModeService.setManualSafeMode(true);
       success = verifySafeMode(true);
       if (success) {
-        LOG.info("STATE* Safe mode is ON.\n" + "It was turned on manually. "
+        AUDITLOG.info("STATE* Safe mode is ON.\n" + "It was turned on manually. "
             + "Use \"hdfs dfsrouteradmin -safemode leave\" to turn"
             + " safe mode off.");
       } else {
-        LOG.error("Unable to enter safemode.");
+        AUDITLOG.error("Unable to enter safemode.");
       }
     }
     return EnterSafeModeResponse.newInstance(success);
@@ -535,9 +537,9 @@ public class RouterAdminServer extends AbstractService
       safeModeService.setManualSafeMode(false);
       success = verifySafeMode(false);
       if (success) {
-        LOG.info("STATE* Safe mode is OFF.\n" + "It was turned off manually.");
+        AUDITLOG.info("STATE* Safe mode is OFF.\n" + "It was turned off manually.");
       } else {
-        LOG.error("Unable to leave safemode.");
+        AUDITLOG.error("Unable to leave safemode.");
       }
     }
     return LeaveSafeModeResponse.newInstance(success);
@@ -676,12 +678,12 @@ public class RouterAdminServer extends AbstractService
     if (namespaceExists(nsId)) {
       success = getDisabledNameserviceStore().disableNameservice(nsId);
       if (success) {
-        LOG.info("Nameservice {} disabled successfully.", nsId);
+        AUDITLOG.info("Nameservice {} disabled successfully.", nsId);
       } else {
-        LOG.error("Unable to disable Nameservice {}", nsId);
+        AUDITLOG.error("Unable to disable Nameservice {}", nsId);
       }
     } else {
-      LOG.error("Cannot disable {}, it does not exists", nsId);
+      AUDITLOG.error("Cannot disable {}, it does not exists", nsId);
     }
     return DisableNameserviceResponse.newInstance(success);
   }
@@ -711,12 +713,12 @@ public class RouterAdminServer extends AbstractService
     if (disabled.contains(nsId)) {
       success = store.enableNameservice(nsId);
       if (success) {
-        LOG.info("Nameservice {} enabled successfully.", nsId);
+        AUDITLOG.info("Nameservice {} enabled successfully.", nsId);
       } else {
-        LOG.error("Unable to enable Nameservice {}", nsId);
+        AUDITLOG.error("Unable to enable Nameservice {}", nsId);
       }
     } else {
-      LOG.error("Cannot enable {}, it was not disabled", nsId);
+      AUDITLOG.error("Cannot enable {}, it was not disabled", nsId);
     }
     return EnableNameserviceResponse.newInstance(success);
   }
