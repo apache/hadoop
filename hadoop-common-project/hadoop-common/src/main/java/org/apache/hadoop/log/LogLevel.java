@@ -351,7 +351,7 @@ public class LogLevel {
         if (GenericsUtil.isLog4jLogger(logName)) {
           process(Logger.getLogger(logName), level, out);
         } else {
-          out.println("Sorry, " + log.getClass() + " not supported.<br />");
+          out.println("Sorry, setting log level is only supported for log4j loggers.<br />");
         }
       }
 
