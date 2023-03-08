@@ -22,7 +22,6 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
@@ -30,32 +29,28 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MI
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_AUTOTHROTTLING;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.IF_MATCH;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.RANGE;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT1_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
 import static org.junit.Assume.assumeTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 
-import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.mockito.Mockito;
+
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -154,7 +149,7 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     when(http500Op.getStatusCode()).thenReturn(HTTP_INTERNAL_ERROR);
     when(successOp.getResult()).thenReturn(http500Op);
 
-    AbfsConfiguration configuration = Mockito.mock(AbfsConfiguration.class);
+    AbfsConfiguration configuration = mock(AbfsConfiguration.class);
     when(configuration.getAnalysisPeriod()).thenReturn(ANALYSIS_PERIOD);
     when(configuration.isAutoThrottlingEnabled()).thenReturn(true);
     when(configuration.accountThrottlingEnabled()).thenReturn(false);
@@ -304,7 +299,7 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     AbfsClient client = Mockito.spy(fs.getAbfsStore().getClient());
 
-    AbfsThrottlingIntercept intercept = Mockito.mock(AbfsThrottlingIntercept.class);
+    AbfsThrottlingIntercept intercept = mock(AbfsThrottlingIntercept.class);
     Mockito.doNothing().when(intercept).sendingRequest(Mockito.any(AbfsRestOperationType.class), Mockito.any(AbfsCounters.class));
     Mockito.doReturn(intercept).when(client).getIntercept();
 
@@ -322,10 +317,10 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
             requestHeaders));
 
     // setting up mock behavior for the AbfsHttpOperation class
-    AbfsHttpOperation mockHttpOp = Mockito.mock(AbfsHttpOperation.class);
-    HttpURLConnection mockUrlConnection = Mockito.mock(HttpURLConnection.class);
+    AbfsHttpOperation mockHttpOp = mock(AbfsHttpOperation.class);
+    HttpURLConnection mockUrlConnection = mock(HttpURLConnection.class);
     Mockito.doNothing().when(mockUrlConnection).setRequestProperty(nullable(String.class), nullable(String.class));
-    SharedKeyCredentials mockSharedKeyCreds = Mockito.mock(SharedKeyCredentials.class);
+    SharedKeyCredentials mockSharedKeyCreds = mock(SharedKeyCredentials.class);
     Mockito.doNothing().when(mockSharedKeyCreds).signRequest(Mockito.any(HttpURLConnection.class), Mockito.any(long.class));
     Mockito.doReturn(mockSharedKeyCreds).when(client).getSharedKeyCredentials();
     Mockito.doReturn(mockUrlConnection).when(mockHttpOp).getConnection();
