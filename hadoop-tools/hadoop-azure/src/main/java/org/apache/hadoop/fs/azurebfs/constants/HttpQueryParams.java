@@ -30,6 +30,7 @@ public final class HttpQueryParams {
   public static final String QUERY_PARAM_DIRECTORY = "directory";
   public static final String QUERY_PARAM_CONTINUATION = "continuation";
   public static final String QUERY_PARAM_RECURSIVE = "recursive";
+  public static final String QUERY_PARAM_PAGINATED = "paginated";
   public static final String QUERY_PARAM_MAXRESULTS = "maxResults";
   public static final String QUERY_PARAM_ACTION = "action";
   public static final String QUERY_FS_ACTION = "fsAction";

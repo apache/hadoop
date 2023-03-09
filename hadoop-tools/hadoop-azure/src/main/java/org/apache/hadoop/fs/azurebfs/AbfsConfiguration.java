@@ -328,6 +328,10 @@ public class AbfsConfiguration{
       FS_AZURE_ENABLE_ABFS_LIST_ITERATOR, DefaultValue = DEFAULT_ENABLE_ABFS_LIST_ITERATOR)
   private boolean enableAbfsListIterator;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ENABLE_PAGINATED_DELETE, DefaultValue = DEFAULT_ENABLE_PAGINATED_DELETE)
+  private boolean enablePaginatedDelete;
+
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, InvalidConfigurationValueException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
@@ -700,6 +704,10 @@ public class AbfsConfiguration{
 
   public boolean isEnabledMkdirOverwrite() {
     return mkdirOverwrite;
+  }
+
+  public boolean isEnabledPaginatedDelete() {
+    return enablePaginatedDelete;
   }
 
   public String getAppendBlobDirs() {
