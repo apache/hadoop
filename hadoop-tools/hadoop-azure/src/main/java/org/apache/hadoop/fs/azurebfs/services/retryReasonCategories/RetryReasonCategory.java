@@ -23,7 +23,7 @@ import java.util.Locale;
 /**
  * Provides methods to define if given exception can be categorised to certain category.
  * Each category has a different implementation of the abstract class.
- * */
+ */
 public abstract class RetryReasonCategory {
 
   /**
@@ -60,7 +60,7 @@ public abstract class RetryReasonCategory {
    *
    * @return abbreviation if the server-response can be categorised by the implementation.
    * null if the server-response can not be categorised by the implementation.
-   * */
+   */
   public String captureAndGetAbbreviation(Exception ex,
       Integer statusCode,
       String serverErrorMessage) {

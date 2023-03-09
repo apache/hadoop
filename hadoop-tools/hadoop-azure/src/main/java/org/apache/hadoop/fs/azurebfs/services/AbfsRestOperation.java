@@ -77,7 +77,7 @@ public class AbfsRestOperation {
   /**
    * This variable contains the reason of last API call within the same
    * AbfsRestOperation object.
-   * */
+   */
   private String failureReason;
 
   /**
@@ -354,7 +354,7 @@ public class AbfsRestOperation {
   /**
    * Creates new object of {@link AbfsHttpOperation} with the url, method, and
    * requestHeaders fields of the AbfsRestOperation object.
-   * */
+   */
   @VisibleForTesting
   AbfsHttpOperation createHttpOperation() throws IOException {
     return new AbfsHttpOperation(url, method, requestHeaders);
