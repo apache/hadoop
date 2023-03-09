@@ -153,8 +153,8 @@ public class TracingContext {
    * X_MS_CLIENT_REQUEST_ID header of the http operation
    * @param httpOperation AbfsHttpOperation instance to set header into
    *                      connection
-   * @param previousFailure Failure seen before this API trigger on
-   * same operation from AbfsClient. It shall be non-null if it is a retry-iteration.
+   * @param previousFailure Failure seen before this API trigger on same operation
+   * from AbfsClient.
    */
   public void constructHeader(AbfsHttpOperation httpOperation, String previousFailure) {
     clientRequestId = UUID.randomUUID().toString();
@@ -162,7 +162,7 @@ public class TracingContext {
     case ALL_ID_FORMAT: // Optional IDs (e.g. streamId) may be empty
       header =
           clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID + ":"
-              + getPrimaryRequestIdForHeader(previousFailure != null) + ":" + streamID
+              + getPrimaryRequestIdForHeader(retryCount > 0) + ":" + streamID
               + ":" + opType + ":" + retryCount;
       header = addFailureReasons(header, previousFailure);
       break;
@@ -181,7 +181,7 @@ public class TracingContext {
     * API call (previousFailure shall be null), maintain the last part of clientRequestId's
     * UUID in primaryRequestIdForRetry. This field shall be used as primaryRequestId part
     * of the x-ms-client-request-id header in case of retry of the same API-request.
-    * */
+    */
     if (primaryRequestId.isEmpty() && previousFailure == null) {
       String[] clientRequestIdParts = clientRequestId.split("-");
       primaryRequestIdForRetry = clientRequestIdParts[
@@ -195,7 +195,7 @@ public class TracingContext {
    * @return {@link #primaryRequestIdForRetry}:If the {@link #primaryRequestId}
    * is an empty-string, and it's a retry iteration.
    * {@link #primaryRequestId} for other cases.
-   * */
+   */
   private String getPrimaryRequestIdForHeader(final Boolean isRetry) {
     if (!primaryRequestId.isEmpty() || !isRetry) {
       return primaryRequestId;
