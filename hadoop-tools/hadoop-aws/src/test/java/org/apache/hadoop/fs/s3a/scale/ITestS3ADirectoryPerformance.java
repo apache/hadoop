@@ -258,7 +258,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
         originalListOfFiles.add(file.toString());
         PutObjectRequest.Builder putObjectRequestBuilder = requestFactory
             .newPutObjectRequestBuilder(fs.pathToKey(file),
-                null, 128, false);
+                null, 0, false);
         futures.add(submit(executorService,
             () -> writeOperationHelper.putObject(putObjectRequestBuilder.build(),
                 PutObjectOptions.keepingDirs(),
