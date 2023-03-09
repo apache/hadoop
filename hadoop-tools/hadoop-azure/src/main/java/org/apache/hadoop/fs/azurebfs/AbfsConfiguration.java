@@ -270,7 +270,7 @@ public class AbfsConfiguration{
   private int accountOperationIdleTimeout;
 
   /**
-  * Analysis Period for client-side throttling
+   * Analysis Period for client-side throttling
    */
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ANALYSIS_PERIOD,
           DefaultValue = DEFAULT_ANALYSIS_PERIOD_MS)

@@ -333,7 +333,7 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
             .doThrow(IOException.class)
             .doNothing().when(mockHttpOp).processResponse(nullable(byte[].class), nullable(int.class), nullable(int.class));
 
-    Mockito.doReturn(mockHttpOp).when(mockRestOp).createHttpOperationInstance();
+    Mockito.doReturn(mockHttpOp).when(mockRestOp).createHttpOperation();
     Mockito.doReturn(mockHttpOp).when(mockRestOp).getResult();
 
     mockRestOp.execute(getTestTracingContext(fs, false));
