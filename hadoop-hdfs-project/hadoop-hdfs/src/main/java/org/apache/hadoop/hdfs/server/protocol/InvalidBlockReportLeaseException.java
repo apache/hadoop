@@ -34,7 +34,8 @@ public class InvalidBlockReportLeaseException extends IOException {
   /** for java.io.Serializable. */
   private static final long serialVersionUID = 1L;
 
-  public InvalidBlockReportLeaseException() {
-    super("Block report was rejected as the lease is invalid");
+  public InvalidBlockReportLeaseException(long blockReportID, long leaseID) {
+    super("Block report 0x" + Long.toHexString(blockReportID) + " was rejected as lease 0x"
+        + Long.toHexString(leaseID) +  " is invalid");
   }
 }

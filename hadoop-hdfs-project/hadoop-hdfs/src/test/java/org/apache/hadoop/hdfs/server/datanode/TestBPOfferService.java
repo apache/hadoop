@@ -1187,7 +1187,7 @@ public class TestBPOfferService {
                 // just reject and wait until DN request for a new leaseId
                 if(leaseId == 1) {
                   firstLeaseId = leaseId;
-                  InvalidBlockReportLeaseException e = new InvalidBlockReportLeaseException();
+                  InvalidBlockReportLeaseException e = new InvalidBlockReportLeaseException(context.getReportId(), 1);
                   throw new RemoteException(e.getClass().getName(), e.getMessage());
                 } else {
                   secondLeaseId = leaseId;
