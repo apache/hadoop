@@ -443,7 +443,7 @@ public class NativeAzureFileSystem extends FileSystem {
      * failure.
      * @throws IOException Thrown when fail to renaming.
      */
-    public void execute() throws IOException {
+    public void execute(BlobMaterialization srcBlobMaterialization) throws IOException {
 
       AzureFileSystemThreadTask task = new AzureFileSystemThreadTask() {
         @Override
@@ -460,8 +460,9 @@ public class NativeAzureFileSystem extends FileSystem {
 
       // Rename the source folder 0-byte root file itself.
       FileMetadata srcMetadata2 = this.getSourceMetadata();
-      if (srcMetadata2.getBlobMaterialization() ==
-          BlobMaterialization.Explicit) {
+      if (srcBlobMaterialization == BlobMaterialization.Explicit &&
+              srcMetadata2.getBlobMaterialization() ==
+                      BlobMaterialization.Explicit) {
 
         // It already has a lease on it from the "prepare" phase so there's no
         // need to get one now. Pass in existing lease to allow file delete.
@@ -3278,9 +3279,13 @@ public class NativeAzureFileSystem extends FileSystem {
           "rename", absoluteDstPath);
       }
     }
-    FileMetadata srcMetadata = null;
+    FileMetadata srcMetadata;
+    BlobMaterialization srcBlobMaterialization = null;
     try {
       srcMetadata = store.retrieveMetadata(srcKey);
+      if (srcMetadata != null){
+        srcBlobMaterialization = srcMetadata.getBlobMaterialization();
+      }
     } catch (IOException ex) {
       Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
 
@@ -3338,7 +3343,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // operation to HBase log file folders, where atomic rename is required.
       // In the future, we could generalize it easily to all folders.
       renamePending = prepareAtomicFolderRename(srcKey, dstKey);
-      renamePending.execute();
+      renamePending.execute(srcBlobMaterialization);
 
       LOG.debug("Renamed {} to {} successfully.", src, dst);
       renamePending.cleanup();
