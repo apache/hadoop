@@ -318,7 +318,7 @@ public class NamenodeHeartbeatService extends PeriodicService {
         LOG.warn("Cannot register namenode {}", report);
       }
     } catch (IOException e) {
-      LOG.info("Cannot register namenode in the State Store");
+      LOG.error("Cannot register namenode in the State Store", e);
     } catch (Exception ex) {
       LOG.error("Unhandled exception updating NN registration for {}",
           getNamenodeDesc(), ex);
