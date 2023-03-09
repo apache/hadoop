@@ -5118,6 +5118,16 @@
   </property>
 
   <property>
+    <name>yarn.router.asc-interceptor-max-size</name>
+    <value>1MB</value>
+    <description>
+      We define the size limit of ApplicationSubmissionContext.
+      If the size of the ApplicationSubmissionContext is larger than this value,
+      We will throw an exception. the default value is 1MB.
+    </description>
+  </property>
+
+  <property>
     <description>
       The number of threads to use for the Router scheduled executor service.
     </description>

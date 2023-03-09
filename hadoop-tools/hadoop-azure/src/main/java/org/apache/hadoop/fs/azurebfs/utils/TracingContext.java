@@ -152,8 +152,10 @@ public class TracingContext {
    * X_MS_CLIENT_REQUEST_ID header of the http operation
    * @param httpOperation AbfsHttpOperation instance to set header into
    *                      connection
+   * @param previousFailure List of failures seen before this API trigger on
+   * same operation from AbfsClient.
    */
-  public void constructHeader(AbfsHttpOperation httpOperation) {
+  public void constructHeader(AbfsHttpOperation httpOperation, String previousFailure) {
     clientRequestId = UUID.randomUUID().toString();
     switch (format) {
     case ALL_ID_FORMAT: // Optional IDs (e.g. streamId) may be empty
@@ -161,6 +163,7 @@ public class TracingContext {
           clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID + ":"
               + primaryRequestId + ":" + streamID + ":" + opType + ":"
               + retryCount;
+      header = addFailureReasons(header, previousFailure);
       break;
     case TWO_ID_FORMAT:
       header = clientCorrelationID + ":" + clientRequestId;
@@ -172,6 +175,14 @@ public class TracingContext {
       listener.callTracingHeaderValidator(header, format);
     }
     httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
+  }
+
+  private String addFailureReasons(final String header,
+      final String previousFailure) {
+    if (previousFailure == null) {
+      return header;
+    }
+    return String.format("%s_%s", header, previousFailure);
   }
 
   /**

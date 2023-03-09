@@ -125,7 +125,7 @@
     <commons-net.version>3.9.0</commons-net.version>
     <commons-text.version>1.10.0</commons-text.version>
 
-    <kerby.version>2.0.2</kerby.version>
+    <kerby.version>2.0.3</kerby.version>
     <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.3.1</ehcache.version>
     <hikari.version>4.0.3</hikari.version>

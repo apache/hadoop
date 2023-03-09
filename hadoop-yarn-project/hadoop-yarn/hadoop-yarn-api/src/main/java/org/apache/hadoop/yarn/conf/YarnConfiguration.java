@@ -4250,6 +4250,13 @@ public class YarnConfiguration extends Configuration {
           + "DefaultRequestInterceptorREST";
 
   /**
+   * ApplicationSubmissionContextInterceptor configurations.
+   **/
+  public static final String ROUTER_ASC_INTERCEPTOR_MAX_SIZE =
+      ROUTER_PREFIX + "asc-interceptor-max-size";
+  public static final String DEFAULT_ROUTER_ASC_INTERCEPTOR_MAX_SIZE = "1MB";
+
+  /**
    * The interceptor class used in FederationInterceptorREST should return
    * partial AppReports.
    */

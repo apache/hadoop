@@ -112,6 +112,7 @@ public final class RouterWebServiceUtil {
    * @param additionalParam the query parameters as input for a specific REST
    *          call in case the call has no servlet request
    * @param client same client used to reduce number of clients created
+   * @param conf configuration
    * @return the retrieved entity from the REST call
    */
   protected static <T> T genericForward(final String webApp,
