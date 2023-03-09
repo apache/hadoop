@@ -324,7 +324,7 @@ public class AbfsRestOperation {
       return false;
     } catch (IOException ex) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("HttpRequestFailure: {}, {}", httpOperation.toString(), ex);
+        LOG.debug("HttpRequestFailure: {}, {}", httpOperation, ex);
       }
 
       failureReason = RetryReason.getAbbreviation(ex, -1, "");
@@ -338,7 +338,7 @@ public class AbfsRestOperation {
       intercept.updateMetrics(operationType, httpOperation);
     }
 
-    LOG.debug("HttpRequest: {}: {}", operationType, httpOperation.toString());
+    LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
 
     if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {
       int status = httpOperation.getStatusCode();

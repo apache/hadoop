@@ -455,8 +455,8 @@ final class ReadBufferManager {
    */
   void doneReading(final ReadBuffer buffer, final ReadBufferStatus result, final int bytesActuallyRead) {
     if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("ReadBufferWorker completed file {} for offset {} bytes {}",
-          buffer.getStream().getPath(),  buffer.getOffset(), bytesActuallyRead);
+      LOGGER.trace("ReadBufferWorker completed read file {} for offset {} outcome {} bytes {}",
+          buffer.getStream().getPath(),  buffer.getOffset(), result, bytesActuallyRead);
     }
     synchronized (this) {
       // If this buffer has already been purged during
