@@ -42,6 +42,8 @@ public class ClusterUserInfo {
     // User who has placed the request
     protected String requestedUser;
 
+    private String subClusterId;
+
     public ClusterUserInfo() {
     }
 
@@ -60,5 +62,13 @@ public class ClusterUserInfo {
 
     public String getRequestedUser() {
         return requestedUser;
+    }
+
+    public String getSubClusterId() {
+        return subClusterId;
+    }
+
+    public void setSubClusterId(String subClusterId) {
+        this.subClusterId = subClusterId;
     }
 }

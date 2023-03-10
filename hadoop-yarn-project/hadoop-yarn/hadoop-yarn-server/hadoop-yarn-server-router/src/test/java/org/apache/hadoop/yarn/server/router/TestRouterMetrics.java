@@ -568,6 +568,16 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed getBulkActivitie call");
       metrics.incrGetBulkActivitiesFailedRetrieved();
     }
+
+    public void getClusterInfoFailed() {
+      LOG.info("Mocked: failed getClusterInfo call");
+      metrics.incrGetClusterInfoFailedRetrieved();
+    }
+
+    public void getClusterUserInfoFailed() {
+      LOG.info("Mocked: failed getClusterUserInfo call");
+      metrics.incrGetClusterUserInfoFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -837,6 +847,16 @@ public class TestRouterMetrics {
     public void addToClusterNodeLabelsRetrieved(long duration) {
       LOG.info("Mocked: successful AddToClusterNodeLabels call with duration {}", duration);
       metrics.succeededAddToClusterNodeLabelsRetrieved(duration);
+    }
+
+    public void getClusterInfoRetrieved(long duration) {
+      LOG.info("Mocked: successful GetClusterInfoRetrieved call with duration {}", duration);
+      metrics.succeededGetClusterInfoRetrieved(duration);
+    }
+
+    public void getClusterUserInfoRetrieved(long duration) {
+      LOG.info("Mocked: successful GetClusterUserInfoRetrieved call with duration {}", duration);
+      metrics.succeededGetClusterUserInfoRetrieved(duration);
     }
   }
 
@@ -1847,5 +1867,49 @@ public class TestRouterMetrics {
         metrics.getNumSucceededAddToClusterNodeLabelsRetrieved());
     Assert.assertEquals(225,
         metrics.getLatencySucceededAddToClusterNodeLabelsRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetClusterInfoRetrievedFailed() {
+    long totalBadBefore = metrics.getClusterInfoFailedRetrieved();
+    badSubCluster.getClusterInfoFailed();
+    Assert.assertEquals(totalBadBefore + 1, metrics.getClusterInfoFailedRetrieved());
+  }
+
+  @Test
+  public void testGetClusterInfoRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetClusterInfoRetrieved();
+    goodSubCluster.getClusterInfoRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetClusterInfoRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetClusterInfoRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getClusterInfoRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetClusterInfoRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetClusterInfoRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetClusterUserInfoRetrievedFailed() {
+    long totalBadBefore = metrics.getClusterUserInfoFailedRetrieved();
+    badSubCluster.getClusterUserInfoFailed();
+    Assert.assertEquals(totalBadBefore + 1, metrics.getClusterUserInfoFailedRetrieved());
+  }
+
+  @Test
+  public void testGetClusterUserInfoRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetClusterUserInfoRetrieved();
+    goodSubCluster.getClusterUserInfoRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetClusterUserInfoRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetClusterUserInfoRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getClusterUserInfoRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetClusterUserInfoRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetClusterUserInfoRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 }
