@@ -763,7 +763,7 @@ public class NativeAzureFileSystem extends FileSystem {
   /**
    * The default number of threads to be used for rename operation.
    */
-  public static final int DEFAULT_AZURE_RENAME_THREADS = 0;
+  public static final int DEFAULT_AZURE_RENAME_THREADS = 5;
 
   /**
    * The configuration property to set number of threads to be used for delete operation.
@@ -773,7 +773,7 @@ public class NativeAzureFileSystem extends FileSystem {
   /**
    * The default number of threads to be used for delete operation.
    */
-  public static final int DEFAULT_AZURE_DELETE_THREADS = 0;
+  public static final int DEFAULT_AZURE_DELETE_THREADS = 5;
 
   /**
    * The number of threads to be used for delete operation after reading user configuration.

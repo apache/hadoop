@@ -257,7 +257,6 @@ public class AzureBlobFileSystem extends FileSystem
       }
       nativeFs = new NativeAzureFileSystem();
       Configuration config = getConf();
-      config.setInt("fs.azure.rename.threads", 5);
       try {
         nativeFs.initialize(wasbUri, config);
       } catch (IOException e) {
