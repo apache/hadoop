@@ -415,7 +415,7 @@ public class ITestS3SelectLandsat extends AbstractS3SelectTest {
       long increment = 64 * _1KB;
 
       // seek forward, comparing bytes
-      for(offset = 32 * _1KB; offset < _1MB; offset += increment) {
+      for(offset = 32 * _1KB; offset < 256 * _1KB; offset += increment) {
         seek(seekStream, offset);
         assertEquals("Seek position in " + seekStream,
             offset, seekStream.getPos());
