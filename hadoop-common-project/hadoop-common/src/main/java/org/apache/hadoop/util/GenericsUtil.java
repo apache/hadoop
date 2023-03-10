@@ -93,7 +93,7 @@ public class GenericsUtil {
    * @return true if the log of <code>clazz</code> is Log4j implementation.
    */
   public static boolean isLog4jLogger(Class<?> clazz) {
-    if (clazz == null || !IS_LOG4J_LOGGER.get()) {
+    if (clazz == null) {
       return false;
     }
     return isLog4jLogger(clazz.getName());
