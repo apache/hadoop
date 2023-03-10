@@ -96,14 +96,7 @@ public class GenericsUtil {
     if (clazz == null || !IS_LOG4J_LOGGER.get()) {
       return false;
     }
-    Logger log = LoggerFactory.getLogger(clazz);
-    try {
-      Class<?> log4jClass = Class.forName(SLF4J_LOG4J_ADAPTER_CLASS);
-      return log4jClass.isInstance(log);
-    } catch (ClassNotFoundException e) {
-      IS_LOG4J_LOGGER.set(false);
-      return false;
-    }
+    return isLog4jLogger(clazz.getName());
   }
 
   /**
