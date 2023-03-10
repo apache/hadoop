@@ -57,10 +57,14 @@ import static org.apache.hadoop.util.Time.*;
  */
 public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
   public static final String SQL_STATE_STORE_CONF_PREFIX = "state-store-mysql.";
-  public static final String CONNECTION_URL = SQL_STATE_STORE_CONF_PREFIX + "connection.url";
-  public static final String CONNECTION_USERNAME = SQL_STATE_STORE_CONF_PREFIX + "connection.username";
-  public static final String CONNECTION_PASSWORD = SQL_STATE_STORE_CONF_PREFIX + "connection.password";
-  public static final String CONNECTION_DRIVER = SQL_STATE_STORE_CONF_PREFIX + "connection.driver";
+  public static final String CONNECTION_URL =
+      SQL_STATE_STORE_CONF_PREFIX + "connection.url";
+  public static final String CONNECTION_USERNAME =
+      SQL_STATE_STORE_CONF_PREFIX + "connection.username";
+  public static final String CONNECTION_PASSWORD =
+      SQL_STATE_STORE_CONF_PREFIX + "connection.password";
+  public static final String CONNECTION_DRIVER =
+      SQL_STATE_STORE_CONF_PREFIX + "connection.driver";
 
   private static final Logger LOG =
       LoggerFactory.getLogger(StateStoreSerializableImpl.class);
@@ -142,7 +146,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
           ret.add(record);
         }
       }
-    } catch (Exception e) {
+    } catch (SQLException e) {
       if (metrics != null) {
         metrics.addFailure(monotonicNow() - start);
       }
