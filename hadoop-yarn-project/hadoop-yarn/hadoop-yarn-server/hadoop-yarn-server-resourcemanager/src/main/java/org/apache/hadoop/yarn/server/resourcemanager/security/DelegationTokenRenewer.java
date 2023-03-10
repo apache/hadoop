@@ -623,7 +623,9 @@ public class DelegationTokenRenewer extends AbstractService {
   }
 
   /**
-   * set task to renew the token
+   * set task to renew the token.
+   * @param token DelegationTokenToRenew.
+   * @throws IOException if an IO error occurred.
    */
   @VisibleForTesting
   protected void setTimerForTokenRenewal(DelegationTokenToRenew token)

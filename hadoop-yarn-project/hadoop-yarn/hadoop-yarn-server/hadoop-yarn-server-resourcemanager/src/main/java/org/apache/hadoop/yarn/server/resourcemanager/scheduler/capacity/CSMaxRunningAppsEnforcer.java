@@ -172,6 +172,8 @@ public class CSMaxRunningAppsEnforcer {
    *
    * Runs in O(n log(n)) where n is the number of queues that are under the
    * highest queue that went from having no slack to having slack.
+   *
+   * @param app FiCaSchedulerApp.
    */
   public void updateRunnabilityOnAppRemoval(FiCaSchedulerApp app) {
     // childqueueX might have no pending apps itself, but if a queue higher up

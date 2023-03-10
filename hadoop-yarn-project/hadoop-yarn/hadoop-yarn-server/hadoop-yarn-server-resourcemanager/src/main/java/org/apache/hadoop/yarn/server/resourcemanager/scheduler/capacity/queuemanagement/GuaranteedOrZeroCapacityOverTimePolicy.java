@@ -350,7 +350,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
    *
    * @return List of Queue Management change suggestions which could potentially
    * be committed/rejected by the scheduler due to validation failures
-   * @throws SchedulerDynamicEditException
+   * @throws SchedulerDynamicEditException when compute queueManagement changes fails.
    */
   @Override
   public List<QueueManagementChange> computeQueueManagementChanges()

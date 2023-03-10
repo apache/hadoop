@@ -49,7 +49,7 @@ public class FairSchedulerInfo extends SchedulerInfo {
 
   /**
    * Get the fair share assigned to the appAttemptId.
-   * @param appAttemptId
+   * @param appAttemptId the application attempt id
    * @return The fair share assigned to the appAttemptId,
    * <code>FairSchedulerInfo#INVALID_FAIR_SHARE</code> if the scheduler does
    * not know about this application attempt.

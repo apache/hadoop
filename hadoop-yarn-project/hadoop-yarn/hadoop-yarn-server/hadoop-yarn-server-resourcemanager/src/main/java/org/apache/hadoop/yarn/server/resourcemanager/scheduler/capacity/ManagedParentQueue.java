@@ -279,9 +279,11 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
   }
 
   /**
-   * Asynchronously called from scheduler to apply queue management changes
+   * Asynchronously called from scheduler to apply queue management changes.
    *
-   * @param queueManagementChanges
+   * @param queueManagementChanges QueueManagementChange List.
+   * @throws IOException an I/O exception has occurred.
+   * @throws SchedulerDynamicEditException when validate and apply QueueManagementChanges fails.
    */
   public void validateAndApplyQueueManagementChanges(
       List<QueueManagementChange> queueManagementChanges)

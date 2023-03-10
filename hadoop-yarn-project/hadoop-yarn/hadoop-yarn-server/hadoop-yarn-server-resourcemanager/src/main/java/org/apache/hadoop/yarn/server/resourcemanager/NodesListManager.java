@@ -615,12 +615,12 @@ public class NodesListManager extends CompositeService implements
   }
 
   /**
-   * Refresh the nodes gracefully
+   * Refresh the nodes gracefully.
    *
-   * @param yarnConf
+   * @param yarnConf yarn configuration.
    * @param timeout decommission timeout, null means default timeout.
-   * @throws IOException
-   * @throws YarnException
+   * @throws IOException io error occur.
+   * @throws YarnException exceptions from yarn servers.
    */
   public void refreshNodesGracefully(Configuration yarnConf, Integer timeout)
       throws IOException, YarnException {
@@ -682,6 +682,9 @@ public class NodesListManager extends CompositeService implements
   /**
    * A NodeId instance needed upon startup for populating inactive nodes Map.
    * It only knows the hostname/ip and marks the port to -1 or invalid.
+   *
+   * @param host host name.
+   * @return node id.
    */
   public static NodeId createUnknownNodeId(String host) {
     return NodeId.newInstance(host, -1);
