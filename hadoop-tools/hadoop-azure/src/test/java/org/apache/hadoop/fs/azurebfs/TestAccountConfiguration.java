@@ -66,6 +66,7 @@ import static org.junit.Assert.assertNull;
  * that do allow default values (all others) follow another form.
  */
 public class TestAccountConfiguration {
+  private static final String TEST_OAUTH_PROVIDER_CLASS_CONFIG = "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider";
   private static final String TEST_OAUTH_MSI_TOKEN_PROVIDER_CLASS_CONFIG = "org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider";
   private static final String TEST_CUSTOM_PROVIDER_CLASS_CONFIG = "org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider";
   private static final String TEST_SAS_PROVIDER_CLASS_CONFIG_1 = "org.apache.hadoop.fs.azurebfs.extensions.MockErrorSASTokenProvider";
@@ -90,11 +91,6 @@ public class TestAccountConfiguration {
           FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT,
           FS_AZURE_ACCOUNT_OAUTH_USER_NAME,
           FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD));
-
-  private static final List<String> MSI_TOKEN_OAUTH_CONFIG_KEYS =
-      Collections.unmodifiableList(Arrays.asList(
-          FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT,
-          FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID));
 
   private static final List<String> REFRESH_TOKEN_OAUTH_CONFIG_KEYS =
       Collections.unmodifiableList(Arrays.asList(
@@ -411,10 +407,8 @@ public class TestAccountConfiguration {
   public void testOAuthConfigPropNotFound() throws Throwable {
     testConfigPropNotFound(CLIENT_CREDENTIAL_OAUTH_CONFIG_KEYS, ClientCredsTokenProvider.class.getName());
     testConfigPropNotFound(USER_PASSWORD_OAUTH_CONFIG_KEYS, UserPasswordTokenProvider.class.getName());
-    testConfigPropNotFound(MSI_TOKEN_OAUTH_CONFIG_KEYS, MsiTokenProvider.class.getName());
     testConfigPropNotFound(REFRESH_TOKEN_OAUTH_CONFIG_KEYS, RefreshTokenBasedTokenProvider.class.getName());
     testConfigPropNotFound(WORKLOAD_IDENTITY_OAUTH_CONFIG_KEYS, WorkloadIdentityTokenProvider.class.getName());
-
   }
 
   private void testConfigPropNotFound(List<String> configKeys,
