@@ -57,10 +57,10 @@ import static org.apache.hadoop.util.Time.*;
  */
 public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
   public static final String SQL_STATE_STORE_CONF_PREFIX = "state-store-mysql.";
-  public static String CONNECTION_URL = SQL_STATE_STORE_CONF_PREFIX + "connection.url";
-  public static String CONNECTION_USERNAME = SQL_STATE_STORE_CONF_PREFIX + "connection.username";
-  public static String CONNECTION_PASSWORD = SQL_STATE_STORE_CONF_PREFIX + "connection.password";
-  public static String CONNECTION_DRIVER = SQL_STATE_STORE_CONF_PREFIX + "connection.driver";
+  public static final String CONNECTION_URL = SQL_STATE_STORE_CONF_PREFIX + "connection.url";
+  public static final String CONNECTION_USERNAME = SQL_STATE_STORE_CONF_PREFIX + "connection.username";
+  public static final String CONNECTION_PASSWORD = SQL_STATE_STORE_CONF_PREFIX + "connection.password";
+  public static final String CONNECTION_DRIVER = SQL_STATE_STORE_CONF_PREFIX + "connection.driver";
 
   private static final Logger LOG =
       LoggerFactory.getLogger(StateStoreSerializableImpl.class);
@@ -132,16 +132,14 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
     long start = monotonicNow();
     StateStoreMetrics metrics = getMetrics();
     List<T> ret = new ArrayList<>();
-    try {
-      try (Connection connection = connectionFactory.getConnection()){
-          PreparedStatement statement = connection.prepareStatement(
-              String.format("SELECT * FROM %s", tableName));
-        try (ResultSet result = statement.executeQuery()) {
-          while(result.next()) {
-            String recordValue = result.getString("recordValue");
-            T record = newRecord(recordValue, clazz, false);
-            ret.add(record);
-          }
+    try (Connection connection = connectionFactory.getConnection();
+        PreparedStatement statement = connection.prepareStatement(
+            String.format("SELECT * FROM %s", tableName))) {
+      try (ResultSet result = statement.executeQuery()) {
+        while(result.next()) {
+          String recordValue = result.getString("recordValue");
+          T record = newRecord(recordValue, clazz, false);
+          ret.add(record);
         }
       }
     } catch (Exception e) {
@@ -395,7 +393,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
         + "connection.hikari.";
     private final HikariDataSource dataSource;
 
-    public MySQLStateStoreHikariDataSourceConnectionFactory(Configuration conf) {
+    MySQLStateStoreHikariDataSourceConnectionFactory(Configuration conf) {
       Properties properties = new Properties();
       properties.setProperty("jdbcUrl", conf.get(StateStoreMySQLImpl.CONNECTION_URL));
       properties.setProperty("username", conf.get(StateStoreMySQLImpl.CONNECTION_USERNAME));
