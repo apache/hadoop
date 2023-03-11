@@ -44,6 +44,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -841,6 +842,28 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throws NotFoundException {
     try {
       return federationFacade.getSubClusters(true);
+    } catch (YarnException e) {
+      throw new NotFoundException(e.getMessage());
+    }
+  }
+
+  /**
+   * Get the active subcluster in the federation.
+   *
+   * @param subClusterId subClusterId.
+   * @return subClusterInfo.
+   * @throws NotFoundException If the subclusters cannot be found.
+   */
+  private SubClusterInfo getActiveSubcluster(String subClusterId)
+      throws NotFoundException {
+    try {
+      Map<SubClusterId, SubClusterInfo> subClusterInfoMap =
+          federationFacade.getSubClusters(true);
+      SubClusterInfo subClusterInfo = subClusterInfoMap.get(subClusterId);
+      if (subClusterInfo == null) {
+        throw new NotFoundException(subClusterId + " not found.");
+      }
+      return subClusterInfo;
     } catch (YarnException e) {
       throw new NotFoundException(e.getMessage());
     }
@@ -2834,11 +2857,53 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     throw new RuntimeException("getContainer Failed.");
   }
 
+  /**
+   * This method updates the Scheduler configuration, and it is reachable by
+   * using {@link RMWSConsts#SCHEDULER_CONF}.
+   *
+   * @param mutationInfo th information for making scheduler configuration
+   *        changes (supports adding, removing, or updating a queue, as well
+   *        as global scheduler conf changes)
+   * @param hsr the servlet request
+   * @return Response containing the status code
+   * @throws AuthorizationException if the user is not authorized to invoke this
+   *         method
+   * @throws InterruptedException if interrupted
+   */
   @Override
   public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
-      HttpServletRequest hsr)
-      throws AuthorizationException, InterruptedException {
-    throw new NotImplementedException("Code is not implemented");
+      HttpServletRequest hsr) throws AuthorizationException, InterruptedException {
+
+    // Make Sure mutationInfo is not null.
+    if (mutationInfo == null) {
+      throw new IllegalArgumentException(
+          "Parameter error, the mutationInfo is empty or null.");
+    }
+
+    // In Federation mode, in order to stabilize the cluster,
+    // we must specify the subClusterId.
+    String pSubClusterId = mutationInfo.getSubClusterId();
+    if (StringUtils.isBlank(pSubClusterId)) {
+      throw new IllegalArgumentException("Parameter error, " +
+          "the subClusterId is empty or null.");
+    }
+
+    try {
+      SubClusterInfo subClusterInfo = getActiveSubcluster(pSubClusterId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      Response response = interceptor.updateSchedulerConfiguration(mutationInfo, hsr);
+      if (response != null) {
+        return Response.status(response.getStatus()).entity(response.getEntity()).build();
+      }
+    } catch (NotFoundException e) {
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Get subCluster error. subClusterId = %s", pSubClusterId);
+    } catch (Exception e) {
+      RouterServerUtil.logAndThrowRunTimeException("updateSchedulerConfiguration error.", e);
+    }
+
+    throw new RuntimeException("updateSchedulerConfiguration error. subClusterId = " + pSubClusterId);
   }
 
   @Override
