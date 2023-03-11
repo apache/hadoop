@@ -122,6 +122,12 @@
                         <exclude>org/apache/hadoop/yarn/client/api/package-info.class</exclude>
                       </excludes>
                     </filter>
+                    <filter>
+                      <artifact>org.apache.hadoop:*</artifact>
+                      <excludes>
+                        <exclude>org/apache/hadoop/hdfs/server/protocol/package-info.class</exclude>
+                      </excludes>
+                    </filter>
                   </filters>
                   <relocations>
                     <relocation>
