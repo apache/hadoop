@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
+import org.apache.hadoop.hdfs.server.protocol.InvalidBlockReportLeaseException;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
@@ -777,6 +778,9 @@ class BPServiceActor implements Runnable {
           LOG.warn(this + " is shutting down", re);
           shouldServiceRun = false;
           return;
+        }
+        if (InvalidBlockReportLeaseException.class.getName().equals(reClass)) {
+          fullBlockReportLeaseId = 0;
         }
         LOG.warn("RemoteException in offerService", re);
         sleepAfterException();
