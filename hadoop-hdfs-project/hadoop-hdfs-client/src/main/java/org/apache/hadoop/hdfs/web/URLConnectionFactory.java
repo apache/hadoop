@@ -136,7 +136,7 @@ public class URLConnectionFactory {
       }
     }
 
-    return new BasicAuthConfigurator(conn, basicAuthCredentials);
+    return BasicAuthConfigurator.getConfigurator(conn, basicAuthCredentials);
   }
 
   /**
@@ -166,7 +166,7 @@ public class URLConnectionFactory {
     } catch (Exception e) {
       throw new IOException("Unable to load OAuth2 connection factory.", e);
     }
-    conn = new BasicAuthConfigurator(conn, basicAuthCredentials);
+    conn = BasicAuthConfigurator.getConfigurator(conn, basicAuthCredentials);
     return new URLConnectionFactory(conn);
   }
 

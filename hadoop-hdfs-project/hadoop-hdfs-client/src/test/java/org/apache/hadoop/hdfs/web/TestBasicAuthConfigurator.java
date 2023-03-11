@@ -23,6 +23,8 @@ import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 public class TestBasicAuthConfigurator {
   @Test
@@ -43,25 +45,39 @@ public class TestBasicAuthConfigurator {
 
   @Test
   public void testCredentialsSet() throws IOException {
-    ConnectionConfigurator conf = new BasicAuthConfigurator(null, "user:pass");
+    String credentials = "user:pass";
+    ConnectionConfigurator conf = new BasicAuthConfigurator(null, credentials);
     HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
     conf.configure(conn);
     Mockito.verify(conn, Mockito.times(1)).setRequestProperty(
         "AUTHORIZATION",
-        "Basic dXNlcjpwYXNz"
+        "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8))
     );
   }
 
   @Test
   public void testParentConfigurator() throws IOException {
     ConnectionConfigurator parent = Mockito.mock(ConnectionConfigurator.class);
-    ConnectionConfigurator conf = new BasicAuthConfigurator(parent, "user:pass");
+    String credentials = "user:pass";
+    ConnectionConfigurator conf = new BasicAuthConfigurator(parent, credentials);
     HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
     conf.configure(conn);
     Mockito.verify(conn, Mockito.times(1)).setRequestProperty(
         "AUTHORIZATION",
-        "Basic dXNlcjpwYXNz"
+        "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8))
     );
     Mockito.verify(parent, Mockito.times(1)).configure(conn);
+  }
+
+  @Test
+  public void testCredentialsSetWithUtfAndSpecialCharacters() throws IOException {
+    String credentials = "\uD80C\uDD04@ą:pass";
+    ConnectionConfigurator conf = new BasicAuthConfigurator(null, credentials);
+    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
+    conf.configure(conn);
+    Mockito.verify(conn, Mockito.times(1)).setRequestProperty(
+        "AUTHORIZATION",
+        "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8))
+    );
   }
 }
