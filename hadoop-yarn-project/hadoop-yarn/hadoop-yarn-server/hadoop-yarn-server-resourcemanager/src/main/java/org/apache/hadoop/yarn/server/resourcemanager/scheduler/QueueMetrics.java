@@ -314,7 +314,7 @@ public class QueueMetrics implements MetricsSource {
    *  QueueMetrics (B)
    *    metrics
    *
-   * @param partition
+   * @param partition Node Partition
    * @return QueueMetrics
    */
   public synchronized QueueMetrics getPartitionQueueMetrics(String partition) {
@@ -603,7 +603,7 @@ public class QueueMetrics implements MetricsSource {
   /**
    * Set Available resources with support for resource vectors.
    *
-   * @param limit
+   * @param limit Resource.
    */
   public void setAvailableResources(Resource limit) {
     availableMB.set(limit.getMemorySize());
@@ -631,7 +631,7 @@ public class QueueMetrics implements MetricsSource {
    * resources become available.
    *
    * @param partition Node Partition
-   * @param user
+   * @param user Name of the user.
    * @param limit resource limit
    */
   public void setAvailableResourcesToUser(String partition, String user,
@@ -657,8 +657,8 @@ public class QueueMetrics implements MetricsSource {
    * Increment pending resource metrics
    *
    * @param partition Node Partition
-   * @param user
-   * @param containers
+   * @param user Name of the user.
+   * @param containers containers count.
    * @param res the TOTAL delta of resources note this is different from the
    *          other APIs which use per container resource
    */
@@ -852,8 +852,8 @@ public class QueueMetrics implements MetricsSource {
   /**
    * Allocate Resource for container size change.
    * @param partition Node Partition
-   * @param user
-   * @param res
+   * @param user Name of the user
+   * @param res Resource.
    */
   public void allocateResources(String partition, String user, Resource res) {
     allocatedMB.incr(res.getMemorySize());

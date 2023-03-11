@@ -100,6 +100,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
@@ -135,9 +137,17 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationReque
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateResponseInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteResponseInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeAllocationInfo;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -296,9 +306,14 @@ public class MockDefaultRequestInterceptorREST
     if (!isRunning) {
       throw new RuntimeException("RM is stopped");
     }
-    NodeInfo node = new NodeInfo();
-    node.setId(nodeId);
-    node.setLastHealthUpdate(Integer.valueOf(getSubClusterId().getId()));
+    NodeInfo node = null;
+    SubClusterId subCluster = getSubClusterId();
+    String subClusterId = subCluster.getId();
+    if (nodeId.contains(subClusterId) || nodeId.contains("test")) {
+      node = new NodeInfo();
+      node.setId(nodeId);
+      node.setLastHealthUpdate(Integer.valueOf(getSubClusterId().getId()));
+    }
     return node;
   }
 
@@ -1205,5 +1220,147 @@ public class MockDefaultRequestInterceptorREST
 
       return new RMQueueAclInfo(true, user.getUserName(), "");
     }
+
+    public String dumpSchedulerLogs(String time, HttpServletRequest hsr)
+        throws IOException {
+
+      int period = Integer.parseInt(time);
+      if (period <= 0) {
+        throw new BadRequestException("Period must be greater than 0");
+      }
+
+      return "Capacity scheduler logs are being created.";
+    }
+  }
+
+  @Override
+  public String dumpSchedulerLogs(String time, HttpServletRequest hsr) throws IOException {
+    ResourceManager mockResourceManager = mock(ResourceManager.class);
+    Configuration conf = new YarnConfiguration();
+    MockRMWebServices webSvc = new MockRMWebServices(mockResourceManager, conf,
+        mock(HttpServletResponse.class));
+    return webSvc.dumpSchedulerLogs(time, hsr);
+  }
+
+  public Response replaceLabelsOnNodes(NodeToLabelsEntryList newNodeToLabels,
+      HttpServletRequest hsr) throws IOException {
+    return super.replaceLabelsOnNodes(newNodeToLabels, hsr);
+  }
+
+  @Override
+  public Response replaceLabelsOnNode(Set<String> newNodeLabelsName,
+      HttpServletRequest hsr, String nodeId) throws Exception {
+    return super.replaceLabelsOnNode(newNodeLabelsName, hsr, nodeId);
+  }
+
+  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId, String groupBy) {
+    if (!EnumUtils.isValidEnum(RMWSConsts.ActivitiesGroupBy.class, groupBy.toUpperCase())) {
+      String errMessage = "Got invalid groupBy: " + groupBy + ", valid groupBy types: "
+          + Arrays.asList(RMWSConsts.ActivitiesGroupBy.values());
+      throw new IllegalArgumentException(errMessage);
+    }
+
+    SubClusterId subClusterId = getSubClusterId();
+    ActivitiesInfo activitiesInfo = mock(ActivitiesInfo.class);
+    Mockito.when(activitiesInfo.getNodeId()).thenReturn(nodeId);
+    Mockito.when(activitiesInfo.getTimestamp()).thenReturn(1673081972L);
+    Mockito.when(activitiesInfo.getDiagnostic()).thenReturn("Diagnostic:" + subClusterId.getId());
+
+    List<NodeAllocationInfo> allocationInfos = new ArrayList<>();
+    NodeAllocationInfo nodeAllocationInfo = mock(NodeAllocationInfo.class);
+    Mockito.when(nodeAllocationInfo.getPartition()).thenReturn("p" + subClusterId.getId());
+    Mockito.when(nodeAllocationInfo.getFinalAllocationState()).thenReturn("ALLOCATED");
+
+    allocationInfos.add(nodeAllocationInfo);
+    Mockito.when(activitiesInfo.getAllocations()).thenReturn(allocationInfos);
+    return activitiesInfo;
+  }
+
+  @Override
+  public BulkActivitiesInfo getBulkActivities(HttpServletRequest hsr,
+      String groupBy, int activitiesCount) {
+
+    if (activitiesCount <= 0) {
+      throw new IllegalArgumentException("activitiesCount needs to be greater than 0.");
+    }
+
+    if (!EnumUtils.isValidEnum(RMWSConsts.ActivitiesGroupBy.class, groupBy.toUpperCase())) {
+      String errMessage = "Got invalid groupBy: " + groupBy + ", valid groupBy types: "
+          + Arrays.asList(RMWSConsts.ActivitiesGroupBy.values());
+      throw new IllegalArgumentException(errMessage);
+    }
+
+    BulkActivitiesInfo bulkActivitiesInfo = new BulkActivitiesInfo();
+
+    for (int i = 0; i < activitiesCount; i++) {
+      SubClusterId subClusterId = getSubClusterId();
+      ActivitiesInfo activitiesInfo = mock(ActivitiesInfo.class);
+      Mockito.when(activitiesInfo.getNodeId()).thenReturn(subClusterId + "-nodeId-" + i);
+      Mockito.when(activitiesInfo.getTimestamp()).thenReturn(1673081972L);
+      Mockito.when(activitiesInfo.getDiagnostic()).thenReturn("Diagnostic:" + subClusterId.getId());
+
+      List<NodeAllocationInfo> allocationInfos = new ArrayList<>();
+      NodeAllocationInfo nodeAllocationInfo = mock(NodeAllocationInfo.class);
+      Mockito.when(nodeAllocationInfo.getPartition()).thenReturn("p" + subClusterId.getId());
+      Mockito.when(nodeAllocationInfo.getFinalAllocationState()).thenReturn("ALLOCATED");
+
+      allocationInfos.add(nodeAllocationInfo);
+      Mockito.when(activitiesInfo.getAllocations()).thenReturn(allocationInfos);
+      bulkActivitiesInfo.getActivities().add(activitiesInfo);
+    }
+
+    return bulkActivitiesInfo;
+  }
+
+  public SchedulerTypeInfo getSchedulerInfo() {
+    try {
+      ResourceManager resourceManager = CapacitySchedulerTestUtilities.createResourceManager();
+      CapacityScheduler cs = (CapacityScheduler) resourceManager.getResourceScheduler();
+      CSQueue root = cs.getRootQueue();
+      SchedulerInfo schedulerInfo = new CapacitySchedulerInfo(root, cs);
+      return new SchedulerTypeInfo(schedulerInfo);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public Response addToClusterNodeLabels(NodeLabelsInfo newNodeLabels, HttpServletRequest hsr)
+      throws Exception {
+    List<NodeLabelInfo> nodeLabelInfoList = newNodeLabels.getNodeLabelsInfo();
+    NodeLabelInfo nodeLabelInfo = nodeLabelInfoList.get(0);
+    String nodeLabelName = nodeLabelInfo.getName();
+
+    // If nodeLabelName is ALL, we let all subclusters pass
+    if (StringUtils.equals("ALL", nodeLabelName)) {
+      return Response.status(Status.OK).build();
+    } else if (StringUtils.equals("A0", nodeLabelName)) {
+      SubClusterId subClusterId = getSubClusterId();
+      String id = subClusterId.getId();
+      if (StringUtils.contains("A0", id)) {
+        return Response.status(Status.OK).build();
+      } else {
+        return Response.status(Status.BAD_REQUEST).entity(null).build();
+      }
+    }
+    throw new YarnException("addToClusterNodeLabels Error");
+  }
+
+  @Override
+  public Response removeFromClusterNodeLabels(Set<String> oldNodeLabels, HttpServletRequest hsr)
+      throws Exception {
+    // If oldNodeLabels contains ALL, we let all subclusters pass
+    if (oldNodeLabels.contains("ALL")) {
+      return Response.status(Status.OK).build();
+    } else if (oldNodeLabels.contains("A0")) {
+      SubClusterId subClusterId = getSubClusterId();
+      String id = subClusterId.getId();
+      if (StringUtils.contains("A0", id)) {
+        return Response.status(Status.OK).build();
+      } else {
+        return Response.status(Status.BAD_REQUEST).entity(null).build();
+      }
+    }
+    throw new YarnException("removeFromClusterNodeLabels Error");
   }
 }

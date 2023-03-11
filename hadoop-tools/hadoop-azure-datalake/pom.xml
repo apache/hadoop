@@ -110,6 +110,22 @@
       <groupId>com.microsoft.azure</groupId>
       <artifactId>azure-data-lake-store-sdk</artifactId>
       <version>${azure.data.lake.store.sdk.version}</version>
+      <exclusions>
+        <!-- comes with hadoop-common -->
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+        <!-- out of date and incompatible with recent openssl releases -->
+        <exclusion>
+          <groupId>org.wildfly.openssl</groupId>
+          <artifactId>wildfly-openssl</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <!--  ENDS HERE-->
     <dependency>

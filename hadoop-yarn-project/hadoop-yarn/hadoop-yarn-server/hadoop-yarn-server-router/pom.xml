@@ -150,12 +150,6 @@
       <type>test-jar</type>
     </dependency>
 
-    <dependency>
-      <groupId>org.glassfish.grizzly</groupId>
-      <artifactId>grizzly-http-servlet</artifactId>
-      <scope>test</scope>
-    </dependency>
-
   </dependencies>
 
   <build>

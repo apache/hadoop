@@ -43,10 +43,11 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -72,6 +73,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.RouterPolicyFacade;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
@@ -82,6 +84,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
@@ -115,13 +118,17 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntry;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationBulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.SubClusterResult;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -1140,27 +1147,215 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     throw new NotImplementedException("Code is not implemented");
   }
 
+  /**
+   * This method retrieves the current scheduler status, and it is reachable by
+   * using {@link RMWSConsts#SCHEDULER}.
+   *
+   * For the federation mode, the SchedulerType information of the cluster
+   * cannot be integrated and displayed, and the specific cluster information needs to be marked.
+   *
+   * @return the current scheduler status
+   */
   @Override
   public SchedulerTypeInfo getSchedulerInfo() {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      long startTime = Time.now();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      Class[] argsClasses = new Class[]{};
+      Object[] args = new Object[]{};
+      ClientMethod remoteMethod = new ClientMethod("getSchedulerInfo", argsClasses, args);
+      Map<SubClusterInfo, SchedulerTypeInfo> subClusterInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, SchedulerTypeInfo.class);
+      FederationSchedulerTypeInfo federationSchedulerTypeInfo = new FederationSchedulerTypeInfo();
+      subClusterInfoMap.forEach((subClusterInfo, schedulerTypeInfo) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        schedulerTypeInfo.setSubClusterId(subClusterId.getId());
+        federationSchedulerTypeInfo.getList().add(schedulerTypeInfo);
+      });
+      long stopTime = Time.now();
+      routerMetrics.succeededGetSchedulerInfoRetrieved(stopTime - startTime);
+      return federationSchedulerTypeInfo;
+    } catch (NotFoundException e) {
+      routerMetrics.incrGetSchedulerInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException | IOException e) {
+      routerMetrics.incrGetSchedulerInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("getSchedulerInfo error.", e);
+    }
+    routerMetrics.incrGetSchedulerInfoFailedRetrieved();
+    throw new RuntimeException("getSchedulerInfo error.");
   }
 
+  /**
+   * This method dumps the scheduler logs for the time got in input, and it is
+   * reachable by using {@link RMWSConsts#SCHEDULER_LOGS}.
+   *
+   * @param time the period of time. It is a FormParam.
+   * @param hsr the servlet request
+   * @return the result of the operation
+   * @throws IOException when it cannot create dump log file
+   */
   @Override
   public String dumpSchedulerLogs(String time, HttpServletRequest hsr)
       throws IOException {
-    throw new NotImplementedException("Code is not implemented");
+
+    // Step1. We will check the time parameter to
+    // ensure that the time parameter is not empty and greater than 0.
+
+    if (StringUtils.isBlank(time)) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the time is empty or null.");
+    }
+
+    try {
+      int period = Integer.parseInt(time);
+      if (period <= 0) {
+        throw new IllegalArgumentException("time must be greater than 0.");
+      }
+    } catch (NumberFormatException e) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      throw new IllegalArgumentException("time must be a number.");
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      throw e;
+    }
+
+    // Step2. Call dumpSchedulerLogs of each subcluster.
+    try {
+      long startTime = clock.getTime();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{String.class, HttpServletRequest.class};
+      Object[] args = new Object[]{time, hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("dumpSchedulerLogs", argsClasses, args);
+      Map<SubClusterInfo, String> dumpSchedulerLogsMap = invokeConcurrent(
+          subClustersActive.values(), remoteMethod, String.class);
+      StringBuilder stringBuilder = new StringBuilder();
+      dumpSchedulerLogsMap.forEach((subClusterInfo, msg) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        stringBuilder.append("subClusterId" + subClusterId + " : " + msg + "; ");
+      });
+      long stopTime = clock.getTime();
+      routerMetrics.succeededDumpSchedulerLogsRetrieved(stopTime - startTime);
+      return stringBuilder.toString();
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Unable to dump SchedulerLogs by time: %s.", time);
+    } catch (YarnException e) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "dumpSchedulerLogs by time = %s error .", time);
+    }
+
+    routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+    throw new RuntimeException("dumpSchedulerLogs Failed.");
   }
 
+  /**
+   * This method retrieve all the activities in a specific node, and it is
+   * reachable by using {@link RMWSConsts#SCHEDULER_ACTIVITIES}.
+   *
+   * @param hsr the servlet request
+   * @param nodeId the node we want to retrieve the activities. It is a
+   *          QueryParam.
+   * @param groupBy the groupBy type by which the activities should be
+   *          aggregated. It is a QueryParam.
+   * @return all the activities in the specific node
+   */
   @Override
   public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
       String groupBy) {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      // Check the parameters to ensure that the parameters are not empty
+      Validate.checkNotNullAndNotEmpty(nodeId, "nodeId");
+      Validate.checkNotNullAndNotEmpty(groupBy, "groupBy");
+
+      // Query SubClusterInfo according to id,
+      // if the nodeId cannot get SubClusterInfo, an exception will be thrown directly.
+      SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
+
+      // Call the corresponding subCluster to get ActivitiesInfo.
+      long startTime = clock.getTime();
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      final HttpServletRequest hsrCopy = clone(hsr);
+      ActivitiesInfo activitiesInfo = interceptor.getActivities(hsrCopy, nodeId, groupBy);
+      if (activitiesInfo != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetActivitiesLatencyRetrieved(stopTime - startTime);
+        return activitiesInfo;
+      }
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrGetActivitiesFailedRetrieved();
+      throw e;
+    } catch (NotFoundException e) {
+      routerMetrics.incrGetActivitiesFailedRetrieved();
+      throw e;
+    }
+
+    routerMetrics.incrGetActivitiesFailedRetrieved();
+    throw new RuntimeException("getActivities Failed.");
   }
 
+  /**
+   * This method retrieve the last n activities inside scheduler, and it is
+   * reachable by using {@link RMWSConsts#SCHEDULER_BULK_ACTIVITIES}.
+   *
+   * @param hsr the servlet request
+   * @param groupBy the groupBy type by which the activities should be
+   *        aggregated. It is a QueryParam.
+   * @param activitiesCount number of activities
+   * @return last n activities
+   */
   @Override
   public BulkActivitiesInfo getBulkActivities(HttpServletRequest hsr,
       String groupBy, int activitiesCount) throws InterruptedException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      // Step1. Check the parameters to ensure that the parameters are not empty
+      Validate.checkNotNullAndNotEmpty(groupBy, "groupBy");
+      Validate.checkNotNegative(activitiesCount, "activitiesCount");
+
+      // Step2. Call the interface of subCluster concurrently and get the returned result.
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{HttpServletRequest.class, String.class, int.class};
+      Object[] args = new Object[]{hsrCopy, groupBy, activitiesCount};
+      ClientMethod remoteMethod = new ClientMethod("getBulkActivities", argsClasses, args);
+      Map<SubClusterInfo, BulkActivitiesInfo> appStatisticsMap = invokeConcurrent(
+          subClustersActive.values(), remoteMethod, BulkActivitiesInfo.class);
+
+      // Step3. Generate Federation objects and set subCluster information.
+      long startTime = clock.getTime();
+      FederationBulkActivitiesInfo fedBulkActivitiesInfo = new FederationBulkActivitiesInfo();
+      appStatisticsMap.forEach((subClusterInfo, bulkActivitiesInfo) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        bulkActivitiesInfo.setSubClusterId(subClusterId.getId());
+        fedBulkActivitiesInfo.getList().add(bulkActivitiesInfo);
+      });
+      long stopTime = clock.getTime();
+      routerMetrics.succeededGetBulkActivitiesRetrieved(stopTime - startTime);
+      return fedBulkActivitiesInfo;
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrGetBulkActivitiesFailedRetrieved();
+      throw e;
+    } catch (NotFoundException e) {
+      routerMetrics.incrGetBulkActivitiesFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("get all active sub cluster(s) error.", e);
+    } catch (IOException e) {
+      routerMetrics.incrGetBulkActivitiesFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "getBulkActivities by groupBy = %s, activitiesCount = %s with io error.",
+          groupBy, String.valueOf(activitiesCount));
+    } catch (YarnException e) {
+      routerMetrics.incrGetBulkActivitiesFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "getBulkActivities by groupBy = %s, activitiesCount = %s with yarn error.",
+          groupBy, String.valueOf(activitiesCount));
+    }
+
+    routerMetrics.incrGetBulkActivitiesFailedRetrieved();
+    throw new RuntimeException("getBulkActivities Failed.");
   }
 
   @Override
@@ -1345,16 +1540,130 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         "getLabelsToNodes by labels = %s Failed.", StringUtils.join(labels, ","));
   }
 
+  /**
+   * This method replaces all the node labels for specific nodes, and it is
+   * reachable by using {@link RMWSConsts#REPLACE_NODE_TO_LABELS}.
+   *
+   * @see ResourceManagerAdministrationProtocol#replaceLabelsOnNode
+   * @param newNodeToLabels the list of new labels. It is a content param.
+   * @param hsr the servlet request
+   * @return Response containing the status code
+   * @throws IOException if an exception happened
+   */
   @Override
   public Response replaceLabelsOnNodes(NodeToLabelsEntryList newNodeToLabels,
       HttpServletRequest hsr) throws IOException {
-    throw new NotImplementedException("Code is not implemented");
+
+    // Step1. Check the parameters to ensure that the parameters are not empty.
+    if (newNodeToLabels == null) {
+      routerMetrics.incrReplaceLabelsOnNodesFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, newNodeToLabels must not be empty.");
+    }
+    List<NodeToLabelsEntry> nodeToLabelsEntries = newNodeToLabels.getNodeToLabels();
+    if (CollectionUtils.isEmpty(nodeToLabelsEntries)) {
+      routerMetrics.incrReplaceLabelsOnNodesFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, " +
+         "nodeToLabelsEntries must not be empty.");
+    }
+
+    try {
+
+      // Step2. We map the NodeId and NodeToLabelsEntry in the request.
+      Map<String, NodeToLabelsEntry> nodeIdToLabels = new HashMap<>();
+      newNodeToLabels.getNodeToLabels().stream().forEach(nodeIdToLabel -> {
+        String nodeId = nodeIdToLabel.getNodeId();
+        nodeIdToLabels.put(nodeId, nodeIdToLabel);
+      });
+
+      // Step3. We map SubCluster with NodeToLabelsEntryList
+      Map<SubClusterInfo, NodeToLabelsEntryList> subClusterToNodeToLabelsEntryList =
+          new HashMap<>();
+      nodeIdToLabels.forEach((nodeId, nodeToLabelsEntry) -> {
+        SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
+        NodeToLabelsEntryList nodeToLabelsEntryList = subClusterToNodeToLabelsEntryList.
+            getOrDefault(subClusterInfo, new NodeToLabelsEntryList());
+        nodeToLabelsEntryList.getNodeToLabels().add(nodeToLabelsEntry);
+        subClusterToNodeToLabelsEntryList.put(subClusterInfo, nodeToLabelsEntryList);
+      });
+
+      // Step4. Traverse the subCluster and call the replaceLabelsOnNodes interface.
+      long startTime = clock.getTime();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      StringBuilder builder = new StringBuilder();
+      subClusterToNodeToLabelsEntryList.forEach((subCluster, nodeToLabelsEntryList) -> {
+        SubClusterId subClusterId = subCluster.getSubClusterId();
+        try {
+          DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+              subCluster.getSubClusterId(), subCluster.getRMWebServiceAddress());
+          interceptor.replaceLabelsOnNodes(nodeToLabelsEntryList, hsrCopy);
+          builder.append("subCluster-").append(subClusterId.getId()).append(":Success,");
+        } catch (Exception e) {
+          LOG.error("replaceLabelsOnNodes Failed. subClusterId = {}.", subClusterId, e);
+          builder.append("subCluster-").append(subClusterId.getId()).append(":Failed,");
+        }
+      });
+      long stopTime = clock.getTime();
+      routerMetrics.succeededReplaceLabelsOnNodesRetrieved(stopTime - startTime);
+
+      // Step5. return call result.
+      return Response.status(Status.OK).entity(builder.toString()).build();
+    } catch (NotFoundException e) {
+      routerMetrics.incrReplaceLabelsOnNodesFailedRetrieved();
+      throw e;
+    } catch (Exception e) {
+      routerMetrics.incrReplaceLabelsOnNodesFailedRetrieved();
+      throw e;
+    }
   }
 
+  /**
+   * This method replaces all the node labels for specific node, and it is
+   * reachable by using {@link RMWSConsts#NODES_NODEID_REPLACE_LABELS}.
+   *
+   * @see ResourceManagerAdministrationProtocol#replaceLabelsOnNode
+   * @param newNodeLabelsName the list of new labels. It is a QueryParam.
+   * @param hsr the servlet request
+   * @param nodeId the node we want to replace the node labels. It is a
+   *     PathParam.
+   * @return Response containing the status code
+   * @throws Exception if an exception happened
+   */
   @Override
   public Response replaceLabelsOnNode(Set<String> newNodeLabelsName,
       HttpServletRequest hsr, String nodeId) throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+
+    // Step1. Check the parameters to ensure that the parameters are not empty.
+    if (StringUtils.isBlank(nodeId)) {
+      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, nodeId must not be null or empty.");
+    }
+    if (CollectionUtils.isEmpty(newNodeLabelsName)) {
+      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, newNodeLabelsName must not be empty.");
+    }
+
+    try {
+      // Step2. We find the subCluster according to the nodeId,
+      // and then call the replaceLabelsOnNode of the subCluster.
+      long startTime = clock.getTime();
+      SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      final HttpServletRequest hsrCopy = clone(hsr);
+      interceptor.replaceLabelsOnNode(newNodeLabelsName, hsrCopy, nodeId);
+
+      // Step3. Return the response result.
+      long stopTime = clock.getTime();
+      routerMetrics.succeededReplaceLabelsOnNodeRetrieved(stopTime - startTime);
+      String msg = "subCluster#" + subClusterInfo.getSubClusterId().getId() + ":Success;";
+      return Response.status(Status.OK).entity(msg).build();
+    } catch (NotFoundException e) {
+      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+      throw e;
+    } catch (Exception e){
+      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+      throw e;
+    }
   }
 
   @Override
@@ -1388,16 +1697,126 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     throw new RuntimeException("getClusterNodeLabels Failed.");
   }
 
+  /**
+   * This method adds specific node labels for specific nodes, and it is
+   * reachable by using {@link RMWSConsts#ADD_NODE_LABELS}.
+   *
+   * @see ResourceManagerAdministrationProtocol#addToClusterNodeLabels
+   * @param newNodeLabels the node labels to add. It is a content param.
+   * @param hsr the servlet request
+   * @return Response containing the status code
+   * @throws Exception in case of bad request
+   */
   @Override
   public Response addToClusterNodeLabels(NodeLabelsInfo newNodeLabels,
       HttpServletRequest hsr) throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (newNodeLabels == null) {
+      routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the newNodeLabels is null.");
+    }
+
+    List<NodeLabelInfo> nodeLabelInfos = newNodeLabels.getNodeLabelsInfo();
+    if (CollectionUtils.isEmpty(nodeLabelInfos)) {
+      routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the nodeLabelsInfo is null or empty.");
+    }
+
+    try {
+      long startTime = clock.getTime();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{NodeLabelsInfo.class, HttpServletRequest.class};
+      Object[] args = new Object[]{newNodeLabels, hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("addToClusterNodeLabels", argsClasses, args);
+      Map<SubClusterInfo, Response> responseInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, Response.class);
+      StringBuffer buffer = new StringBuffer();
+      // SubCluster-0:SUCCESS,SubCluster-1:SUCCESS
+      responseInfoMap.forEach((subClusterInfo, response) -> {
+        buildAppendMsg(subClusterInfo, buffer, response);
+      });
+      long stopTime = clock.getTime();
+      routerMetrics.succeededAddToClusterNodeLabelsRetrieved((stopTime - startTime));
+      return Response.status(Status.OK).entity(buffer.toString()).build();
+    } catch (NotFoundException e) {
+      routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowIOException("addToClusterNodeLabels with yarn error.", e);
+    }
+
+    routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+    throw new RuntimeException("addToClusterNodeLabels Failed.");
   }
 
+  /**
+   * This method removes all the node labels for specific nodes, and it is
+   * reachable by using {@link RMWSConsts#REMOVE_NODE_LABELS}.
+   *
+   * @see ResourceManagerAdministrationProtocol#removeFromClusterNodeLabels
+   * @param oldNodeLabels the node labels to remove. It is a QueryParam.
+   * @param hsr the servlet request
+   * @return Response containing the status code
+   * @throws Exception in case of bad request
+   */
   @Override
   public Response removeFromClusterNodeLabels(Set<String> oldNodeLabels,
       HttpServletRequest hsr) throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (CollectionUtils.isEmpty(oldNodeLabels)) {
+      routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the oldNodeLabels is null or empty.");
+    }
+
+    try {
+      long startTime = clock.getTime();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{Set.class, HttpServletRequest.class};
+      Object[] args = new Object[]{oldNodeLabels, hsrCopy};
+      ClientMethod remoteMethod =
+          new ClientMethod("removeFromClusterNodeLabels", argsClasses, args);
+      Map<SubClusterInfo, Response> responseInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, Response.class);
+      StringBuffer buffer = new StringBuffer();
+      // SubCluster-0:SUCCESS,SubCluster-1:SUCCESS
+      responseInfoMap.forEach((subClusterInfo, response) -> {
+        buildAppendMsg(subClusterInfo, buffer, response);
+      });
+      long stopTime = clock.getTime();
+      routerMetrics.succeededRemoveFromClusterNodeLabelsRetrieved(stopTime - startTime);
+      return Response.status(Status.OK).entity(buffer.toString()).build();
+    } catch (NotFoundException e) {
+      routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowIOException("removeFromClusterNodeLabels with yarn error.", e);
+    }
+
+    routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+    throw new RuntimeException("removeFromClusterNodeLabels Failed.");
+  }
+
+  /**
+   * Bbulid Append information.
+   *
+   * @param subClusterInfo subCluster information.
+   * @param buffer StringBuffer.
+   * @param response response message.
+   */
+  private void buildAppendMsg(SubClusterInfo subClusterInfo, StringBuffer buffer,
+      Response response) {
+    SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+    String state = response != null &&
+        (response.getStatus() == Status.OK.getStatusCode()) ? "SUCCESS" : "FAILED";
+    buffer.append("SubCluster-")
+        .append(subClusterId.getId())
+        .append(":")
+        .append(state)
+        .append(",");
   }
 
   @Override
@@ -2496,7 +2915,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     // If there is a sub-cluster access error,
     // we should choose whether to throw exception information according to user configuration.
     // Send the requests in parallel.
-    CompletionService<Pair<R, Exception>> compSvc = new ExecutorCompletionService<>(threadpool);
+    CompletionService<SubClusterResult<R>> compSvc = new ExecutorCompletionService<>(threadpool);
 
     // This part of the code should be able to expose the accessed Exception information.
     // We use Pair to store related information. The left value of the Pair is the response,
@@ -2512,36 +2931,41 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
               getMethod(request.getMethodName(), request.getTypes());
           Object retObj = method.invoke(interceptor, request.getParams());
           R ret = clazz.cast(retObj);
-          return Pair.of(ret, null);
+          return new SubClusterResult<>(info, ret, null);
         } catch (Exception e) {
           LOG.error("SubCluster {} failed to call {} method.",
               info.getSubClusterId(), request.getMethodName(), e);
-          return Pair.of(null, e);
+          return new SubClusterResult<>(info, null, e);
         }
       });
     }
 
-    clusterIds.stream().forEach(clusterId -> {
+    for (int i = 0; i < clusterIds.size(); i++) {
+      SubClusterInfo subClusterInfo = null;
       try {
-        Future<Pair<R, Exception>> future = compSvc.take();
-        Pair<R, Exception> pair = future.get();
-        R response = pair.getKey();
+        Future<SubClusterResult<R>> future = compSvc.take();
+        SubClusterResult<R> result = future.get();
+        subClusterInfo = result.getSubClusterInfo();
+
+        R response = result.getResponse();
         if (response != null) {
-          results.put(clusterId, response);
+          results.put(subClusterInfo, response);
         }
-        Exception exception = pair.getValue();
+
+        Exception exception = result.getException();
+
         // If allowPartialResult=false, it means that if an exception occurs in a subCluster,
         // an exception will be thrown directly.
         if (!allowPartialResult && exception != null) {
           throw exception;
         }
       } catch (Throwable e) {
-        String msg = String.format("SubCluster %s failed to %s report.",
-            clusterId.getSubClusterId(), request.getMethodName());
-        LOG.error(msg, e);
+        String subClusterId = subClusterInfo != null ?
+            subClusterInfo.getSubClusterId().getId() : "UNKNOWN";
+        LOG.error("SubCluster {} failed to {} report.", subClusterId, request.getMethodName(), e);
         throw new YarnRuntimeException(e.getCause().getMessage(), e);
       }
-    });
+    }
 
     return results;
   }
@@ -2611,5 +3035,17 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   public void setAllowPartialResult(boolean allowPartialResult) {
     this.allowPartialResult = allowPartialResult;
+  }
+
+  @VisibleForTesting
+  public Map<SubClusterInfo, NodesInfo> invokeConcurrentGetNodeLabel()
+      throws IOException, YarnException {
+    Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+    Class[] argsClasses = new Class[]{String.class};
+    Object[] args = new Object[]{null};
+    ClientMethod remoteMethod = new ClientMethod("getNodes", argsClasses, args);
+    Map<SubClusterInfo, NodesInfo> nodesMap =
+        invokeConcurrent(subClustersActive.values(), remoteMethod, NodesInfo.class);
+    return nodesMap;
   }
 }

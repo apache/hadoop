@@ -18,13 +18,16 @@
 
 package org.apache.hadoop.yarn.server.router;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.thirdparty.protobuf.GeneratedMessageV3;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
@@ -32,10 +35,18 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ReservationRequests;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerLaunchContextPBImpl;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.proto.YarnProtos.StringStringMapProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.StringBytesMapProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationACLMapProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.StringLocalResourceMapProto;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -43,6 +54,8 @@ import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -623,5 +636,119 @@ public final class RouterServerUtil {
         arrival, deadline, reservationRequests, name, recurrenceExpression, priority);
 
     return definition;
+  }
+
+  /**
+   * Checks if the ApplicationSubmissionContext submitted with the application
+   * is valid.
+   *
+   * Current checks:
+   * - if its size is within limits.
+   *
+   * @param appContext the app context to check.
+   * @throws IOException if an IO error occurred.
+   * @throws YarnException yarn exception.
+   */
+  @Public
+  @Unstable
+  public static void checkAppSubmissionContext(ApplicationSubmissionContextPBImpl appContext,
+      Configuration conf) throws IOException, YarnException {
+    // Prevents DoS over the ApplicationClientProtocol by checking the context
+    // the application was submitted with for any excessively large fields.
+    double bytesOfMaxAscSize = conf.getStorageSize(
+        YarnConfiguration.ROUTER_ASC_INTERCEPTOR_MAX_SIZE,
+        YarnConfiguration.DEFAULT_ROUTER_ASC_INTERCEPTOR_MAX_SIZE, StorageUnit.BYTES);
+    if (appContext != null) {
+      int bytesOfSerializedSize = appContext.getProto().getSerializedSize();
+      if (bytesOfSerializedSize >= bytesOfMaxAscSize) {
+        logContainerLaunchContext(appContext);
+        String applicationId = appContext.getApplicationId().toString();
+        String limit = StringUtils.byteDesc((long) bytesOfMaxAscSize);
+        String appContentSize = StringUtils.byteDesc(bytesOfSerializedSize);
+        String errMsg = String.format(
+            "The size of the ApplicationSubmissionContext of the application %s is " +
+            "above the limit %s, size = %s.", applicationId, limit, appContentSize);
+        LOG.error(errMsg);
+        throw new YarnException(errMsg);
+      }
+    }
+  }
+
+  /**
+   * Private helper for checkAppSubmissionContext that logs the fields in the
+   * context for debugging.
+   *
+   * @param appContext the app context.
+   * @throws IOException if an IO error occurred.
+   */
+  @Private
+  @Unstable
+  private static void logContainerLaunchContext(ApplicationSubmissionContextPBImpl appContext)
+      throws IOException {
+    if (appContext == null || appContext.getAMContainerSpec() == null ||
+        !(appContext.getAMContainerSpec() instanceof ContainerLaunchContextPBImpl)) {
+      return;
+    }
+
+    ContainerLaunchContext launchContext = appContext.getAMContainerSpec();
+    ContainerLaunchContextPBImpl clc = (ContainerLaunchContextPBImpl) launchContext;
+    LOG.warn("ContainerLaunchContext size: {}.", clc.getProto().getSerializedSize());
+
+    // ContainerLaunchContext contains:
+    // 1) Map<String, LocalResource> localResources,
+    List<StringLocalResourceMapProto> lrs = clc.getProto().getLocalResourcesList();
+    logContainerLaunchContext("LocalResource size: {}. Length: {}.", lrs);
+
+    // 2) Map<String, String> environment, List<String> commands,
+    List<StringStringMapProto> envs = clc.getProto().getEnvironmentList();
+    logContainerLaunchContext("Environment size: {}. Length: {}.", envs);
+
+    List<String> cmds = clc.getCommands();
+    if (CollectionUtils.isNotEmpty(cmds)) {
+      LOG.warn("Commands size: {}. Length: {}.", cmds.size(), serialize(cmds).length);
+    }
+
+    // 3) Map<String, ByteBuffer> serviceData,
+    List<StringBytesMapProto> serviceData = clc.getProto().getServiceDataList();
+    logContainerLaunchContext("ServiceData size: {}. Length: {}.", serviceData);
+
+    // 4) Map<ApplicationAccessType, String> acls
+    List<ApplicationACLMapProto> acls = clc.getProto().getApplicationACLsList();
+    logContainerLaunchContext("ACLs size: {}. Length: {}.", acls);
+  }
+
+  /**
+   * Log ContainerLaunchContext Data SerializedSize.
+   *
+   * @param format format of logging.
+   * @param lists data list.
+   * @param <R> generic type R.
+   */
+  private static <R extends GeneratedMessageV3> void logContainerLaunchContext(String format,
+      List<R> lists) {
+    if (CollectionUtils.isNotEmpty(lists)) {
+      int sumLength = 0;
+      for (R item : lists) {
+        sumLength += item.getSerializedSize();
+      }
+      LOG.warn(format, lists.size(), sumLength);
+    }
+  }
+
+  /**
+   * Serialize an object in ByteArray.
+   *
+   * @return obj ByteArray.
+   * @throws IOException if an IO error occurred.
+   */
+  @Private
+  @Unstable
+  private static byte[] serialize(Object obj) throws IOException {
+    try (ByteArrayOutputStream b = new ByteArrayOutputStream()) {
+      try (ObjectOutputStream o = new ObjectOutputStream(b)) {
+        o.writeObject(obj);
+      }
+      return b.toByteArray();
+    }
   }
 }

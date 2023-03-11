@@ -27,14 +27,18 @@ import com.google.inject.Injector;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
@@ -46,7 +50,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
-import org.glassfish.grizzly.servlet.HttpServletResponseImpl;
 import org.junit.Test;
 
 /**
@@ -126,7 +129,7 @@ public class TestNMWebFilter {
     assertTrue(redirect.contains("start=10"));
   }
 
-  private class HttpServletResponseForTest extends HttpServletResponseImpl {
+  private class HttpServletResponseForTest implements HttpServletResponse {
     String redirectLocation = "";
     int status;
     private String contentType;
@@ -143,8 +146,53 @@ public class TestNMWebFilter {
     }
 
     @Override
+    public void setDateHeader(String name, long date) {
+
+    }
+
+    @Override
+    public void addDateHeader(String name, long date) {
+
+    }
+
+    @Override
+    public void addCookie(Cookie cookie) {
+
+    }
+
+    @Override
+    public boolean containsHeader(String name) {
+      return false;
+    }
+
+    @Override
+    public String encodeURL(String url) {
+      return null;
+    }
+
+    @Override
     public String encodeRedirectURL(String url) {
       return url;
+    }
+
+    @Override
+    public String encodeUrl(String url) {
+      return null;
+    }
+
+    @Override
+    public String encodeRedirectUrl(String url) {
+      return null;
+    }
+
+    @Override
+    public void sendError(int sc, String msg) throws IOException {
+
+    }
+
+    @Override
+    public void sendError(int sc) throws IOException {
+
     }
 
     @Override
@@ -153,8 +201,58 @@ public class TestNMWebFilter {
     }
 
     @Override
+    public void setStatus(int sc, String sm) {
+
+    }
+
+    @Override
+    public int getStatus() {
+      return 0;
+    }
+
+    @Override
     public void setContentType(String type) {
       this.contentType = type;
+    }
+
+    @Override
+    public void setBufferSize(int size) {
+
+    }
+
+    @Override
+    public int getBufferSize() {
+      return 0;
+    }
+
+    @Override
+    public void flushBuffer() throws IOException {
+
+    }
+
+    @Override
+    public void resetBuffer() {
+
+    }
+
+    @Override
+    public boolean isCommitted() {
+      return false;
+    }
+
+    @Override
+    public void reset() {
+
+    }
+
+    @Override
+    public void setLocale(Locale loc) {
+
+    }
+
+    @Override
+    public Locale getLocale() {
+      return null;
     }
 
     @Override
@@ -162,14 +260,69 @@ public class TestNMWebFilter {
       headers.put(name, value);
     }
 
+    @Override
+    public void addHeader(String name, String value) {
+
+    }
+
+    @Override
+    public void setIntHeader(String name, int value) {
+
+    }
+
+    @Override
+    public void addIntHeader(String name, int value) {
+
+    }
+
     public String getHeader(String name) {
       return headers.get(name);
+    }
+
+    @Override
+    public Collection<String> getHeaders(String name) {
+      return null;
+    }
+
+    @Override
+    public Collection<String> getHeaderNames() {
+      return null;
+    }
+
+    @Override
+    public String getCharacterEncoding() {
+      return null;
+    }
+
+    @Override
+    public String getContentType() {
+      return null;
+    }
+
+    @Override
+    public ServletOutputStream getOutputStream() throws IOException {
+      return null;
     }
 
     @Override
     public PrintWriter getWriter() throws IOException {
       body = new StringWriter();
       return new PrintWriter(body);
+    }
+
+    @Override
+    public void setCharacterEncoding(String charset) {
+
+    }
+
+    @Override
+    public void setContentLength(int len) {
+
+    }
+
+    @Override
+    public void setContentLengthLong(long len) {
+
     }
   }
 }
