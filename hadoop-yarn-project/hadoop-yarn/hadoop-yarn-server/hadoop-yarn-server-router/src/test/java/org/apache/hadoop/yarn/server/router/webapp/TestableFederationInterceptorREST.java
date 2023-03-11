@@ -117,4 +117,8 @@ public class TestableFederationInterceptorREST
     }
     super.shutdown();
   }
+
+  public MockRM getMockRM() {
+    return mockRM;
+  }
 }

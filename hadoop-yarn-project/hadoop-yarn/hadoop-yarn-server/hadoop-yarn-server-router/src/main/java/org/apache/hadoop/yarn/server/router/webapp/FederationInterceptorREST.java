@@ -1196,7 +1196,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       final HttpServletRequest hsrCopy = clone(hsr);
       Class[] argsClasses = new Class[]{HttpServletRequest.class};
       Object[] args = new Object[]{hsrCopy};
-      ClientMethod remoteMethod = new ClientMethod("getClusterInfo", argsClasses, args);
+      ClientMethod remoteMethod = new ClientMethod("getClusterUserInfo", argsClasses, args);
       Map<SubClusterInfo, ClusterUserInfo> subClusterInfoMap =
           invokeConcurrent(subClustersActive.values(), remoteMethod, ClusterUserInfo.class);
       FederationClusterUserInfo federationClusterUserInfo = new FederationClusterUserInfo();
