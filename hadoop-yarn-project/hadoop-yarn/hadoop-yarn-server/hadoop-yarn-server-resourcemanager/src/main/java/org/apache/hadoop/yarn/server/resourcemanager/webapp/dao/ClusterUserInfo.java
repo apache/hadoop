@@ -64,11 +64,11 @@ public class ClusterUserInfo {
         return requestedUser;
     }
 
-    public String getSubClusterId() {
-        return subClusterId;
-    }
+  public String getSubClusterId() {
+    return subClusterId;
+  }
 
-    public void setSubClusterId(String subClusterId) {
-        this.subClusterId = subClusterId;
-    }
+  public void setSubClusterId(String subClusterId) {
+    this.subClusterId = subClusterId;
+  }
 }

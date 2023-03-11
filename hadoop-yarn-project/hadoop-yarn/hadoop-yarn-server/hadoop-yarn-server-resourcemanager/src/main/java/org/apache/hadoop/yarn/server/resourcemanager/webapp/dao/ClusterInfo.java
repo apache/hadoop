@@ -44,7 +44,7 @@ public class ClusterInfo {
   protected String hadoopVersionBuiltOn;
   protected String haZooKeeperConnectionState;
 
-  protected String subClusterId;
+  private String subClusterId;
 
   public ClusterInfo() {
   } // JAXB needs this

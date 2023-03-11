@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.router.webapp.dao;
 
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 
 import javax.xml.bind.annotation.XmlAccessType;
