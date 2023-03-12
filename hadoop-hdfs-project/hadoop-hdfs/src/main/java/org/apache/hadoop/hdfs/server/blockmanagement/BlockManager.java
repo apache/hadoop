@@ -4155,8 +4155,10 @@ public class BlockManager implements BlockStatsMXBean {
     final List<StorageType> excessTypes = storagePolicy.chooseExcess(
         (short) numOfTarget, DatanodeStorageInfo.toStorageTypes(nonExcess));
     if (excessTypes.isEmpty()) {
-      LOG.warn("excess types chosen for block {} among storages {} is empty",
-          storedBlock, nonExcess);
+      if(delStorageHint == null) {
+        LOG.warn("excess types chosen for block {} among storages {} is empty",
+                storedBlock, nonExcess);
+      }
       return;
     }
 
