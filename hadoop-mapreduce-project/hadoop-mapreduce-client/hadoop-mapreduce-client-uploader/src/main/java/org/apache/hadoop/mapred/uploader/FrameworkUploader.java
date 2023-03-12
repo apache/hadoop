@@ -204,7 +204,7 @@ public class FrameworkUploader implements Runnable {
       } else {
         LOG.warn("Cannot set replication to " +
             initialReplication + " for path: " + targetPath +
-            " on a non-distributed fileystem " +
+            " on a non-distributed filesystem " +
             fileSystem.getClass().getName());
       }
       if (targetStream == null) {
@@ -319,7 +319,7 @@ public class FrameworkUploader implements Runnable {
     } else {
       LOG.info("Cannot set replication to " +
           finalReplication + " for path: " + targetPath +
-          " on a non-distributed fileystem " +
+          " on a non-distributed filesystem " +
           fileSystem.getClass().getName());
     }
   }

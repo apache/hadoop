@@ -811,7 +811,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
     try {
       uri = new URI(s3Path);
     } catch (URISyntaxException e) {
-      throw invalidArgs("Not a valid fileystem path: %s", s3Path);
+      throw invalidArgs("Not a valid filesystem path: %s", s3Path);
     }
     return uri;
   }

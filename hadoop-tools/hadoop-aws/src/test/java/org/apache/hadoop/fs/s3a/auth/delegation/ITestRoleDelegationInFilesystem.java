@@ -32,8 +32,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * Subclass of the session test which checks roles; only works if
  * a role ARN has been declared.
  */
-public class ITestRoleDelegationInFileystem extends
-    ITestSessionDelegationInFileystem {
+public class ITestRoleDelegationInFilesystem extends
+    ITestSessionDelegationInFilesystem {
 
   @Override
   public void setup() throws Exception {

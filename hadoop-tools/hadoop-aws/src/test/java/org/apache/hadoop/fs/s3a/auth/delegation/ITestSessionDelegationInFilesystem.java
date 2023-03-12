@@ -87,10 +87,10 @@ import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
  * UGI to be initialized with security enabled.
  */
 @SuppressWarnings("StaticNonFinalField")
-public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
+public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(ITestSessionDelegationInFileystem.class);
+      LoggerFactory.getLogger(ITestSessionDelegationInFilesystem.class);
 
   private static MiniKerberizedHadoopCluster cluster;
 
@@ -595,7 +595,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
         .withEndpoint(DEFAULT_ENDPOINT)
         .withMetrics(new EmptyS3AStatisticsContext()
             .newStatisticsFromAwsSdk())
-        .withUserAgentSuffix("ITestSessionDelegationInFileystem");
+        .withUserAgentSuffix("ITestSessionDelegationInFilesystem");
     AmazonS3 s3 = factory.createS3Client(landsat, parameters);
 
     return Invoker.once("HEAD", host,
