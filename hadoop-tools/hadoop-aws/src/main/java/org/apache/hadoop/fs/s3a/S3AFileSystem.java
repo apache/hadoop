@@ -1831,6 +1831,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     final PutObjectOptions putOptions =
         new PutObjectOptions(keep, null, options.getHeaders());
 
+    if(!checkDiskBuffer(getConf())){
+      throw new IOException("The filesystem conf is not " +
+          "proper for the output stream");
+    }
+
     final S3ABlockOutputStream.BlockOutputStreamBuilder builder =
         S3ABlockOutputStream.builder()
         .withKey(destKey)
@@ -1854,7 +1859,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withCSEEnabled(isCSEEnabled)
         .withPutOptions(putOptions)
         .withIOStatisticsAggregator(
-            IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator());
+            IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator())
+            .withMultipartAllowed(getConf().getBoolean(ALLOW_MULTIPART_UPLOADS,
+                IS_ALLOWED_MULTIPART_UPLOADS_DEFAULT));
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);

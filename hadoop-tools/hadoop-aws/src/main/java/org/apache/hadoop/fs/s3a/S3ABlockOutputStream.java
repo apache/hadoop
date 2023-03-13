@@ -169,6 +169,9 @@ class S3ABlockOutputStream extends OutputStream implements
   /** Thread level IOStatistics Aggregator. */
   private final IOStatisticsAggregator threadIOStatisticsAggregator;
 
+  /**Is multipart upload allowed? */
+  private final boolean isMultipartAllowed;
+
   /**
    * An S3A output stream which uploads partitions in a separate pool of
    * threads; different {@link S3ADataBlocks.BlockFactory}
@@ -181,7 +184,7 @@ class S3ABlockOutputStream extends OutputStream implements
     this.builder = builder;
     this.key = builder.key;
     this.blockFactory = builder.blockFactory;
-    this.blockSize = (int) builder.blockSize;
+    this.blockSize = builder.blockSize;
     this.statistics = builder.statistics;
     // test instantiations may not provide statistics;
     this.iostatistics = statistics.getIOStatistics();
@@ -200,7 +203,8 @@ class S3ABlockOutputStream extends OutputStream implements
     createBlockIfNeeded();
     LOG.debug("Initialized S3ABlockOutputStream for {}" +
         " output to {}", key, activeBlock);
-    if (putTracker.initialize()) {
+    this.isMultipartAllowed = builder.isMultipartAllowed;
+    if (putTracker.initialize() && this.isMultipartAllowed) {
       LOG.debug("Put tracker requests multipart upload");
       initMultipartUpload();
     }
@@ -1128,6 +1132,11 @@ class S3ABlockOutputStream extends OutputStream implements
      */
     private IOStatisticsAggregator ioStatisticsAggregator;
 
+    /**
+     * Is Multipart Uploads enabled for the given upload
+     */
+    private boolean isMultipartAllowed;
+
     private BlockOutputStreamBuilder() {
     }
 
@@ -1276,6 +1285,12 @@ class S3ABlockOutputStream extends OutputStream implements
     public BlockOutputStreamBuilder withIOStatisticsAggregator(
         final IOStatisticsAggregator value) {
       ioStatisticsAggregator = value;
+      return this;
+    }
+
+    public BlockOutputStreamBuilder withMultipartAllowed(
+        final boolean value) {
+      isMultipartAllowed = value;
       return this;
     }
   }
