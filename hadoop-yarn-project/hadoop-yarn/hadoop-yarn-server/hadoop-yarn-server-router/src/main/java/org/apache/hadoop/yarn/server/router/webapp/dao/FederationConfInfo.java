@@ -19,5 +19,37 @@ package org.apache.hadoop.yarn.server.router.webapp.dao;
 
 import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import java.util.ArrayList;
+import java.util.List;
+
+@XmlRootElement
+@XmlAccessorType(XmlAccessType.FIELD)
 public class FederationConfInfo extends ConfInfo {
+  @XmlElement(name = "subCluster")
+  private List<ConfInfo> list = new ArrayList<>();
+
+  @XmlElement(name = "errorMsgs")
+  private List<String> errorMsgs = new ArrayList<>();
+  public FederationConfInfo() {
+  } // JAXB needs this
+
+  public List<ConfInfo> getList() {
+    return list;
+  }
+
+  public void setList(List<ConfInfo> list) {
+    this.list = list;
+  }
+
+  public List<String> getErrorMsgs() {
+    return errorMsgs;
+  }
+
+  public void setErrorMsgs(List<String> errorMsgs) {
+    this.errorMsgs = errorMsgs;
+  }
 }

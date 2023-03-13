@@ -84,6 +84,7 @@ import org.apache.hadoop.yarn.server.federation.retry.FederationActionRetry;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
@@ -130,11 +131,13 @@ import org.apache.hadoop.yarn.server.router.webapp.dao.FederationBulkActivitiesI
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.SubClusterResult;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationConfInfo;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
+import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
@@ -2906,10 +2909,51 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     throw new RuntimeException("updateSchedulerConfiguration error. subClusterId = " + pSubClusterId);
   }
 
+  /**
+   * This method retrieves all the Scheduler configuration, and it is reachable
+   * by using {@link RMWSConsts#SCHEDULER_CONF}.
+   *
+   * @param hsr the servlet request
+   * @return Response containing the status code
+   * @throws AuthorizationException if the user is not authorized to invoke this
+   *         method.
+   */
   @Override
   public Response getSchedulerConfiguration(HttpServletRequest hsr)
       throws AuthorizationException {
-    throw new NotImplementedException("Code is not implemented");
+
+    try {
+      long startTime = clock.getTime();
+      FederationConfInfo federationConfInfo = new FederationConfInfo();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{HttpServletRequest.class};
+      Object[] args = new Object[]{hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("getSchedulerConfiguration", argsClasses, args);
+      Map<SubClusterInfo, Response> responseMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, Response.class);
+      responseMap.forEach((subClusterInfo, response) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        if (response == null) {
+          String errorMsg = subClusterId + " can't getSchedulerConfiguration.";
+          federationConfInfo.getErrorMsgs().add(errorMsg);
+        } else if (response.getStatus() == Status.BAD_REQUEST.getStatusCode()) {
+          String errorMsg = String.valueOf(response.getEntity());
+          federationConfInfo.getErrorMsgs().add(errorMsg);
+        } else if (response.getStatus() == Status.OK.getStatusCode()) {
+          ConfInfo fedConfInfo = ConfInfo.class.cast(response.getEntity());
+          federationConfInfo.getList().add(fedConfInfo);
+        }
+      });
+      long endTime = clock.getTime();
+    } catch (NotFoundException e) {
+
+    } catch (Exception e) {
+      RouterServerUtil.logAndThrowRunTimeException("getSchedulerConfiguration error.", e);
+      return Response.status(Status.BAD_REQUEST).entity("getSchedulerConfiguration error.").build();
+    }
+
+    throw new RuntimeException("getSchedulerConfiguration error.");
   }
 
   @Override
