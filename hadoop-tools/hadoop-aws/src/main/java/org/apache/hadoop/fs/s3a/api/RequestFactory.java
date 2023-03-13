@@ -248,7 +248,7 @@ public interface RequestFactory {
       String destKey,
       String uploadId,
       int partNumber,
-      int size,
+      long size,
       InputStream uploadStream,
       File sourceFile,
       long offset) throws PathIOException;

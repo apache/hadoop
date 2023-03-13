@@ -1031,6 +1031,19 @@ public final class S3AUtils {
     return partSize;
   }
 
+  public static boolean checkDiskBuffer(Configuration conf){
+    boolean isAllowedMultipart = conf.getBoolean(ALLOW_MULTIPART_UPLOADS,
+        IS_ALLOWED_MULTIPART_UPLOADS_DEFAULT);
+    if (isAllowedMultipart) {
+      return true;
+    } else if (!isAllowedMultipart && conf.get(FAST_UPLOAD_BUFFER)
+        .equals(FAST_UPLOAD_BUFFER_DISK)){
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   /**
    * Ensure that the long value is in the range of an integer.
    * @param name property name for error messages

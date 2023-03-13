@@ -532,7 +532,7 @@ public class WriteOperationHelper implements WriteOperations {
       String destKey,
       String uploadId,
       int partNumber,
-      int size,
+      long size,
       InputStream uploadStream,
       File sourceFile,
       Long offset) throws IOException {
