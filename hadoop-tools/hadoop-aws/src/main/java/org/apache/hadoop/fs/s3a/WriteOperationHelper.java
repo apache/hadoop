@@ -269,8 +269,8 @@ public class WriteOperationHelper implements WriteOperations {
       String dest,
       File sourceFile,
       final PutObjectOptions options) {
-    Preconditions.checkState(sourceFile.length() < Integer.MAX_VALUE,
-        "File length is too big for a single PUT upload");
+    //Preconditions.checkState(sourceFile.length() < Integer.MAX_VALUE,
+      //  "File length is too big for a single PUT upload");
     activateAuditSpan();
     final ObjectMetadata objectMetadata =
         newObjectMetadata((int) sourceFile.length());
