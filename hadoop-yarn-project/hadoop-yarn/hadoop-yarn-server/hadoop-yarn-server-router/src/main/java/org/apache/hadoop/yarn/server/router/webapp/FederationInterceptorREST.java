@@ -585,9 +585,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     long startTime = clock.getTime();
 
-    ApplicationId applicationId;
     try {
-      applicationId = ApplicationId.fromString(appId);
+      ApplicationId.fromString(appId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrAppsFailedRetrieved();
       return null;
@@ -800,7 +799,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     final String user = hsr.getRemoteUser();
     final Principal principal = hsr.getUserPrincipal();
     final String mediaType = RouterWebServiceUtil.getMediaTypeFromHttpServletRequest(
-       hsr, AppsInfo.class);
+        hsr, AppsInfo.class);
     return new HttpServletRequestWrapper(hsr) {
         public Map<String, String[]> getParameterMap() {
           return parameterMap;
@@ -995,7 +994,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * @param nodeId The node we want to retrieve the information for.
    *               It is a PathParam.
    * @param resourceOption The resource change.
-   * @throws AuthorizationException If the user is not authorized.
    * @return the resources of a specific node.
    */
   @Override
