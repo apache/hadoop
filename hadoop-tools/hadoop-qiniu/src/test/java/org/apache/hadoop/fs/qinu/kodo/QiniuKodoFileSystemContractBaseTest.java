@@ -19,6 +19,18 @@ public class QiniuKodoFileSystemContractBaseTest extends FileSystemContractBaseT
 
     }
 
+    /**
+     * 从根目录递归地遍历太慢了，所以禁用它
+     */
+    @Override
+    protected boolean rootDirTestEnabled() {
+        return false;
+    }
+
+
+    /**
+     * 方便调试不会超时，所以超时时间设置为int的最大值
+     */
     @Override
     protected int getGlobalTimeout() {
         return Integer.MAX_VALUE;

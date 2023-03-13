@@ -116,7 +116,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             // 下载域名未配置时
             if (fsConfig.customRegion.id == null) {
                 // 公有云通过uc query api获取源站域名构造下载链接
-                this.downloadDomain = getDownloadDomainFromUC();
+                this.downloadDomain = UCQuery.getDownloadDomainFromUC(client, fsConfig.auth.accessKey, bucket);
             } else {
                 // 私有云未配置下载域名时抛出异常
                 throw new QiniuException(new MissingConfigFieldException(String.format(
@@ -132,14 +132,6 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         this.downloadHttpClient = new DownloadHttpClient(configuration, fsConfig.download.useNoCacheHeader);
     }
 
-    private String getDownloadDomainFromUC() throws QiniuException {
-        String ucQueryUrl = String.format("https://uc.qbox.me/v3/query?ak=%s&bucket=%s", fsConfig.auth.accessKey, bucket);
-        try {
-            return this.client.get(ucQueryUrl).jsonToObject(UCQueryRet.class).getIoSrcHost();
-        } catch (Exception e) {
-            throw new QiniuException(e, "get download domain from uc failed");
-        }
-    }
 
     private static Auth getAuth(QiniuKodoFsConfig fsConfig) throws AuthorizationException {
         String ak = fsConfig.auth.accessKey;
