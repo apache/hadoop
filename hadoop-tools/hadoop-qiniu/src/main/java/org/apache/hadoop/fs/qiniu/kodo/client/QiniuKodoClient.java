@@ -24,8 +24,6 @@ import org.apache.hadoop.fs.qiniu.kodo.config.ProxyConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.client.base.ListAndBatchBaseConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.client.base.ListProducerConfig;
-import org.apache.hadoop.fs.qiniu.kodo.config.region.QiniuKodoPublicRegions;
-import org.apache.hadoop.fs.qiniu.kodo.config.region.QiniuKodoRegion;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,26 +78,20 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         configuration.accUpHostFirst = fsConfig.upload.accUpHostFirst;
         configuration.useDefaultUpHostIfNone = fsConfig.upload.useDefaultUpHostIfNone;
 
-        QiniuKodoRegion region = null;
 
-        // 配置七牛配置对象的region
-        if (fsConfig.region.id == null) {
-            // 没配置regionId默认当公有云处理，走autoRegion
+        // 配置七牛配置对象的 region
+        if (fsConfig.customRegion.id == null) {
+            // 没配置regionId默认当公有云处理
+            // 公有云走autoRegion
             configuration.region = Region.autoRegion();
         } else {
-            // 先尝试公有云获取
-            region = QiniuKodoPublicRegions.getRegionById(fsConfig.region.id);
-
-            if (region == null) {
-                // 公有云找不到相应id，寻找用户自定义配置的私有云
-                try {
-                    region = fsConfig.region.custom.getCustomRegion(fsConfig.region.id);
-                } catch (MissingConfigFieldException e) {
-                    throw new QiniuException(e);
-                }
+            // 私有云走自定义Region配置
+            try {
+                configuration.region = fsConfig.customRegion.getCustomRegion();
+            } catch (MissingConfigFieldException e) {
+                throw new QiniuException(e);
             }
         }
-
 
         this.useDownloadHttps = fsConfig.download.useHttps;
         configuration.useHttpsDomains = fsConfig.upload.useHttps;
@@ -118,22 +110,35 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         this.uploadManager = new UploadManager(configuration);
         this.bucketManager = new BucketManager(auth, configuration, this.client);
 
-        // 设置下载域名，若未配置，则走源站
-        downloadDomain = fsConfig.download.domain;
-        if (downloadDomain == null) {
-            // 尝试获取下载域名
-            // 如果找不到区域配置，那就当作公有云发起请求获取区域信息, 这将用于下载域名的构造
-            if (region == null) {
-                String regionId = bucketManager.getBucketInfo(bucket).getRegion();
-                region = QiniuKodoPublicRegions.getRegionById(regionId);
+        // 设置下载域名
+        this.downloadDomain = fsConfig.download.domain;
+        if (this.downloadDomain == null) {
+            // 下载域名未配置时
+            if (fsConfig.customRegion.id == null) {
+                // 公有云通过uc query api获取源站域名构造下载链接
+                this.downloadDomain = getDownloadDomainFromUC();
+            } else {
+                // 私有云未配置下载域名时抛出异常
+                throw new QiniuException(new MissingConfigFieldException(String.format(
+                        "download domain can't be empty, you should set it with %s in core-site.xml",
+                        fsConfig.download.KEY_DOMAIN
+                )));
             }
-            downloadDomain = bucket + "." + region.getRegionEndpoint();
         }
 
         this.downloadUseSign = fsConfig.download.sign.enable;
         this.downloadSignExpires = fsConfig.download.sign.expires;
         this.uploadSignExpires = fsConfig.upload.sign.expires;
         this.downloadHttpClient = new DownloadHttpClient(configuration, fsConfig.download.useNoCacheHeader);
+    }
+
+    private String getDownloadDomainFromUC() throws QiniuException {
+        String ucQueryUrl = String.format("https://uc.qbox.me/v3/query?ak=%s&bucket=%s", fsConfig.auth.accessKey, bucket);
+        try {
+            return this.client.get(ucQueryUrl).jsonToObject(UCQueryRet.class).getIoSrcHost();
+        } catch (Exception e) {
+            throw new QiniuException(e, "get download domain from uc failed");
+        }
     }
 
     private static Auth getAuth(QiniuKodoFsConfig fsConfig) throws AuthorizationException {
@@ -218,19 +223,6 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     @Override
     public boolean exists(String key) throws IOException {
         return getFileStatus(key) != null;
-//        Request.Builder requestBuilder = new Request.Builder().url(getFileUrlByKey(key)).head();
-//
-//        try {
-//            Response response = client.send(requestBuilder, null);
-//            // 找到了
-//            return response.isOK();
-//        } catch (QiniuException e) {
-//            if (e.response != null && e.response.statusCode == 404) {
-//                // 文件找不到
-//                return false;
-//            }
-//            throw e;
-//        }
     }
 
     /**

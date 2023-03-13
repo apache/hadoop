@@ -3,21 +3,21 @@ package org.apache.hadoop.fs.qiniu.kodo.config;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.qiniu.kodo.config.client.ClientConfig;
+import org.apache.hadoop.fs.qiniu.kodo.config.customregion.CustomRegionConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.download.DownloadConfig;
-import org.apache.hadoop.fs.qiniu.kodo.config.region.RegionConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.upload.UploadConfig;
 
 public class QiniuKodoFsConfig extends AConfigBase {
     public final AuthConfig auth;
     public final DownloadConfig download;
     public final UploadConfig upload;
-    public final RegionConfig region;
+    public final CustomRegionConfig customRegion;
     public final ClientConfig client;
     public final ProxyConfig proxy;
 
     public QiniuKodoFsConfig(Configuration conf, String namespace) {
         super(conf, namespace);
-        this.region = region();
+        this.customRegion = region();
         this.auth = auth();
         this.download = download();
         this.upload = upload();
@@ -31,10 +31,10 @@ public class QiniuKodoFsConfig extends AConfigBase {
 
 
     /**
-     * 获取bucket的region配置信息
+     * 获取私有云的自定义bucket的region配置信息
      */
-    private RegionConfig region() {
-        return new RegionConfig(conf, namespace + ".region");
+    private CustomRegionConfig region() {
+        return new CustomRegionConfig(conf, namespace + ".customRegion");
     }
 
     private AuthConfig auth() {

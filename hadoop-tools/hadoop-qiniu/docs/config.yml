@@ -79,15 +79,7 @@ upload:
   bufferSize: 16777216
 
 # 区域与私有云相关设置
-region:
-  # 区域ID，默认支持公有云id配置如下，也可通过添加custom相关字段实现私有云接入
-  #     华东: cn-east-1, z0
-  #     华东-浙江: cn-east-2
-  #     华北: cn-north-1, z1
-  #     华南: cn-south-1, z2
-  #     北美: us-north-1, na0
-  #     新加坡: ap-southeast-1
-  #     亚太-首尔: ap-northeast-1
+custom_region:
   id: custom1
 
   # 私有云ID自定义配置，子命名空间均为用户自定义region id
@@ -99,7 +91,6 @@ region:
       iovipHost:
       accUpHosts: [ ]
       srcUpHosts: [ ]
-      endpointHost:
 
     custom2:
       rsHost:
@@ -108,7 +99,6 @@ region:
       iovipHost:
       accUpHosts: [ ]
       srcUpHosts: [ ]
-      endpointHost:
 
 # 客户端模拟文件系统相关设置
 client:

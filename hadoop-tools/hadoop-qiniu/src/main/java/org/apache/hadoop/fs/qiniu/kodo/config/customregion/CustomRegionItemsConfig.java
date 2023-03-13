@@ -1,25 +1,14 @@
-package org.apache.hadoop.fs.qiniu.kodo.config.region;
+package org.apache.hadoop.fs.qiniu.kodo.config.customregion;
 
 import com.qiniu.storage.Region;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.qiniu.kodo.config.AConfigBase;
 import org.apache.hadoop.fs.qiniu.kodo.config.MissingConfigFieldException;
 
-public class CustomRegionConfig extends AConfigBase {
+public class CustomRegionItemsConfig extends AConfigBase {
 
-    public CustomRegionConfig(Configuration conf, String namespace) {
+    public CustomRegionItemsConfig(Configuration conf, String namespace) {
         super(conf, namespace);
-    }
-
-    public QiniuKodoRegion getCustomRegion(String customId) throws MissingConfigFieldException {
-        // 源站下载域名
-        String endpointHost = conf.get(String.format("%s.%s.endpointHost", namespace, customId));
-
-        // 构造sdk region
-        Region region = buildCustomSdkRegion(customId);
-
-        // 返回组合后的region
-        return new QiniuKodoRegion(customId, region, endpointHost);
     }
 
     private String getCustomRegionFieldString(String customId, String field) throws MissingConfigFieldException {
@@ -29,7 +18,7 @@ public class CustomRegionConfig extends AConfigBase {
         throw new MissingConfigFieldException(key);
     }
 
-    private Region buildCustomSdkRegion(String customId) throws MissingConfigFieldException {
+    public Region buildCustomSdkRegion(String customId) throws MissingConfigFieldException {
         // 资源管理，资源列表，资源处理类域名
         String rsHost = getCustomRegionFieldString(customId, "rsHost");
         String rsfHost = getCustomRegionFieldString(customId, "rsfHost");

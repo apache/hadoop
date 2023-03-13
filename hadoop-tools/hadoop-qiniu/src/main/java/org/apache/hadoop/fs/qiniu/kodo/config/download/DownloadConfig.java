@@ -5,9 +5,16 @@ import org.apache.hadoop.fs.qiniu.kodo.config.AConfigBase;
 import org.apache.hadoop.fs.qiniu.kodo.config.download.cache.CacheConfig;
 
 public class DownloadConfig extends AConfigBase {
+    public final String KEY_DOMAIN;
+    /**
+     * 若返回空，则默认走源站
+     */
+    public final String domain;
+
     public final CacheConfig cache;
     public final int blockSize;
-    public final String domain;
+
+
     public final SignConfig sign;
     public final boolean useNoCacheHeader;
     public final boolean useHttps;
@@ -17,7 +24,10 @@ public class DownloadConfig extends AConfigBase {
         super(conf, namespace);
         this.cache = cache();
         this.blockSize = blockSize();
-        this.domain = domain();
+
+        this.KEY_DOMAIN = namespace + ".domain";
+        this.domain = conf.get(namespace + ".domain");
+
         this.sign = new SignConfig(conf, namespace + ".sign");
         this.useNoCacheHeader = useNoCacheHeader();
         this.useHttps = useHttps();
@@ -43,13 +53,6 @@ public class DownloadConfig extends AConfigBase {
      */
     private int blockSize() {
         return conf.getInt(namespace + ".blockSize", 4 * 1024 * 1024);
-    }
-
-    /**
-     * 若返回空，则默认走源站
-     */
-    private String domain() {
-        return conf.get(namespace + ".domain");
     }
 
 
