@@ -58,11 +58,13 @@ message RefreshUserToGroupsMappingsResponseProto {
 }
 
 message RefreshAdminAclsRequestProto {
+  optional string sub_cluster_id = 1;
 }
 message RefreshAdminAclsResponseProto {
 }
 
 message RefreshServiceAclsRequestProto {
+  optional string sub_cluster_id = 1;
 }
 message RefreshServiceAclsResponseProto {
 }
