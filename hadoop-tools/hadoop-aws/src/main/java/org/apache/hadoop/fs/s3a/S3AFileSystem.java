@@ -516,6 +516,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
       partSize = getMultipartSizeProperty(conf,
           MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
+      LOG.warn("Patcchhhh: The part size is : {}", partSize);
       multiPartThreshold = getMultipartSizeProperty(conf,
           MIN_MULTIPART_THRESHOLD, DEFAULT_MIN_MULTIPART_THRESHOLD);
 

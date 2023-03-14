@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
+
 public class ITestS3AHugeFileUpload extends S3AScaleTestBase{
   final private Logger LOG = LoggerFactory.getLogger(
       ITestS3AHugeFileUpload.class.getName());
@@ -18,6 +20,7 @@ public class ITestS3AHugeFileUpload extends S3AScaleTestBase{
   protected Configuration createScaleConfiguration() {
     Configuration configuration = super.createScaleConfiguration();
     configuration.setBoolean(Constants.ALLOW_MULTIPART_UPLOADS, false);
+    configuration.setLong(MULTIPART_SIZE, 53687091200L);
     configuration.setInt(KEY_TEST_TIMEOUT, 36000);
     return configuration;
   }
