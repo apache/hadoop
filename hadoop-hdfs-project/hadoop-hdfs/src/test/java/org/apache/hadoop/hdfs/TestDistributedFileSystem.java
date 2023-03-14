@@ -31,6 +31,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -123,9 +124,11 @@ import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.functional.RemoteIterators;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.InOrder;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -1554,6 +1557,33 @@ public class TestDistributedFileSystem {
       System.out.println("retVal = " + retVal);
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testListFilesRecursive() throws IOException {
+    Configuration conf = getTestConfiguration();
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();) {
+      DistributedFileSystem fs = cluster.getFileSystem();
+
+      // Create some directories and files.
+      Path dir = new Path("/dir");
+      Path subDir1 = fs.makeQualified(new Path(dir, "subDir1"));
+      Path subDir2 = fs.makeQualified(new Path(dir, "subDir2"));
+
+      fs.mkdirs(subDir1);
+      fs.mkdirs(subDir2);
+      fs.create(new Path(dir, "foo1")).close();
+      fs.create(new Path(dir, "foo2")).close();
+      fs.create(new Path(subDir1, "foo3")).close();
+      fs.create(new Path(subDir2, "foo4")).close();
+
+      // Mock the filesystem, and throw FNF when listing is triggered for the subdirectory.
+      FileSystem mockFs = spy(fs);
+      Mockito.doThrow(new FileNotFoundException("")).when(mockFs).listLocatedStatus(eq(subDir1));
+      List<LocatedFileStatus> str = RemoteIterators.toList(mockFs.listFiles(dir, true));
+      Assert.assertEquals(str.toString(), 3, str.size());
     }
   }
 
