@@ -204,7 +204,7 @@ class S3ABlockOutputStream extends OutputStream implements
     LOG.debug("Initialized S3ABlockOutputStream for {}" +
         " output to {}", key, activeBlock);
     this.isMultipartAllowed = builder.isMultipartAllowed;
-    if (putTracker.initialize() && this.isMultipartAllowed) {
+    if (putTracker.initialize()) {
       LOG.debug("Put tracker requests multipart upload");
       initMultipartUpload();
     }
@@ -373,6 +373,9 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   @Retries.RetryTranslated
   private void initMultipartUpload() throws IOException {
+    if (!isMultipartAllowed){
+      return;
+    }
     if (multiPartUpload == null) {
       LOG.debug("Initiating Multipart upload");
       multiPartUpload = new MultiPartUpload(key);
