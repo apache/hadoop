@@ -62,6 +62,15 @@ public class TracingContext {
   private Listener listener = null;  // null except when testing
   //final concatenated ID list set into x-ms-client-request-id header
   private String header = EMPTY_STRING;
+
+  /**
+   * If {@link #primaryRequestId} is null, this field shall be set equal
+   * to the last part of the {@link #clientRequestId}'s UUID
+   * in {@link #constructHeader(AbfsHttpOperation, String)} only on the
+   * first API call for an operation. Subsequent retries for that operation
+   * will not change this field. In case {@link  #primaryRequestId} is non-null,
+   * this field shall not be set.
+   */
   private String primaryRequestIdForRetry;
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);

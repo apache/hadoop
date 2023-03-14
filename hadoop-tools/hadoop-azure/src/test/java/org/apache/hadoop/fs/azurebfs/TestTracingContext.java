@@ -233,7 +233,8 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(primaryRequestId)
         .describedAs("PrimaryRequestId in a retried request's "
             + "tracingContext should be equal to last part of original "
-            + "request's clientRequestId UUID").isEqualTo(assertionPrimaryId);
+            + "request's clientRequestId UUID")
+        .isEqualTo(assertionPrimaryId);
   }
 
   @Test
@@ -265,7 +266,8 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     String primaryRequestId = header.split(":")[3];
 
     Assertions.assertThat(primaryRequestId)
-        .describedAs("PrimaryRequestId in a retried request's "
-            + "tracingContext should be equal to PrimaryRequestId in the original request.").isEqualTo(assertionPrimaryId);
+        .describedAs("PrimaryRequestId in a retried request's tracingContext "
+            + "should be equal to PrimaryRequestId in the original request.")
+        .isEqualTo(assertionPrimaryId);
   }
 }
