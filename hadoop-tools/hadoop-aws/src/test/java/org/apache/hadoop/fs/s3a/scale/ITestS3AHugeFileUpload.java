@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.IO_CHUNK_BUFFER_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
 
 public class ITestS3AHugeFileUpload extends S3AScaleTestBase{
@@ -22,6 +23,7 @@ public class ITestS3AHugeFileUpload extends S3AScaleTestBase{
     configuration.setBoolean(Constants.ALLOW_MULTIPART_UPLOADS, false);
     configuration.setLong(MULTIPART_SIZE, 53687091200L);
     configuration.setInt(KEY_TEST_TIMEOUT, 36000);
+    configuration.setInt(IO_CHUNK_BUFFER_SIZE, 655360);
     return configuration;
   }
 
