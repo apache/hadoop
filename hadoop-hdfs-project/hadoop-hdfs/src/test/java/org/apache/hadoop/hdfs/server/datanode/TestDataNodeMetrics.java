@@ -392,7 +392,7 @@ public class TestDataNodeMetrics {
 
       final long startWriteValue = getLongCounter("TotalWriteTime", rb);
       final long startReadValue = getLongCounter("TotalReadTime", rb);
-      assertCounter("ReadTransferRateNumOps", 0L, rb);
+      assertCounter("ReadLatencyPerGBNumOps", 0L, rb);
       final AtomicInteger x = new AtomicInteger(0);
 
       // Lets Metric system update latest metrics
@@ -412,8 +412,8 @@ public class TestDataNodeMetrics {
           MetricsRecordBuilder rbNew = getMetrics(datanode.getMetrics().name());
           final long endWriteValue = getLongCounter("TotalWriteTime", rbNew);
           final long endReadValue = getLongCounter("TotalReadTime", rbNew);
-          assertCounter("ReadTransferRateNumOps", 1L, rbNew);
-          assertQuantileGauges("ReadTransferRate" + "60s", rbNew, "Rate");
+          assertCounter("ReadLatencyPerGBNumOps", 1L, rbNew);
+          assertQuantileGauges("ReadLatencyPerGB" + "60s", rbNew);
           return endWriteValue > startWriteValue
               && endReadValue > startReadValue;
         }

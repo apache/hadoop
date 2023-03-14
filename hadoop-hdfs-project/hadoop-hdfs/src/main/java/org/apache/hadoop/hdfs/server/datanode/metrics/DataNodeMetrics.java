@@ -61,8 +61,8 @@ public class DataNodeMetrics {
   @Metric MutableCounterLong bytesRead;
   @Metric("Milliseconds spent reading")
   MutableCounterLong totalReadTime;
-  @Metric private MutableRate readTransferRate;
-  final private MutableQuantiles[] readTransferRateQuantiles;
+  @Metric private MutableRate readLatencyPerGB;
+  final private MutableQuantiles[] readLatencyPerGBQuantiles;
   @Metric MutableCounterLong blocksWritten;
   @Metric MutableCounterLong blocksRead;
   @Metric MutableCounterLong blocksReplicated;
@@ -229,7 +229,7 @@ public class DataNodeMetrics {
     sendDataPacketTransferNanosQuantiles = new MutableQuantiles[len];
     ramDiskBlocksEvictionWindowMsQuantiles = new MutableQuantiles[len];
     ramDiskBlocksLazyPersistWindowMsQuantiles = new MutableQuantiles[len];
-    readTransferRateQuantiles = new MutableQuantiles[len];
+    readLatencyPerGBQuantiles = new MutableQuantiles[len];
 
     for (int i = 0; i < len; i++) {
       int interval = intervals[i];
@@ -258,10 +258,10 @@ public class DataNodeMetrics {
           "ramDiskBlocksLazyPersistWindows" + interval + "s",
           "Time between the RamDisk block write and disk persist in ms",
           "ops", "latency", interval);
-      readTransferRateQuantiles[i] = registry.newQuantiles(
-          "readTransferRate" + interval + "s",
-          "Rate at which bytes are read from datanode calculated in bytes per second",
-          "ops", "rate", interval);
+      readLatencyPerGBQuantiles[i] = registry.newQuantiles(
+          "readLatencyPerGB" + interval + "s",
+          "Time taken in seconds for reading data from datanode per GB",
+          "ops", "latency", interval);
     }
   }
 
@@ -323,10 +323,10 @@ public class DataNodeMetrics {
     }
   }
 
-  public void addReadTransferRate(long readTransferRate) {
-    this.readTransferRate.add(readTransferRate);
-    for (MutableQuantiles q : readTransferRateQuantiles) {
-      q.add(readTransferRate);
+  public void addReadLatencyPerGB(long readLatencyPerGB) {
+    this.readLatencyPerGB.add(readLatencyPerGB);
+    for (MutableQuantiles q : readLatencyPerGBQuantiles) {
+      q.add(readLatencyPerGB);
     }
   }
 

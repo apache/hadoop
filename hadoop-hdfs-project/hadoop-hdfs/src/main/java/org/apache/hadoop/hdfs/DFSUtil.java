@@ -1939,16 +1939,17 @@ public class DFSUtil {
   }
 
   /**
-   * Add transfer rate metrics for valid data read and duration values.
+   * Add time taken in seconds to read a GB of data metric for valid data read and duration values.
    * @param metrics metrics for datanodes
    * @param read bytes read
-   * @param duration read duration
+   * @param duration read duration in milliseconds
    */
-  public static void addTransferRateMetric(final DataNodeMetrics metrics, final long read, final long duration) {
-    if (read >= 0 && duration > 0) {
-        metrics.addReadTransferRate(read * 1000 / duration);
+  public static void addReadLatencyPerGBMetric(final DataNodeMetrics metrics,
+                                               final long read, final long duration) {
+    if (read > 0 && duration >= 0) {
+      metrics.addReadLatencyPerGB(duration * 1000_000 / read);
     } else {
-      LOG.warn("Unexpected value for data transfer bytes={} duration={}", read, duration);
+      LOG.warn("Unexpected value for data read bytes={} duration={}", read, duration);
     }
   }
 }

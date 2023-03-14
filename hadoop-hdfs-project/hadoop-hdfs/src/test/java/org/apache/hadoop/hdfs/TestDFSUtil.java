@@ -1112,16 +1112,16 @@ public class TestDFSUtil {
   }
 
   @Test
-  public void testAddTransferRateMetricForValidValues() {
+  public void testAddReadLatencyPerGBMetricForValidValues() {
     DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
-    DFSUtil.addTransferRateMetric(mockMetrics, 100, 10);
-    verify(mockMetrics).addReadTransferRate(10000);
+    DFSUtil.addReadLatencyPerGBMetric(mockMetrics, 3333333333L, 99999L);
+    verify(mockMetrics).addReadLatencyPerGB(29L);
   }
 
   @Test
-  public void testAddTransferRateMetricForInvalidValue() {
+  public void testAddReadLatencyPerGBMetricForInvalidValue() {
     DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
-    DFSUtil.addTransferRateMetric(mockMetrics, 100, 0);
-    verify(mockMetrics, times(0)).addReadTransferRate(anyLong());
+    DFSUtil.addReadLatencyPerGBMetric(mockMetrics, 0, 1000);
+    verify(mockMetrics, times(0)).addReadLatencyPerGB(anyLong());
   }
 }
