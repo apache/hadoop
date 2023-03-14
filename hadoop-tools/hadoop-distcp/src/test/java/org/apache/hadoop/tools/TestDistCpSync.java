@@ -1339,7 +1339,7 @@ public class TestDistCpSync {
     public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
         final String fromSnapshot, final String toSnapshot) {
       return new SnapshotDiffReport(snapshotDir.getName(), fromSnapshot,
-          toSnapshot, Collections.EMPTY_LIST);
+          toSnapshot, new ArrayList<SnapshotDiffReport.DiffReportEntry>());
     }
   }
 }
