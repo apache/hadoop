@@ -43,7 +43,6 @@ import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.util.ReflectionUtils;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
@@ -85,16 +84,7 @@ public class DistCp extends Configured implements Tool {
     if (context.shouldUseSnapshotDiff()) {
       // When "-diff" or "-rdiff" is passed, do sync() first, then
       // create copyListing based on snapshot diff.
-      DistCpSync distCpSync;
-      Class<? extends DistCpSync> distcpSyncClass = DistCpSync.getClass(job.getConfiguration());
-      if (!distcpSyncClass.equals(DistCpSync.class)) {
-        // get the impl class
-        distCpSync = ReflectionUtils.newInstance(distcpSyncClass,
-            job.getConfiguration());
-        distCpSync.init(context, job.getConfiguration());
-      } else {
-        distCpSync = new DistCpSync(context, job.getConfiguration());
-      }
+      DistCpSync distCpSync = new DistCpSync(context, job.getConfiguration());
       if (distCpSync.sync()) {
         createInputFileListingWithDiff(job, distCpSync);
       } else {

@@ -23,6 +23,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.RawLocalFileSystem;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -38,6 +40,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 import org.junit.After;
 import org.junit.Assert;
@@ -47,6 +50,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.io.FileWriter;
 import java.io.BufferedWriter;
+import java.net.URI;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.ArrayList;
@@ -55,6 +59,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 public class TestDistCpSync {
   private MiniDFSCluster cluster;
@@ -89,6 +95,7 @@ public class TestDistCpSync {
 
     conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, target.toString());
     conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, target.toString());
+    conf.setClass("fs.dummy.impl", DummyFs.class, FileSystem.class);
   }
 
   @After
@@ -1275,5 +1282,64 @@ public class TestDistCpSync {
 
     verifyCopyByFs(sourceFS, targetFS, sourceFS.getFileStatus(sourceFSPath),
         targetFS.getFileStatus(targetFSPath), false);
+  }
+
+  @Test
+  public void testSyncSnapshotDiffWithLocalFileSystem() throws Exception {
+    String[] args = new String[]{"-update", "-diff", "s1", "s2",
+        "file:///source", "file:///target"};
+    LambdaTestUtils.intercept(
+        IllegalArgumentException.class,
+        "The source file system file does not support snapshot",
+        () -> new DistCp(conf, OptionsParser.parse(args)).execute());
+  }
+
+  @Test
+  public void testSyncSnapshotDiffWithDummyFileSystem() throws Exception {
+    String[] args =
+        new String[] { "-update", "-diff", "s1", "s2", "dummy:///source",
+            "dummy:///target" };
+    try {
+      FileSystem dummyFs = FileSystem.get(URI.create("dummy:///"), conf);
+      Assert.assertTrue(dummyFs instanceof DummyFs);
+      new DistCp(conf, OptionsParser.parse(args)).execute();
+    } catch (Exception e) {
+      // can expect other exceptions as source and target paths
+      // are not created, assert if the exception is not arising
+      // due to the filesystem not supporting snapshots.
+      Assert.assertFalse(e.getMessage().contains("does not support snapshot"));
+    }
+  }
+
+  public static class DummyFs extends RawLocalFileSystem {
+    public DummyFs() {
+      super();
+    }
+
+    public URI getUri() {
+      return URI.create("dummy:///");
+    }
+
+    @Override
+    public boolean hasPathCapability(Path path, String capability)
+        throws IOException {
+      switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
+      case CommonPathCapabilities.FS_SNAPSHOTS:
+        return true;
+      default:
+        return super.hasPathCapability(path, capability);
+      }
+    }
+
+    @Override
+    public FileStatus getFileStatus(Path f) throws IOException {
+      return new FileStatus();
+    }
+
+    public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
+        final String fromSnapshot, final String toSnapshot) {
+      return new SnapshotDiffReport(snapshotDir.getName(), fromSnapshot,
+          toSnapshot, Collections.EMPTY_LIST);
+    }
   }
 }

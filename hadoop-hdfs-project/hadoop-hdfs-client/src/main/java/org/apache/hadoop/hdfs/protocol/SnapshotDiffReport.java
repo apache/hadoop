@@ -254,6 +254,11 @@ public class SnapshotDiffReport {
   }
 
   /** @return {@link #toSnapshot} */
+  public String getToSnapshot() {
+    return toSnapshot;
+  }
+
+  /** @return {@link #toSnapshot} */
   public String getLaterSnapshotName() {
     return toSnapshot;
   }
@@ -281,9 +286,5 @@ public class SnapshotDiffReport {
       str.append(entry.toString()).append(LINE_SEPARATOR);
     }
     return str.toString();
-  }
-
-  public String getToSnapshot() {
-    return toSnapshot;
   }
 }
