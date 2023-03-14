@@ -156,7 +156,7 @@ class DistCpSync {
   /**
    * Check if the source and target filesystems support snapshots.
    */
-  protected void checkFilesystemSupport(Path sourceDir, Path targetDir,
+  private void checkFilesystemSupport(Path sourceDir, Path targetDir,
       FileSystem srcFs, FileSystem tgtFs) throws IOException {
     if (!srcFs.hasPathCapability(sourceDir,
         CommonPathCapabilities.FS_SNAPSHOTS)) {
@@ -297,7 +297,10 @@ class DistCpSync {
         "getSnapshotDiffReport", Path.class, String.class, String.class);
   }
 
-
+  /**
+   * Get the snapshotDiff b/w the fromSnapshot & toSnapshot for the given
+   * filesystem.
+   */
   private static SnapshotDiffReport getSnapshotDiffReport(
       final FileSystem fs,
       final Path snapshotDir,
