@@ -252,6 +252,12 @@
 		<property name="client_id" value="${client_id}" />
 		<property name="client_secret" value="${client_secret}" />
 		<property name="refreshInterval" value="${refreshInterval}" />
+		<echo message="dataset_id: ${dataset_id}" />
+		<echo message="username: ${username}" />
+		<echo message="password: ${password}" />
+		<echo message="client_id: ${client_id}" />
+		<echo message="client_secret: ${client_secret}" />
+		<echo message="refreshInterval: ${refreshInterval}" />
 		<sleep minutes="1" />
 
 		<exec executable='curl' failonerror="true" outputproperty="Token">
