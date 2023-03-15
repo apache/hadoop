@@ -328,6 +328,10 @@ public class AbfsConfiguration{
       FS_AZURE_ENABLE_ABFS_LIST_ITERATOR, DefaultValue = DEFAULT_ENABLE_ABFS_LIST_ITERATOR)
   private boolean enableAbfsListIterator;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ABFS_RENAME_RESILIENCE, DefaultValue = DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE)
+  private boolean renameResilience;
+
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, InvalidConfigurationValueException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
@@ -1130,4 +1134,7 @@ public class AbfsConfiguration{
     this.enableAbfsListIterator = enableAbfsListIterator;
   }
 
+  public boolean getRenameResilience() {
+    return renameResilience;
+  }
 }

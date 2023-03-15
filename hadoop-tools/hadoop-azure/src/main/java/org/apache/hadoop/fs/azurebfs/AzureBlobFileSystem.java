@@ -46,6 +46,9 @@ import java.util.concurrent.Future;
 import javax.annotation.Nullable;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.EtagSource;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -154,6 +157,11 @@ public class AzureBlobFileSystem extends FileSystem
   /** Rate limiting for operations which use it to throttle their IO. */
   private RateLimiting rateLimiting;
 
+  /**
+   * Enable resilient rename.
+   */
+  private boolean renameResilience;
+
   @Override
   public void initialize(URI uri, Configuration configuration)
       throws IOException {
@@ -226,6 +234,8 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     rateLimiting = RateLimitingFactory.create(abfsConfiguration.getRateLimit());
+
+    renameResilience = abfsConfiguration.getRenameResilience();
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
   }
 
@@ -442,9 +452,12 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     // Non-HNS account need to check dst status on driver side.
-    if (!abfsStore.getIsNamespaceEnabled(tracingContext) && dstFileStatus == null) {
+    final boolean isNamespaceEnabled = abfsStore.getIsNamespaceEnabled(tracingContext);
+    if (!isNamespaceEnabled && dstFileStatus == null) {
       dstFileStatus = tryGetFileStatus(qualifiedDstPath, tracingContext);
     }
+
+    FileStatus sourceFileStatus = null;
 
     try {
       String sourceFileName = src.getName();
@@ -459,10 +472,24 @@ public class AzureBlobFileSystem extends FileSystem
 
       qualifiedDstPath = makeQualified(adjustedDst);
 
-      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext, null);
+      String etag = null;
+      if (renameResilience && isNamespaceEnabled) {
+        // for resilient rename on an HNS store, get the etag before
+        // attempting the rename, and pass it down
+        sourceFileStatus = abfsStore.getFileStatus(qualifiedSrcPath, tracingContext);
+        etag = ((EtagSource) sourceFileStatus).getEtag();
+      }
+      boolean recovered = abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext,
+          etag);
+      if (recovered) {
+        LOG.info("Recovered from rename failure of {} to {}",
+            qualifiedSrcPath, qualifiedDstPath);
+      }
       return true;
     } catch (AzureBlobFileSystemException ex) {
-      LOG.debug("Rename operation failed. ", ex);
+      LOG.debug("Rename {} to {} failed. source {} dest {}",
+          qualifiedSrcPath, qualifiedDstPath,
+          sourceFileStatus, dstFileStatus, ex);
       checkException(
           src,
           ex,

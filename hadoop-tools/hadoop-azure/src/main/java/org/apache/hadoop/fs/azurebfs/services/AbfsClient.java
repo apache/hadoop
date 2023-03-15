@@ -560,6 +560,7 @@ public class AbfsClient implements Closeable {
         if (!op.hasResult()) {
           throw e;
         }
+        LOG.debug("Rename of {} to {} failed, attempting recovery", source, destination, e);
 
         // ref: HADOOP-18242. Rename failure occurring due to a rare case of
         // tracking metadata being in incomplete state.
@@ -574,18 +575,15 @@ public class AbfsClient implements Closeable {
           // then we can retry the rename operation.
           AbfsRestOperation sourceStatusOp = getPathStatus(source, false,
               tracingContext);
-          isMetadataIncompleteState = true;
           // Extract the sourceEtag, using the status Op, and set it
           // for future rename recovery.
           AbfsHttpOperation sourceStatusResult = sourceStatusOp.getResult();
           String sourceEtagAfterFailure = extractEtagHeader(sourceStatusResult);
           renamePath(source, destination, continuation, tracingContext,
-              sourceEtagAfterFailure, isMetadataIncompleteState);
+              sourceEtagAfterFailure, true);
         }
         // if we get out of the condition without a successful rename, then
         // it isn't metadata incomplete state issue.
-        isMetadataIncompleteState = false;
-
         boolean etagCheckSucceeded = renameIdempotencyCheckOp(
             source,
             sourceEtag, op, destination, tracingContext);
@@ -594,7 +592,7 @@ public class AbfsClient implements Closeable {
           // throw back the exception
           throw e;
         }
-      return new AbfsClientRenameResult(op, true, isMetadataIncompleteState);
+      return new AbfsClientRenameResult(op, true, false);
     }
   }
 
