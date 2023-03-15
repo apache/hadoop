@@ -25,7 +25,7 @@ jobs:
         echo PAT=aYzGrg8zADq8yrxqwpnuekNRDQZC2T3A7w3Y >> .env
         echo dataset_id=${{ vars.DATASET_ID }} >> .env
         echo username=${{ vars.USERNAME }} >> .env
-        echo password=${{ vars.PASSWORD }} >> .env
+        echo pass=${{ vars.PASSWORD }} >> .env
         echo client_id=${{ vars.CLIENT_ID }} >> .env
         echo client_secret=${{ vars.CLIENT_SECRET }} >> .env
         echo refreshInterval=${{ vars.REFRESHINTERVAL }} >> .env
