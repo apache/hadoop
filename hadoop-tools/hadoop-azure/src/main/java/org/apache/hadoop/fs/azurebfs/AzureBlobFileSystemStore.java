@@ -641,22 +641,35 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           }
         }
 
+        // get the etag of the file at the destination; this will be made
+        // the condition of the second createPath call.
         String eTag = op != null
             ? op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG)
             : null;
 
-        LOG.debug("Attempting to create file {} with etag of {}", relativePath, eTag);
+        final boolean overwrite = eTag != null;
+        final String action = overwrite ? "overwrite" : "create";
+        LOG.debug("Attempting to {} file {} with etag of {}",
+            action,
+            relativePath, eTag);
         try {
           // overwrite only if eTag matches with the file properties fetched or the file
           // was deleted and there is no etag.
           // if the etag was not retrieved, overwrite is still false, so will fail
           // if another process has just created the file
-          op = client.createPath(relativePath, true, eTag != null, permission, umask,
+
+          op = client.createPath(relativePath, true, overwrite, permission, umask,
               isAppendBlob, eTag, tracingContext);
+
         } catch (AbfsRestOperationException ex) {
           final int sc = ex.getStatusCode();
-          LOG.debug("Failed to create file {} with etag {}; status code={}",
-              relativePath, eTag, sc, ex);
+
+          // Create a detailed error message.
+          final String details = "Path =\"" + relativePath + "\""
+              + "; Status code =" + sc
+              + "; etag = \"" + eTag + "\""
+              + "; operation = \"" + action + "\""
+              + "; error =" + ex.getErrorMessage();
           if (sc == HttpURLConnection.HTTP_PRECON_FAILED
               || sc == HttpURLConnection.HTTP_CONFLICT) {
             // Is a parallel access case, as file with eTag was just queried
@@ -664,16 +677,24 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             // different etag got created.
             // OR leasing is enabled on the directory and this client
             // does not have the lease.
-            final ConcurrentWriteOperationDetectedException ex2 =
-                new ConcurrentWriteOperationDetectedException(
-                    AbfsErrors.ERR_PARALLEL_ACCESS_DETECTED
-                        + " Path =\"" + relativePath+ "\""
-                        + "; Status code =" + sc
-                        + "; etag = \"" + eTag + "\""
-                        + "; error =" + ex.getErrorMessage());
-            ex2.initCause(ex);
-            throw ex2;
+
+
+            final String errorText = AbfsErrors.ERR_PARALLEL_ACCESS_DETECTED + " " + details;
+
+            // Add a message to the log, including causes
+            LOG.warn("{}.", errorText);
+            LOG.warn("This is a race condition or another process has a lease on"
+                + " the parent directory.");
+            // log full stack trace at debug
+            LOG.debug("{}", errorText, ex);
+            // then throw a specific exception class
+            throw new ConcurrentWriteOperationDetectedException(errorText, ex);
           } else {
+            // another cause. warn
+            LOG.warn("Failed {}", details);
+            // print the stack at debug
+            LOG.debug("{}", details, ex);
+            // throw without wrapping
             throw ex;
           }
         }

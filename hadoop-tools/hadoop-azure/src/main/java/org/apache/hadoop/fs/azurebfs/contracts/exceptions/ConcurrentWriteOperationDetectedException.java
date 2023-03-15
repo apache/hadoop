@@ -29,4 +29,9 @@ public class ConcurrentWriteOperationDetectedException
   public ConcurrentWriteOperationDetectedException(String message) {
     super(message);
   }
+
+  public ConcurrentWriteOperationDetectedException(final String message,
+      final Throwable innerThrowable) {
+    super(message, innerThrowable);
+  }
 }
