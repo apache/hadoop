@@ -247,7 +247,7 @@
 		<echo message="Initiating the curl request to get bearer token for Microsoft Login."/>
 		<property file=".env"/>
 		<property name="dataset_id" value="${dataset_id}" />
-		<property name="uname" value="${username}" />
+		<property name="uname" value="${uname}" />
 		<property name="password" value="${pass}" />
 		<property name="client_id" value="${client_id}" />
 		<property name="client_secret" value="${client_secret}" />
