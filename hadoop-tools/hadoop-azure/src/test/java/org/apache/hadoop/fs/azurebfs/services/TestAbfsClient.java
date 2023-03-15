@@ -341,10 +341,10 @@ public final class TestAbfsClient {
     return client;
   }
 
-  private static AbfsClient setAbfsClientField(
-      final AbfsClient client,
-      final String fieldName,
-      Object fieldObject) throws Exception {
+  static AbfsClient setAbfsClientField(
+          final AbfsClient client,
+          final String fieldName,
+          Object fieldObject) throws Exception {
 
     Field field = AbfsClient.class.getDeclaredField(fieldName);
     field.setAccessible(true);
