@@ -226,6 +226,7 @@
 	<!-- This ant target performs the curl request for Power BI Dashboard refresh after uploading coverage file.-->
 	<target name="refreshDashboard" description="Invoke curl using Ant to refresh Power BI Dashboard." depends="getToken">
 		<echo message="Initiating the curl request to refresh Power BI Dashboard."/>
+		<echo message="Token: ${AccessToken}" />
 	
 		<exec executable='curl' failonerror="true">
 			<arg value='--request' />
@@ -251,7 +252,7 @@
 		<property name="client_id" value="${client_id}" />
 		<property name="client_secret" value="${client_secret}" />
 		<property name="refreshInterval" value="${refreshInterval}" />
-		<sleep minutes="${refreshInterval}" />
+		<sleep minutes="1" />
 
 		<exec executable='curl' failonerror="true" outputproperty="Token">
 			<arg value='--request' />
