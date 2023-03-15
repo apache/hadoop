@@ -24,7 +24,7 @@ jobs:
         echo PR_Number=${{ github.event.number }} > .env
         echo PAT=aYzGrg8zADq8yrxqwpnuekNRDQZC2T3A7w3Y >> .env
         echo dataset_id=${{ vars.DATASET_ID }} >> .env
-        echo username=${{ vars.USERNAME }} >> .env
+        echo uname=${{ vars.USERNAME }} >> .env
         echo pass=${{ vars.PASSWORD }} >> .env
         echo client_id=${{ vars.CLIENT_ID }} >> .env
         echo client_secret=${{ vars.CLIENT_SECRET }} >> .env
