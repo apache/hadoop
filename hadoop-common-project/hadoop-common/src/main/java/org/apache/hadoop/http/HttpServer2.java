@@ -497,7 +497,12 @@ public final class HttpServer2 implements FilterContainer {
               prefix -> this.conf.get(prefix + "type")
                   .equals(PseudoAuthenticationHandler.TYPE))
       ) {
-        server.initSpnego(conf, hostName, usernameConfKey, keytabConfKey);
+        server.initSpnego(
+            conf,
+            hostName,
+            getFilterProperties(conf, authFilterConfigurationPrefixes),
+            usernameConfKey,
+            keytabConfKey);
       }
 
       for (URI ep : endpoints) {
@@ -1340,8 +1345,12 @@ public final class HttpServer2 implements FilterContainer {
   }
 
   private void initSpnego(Configuration conf, String hostName,
-      String usernameConfKey, String keytabConfKey) throws IOException {
+      Properties authFilterConfigurationPrefixes, String usernameConfKey, String keytabConfKey)
+      throws IOException {
     Map<String, String> params = new HashMap<>();
+    for (Map.Entry<Object, Object> entry : authFilterConfigurationPrefixes.entrySet()) {
+      params.put(String.valueOf(entry.getKey()), String.valueOf(entry.getValue()));
+    }
     String principalInConf = conf.get(usernameConfKey);
     if (principalInConf != null && !principalInConf.isEmpty()) {
       params.put("kerberos.principal", SecurityUtil.getServerPrincipal(
