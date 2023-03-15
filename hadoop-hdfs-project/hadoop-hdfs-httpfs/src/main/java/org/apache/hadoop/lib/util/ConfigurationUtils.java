@@ -73,7 +73,7 @@ public abstract class ConfigurationUtils {
     for (Map.Entry<String, String> entry : conf) {
       resolved.set(entry.getKey(), conf.get(entry.getKey()));
     }
-    // Testing MR pipeline secrets
+    // Testing MR pipeline secret
     return resolved;
   }
 
