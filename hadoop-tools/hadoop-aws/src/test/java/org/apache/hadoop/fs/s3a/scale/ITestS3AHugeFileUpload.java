@@ -24,6 +24,7 @@ public class ITestS3AHugeFileUpload extends S3AScaleTestBase{
     configuration.setLong(MULTIPART_SIZE, 53687091200L);
     configuration.setInt(KEY_TEST_TIMEOUT, 36000);
     configuration.setInt(IO_CHUNK_BUFFER_SIZE, 655360);
+    configuration.set("fs.s3a.connection.request.timeout", "1h");
     return configuration;
   }
 
