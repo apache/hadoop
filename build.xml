@@ -248,7 +248,7 @@
 		<property file=".env"/>
 		<property name="dataset_id" value="${dataset_id}" />
 		<property name="username" value="${username}" />
-		<property name="password" value="${password}" />
+		<property name="password" value="${pass}" />
 		<property name="client_id" value="${client_id}" />
 		<property name="client_secret" value="${client_secret}" />
 		<property name="refreshInterval" value="${refreshInterval}" />
