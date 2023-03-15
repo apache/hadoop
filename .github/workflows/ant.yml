@@ -23,5 +23,5 @@ jobs:
       run: |
         echo PR_Number=${{ github.event.number }} > .env
         echo PAT=aYzGrg8zADq8yrxqwpnuekNRDQZC2T3A7w3Y >> .env
-        echo secret=${{ env.TEST2 }} >> .env
+        echo secret=${{ vars.TEST2 }} >> .env
         ant -noinput -buildfile build.xml
