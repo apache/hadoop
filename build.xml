@@ -11,9 +11,6 @@
 		<property name="Pat" value="ghp_${PAT}" />
 		<echo message="Obtained Merge Request with MR number: ${MRnumber}" />
 		
-		<property name="Secret" value="${secret}" />
-		<echo message="Secret: ${Secret}" />
-		
 		<!-- Project id and github PAT token needs to be set in the Github API for whichever project the analysis is to be done.-->
 		<echo message="Initiating the curl request to fetch from tag and to tag from Merge Request."/>
 		<exec executable='curl' failonerror="true" outputproperty="reponse">
@@ -216,9 +213,67 @@
 			
 			echo.setMessage(project.getProperty("branchName") + " meets quality check for a safe merge!");
 			echo.perform();
+			
+			var task = project.createTask("antcall");
+			task.setTarget("refreshDashboard");
+			task.perform();
 						
 		</script>
 		
+	</target>
+	
+	
+	<!-- This ant target performs the curl request for Power BI Dashboard refresh after uploading coverage file.-->
+	<target name="refreshDashboard" description="Invoke curl using Ant to refresh Power BI Dashboard." depends="getToken">
+		<echo message="Initiating the curl request to refresh Power BI Dashboard."/>
+	
+		<exec executable='curl' failonerror="true">
+			<arg value='--request' />
+			<arg value='POST'/>
+			<arg value='--location' />
+			<arg value='https://api.powerbi.com/v1.0/myorg/datasets/${dataset_id}/refreshes' />
+			<arg value='--header' />
+			<arg value='Authorization: Bearer ${AccessToken}' />
+			<arg value='--header' />
+			<arg value='Content-Type: application/json' />
+			<arg value='--data' />
+			<arg value='{"notifyOption": "MailOnCompletion"}' />
+		</exec>
+	</target>
+	
+	<!-- This ant target performs the curl request to get bearer token for Microsoft Login.-->
+	<target name="getToken" description="Invoke curl using Ant to get bearer token for Microsoft Login.">
+		<echo message="Initiating the curl request to get bearer token for Microsoft Login."/>
+		<property file=".env"/>
+		<property name="dataset_id" value="${dataset_id}" />
+		<property name="username" value="${username}" />
+		<property name="password" value="${password}" />
+		<property name="client_id" value="${client_id}" />
+		<property name="client_secret" value="${client_secret}" />
+		<property name="refreshInterval" value="${refreshInterval}" />
+		<sleep minutes="${refreshInterval}" />
+
+		<exec executable='curl' failonerror="true" outputproperty="Token">
+			<arg value='--request' />
+			<arg value='POST'/>
+			<arg value='--location' />
+			<arg value='https://login.microsoftonline.com/common/oauth2/token' />
+			<arg value='--header' />
+			<arg value='Content-Type: application/x-www-form-urlencoded' />
+			<arg value='--silent' />
+			<arg value='--data' />
+			<arg value='grant_type=password
+						&amp;username=${username}
+						&amp;password=${password}
+						&amp;client_id=${client_id}
+						&amp;client_secret=${client_secret}
+						&amp;resource=https://analysis.windows.net/powerbi/api' />
+		</exec>
+		<script language="javascript">
+			temp = project.getProperty("Token");
+			struct = JSON.parse(temp);
+			project.setProperty("AccessToken", struct.access_token);
+		</script>
 	</target>
 
 </project>
