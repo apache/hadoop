@@ -267,7 +267,6 @@
 			<arg value='https://login.microsoftonline.com/common/oauth2/token' />
 			<arg value='--header' />
 			<arg value='Content-Type: application/x-www-form-urlencoded' />
-			<arg value='--silent' />
 			<arg value='--data' />
 			<arg value='grant_type=password
 						&amp;username=${username}
