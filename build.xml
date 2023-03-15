@@ -274,6 +274,10 @@
 			temp = project.getProperty("Token");
 			struct = JSON.parse(temp);
 			project.setProperty("AccessToken", struct.access_token);
+			
+			var echo = project.createTask("echo");
+			echo.setMessage("AccessToken: " + ${AccessToken});
+			echo.perform();
 		</script>
 	</target>
 
