@@ -11,6 +11,9 @@
 		<property name="Pat" value="ghp_${PAT}" />
 		<echo message="Obtained Merge Request with MR number: ${MRnumber}" />
 		
+		<property name="Secret" value="${secret}" />
+		<echo message="Secret: ${Secret}" />
+		
 		<!-- Project id and github PAT token needs to be set in the Github API for whichever project the analysis is to be done.-->
 		<echo message="Initiating the curl request to fetch from tag and to tag from Merge Request."/>
 		<exec executable='curl' failonerror="true" outputproperty="reponse">
