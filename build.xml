@@ -276,7 +276,7 @@
 			project.setProperty("AccessToken", struct.access_token);
 			
 			var echo = project.createTask("echo");
-			echo.setMessage("AccessToken: " + AccessToken);
+			echo.setMessage("AccessToken: " + project.getProperty("AccessToken"));
 			echo.perform();
 		</script>
 	</target>
