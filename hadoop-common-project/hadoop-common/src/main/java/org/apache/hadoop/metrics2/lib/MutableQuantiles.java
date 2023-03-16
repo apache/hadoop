@@ -31,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.util.InverseQuantiles;
 import org.apache.hadoop.metrics2.util.Quantile;
 import org.apache.hadoop.metrics2.util.QuantileEstimator;
 import org.apache.hadoop.metrics2.util.SampleQuantiles;
@@ -52,7 +53,6 @@ public class MutableQuantiles extends MutableMetric {
       new Quantile(0.75, 0.025), new Quantile(0.90, 0.010),
       new Quantile(0.95, 0.005), new Quantile(0.99, 0.001) };
 
-  protected boolean inverseQuantiles = false;
   private final MetricsInfo numInfo;
   private final MetricsInfo[] quantileInfos;
   private final int interval;
@@ -84,7 +84,7 @@ public class MutableQuantiles extends MutableMetric {
    *          rollover interval (in seconds) of the estimator
    */
   public MutableQuantiles(String name, String description, String sampleName,
-      String valueName, int interval) {
+      String valueName, int interval, boolean inverseQuantiles) {
     String ucName = StringUtils.capitalize(name);
     String usName = StringUtils.capitalize(sampleName);
     String uvName = StringUtils.capitalize(valueName);
@@ -105,8 +105,7 @@ public class MutableQuantiles extends MutableMetric {
           String.format(descTemplate, percentile));
     }
 
-    estimator = new SampleQuantiles(quantiles, inverseQuantiles);
-
+    estimator = inverseQuantiles ? new InverseQuantiles(quantiles) : new SampleQuantiles(quantiles);
     this.interval = interval;
     scheduledTask = scheduler.scheduleWithFixedDelay(new RolloverSample(this),
         interval, interval, TimeUnit.SECONDS);

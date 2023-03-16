@@ -216,15 +216,7 @@ public class MetricsRegistry {
    */
   public synchronized MutableQuantiles newQuantiles(String name, String desc,
       String sampleName, String valueName, int interval) {
-    checkMetricName(name);
-    if (interval <= 0) {
-      throw new MetricsException("Interval should be positive.  Value passed" +
-          " is: " + interval);
-    }
-    MutableQuantiles ret =
-        new MutableQuantiles(name, desc, sampleName, valueName, interval);
-    metricsMap.put(name, ret);
-    return ret;
+      return newQuantiles(name, desc, sampleName, valueName, interval, false);
   }
 
   /**
@@ -238,11 +230,16 @@ public class MetricsRegistry {
    * @return a new quantile estimator object
    * @throws MetricsException if interval is not a positive integer
    */
-  public synchronized MutableQuantiles newQuantiles(String name, String desc, String sampleName, 
-                                                    String valueName, int interval, boolean inverseQuantiles) {
-      MutableQuantiles ret = newQuantiles(name, desc, sampleName, valueName, interval);
-      ret.inverseQuantiles = inverseQuantiles;
-      return ret;
+  public synchronized MutableQuantiles newQuantiles(String name, String desc, String sampleName, String valueName, 
+                                                    int interval, boolean inverseQuantiles) {
+    checkMetricName(name);
+    if (interval <= 0) {
+      throw new MetricsException("Interval should be positive. Value passed is: " + interval);
+    }
+    MutableQuantiles ret =
+        new MutableQuantiles(name, desc, sampleName, valueName, interval, inverseQuantiles);
+    metricsMap.put(name, ret);
+    return ret;
   }
 
   /**

@@ -39,7 +39,7 @@ public class TestSampleQuantiles {
 
   @Before
   public void init() {
-    estimator = new SampleQuantiles(quantiles, false);
+    estimator = new SampleQuantiles(quantiles);
   }
 
   /**
@@ -121,7 +121,7 @@ public class TestSampleQuantiles {
   
   @Test
   public void testInverseQuantiles() {
-      SampleQuantiles estimatorWithInverseQuantiles = new SampleQuantiles(quantiles, true);
+      SampleQuantiles estimatorWithInverseQuantiles = new InverseQuantiles(quantiles);
       final int count = 100000;
       Random r = new Random(0xDEADDEAD);
       Long[] values = new Long[count];

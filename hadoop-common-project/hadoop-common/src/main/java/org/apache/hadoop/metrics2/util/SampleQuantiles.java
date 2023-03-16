@@ -52,12 +52,12 @@ public class SampleQuantiles implements QuantileEstimator {
   /**
    * Total number of items in stream
    */
-  private long count = 0;
+  long count = 0;
 
   /**
    * Current list of sampled items, maintained in sorted order with error bounds
    */
-  private LinkedList<SampleItem> samples;
+  LinkedList<SampleItem> samples;
 
   /**
    * Buffers incoming items to be inserted in batch. Items are inserted into 
@@ -71,11 +71,9 @@ public class SampleQuantiles implements QuantileEstimator {
    * Array of Quantiles that we care about, along with desired error.
    */
   private final Quantile quantiles[];
-  private boolean inverseQuantiles;
 
-  public SampleQuantiles(Quantile[] quantiles, boolean inverseQuantiles) {
+  public SampleQuantiles(Quantile[] quantiles) {
     this.quantiles = quantiles;
-    this. inverseQuantiles = inverseQuantiles;
     this.samples = new LinkedList<SampleItem>();
   }
 
@@ -89,7 +87,7 @@ public class SampleQuantiles implements QuantileEstimator {
    * @param rank
    *          the index in the list of samples
    */
-  private double allowableError(int rank) {
+  double allowableError(int rank) {
     int size = samples.size();
     double minError = size + 1;
     for (Quantile q : quantiles) {
@@ -202,10 +200,10 @@ public class SampleQuantiles implements QuantileEstimator {
   /**
    * Get the estimated value at the specified quantile.
    * 
-   * @param quantile Queried quantile, e.g. 0.01, 0.50 or 0.99.
+   * @param quantile Queried quantile, e.g. 0.50 or 0.99.
    * @return Estimated value at that quantile.
    */
-  private long query(double quantile) {
+  long query(double quantile) {
     Preconditions.checkState(!samples.isEmpty(), "no data in estimator");
 
     int rankMin = 0;
@@ -245,12 +243,7 @@ public class SampleQuantiles implements QuantileEstimator {
     
     Map<Quantile, Long> values = new TreeMap<Quantile, Long>();
     for (int i = 0; i < quantiles.length; i++) {
-      /* eg : effectiveQuantile for 0.99 with inverseQuantiles will be 0.01. 
-      For inverse quantiles higher numeric value is better and hence we want 
-      to query from the opposite end of the sorted sample
-       */
-      double effectiveQuantile = inverseQuantiles ? 1 - quantiles[i].quantile : quantiles[i].quantile;
-      values.put(quantiles[i], query(effectiveQuantile));
+      values.put(quantiles[i], query(quantiles[i].quantile));
     }
 
     return values;
@@ -298,7 +291,7 @@ public class SampleQuantiles implements QuantileEstimator {
    * Describes a measured value passed to the estimator, tracking additional
    * metadata required by the CKMS algorithm.
    */
-  private static class SampleItem {
+  static class SampleItem {
     
     /**
      * Value of the sampled item (e.g. a measured latency value)
