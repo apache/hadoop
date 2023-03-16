@@ -1305,7 +1305,7 @@ public class TestDistCpSync {
       new DistCp(conf, OptionsParser.parse(args)).execute();
     } catch (Exception e) {
       // can expect other exceptions as source and target paths
-      // are not created, assert if the exception is not arising
+      // are not created, assert that the exception is not arising
       // due to the filesystem not supporting snapshots.
       Assert.assertFalse(e.getMessage().contains("does not support snapshot"));
     }

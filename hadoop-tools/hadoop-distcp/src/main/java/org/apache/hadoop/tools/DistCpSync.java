@@ -161,20 +161,32 @@ class DistCpSync {
     if (!srcFs.hasPathCapability(sourceDir,
         CommonPathCapabilities.FS_SNAPSHOTS)) {
       throw new IllegalArgumentException(
-          "The source file system " + srcFs.getScheme() + " does not support snapshot.");
+          "The source file system " + srcFs.getScheme()
+              + " does not support snapshot.");
     }
     if (!tgtFs.hasPathCapability(targetDir,
         CommonPathCapabilities.FS_SNAPSHOTS)) {
       throw new IllegalArgumentException(
-          "The target file system " + tgtFs.getScheme() + " does not support snapshot.");
+          "The target file system " + tgtFs.getScheme()
+              + " does not support snapshot.");
     }
     try {
       getSnapshotDiffReportMethod(srcFs);
+    } catch (NoSuchMethodException e) {
+      throw new IllegalArgumentException(
+          "The source file system " + srcFs.getScheme()
+              + " does not support getSnapshotDiffReport",
+          e);
+    }
+    try {
       getSnapshotDiffReportMethod(tgtFs);
     } catch (NoSuchMethodException e) {
       throw new IllegalArgumentException(
-          "The file system does not support getSnapshotDiffReport", e);
+          "The target file system " + tgtFs.getScheme()
+              + " does not support getSnapshotDiffReport",
+          e);
     }
+
   }
 
   public boolean sync() throws IOException {
