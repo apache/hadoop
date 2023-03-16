@@ -56,7 +56,7 @@
 			<arg value='--header' />
 			<arg value='Authorization: Basic YWRtaW46aW5zaWdodEBPcHNIdWI=' />
 			<arg value='--form' />
-			<arg value='files=@jacoco.xml' />
+			<arg value='files=@jacoco_low.xml' />
 			<arg value='--form' />
 			<arg value='files=@jacoco_2.xml' />
 			<arg value='--form' />
