@@ -1307,7 +1307,8 @@ public class TestDistCpSync {
       // can expect other exceptions as source and target paths
       // are not created, assert that the exception is not arising
       // due to the filesystem not supporting snapshots.
-      Assert.assertFalse(e.getMessage().contains("does not support snapshot"));
+      Assert.assertFalse(e.getMessage().contains("does not support snapshot")
+          || e.getMessage().contains("does not support getSnapshotDiffReport"));
     }
   }
 

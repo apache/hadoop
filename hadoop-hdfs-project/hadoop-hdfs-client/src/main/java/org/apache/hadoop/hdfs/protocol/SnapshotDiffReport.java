@@ -254,11 +254,6 @@ public class SnapshotDiffReport {
   }
 
   /** @return {@link #toSnapshot} */
-  public String getToSnapshot() {
-    return toSnapshot;
-  }
-
-  /** @return {@link #toSnapshot} */
   public String getLaterSnapshotName() {
     return toSnapshot;
   }
