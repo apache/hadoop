@@ -568,6 +568,16 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed getBulkActivitie call");
       metrics.incrGetBulkActivitiesFailedRetrieved();
     }
+
+    public void getSchedulerConfigurationFailed() {
+      LOG.info("Mocked: failed getSchedulerConfiguration call");
+      metrics.incrGetSchedulerConfigurationFailedRetrieved();
+    }
+
+    public void updateSchedulerConfigurationFailedRetrieved() {
+      LOG.info("Mocked: failed updateSchedulerConfiguration call");
+      metrics.incrUpdateSchedulerConfigurationFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -837,6 +847,16 @@ public class TestRouterMetrics {
     public void addToClusterNodeLabelsRetrieved(long duration) {
       LOG.info("Mocked: successful AddToClusterNodeLabels call with duration {}", duration);
       metrics.succeededAddToClusterNodeLabelsRetrieved(duration);
+    }
+
+    public void getSchedulerConfigurationRetrieved(long duration) {
+      LOG.info("Mocked: successful GetSchedulerConfiguration call with duration {}", duration);
+      metrics.succeededGetSchedulerConfigurationRetrieved(duration);
+    }
+
+    public void getUpdateSchedulerConfigurationRetrieved(long duration) {
+      LOG.info("Mocked: successful UpdateSchedulerConfiguration call with duration {}", duration);
+      metrics.succeededUpdateSchedulerConfigurationRetrieved(duration);
     }
   }
 
@@ -1847,5 +1867,51 @@ public class TestRouterMetrics {
         metrics.getNumSucceededAddToClusterNodeLabelsRetrieved());
     Assert.assertEquals(225,
         metrics.getLatencySucceededAddToClusterNodeLabelsRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetSchedulerConfigurationRetrievedFailed() {
+    long totalBadBefore = metrics.getSchedulerConfigurationFailedRetrieved();
+    badSubCluster.getSchedulerConfigurationFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getSchedulerConfigurationFailedRetrieved());
+  }
+
+  @Test
+  public void testGetSchedulerConfigurationRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetSchedulerConfigurationRetrieved();
+    goodSubCluster.getSchedulerConfigurationRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetSchedulerConfigurationRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetSchedulerConfigurationRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getSchedulerConfigurationRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetSchedulerConfigurationRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetSchedulerConfigurationRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testUpdateSchedulerConfigurationRetrievedFailed() {
+    long totalBadBefore = metrics.getUpdateSchedulerConfigurationFailedRetrieved();
+    badSubCluster.updateSchedulerConfigurationFailedRetrieved();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getUpdateSchedulerConfigurationFailedRetrieved());
+  }
+
+  @Test
+  public void testUpdateSchedulerConfigurationRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededUpdateSchedulerConfigurationRetrieved();
+    goodSubCluster.getUpdateSchedulerConfigurationRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededUpdateSchedulerConfigurationRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededUpdateSchedulerConfigurationRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getUpdateSchedulerConfigurationRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededUpdateSchedulerConfigurationRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededUpdateSchedulerConfigurationRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 }

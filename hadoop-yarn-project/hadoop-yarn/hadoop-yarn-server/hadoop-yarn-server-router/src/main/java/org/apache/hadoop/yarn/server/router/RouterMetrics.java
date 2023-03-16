@@ -159,6 +159,10 @@ public final class RouterMetrics {
   private MutableGaugeInt numAddToClusterNodeLabelsFailedRetrieved;
   @Metric("# of removeFromClusterNodeLabels failed to be retrieved")
   private MutableGaugeInt numRemoveFromClusterNodeLabelsFailedRetrieved;
+  @Metric("# of numUpdateSchedulerConfiguration failed to be retrieved")
+  private MutableGaugeInt numUpdateSchedulerConfigurationFailedRetrieved;
+  @Metric("# of numGetSchedulerConfiguration failed to be retrieved")
+  private MutableGaugeInt numGetSchedulerConfigurationFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -279,6 +283,10 @@ public final class RouterMetrics {
   private MutableRate totalSucceededAddToClusterNodeLabelsRetrieved;
   @Metric("Total number of successful Retrieved RemoveFromClusterNodeLabels and latency(ms)")
   private MutableRate totalSucceededRemoveFromClusterNodeLabelsRetrieved;
+  @Metric("Total number of successful Retrieved updateSchedulerConfiguration and latency(ms)")
+  private MutableRate totalSucceededUpdateSchedulerConfigurationRetrieved;
+  @Metric("Total number of successful Retrieved getSchedulerConfiguration and latency(ms)")
+  private MutableRate totalSucceededGetSchedulerConfigurationRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -342,6 +350,8 @@ public final class RouterMetrics {
   private MutableQuantiles replaceLabelsOnNodeLatency;
   private MutableQuantiles addToClusterNodeLabelsLatency;
   private MutableQuantiles removeFromClusterNodeLabelsLatency;
+  private MutableQuantiles updateSchedulerConfigurationLatency;
+  private MutableQuantiles getSchedulerConfigurationLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
@@ -551,6 +561,12 @@ public final class RouterMetrics {
 
     removeFromClusterNodeLabelsLatency = registry.newQuantiles("removeFromClusterNodeLabelsLatency",
         "latency of remove cluster nodelabels timeouts", "ops", "latency", 10);
+
+    updateSchedulerConfigurationLatency = registry.newQuantiles("updateSchedulerConfigurationLatency",
+        "latency of update scheduler configuration timeouts", "ops", "latency", 10);
+
+    getSchedulerConfigurationLatency = registry.newQuantiles("getSchedulerConfigurationLatency",
+        "latency of get scheduler configuration timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -848,6 +864,16 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededUpdateSchedulerConfigurationRetrieved() {
+    return totalSucceededUpdateSchedulerConfigurationRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetSchedulerConfigurationRetrieved() {
+    return totalSucceededGetSchedulerConfigurationRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public long getNumSucceededRefreshSuperUserGroupsConfigurationRetrieved() {
     return totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.lastStat().numSamples();
   }
@@ -1138,6 +1164,16 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededUpdateSchedulerConfigurationRetrieved() {
+    return totalSucceededUpdateSchedulerConfigurationRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetSchedulerConfigurationRetrieved() {
+    return totalSucceededGetSchedulerConfigurationRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededRefreshSuperUserGroupsConfigurationRetrieved() {
     return totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.lastStat().mean();
   }
@@ -1380,6 +1416,14 @@ public final class RouterMetrics {
 
   public int getNumRemoveFromClusterNodeLabelsFailedRetrieved() {
     return numRemoveFromClusterNodeLabelsFailedRetrieved.value();
+  }
+
+  public int getUpdateSchedulerConfigurationFailedRetrieved() {
+    return numUpdateSchedulerConfigurationFailedRetrieved.value();
+  }
+
+  public int getSchedulerConfigurationFailedRetrieved() {
+    return numGetSchedulerConfigurationFailedRetrieved.value();
   }
 
   public int getDelegationTokenFailedRetrieved() {
@@ -1685,6 +1729,16 @@ public final class RouterMetrics {
     removeFromClusterNodeLabelsLatency.add(duration);
   }
 
+  public void succeededUpdateSchedulerConfigurationRetrieved(long duration) {
+    totalSucceededUpdateSchedulerConfigurationRetrieved.add(duration);
+    updateSchedulerConfigurationLatency.add(duration);
+  }
+
+  public void succeededGetSchedulerConfigurationRetrieved(long duration) {
+    totalSucceededGetSchedulerConfigurationRetrieved.add(duration);
+    getSchedulerConfigurationLatency.add(duration);
+  }
+
   public void succeededRefreshSuperUserGroupsConfRetrieved(long duration) {
     totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.add(duration);
     refreshSuperUserGroupsConfLatency.add(duration);
@@ -1903,6 +1957,14 @@ public final class RouterMetrics {
 
   public void incrRemoveFromClusterNodeLabelsFailedRetrieved() {
     numRemoveFromClusterNodeLabelsFailedRetrieved.incr();
+  }
+
+  public void incrUpdateSchedulerConfigurationFailedRetrieved() {
+    numUpdateSchedulerConfigurationFailedRetrieved.incr();
+  }
+
+  public void incrGetSchedulerConfigurationFailedRetrieved() {
+    numGetSchedulerConfigurationFailedRetrieved.incr();
   }
 
   public void incrGetDelegationTokenFailedRetrieved() {
