@@ -257,7 +257,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     // Sets the httpOperation for the rest operation.
     Mockito.doReturn(abfsHttpOperation)
         .when(op)
-        .getHttpOperation(Mockito.any(), Mockito.any(), Mockito.any());
+        .createHttpOperation();
     return op;
   }
 
@@ -285,7 +285,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
   public void testExpectHundredContinue() throws Exception {
     // Gets the AbfsRestOperation.
     AbfsRestOperation op = getRestOperation();
-    AbfsHttpOperation httpOperation = op.getHttpOperation(Mockito.any(), Mockito.any(), Mockito.any());
+    AbfsHttpOperation httpOperation = op.createHttpOperation();
 
     TracingContext tracingContext = Mockito.spy(new TracingContext("abcd",
         "abcde", FSOperationType.APPEND,

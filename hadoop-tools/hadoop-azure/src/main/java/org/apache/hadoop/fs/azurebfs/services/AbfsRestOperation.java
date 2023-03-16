@@ -25,6 +25,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -250,19 +251,6 @@ public class AbfsRestOperation {
   }
 
   /**
-   * Returns a new object of AbfsHttpOperation.
-   * @param url The url for the operation.
-   * @param method The http method.
-   * @param requestHeaders The request headers for the operation.
-   * @return AbfsHttpOperation object.
-   * @throws IOException
-   */
-  AbfsHttpOperation getHttpOperation(final URL url, final String method,
-      final List<AbfsHttpHeader> requestHeaders) throws IOException {
-    return new AbfsHttpOperation(url, method, requestHeaders);
-  }
-
-  /**
    * Executes a single HTTP operation to complete the REST operation.  If it
    * fails, there may be a retry.  The retryCount is incremented with each
    * attempt.
@@ -273,7 +261,7 @@ public class AbfsRestOperation {
 
     try {
       // initialize the HTTP request and open the connection
-      httpOperation = getHttpOperation(url, method, requestHeaders);
+      httpOperation = createHttpOperation();
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
       tracingContext.constructHeader(httpOperation);
 
@@ -370,6 +358,15 @@ public class AbfsRestOperation {
     result = httpOperation;
 
     return true;
+  }
+
+  /**
+   * Creates new object of {@link AbfsHttpOperation} with the url, method, and
+   * requestHeaders fields of the AbfsRestOperation object.
+   */
+  @VisibleForTesting
+  AbfsHttpOperation createHttpOperation() throws IOException {
+    return new AbfsHttpOperation(url, method, requestHeaders);
   }
 
   /**

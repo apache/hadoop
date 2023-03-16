@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.regex.Pattern;
 
+import org.assertj.core.api.AbstractBooleanAssert;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -551,7 +552,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     // Sets the httpOperation for the rest operation.
     Mockito.doReturn(abfsHttpOperation)
         .when(op)
-        .getHttpOperation(Mockito.any(), Mockito.any(), Mockito.any());
+        .createHttpOperation();
 
     // Mock the restOperation for the client.
     Mockito.doReturn(op)
@@ -566,7 +567,9 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         TracingHeaderFormat.ALL_ID_FORMAT, null));
 
     // Check that expect header is enabled before the append call.
-    assertTrue(appendRequestParameters.isExpectHeaderEnabled());
+    Assertions.assertThat(appendRequestParameters.isExpectHeaderEnabled())
+            .describedAs("The expect header is not true before the append call")
+            .isTrue();
 
     intercept(AzureBlobFileSystemException.class,
         () -> testClient.append(finalTestPath, buffer, appendRequestParameters, null, tracingContext));
@@ -577,6 +580,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         .isEqualTo(0);
 
     // Verify that the same request was retried with expect header disabled.
-    assertFalse(appendRequestParameters.isExpectHeaderEnabled());
+    Assertions.assertThat(appendRequestParameters.isExpectHeaderEnabled())
+            .describedAs("The expect header is not false")
+            .isFalse();
   }
 }
