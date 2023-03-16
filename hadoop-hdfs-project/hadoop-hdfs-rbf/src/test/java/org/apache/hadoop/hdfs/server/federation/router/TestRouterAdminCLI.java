@@ -433,10 +433,13 @@ public class TestRouterAdminCLI {
     // remove an invalid mount table
     String invalidPath = "/invalid";
     System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
     argv = new String[] {"-rm", invalidPath};
-    assertEquals(0, ToolRunner.run(admin, argv));
+    assertEquals(-1, ToolRunner.run(admin, argv));
     assertTrue(out.toString().contains(
         "Cannot remove mount point " + invalidPath));
+    assertEquals("DFS Router Admin should report error for failure to remove mount point",
+        "Failed to remove mount point " + invalidPath + "\n", err.toString());
   }
 
   @Test

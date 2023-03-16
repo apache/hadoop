@@ -369,6 +369,9 @@ public class RouterAdmin extends Configured implements Tool {
           try {
             if (removeMount(argv[i])) {
               System.out.println("Successfully removed mount point " + argv[i]);
+            } else {
+              exitCode = -1;
+              System.err.println("Failed to remove mount point " + argv[i]);
             }
           } catch (IOException e) {
             exitCode = -1;
