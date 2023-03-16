@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.regex.Pattern;
 
-import org.assertj.core.api.AbstractBooleanAssert;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
