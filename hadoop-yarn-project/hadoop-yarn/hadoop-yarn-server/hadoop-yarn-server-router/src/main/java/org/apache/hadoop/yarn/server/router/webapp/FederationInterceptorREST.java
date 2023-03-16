@@ -2952,6 +2952,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           federationConfInfo.getErrorMsgs().add(errorMsg);
         } else if (response.getStatus() == Status.OK.getStatusCode()) {
           ConfInfo fedConfInfo = ConfInfo.class.cast(response.getEntity());
+          fedConfInfo.setSubClusterId(subClusterId.getId());
           federationConfInfo.getList().add(fedConfInfo);
         }
       });

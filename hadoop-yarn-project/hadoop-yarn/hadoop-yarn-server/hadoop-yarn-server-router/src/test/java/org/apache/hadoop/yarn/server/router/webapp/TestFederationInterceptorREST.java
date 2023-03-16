@@ -123,6 +123,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDelet
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeAllocationInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationConfInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
@@ -132,6 +133,7 @@ import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
+import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -165,6 +167,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   private final static int NUM_SUBCLUSTER = 4;
   private static final int BAD_REQUEST = 400;
   private static final int ACCEPTED = 202;
+  private static final int OK = 200;
   private static String user = "test-user";
   private TestableFederationInterceptorREST interceptor;
   private MemoryFederationStateStore stateStore;
@@ -2126,5 +2129,24 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     oldNodeLabels1.add("A1");
     LambdaTestUtils.intercept(YarnRuntimeException.class, "removeFromClusterNodeLabels Error",
         () -> interceptor.removeFromClusterNodeLabels(oldNodeLabels1, null));
+  }
+
+  @Test
+  public void testGetSchedulerConfiguration() throws Exception {
+    Response response = interceptor.getSchedulerConfiguration(null);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(OK, response.getStatus());
+
+    Object entity = response.getEntity();
+    Assert.assertNotNull(entity);
+    Assert.assertTrue(entity instanceof FederationConfInfo);
+
+    FederationConfInfo federationConfInfo = FederationConfInfo.class.cast(entity);
+    List<ConfInfo> confInfos = federationConfInfo.getList();
+    Assert.assertNotNull(confInfos);
+    Assert.assertEquals(4, confInfos.size());
+
+    List<String> errorMsgs = federationConfInfo.getErrorMsgs();
+    Assert.assertEquals(0, errorMsgs.size());
   }
 }
