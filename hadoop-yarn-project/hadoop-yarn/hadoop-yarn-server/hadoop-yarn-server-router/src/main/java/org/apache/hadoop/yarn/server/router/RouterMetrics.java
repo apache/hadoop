@@ -350,7 +350,7 @@ public final class RouterMetrics {
   private MutableQuantiles replaceLabelsOnNodeLatency;
   private MutableQuantiles addToClusterNodeLabelsLatency;
   private MutableQuantiles removeFromClusterNodeLabelsLatency;
-  private MutableQuantiles updateSchedulerConfigurationLatency;
+  private MutableQuantiles updateSchedulerConfigLatency;
   private MutableQuantiles getSchedulerConfigurationLatency;
 
   private static volatile RouterMetrics instance = null;
@@ -562,7 +562,7 @@ public final class RouterMetrics {
     removeFromClusterNodeLabelsLatency = registry.newQuantiles("removeFromClusterNodeLabelsLatency",
         "latency of remove cluster nodelabels timeouts", "ops", "latency", 10);
 
-    updateSchedulerConfigurationLatency = registry.newQuantiles("updateSchedulerConfigurationLatency",
+    updateSchedulerConfigLatency = registry.newQuantiles("updateSchedulerConfigurationLatency",
         "latency of update scheduler configuration timeouts", "ops", "latency", 10);
 
     getSchedulerConfigurationLatency = registry.newQuantiles("getSchedulerConfigurationLatency",
@@ -1731,7 +1731,7 @@ public final class RouterMetrics {
 
   public void succeededUpdateSchedulerConfigurationRetrieved(long duration) {
     totalSucceededUpdateSchedulerConfigurationRetrieved.add(duration);
-    updateSchedulerConfigurationLatency.add(duration);
+    updateSchedulerConfigLatency.add(duration);
   }
 
   public void succeededGetSchedulerConfigurationRetrieved(long duration) {

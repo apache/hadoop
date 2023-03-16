@@ -855,12 +855,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * @return subClusterInfo.
    * @throws NotFoundException If the subclusters cannot be found.
    */
-  private SubClusterInfo getActiveSubcluster(String subClusterId)
+  private SubClusterInfo getActiveSubCluster(String subClusterId)
       throws NotFoundException {
     try {
+      SubClusterId pSubClusterId = SubClusterId.newInstance(subClusterId);
       Map<SubClusterId, SubClusterInfo> subClusterInfoMap =
           federationFacade.getSubClusters(true);
-      SubClusterInfo subClusterInfo = subClusterInfoMap.get(subClusterId);
+      SubClusterInfo subClusterInfo = subClusterInfoMap.get(pSubClusterId);
       if (subClusterInfo == null) {
         throw new NotFoundException(subClusterId + " not found.");
       }
@@ -2895,7 +2896,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     // Get the subClusterInfo , then update the scheduler configuration.
     try {
       long startTime = clock.getTime();
-      SubClusterInfo subClusterInfo = getActiveSubcluster(pSubClusterId);
+      SubClusterInfo subClusterInfo = getActiveSubCluster(pSubClusterId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       Response response = interceptor.updateSchedulerConfiguration(mutationInfo, hsr);
