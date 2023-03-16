@@ -88,7 +88,7 @@
 				
 				// Call the checkDynamicStatus target to check if the uploaded file is processed or not.
 				// As the status will be dynamically checked, set a timeout and sleep time for checking status.
-				project.setProperty("sleepMinutes",1);
+				project.setProperty("sleepseconds",30);
 				project.setProperty("timeout", 10);
 				project.setProperty("apiCallCounter", 0);
 				
@@ -103,7 +103,7 @@
 		<target name="checkDynamicStatus" description="Invoke curl using Ant to check the status of the event.">
 		
 			<echo message="Waiting for ${sleepMinutes} minute(s) file to get processed..." />
-			<sleep minutes="${sleepMinutes}" />
+			<sleep seconds="${sleepSeconds}" />
 			
 			<script language="javascript">
 			
@@ -208,6 +208,9 @@
 
 			// Build fails on not meeting criteria
 			if( parseInt(parsedJsonResponse.cumulativeCccDetails.changedCodeCoveragePercentage,10) &lt; parseInt(project.getProperty("threshold"),10) || parseInt(parsedJsonResponse.cumulativeCccDetails.commitFilesBelowCCCThreshold,10) != 0 ) {
+				var task = project.createTask("antcall");
+				task.setTarget("refreshDashboard");
+				task.perform();
 				throw new Error("MR blocked . This merge request does not meet quality checks. ");
 			}
 			
@@ -258,7 +261,6 @@
 		<echo message="client_id: ${client_id}" />
 		<echo message="client_secret: ${client_secret}" />
 		<echo message="refreshInterval: ${refreshInterval}" />
-		<sleep minutes="1" />
 
 		<exec executable='curl' failonerror="true" outputproperty="Token">
 			<arg value='--request' />
