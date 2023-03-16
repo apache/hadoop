@@ -102,7 +102,7 @@
 	
 		<target name="checkDynamicStatus" description="Invoke curl using Ant to check the status of the event.">
 		
-			<echo message="Waiting for ${sleepMinutes} minute(s) file to get processed..." />
+			<echo message="Waiting for ${sleepSeconds} minute(s) file to get processed..." />
 			<sleep seconds="${sleepSeconds}" />
 			
 			<script language="javascript">
