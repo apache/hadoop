@@ -64,7 +64,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 
 @RunWith(Parameterized.class)
-public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
+public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
 
   // Specifies whether getOutputStream() or write() throws IOException.
   public enum ErrorType {OUTPUTSTREAM, WRITE};
@@ -116,7 +116,7 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     });
   }
 
-  public TestAbfsRestOperation() throws Exception {
+  public ITestAbfsRestOperation() throws Exception {
     super();
   }
 
@@ -156,7 +156,7 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     Mockito.doNothing().when(intercept).updateMetrics(Mockito.any(), Mockito.any());
 
     // Gets the client.
-    AbfsClient testClient = Mockito.spy(TestAbfsClient.createTestClientFromCurrentContext(
+    AbfsClient testClient = Mockito.spy(ITestAbfsClient.createTestClientFromCurrentContext(
         abfsClient,
         abfsConfig));
 
@@ -177,7 +177,7 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     String finalTestPath = testPath.toString().substring(testPath.toString().lastIndexOf("/"));
 
     // Creates a list of request headers.
-    final List<AbfsHttpHeader> requestHeaders = TestAbfsClient.getTestRequestHeaders(testClient);
+    final List<AbfsHttpHeader> requestHeaders = ITestAbfsClient.getTestRequestHeaders(testClient);
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE, HTTP_METHOD_PATCH));
     if (appendRequestParameters.isExpectHeaderEnabled()) {
       requestHeaders.add(new AbfsHttpHeader(EXPECT, HUNDRED_CONTINUE));
@@ -261,6 +261,22 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     return op;
   }
 
+  void assertTraceContextState(int retryCount, int assertRetryCount, int bytesSent, int assertBytesSent,
+                               int expectedBytesSent, int assertExpectedBytesSent) {
+    // Assert that the request is retried or not.
+    Assertions.assertThat(retryCount)
+            .describedAs("The retry count is incorrect")
+            .isEqualTo(assertRetryCount);
+
+    // Assert that metrics will be updated correctly.
+    Assertions.assertThat(bytesSent)
+            .describedAs("The bytes sent is incorrect")
+            .isEqualTo(assertBytesSent);
+    Assertions.assertThat(expectedBytesSent)
+            .describedAs("The expected bytes sent is incorrect")
+            .isEqualTo(assertExpectedBytesSent);
+  }
+
   /**
    * Test the functionalities based on whether getOutputStream() or write()
    * throws exception and what is the corresponding response code.
@@ -283,14 +299,9 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
       intercept(IOException.class,
           () -> op.execute(tracingContext));
 
-      // Assert that the request is retried based on reduced retry count configured.
-      Assertions.assertThat(tracingContext.getRetryCount())
-          .describedAs("The retry count is incorrect")
-          .isEqualTo(REDUCED_RETRY_COUNT);
-
-      // Assert that metrics will be updated correctly.
-      Assertions.assertThat(httpOperation.getBytesSent())
-          .isEqualTo(BUFFER_LENGTH);
+      // Asserting update of metrics and retries.
+      assertTraceContextState(tracingContext.getRetryCount(), REDUCED_RETRY_COUNT, httpOperation.getBytesSent(), BUFFER_LENGTH,
+              0, 0);
       break;
     case OUTPUTSTREAM:
       switch (responseCode) {
@@ -299,16 +310,9 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         intercept(IOException.class,
             () -> op.execute(tracingContext));
 
-        // Assert that the request is retried based on reduced retry count configured.
-        Assertions.assertThat(tracingContext.getRetryCount())
-            .describedAs("The retry count is incorrect")
-            .isEqualTo(REDUCED_RETRY_COUNT);
-
-        // Assert that metrics will be updated correctly.
-        Assertions.assertThat(httpOperation.getBytesSent())
-            .isEqualTo(ZERO);
-        Assertions.assertThat(httpOperation.getExpectedBytesToBeSent())
-            .isEqualTo(BUFFER_LENGTH);
+        // Asserting update of metrics and retries.
+        assertTraceContextState(tracingContext.getRetryCount(), REDUCED_RETRY_COUNT, httpOperation.getBytesSent(), ZERO,
+                httpOperation.getExpectedBytesToBeSent(), BUFFER_LENGTH);
 
         // Verifies that update Metrics call is made for throttle case and for the first without retry +
         // for the retried cases as well.
@@ -320,14 +324,9 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         intercept(IOException.class,
             () -> op.execute(tracingContext));
 
-        // Assert that the request is retried based on reduced retry count configured.
-        Assertions.assertThat(tracingContext.getRetryCount())
-            .describedAs("The retry count is incorrect")
-            .isEqualTo(REDUCED_RETRY_COUNT);
-
-        // Assert that metrics will be updated correctly.
-        Assertions.assertThat(httpOperation.getBytesSent())
-            .isEqualTo(ZERO);
+        // Asserting update of metrics and retries.
+        assertTraceContextState(tracingContext.getRetryCount(), REDUCED_RETRY_COUNT, httpOperation.getBytesSent(),
+                ZERO, 0, 0);
 
         // Verifies that update Metrics call is made for ErrorType case and for the first without retry +
         // for the retried cases as well.
@@ -340,10 +339,9 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         intercept(AzureBlobFileSystemException.class,
             () -> op.execute(tracingContext));
 
-        // Assert that the request is not retried.
-        Assertions.assertThat(tracingContext.getRetryCount())
-            .describedAs("The retry count is incorrect")
-            .isEqualTo(ZERO);
+        // Asserting update of metrics and retries.
+        assertTraceContextState(tracingContext.getRetryCount(), ZERO, 0,
+                0, 0, 0);
 
         // Verifies that update Metrics call is not made for user ErrorType case.
         Mockito.verify(intercept, never())

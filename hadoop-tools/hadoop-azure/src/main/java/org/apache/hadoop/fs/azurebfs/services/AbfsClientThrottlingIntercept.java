@@ -62,7 +62,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
 
   // Hide default constructor
   private AbfsClientThrottlingIntercept(AbfsConfiguration abfsConfiguration) {
-    //Account name is kept as empty as same instance is shared across all accounts.
+    // Account name is kept as empty as same instance is shared across all accounts.
     this.accountName = "";
     this.readThrottler = setAnalyzer("read", abfsConfiguration);
     this.writeThrottler = setAnalyzer("write", abfsConfiguration);
@@ -117,11 +117,11 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
   }
 
   /**
-   * Updates the metrics for the case when getOutputStream() caught an IOException
-   * and response code signifies throttling.
+   * Updates the metrics for the case when response code signifies throttling
+   * but there are some expected bytes to be sent.
    * @param isThrottledOperation returns true if status code is HTTP_UNAVAILABLE
    * @param abfsHttpOperation Used for status code and data transferred.
-   * @return
+   * @return true if the operation is throttled and has some bytes to transfer.
    */
   private boolean updateBytesTransferred(boolean isThrottledOperation,
       AbfsHttpOperation abfsHttpOperation) {
@@ -148,7 +148,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
     boolean isFailedOperation = (status < HttpURLConnection.HTTP_OK
         || status >= HttpURLConnection.HTTP_INTERNAL_ERROR);
 
-    // If status code is 503, it considered a throttled operation.
+    // If status code is 503, it is considered as a throttled operation.
     boolean isThrottledOperation = (status == HTTP_UNAVAILABLE);
 
     switch (operationType) {
@@ -160,7 +160,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
             throttling but there were some expectedBytesToBeSent.
            */
           if (updateBytesTransferred(isThrottledOperation, abfsHttpOperation)) {
-            LOG.debug("Updating metrics due to throttling");
+            LOG.debug("Updating metrics due to throttling for path " + abfsHttpOperation.getConnUrl().getPath());
             contentLength = abfsHttpOperation.getExpectedBytesToBeSent();
           }
         }

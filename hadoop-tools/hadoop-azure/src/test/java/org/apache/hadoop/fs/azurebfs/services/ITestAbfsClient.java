@@ -82,7 +82,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST
  * Test useragent of abfs client.
  *
  */
-public final class TestAbfsClient extends AbstractAbfsIntegrationTest {
+public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   private static final String ACCOUNT_NAME = "bogusAccountName.dfs.core.windows.net";
   private static final String FS_AZURE_USER_AGENT_PREFIX = "Partner Service";
@@ -94,7 +94,7 @@ public final class TestAbfsClient extends AbstractAbfsIntegrationTest {
 
   private final Pattern userAgentStringPattern;
 
-  public TestAbfsClient() throws Exception {
+  public ITestAbfsClient() throws Exception {
     StringBuilder regEx = new StringBuilder();
     regEx.append("^");
     regEx.append(APN_VERSION);
@@ -340,22 +340,22 @@ public final class TestAbfsClient extends AbstractAbfsIntegrationTest {
             abfsConfig.getAccountName().substring(0,
                 abfsConfig.getAccountName().indexOf(DOT)), abfsConfig));
     // override baseurl
-    client = TestAbfsClient.setAbfsClientField(client, "abfsConfiguration",
+    client = ITestAbfsClient.setAbfsClientField(client, "abfsConfiguration",
         abfsConfig);
 
     // override baseurl
-    client = TestAbfsClient.setAbfsClientField(client, "baseUrl",
+    client = ITestAbfsClient.setAbfsClientField(client, "baseUrl",
         baseAbfsClientInstance.getBaseUrl());
 
     // override auth provider
     if (currentAuthType == AuthType.SharedKey) {
-      client = TestAbfsClient.setAbfsClientField(client, "sharedKeyCredentials",
+      client = ITestAbfsClient.setAbfsClientField(client, "sharedKeyCredentials",
           new SharedKeyCredentials(
               abfsConfig.getAccountName().substring(0,
                   abfsConfig.getAccountName().indexOf(DOT)),
               abfsConfig.getStorageAccountKey()));
     } else {
-      client = TestAbfsClient.setAbfsClientField(client, "tokenProvider",
+      client = ITestAbfsClient.setAbfsClientField(client, "tokenProvider",
           abfsConfig.getTokenProvider());
     }
 
@@ -363,7 +363,7 @@ public final class TestAbfsClient extends AbstractAbfsIntegrationTest {
     String userAgent = "APN/1.0 Azure Blob FS/3.4.0-SNAPSHOT (PrivateBuild "
         + "JavaJRE 1.8.0_252; Linux 5.3.0-59-generic/amd64; openssl-1.0; "
         + "UNKNOWN/UNKNOWN) MSFT";
-    client = TestAbfsClient.setAbfsClientField(client, "userAgent", userAgent);
+    client = ITestAbfsClient.setAbfsClientField(client, "userAgent", userAgent);
 
     return client;
   }
@@ -469,7 +469,7 @@ public final class TestAbfsClient extends AbstractAbfsIntegrationTest {
 
     // Gets the client.
     AbfsClient testClient = Mockito.spy(
-        TestAbfsClient.createTestClientFromCurrentContext(
+        ITestAbfsClient.createTestClientFromCurrentContext(
             abfsClient,
             abfsConfig));
 
@@ -489,7 +489,7 @@ public final class TestAbfsClient extends AbstractAbfsIntegrationTest {
 
     // Creates a list of request headers.
     final List<AbfsHttpHeader> requestHeaders
-        = TestAbfsClient.getTestRequestHeaders(testClient);
+        = ITestAbfsClient.getTestRequestHeaders(testClient);
     requestHeaders.add(
         new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE, HTTP_METHOD_PATCH));
     if (appendRequestParameters.isExpectHeaderEnabled()) {
@@ -566,9 +566,7 @@ public final class TestAbfsClient extends AbstractAbfsIntegrationTest {
         TracingHeaderFormat.ALL_ID_FORMAT, null));
 
     // Check that expect header is enabled before the append call.
-    Assertions.assertThat(appendRequestParameters.isExpectHeaderEnabled())
-        .describedAs("The expect header is not true before the append call")
-            .isEqualTo(true);
+    assertTrue(appendRequestParameters.isExpectHeaderEnabled());
 
     intercept(AzureBlobFileSystemException.class,
         () -> testClient.append(finalTestPath, buffer, appendRequestParameters, null, tracingContext));
@@ -579,8 +577,6 @@ public final class TestAbfsClient extends AbstractAbfsIntegrationTest {
         .isEqualTo(0);
 
     // Verify that the same request was retried with expect header disabled.
-    Assertions.assertThat(appendRequestParameters.isExpectHeaderEnabled())
-        .describedAs("The expect header is not false")
-        .isEqualTo(false);
+    assertFalse(appendRequestParameters.isExpectHeaderEnabled());
   }
 }

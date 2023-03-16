@@ -24,6 +24,8 @@ import java.net.HttpURLConnection;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.classification.VisibleForTesting;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
+
 /**
  * Retry policy used by AbfsClient.
  * */
@@ -55,12 +57,6 @@ public class ExponentialRetryPolicy {
    *  The maximum random ratio used for delay interval calculation.
    */
   private static final double MAX_RANDOM_RATIO = 1.2;
-
-  /**
-   * All status codes less than http 100 signify error
-   * and should qualify for retry.
-   */
-  private static final int HTTP_CONTINUE = 100;
 
   /**
    *  Holds the random number generator used to calculate randomized backoff intervals

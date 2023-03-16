@@ -64,6 +64,11 @@ public final class AbfsHttpConstants {
   public static final String HTTP_METHOD_PATCH = "PATCH";
   public static final String HTTP_METHOD_POST = "POST";
   public static final String HTTP_METHOD_PUT = "PUT";
+  /**
+   * All status codes less than http 100 signify error
+   * and should qualify for retry.
+   */
+  public static final int HTTP_CONTINUE = 100;
 
   // Abfs generic constants
   public static final String SINGLE_WHITE_SPACE = " ";

@@ -686,8 +686,13 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperationForAppend(AbfsRestOperationType.Append,
-        HTTP_METHOD_PUT, url, requestHeaders, buffer, reqParams.getoffset(),
-        reqParams.getLength(), sasTokenForReuse);
+            HTTP_METHOD_PUT,
+            url,
+            requestHeaders,
+            buffer,
+            reqParams.getoffset(),
+            reqParams.getLength(),
+            sasTokenForReuse);
     try {
       op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
@@ -702,7 +707,7 @@ public class AbfsClient implements Closeable {
       */
       int responseStatusCode = ((AbfsRestOperationException) e).getStatusCode();
       if (checkUserError(responseStatusCode) && reqParams.isExpectHeaderEnabled()) {
-        LOG.debug("User error, retrying without 100 continue enabled");
+        LOG.debug("User error, retrying without 100 continue enabled for the given path " + path);
         reqParams.setExpectHeaderEnabled(false);
         return this.append(path, buffer, reqParams, cachedSasToken,
             tracingContext);
@@ -715,9 +720,14 @@ public class AbfsClient implements Closeable {
           && appendSuccessCheckOp(op, path,
           (reqParams.getPosition() + reqParams.getLength()), tracingContext)) {
         final AbfsRestOperation successOp = getAbfsRestOperationForAppend(
-            AbfsRestOperationType.Append, HTTP_METHOD_PUT, url, requestHeaders,
-            buffer, reqParams.getoffset(), reqParams.getLength(),
-            sasTokenForReuse);
+                AbfsRestOperationType.Append,
+                HTTP_METHOD_PUT,
+                url,
+                requestHeaders,
+                buffer,
+                reqParams.getoffset(),
+                reqParams.getLength(),
+                sasTokenForReuse);
         successOp.hardSetResult(HttpURLConnection.HTTP_OK);
         return successOp;
       }
@@ -728,7 +738,7 @@ public class AbfsClient implements Closeable {
   }
 
   /**
-   * Returns the rest operation for append
+   * Returns the rest operation for append.
    * @param operationType The AbfsRestOperationType.
    * @param httpMethod specifies the httpMethod.
    * @param url specifies the url.
@@ -737,7 +747,7 @@ public class AbfsClient implements Closeable {
    * @param bufferOffset The buffer offset.
    * @param bufferLength The buffer Length.
    * @param sasTokenForReuse The sasToken.
-   * @return AbfsRestOperation op
+   * @return AbfsRestOperation op.
    */
   @VisibleForTesting
   AbfsRestOperation getAbfsRestOperationForAppend(final AbfsRestOperationType operationType,

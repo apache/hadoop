@@ -37,6 +37,8 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
+
 /**
  * The AbfsRestOperation for Rest AbfsClient.
  */
@@ -60,9 +62,6 @@ public class AbfsRestOperation {
 
   // Used only by AbfsInputStream/AbfsOutputStream to reuse SAS tokens.
   private final String sasToken;
-
-  // All status codes less than http 100 signify error.
-  private static final int HTTP_CONTINUE = 100;
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
 
@@ -250,6 +249,14 @@ public class AbfsRestOperation {
     LOG.trace("{} REST operation complete", operationType);
   }
 
+  /**
+   * Returns a new object of AbfsHttpOperation.
+   * @param url The url for the operation.
+   * @param method The http method.
+   * @param requestHeaders The request headers for the operation.
+   * @return AbfsHttpOperation object.
+   * @throws IOException
+   */
   AbfsHttpOperation getHttpOperation(final URL url, final String method,
       final List<AbfsHttpHeader> requestHeaders) throws IOException {
     return new AbfsHttpOperation(url, method, requestHeaders);
@@ -341,7 +348,7 @@ public class AbfsRestOperation {
       int status = httpOperation.getStatusCode();
       /*
         A status less than 300 (2xx range) or greater than or equal
-        to 500 (5xx range) should contribute to throttling metrics updation.
+        to 500 (5xx range) should contribute to throttling metrics being updated.
         Less than 200 or greater than or equal to 500 show failed operations. 2xx
         range contributes to successful operations. 3xx range is for redirects
         and 4xx range is for user errors. These should not be a part of
