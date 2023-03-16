@@ -165,6 +165,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
    * @throws URISyntaxException parse problems.
    * @throws IOException IO problems
    */
+  @SuppressWarnings("deprecation")
   private S3Client createS3Client(Configuration conf,
       String endpoint)
       throws IOException {

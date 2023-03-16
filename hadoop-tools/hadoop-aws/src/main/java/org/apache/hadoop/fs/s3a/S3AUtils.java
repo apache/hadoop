@@ -785,6 +785,7 @@ public final class S3AUtils {
    * @return instance of the specified class
    * @throws IOException on any problem
    */
+  @SuppressWarnings("unchecked")
   public static <InstanceT> InstanceT getInstanceFromReflection(Class<?> instanceClass,
       Configuration conf, @Nullable URI uri, Class<?> interfaceImplemented, String methodName,
       String configKey) throws IOException {
