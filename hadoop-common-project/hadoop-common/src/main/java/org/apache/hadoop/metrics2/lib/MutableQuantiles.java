@@ -52,6 +52,7 @@ public class MutableQuantiles extends MutableMetric {
       new Quantile(0.75, 0.025), new Quantile(0.90, 0.010),
       new Quantile(0.95, 0.005), new Quantile(0.99, 0.001) };
 
+  protected boolean inverseQuantiles = false;
   private final MetricsInfo numInfo;
   private final MetricsInfo[] quantileInfos;
   private final int interval;
@@ -104,7 +105,7 @@ public class MutableQuantiles extends MutableMetric {
           String.format(descTemplate, percentile));
     }
 
-    estimator = new SampleQuantiles(quantiles);
+    estimator = new SampleQuantiles(quantiles, inverseQuantiles);
 
     this.interval = interval;
     scheduledTask = scheduler.scheduleWithFixedDelay(new RolloverSample(this),

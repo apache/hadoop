@@ -53,7 +53,7 @@ public class TestMultiThreadedHflush {
       new Quantile[] {
         new Quantile(0.50, 0.050),
         new Quantile(0.75, 0.025), new Quantile(0.90, 0.010),
-        new Quantile(0.95, 0.005), new Quantile(0.99, 0.001) });
+        new Quantile(0.95, 0.005), new Quantile(0.99, 0.001) }, false);
 
   /*
    * creates a file but does not close it
