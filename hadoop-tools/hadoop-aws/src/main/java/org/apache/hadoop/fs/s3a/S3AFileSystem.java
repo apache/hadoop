@@ -531,8 +531,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       this.prefetchEnabled = conf.getBoolean(PREFETCH_ENABLED_KEY, PREFETCH_ENABLED_DEFAULT);
       long prefetchBlockSizeLong =
-          longBytesOption(conf, PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE,
-              PREFETCH_BLOCK_DEFAULT_SIZE);
+          longBytesOption(conf, PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE, 1);
       if (prefetchBlockSizeLong > (long) Integer.MAX_VALUE) {
         throw new IOException("S3A prefatch block size exceeds int limit");
       }

@@ -324,7 +324,7 @@ There's two main causes
 
 If you see this and you are trying to use the S3A connector with Spark, then the cause can
 be that the isolated classloader used to load Hive classes is interfering with the S3A
-connector's dynamic loading of `com.amazonaws` classes. To fix this, declare that that
+connector's dynamic loading of `com.amazonaws` classes. To fix this, declare that
 the classes in the aws SDK are loaded from the same classloader which instantiated
 the S3A FileSystem instance:
 

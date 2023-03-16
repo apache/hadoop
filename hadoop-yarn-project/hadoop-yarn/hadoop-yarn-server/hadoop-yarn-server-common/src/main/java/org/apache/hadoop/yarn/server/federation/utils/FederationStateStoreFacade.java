@@ -89,6 +89,9 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterResponse;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -810,6 +813,24 @@ public final class FederationStateStoreFacade {
   }
 
   /**
+   * The Router Supports Store RMDelegationTokenIdentifier{@link RMDelegationTokenIdentifier}.
+   *
+   * @param identifier delegation tokens from the RM.
+   * @param renewDate renewDate.
+   * @param tokenInfo tokenInfo.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
+  public void storeNewToken(RMDelegationTokenIdentifier identifier,
+      long renewDate, String tokenInfo) throws YarnException, IOException {
+    LOG.info("storing RMDelegation token with sequence number: {}.",
+        identifier.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate, tokenInfo);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    stateStore.storeNewToken(request);
+  }
+
+  /**
    * The Router Supports Update RMDelegationTokenIdentifier{@link RMDelegationTokenIdentifier}.
    *
    * @param identifier delegation tokens from the RM
@@ -822,6 +843,24 @@ public final class FederationStateStoreFacade {
     LOG.info("updating RMDelegation token with sequence number: {}.",
         identifier.getSequenceNumber());
     RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    stateStore.updateStoredToken(request);
+  }
+
+  /**
+   * The Router Supports Update RMDelegationTokenIdentifier{@link RMDelegationTokenIdentifier}.
+   *
+   * @param identifier delegation tokens from the RM
+   * @param renewDate renewDate
+   * @param tokenInfo tokenInfo.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
+  public void updateStoredToken(RMDelegationTokenIdentifier identifier,
+      long renewDate, String tokenInfo) throws YarnException, IOException {
+    LOG.info("updating RMDelegation token with sequence number: {}.",
+        identifier.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate, tokenInfo);
     RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     stateStore.updateStoredToken(request);
   }
@@ -1061,5 +1100,115 @@ public final class FederationStateStoreFacade {
       // the new subClusterId we have selected.
       updateApplicationHomeSubCluster(subClusterId, applicationId, appHomeSubCluster);
     }
+  }
+
+  /**
+   * Exists ReservationHomeSubCluster Mapping.
+   *
+   * @param reservationId reservationId
+   * @return true - exist, false - not exist
+   */
+  public boolean existsReservationHomeSubCluster(ReservationId reservationId) {
+    try {
+      SubClusterId subClusterId = getReservationHomeSubCluster(reservationId);
+      if (subClusterId != null) {
+        return true;
+      }
+    } catch (YarnException e) {
+      LOG.warn("get homeSubCluster by reservationId = {} error.", reservationId, e);
+    }
+    return false;
+  }
+
+  /**
+   * Save Reservation And HomeSubCluster Mapping.
+   *
+   * @param reservationId reservationId
+   * @param homeSubCluster homeSubCluster
+   * @throws YarnException on failure
+   */
+  public void addReservationHomeSubCluster(ReservationId reservationId,
+      ReservationHomeSubCluster homeSubCluster) throws YarnException {
+    try {
+      // persist the mapping of reservationId and the subClusterId which has
+      // been selected as its home
+      addReservationHomeSubCluster(homeSubCluster);
+    } catch (YarnException e) {
+      String msg = String.format(
+          "Unable to insert the ReservationId %s into the FederationStateStore.", reservationId);
+      throw new YarnException(msg, e);
+    }
+  }
+
+  /**
+   * Update Reservation And HomeSubCluster Mapping.
+   *
+   * @param subClusterId subClusterId
+   * @param reservationId reservationId
+   * @param homeSubCluster homeSubCluster
+   * @throws YarnException on failure
+   */
+  public void updateReservationHomeSubCluster(SubClusterId subClusterId,
+      ReservationId reservationId, ReservationHomeSubCluster homeSubCluster) throws YarnException {
+    try {
+      // update the mapping of reservationId and the home subClusterId to
+      // the new subClusterId we have selected
+      updateReservationHomeSubCluster(homeSubCluster);
+    } catch (YarnException e) {
+      SubClusterId subClusterIdInStateStore = getReservationHomeSubCluster(reservationId);
+      if (subClusterId == subClusterIdInStateStore) {
+        LOG.info("Reservation {} already submitted on SubCluster {}.", reservationId, subClusterId);
+      } else {
+        String msg = String.format(
+            "Unable to update the ReservationId %s into the FederationStateStore.", reservationId);
+        throw new YarnException(msg, e);
+      }
+    }
+  }
+
+  /**
+   * Add or Update ReservationHomeSubCluster.
+   *
+   * @param reservationId reservationId.
+   * @param subClusterId homeSubClusterId, this is selected by strategy.
+   * @param retryCount number of retries.
+   * @throws YarnException yarn exception.
+   */
+  public void addOrUpdateReservationHomeSubCluster(ReservationId reservationId,
+      SubClusterId subClusterId, int retryCount) throws YarnException {
+    Boolean exists = existsReservationHomeSubCluster(reservationId);
+    ReservationHomeSubCluster reservationHomeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
+    if (!exists || retryCount == 0) {
+      // persist the mapping of reservationId and the subClusterId which has
+      // been selected as its home.
+      addReservationHomeSubCluster(reservationId, reservationHomeSubCluster);
+    } else {
+      // update the mapping of reservationId and the home subClusterId to
+      // the new subClusterId we have selected.
+      updateReservationHomeSubCluster(subClusterId, reservationId,
+          reservationHomeSubCluster);
+    }
+  }
+
+  /**
+   * Deregister subCluster, Update the subCluster state to
+   * SC_LOST、SC_DECOMMISSIONED etc.
+   *
+   * @param subClusterId subClusterId.
+   * @param subClusterState The state of the subCluster to be updated.
+   * @throws YarnException yarn exception.
+   * @return If Deregister subCluster is successful, return true, otherwise, return false.
+   */
+  public boolean deregisterSubCluster(SubClusterId subClusterId,
+      SubClusterState subClusterState) throws YarnException {
+    SubClusterDeregisterRequest deregisterRequest =
+        SubClusterDeregisterRequest.newInstance(subClusterId, subClusterState);
+    SubClusterDeregisterResponse response = stateStore.deregisterSubCluster(deregisterRequest);
+    // If the response is not empty, deregisterSubCluster is successful.
+    if (response != null) {
+      return true;
+    }
+    return false;
   }
 }
