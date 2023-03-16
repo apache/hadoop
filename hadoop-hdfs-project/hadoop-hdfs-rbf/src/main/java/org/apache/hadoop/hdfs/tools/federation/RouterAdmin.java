@@ -371,7 +371,6 @@ public class RouterAdmin extends Configured implements Tool {
               System.out.println("Successfully removed mount point " + argv[i]);
             } else {
               exitCode = -1;
-              System.err.println("Failed to remove mount point " + argv[i]);
             }
           } catch (IOException e) {
             exitCode = -1;
@@ -815,7 +814,7 @@ public class RouterAdmin extends Configured implements Tool {
         mountTable.removeMountTableEntry(request);
     boolean removed = response.getStatus();
     if (!removed) {
-      System.out.println("Cannot remove mount point " + path);
+      System.err.println("Cannot remove mount point " + path);
     }
     return removed;
   }
