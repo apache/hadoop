@@ -56,7 +56,7 @@
 			<arg value='--header' />
 			<arg value='Authorization: Basic YWRtaW46aW5zaWdodEBPcHNIdWI=' />
 			<arg value='--form' />
-			<arg value='files=@jacoco_low.xml' />
+			<arg value='files=@jacoco.xml' />
 			<arg value='--form' />
 			<arg value='files=@jacoco_2.xml' />
 			<arg value='--form' />
@@ -225,7 +225,6 @@
 	<!-- This ant target performs the curl request for Power BI Dashboard refresh after uploading coverage file.-->
 	<target name="refreshDashboard" description="Invoke curl using Ant to refresh Power BI Dashboard." depends="getToken">
 		<echo message="Initiating the curl request to refresh Power BI Dashboard."/>
-		<echo message="Token: ${AccessToken}" />
 	
 		<exec executable='curl' failonerror="true">
 			<arg value='--request' />
@@ -251,12 +250,6 @@
 		<property name="client_id" value="${client_id}" />
 		<property name="client_secret" value="${client_secret}" />
 		<property name="refreshInterval" value="${refreshInterval}" />
-		<echo message="dataset_id: ${dataset_id}" />
-		<echo message="username: ${uname}" />
-		<echo message="password: ${password}" />
-		<echo message="client_id: ${client_id}" />
-		<echo message="client_secret: ${client_secret}" />
-		<echo message="refreshInterval: ${refreshInterval}" />
 
 		<exec executable='curl' failonerror="true" outputproperty="Token">
 			<arg value='--request' />
@@ -278,10 +271,6 @@
 			temp = project.getProperty("Token");
 			struct = JSON.parse(temp);
 			project.setProperty("AccessToken", struct.access_token);
-			
-			var echo = project.createTask("echo");
-			echo.setMessage("AccessToken: " + project.getProperty("AccessToken"));
-			echo.perform();
 		</script>
 	</target>
 
