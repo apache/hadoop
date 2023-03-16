@@ -6,6 +6,7 @@ name: Java CI
 on:
   pull_request:
     branches: [ "trunk" ]
+    types: [synchronize]
 
 jobs:
   build:
