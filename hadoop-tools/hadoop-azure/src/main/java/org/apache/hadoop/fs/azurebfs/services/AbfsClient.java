@@ -707,7 +707,7 @@ public class AbfsClient implements Closeable {
       */
       int responseStatusCode = ((AbfsRestOperationException) e).getStatusCode();
       if (checkUserError(responseStatusCode) && reqParams.isExpectHeaderEnabled()) {
-        LOG.debug("User error, retrying without 100 continue enabled for the given path {} " , path);
+        LOG.debug("User error, retrying without 100 continue enabled for the given path {}", path);
         reqParams.setExpectHeaderEnabled(false);
         return this.append(path, buffer, reqParams, cachedSasToken,
             tracingContext);

@@ -160,7 +160,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
             throttling but there were some expectedBytesToBeSent.
            */
           if (updateBytesTransferred(isThrottledOperation, abfsHttpOperation)) {
-            LOG.debug("Updating metrics due to throttling for path {} " , abfsHttpOperation.getConnUrl().getPath());
+            LOG.debug("Updating metrics due to throttling for path {}", abfsHttpOperation.getConnUrl().getPath());
             contentLength = abfsHttpOperation.getExpectedBytesToBeSent();
           }
         }
