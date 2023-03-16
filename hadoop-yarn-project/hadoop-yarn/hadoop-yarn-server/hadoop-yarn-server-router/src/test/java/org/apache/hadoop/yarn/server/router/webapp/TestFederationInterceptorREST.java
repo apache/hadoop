@@ -134,6 +134,8 @@ import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
+import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -2146,7 +2148,52 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertNotNull(confInfos);
     Assert.assertEquals(4, confInfos.size());
 
-    List<String> errorMsgs = federationConfInfo.getErrorMsgs();
-    Assert.assertEquals(0, errorMsgs.size());
+    List<String> errors = federationConfInfo.getErrorMsgs();
+    Assert.assertEquals(0, errors.size());
+
+    Set<String> subClusterSet = subClusters.stream()
+        .map(subClusterId -> subClusterId.getId()).collect(Collectors.toSet());
+
+    for (ConfInfo confInfo : confInfos) {
+      List<ConfInfo.ConfItem> confItems = confInfo.getItems();
+      Assert.assertNotNull(confItems);
+      Assert.assertTrue(confItems.size() > 0);
+      Assert.assertTrue(subClusterSet.contains(confInfo.getSubClusterId()));
+    }
+  }
+
+  @Test
+  public void testUpdateSchedulerConfigurationErrorMsg() throws Exception {
+    SchedConfUpdateInfo mutationInfo = new SchedConfUpdateInfo();
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the subClusterId is empty or null.",
+        () -> interceptor.updateSchedulerConfiguration(mutationInfo, null));
+
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the schedConfUpdateInfo is empty or null.",
+        () -> interceptor.updateSchedulerConfiguration(null, null));
+  }
+
+  @Test
+  public void testUpdateSchedulerConfiguration()
+      throws AuthorizationException, InterruptedException {
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+    updateInfo.setSubClusterId("1");
+    Map<String, String> goodUpdateMap = new HashMap<>();
+    goodUpdateMap.put("goodKey", "goodVal");
+    QueueConfigInfo goodUpdateInfo = new
+        QueueConfigInfo("root.default", goodUpdateMap);
+    updateInfo.getUpdateQueueInfo().add(goodUpdateInfo);
+    Response response = interceptor.updateSchedulerConfiguration(updateInfo, null);
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(OK, response.getStatus());
+
+    String expectMsg = "Configuration change successfully applied.";
+    Object entity = response.getEntity();
+    Assert.assertNotNull(entity);
+
+    String entityMsg = String.valueOf(entity);
+    Assert.assertEquals(expectMsg, entityMsg);
   }
 }

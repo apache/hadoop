@@ -102,6 +102,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueu
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.MutableCSConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
@@ -1369,7 +1370,18 @@ public class MockDefaultRequestInterceptorREST
   @Override
   public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
       HttpServletRequest req) throws AuthorizationException, InterruptedException {
-    return super.updateSchedulerConfiguration(mutationInfo, req);
+    MutableCSConfigurationProvider provider = new MutableCSConfigurationProvider(mockRM.getRMContext());
+    try {
+      Configuration conf = new Configuration();
+      conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+          YarnConfiguration.MEMORY_CONFIGURATION_STORE);
+      provider.init(conf);
+      provider.logAndApplyMutation(UserGroupInformation.getCurrentUser(), mutationInfo);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return Response.status(Status.OK).
+        entity("Configuration change successfully applied.").build();
   }
 
   @Override

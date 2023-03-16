@@ -2880,7 +2880,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     if (mutationInfo == null) {
       routerMetrics.incrUpdateSchedulerConfigurationFailedRetrieved();
       throw new IllegalArgumentException(
-          "Parameter error, the mutationInfo is empty or null.");
+          "Parameter error, the schedConfUpdateInfo is empty or null.");
     }
 
     // In federated mode, we may have a mix of multiple schedulers.
