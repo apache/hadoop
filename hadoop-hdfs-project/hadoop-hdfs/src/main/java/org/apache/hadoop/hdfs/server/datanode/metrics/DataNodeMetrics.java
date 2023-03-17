@@ -260,8 +260,8 @@ public class DataNodeMetrics {
           "ops", "latency", interval);
       readTransferRateQuantiles[i] = registry.newQuantiles(
           "readTransferRate" + interval + "s",
-          "Rate at which bytes are read from datanode calculated in bytes per second with inverse quantiles",
-          "ops", "rate", interval, true);
+          "Rate at which bytes are read from datanode calculated in bytes per second" +
+          " with inverse quantiles", "ops", "rate", interval, true);
     }
   }
 

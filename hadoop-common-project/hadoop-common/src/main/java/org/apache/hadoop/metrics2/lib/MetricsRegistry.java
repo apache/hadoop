@@ -215,12 +215,12 @@ public class MetricsRegistry {
    * @throws MetricsException if interval is not a positive integer
    */
   public synchronized MutableQuantiles newQuantiles(String name, String desc,
-      String sampleName, String valueName, int interval) {
-      return newQuantiles(name, desc, sampleName, valueName, interval, false);
+    String sampleName, String valueName, int interval) {
+    return newQuantiles(name, desc, sampleName, valueName, interval, false);
   }
 
   /**
-   * Create a mutable metric that estimates quantiles of a stream of values
+   * Create a mutable metric that estimates quantiles of a stream of values.
    * @param name of the metric
    * @param desc metric description
    * @param sampleName of the metric (e.g., "Ops")
@@ -230,7 +230,8 @@ public class MetricsRegistry {
    * @return a new quantile estimator object
    * @throws MetricsException if interval is not a positive integer
    */
-  public synchronized MutableQuantiles newQuantiles(String name, String desc, String sampleName, String valueName,
+  public synchronized MutableQuantiles newQuantiles(String name, String desc,
+                                                    String sampleName, String valueName,
                                                     int interval, boolean inverseQuantiles) {
     checkMetricName(name);
     if (interval <= 0) {

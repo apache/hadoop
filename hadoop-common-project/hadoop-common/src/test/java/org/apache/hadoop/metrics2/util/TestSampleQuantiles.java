@@ -120,8 +120,8 @@ public class TestSampleQuantiles {
   }
 
   /**
-   * Correctness test that checks that absolute error of the estimate for inverse quantiles is within
-   * specified error bounds for some randomly permuted streams of items.
+   * Correctness test that checks that absolute error of the estimate for inverse quantiles
+   * is within specified error bounds for some randomly permuted streams of items.
    */
   @Test
   public void testInverseQuantiles() {

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.metrics2.util;
 
+import java.util.ListIterator;
+
 public class InverseQuantiles extends SampleQuantiles{
 
   public InverseQuantiles(Quantile[] quantiles) {
@@ -25,22 +27,29 @@ public class InverseQuantiles extends SampleQuantiles{
   }
 
   /**
-   * Get the desired location from the sample for inverse of the specified quantile. 
-   * Eg: return (1 - 0.99)*count position for quantile 0.99.
-   * When count is 100, the desired location for quantile 0.99 is the 1st position
-   * @param quantile queried quantile, e.g. 0.50 or 0.99.
-   * @param count sample size count
-   * @return Desired location inverse position of that quantile.
+   * Get the estimated value at the inverse of the specified quantile.
+   * Eg: return the value at (1 - 0.99)*count position for quantile 0.99.
+   * When count is 100, quantile 0.99 is desired to return the value at the 1st position
+   * @param quantile Queried quantile, e.g. 0.50 or 0.99.
+   * @return Estimated value at that quantile.
    */
-  int getDesiredLocation(final double quantile, final long count) {
-    return (int) ((1 - quantile) * count);
-  }
+  long query(double quantile) {
+    int rankMin = 0;
+    int desired = (int) (quantile * getCount());
 
-  /**
-   * Return the best (minimum) value from given sample
-   * @return minimum value from given sample
-   */
-  long getMaxValue() {
-    return samples.get(0).value;
+    ListIterator<SampleItem> it = getSamples().listIterator(getSampleCount());
+    SampleItem prev;
+    SampleItem cur = it.previous();
+    for (int i = 1; i < getSamples().size(); i++) {
+      prev = cur;
+      cur = it.previous();
+      rankMin += prev.g;
+      if (rankMin + cur.g + cur.delta > desired + (allowableError(i) / 2)) {
+        return prev.value;
+      }
+    }
+
+    // edge case of wanting min value
+    return getSamples().get(0).value;
   }
 }
