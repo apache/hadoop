@@ -226,11 +226,11 @@ public class MetricsRegistry {
    * @param sampleName of the metric (e.g., "Ops")
    * @param valueName of the metric (e.g., "Time" or "Latency")
    * @param interval rollover interval of estimator in seconds
-   * @param inverseQuantiles inverse the quantiles ( e.g. P99 will give the 1st quantile )      
+   * @param inverseQuantiles inverse the quantiles ( e.g. P99 will give the 1st quantile )
    * @return a new quantile estimator object
    * @throws MetricsException if interval is not a positive integer
    */
-  public synchronized MutableQuantiles newQuantiles(String name, String desc, String sampleName, String valueName, 
+  public synchronized MutableQuantiles newQuantiles(String name, String desc, String sampleName, String valueName,
                                                     int interval, boolean inverseQuantiles) {
     checkMetricName(name);
     if (interval <= 0) {

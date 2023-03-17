@@ -1,44 +1,46 @@
-package org.apache.hadoop.metrics2.util;
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-import org.apache.hadoop.util.Preconditions;
-import java.util.ListIterator;
+package org.apache.hadoop.metrics2.util;
 
 public class InverseQuantiles extends SampleQuantiles{
 
   public InverseQuantiles(Quantile[] quantiles) {
     super(quantiles);
   }
-  
 
   /**
-   * Get the estimated value at the inverse of the specified quantile. 
-   * Eg: return the value at (1 - 0.99)*count position for quantile 0.99.
-   * When count is 100, quantile 0.99 is desired to return the value at the 1st position
-   *
-   * @param quantile Queried quantile, e.g. 0.50 or 0.99.
-   * @return Estimated value at the inverse position of that quantile. 
+   * Get the desired location from the sample for inverse of the specified quantile. 
+   * Eg: return (1 - 0.99)*count position for quantile 0.99.
+   * When count is 100, the desired location for quantile 0.99 is the 1st position
+   * @param quantile queried quantile, e.g. 0.50 or 0.99.
+   * @param count sample size count
+   * @return Desired location inverse position of that quantile.
    */
-  long query(double quantile) {
-    Preconditions.checkState(!samples.isEmpty(), "no data in estimator");
+  int getDesiredLocation(final double quantile, final long count) {
+    return (int) ((1 - quantile) * count);
+  }
 
-    int rankMin = 0;
-    int desired = (int) ((1 - quantile) * count);
-
-    ListIterator<SampleItem> it = samples.listIterator();
-    SampleItem prev;
-    SampleItem cur = it.next();
-    for (int i = 1; i < samples.size(); i++) {
-      prev = cur;
-      cur = it.next();
-
-      rankMin += prev.g;
-
-      if (rankMin + cur.g + cur.delta > desired + (allowableError(i) / 2)) {
-        return prev.value;
-      }
-    }
-
-    // edge case of wanting max value
+  /**
+   * Return the best (minimum) value from given sample
+   * @return minimum value from given sample
+   */
+  long getMaxValue() {
     return samples.get(0).value;
   }
 }

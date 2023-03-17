@@ -52,7 +52,7 @@ public class SampleQuantiles implements QuantileEstimator {
   /**
    * Total number of items in stream
    */
-  long count = 0;
+  private long count = 0;
 
   /**
    * Current list of sampled items, maintained in sorted order with error bounds
@@ -87,7 +87,7 @@ public class SampleQuantiles implements QuantileEstimator {
    * @param rank
    *          the index in the list of samples
    */
-  double allowableError(int rank) {
+  private double allowableError(int rank) {
     int size = samples.size();
     double minError = size + 1;
     for (Quantile q : quantiles) {
@@ -203,11 +203,11 @@ public class SampleQuantiles implements QuantileEstimator {
    * @param quantile Queried quantile, e.g. 0.50 or 0.99.
    * @return Estimated value at that quantile.
    */
-  long query(double quantile) {
+  private long query(double quantile) {
     Preconditions.checkState(!samples.isEmpty(), "no data in estimator");
 
     int rankMin = 0;
-    int desired = (int) (quantile * count);
+    int desired = getDesiredLocation(quantile, count);
 
     ListIterator<SampleItem> it = samples.listIterator();
     SampleItem prev = null;
@@ -223,8 +223,28 @@ public class SampleQuantiles implements QuantileEstimator {
       }
     }
 
-    // edge case of wanting max value
-    return samples.get(samples.size() - 1).value;
+    // edge case of wanting the best value
+    return getMaxValue();
+  }
+
+  /**
+   * Get the desired location from the sample for inverse of the specified quantile. 
+   * Eg: return (1 - 0.99)*count position for quantile 0.99.
+   * When count is 100, the desired location for quantile 0.99 is the 1st position
+   * @param quantile queried quantile, e.g. 0.50 or 0.99.
+   * @param count sample size count
+   * @return Desired location inverse position of that quantile.
+   */
+  int getDesiredLocation(final double quantile, final long count) {
+    return (int) (quantile * count);  
+  }
+
+  /**
+   * Return the best (maximum) value from given sample
+   * @return maximum value from given sample
+   */  
+  long getMaxValue() {
+    return samples.get(samples.size() - 1).value;    
   }
 
   /**
@@ -291,7 +311,7 @@ public class SampleQuantiles implements QuantileEstimator {
    * Describes a measured value passed to the estimator, tracking additional
    * metadata required by the CKMS algorithm.
    */
-  static class SampleItem {
+   static class SampleItem {
     
     /**
      * Value of the sampled item (e.g. a measured latency value)

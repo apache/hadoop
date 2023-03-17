@@ -118,36 +118,39 @@ public class TestSampleQuantiles {
       }
     }
   }
-  
+
+  /**
+   * Correctness test that checks that absolute error of the estimate for inverse quantiles is within
+   * specified error bounds for some randomly permuted streams of items.
+   */
   @Test
   public void testInverseQuantiles() {
-      SampleQuantiles estimatorWithInverseQuantiles = new InverseQuantiles(quantiles);
-      final int count = 100000;
-      Random r = new Random(0xDEADDEAD);
-      Long[] values = new Long[count];
-      for (int i = 0; i < count; i++) {
-          values[i] = (long) (i + 1);
+    SampleQuantiles estimatorWithInverseQuantiles = new InverseQuantiles(quantiles);
+    final int count = 100000;
+    Random r = new Random(0xDEADDEAD);
+    Long[] values = new Long[count];
+    for (int i = 0; i < count; i++) {
+      values[i] = (long) (i + 1);
+    }
+    // Do 10 shuffle/insert/check cycles
+    for (int i = 0; i < 10; i++) {
+      System.out.println("Starting run " + i);
+      Collections.shuffle(Arrays.asList(values), r);
+      estimatorWithInverseQuantiles.clear();
+      for (int j = 0; j < count; j++) {
+        estimatorWithInverseQuantiles.insert(values[j]);
       }
-      // Do 10 shuffle/insert/check cycles
-      for (int i = 0; i < 10; i++) {
-          System.out.println("Starting run " + i);
-          Collections.shuffle(Arrays.asList(values), r);
-          estimatorWithInverseQuantiles.clear();
-          for (int j = 0; j < count; j++) {
-              estimatorWithInverseQuantiles.insert(values[j]);
-          }
-          Map<Quantile, Long> snapshot;
-          snapshot = estimatorWithInverseQuantiles.snapshot();
-          for (Quantile q : quantiles) {
-              long actual = (long) ((1 - q.quantile) * count);
-              long error = (long) ((0.1 - q.error) * count);
-              long estimate = snapshot.get(q);
-              System.out
-                      .println(String.format("For quantile %f Expected %d with error %d, estimated %d",
-                              q.quantile, actual, error, estimate));
-              assertThat(estimate <= actual + error).isTrue();
-              assertThat(estimate >= actual - error).isTrue();
-          }
+      Map<Quantile, Long> snapshot;
+      snapshot = estimatorWithInverseQuantiles.snapshot();
+      for (Quantile q : quantiles) {
+        long actual = (long) ((1 - q.quantile) * count);
+        long error = (long) ((0.1 - q.error) * count);
+        long estimate = snapshot.get(q);
+        System.out.println(String.format("For quantile %f Expected %d with error %d, estimated %d",
+                q.quantile, actual, error, estimate));
+        assertThat(estimate <= actual + error).isTrue();
+        assertThat(estimate >= actual - error).isTrue();
       }
+    }
   }
 }

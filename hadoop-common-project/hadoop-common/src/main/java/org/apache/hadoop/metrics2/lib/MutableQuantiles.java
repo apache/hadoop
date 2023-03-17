@@ -82,6 +82,8 @@ public class MutableQuantiles extends MutableMetric {
    *          type of the values
    * @param interval
    *          rollover interval (in seconds) of the estimator
+   * @param inverseQuantiles
+   *          flag to denote if inverse quantiles are requested
    */
   public MutableQuantiles(String name, String description, String sampleName,
       String valueName, int interval, boolean inverseQuantiles) {
