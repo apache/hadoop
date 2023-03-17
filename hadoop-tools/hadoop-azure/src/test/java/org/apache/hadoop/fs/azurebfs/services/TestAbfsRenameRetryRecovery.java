@@ -186,7 +186,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     SharedKeyCredentials mockSharedKeyCreds = mock(SharedKeyCredentials.class);
     Mockito.doNothing().when(mockSharedKeyCreds).signRequest(Mockito.any(HttpURLConnection.class), Mockito.any(long.class));
-    Mockito.doCallRealMethod().doReturn(mockSharedKeyCreds).when(spyClient).getSharedKeyCredentials();
+    Mockito.doCallRealMethod().doReturn(mockSharedKeyCreds).doReturn(mockSharedKeyCreds).doCallRealMethod().when(spyClient).getSharedKeyCredentials();
 
     String path1 = "/dummyFile1";
     String path2 = "/dummyFile2";
@@ -197,15 +197,17 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
     // 404 and retry, send sourceEtag as null
-    // source eTag matches -> rename should pass even when execute throws exception
-    spyClient.renamePath(path1, path1, null, testTracingContext, null, false);
 
     // source eTag does not match -> throw exception
     try {
       spyClient.renamePath(path1, path2,null, testTracingContext, null, false);
     } catch (AbfsRestOperationException e) {
-      Assert.assertEquals(200, e.getErrorCode());
+      Assert.assertEquals(404, e.getErrorCode());
     }
+    // source eTag matches -> rename should pass even when execute throws exception
+    spyClient.renamePath(path1, path1, null, testTracingContext, null, false);
+
+
 
   }
 
