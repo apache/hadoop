@@ -141,8 +141,9 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
 
     // specifying AbfsHttpOperation mock behavior
-    AbfsHttpOperation mockHttp404Op = Mockito.mock(AbfsHttpOperation.class);
 
+    // mock object representing the 404 path not found result
+    AbfsHttpOperation mockHttp404Op = Mockito.mock(AbfsHttpOperation.class);
     Mockito.doReturn(404).when(mockHttp404Op).getStatusCode();
     Mockito.doNothing().when(mockHttp404Op).processResponse(nullable(byte[].class), Mockito.any(int.class), Mockito.any(int.class));
     Mockito.doNothing().when(mockHttp404Op).setRequestProperty(nullable(String.class), nullable(String.class));
@@ -152,6 +153,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     Mockito.doReturn("SourcePathNotFound").when(mockHttp404Op).getStorageErrorCode();
 
 
+    // // mock object representing the 500 timeout result for first try of rename
     AbfsHttpOperation mockHttp500Op = Mockito.mock(AbfsHttpOperation.class);
     Mockito.doReturn(500).when(mockHttp500Op).getStatusCode();
     Mockito.doThrow(IOException.class)
@@ -169,6 +171,8 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     // adding mock objects to current AbfsClient
     AbfsClient spyClient = Mockito.spy(fs.getAbfsStore().getClient());
+    // Rest Operation is spied as it needs to have spyclient instance as a param to the constructor
+    // directly returning a mock for this would make the client instance null
     AbfsRestOperation mockRestOp = Mockito.spy(new AbfsRestOperation(
                     AbfsRestOperationType.RenamePath,
                     spyClient,
@@ -186,6 +190,8 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     SharedKeyCredentials mockSharedKeyCreds = mock(SharedKeyCredentials.class);
     Mockito.doNothing().when(mockSharedKeyCreds).signRequest(Mockito.any(HttpURLConnection.class), Mockito.any(long.class));
+    // real method calls made once at start and once at end
+    // for the two getPathStatus calls that actually have to be made
     Mockito.doCallRealMethod().doReturn(mockSharedKeyCreds).doReturn(mockSharedKeyCreds).doCallRealMethod().when(spyClient).getSharedKeyCredentials();
 
     String path1 = "/dummyFile1";
