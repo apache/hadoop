@@ -519,10 +519,18 @@ public class AbfsClient implements Closeable {
       final String destination,
       final String continuation,
       final TracingContext tracingContext,
-      final String sourceEtag,
+      String sourceEtag,
       boolean isMetadataIncompleteState)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+
+    if (sourceEtag == null || sourceEtag.isEmpty()) {
+      final AbfsRestOperation srcStatusOp = getPathStatus(source,
+              false, tracingContext);
+      final AbfsHttpOperation result = srcStatusOp.getResult();
+
+      sourceEtag = extractEtagHeader(result);
+    }
 
     String encodedRenameSource = urlEncode(FORWARD_SLASH + this.getFileSystem() + source);
     if (authType == AuthType.SAS) {
@@ -540,12 +548,7 @@ public class AbfsClient implements Closeable {
     appendSASTokenToQuery(destination, SASTokenProvider.RENAME_DESTINATION_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(destination, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.RenamePath,
-            this,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders);
+    final AbfsRestOperation op = createRenameRestOperation(url, requestHeaders);
     try {
       incrementAbfsRenamePath();
       op.execute(tracingContext);
@@ -596,6 +599,17 @@ public class AbfsClient implements Closeable {
         }
       return new AbfsClientRenameResult(op, true, isMetadataIncompleteState);
     }
+  }
+
+  @VisibleForTesting
+  AbfsRestOperation createRenameRestOperation(URL url, List<AbfsHttpHeader> requestHeaders) {
+    AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.RenamePath,
+            this,
+            HTTP_METHOD_PUT,
+            url,
+            requestHeaders);
+    return op;
   }
 
   private void incrementAbfsRenamePath() {
