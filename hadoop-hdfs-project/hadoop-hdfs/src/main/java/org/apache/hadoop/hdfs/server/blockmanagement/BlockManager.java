@@ -4148,8 +4148,7 @@ public class BlockManager implements BlockStatsMXBean {
       }
     }
 
-    // cardinality of found indicates the expected number of internal blocks
-    final int numOfTarget = found.cardinality();
+    final int numOfTarget = sblk.getRealDataBlockNum();
     final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(
         bc.getStoragePolicyID());
     final List<StorageType> excessTypes = storagePolicy.chooseExcess(
