@@ -1124,11 +1124,11 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).access
 
         {
             "FsServerDefaults": {
-                "replication": 3, 
-                "encryptDataTransfer": "false", 
+                "replication": 3,
+                "encryptDataTransfer": "false",
                 "defaultStoragePolicyId":7,
-                "writePacketSize": 65536, 
-                "fileBufferSize": 4096, 
+                "writePacketSize": 65536,
+                "fileBufferSize": 4096,
                 "checksumType": 2,
                 "trashInterval": 10080,
                 "keyProviderUri": "",
