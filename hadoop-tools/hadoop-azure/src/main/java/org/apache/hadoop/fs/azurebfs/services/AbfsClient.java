@@ -698,7 +698,7 @@ public class AbfsClient implements Closeable {
     } catch (AzureBlobFileSystemException e) {
       /*
          If the http response code indicates a user error we retry
-         the same append request with expect header disabled.
+         the same append request with expect header being disabled.
          When "100-continue" header is enabled but a non Http 100 response comes,
          the response message might not get set correctly by the server.
          So, this handling is to avoid breaking of backward compatibility
