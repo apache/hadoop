@@ -840,11 +840,8 @@
   <name>yarn.app.mapreduce.task.container.log.backups</name>
   <value>0</value>
   <description>Number of backup files for task logs when using
-    ContainerRollingLogAppender (CRLA). See
-    org.apache.log4j.RollingFileAppender.maxBackupIndex. By default,
-    ContainerLogAppender (CLA) is used, and container logs are not rolled. CRLA
-    is enabled for tasks when both mapreduce.task.userlog.limit.kb and
-    yarn.app.mapreduce.task.container.log.backups are greater than zero.
+    RollingFileAppender (RFA). See
+    org.apache.log4j.RollingFileAppender.maxBackupIndex.
   </description>
 </property>
 
@@ -852,12 +849,8 @@
   <name>yarn.app.mapreduce.am.container.log.backups</name>
   <value>0</value>
   <description>Number of backup files for the ApplicationMaster logs when using
-    ContainerRollingLogAppender (CRLA). See
-    org.apache.log4j.RollingFileAppender.maxBackupIndex. By default,
-    ContainerLogAppender (CLA) is used, and container logs are not rolled. CRLA
-    is enabled for the ApplicationMaster when both
-    yarn.app.mapreduce.am.container.log.limit.kb and
-    yarn.app.mapreduce.am.container.log.backups are greater than zero.
+    RollingFileAppender (RFA). See
+    org.apache.log4j.RollingFileAppender.maxBackupIndex.
   </description>
 </property>
 
