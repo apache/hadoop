@@ -27,6 +27,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -35,11 +36,14 @@ import java.util.Map;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -198,6 +202,25 @@ public class TestDFSInputStreamBlockLocations {
   @Test
   public void testDeferredRegistrationGetAllBlocks() throws IOException {
     testWithRegistrationMethod(DFSInputStream::getAllBlocks);
+  }
+
+  /**
+   * If the ignoreList contains all datanodes, the ignoredList should be cleared to take advantage
+   * of retries built into chooseDataNode. This is needed for hedged reads
+   * @throws IOException
+   */
+  @Test
+  public void testClearIgnoreListChooseDataNode() throws IOException {
+    final String fileName = "/test_cache_locations";
+    filePath = createFile(fileName);
+
+    try (DFSInputStream fin = dfsClient.open(fileName)) {
+      LocatedBlocks existing = fin.locatedBlocks;
+      LocatedBlock block = existing.getLastLocatedBlock();
+      ArrayList<DatanodeInfo> ignoreList = new ArrayList<>(Arrays.asList(block.getLocations()));
+      Assert.assertNotNull(fin.chooseDataNode(block, ignoreList, true));
+      Assert.assertEquals(0, ignoreList.size());
+    }
   }
 
   @FunctionalInterface
