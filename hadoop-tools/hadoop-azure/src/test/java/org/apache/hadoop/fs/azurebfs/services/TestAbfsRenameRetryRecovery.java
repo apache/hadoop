@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -42,6 +43,7 @@ import java.util.List;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doReturn;
@@ -136,8 +138,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
   }
 
-  @Test
-  public void testSourceNotFoundRetrySuccess() throws IOException {
+  AbfsClient getMockAbfsClient() throws IOException {
     AzureBlobFileSystem fs = getFileSystem();
 
     // specifying AbfsHttpOperation mock behavior
@@ -161,6 +162,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     Mockito.doNothing().when(mockHttp500Op).setRequestProperty(nullable(String.class), nullable(String.class));
     Mockito.doNothing().when(mockHttp500Op).sendRequest(nullable(byte[].class), Mockito.any(int.class), Mockito.any(int.class));
     Mockito.doReturn("PUT").when(mockHttp500Op).getMethod();
+    Mockito.doReturn("ClientTimeoutError").when(mockHttp500Op).getStorageErrorCode();
 
     // creating mock HttpUrlConnection object
     HttpURLConnection mockUrlConn = Mockito.mock(HttpsURLConnection.class);
@@ -185,8 +187,8 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     Mockito.doReturn(mockHttp500Op).doReturn(mockHttp404Op).when(mockRestOp).createHttpOperation();
     Mockito.doReturn(mockHttp500Op).doReturn(mockHttp404Op).when(mockRestOp).getResult();
 
-    Mockito.doReturn(true).when(mockRestOp).isARetriedRequest();
     Mockito.doReturn(true).when(mockRestOp).hasResult();
+
 
     SharedKeyCredentials mockSharedKeyCreds = mock(SharedKeyCredentials.class);
     Mockito.doNothing().when(mockSharedKeyCreds).signRequest(Mockito.any(HttpURLConnection.class), Mockito.any(long.class));
@@ -194,27 +196,52 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // for the two getPathStatus calls that actually have to be made
     Mockito.doCallRealMethod().doReturn(mockSharedKeyCreds).doReturn(mockSharedKeyCreds).doCallRealMethod().when(spyClient).getSharedKeyCredentials();
 
+    return spyClient;
+
+  }
+
+  @Test
+  public void testRenameRecoverySrcDestEtagSame() throws IOException {
+    AzureBlobFileSystem fs = getFileSystem();
+    TracingContext testTracingContext = getTestTracingContext(fs, false);
+
+    Assume.assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
+
+    AbfsClient mockClient = getMockAbfsClient();
+
+
     String path1 = "/dummyFile1";
     String path2 = "/dummyFile2";
 
     fs.create(new Path(path1));
     fs.create(new Path(path2));
 
+    // 404 and retry, send sourceEtag as null
+    // source eTag matches -> rename should pass even when execute throws exception
+    mockClient.renamePath(path1, path1, null, testTracingContext, null, false);
+  }
+
+  @Test
+  public void testRenameRecoverySrcDestEtagDifferent() throws IOException {
+    AzureBlobFileSystem fs = getFileSystem();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
-    // 404 and retry, send sourceEtag as null
+    Assume.assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
+
+    AbfsClient spyClient = getMockAbfsClient();
+
+    String path1 = "/dummyFile1";
+    String path2 = "/dummyFile2";
+
+    fs.create(new Path(path1));
+    fs.create(new Path(path2));
 
     // source eTag does not match -> throw exception
     try {
       spyClient.renamePath(path1, path2,null, testTracingContext, null, false);
     } catch (AbfsRestOperationException e) {
-      Assert.assertEquals(404, e.getErrorCode());
+      Assert.assertEquals(SOURCE_PATH_NOT_FOUND, e.getErrorCode());
     }
-    // source eTag matches -> rename should pass even when execute throws exception
-    spyClient.renamePath(path1, path1, null, testTracingContext, null, false);
-
-
-
   }
 
   /**
