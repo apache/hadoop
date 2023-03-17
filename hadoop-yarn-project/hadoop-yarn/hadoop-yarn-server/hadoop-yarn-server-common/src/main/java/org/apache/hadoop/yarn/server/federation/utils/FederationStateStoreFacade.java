@@ -969,7 +969,7 @@ public final class FederationStateStoreFacade {
    * @throws YarnException When there is no Active SubCluster,
    * an exception will be thrown (No active SubCluster available to submit the request.)
    */
-  public static SubClusterId getRandomActiveSubCluster(
+  public SubClusterId getRandomActiveSubCluster(
       Map<SubClusterId, SubClusterInfo> activeSubClusters, List<SubClusterId> blackList)
       throws YarnException {
 

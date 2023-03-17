@@ -767,7 +767,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     if (hsr == null) {
       return null;
     }
-    @SuppressWarnings("unchecked")
+
     final Map<String, String[]> parameterMap = hsr.getParameterMap();
     final String pathInfo = hsr.getPathInfo();
     final String user = hsr.getRemoteUser();
@@ -941,7 +941,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       ClientMethod remoteMethod = new ClientMethod("getNodes", argsClasses, args);
       Map<SubClusterInfo, NodesInfo> nodesMap =
           invokeConcurrent(subClustersActive, remoteMethod, NodesInfo.class);
-      nodesMap.values().stream().forEach(nodesInfo -> nodes.addAll(nodesInfo.getNodes()));
+      nodesMap.values().forEach(nodesInfo -> nodes.addAll(nodesInfo.getNodes()));
     } catch (NotFoundException e) {
       LOG.error("get all active sub cluster(s) error.", e);
       throw e;
@@ -1031,11 +1031,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throws AuthorizationException {
 
     // Check that the appId format is accurate
-    try {
-      RouterServerUtil.validateApplicationId(appId);
-    } catch (IllegalArgumentException e) {
-      throw e;
-    }
+    RouterServerUtil.validateApplicationId(appId);
 
     // Get SubCluster according to appId.
     SubClusterInfo subClusterInfo;
@@ -1069,7 +1065,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   /**
    * This method retrieves the current scheduler status, and it is reachable by
    * using {@link RMWSConsts#SCHEDULER}.
-   *
    * For the federation mode, the SchedulerType information of the cluster
    * cannot be integrated and displayed, and the specific cluster information needs to be marked.
    *
@@ -1152,7 +1147,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       StringBuilder stringBuilder = new StringBuilder();
       dumpSchedulerLogsMap.forEach((subClusterInfo, msg) -> {
         SubClusterId subClusterId = subClusterInfo.getSubClusterId();
-        stringBuilder.append("subClusterId" + subClusterId + " : " + msg + "; ");
+        stringBuilder.append("subClusterId")
+            .append(subClusterId).append(" : ").append(msg).append("; ");
       });
       long stopTime = clock.getTime();
       routerMetrics.succeededDumpSchedulerLogsRetrieved(stopTime - startTime);
@@ -1205,10 +1201,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         routerMetrics.succeededGetActivitiesLatencyRetrieved(stopTime - startTime);
         return activitiesInfo;
       }
-    } catch (IllegalArgumentException e) {
-      routerMetrics.incrGetActivitiesFailedRetrieved();
-      throw e;
-    } catch (NotFoundException e) {
+    } catch (IllegalArgumentException | NotFoundException e) {
       routerMetrics.incrGetActivitiesFailedRetrieved();
       throw e;
     }
@@ -1489,7 +1482,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
       // Step2. We map the NodeId and NodeToLabelsEntry in the request.
       Map<String, NodeToLabelsEntry> nodeIdToLabels = new HashMap<>();
-      newNodeToLabels.getNodeToLabels().stream().forEach(nodeIdToLabel -> {
+      newNodeToLabels.getNodeToLabels().forEach(nodeIdToLabel -> {
         String nodeId = nodeIdToLabel.getNodeId();
         nodeIdToLabels.put(nodeId, nodeIdToLabel);
       });
@@ -1526,9 +1519,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
       // Step5. return call result.
       return Response.status(Status.OK).entity(builder.toString()).build();
-    } catch (NotFoundException e) {
-      routerMetrics.incrReplaceLabelsOnNodesFailedRetrieved();
-      throw e;
     } catch (Exception e) {
       routerMetrics.incrReplaceLabelsOnNodesFailedRetrieved();
       throw e;
@@ -1576,10 +1566,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       routerMetrics.succeededReplaceLabelsOnNodeRetrieved(stopTime - startTime);
       String msg = "subCluster#" + subClusterInfo.getSubClusterId().getId() + ":Success;";
       return Response.status(Status.OK).entity(msg).build();
-    } catch (NotFoundException e) {
-      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
-      throw e;
-    } catch (Exception e){
+    } catch (Exception e) {
       routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
       throw e;
     }
@@ -1652,9 +1639,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           invokeConcurrent(subClustersActives, remoteMethod, Response.class);
       StringBuffer buffer = new StringBuffer();
       // SubCluster-0:SUCCESS,SubCluster-1:SUCCESS
-      responseInfoMap.forEach((subClusterInfo, response) -> {
-        buildAppendMsg(subClusterInfo, buffer, response);
-      });
+      responseInfoMap.forEach((subClusterInfo, response) ->
+          buildAppendMsg(subClusterInfo, buffer, response));
       long stopTime = clock.getTime();
       routerMetrics.succeededAddToClusterNodeLabelsRetrieved((stopTime - startTime));
       return Response.status(Status.OK).entity(buffer.toString()).build();
@@ -1701,9 +1687,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           invokeConcurrent(subClustersActives, remoteMethod, Response.class);
       StringBuffer buffer = new StringBuffer();
       // SubCluster-0:SUCCESS,SubCluster-1:SUCCESS
-      responseInfoMap.forEach((subClusterInfo, response) -> {
-        buildAppendMsg(subClusterInfo, buffer, response);
-      });
+      responseInfoMap.forEach((subClusterInfo, response) ->
+          buildAppendMsg(subClusterInfo, buffer, response));
       long stopTime = clock.getTime();
       routerMetrics.succeededRemoveFromClusterNodeLabelsRetrieved(stopTime - startTime);
       return Response.status(Status.OK).entity(buffer.toString()).build();
@@ -2165,7 +2150,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   private Response invokeCreateNewReservation(Map<SubClusterId, SubClusterInfo> subClustersActive,
       List<SubClusterId> blackList, HttpServletRequest hsr, int retryCount)
-      throws YarnException, IOException, InterruptedException {
+      throws YarnException {
     SubClusterId subClusterId =
         federationFacade.getRandomActiveSubCluster(subClustersActive, blackList);
     LOG.info("createNewReservation try #{} on SubCluster {}.", retryCount, subClusterId);
@@ -2933,8 +2918,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         RouterServerUtil.logAndThrowException(null,
             "Can't get HomeSubCluster by reservationId %s", resId);
       }
-      SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
-      return subClusterInfo;
+      return federationFacade.getSubCluster(subClusterId);
     } catch (YarnException | IOException e) {
       RouterServerUtil.logAndThrowException(e,
           "Get HomeSubClusterInfo by reservationId %s failed.", resId);
