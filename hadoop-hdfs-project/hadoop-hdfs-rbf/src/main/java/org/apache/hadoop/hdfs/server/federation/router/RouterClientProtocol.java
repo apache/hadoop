@@ -614,7 +614,7 @@ public class RouterClientProtocol implements ClientProtocol {
         new Class<?>[] {String.class, String.class},
         new RemoteParam(), dstParam);
     if (isMultiDestDirectory(src)) {
-      if (locs.size() == srcLocations.size()) {
+      if (locs.size() != srcLocations.size()) {
         throw new IOException(
             "Rename of " + src + " to " + dst + " is not allowed," +
                 " The remote location should be exactly same.");
@@ -646,7 +646,7 @@ public class RouterClientProtocol implements ClientProtocol {
         new Class<?>[] {String.class, String.class, options.getClass()},
         new RemoteParam(), dstParam, options);
     if (isMultiDestDirectory(src)) {
-      if (locs.size() == srcLocations.size()) {
+      if (locs.size() != srcLocations.size()) {
         throw new IOException(
             "Rename of " + src + " to " + dst + " is not allowed," +
                 " The remote location should be exactly same.");
