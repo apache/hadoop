@@ -29,12 +29,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.servlet.http.HttpServletRequest;
@@ -711,63 +711,37 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     AppsInfo apps = new AppsInfo();
     long startTime = clock.getTime();
 
-    Map<SubClusterId, SubClusterInfo> subClustersActive = null;
-    try {
-      subClustersActive = federationFacade.getSubClusters(true);
-    } catch (YarnException e) {
-      routerMetrics.incrMultipleAppsFailedRetrieved();
-      return null;
-    }
-
-    // Send the requests in parallel
-    CompletionService<AppsInfo> compSvc =
-        new ExecutorCompletionService<>(this.threadpool);
-
     // HttpServletRequest does not work with ExecutorCompletionService.
     // Create a duplicate hsr.
     final HttpServletRequest hsrCopy = clone(hsr);
+    Collection<SubClusterInfo> subClusterInfos = federationFacade.getActiveSubClusters();
 
-
-
-    for (final SubClusterInfo info : subClustersActive.values()) {
-      compSvc.submit(new Callable<AppsInfo>() {
-        @Override
-        public AppsInfo call() {
+    List<AppsInfo> appsInfos = subClusterInfos.parallelStream().map(subClusterInfo -> {
+        try {
           DefaultRequestInterceptorREST interceptor =
-              getOrCreateInterceptorForSubCluster(
-                  info.getSubClusterId(), info.getRMWebServiceAddress());
+              getOrCreateInterceptorForSubCluster(subClusterInfo);
           AppsInfo rmApps = interceptor.getApps(hsrCopy, stateQuery,
               statesQuery, finalStatusQuery, userQuery, queueQuery, count,
               startedBegin, startedEnd, finishBegin, finishEnd,
               applicationTypes, applicationTags, name, unselectedFields);
-
-          if (rmApps == null) {
-            routerMetrics.incrMultipleAppsFailedRetrieved();
-            LOG.error("Subcluster {} failed to return appReport.", info.getSubClusterId());
-            return null;
+          if (rmApps != null) {
+            return rmApps;
           }
-          return rmApps;
+        } catch (Exception e) {
+          LOG.warn("Failed to get application report.", e);
         }
-      });
-    }
-
-    // Collect all the responses in parallel
-    for (int i = 0; i < subClustersActive.size(); i++) {
-      try {
-        Future<AppsInfo> future = compSvc.take();
-        AppsInfo appsResponse = future.get();
-
-        long stopTime = clock.getTime();
-        routerMetrics.succeededMultipleAppsRetrieved(stopTime - startTime);
-
-        if (appsResponse != null) {
-          apps.addAll(appsResponse.getApps());
-        }
-      } catch (Throwable e) {
         routerMetrics.incrMultipleAppsFailedRetrieved();
-        LOG.warn("Failed to get application report", e);
-      }
-    }
+        LOG.error("Subcluster {} failed to return appReport.", subClusterInfo.getSubClusterId());
+        return null;
+    }).collect(Collectors.toList());
+
+    appsInfos.forEach(appsInfo -> {
+       if (appsInfo != null) {
+         apps.addAll(appsInfo.getApps());
+         long stopTime = clock.getTime();
+         routerMetrics.succeededMultipleAppsRetrieved(stopTime - startTime);
+       }
+    });
 
     if (apps.getApps().isEmpty()) {
       return null;
