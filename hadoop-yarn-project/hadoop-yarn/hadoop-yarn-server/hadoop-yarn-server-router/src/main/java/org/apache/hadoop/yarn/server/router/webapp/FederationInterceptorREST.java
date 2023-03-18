@@ -716,23 +716,21 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     final HttpServletRequest hsrCopy = clone(hsr);
     Collection<SubClusterInfo> subClusterInfos = federationFacade.getActiveSubClusters();
 
-    List<AppsInfo> appsInfos = subClusterInfos.parallelStream().map(subClusterInfo -> {
-        try {
-          DefaultRequestInterceptorREST interceptor =
-              getOrCreateInterceptorForSubCluster(subClusterInfo);
-          AppsInfo rmApps = interceptor.getApps(hsrCopy, stateQuery,
-              statesQuery, finalStatusQuery, userQuery, queueQuery, count,
-              startedBegin, startedEnd, finishBegin, finishEnd,
-              applicationTypes, applicationTags, name, unselectedFields);
-          if (rmApps != null) {
-            return rmApps;
-          }
-        } catch (Exception e) {
-          LOG.warn("Failed to get application report.", e);
-        }
-        routerMetrics.incrMultipleAppsFailedRetrieved();
-        LOG.error("Subcluster {} failed to return appReport.", subClusterInfo.getSubClusterId());
-        return null;
+    List<AppsInfo> appsInfos = subClusterInfos.parallelStream().map(subCluster -> {
+      try {
+       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(subCluster);
+       AppsInfo rmApps = interceptor.getApps(hsrCopy, stateQuery, statesQuery, finalStatusQuery,
+           userQuery, queueQuery, count, startedBegin, startedEnd, finishBegin, finishEnd,
+           applicationTypes, applicationTags, name, unselectedFields);
+       if (rmApps != null) {
+         return rmApps;
+       }
+      } catch (Exception e) {
+        LOG.warn("Failed to get application report.", e);
+      }
+      routerMetrics.incrMultipleAppsFailedRetrieved();
+      LOG.error("Subcluster {} failed to return appReport.", subCluster.getSubClusterId());
+      return null;
     }).collect(Collectors.toList());
 
     appsInfos.forEach(appsInfo -> {
