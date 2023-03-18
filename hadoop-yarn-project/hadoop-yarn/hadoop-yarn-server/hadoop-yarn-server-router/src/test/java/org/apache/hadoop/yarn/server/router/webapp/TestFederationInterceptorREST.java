@@ -2167,7 +2167,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       Assert.assertTrue(subClusterSet.contains(confInfo.getSubClusterId()));
     }
   }
-  
+
   @Test
   public void testGetClusterUserInfo() {
     String requestUserName = "test-user";
@@ -2241,7 +2241,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     String entityMsg = String.valueOf(entity);
     Assert.assertEquals(expectMsg, entityMsg);
   }
-  
+
   @Test
   public void testGetClusterInfo() {
     ClusterInfo clusterInfos = interceptor.getClusterInfo();

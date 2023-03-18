@@ -578,7 +578,7 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed updateSchedulerConfiguration call");
       metrics.incrUpdateSchedulerConfigurationFailedRetrieved();
     }
-    
+
     public void getClusterInfoFailed() {
       LOG.info("Mocked: failed getClusterInfo call");
       metrics.incrGetClusterInfoFailedRetrieved();
@@ -868,7 +868,7 @@ public class TestRouterMetrics {
       LOG.info("Mocked: successful UpdateSchedulerConfiguration call with duration {}", duration);
       metrics.succeededUpdateSchedulerConfigurationRetrieved(duration);
     }
-    
+
     public void getClusterInfoRetrieved(long duration) {
       LOG.info("Mocked: successful GetClusterInfoRetrieved call with duration {}", duration);
       metrics.succeededGetClusterInfoRetrieved(duration);
@@ -1934,7 +1934,7 @@ public class TestRouterMetrics {
     Assert.assertEquals(225,
         metrics.getLatencySucceededUpdateSchedulerConfigurationRetrieved(), ASSERT_DOUBLE_DELTA);
   }
-  
+
   @Test
   public void testGetClusterInfoRetrievedFailed() {
     long totalBadBefore = metrics.getClusterInfoFailedRetrieved();

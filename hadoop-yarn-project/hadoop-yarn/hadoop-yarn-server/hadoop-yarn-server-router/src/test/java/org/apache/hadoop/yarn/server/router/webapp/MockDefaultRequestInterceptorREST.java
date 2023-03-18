@@ -1390,7 +1390,7 @@ public class MockDefaultRequestInterceptorREST
     return Response.status(Status.OK).entity(new ConfInfo(mockRM.getConfig()))
         .build();
   }
-  
+
   public ClusterInfo getClusterInfo() {
     ClusterInfo clusterInfo = new ClusterInfo(mockRM);
     return clusterInfo;

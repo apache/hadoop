@@ -295,7 +295,7 @@ public final class RouterMetrics {
   private MutableRate totalSucceededGetClusterInfoRetrieved;
   @Metric("Total number of successful Retrieved GetClusterUserInfoRetrieved and latency(ms)")
   private MutableRate totalSucceededGetClusterUserInfoRetrieved;
-  
+
   /**
    * Provide quantile counters for all latencies.
    */
@@ -889,7 +889,7 @@ public final class RouterMetrics {
   public long getNumSucceededGetSchedulerConfigurationRetrieved() {
     return totalSucceededGetSchedulerConfigurationRetrieved.lastStat().numSamples();
   }
-  
+
   @VisibleForTesting
   public long getNumSucceededGetClusterInfoRetrieved() {
     return totalSucceededGetClusterInfoRetrieved.lastStat().numSamples();
@@ -1199,7 +1199,7 @@ public final class RouterMetrics {
   public double getLatencySucceededGetSchedulerConfigurationRetrieved() {
     return totalSucceededGetSchedulerConfigurationRetrieved.lastStat().mean();
   }
-  
+
   @VisibleForTesting
   public double getLatencySucceededGetClusterInfoRetrieved() {
     return totalSucceededGetClusterInfoRetrieved.lastStat().mean();
@@ -1454,7 +1454,7 @@ public final class RouterMetrics {
   public int getNumRemoveFromClusterNodeLabelsFailedRetrieved() {
     return numRemoveFromClusterNodeLabelsFailedRetrieved.value();
   }
-  
+
   public int getUpdateSchedulerConfigurationFailedRetrieved() {
     return numUpdateSchedulerConfigurationFailedRetrieved.value();
   }
@@ -1462,7 +1462,7 @@ public final class RouterMetrics {
   public int getSchedulerConfigurationFailedRetrieved() {
     return numGetSchedulerConfigurationFailedRetrieved.value();
   }
-  
+
   public int getClusterInfoFailedRetrieved() {
     return numGetClusterInfoFailedRetrieved.value();
   }
@@ -1783,7 +1783,7 @@ public final class RouterMetrics {
     totalSucceededGetSchedulerConfigurationRetrieved.add(duration);
     getSchedulerConfigurationLatency.add(duration);
   }
-  
+
   public void succeededGetClusterInfoRetrieved(long duration) {
     totalSucceededGetClusterInfoRetrieved.add(duration);
     getClusterInfoLatency.add(duration);
@@ -2021,7 +2021,7 @@ public final class RouterMetrics {
   public void incrGetSchedulerConfigurationFailedRetrieved() {
     numGetSchedulerConfigurationFailedRetrieved.incr();
   }
-  
+
   public void incrGetClusterInfoFailedRetrieved() {
     numGetClusterInfoFailedRetrieved.incr();
   }
