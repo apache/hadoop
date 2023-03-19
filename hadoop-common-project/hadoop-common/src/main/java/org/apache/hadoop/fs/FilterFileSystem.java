@@ -76,6 +76,8 @@ public class FilterFileSystem extends FileSystem {
     this.statistics = fs.statistics;
   }
 
+
+
   /**
    * Get the raw file system 
    * @return FileSystem being filtered

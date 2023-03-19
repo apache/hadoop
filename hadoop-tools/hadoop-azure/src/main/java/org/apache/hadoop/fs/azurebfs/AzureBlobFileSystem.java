@@ -157,11 +157,6 @@ public class AzureBlobFileSystem extends FileSystem
   /** Rate limiting for operations which use it to throttle their IO. */
   private RateLimiting rateLimiting;
 
-  /**
-   * Enable resilient rename.
-   */
-  private boolean renameResilience;
-
   @Override
   public void initialize(URI uri, Configuration configuration)
       throws IOException {
@@ -234,8 +229,6 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     rateLimiting = RateLimitingFactory.create(abfsConfiguration.getRateLimit());
-
-    renameResilience = abfsConfiguration.getRenameResilience();
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
   }
 
@@ -452,12 +445,9 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     // Non-HNS account need to check dst status on driver side.
-    final boolean isNamespaceEnabled = abfsStore.getIsNamespaceEnabled(tracingContext);
-    if (!isNamespaceEnabled && dstFileStatus == null) {
+    if (!abfsStore.getIsNamespaceEnabled(tracingContext) && dstFileStatus == null) {
       dstFileStatus = tryGetFileStatus(qualifiedDstPath, tracingContext);
     }
-
-    FileStatus sourceFileStatus = null;
 
     try {
       String sourceFileName = src.getName();
@@ -472,24 +462,10 @@ public class AzureBlobFileSystem extends FileSystem
 
       qualifiedDstPath = makeQualified(adjustedDst);
 
-      String etag = null;
-      if (renameResilience && isNamespaceEnabled) {
-        // for resilient rename on an HNS store, get the etag before
-        // attempting the rename, and pass it down
-        sourceFileStatus = abfsStore.getFileStatus(qualifiedSrcPath, tracingContext);
-        etag = ((EtagSource) sourceFileStatus).getEtag();
-      }
-      boolean recovered = abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext,
-          etag);
-      if (recovered) {
-        LOG.info("Recovered from rename failure of {} to {}",
-            qualifiedSrcPath, qualifiedDstPath);
-      }
+      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext, null);
       return true;
     } catch (AzureBlobFileSystemException ex) {
-      LOG.debug("Rename {} to {} failed. source {} dest {}",
-          qualifiedSrcPath, qualifiedDstPath,
-          sourceFileStatus, dstFileStatus, ex);
+      LOG.debug("Rename operation failed. ", ex);
       checkException(
           src,
           ex,
