@@ -215,7 +215,7 @@ public class MetricsRegistry {
    * @throws MetricsException if interval is not a positive integer
    */
   public synchronized MutableQuantiles newQuantiles(String name, String desc,
-    String sampleName, String valueName, int interval) {
+                                                    String sampleName, String valueName, int interval) {
     return newQuantiles(name, desc, sampleName, valueName, interval, false);
   }
 

@@ -249,7 +249,7 @@ public class SampleQuantiles implements QuantileEstimator {
   }
 
   /**
-   * Returns the number of items that the estimator has processed
+   * Returns the number of items that the estimator has processed.
    * 
    * @return count total number of items processed
    */
