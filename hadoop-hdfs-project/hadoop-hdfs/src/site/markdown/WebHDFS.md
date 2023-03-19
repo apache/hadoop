@@ -57,6 +57,7 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`GETSNAPSHOTLIST`](#Get_Snapshot_List)
     * [`GETFILEBLOCKLOCATIONS`](#Get_File_Block_Locations) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileBlockLocations)
     * [`GETECPOLICY`](#Get_EC_Policy) (see [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).getErasureCodingPolicy)
+    * [`GETLINKTARGET`](#Get_Link_Target) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTarget)
 *   HTTP PUT
     * [`CREATE`](#Create_and_Write_to_a_File) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).create)
     * [`MKDIRS`](#Make_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).mkdirs)

@@ -64,7 +64,8 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
     GETSNAPSHOTDIFF(false, HttpURLConnection.HTTP_OK),
     GETSNAPSHOTDIFFLISTING(false, HttpURLConnection.HTTP_OK),
     GETSNAPSHOTTABLEDIRECTORYLIST(false, HttpURLConnection.HTTP_OK),
-    GETSNAPSHOTLIST(false, HttpURLConnection.HTTP_OK);
+    GETSNAPSHOTLIST(false, HttpURLConnection.HTTP_OK),
+    GETLINKTARGET(false, HttpURLConnection.HTTP_OK);
 
     final boolean redirect;
     final int expectedHttpResponseCode;
