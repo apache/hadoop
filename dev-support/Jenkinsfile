@@ -42,7 +42,7 @@ def publishJUnitResults() {
 pipeline {
 
     agent {
-        label 'Windows'
+        label 'jenkins-win-azr-6'
     }
 
     options {
