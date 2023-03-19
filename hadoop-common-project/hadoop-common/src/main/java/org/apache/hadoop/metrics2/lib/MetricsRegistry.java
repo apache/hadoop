@@ -235,7 +235,7 @@ public class MetricsRegistry {
                                                     int interval, boolean inverseQuantiles) {
     checkMetricName(name);
     if (interval <= 0) {
-      throw new MetricsException("Interval should be positive. Value passed is: " + interval);
+      throw new MetricsException("Interval should be positive.  Value passed is: " + interval);
     }
     MutableQuantiles ret =
         new MutableQuantiles(name, desc, sampleName, valueName, interval, inverseQuantiles);
