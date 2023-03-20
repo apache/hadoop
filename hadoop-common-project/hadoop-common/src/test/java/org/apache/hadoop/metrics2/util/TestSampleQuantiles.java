@@ -126,7 +126,7 @@ public class TestSampleQuantiles {
    */
   @Test
   public void testInverseQuantiles() throws IOException {
-    SampleQuantiles estimator = new SampleQuantiles(MutableInverseQuantiles.inverseQuantiles);
+    SampleQuantiles inverseQuantilesEstimator = new SampleQuantiles(MutableInverseQuantiles.INVERSE_QUANTILES);
     final int count = 100000;
     Random r = new Random(0xDEADDEAD);
     Long[] values = new Long[count];
@@ -137,13 +137,13 @@ public class TestSampleQuantiles {
     for (int i = 0; i < 10; i++) {
       System.out.println("Starting run " + i);
       Collections.shuffle(Arrays.asList(values), r);
-      estimator.clear();
+      inverseQuantilesEstimator.clear();
       for (int j = 0; j < count; j++) {
-        estimator.insert(values[j]);
+        inverseQuantilesEstimator.insert(values[j]);
       }
       Map<Quantile, Long> snapshot;
-      snapshot = estimator.snapshot();
-      for (Quantile q : MutableInverseQuantiles.inverseQuantiles) {
+      snapshot = inverseQuantilesEstimator.snapshot();
+      for (Quantile q : MutableInverseQuantiles.INVERSE_QUANTILES) {
         long actual = (long) (q.quantile * count);
         long error = (long) (q.error * count);
         long estimate = snapshot.get(q);

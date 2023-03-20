@@ -403,6 +403,27 @@ public class MetricsAsserts {
   }
 
   /**
+   * Asserts that the NumOps and inverse quantiles for a metric have been changed at
+   * some point to a non-zero value, for the specified value name of the
+   * metrics (e.g., "Rate").
+   *
+   * @param prefix of the metric
+   * @param rb MetricsRecordBuilder with the metric
+   * @param valueName the value name for the metric
+   */
+  public static void assertInverseQuantileGauges(String prefix,
+      MetricsRecordBuilder rb, String valueName) {
+    verify(rb).addGauge(eqName(info(prefix + "NumOps", "")), geq(0l));
+    for (Quantile q : MutableQuantiles.quantiles) {
+      String nameTemplate = prefix + "%dthInversePercentile" + valueName;
+      int percentile = (int) (100 * q.quantile);
+      verify(rb).addGauge(
+          eqName(info(String.format(nameTemplate, percentile), "")),
+          geq(0l));
+    }
+  }
+
+  /**
    * Assert a tag of metric as expected.
    * @param name  of the metric tag
    * @param expected  value of the metric tag

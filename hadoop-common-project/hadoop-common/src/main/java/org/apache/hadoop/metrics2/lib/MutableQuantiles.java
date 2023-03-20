@@ -52,11 +52,11 @@ public class MutableQuantiles extends MutableMetric {
       new Quantile(0.75, 0.025), new Quantile(0.90, 0.010),
       new Quantile(0.95, 0.005), new Quantile(0.99, 0.001) };
 
-  MetricsInfo numInfo;
-  MetricsInfo[] quantileInfos;
+  private MetricsInfo numInfo;
+  private MetricsInfo[] quantileInfos;
   private int interval;
 
-  QuantileEstimator estimator;
+  private QuantileEstimator estimator;
   private long previousCount = 0;
   private ScheduledFuture<?> scheduledTask = null;
 
@@ -91,20 +91,20 @@ public class MutableQuantiles extends MutableMetric {
     String lsName = StringUtils.uncapitalize(sampleName);
     String lvName = StringUtils.uncapitalize(valueName);
 
-    numInfo = info(ucName + "Num" + usName, String.format(
-        "Number of %s for %s with %ds interval", lsName, desc, interval));
+    setNumInfo(info(ucName + "Num" + usName, String.format(
+        "Number of %s for %s with %ds interval", lsName, desc, interval)));
     // Construct the MetricsInfos for the quantiles, converting to percentiles
-    quantileInfos = new MetricsInfo[quantiles.length];
+    setQuantileInfos(quantiles.length);
     String nameTemplate = ucName + "%dthPercentile" + uvName;
     String descTemplate = "%d percentile " + lvName + " with " + interval
         + " second interval for " + desc;
     for (int i = 0; i < quantiles.length; i++) {
       int percentile = (int) (100 * quantiles[i].quantile);
-      quantileInfos[i] = info(String.format(nameTemplate, percentile),
-          String.format(descTemplate, percentile));
+      addQuantileInfo(i, info(String.format(nameTemplate, percentile),
+          String.format(descTemplate, percentile)));
     }
 
-    estimator = new SampleQuantiles(quantiles);
+    setEstimator(new SampleQuantiles(quantiles));
 
     setInterval(interval);
     scheduledTask = scheduler.scheduleWithFixedDelay(new RolloverSample(this),
@@ -135,11 +135,49 @@ public class MutableQuantiles extends MutableMetric {
     estimator.insert(value);
   }
 
-  synchronized void setInterval(int interval) {
+  /**
+   * Set info about the metrics.
+   *
+   * @param numInfo info about the metrics.
+   */
+  public synchronized void setNumInfo(MetricsInfo numInfo) {
+    this.numInfo = numInfo;
+  }
+
+  /**
+   * Initialize quantileInfos array.
+   *
+   * @param length of the quantileInfos array.
+   */
+  public synchronized void setQuantileInfos(int length) {
+    this.quantileInfos = new MetricsInfo[length];
+  }
+
+  /**
+   * Add entry to quantileInfos array.
+   *
+   * @param i array index.
+   * @param info info to be added to  quantileInfos array.
+   */
+  public synchronized void addQuantileInfo(int i, MetricsInfo info) {
+    this.quantileInfos[i] = info;
+  }
+
+  /**
+   * Set the rollover interval (in seconds) of the estimator.
+   *
+   * @param interval (in seconds) of the estimator.
+   */
+  public synchronized void setInterval(int interval) {
     this.interval = interval;
   }
 
-  public int getInterval() {
+  /**
+   * Get the rollover interval (in seconds) of the estimator.
+   *
+   * @return  interval (in seconds) of the estimator.
+   */
+  public synchronized int getInterval() {
     return interval;
   }
 

@@ -301,7 +301,7 @@ public class MetricsRegistry {
   }
 
   /**
-   * Create a mutable rate metric (for throughput measurement)
+   * Create a mutable rate metric (for throughput measurement).
    * @param name  of the metric
    * @param desc  description
    * @param extended  produce extended stat (stdev/min/max etc.) if true
