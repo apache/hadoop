@@ -52,11 +52,11 @@ public class MutableQuantiles extends MutableMetric {
       new Quantile(0.75, 0.025), new Quantile(0.90, 0.010),
       new Quantile(0.95, 0.005), new Quantile(0.99, 0.001) };
 
-  private final MetricsInfo numInfo;
-  private final MetricsInfo[] quantileInfos;
-  private final int interval;
+  MetricsInfo numInfo;
+  MetricsInfo[] quantileInfos;
+  private int interval;
 
-  private QuantileEstimator estimator;
+  QuantileEstimator estimator;
   private long previousCount = 0;
   private ScheduledFuture<?> scheduledTask = null;
 
@@ -106,10 +106,12 @@ public class MutableQuantiles extends MutableMetric {
 
     estimator = new SampleQuantiles(quantiles);
 
-    this.interval = interval;
+    setInterval(interval);
     scheduledTask = scheduler.scheduleWithFixedDelay(new RolloverSample(this),
         interval, interval, TimeUnit.SECONDS);
   }
+
+  public MutableQuantiles() {}
 
   @Override
   public synchronized void snapshot(MetricsRecordBuilder builder, boolean all) {
@@ -131,6 +133,10 @@ public class MutableQuantiles extends MutableMetric {
 
   public synchronized void add(long value) {
     estimator.insert(value);
+  }
+
+  synchronized void setInterval(int interval) {
+    this.interval = interval;
   }
 
   public int getInterval() {
@@ -162,7 +168,7 @@ public class MutableQuantiles extends MutableMetric {
    * Runnable used to periodically roll over the internal
    * {@link SampleQuantiles} every interval.
    */
-  private static class RolloverSample implements Runnable {
+  static class RolloverSample implements Runnable {
 
     MutableQuantiles parent;
 

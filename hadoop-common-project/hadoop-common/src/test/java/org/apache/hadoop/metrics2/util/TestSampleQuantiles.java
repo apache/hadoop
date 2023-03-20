@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.metrics2.lib.MutableInverseQuantiles;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -113,6 +114,42 @@ public class TestSampleQuantiles {
         System.out
             .println(String.format("Expected %d with error %d, estimated %d",
                 actual, error, estimate));
+        assertThat(estimate <= actual + error).isTrue();
+        assertThat(estimate >= actual - error).isTrue();
+      }
+    }
+  }
+
+  /**
+   * Correctness test that checks that absolute error of the estimate for inverse quantiles
+   * is within specified error bounds for some randomly permuted streams of items.
+   */
+  @Test
+  public void testInverseQuantiles() throws IOException {
+    SampleQuantiles estimator = new SampleQuantiles(MutableInverseQuantiles.inverseQuantiles);
+    final int count = 100000;
+    Random r = new Random(0xDEADDEAD);
+    Long[] values = new Long[count];
+    for (int i = 0; i < count; i++) {
+      values[i] = (long) (i + 1);
+    }
+    // Do 10 shuffle/insert/check cycles
+    for (int i = 0; i < 10; i++) {
+      System.out.println("Starting run " + i);
+      Collections.shuffle(Arrays.asList(values), r);
+      estimator.clear();
+      for (int j = 0; j < count; j++) {
+        estimator.insert(values[j]);
+      }
+      Map<Quantile, Long> snapshot;
+      snapshot = estimator.snapshot();
+      for (Quantile q : MutableInverseQuantiles.inverseQuantiles) {
+        long actual = (long) (q.quantile * count);
+        long error = (long) (q.error * count);
+        long estimate = snapshot.get(q);
+        System.out.println(String.format("For inverse quantile %f " +
+            "Expected %d with error %d, estimated %d",
+                (1 - q.quantile), actual, error, estimate));
         assertThat(estimate <= actual + error).isTrue();
         assertThat(estimate >= actual - error).isTrue();
       }
