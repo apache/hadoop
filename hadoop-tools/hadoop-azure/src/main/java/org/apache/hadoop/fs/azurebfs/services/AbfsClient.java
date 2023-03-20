@@ -545,7 +545,10 @@ public class AbfsClient implements Closeable {
 
       sourceEtag = extractEtagHeader(result);
       // and update the directory status.
-      isDir = isEmpty(sourceEtag);
+      final String resourceType =
+          result.getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
+      isDir = AbfsHttpConstants.DIRECTORY.equalsIgnoreCase(resourceType);
+      LOG.debug("Retrieved etag of source for rename recovery: {}; isDir={}", sourceEtag, isDir);
     }
 
     String encodedRenameSource = urlEncode(FORWARD_SLASH + this.getFileSystem() + source);
@@ -660,15 +663,14 @@ public class AbfsClient implements Closeable {
       final boolean isDir) {
     Preconditions.checkArgument(op.hasResult(), "Operations has null HTTP response");
 
+    LOG.debug("rename({}, {}) failure {}; retry={} isDir {} etag {}",
+        source, destination, op.getResult().getStatusCode(), op.isARetriedRequest(), isDir, sourceEtag);
     if (!(op.isARetriedRequest()
             && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND))) {
-      // this failed on the first attempt (no not retry related)
-      // *or* it was any error other than 404
-      // do not attempt to recover from this failure.
+      // only attempt recovery if the failure was a 404 on a retried rename request.
       return false;
     }
-    LOG.debug("Source not found on retry of rename({}, {}) isDir {} etag {}",
-        source, destination, isDir, sourceEtag);
+
     if (isDir) {
       // directory recovery is not supported.
       // log and fail.
@@ -697,6 +699,8 @@ public class AbfsClient implements Closeable {
         // or some other failure. log and swallow.
         LOG.debug("Failed to get status of path {}", destination, ex);
       }
+    } else {
+      LOG.debug("No source etag; unable to probe for the operation's success");
     }
     return false;
   }
