@@ -30,13 +30,13 @@ public class TestPaginatedDelete extends AbstractAbfsIntegrationTest {
         AbfsConfiguration abfsConfig = getConfiguration(); // update to retrieve fixed test configs
         AzureBlobFileSystem fs = getFileSystem(); // update to retrieve fixed test configs
         AbfsClient client = fs.getAbfsStore().getClient();
-        client = TestAbfsClient.setAbfsClientField(client, "xMsVersion", "2021-12-02");
+        // client = TestAbfsClient.setAbfsClientField(client, "xMsVersion", "2021-12-02");
 
         abfsConfig.setBoolean(ConfigurationKeys.FS_AZURE_ENABLE_PAGINATED_DELETE, true);
         updateTestConfiguration();
 
         // delete should fail with bad request as version does not support pagination
-        String path = "/LargeDir";
+        String path = "/largeDir";
         AbfsRestOperation resultOp = client.deletePath(path, true, null, getTestTracingContext(fs, false));
         int statusCode = resultOp.getResult().getStatusCode();
         assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, statusCode);
@@ -55,7 +55,6 @@ public class TestPaginatedDelete extends AbstractAbfsIntegrationTest {
 
     }
 
-    @Before
     public void createLargeDir() throws IOException {
         AzureBlobFileSystem fs = getFileSystem();
         String rootPath = "/largeDir";
@@ -63,7 +62,7 @@ public class TestPaginatedDelete extends AbstractAbfsIntegrationTest {
         fs.create(new Path(firstFilePath));
 
         for (int i = 1; i <= 2000; i++) {
-            String dirPath = "/dir" + String.valueOf(i);
+            String dirPath = "/dirLevel1" + String.valueOf(i) + "/dirLevel2" + String.valueOf(i);
             String filePath = rootPath + dirPath + "/file" + String.valueOf(i);
             fs.create(new Path(filePath));
         }
