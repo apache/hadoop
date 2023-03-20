@@ -115,7 +115,7 @@ public class SignerManager implements Closeable {
   private static void maybeRegisterSigner(String signerName,
       String signerClassName, Configuration conf) {
     try {
-      SignerFactory.getSigner(signerName);
+      SignerFactory.verifySignerRegistered(signerName);
     } catch (IllegalArgumentException e) {
       // Signer is not registered with the AWS SDK.
       // Load the class and register the signer.

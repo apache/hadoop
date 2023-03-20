@@ -157,6 +157,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.store.audit.AuditEntryPoint;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
@@ -229,6 +230,7 @@ import static org.apache.hadoop.fs.s3a.Listing.toLocatedFileStatusIterator;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.INITIALIZE_SPAN;
+import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.createAWSCredentialProviderSet;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_ALLOW_SSE_KMS_RW;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3Operations;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.TokenIssuingPolicy.NoTokensAvailable;
@@ -330,6 +332,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private int executorCapacity;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
+  /** Exactly once log to warn about setting the region in config to avoid probe. */
+  private static final LogExactlyOnce SET_REGION_WARNING = new LogExactlyOnce(LOG);
   private static final Logger PROGRESS =
       LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
   private LocalDirAllocator directoryAllocator;
@@ -436,7 +440,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private final Set<Path> deleteOnExit = new TreeSet<>();
 
-  private final Map<String, Region> bucketRegions = new HashMap<>();
+  private final static Map<String, Region> bucketRegions = new HashMap<>();
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -711,7 +715,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * bucket existence check is not done to improve performance of
    * S3AFileSystem initialization. When set to 1 or 2, bucket existence check
    * will be performed which is potentially slow.
-   * If 3 or higher: warn and use the check.
+   * If 3 or higher: warn and skip check.
    * Also logging DNS address of the s3 endpoint if the bucket probe value is
    * greater than 0 else skipping it for increased performance.
    * @throws UnknownStoreException the bucket is absent
@@ -734,9 +738,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       break;
     default:
       // we have no idea what this is, assume it is from a later release.
-      LOG.warn("Unknown bucket probe option {}: {}; falling back to check #2",
+      LOG.warn("Unknown bucket probe option {}: {}; skipping check for bucket existence",
           S3A_BUCKET_PROBE, bucketProbe);
-      verifyBucketExists();
       break;
     }
   }
@@ -836,9 +839,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Retries.RetryTranslated
   protected void verifyBucketExists() throws UnknownStoreException, IOException {
-    if (!invoker.retry("doesBucketExist", bucket, true,
-        trackDurationOfOperation(getDurationTrackerFactory(), STORE_EXISTS_PROBE.getSymbol(),
-            () -> {
+
+    if(!trackDurationAndSpan(
+        STORE_EXISTS_PROBE, bucket, null, () ->
+            invoker.retry("doestBucketExist", bucket, true, () -> {
               try {
                 if (bucketRegions.containsKey(bucket)) {
                   return true;
@@ -855,7 +859,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
               return true;
             }))) {
-      throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does " + "not exist");
+
+      throw new UnknownStoreException("s3a://" + bucket + "/",
+          " Bucket does " + "not exist. " + "Accessing with " + ENDPOINT + " set to "
+              + getConf().getTrimmed(ENDPOINT, null));
     }
   }
 
@@ -996,7 +1003,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         () -> invoker.retry("getS3Region", bucket, true, () -> {
           try {
 
-            LOG.warn(
+            SET_REGION_WARNING.warn(
                 "Getting region for bucket {} from S3, this will slow down FS initialisation. "
                     + "To avoid this, set the region using property {}", bucket,
                 FS_S3A_BUCKET_PREFIX + bucket + ".endpoint.region");

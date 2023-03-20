@@ -289,9 +289,9 @@ public class HeaderProcessing extends AbstractStoreOperation {
 
       if (headBucketResponse.sdkHttpResponse() != null
           && headBucketResponse.sdkHttpResponse().headers() != null
-          && headBucketResponse.sdkHttpResponse().headers().get("Content-Type") != null) {
+          && headBucketResponse.sdkHttpResponse().headers().get(AWSHeaders.CONTENT_TYPE) != null) {
         maybeSetHeader(headers, XA_CONTENT_TYPE,
-            headBucketResponse.sdkHttpResponse().headers().get("Content-Type").get(0));
+            headBucketResponse.sdkHttpResponse().headers().get(AWSHeaders.CONTENT_TYPE).get(0));
       }
 
       maybeSetHeader(headers, XA_CONTENT_LENGTH, 0);

@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.fs.s3a.auth;
 
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.signer.Aws4Signer;
@@ -25,10 +29,6 @@ import software.amazon.awssdk.auth.signer.Aws4UnsignedPayloadSigner;
 import software.amazon.awssdk.auth.signer.AwsS3V4Signer;
 import software.amazon.awssdk.core.signer.NoOpSigner;
 import software.amazon.awssdk.core.signer.Signer;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.apache.hadoop.fs.s3a.S3AUtils;
 
@@ -45,7 +45,7 @@ public final class SignerFactory {
   private static final String S3_V4_SIGNER = "AWSS3V4SignerType";
 
   private static final Map<String, Class<? extends Signer>> SIGNERS
-      = new HashMap<>();
+      = new ConcurrentHashMap<>();
 
   static {
     // Register the standard signer types.
@@ -83,7 +83,7 @@ public final class SignerFactory {
    * Check if the signer has already been registered.
    * @param signerType signer to get
    */
-  public static void getSigner(String signerType) {
+  public static void verifySignerRegistered(String signerType) {
     Class<? extends Signer> signerClass = SIGNERS.get(signerType);
     if (signerClass == null) {
       throw new IllegalArgumentException("unknown signer type: " + signerType);

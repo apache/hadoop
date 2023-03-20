@@ -34,6 +34,7 @@ import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import org.apache.hadoop.conf.Configuration;
@@ -43,6 +44,7 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.BUCKET_REGION_HEADER;
 import static org.apache.hadoop.fs.s3a.Statistic.STORE_REGION_PROBE;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_301_MOVED_PERMANENTLY;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test to check correctness of S3A endpoint regions in
@@ -69,12 +71,10 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     fs.initialize(getFileSystem().getUri(), conf);
 
     try  {
-      fs.getBucketMetadata();
+     fs.getBucketMetadata();
     } catch (S3Exception exception) {
       if (exception.statusCode() == SC_301_MOVED_PERMANENTLY) {
-        List<String> bucketRegion =
-            exception.awsErrorDetails().sdkHttpResponse().headers().get(BUCKET_REGION_HEADER);
-        Assert.fail("Region not configured correctly, expected region: " + bucketRegion);
+        Assert.fail(exception.toString());
       }
     }
 
@@ -121,11 +121,8 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
 
     S3Client client = createS3Client(conf, AWS_ENDPOINT_TEST);
 
-    try {
-      client.headBucket(HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build());
-    } catch (AwsServiceException exception) {
-      // Expected to be thrown by interceptor, do nothing.
-    }
+    intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
+        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
   }
 
 
@@ -151,7 +148,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
       }
 
       // We don't actually want to make a request, so exit early.
-      throw AwsServiceException.builder().build();
+      throw AwsServiceException.builder().message("Exception thrown by interceptor").build();
     }
   }
 
