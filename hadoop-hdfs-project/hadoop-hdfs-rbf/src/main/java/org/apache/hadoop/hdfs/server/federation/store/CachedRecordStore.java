@@ -113,6 +113,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
     if (force || isUpdateTime()) {
       List<R> newRecords = null;
       long t = -1;
+      long startTime = Time.monotonicNow();
       try {
         QueryResult<R> result = getDriver().get(getRecordClass());
         newRecords = result.getRecords();
@@ -141,8 +142,9 @@ public abstract class CachedRecordStore<R extends BaseRecord>
 
       // Update the metrics for the cache State Store size
       StateStoreMetrics metrics = getDriver().getMetrics();
+      String recordName = getRecordClass().getSimpleName();
       if (metrics != null) {
-        String recordName = getRecordClass().getSimpleName();
+        metrics.setCacheLoading(recordName, Time.monotonicNow() - startTime);
         metrics.setCacheSize(recordName, this.records.size());
       }
 

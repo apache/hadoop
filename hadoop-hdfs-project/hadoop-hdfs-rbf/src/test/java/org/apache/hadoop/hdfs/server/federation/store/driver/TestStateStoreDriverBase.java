@@ -76,6 +76,10 @@ public class TestStateStoreDriverBase {
     return stateStore.getDriver();
   }
 
+  protected StateStoreService getStateStoreService() {
+    return stateStore;
+  }
+
   @After
   public void cleanMetrics() {
     if (stateStore != null) {
@@ -572,6 +576,15 @@ public class TestStateStoreDriverBase {
       }
     }
     return getters;
+  }
+
+  public void testCacheLoadMetrics(StateStoreDriver driver, int numRefresh)
+      throws IOException, IllegalArgumentException {
+    StateStoreMetrics metrics = stateStore.getMetrics();
+    final Query<MountTable> query = new Query<>(MountTable.newInstance());
+    driver.getMultiple(MountTable.class, query);
+    assertEquals(numRefresh,
+        metrics.getCacheLoadMetrics().get("CacheMountTableLoad").lastStat().numSamples());
   }
 
   /**

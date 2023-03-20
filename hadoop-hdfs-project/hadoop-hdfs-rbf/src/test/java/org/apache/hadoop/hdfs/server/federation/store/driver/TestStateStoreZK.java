@@ -206,4 +206,13 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     stateStoreDriver.setEnableConcurrent(true);
     testFetchErrors(stateStoreDriver);
   }
+
+  @Test
+  public void testCacheLoadMetrics() throws IOException {
+    getStateStoreService().refreshCaches(true);
+    getStateStoreService().refreshCaches(true);
+    getStateStoreService().refreshCaches(true);
+    testCacheLoadMetrics(getStateStoreDriver(), 4);
+  }
+
 }

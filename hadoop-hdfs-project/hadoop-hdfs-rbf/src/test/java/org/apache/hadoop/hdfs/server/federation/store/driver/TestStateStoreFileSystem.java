@@ -115,4 +115,11 @@ public class TestStateStoreFileSystem extends TestStateStoreDriverBase {
 
     testInsertWithErrorDuringWrite(driver, MembershipState.class);
   }
+
+  @Test
+  public void testCacheLoadMetrics() throws IOException {
+    getStateStoreService().refreshCaches(true);
+    getStateStoreService().refreshCaches(true);
+    testCacheLoadMetrics(getStateStoreDriver(), 3);
+  }
 }

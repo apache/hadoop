@@ -73,4 +73,11 @@ public class TestStateStoreFile extends TestStateStoreDriverBase {
       throws IllegalArgumentException, IllegalAccessException, IOException {
     testMetrics(getStateStoreDriver());
   }
+
+  @Test
+  public void testCacheLoadMetrics() throws IOException {
+    getStateStoreService().refreshCaches(true);
+    testCacheLoadMetrics(getStateStoreDriver(), 2);
+  }
+
 }
