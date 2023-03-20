@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -213,8 +214,8 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     String path1 = "/dummyFile1";
     String path2 = "/dummyFile2";
 
-    fs.create(new Path(path1));
-    fs.create(new Path(path2));
+    touch(new Path(path1));
+    touch(new Path(path2));
 
     // 404 and retry, send sourceEtag as null
     // source eTag matches -> rename should pass even when execute throws exception
@@ -222,7 +223,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testRenameRecoverySrcDestEtagDifferent() throws IOException {
+  public void testRenameRecoverySrcDestEtagDifferent() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
@@ -233,14 +234,14 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     String path1 = "/dummyFile1";
     String path2 = "/dummyFile2";
 
-    fs.create(new Path(path1));
-    fs.create(new Path(path2));
+    touch(new Path(path1));
+    touch(new Path(path2));
 
     // source eTag does not match -> throw exception
-    try {
-      spyClient.renamePath(path1, path2,null, testTracingContext, null, false);
-    } catch (AbfsRestOperationException e) {
-      Assert.assertEquals(SOURCE_PATH_NOT_FOUND, e.getErrorCode());
+    AbfsRestOperationException e = intercept(AbfsRestOperationException.class, () ->
+        spyClient.renamePath(path1, path2, null, testTracingContext, null, false));
+    if (e.getErrorCode() != SOURCE_PATH_NOT_FOUND) {
+      throw e;
     }
   }
 

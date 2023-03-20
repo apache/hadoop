@@ -109,7 +109,7 @@ public class AbfsClient implements Closeable {
   /**
    * Enable resilient rename.
    */
-  private boolean renameResilience;
+  private final boolean renameResilience;
 
   /** logging the rename failure if metadata is in an incomplete state. */
   private static final LogExactlyOnce ABFS_METADATA_INCOMPLETE_RENAME_FAILURE =
@@ -534,7 +534,7 @@ public class AbfsClient implements Closeable {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     // etag passed in, so source is a file
-    final boolean hasEtag = isEmpty(sourceEtag);
+    final boolean hasEtag = !isEmpty(sourceEtag);
     boolean isDir = !hasEtag;
     if (!hasEtag && renameResilience) {
       // no etag was passed in and rename resilience is enabled, so
@@ -660,9 +660,11 @@ public class AbfsClient implements Closeable {
       final boolean isDir) {
     Preconditions.checkArgument(op.hasResult(), "Operations has null HTTP response");
 
-    if (!(op.isARetriedRequest())
-        && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)) {
-      // not an error
+    if (!(op.isARetriedRequest()
+            && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND))) {
+      // this failed on the first attempt (no not retry related)
+      // *or* it was any error other than 404
+      // do not attempt to recover from this failure.
       return false;
     }
     LOG.debug("Source not found on retry of rename({}, {}) isDir {} etag {}",
@@ -675,11 +677,8 @@ public class AbfsClient implements Closeable {
       return false;
     }
     if (isNotEmpty(sourceEtag)) {
-      // Server has returned HTTP 404, which means rename source no longer
-      // exists. Check on destination status and if its etag matches
-      // that of the source, consider it to be a success.
-      // the source tag was either passed in from a manifest commit or
-      // retrieved when rename recovery is enabled.
+      // Server has returned HTTP 404, we have an etag, so see
+      // if the rename has actually taken place,
       LOG.info("rename {} to {} failed, checking etag of destination",
           source, destination);
 
@@ -690,7 +689,8 @@ public class AbfsClient implements Closeable {
 
         final boolean recovered = result.getStatusCode() == HttpURLConnection.HTTP_OK
             && sourceEtag.equals(extractEtagHeader(result));
-        LOG.info("File rename has taken place: recovery completed");
+        LOG.info("File rename has taken place: recovery {}",
+            recovered ? "succeeded" : "failed");
         return recovered;
       } catch (AzureBlobFileSystemException ex) {
         // GetFileStatus on the destination failed, the rename did not take place
