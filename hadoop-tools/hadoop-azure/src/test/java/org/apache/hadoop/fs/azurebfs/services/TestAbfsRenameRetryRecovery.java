@@ -299,6 +299,56 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     assertEquals(Long.valueOf(renamePathAttemptsBeforeRename+1), renamePathAttemptsAfterRename);
   }
 
+  @Test
+  public void testRenameRecoveryFailsForDir() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
+    TracingContext testTracingContext = getTestTracingContext(fs, false);
+
+    Assume.assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
+
+    AbfsClient mockClient = getMockAbfsClient();
+
+    String dir1 = "/dummyDir1";
+    String dir2 = "/dummyDir2";
+
+    Path path1 = new Path(dir1);
+    Path path2 = new Path(dir2);
+
+    fs.mkdirs(path1);
+    // fs.mkdirs(path2);
+
+    abfsStore.setClient(mockClient);
+
+    // checking correct count in AbfsCounters
+    AbfsCounters counter = mockClient.getAbfsCounters();
+    Long connMadeBeforeRename = counter.getIOStatistics().counters().
+            get(AbfsStatistic.CONNECTIONS_MADE.getStatName());
+    Long renamePathAttemptsBeforeRename = counter.getIOStatistics().counters().
+            get(AbfsStatistic.RENAME_PATH_ATTEMPTS.getStatName());
+
+    // source eTag does not match -> rename should be a failure
+    boolean renameResult = fs.rename(path1, path2);
+    assertEquals(false, renameResult);
+
+    // validating stat counters after rename
+    Long connMadeAfterRename = counter.getIOStatistics().counters().
+            get(AbfsStatistic.CONNECTIONS_MADE.getStatName());
+    Long renamePathAttemptsAfterRename = counter.getIOStatistics().counters().
+            get(AbfsStatistic.RENAME_PATH_ATTEMPTS.getStatName());
+
+    // 3 calls should have happened in total for rename
+    // 1 -> original rename rest call, 2 -> first retry,
+    // +1 for getPathStatus calls
+    // last getPathStatus call should be skipped
+    assertEquals(Long.valueOf(connMadeBeforeRename+3), connMadeAfterRename);
+
+    // the RENAME_PATH_ATTEMPTS stat should be incremented by 1
+    // retries happen internally within AbfsRestOperation execute()
+    // the stat for RENAME_PATH_ATTEMPTS is updated only once before execute() is called
+    assertEquals(Long.valueOf(renamePathAttemptsBeforeRename+1), renamePathAttemptsAfterRename);
+  }
+
   /**
    * Method to create an AbfsRestOperationException.
    * @param statusCode status code to be used.

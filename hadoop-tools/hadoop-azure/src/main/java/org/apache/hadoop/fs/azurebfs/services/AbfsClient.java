@@ -106,7 +106,7 @@ public class AbfsClient implements Closeable {
 
   private final ListeningScheduledExecutorService executorService;
 
-  private final boolean renameResilience;
+  private boolean renameResilience;
 
   /** logging the rename failure if metadata is in an incomplete state. */
   private static final LogExactlyOnce ABFS_METADATA_INCOMPLETE_RENAME_FAILURE =
@@ -531,7 +531,7 @@ public class AbfsClient implements Closeable {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final boolean hasEtag = !isEmpty(sourceEtag);
-    boolean isDir = !hasEtag;
+    boolean isDir = false;
     if (!hasEtag && renameResilience) {
       final AbfsRestOperation srcStatusOp = getPathStatus(source,
               false, tracingContext);
@@ -539,9 +539,20 @@ public class AbfsClient implements Closeable {
 
       sourceEtag = extractEtagHeader(result);
 
-      isDir = isEmpty(sourceEtag);
+      isDir = checkIsDir(result);
     }
 
+    if (isDir) {
+      // for a directory created with fs.mkdirs ->
+      // 1. Renaming it to a directory that does not exist:
+      //    the eTag stays preserved before and after rename, i.e.,
+      //    src and dest have same eTag.
+      // 2. Renaming it to an existing directory:
+      //    eTag is not preserved in rename
+      // As overall behavior with eTag preservation in rename is not consistent
+      // for directories, rename recovery is to be skipped.
+      renameResilience = false;
+    }
     String encodedRenameSource = urlEncode(FORWARD_SLASH + this.getFileSystem() + source);
     if (authType == AuthType.SAS) {
       final AbfsUriQueryBuilder srcQueryBuilder = new AbfsUriQueryBuilder();
@@ -609,6 +620,13 @@ public class AbfsClient implements Closeable {
         }
       return new AbfsClientRenameResult(op, true, isMetadataIncompleteState);
     }
+  }
+
+  private boolean checkIsDir(AbfsHttpOperation result) {
+    String resourceType = result.getResponseHeader(
+            HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
+    return resourceType != null
+            && resourceType.equalsIgnoreCase(AbfsHttpConstants.DIRECTORY);
   }
 
   @VisibleForTesting
