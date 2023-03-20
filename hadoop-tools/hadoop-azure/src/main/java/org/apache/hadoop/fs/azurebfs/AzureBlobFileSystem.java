@@ -441,9 +441,17 @@ public class AzureBlobFileSystem extends FileSystem
       return dstFileStatus.isDirectory() ? false : true;
     }
 
+    boolean isNamespaceEnabled = abfsStore.getIsNamespaceEnabled(tracingContext);
+
     // Non-HNS account need to check dst status on driver side.
-    if (!abfsStore.getIsNamespaceEnabled(tracingContext) && dstFileStatus == null) {
+    if (!isNamespaceEnabled && dstFileStatus == null) {
       dstFileStatus = tryGetFileStatus(qualifiedDstPath, tracingContext);
+    }
+
+    // for Non-HNS accounts, rename resiliency cannot be maintained
+    // as eTags are not preserved in rename
+    if (!isNamespaceEnabled) {
+      abfsStore.getAbfsConfiguration().setRenameResilience(false);
     }
 
     try {
