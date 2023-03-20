@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
@@ -39,6 +40,7 @@ import javax.net.ssl.HttpsURLConnection;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.SocketException;
 import java.net.URL;
 import java.util.List;
 
@@ -145,60 +147,108 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // specifying AbfsHttpOperation mock behavior
 
     // mock object representing the 404 path not found result
-    AbfsHttpOperation mockHttp404Op = Mockito.mock(AbfsHttpOperation.class);
-    Mockito.doReturn(404).when(mockHttp404Op).getStatusCode();
-    Mockito.doNothing().when(mockHttp404Op).processResponse(nullable(byte[].class), Mockito.any(int.class), Mockito.any(int.class));
-    Mockito.doNothing().when(mockHttp404Op).setRequestProperty(nullable(String.class), nullable(String.class));
-    Mockito.doNothing().when(mockHttp404Op).sendRequest(nullable(byte[].class), Mockito.any(int.class), Mockito.any(int.class));
-    Mockito.doReturn("PUT").when(mockHttp404Op).getMethod();
-    Mockito.doReturn("Source Path not found").when(mockHttp404Op).getStorageErrorMessage();
-    Mockito.doReturn("SourcePathNotFound").when(mockHttp404Op).getStorageErrorCode();
-
-
-    // // mock object representing the 500 timeout result for first try of rename
-    AbfsHttpOperation mockHttp500Op = Mockito.mock(AbfsHttpOperation.class);
-    Mockito.doReturn(500).when(mockHttp500Op).getStatusCode();
-    Mockito.doThrow(IOException.class)
-            .when(mockHttp500Op).processResponse(nullable(byte[].class), Mockito.any(int.class), Mockito.any(int.class));
-    Mockito.doNothing().when(mockHttp500Op).setRequestProperty(nullable(String.class), nullable(String.class));
-    Mockito.doNothing().when(mockHttp500Op).sendRequest(nullable(byte[].class), Mockito.any(int.class), Mockito.any(int.class));
-    Mockito.doReturn("PUT").when(mockHttp500Op).getMethod();
-    Mockito.doReturn("ClientTimeoutError").when(mockHttp500Op).getStorageErrorCode();
-
-    // creating mock HttpUrlConnection object
-    HttpURLConnection mockUrlConn = Mockito.mock(HttpsURLConnection.class);
-
-    // tying all mocks together
-    Mockito.doReturn(mockUrlConn).when(mockHttp404Op).getConnection();
-    Mockito.doReturn(mockUrlConn).when(mockHttp500Op).getConnection();
+//    AbfsHttpOperation mockHttp404Op = Mockito.mock(AbfsHttpOperation.class);
+//    Mockito.doReturn(404).when(mockHttp404Op).getStatusCode();
+//    Mockito.doNothing().when(mockHttp404Op).processResponse(nullable(byte[].class), Mockito.any(int.class), Mockito.any(int.class));
+//    Mockito.doNothing().when(mockHttp404Op).setRequestProperty(nullable(String.class), nullable(String.class));
+//    Mockito.doNothing().when(mockHttp404Op).sendRequest(nullable(byte[].class), Mockito.any(int.class), Mockito.any(int.class));
+//    Mockito.doReturn("PUT").when(mockHttp404Op).getMethod();
+//    Mockito.doReturn("Source Path not found").when(mockHttp404Op).getStorageErrorMessage();
+//    Mockito.doReturn("SourcePathNotFound").when(mockHttp404Op).getStorageErrorCode();
+//
+//
+//    // // mock object representing the 500 timeout result for first try of rename
+//    AbfsHttpOperation mockHttp500Op = Mockito.mock(AbfsHttpOperation.class);
+//    Mockito.doReturn(500).when(mockHttp500Op).getStatusCode();
+//    Mockito.doThrow(IOException.class)
+//            .when(mockHttp500Op).processResponse(nullable(byte[].class), Mockito.any(int.class), Mockito.any(int.class));
+//    Mockito.doNothing().when(mockHttp500Op).setRequestProperty(nullable(String.class), nullable(String.class));
+//    Mockito.doNothing().when(mockHttp500Op).sendRequest(nullable(byte[].class), Mockito.any(int.class), Mockito.any(int.class));
+//    Mockito.doReturn("PUT").when(mockHttp500Op).getMethod();
+//    Mockito.doReturn("ClientTimeoutError").when(mockHttp500Op).getStorageErrorCode();
+//
+//    // creating mock HttpUrlConnection object
+//    HttpURLConnection mockUrlConn = Mockito.mock(HttpsURLConnection.class);
+//
+//    // tying all mocks together
+//    Mockito.doReturn(mockUrlConn).when(mockHttp404Op).getConnection();
+//    Mockito.doReturn(mockUrlConn).when(mockHttp500Op).getConnection();
 
     // adding mock objects to current AbfsClient
     AbfsClient spyClient = Mockito.spy(fs.getAbfsStore().getClient());
     // Rest Operation is spied as it needs to have spyclient instance as a param to the constructor
     // directly returning a mock for this would make the client instance null
-    AbfsRestOperation mockRestOp = Mockito.spy(new AbfsRestOperation(
-                    AbfsRestOperationType.RenamePath,
-                    spyClient,
-                    HTTP_METHOD_PUT,
-                    null,
-            null)
-    );
-    Mockito.doReturn(mockRestOp).when(spyClient).createRenameRestOperation(nullable(URL.class), nullable(List.class));
-
-    Mockito.doReturn(mockHttp500Op).doReturn(mockHttp404Op).when(mockRestOp).createHttpOperation();
-    Mockito.doReturn(mockHttp500Op).doReturn(mockHttp404Op).when(mockRestOp).getResult();
-
-    Mockito.doReturn(true).when(mockRestOp).hasResult();
+//    AbfsRestOperation mockRestOp = Mockito.spy(new AbfsRestOperation(
+//                    AbfsRestOperationType.RenamePath,
+//                    spyClient,
+//                    HTTP_METHOD_PUT,
+//                    null,
+//            null)
+//    );
 
 
-    SharedKeyCredentials mockSharedKeyCreds = mock(SharedKeyCredentials.class);
-    Mockito.doNothing().when(mockSharedKeyCreds).signRequest(Mockito.any(HttpURLConnection.class), Mockito.any(long.class));
-    // real method calls made once at start and once at end
-    // for the two getPathStatus calls that actually have to be made
-    Mockito.doCallRealMethod().doReturn(mockSharedKeyCreds).doReturn(mockSharedKeyCreds).doCallRealMethod().when(spyClient).getSharedKeyCredentials();
+    Mockito.doAnswer(answer -> {
+      AbfsRestOperation op = new AbfsRestOperation(AbfsRestOperationType.RenamePath,
+          spyClient, HTTP_METHOD_PUT, answer.getArgument(0), answer.getArgument(1));
+      AbfsRestOperation spiedOp = Mockito.spy(op);
+      addSpyBehavior(spiedOp, op, spyClient);
+      return spiedOp;
+    }).when(spyClient).createRenameRestOperation(nullable(URL.class), nullable(List.class));
+
+//    Mockito.doReturn(mockRestOp).when(spyClient).createRenameRestOperation(nullable(URL.class), nullable(List.class));
+//
+//    Mockito.doReturn(mockHttp500Op).doReturn(mockHttp404Op).when(mockRestOp).createHttpOperation();
+
+
+
+
+//    Mockito.doReturn(mockHttp500Op).doReturn(mockHttp404Op).when(mockRestOp).getResult();
+
+//    Mockito.doReturn(true).when(mockRestOp).hasResult();
+
+
+//    SharedKeyCredentials mockSharedKeyCreds = mock(SharedKeyCredentials.class);
+//    Mockito.doNothing().when(mockSharedKeyCreds).signRequest(Mockito.any(HttpURLConnection.class), Mockito.any(long.class));
+//    // real method calls made once at start and once at end
+//    // for the two getPathStatus calls that actually have to be made
+//    Mockito.doCallRealMethod().doReturn(mockSharedKeyCreds).doReturn(mockSharedKeyCreds).doCallRealMethod().when(spyClient).getSharedKeyCredentials();
 
     return spyClient;
 
+  }
+
+  private void addSpyBehavior(final AbfsRestOperation spiedOp, final AbfsRestOperation normalOp, AbfsClient client)
+      throws IOException {
+    AbfsHttpOperation abfsHttpOperation = Mockito.spy(normalOp.createHttpOperation());
+    AbfsHttpOperation normalOp1 = normalOp.createHttpOperation();
+    normalOp1.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+        client.getAccessToken());
+    AbfsHttpOperation normalOp2 = normalOp.createHttpOperation();
+    normalOp2.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+        client.getAccessToken());
+
+    int[] hits = new int[1];
+    hits[0] = 0;
+    Mockito.doAnswer(answer -> {
+      if(hits[0] == 0) {
+        mockIdempotencyIssueBehaviours(abfsHttpOperation, normalOp1);
+        hits[0]++;
+        return abfsHttpOperation;
+      }
+      hits[0]++;
+      return normalOp2;
+    }).when(spiedOp).createHttpOperation();
+  }
+
+  private void mockIdempotencyIssueBehaviours(final AbfsHttpOperation abfsHttpOperation,
+      final AbfsHttpOperation normalOp)
+      throws IOException {
+    Mockito.doAnswer(answer -> {
+      normalOp.sendRequest(answer.getArgument(0), answer.getArgument(1), answer.getArgument(2));
+      normalOp.processResponse(answer.getArgument(0), answer.getArgument(1), answer.getArgument(2));
+      throw new SocketException("connection-reset");
+    }).when(abfsHttpOperation).sendRequest(Mockito.nullable(byte[].class),
+        Mockito.nullable(int.class), Mockito.nullable(int.class));
   }
 
   @Test
@@ -215,7 +265,6 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     String path2 = "/dummyFile2";
 
     touch(new Path(path1));
-    touch(new Path(path2));
 
     // 404 and retry, send sourceEtag as null
     // source eTag matches -> rename should pass even when execute throws exception
@@ -235,7 +284,6 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     String path2 = "/dummyFile2";
 
     touch(new Path(path1));
-    touch(new Path(path2));
 
     // source eTag does not match -> throw exception
     AbfsRestOperationException e = intercept(AbfsRestOperationException.class, () ->
