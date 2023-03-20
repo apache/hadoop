@@ -38,6 +38,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -78,7 +79,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.S
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.*;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
 
 /**
  * AbfsClient.
@@ -539,16 +542,25 @@ public class AbfsClient implements Closeable {
     if (!hasEtag && renameResilience) {
       // no etag was passed in and rename resilience is enabled, so
       // get the value
-      final AbfsRestOperation srcStatusOp = getPathStatus(source,
-              false, tracingContext);
-      final AbfsHttpOperation result = srcStatusOp.getResult();
 
-      sourceEtag = extractEtagHeader(result);
-      // and update the directory status.
-      final String resourceType =
-          result.getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-      isDir = AbfsHttpConstants.DIRECTORY.equalsIgnoreCase(resourceType);
-      LOG.debug("Retrieved etag of source for rename recovery: {}; isDir={}", sourceEtag, isDir);
+      try {
+        final AbfsRestOperation srcStatusOp = getPathStatus(source,
+                false, tracingContext);
+        final AbfsHttpOperation result = srcStatusOp.getResult();
+
+        sourceEtag = extractEtagHeader(result);
+        // and update the directory status.
+        final String resourceType =
+            result.getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
+        isDir = AbfsHttpConstants.DIRECTORY.equalsIgnoreCase(resourceType);
+        LOG.debug("Retrieved etag of source for rename recovery: {}; isDir={}", sourceEtag, isDir);
+      } catch (AbfsRestOperationException e) {
+        // switch file not found to source not found
+        if (PATH_NOT_FOUND.equals(e.getErrorCode())) {
+          throw new AbfsRestOperationException(e.getStatusCode(), SOURCE_PATH_NOT_FOUND.getErrorCode(),
+              e.getMessage(), e);
+        }
+      }
     }
 
     String encodedRenameSource = urlEncode(FORWARD_SLASH + this.getFileSystem() + source);
