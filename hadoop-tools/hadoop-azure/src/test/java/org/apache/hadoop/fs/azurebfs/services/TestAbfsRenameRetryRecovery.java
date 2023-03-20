@@ -18,32 +18,32 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.List;
+import java.util.Optional;
+import javax.net.ssl.HttpsURLConnection;
+
+import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.Path;
+
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-
-import javax.net.ssl.HttpsURLConnection;
-
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.List;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
-import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doReturn;
@@ -203,32 +203,65 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
   @Test
   public void testRenameRecoverySrcDestEtagSame() throws IOException {
     AzureBlobFileSystem fs = getFileSystem();
+    AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
     Assume.assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
 
     AbfsClient mockClient = getMockAbfsClient();
 
+    // simulating eTag check returns true
+    // source and destination eTag equal
+    //
+    Mockito.doReturn(true).when(mockClient).isSourceDestEtagEqual(
+            nullable(String.class), nullable(AbfsHttpOperation.class)
+    );
 
     String path1 = "/dummyFile1";
-    String path2 = "/dummyFile2";
-
+    String path2 = "dummyFile2";
     fs.create(new Path(path1));
     fs.create(new Path(path2));
 
+    abfsStore.setClient(mockClient);
+
+    // checking correct count in AbfsCounters
+    AbfsCounters counter = mockClient.getAbfsCounters();
+    Long connMadeBeforeRename = counter.getIOStatistics().counters().
+            get(AbfsStatistic.CONNECTIONS_MADE.getStatName());
+    Long renamePathAttemptsBeforeRename = counter.getIOStatistics().counters().
+            get(AbfsStatistic.RENAME_PATH_ATTEMPTS.getStatName());
+
     // 404 and retry, send sourceEtag as null
     // source eTag matches -> rename should pass even when execute throws exception
-    mockClient.renamePath(path1, path1, null, testTracingContext, null, false);
+    fs.rename(new Path(path1), new Path(path2));
+
+    // validating stat counters after rename
+    Long connMadeAfterRename = counter.getIOStatistics().counters().
+            get(AbfsStatistic.CONNECTIONS_MADE.getStatName());
+    Long renamePathAttemptsAfterRename = counter.getIOStatistics().counters().
+            get(AbfsStatistic.RENAME_PATH_ATTEMPTS.getStatName());
+
+    // 4 calls should have happened in total for rename
+    // 1 -> original rename rest call, 2 -> first retry,
+    // +2 for getPathStatus calls
+    assertEquals(Long.valueOf(connMadeBeforeRename+4), connMadeAfterRename);
+
+    // the RENAME_PATH_ATTEMPTS stat should be incremented by 1
+    // retries happen internally within AbfsRestOperation execute()
+    // the stat for RENAME_PATH_ATTEMPTS is updated only once before execute() is called
+    assertEquals(Long.valueOf(renamePathAttemptsBeforeRename+1), renamePathAttemptsAfterRename);
+
   }
 
   @Test
-  public void testRenameRecoverySrcDestEtagDifferent() throws IOException {
+  public void testRenameRecoverySrcDestEtagDifferent() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
+    AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
 
     Assume.assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
 
-    AbfsClient spyClient = getMockAbfsClient();
+    AbfsClient mockClient = getMockAbfsClient();
 
     String path1 = "/dummyFile1";
     String path2 = "/dummyFile2";
@@ -236,12 +269,34 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     fs.create(new Path(path1));
     fs.create(new Path(path2));
 
-    // source eTag does not match -> throw exception
-    try {
-      spyClient.renamePath(path1, path2,null, testTracingContext, null, false);
-    } catch (AbfsRestOperationException e) {
-      Assert.assertEquals(SOURCE_PATH_NOT_FOUND, e.getErrorCode());
-    }
+    abfsStore.setClient(mockClient);
+
+    // checking correct count in AbfsCounters
+    AbfsCounters counter = mockClient.getAbfsCounters();
+    Long connMadeBeforeRename = counter.getIOStatistics().counters().
+            get(AbfsStatistic.CONNECTIONS_MADE.getStatName());
+    Long renamePathAttemptsBeforeRename = counter.getIOStatistics().counters().
+            get(AbfsStatistic.RENAME_PATH_ATTEMPTS.getStatName());
+
+    // source eTag does not match -> rename should be a failure
+    boolean renameResult = fs.rename(new Path(path1), new Path(path2));
+    assertEquals(false, renameResult);
+
+    // validating stat counters after rename
+    Long connMadeAfterRename = counter.getIOStatistics().counters().
+            get(AbfsStatistic.CONNECTIONS_MADE.getStatName());
+    Long renamePathAttemptsAfterRename = counter.getIOStatistics().counters().
+            get(AbfsStatistic.RENAME_PATH_ATTEMPTS.getStatName());
+
+    // 4 calls should have happened in total for rename
+    // 1 -> original rename rest call, 2 -> first retry,
+    // +2 for getPathStatus calls
+    assertEquals(Long.valueOf(connMadeBeforeRename+4), connMadeAfterRename);
+
+    // the RENAME_PATH_ATTEMPTS stat should be incremented by 1
+    // retries happen internally within AbfsRestOperation execute()
+    // the stat for RENAME_PATH_ATTEMPTS is updated only once before execute() is called
+    assertEquals(Long.valueOf(renamePathAttemptsBeforeRename+1), renamePathAttemptsAfterRename);
   }
 
   /**

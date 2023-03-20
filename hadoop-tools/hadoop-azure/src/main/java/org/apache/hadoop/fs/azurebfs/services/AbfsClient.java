@@ -78,6 +78,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.*;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
+import static org.eclipse.jetty.util.StringUtil.isEmpty;
 
 /**
  * AbfsClient.
@@ -105,6 +106,8 @@ public class AbfsClient implements Closeable {
 
   private final ListeningScheduledExecutorService executorService;
 
+  private final boolean renameResilience;
+
   /** logging the rename failure if metadata is in an incomplete state. */
   private static final LogExactlyOnce ABFS_METADATA_INCOMPLETE_RENAME_FAILURE =
       new LogExactlyOnce(LOG);
@@ -122,6 +125,9 @@ public class AbfsClient implements Closeable {
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
     this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
+    this.renameResilience = abfsConfiguration.getRenameResilience();
+
+
 
     String encryptionKey = this.abfsConfiguration
         .getClientProvidedEncryptionKey();
@@ -524,12 +530,16 @@ public class AbfsClient implements Closeable {
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
-    if (sourceEtag == null || sourceEtag.isEmpty()) {
+    final boolean hasEtag = !isEmpty(sourceEtag);
+    boolean isDir = !hasEtag;
+    if (!hasEtag && renameResilience) {
       final AbfsRestOperation srcStatusOp = getPathStatus(source,
               false, tracingContext);
       final AbfsHttpOperation result = srcStatusOp.getResult();
 
       sourceEtag = extractEtagHeader(result);
+
+      isDir = isEmpty(sourceEtag);
     }
 
     String encodedRenameSource = urlEncode(FORWARD_SLASH + this.getFileSystem() + source);
@@ -591,7 +601,7 @@ public class AbfsClient implements Closeable {
 
         boolean etagCheckSucceeded = renameIdempotencyCheckOp(
             source,
-            sourceEtag, op, destination, tracingContext);
+            sourceEtag, op, destination, tracingContext, isDir);
         if (!etagCheckSucceeded) {
           // idempotency did not return different result
           // throw back the exception
@@ -638,7 +648,8 @@ public class AbfsClient implements Closeable {
       final String sourceEtag,
       final AbfsRestOperation op,
       final String destination,
-      TracingContext tracingContext) {
+      TracingContext tracingContext,
+      final boolean isDir) {
     Preconditions.checkArgument(op.hasResult(), "Operations has null HTTP response");
 
     if ((op.isARetriedRequest())
@@ -651,18 +662,32 @@ public class AbfsClient implements Closeable {
       LOG.debug("rename {} to {} failed, checking etag of destination",
           source, destination);
 
+      if (isDir) {
+        // directory recovery is not supported.
+        // log and fail.
+        LOG.info("rename directory {} to {} failed; unable to recover",
+                source, destination);
+        return false;
+      }
+
       try {
         final AbfsRestOperation destStatusOp = getPathStatus(destination,
             false, tracingContext);
         final AbfsHttpOperation result = destStatusOp.getResult();
 
         return result.getStatusCode() == HttpURLConnection.HTTP_OK
-            && sourceEtag.equals(extractEtagHeader(result));
+            && isSourceDestEtagEqual(sourceEtag, result);
+                //sourceEtag.equals(extractEtagHeader(result));
       } catch (AzureBlobFileSystemException ignored) {
         // GetFileStatus on the destination failed, the rename did not take place
       }
     }
     return false;
+  }
+
+  @VisibleForTesting
+  boolean isSourceDestEtagEqual(String sourceEtag, AbfsHttpOperation result) {
+    return sourceEtag.equals(extractEtagHeader(result));
   }
 
   public AbfsRestOperation append(final String path, final byte[] buffer,
