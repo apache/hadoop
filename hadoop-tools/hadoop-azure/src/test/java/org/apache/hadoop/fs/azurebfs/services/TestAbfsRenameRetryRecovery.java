@@ -23,13 +23,13 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.SocketException;
 import java.net.URL;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import javax.net.ssl.HttpsURLConnection;
 
-import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+
+import org.apache.commons.lang3.tuple.Pair;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -39,14 +39,21 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.Path;
 
+import org.apache.hadoop.fs.EtagSource;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
+import org.apache.hadoop.fs.azurebfs.commit.ResilientCommitByRename;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
-import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doReturn;
@@ -159,15 +166,22 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
   }
 
+  /**
+   * Spies on a rest operation to inject transient failure.
+   * the first createHttpOperation() invocation will return an abfs rest operation
+   * which will fail.
+   * @param spiedRestOp spied operation whose createHttpOperation() will fail first time
+   * @param normalRestOp normal operation the good operation
+   * @param client client.
+   * @throws IOException failure
+   */
   private void addSpyBehavior(final AbfsRestOperation spiedRestOp,
-                              final AbfsRestOperation normalRestOp,
-                              final AbfsClient client)
-          throws IOException {
+      final AbfsRestOperation normalRestOp,
+      final AbfsClient client)
+      throws IOException {
     AbfsHttpOperation failingOperation = Mockito.spy(normalRestOp.createHttpOperation());
     AbfsHttpOperation normalOp1 = normalRestOp.createHttpOperation();
-    normalOp1.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
-            client.getAccessToken());
-    executeThenFail(client, failingOperation, normalOp1);
+    executeThenFail(client, normalRestOp, failingOperation, normalOp1);
     AbfsHttpOperation normalOp2 = normalRestOp.createHttpOperation();
     normalOp2.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
             client.getAccessToken());
@@ -180,35 +194,40 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
   /**
    * Mock an idempotency failure by executing the normal operation, then
    * raising an IOE.
+   * @param normalRestOp the rest operation used to sign the requests.
    * @param failingOperation failing operation
    * @param normalOp good operation
    * @throws IOException failure
    */
   private void executeThenFail(final AbfsClient client,
-                               final AbfsHttpOperation failingOperation,
-                               final AbfsHttpOperation normalOp)
-          throws IOException {
+      final AbfsRestOperation normalRestOp,
+      final AbfsHttpOperation failingOperation,
+      final AbfsHttpOperation normalOp)
+      throws IOException {
+
     Mockito.doAnswer(answer -> {
       LOG.info("Executing first attempt with post-operation fault injection");
       final byte[] buffer = answer.getArgument(0);
       final int offset = answer.getArgument(1);
       final int length = answer.getArgument(2);
-      client.getSharedKeyCredentials().signRequest(
-              normalOp.getConnection(),
-              length);
+      normalRestOp.signRequest(normalOp, length);
       normalOp.sendRequest(buffer, offset, length);
       normalOp.processResponse(buffer, offset, length);
       LOG.info("Actual outcome is {} \"{}\" \"{}\"; injecting failure",
-              normalOp.getStatusCode(),
-              normalOp.getStorageErrorCode(),
-              normalOp.getStorageErrorMessage());
+          normalOp.getStatusCode(),
+          normalOp.getStorageErrorCode(),
+          normalOp.getStorageErrorMessage());
       throw new SocketException("connection-reset");
     }).when(failingOperation).sendRequest(Mockito.nullable(byte[].class),
-            Mockito.nullable(int.class), Mockito.nullable(int.class));
+        Mockito.nullable(int.class), Mockito.nullable(int.class));
+
   }
 
+  /**
+   * This is the good outcome: resilient rename.
+   */
   @Test
-  public void testRenameRecoverySrcDestEtagSame() throws IOException {
+  public void testRenameRecoveryEtagMatchFsLevel() throws IOException {
     AzureBlobFileSystem fs = getFileSystem();
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
@@ -220,6 +239,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     String base = "/" + getMethodName();
     String path1 = base + "/dummyFile1";
     String path2 = base + "/dummyFile2";
+
     touch(new Path(path1));
 
     abfsStore.setClient(mockClient);
@@ -252,8 +272,15 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     assertEquals(Long.valueOf(renamePathAttemptsBeforeRename+1), renamePathAttemptsAfterRename);
   }
 
+  /**
+   * execute a failing rename but have the file at the far end not match.
+   * This is done by explicitly passing in a made up etag for the source
+   * etag and creating a file at the far end.
+   * The first rename will actually fail with a path exists exception,
+   * but as that is swallowed, it's not a problem.
+   */
   @Test
-  public void testRenameRecoverySrcDestEtagDifferent() throws Exception {
+  public void testRenameRecoveryEtagMismatchFsLevel() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
@@ -262,8 +289,9 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     AbfsClient mockClient = getMockAbfsClient();
 
-    String path1 = "/dummyFile1";
-    String path2 = "/dummyFile2";
+    String base = "/" + getMethodName();
+    String path1 = base + "/dummyFile1";
+    String path2 = base + "/dummyFile2";
 
     fs.create(new Path(path2));
 
@@ -276,7 +304,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testRenameRecoveryFailsForDir() throws Exception {
+  public void testRenameRecoveryFailsForDirFsLevel() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     TracingContext testTracingContext = getTestTracingContext(fs, false);
@@ -322,6 +350,129 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // retries happen internally within AbfsRestOperation execute()
     // the stat for RENAME_PATH_ATTEMPTS is updated only once before execute() is called
     assertEquals(Long.valueOf(renamePathAttemptsBeforeRename+1), renamePathAttemptsAfterRename);
+  }
+
+  /**
+   * Assert that an exception failed with a specific error code.
+   * @param code code
+   * @param e exception
+   * @throws AbfsRestOperationException if there is a mismatch
+   */
+  private static void expectErrorCode(final AzureServiceErrorCode code,
+      final AbfsRestOperationException e) throws AbfsRestOperationException {
+      if (e.getErrorCode() != code) {
+          throw e;
+      }
+  }
+
+  /**
+   * Directory rename failure is unrecoverable.
+   */
+  @Test
+  public void testDirRenameRecoveryUnsupported() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    TracingContext testTracingContext = getTestTracingContext(fs, false);
+
+    Assume.assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
+
+    AbfsClient spyClient = getMockAbfsClient();
+
+    String base = "/" + getMethodName();
+    String path1 = base + "/dummyDir1";
+    String path2 = base + "/dummyDir2";
+
+    fs.mkdirs(new Path(path1));
+
+    // source eTag does not match -> throw exception
+    expectErrorCode(SOURCE_PATH_NOT_FOUND, intercept(AbfsRestOperationException.class, () ->
+            spyClient.renamePath(path1, path2, null, testTracingContext, null, false)));
+  }
+
+  /**
+   * Even with failures, having
+   */
+  @Test
+  public void testExistingPathCorrectlyRejected() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    TracingContext testTracingContext = getTestTracingContext(fs, false);
+
+    Assume.assumeTrue(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
+
+    AbfsClient spyClient = getMockAbfsClient();
+
+    String base = "/" + getMethodName();
+    String path1 = base + "/dummyDir1";
+    String path2 = base + "/dummyDir2";
+
+
+    touch(new Path(path1));
+    touch(new Path(path2));
+
+    // source eTag does not match -> throw exception
+    expectErrorCode(PATH_ALREADY_EXISTS, intercept(AbfsRestOperationException.class, () ->
+            spyClient.renamePath(path1, path2, null, testTracingContext, null, false)));
+  }
+
+  /**
+   * Test the resilient commit code works through fault injection, including
+   * reporting recovery.
+   */
+  @Test
+  public void testResilientCommitOperation() throws Throwable {
+    AzureBlobFileSystem fs = getFileSystem();
+    TracingContext testTracingContext = getTestTracingContext(fs, false);
+
+    final AzureBlobFileSystemStore store = fs.getAbfsStore();
+    Assume.assumeTrue(store.getIsNamespaceEnabled(testTracingContext));
+
+    // patch in the mock abfs client to the filesystem, for the resilient
+    // commit API to pick up.
+    setAbfsClient(store, getMockAbfsClient());
+
+    String base = "/" + getMethodName();
+    String path1 = base + "/dummyDir1";
+    String path2 = base + "/dummyDir2";
+
+
+    final Path source = new Path(path1);
+    touch(source);
+    final String sourceTag = ((EtagSource) fs.getFileStatus(source)).getEtag();
+
+    final ResilientCommitByRename commit = fs.createResilientCommitSupport(source);
+    final Pair<Boolean, Duration> outcome =
+        commit.commitSingleFileByRename(source, new Path(path2), sourceTag);
+    Assertions.assertThat(outcome.getKey())
+        .describedAs("recovery flag")
+        .isTrue();
+  }
+  /**
+   * Test the resilient commit code works through fault injection, including
+   * reporting recovery.
+   */
+  @Test
+  public void testResilientCommitOperationTagMismatch() throws Throwable {
+    AzureBlobFileSystem fs = getFileSystem();
+    TracingContext testTracingContext = getTestTracingContext(fs, false);
+
+    final AzureBlobFileSystemStore store = fs.getAbfsStore();
+    Assume.assumeTrue(store.getIsNamespaceEnabled(testTracingContext));
+
+    // patch in the mock abfs client to the filesystem, for the resilient
+    // commit API to pick up.
+    setAbfsClient(store, getMockAbfsClient());
+
+    String base = "/" + getMethodName();
+    String path1 = base + "/dummyDir1";
+    String path2 = base + "/dummyDir2";
+
+
+    final Path source = new Path(path1);
+    touch(source);
+    final String sourceTag = ((EtagSource) fs.getFileStatus(source)).getEtag();
+
+    final ResilientCommitByRename commit = fs.createResilientCommitSupport(source);
+    intercept(FileNotFoundException.class, () ->
+        commit.commitSingleFileByRename(source, new Path(path2), "not the right tag"));
   }
 
   /**
