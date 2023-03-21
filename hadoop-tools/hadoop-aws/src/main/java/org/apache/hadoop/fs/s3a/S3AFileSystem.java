@@ -440,7 +440,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private final Set<Path> deleteOnExit = new TreeSet<>();
 
-  private final static Map<String, Region> bucketRegions = new HashMap<>();
+  private final static Map<String, Region> BUCKET_REGIONS = new HashMap<>();
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -844,7 +844,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         STORE_EXISTS_PROBE, bucket, null, () ->
             invoker.retry("doestBucketExist", bucket, true, () -> {
               try {
-                if (bucketRegions.containsKey(bucket)) {
+                if (BUCKET_REGIONS.containsKey(bucket)) {
                   return true;
                 }
                 s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
@@ -992,7 +992,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return Region.of(region);
     }
 
-    Region cachedRegion = bucketRegions.get(bucket);
+    Region cachedRegion = BUCKET_REGIONS.get(bucket);
 
     if (cachedRegion != null) {
       LOG.debug("Got region {} for bucket {} from cache", cachedRegion, bucket);
@@ -1022,7 +1022,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
             Region bucketRegion = Region.of(
                 headBucketResponse.sdkHttpResponse().headers().get(BUCKET_REGION_HEADER).get(0));
-            bucketRegions.put(bucket, bucketRegion);
+            BUCKET_REGIONS.put(bucket, bucketRegion);
 
             return bucketRegion;
           } catch (S3Exception exception) {
@@ -1030,7 +1030,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               Region bucketRegion = Region.of(
                   exception.awsErrorDetails().sdkHttpResponse().headers().get(BUCKET_REGION_HEADER)
                       .get(0));
-              bucketRegions.put(bucket, bucketRegion);
+              BUCKET_REGIONS.put(bucket, bucketRegion);
 
               return bucketRegion;
             }

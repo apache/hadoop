@@ -34,14 +34,12 @@ import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
-import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
-import static org.apache.hadoop.fs.s3a.Constants.BUCKET_REGION_HEADER;
 import static org.apache.hadoop.fs.s3a.Statistic.STORE_REGION_PROBE;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_301_MOVED_PERMANENTLY;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -71,7 +69,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     fs.initialize(getFileSystem().getUri(), conf);
 
     try  {
-     fs.getBucketMetadata();
+      fs.getBucketMetadata();
     } catch (S3Exception exception) {
       if (exception.statusCode() == SC_301_MOVED_PERMANENTLY) {
         Assert.fail(exception.toString());

@@ -51,7 +51,10 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
 /**
  * This class provides methods to create the list of AWS credential providers.
  */
-public class AwsCredentialListProvider {
+public final class AwsCredentialListProvider {
+
+  private AwsCredentialListProvider() {
+  }
 
   private static final Logger LOG = LoggerFactory.getLogger(AwsCredentialListProvider.class);
 
@@ -232,8 +235,8 @@ public class AwsCredentialListProvider {
     LOG.debug("Credential provider class is {}", className);
 
     credentials =
-        S3AUtils.getInstanceFromReflection(credClass, conf, uri, AWSCredentialsProvider.class, "getInstance",
-            AWS_CREDENTIALS_PROVIDER);
+        S3AUtils.getInstanceFromReflection(credClass, conf, uri, AWSCredentialsProvider.class,
+            "getInstance", AWS_CREDENTIALS_PROVIDER);
     return credentials;
 
   }
@@ -272,8 +275,8 @@ public class AwsCredentialListProvider {
     }
     LOG.debug("Credential provider class is {}", className);
     credentials =
-        S3AUtils.getInstanceFromReflection(credClass, conf, uri, AwsCredentialsProvider.class, "create",
-            AWS_CREDENTIALS_PROVIDER);
+        S3AUtils.getInstanceFromReflection(credClass, conf, uri, AwsCredentialsProvider.class,
+            "create", AWS_CREDENTIALS_PROVIDER);
     return credentials;
   }
 
