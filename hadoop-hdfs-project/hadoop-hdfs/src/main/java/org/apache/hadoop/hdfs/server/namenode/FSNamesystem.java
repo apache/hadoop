@@ -98,6 +98,7 @@ import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.text.CaseUtils;
 import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -2110,7 +2111,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void setPermission(String src, FsPermission permission) throws IOException {
     final String operationName = "setPermission";
-    FileStatus auditStat = null;
+    Pair<FileStatus, Boolean> result = null;
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
@@ -2119,17 +2120,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       try {
         checkOperation(OperationCategory.WRITE);
         checkNameNodeSafeMode("Cannot set permission for " + src);
-        auditStat = FSDirAttrOp.setPermission(dir, pc, src, permission);
+        result = FSDirAttrOp.setPermission(dir, pc, src, permission);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+            getLockReportInfoSupplier(src, null, result == null ? null : result.getLeft()));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
       throw e;
     }
-    getEditLog().logSync();
-    logAuditEvent(true, operationName, src, null, auditStat);
+    if (result.getRight()) {
+      getEditLog().logSync();
+    }
+    logAuditEvent(true, operationName, src, null, result.getLeft());
   }
 
   /**
@@ -2142,7 +2145,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void setOwner(String src, String username, String group)
       throws IOException {
     final String operationName = "setOwner";
-    FileStatus auditStat = null;
+    Pair<FileStatus, Boolean> result = null;
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
@@ -2151,17 +2154,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       try {
         checkOperation(OperationCategory.WRITE);
         checkNameNodeSafeMode("Cannot set owner for " + src);
-        auditStat = FSDirAttrOp.setOwner(dir, pc, src, username, group);
+        result = FSDirAttrOp.setOwner(dir, pc, src, username, group);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+            getLockReportInfoSupplier(src, null, result == null ? null : result.getLeft()));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
       throw e;
     }
-    getEditLog().logSync();
-    logAuditEvent(true, operationName, src, null, auditStat);
+    if (result.getRight()) {
+      getEditLog().logSync();
+    }
+    logAuditEvent(true, operationName, src, null, result.getLeft());
   }
 
   /**
@@ -2307,7 +2312,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void setTimes(String src, long mtime, long atime) throws IOException {
     final String operationName = "setTimes";
-    FileStatus auditStat = null;
+    Pair<FileStatus, Boolean> result = null;
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
@@ -2316,17 +2321,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       try {
         checkOperation(OperationCategory.WRITE);
         checkNameNodeSafeMode("Cannot set times " + src);
-        auditStat = FSDirAttrOp.setTimes(dir, pc, src, mtime, atime);
+        result = FSDirAttrOp.setTimes(dir, pc, src, mtime, atime);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+            getLockReportInfoSupplier(src, null, result == null ? null : result.getLeft()));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
       throw e;
     }
-    getEditLog().logSync();
-    logAuditEvent(true, operationName, src, null, auditStat);
+    if (result.getRight()) {
+      getEditLog().logSync();
+    }
+    logAuditEvent(true, operationName, src, null, result.getLeft());
   }
 
   /**
@@ -3622,12 +3629,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if(!allowOwnerSetQuota) {
       checkSuperuserPrivilege(operationName, src);
     }
+    boolean changed;
     try {
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
         checkNameNodeSafeMode("Cannot set quota on " + src);
-        FSDirAttrOp.setQuota(dir, pc, src, nsQuota, ssQuota, type,
+        changed = FSDirAttrOp.setQuota(dir, pc, src, nsQuota, ssQuota, type,
             allowOwnerSetQuota);
       } finally {
         writeUnlock(operationName, getLockReportInfoSupplier(src));
@@ -3636,7 +3644,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, src);
       throw ace;
     }
-    getEditLog().logSync();
+    if (changed) {
+      getEditLog().logSync();
+    }
     logAuditEvent(true, operationName, src);
   }
 
