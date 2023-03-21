@@ -589,9 +589,15 @@ public class TestStateStoreDriverBase {
     final MutableRate mountTableCache = cacheLoadMetrics.get("CacheMountTableLoad");
     assertNotNull("CacheMountTableLoad should be present in the state store metrics",
         mountTableCache);
-    final long mountTableCacheSamples = mountTableCache.lastStat().numSamples();
+    // CacheMountTableLoadNumOps
+    final long mountTableCacheLoadNumOps = mountTableCache.lastStat().numSamples();
     assertEquals("Num of samples collected should match with " + numRefresh + ". Actual value: "
-        + mountTableCacheSamples, numRefresh, mountTableCacheSamples);
+        + mountTableCacheLoadNumOps, numRefresh, mountTableCacheLoadNumOps);
+    // CacheMountTableLoadAvgTime
+    final double mountTableCacheLoadAvgTime = mountTableCache.lastStat().mean();
+    assertTrue(
+        "Mean time duration for cache load is expected to be less than 2000 ms. Actual value: "
+            + mountTableCacheLoadAvgTime, mountTableCacheLoadAvgTime < 2000d);
   }
 
   /**
