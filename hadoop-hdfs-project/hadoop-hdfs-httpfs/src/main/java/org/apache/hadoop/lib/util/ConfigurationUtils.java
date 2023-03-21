@@ -70,8 +70,8 @@ public abstract class ConfigurationUtils {
    */
   public static Configuration resolve(Configuration conf) {
     Configuration resolved = new Configuration(false);
-//     for (Map.Entry<String, String> entry : conf) {
-//       resolved.set(entry.getKey(), conf.get(entry.getKey()));
+    for (Map.Entry<String, String> entry : conf) {
+       resolved.set(entry.getKey(), conf.get(entry.getKey()));
 //     }  
     return resolved;
   }
