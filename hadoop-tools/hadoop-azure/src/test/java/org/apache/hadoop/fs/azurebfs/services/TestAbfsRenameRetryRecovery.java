@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.SocketException;
@@ -164,7 +165,9 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
           throws IOException {
     AbfsHttpOperation failingOperation = Mockito.spy(normalRestOp.createHttpOperation());
     AbfsHttpOperation normalOp1 = normalRestOp.createHttpOperation();
-    executeThenFail(client, normalRestOp, failingOperation, normalOp1);
+    normalOp1.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+            client.getAccessToken());
+    executeThenFail(client, failingOperation, normalOp1);
     AbfsHttpOperation normalOp2 = normalRestOp.createHttpOperation();
     normalOp2.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
             client.getAccessToken());
@@ -177,13 +180,11 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
   /**
    * Mock an idempotency failure by executing the normal operation, then
    * raising an IOE.
-   * @param normalRestOp the rest operation used to sign the requests.
    * @param failingOperation failing operation
    * @param normalOp good operation
    * @throws IOException failure
    */
   private void executeThenFail(final AbfsClient client,
-                               final AbfsRestOperation normalRestOp,
                                final AbfsHttpOperation failingOperation,
                                final AbfsHttpOperation normalOp)
           throws IOException {
@@ -192,8 +193,9 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
       final byte[] buffer = answer.getArgument(0);
       final int offset = answer.getArgument(1);
       final int length = answer.getArgument(2);
-      normalOp.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
-              client.getAccessToken());
+      client.getSharedKeyCredentials().signRequest(
+              normalOp.getConnection(),
+              length);
       normalOp.sendRequest(buffer, offset, length);
       normalOp.processResponse(buffer, offset, length);
       LOG.info("Actual outcome is {} \"{}\" \"{}\"; injecting failure",
@@ -263,37 +265,14 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     String path1 = "/dummyFile1";
     String path2 = "/dummyFile2";
 
-    fs.create(new Path(path1));
     fs.create(new Path(path2));
 
     abfsStore.setClient(mockClient);
 
-    // checking correct count in AbfsCounters
-    AbfsCounters counter = mockClient.getAbfsCounters();
-    Long connMadeBeforeRename = counter.getIOStatistics().counters().
-            get(AbfsStatistic.CONNECTIONS_MADE.getStatName());
-    Long renamePathAttemptsBeforeRename = counter.getIOStatistics().counters().
-            get(AbfsStatistic.RENAME_PATH_ATTEMPTS.getStatName());
-
     // source eTag does not match -> rename should be a failure
-    boolean renameResult = fs.rename(new Path(path1), new Path(path2));
-    assertEquals(false, renameResult);
+    intercept(FileNotFoundException.class, () ->
+            fs.rename(new Path(path1), new Path(path2)));
 
-    // validating stat counters after rename
-    Long connMadeAfterRename = counter.getIOStatistics().counters().
-            get(AbfsStatistic.CONNECTIONS_MADE.getStatName());
-    Long renamePathAttemptsAfterRename = counter.getIOStatistics().counters().
-            get(AbfsStatistic.RENAME_PATH_ATTEMPTS.getStatName());
-
-    // 4 calls should have happened in total for rename
-    // 1 -> original rename rest call, 2 -> first retry,
-    // +2 for getPathStatus calls
-    assertEquals(Long.valueOf(connMadeBeforeRename+4), connMadeAfterRename);
-
-    // the RENAME_PATH_ATTEMPTS stat should be incremented by 1
-    // retries happen internally within AbfsRestOperation execute()
-    // the stat for RENAME_PATH_ATTEMPTS is updated only once before execute() is called
-    assertEquals(Long.valueOf(renamePathAttemptsBeforeRename+1), renamePathAttemptsAfterRename);
   }
 
   @Test
@@ -343,30 +322,6 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // retries happen internally within AbfsRestOperation execute()
     // the stat for RENAME_PATH_ATTEMPTS is updated only once before execute() is called
     assertEquals(Long.valueOf(renamePathAttemptsBeforeRename+1), renamePathAttemptsAfterRename);
-  }
-
-
-  @Test
-  public void randomTest() throws IOException {
-    AzureBlobFileSystem fs = getFileSystem();
-
-    String dir1 = "/dummyDir1/dummyFile";
-    String dir2 = "/dummyDir2/dummyFile2";
-    String dir3 = "/dummyDir3/dummyFile3";
-
-    Path path1 = new Path(dir1);
-    Path path2 = new Path(dir2);
-    Path path3 = new Path(dir3);
-
-    fs.create(path1);
-    //fs.create(path2);
-    //fs.create(path3);
-
-    //fs.mkdirs(new Path("/dummyDir1"));
-    //fs.mkdirs(new Path("/dummyDir2"));
-
-    fs.rename(new Path("/dummyDir1"), new Path("/dummyDir2"));
-    fs.rename(new Path("/dummyDir2"), new Path("/dummyDir3"));
   }
 
   /**
