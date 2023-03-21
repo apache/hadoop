@@ -48,6 +48,8 @@ import org.apache.hadoop.hdfs.server.federation.store.records.Query;
 import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
+import org.apache.hadoop.metrics2.lib.MutableRate;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.slf4j.Logger;
@@ -583,8 +585,13 @@ public class TestStateStoreDriverBase {
     StateStoreMetrics metrics = stateStore.getMetrics();
     final Query<MountTable> query = new Query<>(MountTable.newInstance());
     driver.getMultiple(MountTable.class, query);
-    assertEquals(numRefresh,
-        metrics.getCacheLoadMetrics().get("CacheMountTableLoad").lastStat().numSamples());
+    final Map<String, MutableRate> cacheLoadMetrics = metrics.getCacheLoadMetrics();
+    final MutableRate mountTableCache = cacheLoadMetrics.get("CacheMountTableLoad");
+    assertNotNull("CacheMountTableLoad should be present in the state store metrics",
+        mountTableCache);
+    final long mountTableCacheSamples = mountTableCache.lastStat().numSamples();
+    assertEquals("Num of samples collected should match with " + numRefresh + ". Actual value: "
+        + mountTableCacheSamples, numRefresh, mountTableCacheSamples);
   }
 
   /**
