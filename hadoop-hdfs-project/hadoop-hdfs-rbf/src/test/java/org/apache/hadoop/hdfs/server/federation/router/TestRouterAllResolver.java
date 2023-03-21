@@ -205,6 +205,11 @@ public class TestRouterAllResolver {
     assertDirsEverywhere(path, 9);
     assertFilesDistributed(path, 16);
 
+    // Removing a directory should remove it from every subcluster
+    routerFs.delete(new Path(path + "/dir2/dir22/dir220"), true);
+    assertDirsEverywhere(path, 8);
+    assertFilesDistributed(path, 10);
+
     // Removing all sub directories
     routerFs.delete(new Path(path + "/dir0"), true);
     routerFs.delete(new Path(path + "/dir1"), true);
