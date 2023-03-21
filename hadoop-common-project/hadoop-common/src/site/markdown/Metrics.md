@@ -604,7 +604,7 @@ StateStoreMetrics shows the statistics of the State Store component in Router-ba
 | `FailuresAvgTime`                         | Average time of failed transactions for State Store in milliseconds                |
 | `Cache`*BaseRecord*`Size`                 | Number of store records to cache in State Store                                    |
 | `Cache`*BaseRecord*`LoadNumOps`           | Number of times store records are loaded in the State Store Cache from State Store |
-| `Cache`*BaseRecord*`LoadAvgTime`          | Average time of loading State Store Cache from State Store                         |
+| `Cache`*BaseRecord*`LoadAvgTime`          | Average time of loading State Store Cache from State Store in milliseconds         |
 
 yarn context
 ============
