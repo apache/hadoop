@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
@@ -103,6 +104,8 @@ public class TestViewFileSystemWithTruncate {
     out.writeBytes("drtatedasfdasfgdfas");
     out.close();
     int newLength = 10;
+    assertTrue("ViewFS supports truncate",
+        fsView.hasPathCapability(filePath, CommonPathCapabilities.FS_TRUNCATE));
     boolean isReady = fsView.truncate(filePath, newLength);
     if (!isReady) {
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
