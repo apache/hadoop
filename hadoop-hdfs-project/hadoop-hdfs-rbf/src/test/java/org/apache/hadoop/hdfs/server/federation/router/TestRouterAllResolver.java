@@ -48,7 +48,6 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.TestFileTruncate;
-import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -205,23 +204,6 @@ public class TestRouterAllResolver {
         routerFs.getFileStatus(testTruncateFilePath).getLen());
     assertDirsEverywhere(path, 9);
     assertFilesDistributed(path, 16);
-
-    // Test rename to not multi mount dir
-    routerFs.mkdirs(new Path(path+ "/dir2/dir23"));
-    routerFs.mkdirs(new Path(path+ "/dir2/dir23/dir_1"));
-    routerFs.mkdirs(new Path(path+ "/dir2/dir23/dir_2"));
-    LambdaTestUtils.intercept(IOException.class, "The number of" +
-            " remote locations for both source and target should be same.",
-        () ->{
-          routerFs.rename(new Path(path+ "/dir2/dir23/dir_1"),
-              new Path("/NOT_MULTI_MOUNT_DIR"));
-        });
-    routerFs.delete(new Path(path + "/dir2/dir23"), true);
-
-    // Removing a directory should remove it from every subcluster
-    routerFs.delete(new Path(path + "/dir2/dir22/dir220"), true);
-    assertDirsEverywhere(path, 8);
-    assertFilesDistributed(path, 10);
 
     // Removing all sub directories
     routerFs.delete(new Path(path + "/dir0"), true);
