@@ -1371,7 +1371,8 @@ public class MockDefaultRequestInterceptorREST
   @Override
   public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
       HttpServletRequest req) throws AuthorizationException, InterruptedException {
-    MutableCSConfigurationProvider provider = new MutableCSConfigurationProvider(mockRM.getRMContext());
+    RMContext rmContext = mockRM.getRMContext();
+    MutableCSConfigurationProvider provider = new MutableCSConfigurationProvider(rmContext);
     try {
       Configuration conf = new Configuration();
       conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
