@@ -631,8 +631,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
    * application does not exist in StateStore.
    */
   @Test
-  public void testGetApplicationStateNotExists()
-      throws IOException {
+  public void testGetApplicationStateNotExists() throws IOException {
 
     ApplicationId appId =
         ApplicationId.newInstance(Time.now(), 1);
@@ -1182,7 +1181,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertNotNull(entity);
     Assert.assertNotNull(entity instanceof ReservationListInfo);
 
-    assert entity instanceof ReservationListInfo;
+    Assert.assertTrue(entity instanceof ReservationListInfo);
     ReservationListInfo listInfo = (ReservationListInfo) entity;
     Assert.assertNotNull(listInfo);
 
@@ -1250,7 +1249,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertNotNull(entity);
     Assert.assertNotNull(entity instanceof ReservationListInfo);
 
-    assert entity instanceof ReservationListInfo;
+    Assert.assertTrue(entity instanceof ReservationListInfo);
     ReservationListInfo listInfo = (ReservationListInfo) entity;
     Assert.assertNotNull(listInfo);
 
@@ -1294,7 +1293,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertNotNull(entity);
     Assert.assertNotNull(entity instanceof ReservationListInfo);
 
-    assert entity instanceof ReservationListInfo;
+    Assert.assertTrue(entity instanceof ReservationListInfo);
     ReservationListInfo listInfo = (ReservationListInfo) entity;
     Assert.assertNotNull(listInfo);
 

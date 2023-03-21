@@ -149,6 +149,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import static org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade.getRandomActiveSubCluster;
 import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.extractToken;
 import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.getKerberosUserGroupInformation;
 
@@ -369,8 +370,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       List<SubClusterId> blackList, HttpServletRequest hsr, int retryCount)
       throws YarnException, IOException, InterruptedException {
 
-    SubClusterId subClusterId =
-        federationFacade.getRandomActiveSubCluster(subClustersActive, blackList);
+    SubClusterId subClusterId = getRandomActiveSubCluster(subClustersActive, blackList);
 
     LOG.info("getNewApplication try #{} on SubCluster {}.", retryCount, subClusterId);
 
@@ -1065,12 +1065,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public ClusterInfo getClusterInfo() {
     try {
       long startTime = Time.now();
-      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      Collection<SubClusterInfo> subClustersActive = federationFacade.getActiveSubClusters();
       Class[] argsClasses = new Class[]{};
       Object[] args = new Object[]{};
       ClientMethod remoteMethod = new ClientMethod("getClusterInfo", argsClasses, args);
       Map<SubClusterInfo, ClusterInfo> subClusterInfoMap =
-          invokeConcurrent(subClustersActive.values(), remoteMethod, ClusterInfo.class);
+          invokeConcurrent(subClustersActive, remoteMethod, ClusterInfo.class);
       FederationClusterInfo federationClusterInfo = new FederationClusterInfo();
       subClusterInfoMap.forEach((subClusterInfo, clusterInfo) -> {
         SubClusterId subClusterId = subClusterInfo.getSubClusterId();
@@ -1105,13 +1105,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public ClusterUserInfo getClusterUserInfo(HttpServletRequest hsr) {
     try {
       long startTime = Time.now();
-      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      Collection<SubClusterInfo> subClustersActive = federationFacade.getActiveSubClusters();
       final HttpServletRequest hsrCopy = clone(hsr);
       Class[] argsClasses = new Class[]{HttpServletRequest.class};
       Object[] args = new Object[]{hsrCopy};
       ClientMethod remoteMethod = new ClientMethod("getClusterUserInfo", argsClasses, args);
       Map<SubClusterInfo, ClusterUserInfo> subClusterInfoMap =
-          invokeConcurrent(subClustersActive.values(), remoteMethod, ClusterUserInfo.class);
+          invokeConcurrent(subClustersActive, remoteMethod, ClusterUserInfo.class);
       FederationClusterUserInfo federationClusterUserInfo = new FederationClusterUserInfo();
       subClusterInfoMap.forEach((subClusterInfo, clusterUserInfo) -> {
         SubClusterId subClusterId = subClusterInfo.getSubClusterId();
@@ -2221,8 +2221,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   private Response invokeCreateNewReservation(Map<SubClusterId, SubClusterInfo> subClustersActive,
       List<SubClusterId> blackList, HttpServletRequest hsr, int retryCount)
       throws YarnException {
-    SubClusterId subClusterId =
-        federationFacade.getRandomActiveSubCluster(subClustersActive, blackList);
+    SubClusterId subClusterId = getRandomActiveSubCluster(subClustersActive, blackList);
     LOG.info("createNewReservation try #{} on SubCluster {}.", retryCount, subClusterId);
     SubClusterInfo subClusterInfo = subClustersActive.get(subClusterId);
     DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
