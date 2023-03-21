@@ -58,10 +58,6 @@
 			<arg value='--form' />
 			<arg value='files=@jacoco_low.xml' />
 			<arg value='--form' />
-			<arg value='files=@jacoco_2.xml' />
-			<arg value='--form' />
-			<arg value='file_attributes={"reportType":"jacoco",  "fileTag":"integrated"}' />
-			<arg value='--form' />
 			<arg value='file_attributes={"reportType":"jacoco",  "fileTag":"unit"}' />
 			<arg value='--form' />
 			<arg value='file_category=COVERAGE' />
