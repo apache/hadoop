@@ -615,9 +615,9 @@ public class RouterClientProtocol implements ClientProtocol {
         new RemoteParam(), dstParam);
     if (isMultiDestDirectory(src)) {
       if (locs.size() != srcLocations.size()) {
-        throw new IOException(
-            "Rename of " + src + " to " + dst + " is not allowed," +
-                " The remote location should be exactly same.");
+        throw new IOException("Rename of " + src + " to " + dst + " is not"
+            + " allowed. The number of remote locations for both source and"
+            + " target should be same.");
       }
       return rpcClient.invokeAll(locs, method);
     } else {
@@ -647,9 +647,9 @@ public class RouterClientProtocol implements ClientProtocol {
         new RemoteParam(), dstParam, options);
     if (isMultiDestDirectory(src)) {
       if (locs.size() != srcLocations.size()) {
-        throw new IOException(
-            "Rename of " + src + " to " + dst + " is not allowed," +
-                " The remote location should be exactly same.");
+        throw new IOException("Rename of " + src + " to " + dst + " is not"
+            + " allowed. The number of remote locations for both source and"
+            + " target should be same.");
       }
       rpcClient.invokeConcurrent(locs, method);
     } else {

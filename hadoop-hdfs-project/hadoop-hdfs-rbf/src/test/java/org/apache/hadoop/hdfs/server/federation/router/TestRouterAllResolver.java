@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
@@ -45,6 +48,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.TestFileTruncate;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -208,15 +212,13 @@ public class TestRouterAllResolver {
     routerFs.mkdirs(new Path(path+ "/dir2/dir23"));
     routerFs.mkdirs(new Path(path+ "/dir2/dir23/dir_1"));
     routerFs.mkdirs(new Path(path+ "/dir2/dir23/dir_2"));
-    try {
-      routerFs.rename(new Path(path+ "/dir2/dir23/dir_2"),
-          new Path("/NOT_MULTI_MOUNT_DIR"));
-      fail( "dir rename should throw IOException.");
-    }catch (IOException ioException){
-      assertTrue(ioException.getMessage().
-          contains("The remote location should be exactly same."));
-    }
-    assertEquals(2, routerFs.listStatus(new Path(path+ "/dir2/dir23")).length);
+    LambdaTestUtils.intercept(IOException.class, "The number of" +
+            " remote locations for both source and target should be same.",
+        () ->{
+          routerFs.rename(new Path(path+ "/dir2/dir23/dir_1"),
+              new Path("/NOT_MULTI_MOUNT_DIR"));
+        });
+    routerFs.delete(new Path(path + "/dir2/dir23"), true);
 
     // Removing a directory should remove it from every subcluster
     routerFs.delete(new Path(path + "/dir2/dir22/dir220"), true);
