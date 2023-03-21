@@ -53,8 +53,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
 /**
  * Tests the use of the resolvers that write in all subclusters from the
  * Router. It supports:
