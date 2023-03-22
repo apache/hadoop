@@ -208,7 +208,7 @@
 				task.setTarget("refreshDashboard");
 				task.perform();
 				var msg = "";
-				if( parseInt(parsedJsonResponse.cumulativeCccDetails.changedCodeCoveragePercentage,10) &lt; parseInt(project.getProperty("threshold"),10){
+				if( parseInt(parsedJsonResponse.cumulativeCccDetails.changedCodeCoveragePercentage,10) &lt; parseInt(project.getProperty("threshold"),10)) {
 					msg = "Merged blocked as cumulative changed code coverage for this pull request is only " + parsedJsonResponse.cumulativeCccDetails.changedCodeCoveragePercentage + "% whereas required is " +project.getProperty("threshold")+"%";
 				}
 				else if(parseInt(parsedJsonResponse.cumulativeCccDetails.commitFilesBelowCCCThreshold,10) != 0 ) {
