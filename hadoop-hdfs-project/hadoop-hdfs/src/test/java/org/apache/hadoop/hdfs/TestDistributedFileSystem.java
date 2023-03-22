@@ -1595,7 +1595,7 @@ public class TestDistributedFileSystem {
 
   private static RemoteIterator<LocatedFileStatus> getMockedIterator(Path subDir1) {
     return new RemoteIterator<LocatedFileStatus>() {
-      int remainingEntries = 1;
+      private int remainingEntries = 1;
 
       @Override
       public boolean hasNext() throws IOException {
