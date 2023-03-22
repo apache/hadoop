@@ -720,13 +720,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     List<AppsInfo> appsInfos = subClusterInfos.parallelStream().map(subCluster -> {
       try {
-       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(subCluster);
-       AppsInfo rmApps = interceptor.getApps(hsrCopy, stateQuery, statesQuery, finalStatusQuery,
-           userQuery, queueQuery, count, startedBegin, startedEnd, finishBegin, finishEnd,
-           applicationTypes, applicationTags, name, unselectedFields);
-       if (rmApps != null) {
-         return rmApps;
-       }
+        DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(subCluster);
+        AppsInfo rmApps = interceptor.getApps(hsrCopy, stateQuery, statesQuery, finalStatusQuery,
+            userQuery, queueQuery, count, startedBegin, startedEnd, finishBegin, finishEnd,
+            applicationTypes, applicationTags, name, unselectedFields);
+        if (rmApps != null) {
+          return rmApps;
+        }
       } catch (Exception e) {
         LOG.warn("Failed to get application report.", e);
       }
@@ -736,11 +736,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }).collect(Collectors.toList());
 
     appsInfos.forEach(appsInfo -> {
-       if (appsInfo != null) {
-         apps.addAll(appsInfo.getApps());
-         long stopTime = clock.getTime();
-         routerMetrics.succeededMultipleAppsRetrieved(stopTime - startTime);
-       }
+        if (appsInfo != null) {
+          apps.addAll(appsInfo.getApps());
+          long stopTime = clock.getTime();
+          routerMetrics.succeededMultipleAppsRetrieved(stopTime - startTime);
+        }
     });
 
     if (apps.getApps().isEmpty()) {

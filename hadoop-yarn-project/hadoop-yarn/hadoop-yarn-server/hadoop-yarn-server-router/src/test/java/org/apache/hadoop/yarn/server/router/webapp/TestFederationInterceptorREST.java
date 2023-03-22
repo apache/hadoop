@@ -168,7 +168,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   private final static int NUM_SUBCLUSTER = 4;
   private static final int BAD_REQUEST = 400;
   private static final int ACCEPTED = 202;
-  private static final String user = "test-user";
+  private static final String TEST_USER = "test-user";
   private TestableFederationInterceptorREST interceptor;
   private MemoryFederationStateStore stateStore;
   private FederationStateStoreTestUtil stateStoreUtil;
@@ -187,7 +187,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
 
     interceptor.setConf(this.getConf());
-    interceptor.init(user);
+    interceptor.init(TEST_USER);
 
     subClusters = new ArrayList<>();
 
