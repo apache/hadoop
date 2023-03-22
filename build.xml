@@ -207,7 +207,14 @@
 				var task = project.createTask("antcall");
 				task.setTarget("refreshDashboard");
 				task.perform();
-				throw new Error("MR blocked . This merge request does not meet quality checks. ");
+				var msg = "";
+				if( parseInt(parsedJsonResponse.cumulativeCccDetails.changedCodeCoveragePercentage,10) &lt; parseInt(project.getProperty("threshold"),10){
+					msg = "Merged blocked as cumulative changed code coverage for this pull request is only " + parsedJsonResponse.cumulativeCccDetails.changedCodeCoveragePercentage + "% whereas required is " +project.getProperty("threshold")+"%";
+				}
+				else if(parseInt(parsedJsonResponse.cumulativeCccDetails.commitFilesBelowCCCThreshold,10) != 0 ) {
+					msg = "Merged blocked for this pull request as " + parsedJsonResponse.cumulativeCccDetails.commitFilesBelowCCCThreshold + " files are below required cumulative changed code coverage of " +project.getProperty("threshold")+"%";
+				}
+				throw new Error(msg);
 			}
 			
 			echo.setMessage(project.getProperty("branchName") + " meets quality check for a safe merge!");
@@ -231,6 +238,7 @@
 			<arg value='Authorization: Bearer ${AccessToken}' />
 			<arg value='--header' />
 			<arg value='Content-Type: application/json' />
+			<arg value='--silent' />
 			<arg value='--data' />
 			<arg value='{"notifyOption": "MailOnCompletion"}' />
 		</exec>
