@@ -56,9 +56,9 @@ public abstract class ConfigurationUtils {
   public static void injectDefaults(Configuration source, Configuration target) {
     Check.notNull(source, "source");
     Check.notNull(target, "target");
-  //  for (Map.Entry<String, String> entry : source) {
-    //  if (target.get(entry.getKey()) == null) {
-    //  target.set(entry.getKey(), entry.getValue());
+    for (Map.Entry<String, String> entry : source) {
+      if (target.get(entry.getKey()) == null) {
+      target.set(entry.getKey(), entry.getValue());
       }
     }
   }
