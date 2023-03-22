@@ -1308,8 +1308,7 @@ public class TestDistCpSync {
           "did not expect UnsupportedOperationException");
     } catch (Exception e) {
       // can expect other exceptions as source and target paths
-      // are not created, assert if the exception is not arising
-      // due to the filesystem not supporting snapshots.
+      // are not created.
     }
   }
 
