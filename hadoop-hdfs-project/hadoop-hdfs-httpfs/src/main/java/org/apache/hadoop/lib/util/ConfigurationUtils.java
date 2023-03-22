@@ -58,7 +58,7 @@ public abstract class ConfigurationUtils {
     Check.notNull(target, "target");
     for (Map.Entry<String, String> entry : source) {
       if (target.get(entry.getKey()) == null) {
-//       target.set(entry.getKey(), entry.getValue());
+      target.set(entry.getKey(), entry.getValue());
       }
     }
   }
