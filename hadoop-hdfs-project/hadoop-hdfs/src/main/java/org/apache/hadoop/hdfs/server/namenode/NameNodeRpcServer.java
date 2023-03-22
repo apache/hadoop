@@ -1638,6 +1638,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         nodeReg, reports.length);
     final BlockManager bm = namesystem.getBlockManager(); 
     boolean noStaleStorages = false;
+    boolean canUpdateLastReportTime = false;
     try {
       if (bm.checkBlockReportLease(context, nodeReg)) {
         for (int r = 0; r < reports.length; r++) {
@@ -1652,6 +1653,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
             bm.processReport(nodeReg, reports[index].getStorage(),
                 blocks, context));
         }
+        canUpdateLastReportTime = true;
       } else {
         throw new InvalidBlockReportLeaseException(context.getReportId(), context.getLeaseId());
       }
@@ -1660,7 +1662,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
           nodeReg);
       return RegisterCommand.REGISTER;
     }
-    bm.removeBRLeaseIfNeeded(nodeReg, context);
+    bm.removeBRLeaseIfNeeded(nodeReg, context, canUpdateLastReportTime);
 
     BlockManagerFaultInjector.getInstance().
         incomingBlockReportRpc(nodeReg, context);

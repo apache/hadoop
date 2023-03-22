@@ -2958,7 +2958,7 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   public void removeBRLeaseIfNeeded(final DatanodeID nodeID,
-      final BlockReportContext context) throws IOException {
+      final BlockReportContext context, final boolean canUpdateLastReportTime) throws IOException {
     namesystem.writeLock();
     DatanodeDescriptor node;
     try {
@@ -2968,8 +2968,10 @@ public class BlockManager implements BlockStatsMXBean {
           long leaseId = this.getBlockReportLeaseManager().removeLease(node);
           BlockManagerFaultInjector.getInstance().
               removeBlockReportLease(node, leaseId);
-          node.setLastBlockReportTime(now());
-          node.setLastBlockReportMonotonic(Time.monotonicNow());
+          if (canUpdateLastReportTime) {
+            node.setLastBlockReportTime(now());
+            node.setLastBlockReportMonotonic(Time.monotonicNow());
+          }
         }
         if (LOG.isDebugEnabled()) {
           LOG.debug("Processing RPC with index {} out of total {} RPCs in processReport 0x{}",
