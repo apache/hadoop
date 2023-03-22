@@ -721,7 +721,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
   }
 
   /**
-   *  Test rename a dir from src dir (mapped to both ns0 and ns1) to ns0
+   *  Test rename a dir from src dir (mapped to both ns0 and ns1) to ns0.
    */
   @Test
   public void testRenameWithMultiDestinations() throws Exception {
