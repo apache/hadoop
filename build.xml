@@ -170,7 +170,7 @@
 		
 		<!-- Hardcoded the non-mandatory parameter testType, if not provided, by default it takes "merged" -->
 		<property name="testType" value="merged" />
-		<property name="threshold" value="50" />
+		<property name="threshold" value="80" />
 
 		<echo message="event_uuid = ${eventUUid}, test_type = ${testType}, threshold = ${threshold}"/>
 		
