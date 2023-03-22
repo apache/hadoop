@@ -160,20 +160,20 @@ class DistCpSync {
       FileSystem srcFs, FileSystem tgtFs) throws IOException {
     if (!srcFs.hasPathCapability(sourceDir,
         CommonPathCapabilities.FS_SNAPSHOTS)) {
-      throw new IllegalArgumentException(
+      throw new UnsupportedOperationException(
           "The source file system " + srcFs.getScheme()
               + " does not support snapshot.");
     }
     if (!tgtFs.hasPathCapability(targetDir,
         CommonPathCapabilities.FS_SNAPSHOTS)) {
-      throw new IllegalArgumentException(
+      throw new UnsupportedOperationException(
           "The target file system " + tgtFs.getScheme()
               + " does not support snapshot.");
     }
     try {
       getSnapshotDiffReportMethod(srcFs);
     } catch (NoSuchMethodException e) {
-      throw new IllegalArgumentException(
+      throw new UnsupportedOperationException(
           "The source file system " + srcFs.getScheme()
               + " does not support getSnapshotDiffReport",
           e);
@@ -181,7 +181,7 @@ class DistCpSync {
     try {
       getSnapshotDiffReportMethod(tgtFs);
     } catch (NoSuchMethodException e) {
-      throw new IllegalArgumentException(
+      throw new UnsupportedOperationException(
           "The target file system " + tgtFs.getScheme()
               + " does not support getSnapshotDiffReport",
           e);

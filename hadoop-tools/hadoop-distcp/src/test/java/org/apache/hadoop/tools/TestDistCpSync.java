@@ -1303,12 +1303,13 @@ public class TestDistCpSync {
       FileSystem dummyFs = FileSystem.get(URI.create("dummy:///"), conf);
       Assert.assertTrue(dummyFs instanceof DummyFs);
       new DistCp(conf, OptionsParser.parse(args)).execute();
+    } catch (UnsupportedOperationException e) {
+      Assert.fail("Dummy FS supports snapshots," +
+          "did not expect UnsupportedOperationException");
     } catch (Exception e) {
       // can expect other exceptions as source and target paths
-      // are not created, assert that the exception is not arising
+      // are not created, assert if the exception is not arising
       // due to the filesystem not supporting snapshots.
-      Assert.assertFalse(e.getMessage().contains("does not support snapshot")
-          || e.getMessage().contains("does not support getSnapshotDiffReport"));
     }
   }
 
