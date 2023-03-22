@@ -200,7 +200,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throw new YarnRuntimeException(e);
     }
 
-    numSubmitRetries = conf.getInt(YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_RETRY,
+    numSubmitRetries = conf.getInt(
+        YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_RETRY,
         YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY);
 
     interceptors = new HashMap<>();
@@ -585,6 +586,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public AppInfo getApp(HttpServletRequest hsr, String appId, Set<String> unselectedFields) {
 
+    // We first check the applicationId
     try {
       RouterServerUtil.validateApplicationId(appId);
     } catch (IllegalArgumentException e) {
@@ -592,27 +594,28 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throw e;
     }
 
-    long startTime = clock.getTime();
-    SubClusterInfo subClusterInfo;
-
     try {
-      subClusterInfo = getHomeSubClusterInfoByAppId(appId);
+      long startTime = clock.getTime();
+
+      // Get SubClusterInfo according to applicationId
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
       if (subClusterInfo == null) {
         routerMetrics.incrAppsFailedRetrieved();
         return null;
       }
+
+      // Call the getApp interface
+      DefaultRequestInterceptorREST interceptor =
+          getOrCreateInterceptorForSubCluster(subClusterInfo);
+      AppInfo response = interceptor.getApp(hsr, appId, unselectedFields);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededAppsRetrieved(stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       routerMetrics.incrAppsFailedRetrieved();
       LOG.error("getApp Error, applicationId = {}.", appId, e);
       return null;
     }
-
-    DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(subClusterInfo);
-    AppInfo response = interceptor.getApp(hsr, appId, unselectedFields);
-
-    long stopTime = clock.getTime();
-    routerMetrics.succeededAppsRetrieved(stopTime - startTime);
-    return response;
   }
 
   /**
@@ -735,11 +738,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }).collect(Collectors.toList());
 
     appsInfos.forEach(appsInfo -> {
-        if (appsInfo != null) {
-          apps.addAll(appsInfo.getApps());
-          long stopTime = clock.getTime();
-          routerMetrics.succeededMultipleAppsRetrieved(stopTime - startTime);
-        }
+      if (appsInfo != null) {
+        apps.addAll(appsInfo.getApps());
+        long stopTime = clock.getTime();
+        routerMetrics.succeededMultipleAppsRetrieved(stopTime - startTime);
+      }
     });
 
     if (apps.getApps().isEmpty()) {
