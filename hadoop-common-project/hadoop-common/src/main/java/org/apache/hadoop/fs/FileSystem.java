@@ -2418,7 +2418,8 @@ public abstract class FileSystem extends Configured
             itors.push(curItor);
             curItor = newDirItor;
           } catch (FileNotFoundException ignored) {
-            LOGGER.debug("Directory {} deleted while attempting to recusive listing", stat.getPath());
+            LOGGER.debug("Directory {} deleted while attempting for recursive listing",
+                stat.getPath());
           }
         }
       }
