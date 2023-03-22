@@ -585,16 +585,16 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public AppInfo getApp(HttpServletRequest hsr, String appId, Set<String> unselectedFields) {
 
-    long startTime = clock.getTime();
-
     try {
-      ApplicationId.fromString(appId);
+      RouterServerUtil.validateApplicationId(appId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrAppsFailedRetrieved();
-      return null;
+      throw e;
     }
 
+    long startTime = clock.getTime();
     SubClusterInfo subClusterInfo;
+
     try {
       subClusterInfo = getHomeSubClusterInfoByAppId(appId);
       if (subClusterInfo == null) {
@@ -612,7 +612,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     long stopTime = clock.getTime();
     routerMetrics.succeededAppsRetrieved(stopTime - startTime);
-
     return response;
   }
 
@@ -2952,7 +2951,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    */
   private SubClusterInfo getHomeSubClusterInfoByAppId(String appId)
       throws YarnException {
-    SubClusterInfo subClusterInfo;
+
+    if (StringUtils.isBlank(appId)) {
+      throw new IllegalArgumentException("applicationId can't null or empty.");
+    }
+
     try {
       ApplicationId applicationId = ApplicationId.fromString(appId);
       SubClusterId subClusterId = federationFacade.getApplicationHomeSubCluster(applicationId);
@@ -2960,7 +2963,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         RouterServerUtil.logAndThrowException(null,
             "Can't get HomeSubCluster by applicationId %s", applicationId);
       }
-      subClusterInfo = federationFacade.getSubCluster(subClusterId);
+      SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
       return subClusterInfo;
     } catch (IllegalArgumentException e){
       throw new IllegalArgumentException(e);
