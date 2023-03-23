@@ -3873,8 +3873,9 @@ public class DistributedFileSystem extends FileSystem
       throws IOException {
     // qualify the path to make sure that it refers to the current FS.
     final Path p = makeQualified(path);
-    if (DfsPathCapabilities.hasPathCapability(p, capability)) {
-      return true;
+    final Boolean cap = DfsPathCapabilities.hasPathCapability(p, capability);
+    if (cap != null) {
+      return cap;
     }
     // this switch is for features which are in the DFS client but not
     // (yet/ever) in the WebHDFS API.
