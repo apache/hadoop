@@ -1289,7 +1289,7 @@ public class TestDistCpSync {
     String[] args = new String[]{"-update", "-diff", "s1", "s2",
         "file:///source", "file:///target"};
     LambdaTestUtils.intercept(
-        IllegalArgumentException.class,
+        UnsupportedOperationException.class,
         "The source file system file does not support snapshot",
         () -> new DistCp(conf, OptionsParser.parse(args)).execute());
   }
