@@ -44,7 +44,7 @@ import static java.time.temporal.ChronoUnit.SECONDS;
 public final class CachedSASToken {
   public static final Logger LOG = LoggerFactory.getLogger(CachedSASToken.class);
 
-  private static final DateTimeFormatter isoDateMidnight = new DateTimeFormatterBuilder()
+  private static final DateTimeFormatter ISO_DATE_MIDNIGHT = new DateTimeFormatterBuilder()
           .append(DateTimeFormatter.ISO_DATE)
           .parseDefaulting(ChronoField.HOUR_OF_DAY, 0)
           .parseDefaulting(ChronoField.MINUTE_OF_HOUR, 0)
@@ -127,7 +127,7 @@ public final class CachedSASToken {
       seDate = OffsetDateTime.parse(seValue, DateTimeFormatter.ISO_DATE_TIME);
     } catch (DateTimeParseException dateTimeException) {
       try {
-        TemporalAccessor dt = isoDateMidnight.parseBest(seValue, OffsetDateTime::from, LocalDateTime::from);
+        TemporalAccessor dt = ISO_DATE_MIDNIGHT.parseBest(seValue, OffsetDateTime::from, LocalDateTime::from);
         if (dt instanceof OffsetDateTime) {
           seDate = (OffsetDateTime) dt;
         } else if (dt instanceof LocalDateTime) {
