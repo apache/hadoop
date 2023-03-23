@@ -58,7 +58,7 @@ public abstract class ConfigurationUtils {
     Check.notNull(target, "target");
     for (Map.Entry<String, String> entry : source) {
       if (target.get(entry.getKey()) == null) {
-        target.set(entry.getKey(), entry.getValue());
+      target.set(entry.getKey(), entry.getValue());
       }
     }
   }
@@ -70,9 +70,9 @@ public abstract class ConfigurationUtils {
    */
   public static Configuration resolve(Configuration conf) {
     Configuration resolved = new Configuration(false);
-    for (Map.Entry<String, String> entry : conf) {
-       resolved.set(entry.getKey(), conf.get(entry.getKey()));
-     }  
+     for (Map.Entry<String, String> entry : conf) {
+        resolved.set(entry.getKey(), conf.get(entry.getKey()));
+    }  
     return resolved;
   }
 
