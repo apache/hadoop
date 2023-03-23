@@ -580,7 +580,16 @@ public class TestStateStoreDriverBase {
     return getters;
   }
 
-  public void testCacheLoadMetrics(StateStoreDriver driver, int numRefresh)
+  public long getMountTableCacheLoadSamples(StateStoreDriver driver) throws IOException {
+    StateStoreMetrics metrics = stateStore.getMetrics();
+    final Query<MountTable> query = new Query<>(MountTable.newInstance());
+    driver.getMultiple(MountTable.class, query);
+    final Map<String, MutableRate> cacheLoadMetrics = metrics.getCacheLoadMetrics();
+    final MutableRate mountTableCache = cacheLoadMetrics.get("CacheMountTableLoad");
+    return mountTableCache.lastStat().numSamples();
+  }
+
+  public void testCacheLoadMetrics(StateStoreDriver driver, long numRefresh)
       throws IOException, IllegalArgumentException {
     StateStoreMetrics metrics = stateStore.getMetrics();
     final Query<MountTable> query = new Query<>(MountTable.newInstance());
@@ -591,10 +600,10 @@ public class TestStateStoreDriverBase {
         mountTableCache);
     // CacheMountTableLoadNumOps
     final long mountTableCacheLoadNumOps = mountTableCache.lastStat().numSamples();
-    assertEquals("Num of samples collected should match with " + numRefresh + ". Actual value: "
-        + mountTableCacheLoadNumOps, numRefresh, mountTableCacheLoadNumOps);
+    assertEquals("Num of samples collected should match", numRefresh, mountTableCacheLoadNumOps);
     // CacheMountTableLoadAvgTime
     final double mountTableCacheLoadAvgTime = mountTableCache.lastStat().mean();
+    // 2000 ms is high enough value that we expect mount table cache to be loaded by the time.
     assertTrue(
         "Mean time duration for cache load is expected to be less than 2000 ms. Actual value: "
             + mountTableCacheLoadAvgTime, mountTableCacheLoadAvgTime < 2000d);

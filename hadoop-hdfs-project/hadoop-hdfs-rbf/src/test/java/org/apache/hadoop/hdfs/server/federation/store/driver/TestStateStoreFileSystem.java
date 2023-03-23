@@ -118,8 +118,9 @@ public class TestStateStoreFileSystem extends TestStateStoreDriverBase {
 
   @Test
   public void testCacheLoadMetrics() throws IOException {
+    long curMountTableLoadNum = getMountTableCacheLoadSamples(getStateStoreDriver());
     getStateStoreService().refreshCaches(true);
     getStateStoreService().refreshCaches(true);
-    testCacheLoadMetrics(getStateStoreDriver(), 3);
+    testCacheLoadMetrics(getStateStoreDriver(), curMountTableLoadNum + 2);
   }
 }

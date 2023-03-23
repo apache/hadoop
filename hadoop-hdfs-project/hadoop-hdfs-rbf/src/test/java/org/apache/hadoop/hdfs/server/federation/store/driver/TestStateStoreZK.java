@@ -209,10 +209,11 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
 
   @Test
   public void testCacheLoadMetrics() throws IOException {
+    long curMountTableLoadNum = getMountTableCacheLoadSamples(getStateStoreDriver());
     getStateStoreService().refreshCaches(true);
     getStateStoreService().refreshCaches(true);
     getStateStoreService().refreshCaches(true);
-    testCacheLoadMetrics(getStateStoreDriver(), 4);
+    testCacheLoadMetrics(getStateStoreDriver(), curMountTableLoadNum + 3);
   }
 
 }
