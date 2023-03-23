@@ -285,6 +285,23 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     return getOrCreateInterceptorForSubCluster(subClusterId, webServiceAddress);
   }
 
+  protected DefaultRequestInterceptorREST getOrCreateInterceptorByAppId(String appId)
+      throws YarnException {
+    SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
+    if (subClusterInfo != null) {
+      return getOrCreateInterceptorForSubCluster(subClusterInfo);
+    }
+    return null;
+  }
+
+  protected DefaultRequestInterceptorREST getOrCreateInterceptorByNodeId(String nodeId) {
+    SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
+    if (subClusterInfo != null) {
+      return getOrCreateInterceptorForSubCluster(subClusterInfo);
+    }
+    return null;
+  }
+
   @VisibleForTesting
   protected DefaultRequestInterceptorREST getOrCreateInterceptorForSubCluster(
       SubClusterId subClusterId, String webAppAddress) {
@@ -598,15 +615,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       long startTime = clock.getTime();
 
       // Get SubClusterInfo according to applicationId
-      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
-      if (subClusterInfo == null) {
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
+      if (interceptor == null) {
         routerMetrics.incrAppsFailedRetrieved();
         return null;
       }
-
-      // Call the getApp interface
-      DefaultRequestInterceptorREST interceptor =
-          getOrCreateInterceptorForSubCluster(subClusterInfo);
       AppInfo response = interceptor.getApp(hsr, appId, unselectedFields);
       long stopTime = clock.getTime();
       routerMetrics.succeededAppsRetrieved(stopTime - startTime);
@@ -861,10 +874,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     Stream<Pair<SubClusterInfo, NodeInfo>> pairStream = subClusters.parallelStream().map(
         subClusterInfo -> {
             final SubClusterId subClusterId = subClusterInfo.getSubClusterId();
-            final String webServiceAddress = subClusterInfo.getRMWebServiceAddress();
             try {
               DefaultRequestInterceptorREST interceptor =
-                   getOrCreateInterceptorForSubCluster(subClusterId, webServiceAddress);
+                   getOrCreateInterceptorForSubCluster(subClusterInfo);
               return Pair.of(subClusterInfo, interceptor.getNode(nodeId));
             } catch (Exception e) {
               LOG.error("Subcluster {} failed to return nodeInfo.", subClusterId, e);
@@ -975,8 +987,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public ResourceInfo updateNodeResource(HttpServletRequest hsr,
       String nodeId, ResourceOptionInfo resourceOption) {
-    SubClusterInfo subcluster = getNodeSubcluster(nodeId);
-    DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(subcluster);
+    DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByNodeId(nodeId);
     return interceptor.updateNodeResource(hsr, nodeId, resourceOption);
   }
 
@@ -1031,22 +1042,18 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public AppState getAppState(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
-
-    // Check that the appId format is accurate
-    RouterServerUtil.validateApplicationId(appId);
-
-    // Get SubCluster according to appId.
-    SubClusterInfo subClusterInfo;
     try {
-      subClusterInfo = getHomeSubClusterInfoByAppId(appId);
+      // Check that the appId format is accurate
+      RouterServerUtil.validateApplicationId(appId);
+
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
+      if (interceptor != null) {
+        return interceptor.getAppState(hsr, appId);
+      }
     } catch (YarnException e) {
       LOG.error("getHomeSubClusterInfoByAppId error, applicationId = {}.", appId, e);
-      return null;
     }
-
-    // Call the appState interface.
-    DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(subClusterInfo);
-    return interceptor.getAppState(hsr, appId);
+    return null;
   }
 
   @Override
@@ -1260,12 +1267,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
       // Query SubClusterInfo according to id,
       // if the nodeId cannot get SubClusterInfo, an exception will be thrown directly.
-      SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
-
       // Call the corresponding subCluster to get ActivitiesInfo.
       long startTime = clock.getTime();
-      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByNodeId(nodeId);
       final HttpServletRequest hsrCopy = clone(hsr);
       ActivitiesInfo activitiesInfo = interceptor.getActivities(hsrCopy, nodeId, groupBy);
       if (activitiesInfo != null) {
@@ -1361,9 +1365,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     try {
       long startTime = clock.getTime();
-      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
-      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-          subClusterInfo);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       final HttpServletRequest hsrCopy = clone(hsr);
       AppActivitiesInfo appActivitiesInfo = interceptor.getAppActivities(hsrCopy, appId, time,
           requestPriorities, allocationRequestIds, groupBy, limit, actions, summarize);
@@ -1574,11 +1576,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       long startTime = clock.getTime();
       final HttpServletRequest hsrCopy = clone(hsr);
       StringBuilder builder = new StringBuilder();
-      subClusterToNodeToLabelsEntryList.forEach((subCluster, nodeToLabelsEntryList) -> {
-        SubClusterId subClusterId = subCluster.getSubClusterId();
+      subClusterToNodeToLabelsEntryList.forEach((subClusterInfo, nodeToLabelsEntryList) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
         try {
           DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-              subCluster.getSubClusterId(), subCluster.getRMWebServiceAddress());
+              subClusterInfo);
           interceptor.replaceLabelsOnNodes(nodeToLabelsEntryList, hsrCopy);
           builder.append("subCluster-").append(subClusterId.getId()).append(":Success,");
         } catch (Exception e) {
@@ -1628,8 +1630,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       // and then call the replaceLabelsOnNode of the subCluster.
       long startTime = clock.getTime();
       SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
-      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByNodeId(nodeId);
       final HttpServletRequest hsrCopy = clone(hsr);
       interceptor.replaceLabelsOnNode(newNodeLabelsName, hsrCopy, nodeId);
 
@@ -1842,9 +1843,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     try {
       long startTime = clock.getTime();
-      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
-      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       AppPriority appPriority = interceptor.getAppPriority(hsr, appId);
       if (appPriority != null) {
         long stopTime = clock.getTime();
@@ -1883,9 +1882,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     try {
       long startTime = clock.getTime();
-      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
-      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       Response response = interceptor.updateApplicationPriority(targetPriority, hsr, appId);
       if (response != null) {
         long stopTime = clock.getTime();
@@ -1918,9 +1915,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     try {
       long startTime = clock.getTime();
-      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
-      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       AppQueue queue = interceptor.getAppQueue(hsr, appId);
       if (queue != null) {
         long stopTime = clock.getTime();
@@ -1958,9 +1953,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     try {
       long startTime = clock.getTime();
-      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
-      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       Response response = interceptor.updateAppQueue(targetQueue, hsr, appId);
       if (response != null) {
         long stopTime = clock.getTime();
@@ -2490,9 +2483,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     try {
       long startTime = clock.getTime();
-      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
-      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       AppTimeoutInfo appTimeoutInfo = interceptor.getAppTimeout(hsr, appId, type);
       if (appTimeoutInfo != null) {
         long stopTime = clock.getTime();
@@ -2525,9 +2516,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     try {
       long startTime = clock.getTime();
-      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
-      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       AppTimeoutsInfo appTimeoutsInfo = interceptor.getAppTimeouts(hsr, appId);
       if (appTimeoutsInfo != null) {
         long stopTime = clock.getTime();
@@ -2567,9 +2556,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     try {
       long startTime = Time.now();
-      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
-      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       Response response = interceptor.updateApplicationTimeout(appTimeout, hsr, appId);
       if (response != null) {
         long stopTime = clock.getTime();
@@ -2602,9 +2589,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     try {
       long startTime = Time.now();
-      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
-      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       AppAttemptsInfo appAttemptsInfo = interceptor.getAppAttempts(hsr, appId);
       if (appAttemptsInfo != null) {
         long stopTime = Time.now();
@@ -2692,9 +2677,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     // Call the getAppAttempt method
     try {
       long startTime = Time.now();
-      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
-      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       AppAttemptInfo appAttemptInfo = interceptor.getAppAttempt(req, res, appId, appAttemptId);
       if (appAttemptInfo != null) {
         long stopTime = Time.now();
@@ -2784,9 +2767,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     try {
       long startTime = Time.now();
-      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
-      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       ContainerInfo containerInfo =
           interceptor.getContainer(req, res, appId, appAttemptId, containerId);
       if (containerInfo != null) {
