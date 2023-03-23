@@ -266,8 +266,19 @@ pipeline {
                 withCredentials(getGithubCreds()) {
                     bat 'if not exist %WORKSPACE%\\out mkdir %WORKSPACE%\\out'
                     bat 'if not exist F:\\maven\\repository mkdir F:\\maven\\repository'
-                    bat 'docker build --label org.apache.yetus="" --label org.apache.yetus.testpatch.project=hadoop --tag hadoop-windows-10-builder -f %DOCKERFILE% %SOURCEDIR%\\dev-support\\docker'
-                    bat 'docker run --rm -v %WORKSPACE%\\out:C:\\out -v %WORKSPACE%\\src:C:\\src -v %WORKSPACE%\\yetus:C:\\yetus -v F:\\maven\\repository:C:\\Users\\ContainerAdministrator\\.m2 -e PATCH_OR_ISSUE=%CHANGE_URL% -e JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY% -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER% hadoop-windows-10-builder "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "/q" "C:\\src" "C:\\hadoop" "&&" "C:\\Git\\bin\\bash.exe" "-c" \'"/c/src/dev-support/jenkins.sh" "run_ci"\''
+                    bat '''docker build --label org.apache.yetus=""^
+                            --label org.apache.yetus.testpatch.project=hadoop^
+                            --tag hadoop-windows-10-builder^
+                            -f %DOCKERFILE% %SOURCEDIR%\\dev-support\\docker'''
+                    bat '''docker run --rm -v %WORKSPACE%\\out:C:\\out -v %WORKSPACE%\\src:C:\\src^
+                            -v %WORKSPACE%\\yetus:C:\\yetus^
+                            -v F:\\maven\\repository:C:\\Users\\ContainerAdministrator\\.m2^
+                            -e PATCH_OR_ISSUE=%CHANGE_URL% -e JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY%^
+                            -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus^
+                            -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out^
+                            -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER%^
+                            hadoop-windows-10-builder "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "/q" "C:\\src" "C:\\hadoop"^
+                                "&&" "C:\\Git\\bin\\bash.exe" "-c" \'"/c/src/dev-support/jenkins.sh" "run_ci"\''''
                 }
             }
 
