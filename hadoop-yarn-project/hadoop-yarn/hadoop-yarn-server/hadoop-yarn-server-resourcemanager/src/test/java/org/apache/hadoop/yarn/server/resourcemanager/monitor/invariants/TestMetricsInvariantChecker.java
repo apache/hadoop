@@ -25,9 +25,10 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static junit.framework.TestCase.fail;
 
@@ -37,8 +38,7 @@ import static junit.framework.TestCase.fail;
  * the invariant throws in case the invariants are not respected.
  */
 public class TestMetricsInvariantChecker {
-  public final static Logger LOG =
-      Logger.getLogger(TestMetricsInvariantChecker.class);
+  public final static Logger LOG = LoggerFactory.getLogger(TestMetricsInvariantChecker.class);
 
   private MetricsSystem metricsSystem;
   private MetricsInvariantChecker ic;

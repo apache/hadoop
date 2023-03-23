@@ -41,6 +41,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCp;
 import org.apache.hadoop.tools.DistCpConstants;
@@ -701,8 +702,8 @@ public abstract class AbstractContractDistCpTest
     GenericTestUtils
         .createFiles(remoteFS, source, getDepth(), getWidth(), getWidth());
 
-    GenericTestUtils.LogCapturer log =
-        GenericTestUtils.LogCapturer.captureLogs(SimpleCopyListing.LOG);
+    LogCapturer log =
+        LogCapturer.captureLogs(SimpleCopyListing.LOG);
 
     String options = "-useiterator -update -delete" + getDefaultCLIOptions();
     DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, source.toString(),

@@ -19,6 +19,8 @@ package org.apache.hadoop.security.ssl;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.logging.LogCapturer;
+
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -42,7 +44,7 @@ public class TestReloadingX509KeyManager {
     private static final String BASEDIR = GenericTestUtils.getTempPath(
             TestReloadingX509TrustManager.class.getSimpleName());
 
-    private final GenericTestUtils.LogCapturer reloaderLog = GenericTestUtils.LogCapturer.captureLogs(
+    private final LogCapturer reloaderLog = LogCapturer.captureLogs(
             FileMonitoringTimerTask.LOG);
 
     @BeforeClass

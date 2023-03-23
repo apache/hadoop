@@ -58,7 +58,7 @@ import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStat
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.logging.LogCapturer;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.slf4j.LoggerFactory;
@@ -575,7 +575,7 @@ public class TestPendingReconstruction {
         new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     cluster.waitActive();
     DFSTestUtil.setNameNodeLogLevel(Level.DEBUG);
-    LogCapturer logs = GenericTestUtils.LogCapturer
+    LogCapturer logs = LogCapturer
         .captureLogs(LoggerFactory.getLogger("BlockStateChange"));
     BlockManager bm = cluster.getNamesystem().getBlockManager();
     try {

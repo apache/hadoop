@@ -22,7 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.federation.router.FederationUtil;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.util.Time;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
@@ -179,7 +179,7 @@ public class TestRouterRpcFairnessPolicyController {
 
   private void verifyInstantiationError(Configuration conf, int handlerCount,
       int totalDedicatedHandlers) {
-    GenericTestUtils.LogCapturer logs = GenericTestUtils.LogCapturer
+    LogCapturer logs = LogCapturer
         .captureLogs(LoggerFactory.getLogger(
             StaticRouterRpcFairnessPolicyController.class));
     try {

@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.log.LogLevel.CLI;
+import org.apache.hadoop.logging.HadoopLoggerUtils;
 import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
@@ -40,12 +41,11 @@ import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.junit.Assert;
 
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLException;
@@ -67,7 +67,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
   private final String logName = TestLogLevel.class.getName();
   private String clientPrincipal;
   private String serverPrincipal;
-  private final Logger log = Logger.getLogger(logName);
+  private final Logger log = LoggerFactory.getLogger(logName);
   private final static String PRINCIPAL = "loglevel.principal";
   private final static String KEYTAB  = "loglevel.keytab";
   private static final String PREFIX = "hadoop.http.authentication.";
@@ -76,7 +76,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
   public static void setUp() throws Exception {
     org.slf4j.Logger logger =
         LoggerFactory.getLogger(KerberosAuthenticator.class);
-    GenericTestUtils.setLogLevel(logger, Level.DEBUG);
+    HadoopLoggerUtils.setLogLevel(logger.getName(), "DEBUG");
     FileUtil.fullyDelete(BASEDIR);
     if (!BASEDIR.mkdirs()) {
       throw new Exception("unable to create the base directory for testing");
@@ -230,7 +230,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
       final String connectProtocol, final boolean isSpnego)
       throws Exception {
     testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego,
-        Level.DEBUG.toString());
+        "DEBUG");
   }
 
   /**
@@ -250,9 +250,8 @@ public class TestLogLevel extends KerberosSecurityTestcase {
     if (!LogLevel.isValidProtocol(connectProtocol)) {
       throw new Exception("Invalid client protocol " + connectProtocol);
     }
-    Level oldLevel = log.getEffectiveLevel();
-    Assert.assertNotEquals("Get default Log Level which shouldn't be ERROR.",
-        Level.ERROR, oldLevel);
+    String oldLevel = HadoopLoggerUtils.getEffectiveLevel(log.getName());
+    Assert.assertNotEquals("Get default Log Level which shouldn't be ERROR.", "ERROR", oldLevel);
 
     // configs needed for SPNEGO at server side
     if (isSpnego) {
@@ -288,7 +287,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
     });
     server.stop();
     // restore log level
-    GenericTestUtils.setLogLevel(log, oldLevel);
+    HadoopLoggerUtils.setLogLevel(log.getName(), oldLevel.toString());
   }
 
   /**
@@ -322,7 +321,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
     cli.run(setLevelArgs);
 
     assertEquals("new level not equal to expected: ", newLevel.toUpperCase(),
-        log.getEffectiveLevel().toString());
+        HadoopLoggerUtils.getEffectiveLevel(log.getName()));
   }
 
   /**

@@ -42,8 +42,9 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 import static org.junit.Assert.assertEquals;
 
-import org.apache.log4j.Logger;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
@@ -241,7 +242,7 @@ public class TestMetricsSourceAdapter {
     private MetricsSourceAdapter sa = null;
     private ScheduledFuture<?> future = null;
     private AtomicBoolean hasError = null;
-    private static final Logger LOG = Logger.getLogger(SourceUpdater.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SourceUpdater.class);
 
     public SourceUpdater(MetricsSourceAdapter sourceAdapter,
         AtomicBoolean err) {
@@ -263,7 +264,7 @@ public class TestMetricsSourceAdapter {
       } catch (Exception e) {
         // catch all errors
         hasError.set(true);
-        LOG.error(e.getStackTrace());
+        LOG.error("Something went wrong.", e);
       } finally {
         if (hasError.get()) {
           LOG.error("Hit error, stopping now");
@@ -284,7 +285,7 @@ public class TestMetricsSourceAdapter {
     private int cnt = 0;
     private ScheduledFuture<?> future = null;
     private AtomicBoolean hasError = null;
-    private static final Logger LOG = Logger.getLogger(SourceReader.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SourceReader.class);
 
     public SourceReader(
         TestMetricsSource source, MetricsSourceAdapter sourceAdapter,
@@ -318,7 +319,7 @@ public class TestMetricsSourceAdapter {
       } catch (Exception e) {
         // catch other errors
         hasError.set(true);
-        LOG.error(e.getStackTrace());
+        LOG.error("Something went wrong.", e);
       } finally {
         if (hasError.get()) {
           future.cancel(false);

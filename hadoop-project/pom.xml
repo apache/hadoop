@@ -1948,6 +1948,18 @@
         <artifactId>log4j-web</artifactId>
         <version>${log4j2.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-logging</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-logging</artifactId>
+        <version>${hadoop.version}</version>
+        <scope>test</scope>
+        <type>test-jar</type>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 

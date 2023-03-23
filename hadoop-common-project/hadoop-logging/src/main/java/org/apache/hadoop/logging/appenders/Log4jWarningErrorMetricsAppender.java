@@ -16,12 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.util;
+package org.apache.hadoop.logging.appenders;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Time;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -113,16 +111,13 @@ public class Log4jWarningErrorMetricsAppender extends AppenderSkeleton {
   /**
    * Create an appender to keep track of the errors and warnings logged by the
    * system.
-   * 
-   * @param cleanupIntervalSeconds
-   *          the interval at which old messages are purged to prevent the
-   *          message stores from growing unbounded
-   * @param messageAgeLimitSeconds
-   *          the maximum age of a message in seconds before it is purged from
-   *          the store
-   * @param maxUniqueMessages
-   *          the maximum number of unique messages of each type we keep before
-   *          we start purging
+   *
+   * @param cleanupIntervalSeconds the interval at which old messages are purged to prevent the
+   * message stores from growing unbounded.
+   * @param messageAgeLimitSeconds the maximum age of a message in seconds before it is purged from
+   * the store.
+   * @param maxUniqueMessages the maximum number of unique messages of each type we keep before
+   * we start purging.
    */
   public Log4jWarningErrorMetricsAppender(int cleanupIntervalSeconds,
       long messageAgeLimitSeconds, int maxUniqueMessages) {
@@ -143,6 +138,20 @@ public class Log4jWarningErrorMetricsAppender extends AppenderSkeleton {
     this.setThreshold(Level.WARN);
   }
 
+  private static String join(CharSequence separator, String[] strings) {
+    StringBuilder sb = new StringBuilder();
+    boolean first = true;
+    for (String s : strings) {
+      if (first) {
+        first = false;
+      } else {
+        sb.append(separator);
+      }
+      sb.append(s);
+    }
+    return sb.toString();
+  }
+
   /**
    * {@inheritDoc}
    */
@@ -151,7 +160,7 @@ public class Log4jWarningErrorMetricsAppender extends AppenderSkeleton {
     String message = event.getRenderedMessage();
     String[] throwableStr = event.getThrowableStrRep();
     if (throwableStr != null) {
-      message = message + "\n" + StringUtils.join("\n", throwableStr);
+      message = message + "\n" + join("\n", throwableStr);
       message =
           org.apache.commons.lang3.StringUtils.left(message, MAX_MESSAGE_SIZE);
     }
@@ -232,7 +241,7 @@ public class Log4jWarningErrorMetricsAppender extends AppenderSkeleton {
    * getErrorMessagesAndCounts since the message store is purged at regular
    * intervals to prevent it from growing without bounds, while the store for
    * the counts is purged less frequently.
-   * 
+   *
    * @param cutoffs
    *          list of timestamp cutoffs(in seconds) for which the counts are
    *          desired
@@ -248,7 +257,7 @@ public class Log4jWarningErrorMetricsAppender extends AppenderSkeleton {
    * getWarningMessagesAndCounts since the message store is purged at regular
    * intervals to prevent it from growing without bounds, while the store for
    * the counts is purged less frequently.
-   * 
+   *
    * @param cutoffs
    *          list of timestamp cutoffs(in seconds) for which the counts are
    *          desired
@@ -285,7 +294,7 @@ public class Log4jWarningErrorMetricsAppender extends AppenderSkeleton {
    * differ from the ones provided by getErrorCounts since the message store is
    * purged at regular intervals to prevent it from growing without bounds,
    * while the store for the counts is purged less frequently.
-   * 
+   *
    * @param cutoffs
    *          list of timestamp cutoffs(in seconds) for which the counts are
    *          desired
@@ -304,7 +313,7 @@ public class Log4jWarningErrorMetricsAppender extends AppenderSkeleton {
    * may differ from the ones provided by getWarningCounts since the message
    * store is purged at regular intervals to prevent it from growing without
    * bounds, while the store for the counts is purged less frequently.
-   * 
+   *
    * @param cutoffs
    *          list of timestamp cutoffs(in seconds) for which the counts are
    *          desired
@@ -322,7 +331,7 @@ public class Log4jWarningErrorMetricsAppender extends AppenderSkeleton {
       SortedSet<PurgeElement> purgeInformation) {
     if (purgeInformation.size() > maxUniqueMessages) {
       ErrorAndWarningsCleanup cleanup = new ErrorAndWarningsCleanup();
-      long cutoff = Time.now() - (messageAgeLimitSeconds * 1000);
+      long cutoff = System.currentTimeMillis() - (messageAgeLimitSeconds * 1000);
       cutoff = (cutoff / 1000);
       cleanup.cleanupMessages(map, purgeInformation, cutoff, maxUniqueMessages);
     }
@@ -379,7 +388,7 @@ public class Log4jWarningErrorMetricsAppender extends AppenderSkeleton {
 
     @Override
     public void run() {
-      long cutoff = Time.now() - (messageAgeLimitSeconds * 1000);
+      long cutoff = System.currentTimeMillis() - (messageAgeLimitSeconds * 1000);
       cutoff = (cutoff / 1000);
       cleanupMessages(errors, errorsPurgeInformation, cutoff, maxUniqueMessages);
       cleanupMessages(warnings, warningsPurgeInformation, cutoff,

@@ -99,7 +99,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.WorkflowPriorityMappingsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.WorkflowPriorityMappingsManager.WorkflowPriorityMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -557,9 +556,9 @@ public class TestMRJobs {
           systemClasses);
     }
     sleepConf.set(MRJobConfig.IO_SORT_MB, TEST_IO_SORT_MB);
-    sleepConf.set(MRJobConfig.MR_AM_LOG_LEVEL, Level.ALL.toString());
-    sleepConf.set(MRJobConfig.MAP_LOG_LEVEL, Level.ALL.toString());
-    sleepConf.set(MRJobConfig.REDUCE_LOG_LEVEL, Level.ALL.toString());
+    sleepConf.set(MRJobConfig.MR_AM_LOG_LEVEL, "ALL");
+    sleepConf.set(MRJobConfig.MAP_LOG_LEVEL, "ALL");
+    sleepConf.set(MRJobConfig.REDUCE_LOG_LEVEL, "ALL");
     sleepConf.set(MRJobConfig.MAP_JAVA_OPTS, "-verbose:class");
     final SleepJob sleepJob = new SleepJob();
     sleepJob.setConf(sleepConf);
@@ -856,11 +855,11 @@ public class TestMRJobs {
 
     final SleepJob sleepJob = new SleepJob();
     final JobConf sleepConf = new JobConf(mrCluster.getConfig());
-    sleepConf.set(MRJobConfig.MAP_LOG_LEVEL, Level.ALL.toString());
+    sleepConf.set(MRJobConfig.MAP_LOG_LEVEL, "ALL");
     final long userLogKb = 4;
     sleepConf.setLong(MRJobConfig.TASK_USERLOG_LIMIT, userLogKb);
     sleepConf.setInt(MRJobConfig.TASK_LOG_BACKUPS, 3);
-    sleepConf.set(MRJobConfig.MR_AM_LOG_LEVEL, Level.ALL.toString());
+    sleepConf.set(MRJobConfig.MR_AM_LOG_LEVEL, "ALL");
     final long amLogKb = 7;
     sleepConf.setLong(MRJobConfig.MR_AM_LOG_KB, amLogKb);
     sleepConf.setInt(MRJobConfig.MR_AM_LOG_BACKUPS, 7);

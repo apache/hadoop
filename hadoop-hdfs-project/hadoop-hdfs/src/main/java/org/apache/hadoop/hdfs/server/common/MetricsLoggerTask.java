@@ -31,6 +31,8 @@ import javax.management.ObjectName;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.logging.HadoopLoggerUtils;
 import org.apache.hadoop.metrics2.util.MBeans;
 
 /**
@@ -111,11 +113,8 @@ public class MetricsLoggerTask implements Runnable {
         .substring(0, maxLogLineLength) + "...");
   }
 
-  // TODO : hadoop-logging module to hide log4j implementation details, this method
-  //  can directly call utility from hadoop-logging.
   private static boolean hasAppenders(Logger logger) {
-    return org.apache.log4j.Logger.getLogger(logger.getName()).getAllAppenders()
-        .hasMoreElements();
+    return HadoopLoggerUtils.hasAppenders(logger.getName());
   }
 
   /**

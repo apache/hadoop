@@ -27,7 +27,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -77,10 +76,9 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.LazyPersistTestCase
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.SimpleLayout;
-import org.apache.log4j.WriterAppender;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -414,14 +412,9 @@ public class TestDirectoryScanner {
   @Test(timeout=600000)
   public void testScanDirectoryStructureWarn() throws Exception {
 
+    LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger("root"));
     //add a logger stream to check what has printed to log
-    ByteArrayOutputStream loggerStream = new ByteArrayOutputStream();
-    org.apache.log4j.Logger rootLogger =
-        org.apache.log4j.Logger.getRootLogger();
     GenericTestUtils.setRootLogLevel(Level.INFO);
-    WriterAppender writerAppender =
-        new WriterAppender(new SimpleLayout(), loggerStream);
-    rootLogger.addAppender(writerAppender);
 
     Configuration conf = getConfiguration();
     cluster = new MiniDFSCluster
@@ -452,7 +445,7 @@ public class TestDirectoryScanner {
       scan(1, 1, 0, 1, 0, 0, 0);
 
       //ensure the warn log not appear and missing block log do appear
-      String logContent = new String(loggerStream.toByteArray());
+      String logContent = logCapturer.getOutput();
       String missingBlockWarn = "Deleted a metadata file" +
           " for the deleted block";
       String dirStructureWarnLog = " found in invalid directory." +
@@ -464,6 +457,7 @@ public class TestDirectoryScanner {
       LOG.info("check pass");
 
     } finally {
+      logCapturer.stopCapturing();
       if (scanner != null) {
         scanner.shutdown();
         scanner = null;
@@ -526,7 +520,7 @@ public class TestDirectoryScanner {
       client = cluster.getFileSystem().getClient();
       conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY, 1);
       // log trace
-      GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer.
+      LogCapturer logCapturer = LogCapturer.
           captureLogs(NameNode.stateChangeLog);
       // Add files with 5 blocks
       createFile(GenericTestUtils.getMethodName(), BLOCK_LENGTH * 5, false);

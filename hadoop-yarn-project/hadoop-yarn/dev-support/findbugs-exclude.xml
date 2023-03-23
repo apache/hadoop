@@ -576,16 +576,6 @@
     <Bug pattern="SQL_PREPARED_STATEMENT_GENERATED_FROM_NONCONSTANT_STRING" />
   </Match>
   
-  <!-- Following fields are used in ErrorsAndWarningsBlock, which is not a part of analysis of findbugs -->
-  <Match>
-    <Class name="org.apache.hadoop.yarn.util.Log4jWarningErrorMetricsAppender$Element" />
-    <Or>
-      <Field name="count" />
-      <Field name="timestampSeconds" />
-    </Or>
-    <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD" />
-  </Match>
-
   <Match>
     <Class name="org.apache.hadoop.yarn.api.records.ResourceRequest" />
     <Method name="equals" />

@@ -25,6 +25,7 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 
+import org.apache.hadoop.logging.HadoopLoggerUtils;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
@@ -50,8 +51,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,8 +63,7 @@ public class TestJHSSecurity {
   @Test
   public void testDelegationToken() throws Exception {
 
-    org.apache.log4j.Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    HadoopLoggerUtils.setLogLevel("root", "DEBUG");
 
     final YarnConfiguration conf = new YarnConfiguration(new JobConf());
     // Just a random principle

@@ -19,7 +19,7 @@ package org.apache.hadoop.security.ssl;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.logging.LogCapturer;
 
 import java.util.function.Supplier;
 

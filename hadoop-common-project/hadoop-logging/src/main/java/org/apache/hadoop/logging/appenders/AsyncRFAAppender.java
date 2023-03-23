@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.util;
+package org.apache.hadoop.logging.appenders;
 
 import java.io.IOException;
 

@@ -39,7 +39,6 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
@@ -54,6 +53,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.NamenodeStatusReport;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -296,11 +296,7 @@ public class TestRouterNamenodeMonitoring {
   private void verifyUrlSchemes(String scheme) {
 
     // Attach our own log appender so we can verify output
-    final LogVerificationAppender appender =
-        new LogVerificationAppender();
-    final org.apache.log4j.Logger logger =
-        org.apache.log4j.Logger.getRootLogger();
-    logger.addAppender(appender);
+    LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger("root"));
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
 
     // Setup and start the Router
@@ -321,12 +317,17 @@ public class TestRouterNamenodeMonitoring {
       heartbeatService.getNamenodeStatusReport();
     }
     if (HttpConfig.Policy.HTTPS_ONLY.name().equals(scheme)) {
-      assertEquals(2, appender.countLinesWithMessage("JMX URL: https://"));
-      assertEquals(0, appender.countLinesWithMessage("JMX URL: http://"));
+      assertEquals(2, org.apache.commons.lang3.StringUtils.countMatches(logCapturer.getOutput(),
+          "JMX URL: https://"));
+      assertEquals(0, org.apache.commons.lang3.StringUtils.countMatches(logCapturer.getOutput(),
+          "JMX URL: http://"));
     } else {
-      assertEquals(2, appender.countLinesWithMessage("JMX URL: http://"));
-      assertEquals(0, appender.countLinesWithMessage("JMX URL: https://"));
+      assertEquals(0, org.apache.commons.lang3.StringUtils.countMatches(logCapturer.getOutput(),
+          "JMX URL: https://"));
+      assertEquals(2, org.apache.commons.lang3.StringUtils.countMatches(logCapturer.getOutput(),
+          "JMX URL: http://"));
     }
+    logCapturer.stopCapturing();
   }
 
   /**

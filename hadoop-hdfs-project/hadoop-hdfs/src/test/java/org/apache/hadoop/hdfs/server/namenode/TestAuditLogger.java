@@ -37,7 +37,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.authorize.ProxyServers;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.util.Lists;
 
 import org.junit.Before;

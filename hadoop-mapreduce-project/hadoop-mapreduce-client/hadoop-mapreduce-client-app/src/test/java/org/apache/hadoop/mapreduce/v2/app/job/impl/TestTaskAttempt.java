@@ -36,9 +36,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
 import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.junit.After;
@@ -107,12 +108,10 @@ import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.apache.log4j.AppenderSkeleton;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.spi.LoggingEvent;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
@@ -125,29 +124,6 @@ public class TestTaskAttempt{
     @Override
     public FileStatus getFileStatus(Path f) throws IOException {
       return new FileStatus(1, false, 1, 1, 1, f);
-    }
-  }
-
-  private static class TestAppender extends AppenderSkeleton {
-
-    private final List<LoggingEvent> logEvents = new CopyOnWriteArrayList<>();
-
-    @Override
-    public boolean requiresLayout() {
-      return false;
-    }
-
-    @Override
-    public void close() {
-    }
-
-    @Override
-    protected void append(LoggingEvent arg0) {
-      logEvents.add(arg0);
-    }
-
-    private List<LoggingEvent> getLogEvents() {
-      return logEvents;
     }
   }
 
@@ -1724,11 +1700,10 @@ public class TestTaskAttempt{
     for (String memoryName : ImmutableList.of(
         MRJobConfig.RESOURCE_TYPE_NAME_MEMORY,
         MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY)) {
-      TestAppender testAppender = new TestAppender();
-      final Logger logger = Logger.getLogger(TaskAttemptImpl.class);
+      final Logger logger = LoggerFactory.getLogger(TaskAttemptImpl.class);
+      LogCapturer logCapturer = LogCapturer.captureLogs(logger);
       try {
         TaskAttemptImpl.RESOURCE_REQUEST_CACHE.clear();
-        logger.addAppender(testAppender);
         EventHandler eventHandler = mock(EventHandler.class);
         Clock clock = SystemClock.getInstance();
         JobConf jobConf = new JobConf();
@@ -1741,13 +1716,11 @@ public class TestTaskAttempt{
             getResourceInfoFromContainerRequest(taImpl, eventHandler).
             getMemorySize();
         assertEquals(3072, memorySize);
-        assertTrue(testAppender.getLogEvents().stream()
-            .anyMatch(e -> e.getLevel() == Level.WARN && ("Configuration " +
-                "mapreduce.reduce.resource." + memoryName + "=3Gi is " +
-                "overriding the mapreduce.reduce.memory.mb=2048 configuration")
-                    .equals(e.getMessage())));
+        assertTrue(logCapturer.getOutput().contains(
+            "Configuration " + "mapreduce.reduce.resource." + memoryName + "=3Gi is "
+                + "overriding the mapreduce.reduce.memory.mb=2048 configuration"));
       } finally {
-        logger.removeAppender(testAppender);
+        logCapturer.stopCapturing();
       }
     }
   }
@@ -1809,10 +1782,9 @@ public class TestTaskAttempt{
 
   @Test
   public void testReducerCpuRequestOverriding() {
-    TestAppender testAppender = new TestAppender();
-    final Logger logger = Logger.getLogger(TaskAttemptImpl.class);
+    final Logger logger = LoggerFactory.getLogger(TaskAttemptImpl.class);
+    final LogCapturer logCapturer = LogCapturer.captureLogs(logger);
     try {
-      logger.addAppender(testAppender);
       EventHandler eventHandler = mock(EventHandler.class);
       Clock clock = SystemClock.getInstance();
       JobConf jobConf = new JobConf();
@@ -1825,13 +1797,11 @@ public class TestTaskAttempt{
           getResourceInfoFromContainerRequest(taImpl, eventHandler).
           getVirtualCores();
       assertEquals(7, vCores);
-      assertTrue(testAppender.getLogEvents().stream().anyMatch(
-          e -> e.getLevel() == Level.WARN && ("Configuration " +
-              "mapreduce.reduce.resource.vcores=7 is overriding the " +
-              "mapreduce.reduce.cpu.vcores=9 configuration").equals(
-                  e.getMessage())));
+      assertTrue(logCapturer.getOutput().contains(
+          "Configuration " + "mapreduce.reduce.resource.vcores=7 is overriding the "
+              + "mapreduce.reduce.cpu.vcores=9 configuration"));
     } finally {
-      logger.removeAppender(testAppender);
+      logCapturer.stopCapturing();
     }
   }
 

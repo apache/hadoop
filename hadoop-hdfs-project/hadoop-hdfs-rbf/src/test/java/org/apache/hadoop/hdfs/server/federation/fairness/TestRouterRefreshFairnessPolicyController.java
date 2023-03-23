@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RemoteMethod;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcClient;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.logging.LogCapturer;
 
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX;
 import static org.junit.Assert.assertEquals;
@@ -48,8 +49,8 @@ public class TestRouterRefreshFairnessPolicyController {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRouterRefreshFairnessPolicyController.class);
-  private final GenericTestUtils.LogCapturer controllerLog =
-      GenericTestUtils.LogCapturer.captureLogs(AbstractRouterRpcFairnessPolicyController.LOG);
+  private final LogCapturer controllerLog =
+      LogCapturer.captureLogs(AbstractRouterRpcFairnessPolicyController.LOG);
 
   private StateStoreDFSCluster cluster;
 

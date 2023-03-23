@@ -72,6 +72,8 @@ import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.logging.LogCapturer;
+
 import org.junit.Test;
 
 /**
@@ -439,8 +441,8 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
 
   @Test
   public void testCallerContextWithMultiDestinations() throws IOException {
-    GenericTestUtils.LogCapturer auditLog =
-        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
+    LogCapturer auditLog =
+        LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
     // set client context
     CallerContext.setCurrent(

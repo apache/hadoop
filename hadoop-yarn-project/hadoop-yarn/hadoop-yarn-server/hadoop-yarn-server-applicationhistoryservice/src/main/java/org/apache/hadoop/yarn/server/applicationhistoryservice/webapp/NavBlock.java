@@ -22,7 +22,7 @@ import com.google.inject.Inject;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
-import org.apache.hadoop.yarn.util.Log4jWarningErrorMetricsAppender;
+import org.apache.hadoop.logging.appenders.Log4jWarningErrorMetricsAppender;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 

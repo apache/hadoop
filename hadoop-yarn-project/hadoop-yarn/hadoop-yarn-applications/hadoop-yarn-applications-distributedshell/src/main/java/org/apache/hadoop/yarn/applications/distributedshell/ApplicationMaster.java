@@ -63,6 +63,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.logging.HadoopLoggerUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -126,7 +127,6 @@ import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
-import org.apache.log4j.LogManager;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.api.client.ClientHandlerException;
@@ -403,7 +403,7 @@ public class ApplicationMaster {
       result = appMaster.finish();
     } catch (Throwable t) {
       LOG.error("Error running ApplicationMaster", t);
-      LogManager.shutdown();
+      HadoopLoggerUtils.shutdownLogManager();
       ExitUtil.terminate(1, t);
     } finally {
       if (appMaster != null) {
@@ -529,7 +529,7 @@ public class ApplicationMaster {
     //Check whether customer log4j.properties file exists
     if (fileExist(log4jPath)) {
       try {
-        Log4jPropertyHelper.updateLog4jConfiguration(ApplicationMaster.class,
+        HadoopLoggerUtils.updateLog4jConfiguration(ApplicationMaster.class,
             log4jPath);
       } catch (Exception e) {
         LOG.warn("Can not set up custom log4j properties. " + e);

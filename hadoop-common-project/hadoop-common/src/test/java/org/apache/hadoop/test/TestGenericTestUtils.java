@@ -26,6 +26,8 @@ import org.slf4j.LoggerFactory;
 import java.util.function.Supplier;
 import org.slf4j.event.Level;
 
+import org.apache.hadoop.logging.LogCapturer;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;

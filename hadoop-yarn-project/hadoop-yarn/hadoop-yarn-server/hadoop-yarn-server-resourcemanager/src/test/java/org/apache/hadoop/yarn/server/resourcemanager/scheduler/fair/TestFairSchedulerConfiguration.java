@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
@@ -29,19 +30,13 @@ import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProv
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.log4j.AppenderSkeleton;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
-import org.apache.log4j.spi.LoggingEvent;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration.parseResourceConfigValue;
 import static org.junit.Assert.assertEquals;
@@ -53,29 +48,6 @@ import static org.junit.Assert.assertTrue;
 public class TestFairSchedulerConfiguration {
 
   private static final String A_CUSTOM_RESOURCE = "a-custom-resource";
-
-  private static class TestAppender extends AppenderSkeleton {
-
-    private final List<LoggingEvent> logEvents = new CopyOnWriteArrayList<>();
-
-    @Override
-    public boolean requiresLayout() {
-      return false;
-    }
-
-    @Override
-    public void close() {
-    }
-
-    @Override
-    protected void append(LoggingEvent arg0) {
-      logEvents.add(arg0);
-    }
-
-    private List<LoggingEvent> getLogEvents() {
-      return logEvents;
-    }
-  }
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -751,9 +723,7 @@ public class TestFairSchedulerConfiguration {
 
   @Test
   public void testMemoryIncrementConfiguredViaMultipleProperties() {
-    TestAppender testAppender = new TestAppender();
-    Logger logger = LogManager.getRootLogger();
-    logger.addAppender(testAppender);
+    LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger("root"));
     try {
       Configuration conf = new Configuration();
       conf.set("yarn.scheduler.increment-allocation-mb", "7");
@@ -763,23 +733,19 @@ public class TestFairSchedulerConfiguration {
       FairSchedulerConfiguration fsc = new FairSchedulerConfiguration(conf);
       Resource increment = fsc.getIncrementAllocation();
       Assert.assertEquals(13L, increment.getMemorySize());
-      assertTrue("Warning message is not logged when specifying memory " +
-          "increment via multiple properties",
-          testAppender.getLogEvents().stream().anyMatch(
-            e -> e.getLevel() == Level.WARN && ("Configuration " +
-              "yarn.resource-types.memory-mb.increment-allocation=13 is " +
-              "overriding the yarn.scheduler.increment-allocation-mb=7 " +
-              "property").equals(e.getMessage())));
+      assertTrue("Warning message is not logged when specifying memory "
+          + "increment via multiple properties", logCapturer.getOutput().contains("Configuration "
+          + "yarn.resource-types.memory-mb.increment-allocation=13 is "
+          + "overriding the yarn.scheduler.increment-allocation-mb=7 "
+          + "property"));
     } finally {
-      logger.removeAppender(testAppender);
+      logCapturer.stopCapturing();
     }
   }
 
   @Test
   public void testCpuIncrementConfiguredViaMultipleProperties() {
-    TestAppender testAppender = new TestAppender();
-    Logger logger = LogManager.getRootLogger();
-    logger.addAppender(testAppender);
+    LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger("root"));
     try {
       Configuration conf = new Configuration();
       conf.set("yarn.scheduler.increment-allocation-vcores", "7");
@@ -789,15 +755,13 @@ public class TestFairSchedulerConfiguration {
       FairSchedulerConfiguration fsc = new FairSchedulerConfiguration(conf);
       Resource increment = fsc.getIncrementAllocation();
       Assert.assertEquals(13, increment.getVirtualCores());
-      assertTrue("Warning message is not logged when specifying CPU vCores " +
-          "increment via multiple properties",
-          testAppender.getLogEvents().stream().anyMatch(
-            e -> e.getLevel() == Level.WARN && ("Configuration " +
-              "yarn.resource-types.vcores.increment-allocation=13 is " +
-              "overriding the yarn.scheduler.increment-allocation-vcores=7 " +
-              "property").equals(e.getMessage())));
+      assertTrue("Warning message is not logged when specifying CPU vCores "
+          + "increment via multiple properties", logCapturer.getOutput().contains("Configuration "
+          + "yarn.resource-types.vcores.increment-allocation=13 is "
+          + "overriding the yarn.scheduler.increment-allocation-vcores=7 "
+          + "property"));
     } finally {
-      logger.removeAppender(testAppender);
+      logCapturer.stopCapturing();
     }
   }
 }

@@ -54,7 +54,7 @@ import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.logging.LogCapturer;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -138,7 +138,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
     HdfsConfiguration clientConf = new HdfsConfiguration(clusterConf);
     clientConf.set(DFS_DATA_TRANSFER_PROTECTION_KEY, "");
 
-    LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
+    LogCapturer logs = LogCapturer.captureLogs(
         LoggerFactory.getLogger(DataNode.class));
     try {
       doTest(clientConf);

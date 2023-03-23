@@ -51,7 +51,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.junit.After;
 import org.junit.Before;
@@ -168,9 +168,9 @@ public class TestEncryptedTransfer {
 
     FileChecksum checksum = writeUnencryptedAndThenRestartEncryptedCluster();
 
-    LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
+    LogCapturer logs = LogCapturer.captureLogs(
         LoggerFactory.getLogger(SaslDataTransferServer.class));
-    LogCapturer logs1 = GenericTestUtils.LogCapturer.captureLogs(
+    LogCapturer logs1 = LogCapturer.captureLogs(
         LoggerFactory.getLogger(DataTransferSaslUtil.class));
     try {
       assertEquals(PLAIN_TEXT, DFSTestUtil.readFile(fs, TEST_PATH));
@@ -239,7 +239,7 @@ public class TestEncryptedTransfer {
     Mockito.doReturn(false).when(spyClient).shouldEncryptData();
     DFSClientAdapter.setDFSClient((DistributedFileSystem) fs, spyClient);
 
-    LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
+    LogCapturer logs = LogCapturer.captureLogs(
         LoggerFactory.getLogger(DataNode.class));
     try {
       assertEquals(PLAIN_TEXT, DFSTestUtil.readFile(fs, TEST_PATH));
@@ -457,9 +457,9 @@ public class TestEncryptedTransfer {
 
     fs = getFileSystem(conf);
 
-    LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
+    LogCapturer logs = LogCapturer.captureLogs(
         LoggerFactory.getLogger(SaslDataTransferServer.class));
-    LogCapturer logs1 = GenericTestUtils.LogCapturer.captureLogs(
+    LogCapturer logs1 = LogCapturer.captureLogs(
         LoggerFactory.getLogger(DataTransferSaslUtil.class));
     try {
       writeTestDataToFile(fs);

@@ -49,6 +49,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.util.Time;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.After;
@@ -583,8 +584,8 @@ public class TestKMS {
   @Test
   public void testStartStopHttpPseudo() throws Exception {
     // Make sure bogus errors don't get emitted.
-    GenericTestUtils.LogCapturer logs =
-        GenericTestUtils.LogCapturer.captureLogs(LoggerFactory.getLogger(
+    LogCapturer logs =
+        LogCapturer.captureLogs(LoggerFactory.getLogger(
             "com.sun.jersey.server.wadl.generators.AbstractWadlGeneratorGrammarGenerator"));
     try {
       testStartStop(false, false);

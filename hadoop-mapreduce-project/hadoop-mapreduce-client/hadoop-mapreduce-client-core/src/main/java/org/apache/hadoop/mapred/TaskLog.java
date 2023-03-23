@@ -23,12 +23,10 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.Flushable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -44,16 +42,13 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SecureIOUtils;
+import org.apache.hadoop.logging.HadoopLoggerUtils;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.util.ProcessTree;
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.log4j.Appender;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
@@ -276,42 +271,7 @@ public class TaskLog {
     }
 
     // flush & close all appenders
-    LogManager.shutdown(); 
-  }
-
-  @SuppressWarnings("unchecked")
-  public static synchronized void syncLogs() {
-    // flush standard streams
-    //
-    System.out.flush();
-    System.err.flush();
-
-    // flush flushable appenders
-    //
-    final Logger rootLogger = Logger.getRootLogger();
-    flushAppenders(rootLogger);
-    final Enumeration<Logger> allLoggers = rootLogger.getLoggerRepository().
-      getCurrentLoggers();
-    while (allLoggers.hasMoreElements()) {
-      final Logger l = allLoggers.nextElement();
-      flushAppenders(l);
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private static void flushAppenders(Logger l) {
-    final Enumeration<Appender> allAppenders = l.getAllAppenders();
-    while (allAppenders.hasMoreElements()) {
-      final Appender a = allAppenders.nextElement();
-      if (a instanceof Flushable) {
-        try {
-          ((Flushable) a).flush();
-        } catch (IOException ioe) {
-          System.err.println(a + ": Failed to flush!"
-            + StringUtils.stringifyException(ioe));
-        }
-      }
-    }
+    HadoopLoggerUtils.shutdownLogManager();
   }
 
   public static ScheduledExecutorService createLogSyncer() {
@@ -336,7 +296,7 @@ public class TaskLog {
         new Runnable() {
           @Override
           public void run() {
-            TaskLog.syncLogs();
+            HadoopLoggerUtils.syncLogs();
           }
         }, 0L, 5L, TimeUnit.SECONDS);
     return scheduler;

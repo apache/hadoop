@@ -21,7 +21,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSI
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -41,6 +40,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.ContentSummary;
@@ -49,7 +49,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -67,16 +66,15 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.TestINodeFile;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.spi.LoggingEvent;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.LoggerFactory;
 
 @RunWith(Parameterized.class)
 public class TestReplicationPolicy extends BaseReplicationPolicyTest {
@@ -507,26 +505,26 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
     }
-    
-    final LogVerificationAppender appender = new LogVerificationAppender();
-    final Logger logger = Logger.getRootLogger();
-    logger.addAppender(appender);
-    
+
+    final LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger("root"));
+
     // try to choose NUM_OF_DATANODES which is more than actually available
     // nodes.
     DatanodeStorageInfo[] targets = chooseTarget(dataNodes.length);
     assertEquals(targets.length, dataNodes.length - 2);
 
-    final List<LoggingEvent> log = appender.getLog();
-    assertNotNull(log);
-    assertFalse(log.size() == 0);
-    final LoggingEvent lastLogEntry = log.get(log.size() - 1);
-    
-    assertTrue(Level.WARN.isGreaterOrEqual(lastLogEntry.getLevel()));
-    // Suppose to place replicas on each node but two data nodes are not
-    // available for placing replica, so here we expect a short of 2
-    assertTrue(((String)lastLogEntry.getMessage()).contains("in need of 2"));
-
+    boolean isFound = false;
+    for (String logLine : logCapturer.getOutput().split("\n")) {
+      // Suppose to place replicas on each node but two data nodes are not
+      // available for placing replica, so here we expect a short of 2
+      if(logLine.contains("WARN") && logLine.contains("in need of 2")) {
+        isFound = true;
+        break;
+      }
+    }
+    assertTrue("Could not find the block placement log specific to 2 datanodes not being "
+            + "available for placing replicas", isFound);
+    logCapturer.stopCapturing();
     resetHeartbeatForStorages();
   }
 
@@ -1710,17 +1708,14 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
 
   @Test
   public void testChosenFailureForStorageType() {
-    final LogVerificationAppender appender = new LogVerificationAppender();
-    final Logger logger = Logger.getRootLogger();
-    logger.addAppender(appender);
-
+    final LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger("root"));
     DatanodeStorageInfo[] targets = replicator.chooseTarget(filename, 1,
         dataNodes[0], new ArrayList<DatanodeStorageInfo>(), false, null,
         BLOCK_SIZE, TestBlockStoragePolicy.POLICY_SUITE.getPolicy(
             HdfsConstants.StoragePolicy.COLD.value()), null);
     assertEquals(0, targets.length);
     assertNotEquals(0,
-        appender.countLinesWithMessage("NO_REQUIRED_STORAGE_TYPE"));
+        StringUtils.countMatches(logCapturer.getOutput(), "NO_REQUIRED_STORAGE_TYPE"));
   }
 
   @Test

@@ -28,10 +28,12 @@ import java.util.Iterator;
 import java.util.Random;
 
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.util.hash.Hash;
-import org.apache.log4j.Logger;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
@@ -113,7 +115,7 @@ public class BloomFilterCommonTester<T extends Filter> {
   }
 
   interface FilterTesterStrategy {
-    final Logger logger = Logger.getLogger(FilterTesterStrategy.class);
+    Logger logger = LoggerFactory.getLogger(FilterTesterStrategy.class);
 
     void assertWhat(Filter filter, int numInsertions, int hashId,
         ImmutableSet<Integer> falsePositives);
