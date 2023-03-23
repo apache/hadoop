@@ -61,6 +61,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class TestDistCpSync {
   private MiniDFSCluster cluster;
@@ -1295,17 +1296,16 @@ public class TestDistCpSync {
   }
 
   @Test
-  public void testSyncSnapshotDiffWithDummyFileSystem() throws Exception {
+  public void testSyncSnapshotDiffWithDummyFileSystem() {
     String[] args =
         new String[] { "-update", "-diff", "s1", "s2", "dummy:///source",
             "dummy:///target" };
     try {
       FileSystem dummyFs = FileSystem.get(URI.create("dummy:///"), conf);
-      Assert.assertTrue(dummyFs instanceof DummyFs);
+      assertThat(dummyFs).isInstanceOf(DummyFs.class);
       new DistCp(conf, OptionsParser.parse(args)).execute();
     } catch (UnsupportedOperationException e) {
-      Assert.fail("Dummy FS supports snapshots," +
-          "did not expect UnsupportedOperationException");
+      throw e;
     } catch (Exception e) {
       // can expect other exceptions as source and target paths
       // are not created.
