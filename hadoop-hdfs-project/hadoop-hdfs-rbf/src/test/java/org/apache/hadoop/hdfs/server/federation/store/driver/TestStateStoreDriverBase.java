@@ -581,16 +581,11 @@ public class TestStateStoreDriverBase {
   }
 
   public long getMountTableCacheLoadSamples(StateStoreDriver driver) throws IOException {
-    StateStoreMetrics metrics = stateStore.getMetrics();
-    final Query<MountTable> query = new Query<>(MountTable.newInstance());
-    driver.getMultiple(MountTable.class, query);
-    final Map<String, MutableRate> cacheLoadMetrics = metrics.getCacheLoadMetrics();
-    final MutableRate mountTableCache = cacheLoadMetrics.get("CacheMountTableLoad");
+    final MutableRate mountTableCache = getMountTableCache(driver);
     return mountTableCache.lastStat().numSamples();
   }
 
-  public void testCacheLoadMetrics(StateStoreDriver driver, long numRefresh)
-      throws IOException, IllegalArgumentException {
+  private static MutableRate getMountTableCache(StateStoreDriver driver) throws IOException {
     StateStoreMetrics metrics = stateStore.getMetrics();
     final Query<MountTable> query = new Query<>(MountTable.newInstance());
     driver.getMultiple(MountTable.class, query);
@@ -598,12 +593,20 @@ public class TestStateStoreDriverBase {
     final MutableRate mountTableCache = cacheLoadMetrics.get("CacheMountTableLoad");
     assertNotNull("CacheMountTableLoad should be present in the state store metrics",
         mountTableCache);
+    return mountTableCache;
+  }
+
+  public void testCacheLoadMetrics(StateStoreDriver driver, long numRefresh)
+      throws IOException, IllegalArgumentException {
+    final MutableRate mountTableCache = getMountTableCache(driver);
     // CacheMountTableLoadNumOps
-    final long mountTableCacheLoadNumOps = mountTableCache.lastStat().numSamples();
+    final long mountTableCacheLoadNumOps = getMountTableCacheLoadSamples(driver);
     assertEquals("Num of samples collected should match", numRefresh, mountTableCacheLoadNumOps);
     // CacheMountTableLoadAvgTime
     final double mountTableCacheLoadAvgTime = mountTableCache.lastStat().mean();
-    // 2000 ms is high enough value that we expect mount table cache to be loaded by the time.
+    // 2000 ms is pretty high enough value for the test, hence we expect mount table cache
+    // with very few entries to be loaded by this time duration, hence not have this test result
+    // show flaky behavior.
     assertTrue(
         "Mean time duration for cache load is expected to be less than 2000 ms. Actual value: "
             + mountTableCacheLoadAvgTime, mountTableCacheLoadAvgTime < 2000d);
