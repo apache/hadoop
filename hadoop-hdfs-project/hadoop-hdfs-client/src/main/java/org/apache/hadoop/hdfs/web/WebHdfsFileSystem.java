@@ -47,7 +47,6 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
@@ -2207,10 +2206,8 @@ public class WebHdfsFileSystem extends FileSystem
       throws IOException {
     // qualify the path to make sure that it refers to the current FS.
     final Path p = makeQualified(path);
-    Optional<Boolean> cap = DfsPathCapabilities.hasPathCapability(p,
-        capability);
-    if (cap.isPresent()) {
-      return cap.get();
+    if (DfsPathCapabilities.hasPathCapability(p, capability)) {
+      return true;
     }
     return super.hasPathCapability(p, capability);
   }
