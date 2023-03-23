@@ -2067,8 +2067,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     byte[] password = token.getPassword().array();
     Text kind = new Text(token.getKind());
     Text service = new Text(token.getService());
-    Token<RMDelegationTokenIdentifier> tk = new Token<>(identifier, password, kind, service);
-    return tk;
+    return new Token<>(identifier, password, kind, service);
   }
 
   /**
@@ -2944,8 +2943,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         RouterServerUtil.logAndThrowException(null,
             "Can't get HomeSubCluster by applicationId %s", applicationId);
       }
-      SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
-      return subClusterInfo;
+      return federationFacade.getSubCluster(subClusterId);
     } catch (IllegalArgumentException e){
       throw new IllegalArgumentException(e);
     } catch (YarnException e) {
@@ -3000,8 +2998,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     Class[] argsClasses = new Class[]{String.class};
     Object[] args = new Object[]{null};
     ClientMethod remoteMethod = new ClientMethod("getNodes", argsClasses, args);
-    Map<SubClusterInfo, NodesInfo> nodesMap =
-        invokeConcurrent(subClustersActive, remoteMethod, NodesInfo.class);
-    return nodesMap;
+    return invokeConcurrent(subClustersActive, remoteMethod, NodesInfo.class);
   }
 }
