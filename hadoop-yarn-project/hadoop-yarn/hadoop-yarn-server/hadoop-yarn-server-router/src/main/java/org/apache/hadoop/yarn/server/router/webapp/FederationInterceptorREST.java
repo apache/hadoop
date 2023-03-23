@@ -280,26 +280,23 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   protected DefaultRequestInterceptorREST getOrCreateInterceptorForSubCluster(
       SubClusterInfo subClusterInfo) {
-    final SubClusterId subClusterId = subClusterInfo.getSubClusterId();
-    final String webServiceAddress = subClusterInfo.getRMWebServiceAddress();
-    return getOrCreateInterceptorForSubCluster(subClusterId, webServiceAddress);
+    if (subClusterInfo != null) {
+      final SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+      final String webServiceAddress = subClusterInfo.getRMWebServiceAddress();
+      return getOrCreateInterceptorForSubCluster(subClusterId, webServiceAddress);
+    }
+    return null;
   }
 
   protected DefaultRequestInterceptorREST getOrCreateInterceptorByAppId(String appId)
       throws YarnException {
     SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
-    if (subClusterInfo != null) {
-      return getOrCreateInterceptorForSubCluster(subClusterInfo);
-    }
-    return null;
+    return getOrCreateInterceptorForSubCluster(subClusterInfo);
   }
 
   protected DefaultRequestInterceptorREST getOrCreateInterceptorByNodeId(String nodeId) {
     SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
-    if (subClusterInfo != null) {
-      return getOrCreateInterceptorForSubCluster(subClusterInfo);
-    }
-    return null;
+    return getOrCreateInterceptorForSubCluster(subClusterInfo);
   }
 
   @VisibleForTesting
