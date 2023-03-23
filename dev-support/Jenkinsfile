@@ -42,7 +42,7 @@ def publishJUnitResults() {
 pipeline {
 
     agent {
-        label 'jenkins-win-azr-6'
+        label 'Windows'
     }
 
     options {
@@ -285,46 +285,41 @@ pipeline {
             post {
                 always {
                     script {
-//                         // Publish status if it was missed (YETUS-1059)
-//                         withCredentials(
-//                             [usernamePassword(credentialsId: '683f5dcf-5552-4b28-9fb1-6a6b77cf53dd',
-//                                               passwordVariable: 'GITHUB_TOKEN',
-//                                               usernameVariable: 'GITHUB_USER')]) {
-//                             sh '''#!/usr/bin/env bash
-//
-//                             # Copy the artifacts of Ubuntu focal build to workspace
-//                             cp -Rp "${WORKSPACE}/out" "${WORKSPACE}"
-//
-//                             # Send Github status
-//                             chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
-//                             "${SOURCEDIR}/dev-support/jenkins.sh" github_status_recovery
-//                             '''
-//                         }
+                        // Publish status if it was missed (YETUS-1059)
+                        withCredentials(
+                            [usernamePassword(credentialsId: '683f5dcf-5552-4b28-9fb1-6a6b77cf53dd',
+                                              passwordVariable: 'GITHUB_TOKEN',
+                                              usernameVariable: 'GITHUB_USER')]) {
+                            bat '''
+                            C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${SOURCEDIR}/dev-support/jenkins.sh"
+                            C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${SOURCEDIR}/dev-support/jenkins.sh github_status_recovery"
+                            '''
+                        }
 
                         // YETUS output
                         archiveArtifacts "out/**"
 
-//                         // Publish the HTML report so that it can be looked at
-//                         // Has to be relative to WORKSPACE.
-//                         publishHTML (target: [
-//                                       allowMissing: true,
-//                                       keepAll: true,
-//                                       alwaysLinkToLastBuild: true,
-//                                       // Has to be relative to WORKSPACE
-//                                       reportDir: "out",
-//                                       reportFiles: 'report.html',
-//                                       reportName: 'Yetus Report'
-//                         ])
-//
-//                         publishJUnitResults()
+                        // Publish the HTML report so that it can be looked at
+                        // Has to be relative to WORKSPACE.
+                        publishHTML (target: [
+                                      allowMissing: true,
+                                      keepAll: true,
+                                      alwaysLinkToLastBuild: true,
+                                      // Has to be relative to WORKSPACE
+                                      reportDir: "out",
+                                      reportFiles: 'report.html',
+                                      reportName: 'Yetus Report'
+                        ])
+
+                        publishJUnitResults()
                     }
                 }
 
                 cleanup() {
                     script {
                         bat '''
-                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${WORKSPACE}/jenkins.sh"
-                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${WORKSPACE}/jenkins.sh cleanup_ci_proc"
+                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${SOURCEDIR}/dev-support/jenkins.sh"
+                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${SOURCEDIR}/dev-support/jenkins.sh cleanup_ci_proc"
                         '''
                     }
                 }
@@ -338,6 +333,8 @@ pipeline {
             script {
                 bat '''
                 C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod -R u+rxw ${WORKSPACE}"
+                docker run --rm -v %WORKSPACE%\\out:C:\\out -v %WORKSPACE%\\src:C:\\src^
+                    hadoop-windows-10-builder "/c" "rmdir" "/s" "/q" "C:\\out"
                 '''
                 deleteDir()
             }
