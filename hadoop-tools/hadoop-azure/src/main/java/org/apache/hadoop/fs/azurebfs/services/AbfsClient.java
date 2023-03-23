@@ -38,6 +38,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -78,6 +79,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.*;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
 import static org.eclipse.jetty.util.StringUtil.isEmpty;
 
 /**
@@ -528,37 +530,32 @@ public class AbfsClient implements Closeable {
           final String continuation,
           final TracingContext tracingContext,
           String sourceEtag,
-          boolean isMetadataIncompleteState)
+          boolean isMetadataIncompleteState,
+          boolean isNamespaceEnabled)
           throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final boolean hasEtag = !isEmpty(sourceEtag);
     boolean isDir = false;
-    if (!hasEtag && renameResilience) {
-      final AbfsRestOperation srcStatusOp = getPathStatus(source,
-              false, tracingContext);
-      final AbfsHttpOperation result = srcStatusOp.getResult();
+    if (!hasEtag && renameResilience && isNamespaceEnabled) {
+      try {
+        final AbfsRestOperation srcStatusOp = getPathStatus(source,
+                false, tracingContext);
+        final AbfsHttpOperation result = srcStatusOp.getResult();
 
-      sourceEtag = extractEtagHeader(result);
+        sourceEtag = extractEtagHeader(result);
 
-      isDir = checkIsDir(result);
-      // and update the directory status.
+        isDir = checkIsDir(result);
+        // and update the directory status.
 
-      LOG.debug("Retrieved etag of source for rename recovery: {}; isDir={}", sourceEtag, isDir);
+        LOG.debug("Retrieved etag of source for rename recovery: {}; isDir={}", sourceEtag, isDir);
+      } catch (AbfsRestOperationException e) {
+        throw new AbfsRestOperationException(e.getStatusCode(), SOURCE_PATH_NOT_FOUND.getErrorCode(),
+                e.getMessage(), e);
+      }
 
     }
 
-    if (isDir) {
-      // for a directory created with fs.mkdirs ->
-      // 1. Renaming it to a directory that does not exist:
-      //    the eTag stays preserved before and after rename, i.e.,
-      //    src and dest have same eTag.
-      // 2. Renaming it to an existing directory:
-      //    eTag is not preserved in rename
-      // As overall behavior with eTag preservation in rename is not consistent
-      // for directories, rename recovery is to be skipped.
-      renameResilience = false;
-    }
     String encodedRenameSource = urlEncode(FORWARD_SLASH + this.getFileSystem() + source);
     if (authType == AuthType.SAS) {
       final AbfsUriQueryBuilder srcQueryBuilder = new AbfsUriQueryBuilder();
@@ -610,7 +607,7 @@ public class AbfsClient implements Closeable {
         AbfsHttpOperation sourceStatusResult = sourceStatusOp.getResult();
         String sourceEtagAfterFailure = extractEtagHeader(sourceStatusResult);
         renamePath(source, destination, continuation, tracingContext,
-                sourceEtagAfterFailure, isMetadataIncompleteState);
+                sourceEtagAfterFailure, isMetadataIncompleteState, isNamespaceEnabled);
       }
       // if we get out of the condition without a successful rename, then
       // it isn't metadata incomplete state issue.
@@ -686,7 +683,12 @@ public class AbfsClient implements Closeable {
     }
 
     if (isDir) {
-      // directory recovery is not supported.
+      // preservation of eTag in rename is inconsistent
+      // across different mechanisms of dir creation -
+      // creating through mkdirs preserves eTag and
+      // implicit creation of dir when creating a child file
+      // does not preserve eTag on rename.
+      // Hence directory recovery is not supported.
       // log and fail.
       LOG.info("rename directory {} to {} failed; unable to recover",
               source, destination);

@@ -897,7 +897,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   public boolean rename(final Path source,
       final Path destination,
       final TracingContext tracingContext,
-      final String sourceEtag) throws
+      final String sourceEtag,
+      final boolean isNamespaceEnabled) throws
           AzureBlobFileSystemException {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
@@ -924,7 +925,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       try (AbfsPerfInfo perfInfo = startTracking("rename", "renamePath")) {
         final AbfsClientRenameResult abfsClientRenameResult =
             client.renamePath(sourceRelativePath, destinationRelativePath,
-                continuation, tracingContext, sourceEtag, false);
+                continuation, tracingContext, sourceEtag, false,
+                    isNamespaceEnabled);
 
         AbfsRestOperation op = abfsClientRenameResult.getOp();
         perfInfo.registerResult(op.getResult());

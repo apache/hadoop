@@ -30,6 +30,10 @@ import javax.net.ssl.HttpsURLConnection;
 
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
+import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -54,6 +58,10 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.*;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doReturn;
@@ -70,7 +78,11 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestAbfsRenameRetryRecovery.class);
 
+  private boolean isNamespaceEnabled;
+
   public TestAbfsRenameRetryRecovery() throws Exception {
+    isNamespaceEnabled = getConfiguration()
+            .getBoolean(TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
   }
 
   /**
@@ -115,7 +127,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // We need to throw an exception once a rename is triggered with
     // destination having no parent, but after a retry it needs to succeed.
     when(mockClient.renamePath(sourcePath, destNoParentPath, null, null,
-        null, false))
+        null, false, isNamespaceEnabled))
         .thenThrow(destParentNotFound)
         .thenReturn(recoveredMetaDataIncompleteResult);
 
@@ -123,12 +135,12 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     intercept(AzureBlobFileSystemException.class,
         () -> mockClient.renamePath(sourcePath,
         destNoParentPath, null, null,
-        null, false));
+        null, false, isNamespaceEnabled));
 
     AbfsClientRenameResult resultOfSecondRenameCall =
         mockClient.renamePath(sourcePath,
         destNoParentPath, null, null,
-        null, false);
+        null, false, isNamespaceEnabled);
 
     // the second rename call should be the recoveredResult due to
     // metaDataIncomplete
@@ -144,7 +156,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     // Verify renamePath occurred two times implying a retry was attempted.
     verify(mockClient, times(2))
-        .renamePath(sourcePath, destNoParentPath, null, null, null, false);
+        .renamePath(sourcePath, destNoParentPath, null, null, null, false, isNamespaceEnabled);
 
   }
 
@@ -246,30 +258,29 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     // checking correct count in AbfsCounters
     AbfsCounters counter = mockClient.getAbfsCounters();
-    Long connMadeBeforeRename = counter.getIOStatistics().counters().
-            get(AbfsStatistic.CONNECTIONS_MADE.getStatName());
-    Long renamePathAttemptsBeforeRename = counter.getIOStatistics().counters().
-            get(AbfsStatistic.RENAME_PATH_ATTEMPTS.getStatName());
+    IOStatistics ioStats = counter.getIOStatistics();
+
+    Long connMadeBeforeRename = lookupCounterStatistic(ioStats, CONNECTIONS_MADE.getStatName());
+    Long renamePathAttemptsBeforeRename = lookupCounterStatistic(ioStats, RENAME_PATH_ATTEMPTS.getStatName());
 
     // 404 and retry, send sourceEtag as null
     // source eTag matches -> rename should pass even when execute throws exception
     fs.rename(new Path(path1), new Path(path2));
 
     // validating stat counters after rename
-    Long connMadeAfterRename = counter.getIOStatistics().counters().
-            get(AbfsStatistic.CONNECTIONS_MADE.getStatName());
-    Long renamePathAttemptsAfterRename = counter.getIOStatistics().counters().
-            get(AbfsStatistic.RENAME_PATH_ATTEMPTS.getStatName());
-
     // 4 calls should have happened in total for rename
     // 1 -> original rename rest call, 2 -> first retry,
     // +2 for getPathStatus calls
-    assertEquals(Long.valueOf(connMadeBeforeRename+4), connMadeAfterRename);
-
+    assertThatStatisticCounter(ioStats,
+            CONNECTIONS_MADE.getStatName())
+            .isEqualTo(4 + connMadeBeforeRename);
     // the RENAME_PATH_ATTEMPTS stat should be incremented by 1
     // retries happen internally within AbfsRestOperation execute()
     // the stat for RENAME_PATH_ATTEMPTS is updated only once before execute() is called
-    assertEquals(Long.valueOf(renamePathAttemptsBeforeRename+1), renamePathAttemptsAfterRename);
+    assertThatStatisticCounter(ioStats,
+            RENAME_PATH_ATTEMPTS.getStatName())
+            .isEqualTo(1 + renamePathAttemptsBeforeRename);
+
   }
 
   /**
@@ -325,31 +336,30 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     // checking correct count in AbfsCounters
     AbfsCounters counter = mockClient.getAbfsCounters();
-    Long connMadeBeforeRename = counter.getIOStatistics().counters().
-            get(AbfsStatistic.CONNECTIONS_MADE.getStatName());
-    Long renamePathAttemptsBeforeRename = counter.getIOStatistics().counters().
-            get(AbfsStatistic.RENAME_PATH_ATTEMPTS.getStatName());
+    IOStatistics ioStats = counter.getIOStatistics();
+
+    Long connMadeBeforeRename = lookupCounterStatistic(ioStats, CONNECTIONS_MADE.getStatName());
+    Long renamePathAttemptsBeforeRename = lookupCounterStatistic(ioStats, RENAME_PATH_ATTEMPTS.getStatName());
 
     // source eTag does not match -> rename should be a failure
     boolean renameResult = fs.rename(path1, path2);
     assertEquals(false, renameResult);
 
     // validating stat counters after rename
-    Long connMadeAfterRename = counter.getIOStatistics().counters().
-            get(AbfsStatistic.CONNECTIONS_MADE.getStatName());
-    Long renamePathAttemptsAfterRename = counter.getIOStatistics().counters().
-            get(AbfsStatistic.RENAME_PATH_ATTEMPTS.getStatName());
-
     // 3 calls should have happened in total for rename
     // 1 -> original rename rest call, 2 -> first retry,
     // +1 for getPathStatus calls
     // last getPathStatus call should be skipped
-    assertEquals(Long.valueOf(connMadeBeforeRename+3), connMadeAfterRename);
+    assertThatStatisticCounter(ioStats,
+            CONNECTIONS_MADE.getStatName())
+            .isEqualTo(3 + connMadeBeforeRename);
 
     // the RENAME_PATH_ATTEMPTS stat should be incremented by 1
     // retries happen internally within AbfsRestOperation execute()
     // the stat for RENAME_PATH_ATTEMPTS is updated only once before execute() is called
-    assertEquals(Long.valueOf(renamePathAttemptsBeforeRename+1), renamePathAttemptsAfterRename);
+    assertThatStatisticCounter(ioStats,
+            RENAME_PATH_ATTEMPTS.getStatName())
+            .isEqualTo(1 + renamePathAttemptsBeforeRename);
   }
 
   /**
@@ -385,7 +395,8 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     // source eTag does not match -> throw exception
     expectErrorCode(SOURCE_PATH_NOT_FOUND, intercept(AbfsRestOperationException.class, () ->
-            spyClient.renamePath(path1, path2, null, testTracingContext, null, false)));
+            spyClient.renamePath(path1, path2, null, testTracingContext, null, false,
+                    isNamespaceEnabled)));
   }
 
   /**
@@ -410,7 +421,56 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     // source eTag does not match -> throw exception
     expectErrorCode(PATH_ALREADY_EXISTS, intercept(AbfsRestOperationException.class, () ->
-            spyClient.renamePath(path1, path2, null, testTracingContext, null, false)));
+            spyClient.renamePath(path1, path2, null, testTracingContext, null, false,
+                    isNamespaceEnabled)));
+  }
+
+  /**
+   * Test that rename recovery remains unsupported for
+   * FNS configurations.
+   */
+  @Test
+  public void testRenameRecoveryUnsupportedForFlatNamespace() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
+    TracingContext testTracingContext = getTestTracingContext(fs, false);
+
+    AbfsClient mockClient = getMockAbfsClient();
+
+    String base = "/" + getMethodName();
+    String path1 = base + "/dummyFile1";
+    String path2 = base + "/dummyFile2";
+
+    touch(new Path(path1));
+
+    abfsStore.setClient(mockClient);
+
+    // checking correct count in AbfsCounters
+    AbfsCounters counter = mockClient.getAbfsCounters();
+    IOStatistics ioStats = counter.getIOStatistics();
+
+    Long connMadeBeforeRename = lookupCounterStatistic(ioStats, CONNECTIONS_MADE.getStatName());
+    Long renamePathAttemptsBeforeRename = lookupCounterStatistic(ioStats, RENAME_PATH_ATTEMPTS.getStatName());
+
+    expectErrorCode(SOURCE_PATH_NOT_FOUND, intercept(AbfsRestOperationException.class, () ->
+            mockClient.renamePath(path1, path2, null, testTracingContext, null, false, false)));
+
+    // validating stat counters after rename
+
+    // only 2 calls should have happened in total for rename
+    // 1 -> original rename rest call, 2 -> first retry,
+    // no getPathStatus calls
+    // last getPathStatus call should be skipped
+    assertThatStatisticCounter(ioStats,
+            CONNECTIONS_MADE.getStatName())
+            .isEqualTo(2 + connMadeBeforeRename);
+
+    // the RENAME_PATH_ATTEMPTS stat should be incremented by 1
+    // retries happen internally within AbfsRestOperation execute()
+    // the stat for RENAME_PATH_ATTEMPTS is updated only once before execute() is called
+    assertThatStatisticCounter(ioStats,
+            RENAME_PATH_ATTEMPTS.getStatName())
+            .isEqualTo(1 + renamePathAttemptsBeforeRename);
   }
 
   /**

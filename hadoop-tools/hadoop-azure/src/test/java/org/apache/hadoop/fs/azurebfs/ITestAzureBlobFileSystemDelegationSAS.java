@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -70,6 +71,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestAzureBlobFileSystemDelegationSAS.class);
 
+  private boolean isHNSEnabled;
+
   public ITestAzureBlobFileSystemDelegationSAS() throws Exception {
     // These tests rely on specific settings in azure-auth-keys.xml:
     String sasProvider = getRawConfiguration().get(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE);
@@ -85,7 +88,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
 
   @Override
   public void setup() throws Exception {
-    boolean isHNSEnabled = this.getConfiguration().getBoolean(
+    isHNSEnabled = this.getConfiguration().getBoolean(
         TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
     Assume.assumeTrue(isHNSEnabled);
     createFilesystemForSASTests();
@@ -399,9 +402,10 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = getFileSystem();
     String src = String.format("/testABC/test%s.xt", UUID.randomUUID());
     fs.create(new Path(src)).close();
+
     AbfsRestOperation abfsHttpRestOperation = fs.getAbfsClient()
         .renamePath(src, "/testABC" + "/abc.txt", null,
-            getTestTracingContext(fs, false), null, false)
+            getTestTracingContext(fs, false), null, false, isHNSEnabled)
         .getOp();
     AbfsHttpOperation result = abfsHttpRestOperation.getResult();
     String url = result.getMaskedUrl();
@@ -419,7 +423,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     intercept(IOException.class, "sig=XXXX",
         () -> getFileSystem().getAbfsClient()
             .renamePath("testABC/test.xt", "testABC/abc.txt", null,
-                getTestTracingContext(getFileSystem(), false), null, false));
+                getTestTracingContext(getFileSystem(), false), null, false, isHNSEnabled));
   }
 
   @Test

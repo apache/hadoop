@@ -448,12 +448,6 @@ public class AzureBlobFileSystem extends FileSystem
       dstFileStatus = tryGetFileStatus(qualifiedDstPath, tracingContext);
     }
 
-    // for Non-HNS accounts, rename resiliency cannot be maintained
-    // as eTags are not preserved in rename
-    if (!isNamespaceEnabled) {
-      abfsStore.getAbfsConfiguration().setRenameResilience(false);
-    }
-
     try {
       String sourceFileName = src.getName();
       Path adjustedDst = dst;
@@ -467,7 +461,7 @@ public class AzureBlobFileSystem extends FileSystem
 
       qualifiedDstPath = makeQualified(adjustedDst);
 
-      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext, null);
+      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext, null, isNamespaceEnabled);
       return true;
     } catch (AzureBlobFileSystemException ex) {
       LOG.debug("Rename operation failed. ", ex);
@@ -543,12 +537,14 @@ public class AzureBlobFileSystem extends FileSystem
         throw new PathIOException(qualifiedSrcPath.toString(), "cannot rename object onto self");
       }
 
+      boolean isNamespaceEnabled = abfsStore.getIsNamespaceEnabled(tracingContext);
+
       // acquire one IO permit
       final Duration waitTime = rateLimiting.acquire(1);
 
       try {
         final boolean recovered = abfsStore.rename(qualifiedSrcPath,
-            qualifiedDstPath, tracingContext, sourceEtag);
+            qualifiedDstPath, tracingContext, sourceEtag, isNamespaceEnabled);
         return Pair.of(recovered, waitTime);
       } catch (AzureBlobFileSystemException ex) {
         LOG.debug("Rename operation failed. ", ex);
