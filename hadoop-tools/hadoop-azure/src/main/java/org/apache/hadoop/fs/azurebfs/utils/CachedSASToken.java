@@ -20,11 +20,9 @@ package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.time.chrono.ChronoLocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
