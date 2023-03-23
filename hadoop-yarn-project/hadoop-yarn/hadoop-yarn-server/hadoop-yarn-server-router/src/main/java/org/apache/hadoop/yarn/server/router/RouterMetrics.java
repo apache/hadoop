@@ -895,6 +895,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededRefreshNodesResourcesRetrieved() {
+    return totalSucceededRefreshNodesResourcesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public long getNumSucceededRefreshSuperUserGroupsConfigurationRetrieved() {
     return totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.lastStat().numSamples();
   }
@@ -1192,6 +1197,16 @@ public final class RouterMetrics {
   @VisibleForTesting
   public double getLatencySucceededGetClusterUserInfoRetrieved() {
     return totalSucceededGetClusterUserInfoRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededUpdateNodeResourceRetrieved() {
+    return totalSucceededUpdateNodeResourceRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededRefreshNodesResourcesRetrieved() {
+    return totalSucceededRefreshNodesResourcesRetrieved.lastStat().mean();
   }
 
   @VisibleForTesting
