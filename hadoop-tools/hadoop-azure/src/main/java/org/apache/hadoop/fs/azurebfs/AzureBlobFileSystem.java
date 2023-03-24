@@ -154,6 +154,9 @@ public class AzureBlobFileSystem extends FileSystem
   /** Rate limiting for operations which use it to throttle their IO. */
   private RateLimiting rateLimiting;
 
+  /** Stores whether filesystem is namespace enabled or not. */
+  private boolean isNamespaceEnabled;
+
   @Override
   public void initialize(URI uri, Configuration configuration)
       throws IOException {
@@ -201,9 +204,9 @@ public class AzureBlobFileSystem extends FileSystem
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
     this.setWorkingDirectory(this.getHomeDirectory());
 
+    TracingContext tracingContext = new TracingContext(clientCorrelationId,
+            fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
-      TracingContext tracingContext = new TracingContext(clientCorrelationId,
-          fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
       if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH), tracingContext) == null) {
         try {
           this.createFileSystem(tracingContext);
@@ -212,6 +215,8 @@ public class AzureBlobFileSystem extends FileSystem
         }
       }
     }
+    isNamespaceEnabled = abfsStore.getIsNamespaceEnabled(tracingContext);
+    abfsStore.setIsNamespaceEnabled(isNamespaceEnabled);
 
     LOG.trace("Initiate check for delegation token manager");
     if (UserGroupInformation.isSecurityEnabled()) {
@@ -441,8 +446,6 @@ public class AzureBlobFileSystem extends FileSystem
       return dstFileStatus.isDirectory() ? false : true;
     }
 
-    boolean isNamespaceEnabled = abfsStore.getIsNamespaceEnabled(tracingContext);
-
     // Non-HNS account need to check dst status on driver side.
     if (!isNamespaceEnabled && dstFileStatus == null) {
       dstFileStatus = tryGetFileStatus(qualifiedDstPath, tracingContext);
@@ -461,7 +464,7 @@ public class AzureBlobFileSystem extends FileSystem
 
       qualifiedDstPath = makeQualified(adjustedDst);
 
-      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext, null, isNamespaceEnabled);
+      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext, null);
       return true;
     } catch (AzureBlobFileSystemException ex) {
       LOG.debug("Rename operation failed. ", ex);
@@ -537,14 +540,12 @@ public class AzureBlobFileSystem extends FileSystem
         throw new PathIOException(qualifiedSrcPath.toString(), "cannot rename object onto self");
       }
 
-      boolean isNamespaceEnabled = abfsStore.getIsNamespaceEnabled(tracingContext);
-
       // acquire one IO permit
       final Duration waitTime = rateLimiting.acquire(1);
 
       try {
         final boolean recovered = abfsStore.rename(qualifiedSrcPath,
-            qualifiedDstPath, tracingContext, sourceEtag, isNamespaceEnabled);
+            qualifiedDstPath, tracingContext, sourceEtag);
         return Pair.of(recovered, waitTime);
       } catch (AzureBlobFileSystemException ex) {
         LOG.debug("Rename operation failed. ", ex);

@@ -55,6 +55,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
+import org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
@@ -69,10 +73,6 @@ import org.apache.hadoop.fs.EtagSource;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
-import org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations;
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperationDetectedException;
@@ -266,6 +266,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         abfsConfiguration.getMaxWriteRequestsToQueue(),
         10L, TimeUnit.SECONDS,
         "abfs-bounded");
+  }
+
+  void setIsNamespaceEnabled(boolean isHNSEnabled) {
+    client.setIsNamespaceEnabled(isHNSEnabled);
   }
 
   /**
@@ -897,8 +901,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   public boolean rename(final Path source,
       final Path destination,
       final TracingContext tracingContext,
-      final String sourceEtag,
-      final boolean isNamespaceEnabled) throws
+      final String sourceEtag) throws
           AzureBlobFileSystemException {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
@@ -925,8 +928,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       try (AbfsPerfInfo perfInfo = startTracking("rename", "renamePath")) {
         final AbfsClientRenameResult abfsClientRenameResult =
             client.renamePath(sourceRelativePath, destinationRelativePath,
-                continuation, tracingContext, sourceEtag, false,
-                    isNamespaceEnabled);
+                continuation, tracingContext, sourceEtag, false);
 
         AbfsRestOperation op = abfsClientRenameResult.getOp();
         perfInfo.registerResult(op.getResult());

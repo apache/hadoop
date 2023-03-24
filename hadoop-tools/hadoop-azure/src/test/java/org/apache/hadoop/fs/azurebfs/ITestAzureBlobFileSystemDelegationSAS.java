@@ -405,7 +405,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
 
     AbfsRestOperation abfsHttpRestOperation = fs.getAbfsClient()
         .renamePath(src, "/testABC" + "/abc.txt", null,
-            getTestTracingContext(fs, false), null, false, isHNSEnabled)
+            getTestTracingContext(fs, false), null, false)
         .getOp();
     AbfsHttpOperation result = abfsHttpRestOperation.getResult();
     String url = result.getMaskedUrl();
@@ -423,7 +423,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     intercept(IOException.class, "sig=XXXX",
         () -> getFileSystem().getAbfsClient()
             .renamePath("testABC/test.xt", "testABC/abc.txt", null,
-                getTestTracingContext(getFileSystem(), false), null, false, isHNSEnabled));
+                getTestTracingContext(getFileSystem(), false), null, false));
   }
 
   @Test
