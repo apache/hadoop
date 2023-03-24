@@ -40,6 +40,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsReque
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesResponse;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
@@ -348,7 +350,7 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     Map<NodeId, ResourceOption> nodeResourceMap = new HashMap<>();
     NodeId nodeId = NodeId.newInstance("127.0.0.1",1);
     ResourceOption resourceOption =
-         ResourceOption.newInstance(Resource.newInstance(2 * GB, 1), -1);
+        ResourceOption.newInstance(Resource.newInstance(2 * GB, 1), -1);
     nodeResourceMap.put(nodeId, resourceOption);
     UpdateNodeResourceRequest request =
         UpdateNodeResourceRequest.newInstance(nodeResourceMap, "SC-1");
@@ -360,5 +362,30 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
         UpdateNodeResourceRequest.newInstance(nodeResourceMap, "SC-NON");
     LambdaTestUtils.intercept(Exception.class, "subClusterId = SC-NON is not an active subCluster.",
         () -> interceptor.updateNodeResource(request1));
+  }
+
+  @Test
+  public void testRefreshNodesResourcesEmptyRequest() throws Exception {
+    // null request1.
+    LambdaTestUtils.intercept(YarnException.class, "Missing RefreshNodesResources request.",
+        () -> interceptor.refreshNodesResources(null));
+
+    // null request2.
+    RefreshNodesResourcesRequest request = RefreshNodesResourcesRequest.newInstance();
+    LambdaTestUtils.intercept(YarnException.class, "Missing RefreshNodesResources SubClusterId.",
+        () -> interceptor.refreshNodesResources(request));
+  }
+
+  @Test
+  public void testRefreshNodesResourcesNormalRequest() throws Exception {
+    // case 1, test the existing subCluster (SC-1).
+    RefreshNodesResourcesRequest request = RefreshNodesResourcesRequest.newInstance("SC-1");
+    RefreshNodesResourcesResponse response = interceptor.refreshNodesResources(request);
+    assertNotNull(response);
+
+    // case 2, test the non-exist subCluster.
+    RefreshNodesResourcesRequest request1 = RefreshNodesResourcesRequest.newInstance("SC-NON");
+    LambdaTestUtils.intercept(Exception.class, "subClusterId = SC-NON is not an active subCluster.",
+        () -> interceptor.refreshNodesResources(request1));
   }
 }

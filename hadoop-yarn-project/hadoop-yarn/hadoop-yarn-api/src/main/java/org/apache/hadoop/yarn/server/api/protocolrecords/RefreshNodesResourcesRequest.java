@@ -37,6 +37,15 @@ public abstract class RefreshNodesResourcesRequest {
     return request;
   }
 
+  @Public
+  @Evolving
+  public static RefreshNodesResourcesRequest newInstance(String subClusterId) {
+    RefreshNodesResourcesRequest request =
+        Records.newRecord(RefreshNodesResourcesRequest.class);
+    request.setSubClusterId(subClusterId);
+    return request;
+  }
+
   /**
    * Get the subClusterId.
    *
