@@ -527,13 +527,13 @@ public class AbfsClient implements Closeable {
    * @throws AzureBlobFileSystemException failure, excluding any recovery from overload failures.
    */
   public AbfsClientRenameResult renamePath(
-          final String source,
-          final String destination,
-          final String continuation,
-          final TracingContext tracingContext,
-          String sourceEtag,
-          boolean isMetadataIncompleteState)
-          throws AzureBlobFileSystemException {
+      final String source,
+      final String destination,
+      final String continuation,
+      final TracingContext tracingContext,
+      String sourceEtag,
+      boolean isMetadataIncompleteState)
+      throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final boolean hasEtag = !isEmpty(sourceEtag);
@@ -676,11 +676,11 @@ public class AbfsClient implements Closeable {
    * @return true if the file was successfully copied
    */
   public boolean renameIdempotencyCheckOp(
-          final String source,
-          final String sourceEtag,
-          final AbfsRestOperation op,
-          final String destination,
-          TracingContext tracingContext) {
+      final String source,
+      final String sourceEtag,
+      final AbfsRestOperation op,
+      final String destination,
+      TracingContext tracingContext) {
     Preconditions.checkArgument(op.hasResult(), "Operations has null HTTP response");
 
     // removing isDir from debug logs as it can be misleading
