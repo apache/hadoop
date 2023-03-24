@@ -601,6 +601,8 @@ public class AbfsClient implements Closeable {
         //Logging
         ABFS_METADATA_INCOMPLETE_RENAME_FAILURE
                 .info("Rename Failure attempting to resolve tracking metadata state and retrying.");
+        // rename recovery should be attempted in this case also
+        shouldAttemptRecovery = true;
         String sourceEtagAfterFailure = sourceEtag;
         if (isEmpty(sourceEtagAfterFailure)) {
           // Doing a HEAD call resolves the incomplete metadata state and
