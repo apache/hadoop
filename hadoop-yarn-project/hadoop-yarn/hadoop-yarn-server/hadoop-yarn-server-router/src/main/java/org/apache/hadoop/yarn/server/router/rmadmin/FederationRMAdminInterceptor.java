@@ -445,11 +445,13 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     // parameter verification.
     if (request == null) {
       routerMetrics.incrUpdateNodeResourceFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing UpdateNodeResource request.", null);
     }
 
     String subClusterId = request.getSubClusterId();
     if (StringUtils.isBlank(subClusterId)) {
       routerMetrics.incrUpdateNodeResourceFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing UpdateNodeResource SubClusterId.", null);
     }
 
     try {
