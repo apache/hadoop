@@ -720,8 +720,6 @@ public class AbfsClient implements Closeable {
       return false;
   }
 
-
-
   @VisibleForTesting
   boolean isSourceDestEtagEqual(String sourceEtag, AbfsHttpOperation result) {
     return sourceEtag.equals(extractEtagHeader(result));
