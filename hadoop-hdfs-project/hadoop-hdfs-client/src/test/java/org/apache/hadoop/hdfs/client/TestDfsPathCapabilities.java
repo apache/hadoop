@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import static org.apache.hadoop.fs.CommonPathCapabilities.FS_SYMLINKS;
 
@@ -37,16 +38,28 @@ public class TestDfsPathCapabilities {
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://localhost/");
     final FileSystem fs = FileSystem.get(conf);
     Assert.assertTrue(fs instanceof DistributedFileSystem);
-    final DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    final DistributedFileSystem dfs = Mockito.spy((DistributedFileSystem) fs);
     final Path path = new Path("/");
-    Assert.assertTrue(dfs.supportsSymlinks());
 
-    // Symlinks disabled
+    // Symlinks support disabled
+    Mockito.doReturn(false).when(dfs).supportsSymlinks();
+    Assert.assertFalse(FileSystem.areSymlinksEnabled());
+    Assert.assertFalse(dfs.hasPathCapability(path, FS_SYMLINKS));
+
+    // Symlinks support enabled
+    Mockito.doReturn(true).when(dfs).supportsSymlinks();
     Assert.assertFalse(FileSystem.areSymlinksEnabled());
     Assert.assertFalse(dfs.hasPathCapability(path, FS_SYMLINKS));
 
     // Symlinks enabled
     FileSystem.enableSymlinks();
+    Mockito.doReturn(true).when(dfs).supportsSymlinks();
+    Assert.assertTrue(FileSystem.areSymlinksEnabled());
+    Assert.assertTrue(dfs.hasPathCapability(path, FS_SYMLINKS));
+
+    // Symlinks enabled but symlink-support is disabled
+    FileSystem.enableSymlinks();
+    Mockito.doReturn(false).when(dfs).supportsSymlinks();
     Assert.assertTrue(FileSystem.areSymlinksEnabled());
     Assert.assertTrue(dfs.hasPathCapability(path, FS_SYMLINKS));
   }
