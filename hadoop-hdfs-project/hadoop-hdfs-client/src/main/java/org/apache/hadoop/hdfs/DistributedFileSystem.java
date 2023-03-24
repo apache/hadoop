@@ -3873,7 +3873,8 @@ public class DistributedFileSystem extends FileSystem
       throws IOException {
     // qualify the path to make sure that it refers to the current FS.
     final Path p = makeQualified(path);
-    if (DfsPathCapabilities.hasPathCapability(p, capability)) {
+    if (DfsPathCapabilities.hasPathCapability(p, capability)
+        && supportsSymlinks()) {
       return true;
     }
     // this switch is for features which are in the DFS client but not
