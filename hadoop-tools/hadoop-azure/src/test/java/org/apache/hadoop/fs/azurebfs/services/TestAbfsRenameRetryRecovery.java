@@ -63,6 +63,7 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -172,7 +173,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
       AbfsRestOperation spiedOp = Mockito.spy(op);
       addSpyBehavior(spiedOp, op, spyClient);
       return spiedOp;
-    }).when(spyClient).createRenameRestOperation(nullable(URL.class), nullable(List.class));
+    }).when(spyClient).createRenameRestOperation(Mockito.any(URL.class), anyList());
 
     return spyClient;
 
