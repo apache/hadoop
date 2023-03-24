@@ -521,8 +521,9 @@ public class AbfsClient implements Closeable {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final boolean hasEtag = !isEmpty(sourceEtag);
-    boolean isDir = false;
-    if (!hasEtag && renameResilience && isNamespaceEnabled) {
+
+    boolean shouldAttemptRecovery = renameResilience && isNamespaceEnabled;
+    if (!hasEtag && shouldAttemptRecovery) {
       // in case eTag is already not supplied to the API
       // and rename resilience is expected and it is an HNS enabled account
       // fetch the source etag to be used later in recovery
@@ -533,8 +534,8 @@ public class AbfsClient implements Closeable {
           final AbfsHttpOperation result = srcStatusOp.getResult();
           sourceEtag = extractEtagHeader(result);
           // and update the directory status.
-          isDir = checkIsDir(result);
-
+          boolean isDir = checkIsDir(result);
+          shouldAttemptRecovery = !isDir;
           LOG.debug("Retrieved etag of source for rename recovery: {}; isDir={}", sourceEtag, isDir);
         }
       } catch (AbfsRestOperationException e) {
@@ -584,15 +585,17 @@ public class AbfsClient implements Closeable {
         //Logging
         ABFS_METADATA_INCOMPLETE_RENAME_FAILURE
                 .info("Rename Failure attempting to resolve tracking metadata state and retrying.");
-
-        // Doing a HEAD call resolves the incomplete metadata state and
-        // then we can retry the rename operation.
-        AbfsRestOperation sourceStatusOp = getPathStatus(source, false, tracingContext);
-        isMetadataIncompleteState = true;
-        // Extract the sourceEtag, using the status Op, and set it
-        // for future rename recovery.
-        AbfsHttpOperation sourceStatusResult = sourceStatusOp.getResult();
-        String sourceEtagAfterFailure = extractEtagHeader(sourceStatusResult);
+        String sourceEtagAfterFailure = sourceEtag;
+        if (isEmpty(sourceEtagAfterFailure)) {
+          // Doing a HEAD call resolves the incomplete metadata state and
+          // then we can retry the rename operation.
+          AbfsRestOperation sourceStatusOp = getPathStatus(source, false, tracingContext);
+          isMetadataIncompleteState = true;
+          // Extract the sourceEtag, using the status Op, and set it
+          // for future rename recovery.
+          AbfsHttpOperation sourceStatusResult = sourceStatusOp.getResult();
+          sourceEtagAfterFailure = extractEtagHeader(sourceStatusResult);
+        }
         renamePath(source, destination, continuation, tracingContext,
                 sourceEtagAfterFailure, isMetadataIncompleteState);
       }
@@ -600,10 +603,13 @@ public class AbfsClient implements Closeable {
       // it isn't metadata incomplete state issue.
       isMetadataIncompleteState = false;
 
-      boolean etagCheckSucceeded = renameIdempotencyCheckOp(
-              source,
-              sourceEtag, op, destination, tracingContext, isDir,
-              isNamespaceEnabled);
+      // setting default rename recovery success to false
+      boolean etagCheckSucceeded = false;
+      if (shouldAttemptRecovery) {
+        etagCheckSucceeded = renameIdempotencyCheckOp(
+                source,
+                sourceEtag, op, destination, tracingContext);
+      }
       if (!etagCheckSucceeded) {
         // idempotency did not return different result
         // throw back the exception
@@ -651,7 +657,6 @@ public class AbfsClient implements Closeable {
    * @param destination    rename destination path
    * @param sourceEtag     etag of source file. may be null or empty
    * @param tracingContext Tracks identifiers for request header
-   * @param isDir tracks whether current rename is on directories
    * @return true if the file was successfully copied
    * </p>
    */
@@ -660,34 +665,15 @@ public class AbfsClient implements Closeable {
           final String sourceEtag,
           final AbfsRestOperation op,
           final String destination,
-          TracingContext tracingContext,
-          final boolean isDir,
-          final boolean isNamespaceEnabled) {
+          TracingContext tracingContext) {
     Preconditions.checkArgument(op.hasResult(), "Operations has null HTTP response");
 
-    LOG.debug("rename({}, {}) failure {}; retry={} isDir {} etag {}",
-              source, destination, op.getResult().getStatusCode(), op.isARetriedRequest(), isDir, sourceEtag);
+    // removing isDir from debug logs as it can be misleading
+    LOG.debug("rename({}, {}) failure {}; retry={} etag {}",
+              source, destination, op.getResult().getStatusCode(), op.isARetriedRequest(), sourceEtag);
     if (!(op.isARetriedRequest()
             && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND))) {
       // only attempt recovery if the failure was a 404 on a retried rename request.
-      return false;
-    }
-
-    if (!isNamespaceEnabled) {
-      // recovery is not supported for FNS configurations
-      return false;
-    }
-
-    if (isDir) {
-      // preservation of eTag in rename is inconsistent
-      // across different mechanisms of dir creation -
-      // creating through mkdirs preserves eTag and
-      // implicit creation of dir when creating a child file
-      // does not preserve eTag on rename.
-      // Hence directory recovery is not supported.
-      // log and fail.
-      LOG.info("rename directory {} to {} failed; unable to recover",
-              source, destination);
       return false;
     }
 
