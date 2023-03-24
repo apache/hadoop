@@ -216,6 +216,7 @@
     <yarnpkg.version>v1.22.5</yarnpkg.version>
     <apache-ant.version>1.10.13</apache-ant.version>
     <jmh.version>1.20</jmh.version>
+    <mockito-all.version>1.10.19</mockito-all.version>
   </properties>
 
   <dependencyManagement>
@@ -1309,7 +1310,7 @@
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-all</artifactId>
-        <version>1.10.19</version>
+        <version>${mockito-all.version}</version>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
