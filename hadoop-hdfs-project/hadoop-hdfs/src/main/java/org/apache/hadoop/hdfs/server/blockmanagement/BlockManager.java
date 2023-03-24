@@ -4128,6 +4128,7 @@ public class BlockManager implements BlockStatsMXBean {
     BitSet found = new BitSet(groupSize); //indices found
     BitSet duplicated = new BitSet(groupSize); //indices found more than once
     HashMap<DatanodeStorageInfo, Integer> storage2index = new HashMap<>();
+    boolean logEmptyExcessType = true;
     for (DatanodeStorageInfo storage : nonExcess) {
       int index = sblk.getStorageBlockIndex(storage);
       assert index >= 0;
@@ -4145,6 +4146,7 @@ public class BlockManager implements BlockStatsMXBean {
       Integer index = storage2index.get(delStorageHint);
       if (index != null && duplicated.get(index)) {
         processChosenExcessRedundancy(nonExcess, delStorageHint, storedBlock);
+        logEmptyExcessType = false;
       }
     }
 
@@ -4155,8 +4157,10 @@ public class BlockManager implements BlockStatsMXBean {
     final List<StorageType> excessTypes = storagePolicy.chooseExcess(
         (short) numOfTarget, DatanodeStorageInfo.toStorageTypes(nonExcess));
     if (excessTypes.isEmpty()) {
-      LOG.warn("excess types chosen for block {} among storages {} is empty",
-          storedBlock, nonExcess);
+      if(logEmptyExcessType) {
+        LOG.warn("excess types chosen for block {} among storages {} is empty",
+                storedBlock, nonExcess);
+      }
       return;
     }
 

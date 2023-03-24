@@ -62,7 +62,10 @@ possibly in parallel, with results potentially coming in out-of-order.
 Benchmarking of enhanced Apache ORC and Apache Parquet clients through `file://` and `s3a://`
 show significant improvements in query performance.
 
-Further Reading: [FsDataInputStream](./hadoop-project-dist/hadoop-common/filesystem/fsdatainputstream.html).
+Further Reading:
+* [FsDataInputStream](./hadoop-project-dist/hadoop-common/filesystem/fsdatainputstream.html).
+* [Hadoop Vectored IO: Your Data Just Got Faster!](https://apachecon.com/acasia2022/sessions/bigdata-1148.html)
+  Apachecon 2022 talk.
 
 Mapreduce: Manifest Committer for Azure ABFS and google GCS
 ----------------------------------------------------------
@@ -87,14 +90,6 @@ More details are available in the
 [manifest committer](./hadoop-mapreduce-client/hadoop-mapreduce-client-core/manifest_committer.html).
 documentation.
 
-
-HDFS: Router Based Federation
------------------------------
-
-A lot of effort has been invested into stabilizing/improving the HDFS Router Based Federation feature.
-
-1. HDFS-13522, HDFS-16767 & Related Jiras: Allow Observer Reads in HDFS Router Based Federation.
-2. HDFS-13248: RBF supports Client Locality
 
 HDFS: Dynamic Datanode Reconfiguration
 --------------------------------------

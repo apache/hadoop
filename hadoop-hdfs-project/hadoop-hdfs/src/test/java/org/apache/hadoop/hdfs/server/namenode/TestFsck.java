@@ -23,7 +23,6 @@ import static org.apache.hadoop.hdfs.MiniDFSCluster.HDFS_MINIDFS_BASEDIR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,12 +30,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -118,14 +115,13 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
-import org.apache.log4j.RollingFileAppender;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
@@ -136,10 +132,7 @@ public class TestFsck {
   private static final org.slf4j.Logger LOG =
       LoggerFactory.getLogger(TestFsck.class.getName());
 
-  static final String AUDITLOG_FILE =
-      GenericTestUtils.getTempPath("TestFsck-audit.log");
-  
-  // Pattern for: 
+  // Pattern for:
   // allowed=true ugi=name ip=/address cmd=FSCK src=/ dst=null perm=null
   static final Pattern FSCK_PATTERN = Pattern.compile(
       "allowed=.*?\\s" +
@@ -163,6 +156,8 @@ public class TestFsck {
   private static final String LINE_SEPARATOR =
       System.getProperty("line.separator");
 
+  private static LogCapturer auditLogCapture;
+
   public static String runFsck(Configuration conf, int expectedErrCode,
                         boolean checkErrorCode, String... path)
                         throws Exception {
@@ -182,6 +177,16 @@ public class TestFsck {
 
   private MiniDFSCluster cluster = null;
   private Configuration conf = null;
+
+  @BeforeClass
+  public static void beforeClass() {
+    auditLogCapture = LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
+  }
+
+  @AfterClass
+  public static void afterClass() {
+    auditLogCapture.stopCapturing();
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -221,7 +226,6 @@ public class TestFsck {
     final Path file = new Path(fileName);
     long aTime = fs.getFileStatus(file).getAccessTime();
     Thread.sleep(precision);
-    setupAuditLogs();
     String outStr = runFsck(conf, 0, true, "/");
     verifyAuditLogs();
     assertEquals(aTime, fs.getFileStatus(file).getAccessTime());
@@ -245,55 +249,29 @@ public class TestFsck {
     util.cleanup(fs, "/srcdat");
   }
 
-  /** Sets up log4j logger for auditlogs. */
-  private void setupAuditLogs() throws IOException {
-    File file = new File(AUDITLOG_FILE);
-    if (file.exists()) {
-      file.delete();
+  private void verifyAuditLogs() {
+    String[] auditLogOutputLines = auditLogCapture.getOutput().split("\\n");
+    int fileStatusSuccess = 0;
+    int fsckCount = 0;
+    for (String auditLogLine : auditLogOutputLines) {
+      if (!auditLogLine.contains("allowed=")) {
+        continue;
+      }
+      String extractedAuditLog = "allowed=" + auditLogLine.split("allowed=")[1];
+      LOG.info("Line: {}", extractedAuditLog);
+      if (extractedAuditLog.contains("cmd=getfileinfo") && GET_FILE_INFO_PATTERN.matcher(
+          extractedAuditLog).matches()) {
+        fileStatusSuccess++;
+      } else if (FSCK_PATTERN.matcher(extractedAuditLog).matches()) {
+        fsckCount++;
+      }
     }
-    Logger logger = FSNamesystem.AUDIT_LOG;
-    logger.removeAllAppenders();
-    logger.setLevel(Level.INFO);
-    PatternLayout layout = new PatternLayout("%m%n");
-    RollingFileAppender appender =
-        new RollingFileAppender(layout, AUDITLOG_FILE);
-    logger.addAppender(appender);
-  }
-  
-  private void verifyAuditLogs() throws IOException {
-    // Turn off the logs
-    GenericTestUtils.disableLog(LoggerFactory.getLogger(
-        FSNamesystem.class.getName() + ".audit"));
-
-    BufferedReader reader = null;
-    try {
-      // Audit log should contain one getfileinfo and one fsck
-      reader = new BufferedReader(new FileReader(AUDITLOG_FILE));
-      String line;
-
-      // one extra getfileinfo stems from resolving the path
-      //
-      for (int i = 0; i < 2; i++) {
-        line = reader.readLine();
-        assertNotNull(line);
-        assertTrue("Expected getfileinfo event not found in audit log",
-            GET_FILE_INFO_PATTERN.matcher(line).matches());
-      }
-      line = reader.readLine();
-      assertNotNull(line);
-      assertTrue("Expected fsck event not found in audit log", FSCK_PATTERN
-          .matcher(line).matches());
-      assertNull("Unexpected event in audit log", reader.readLine());
-    } finally {
-      // Close the reader and remove the appender to release the audit log file
-      // handle after verifying the content of the file.
-      if (reader != null) {
-        reader.close();
-      }
-      Logger logger = FSNamesystem.AUDIT_LOG;
-      if (logger != null) {
-        logger.removeAllAppenders();
-      }
+    if (fileStatusSuccess < 2) {
+      throw new AssertionError(
+          "getfileinfo cmd should occur at least 2 times. Actual count: " + fileStatusSuccess);
+    }
+    if (fsckCount < 1) {
+      throw new AssertionError("fsck should be present at least once. Actual count: " + fsckCount);
     }
   }
   
@@ -1411,7 +1389,6 @@ public class TestFsck {
     util.waitReplication(fs, fileName, (short)3);
     long aTime = fc.getFileStatus(symlink).getAccessTime();
     Thread.sleep(precision);
-    setupAuditLogs();
     String outStr = runFsck(conf, 0, true, "/");
     verifyAuditLogs();
     assertEquals(aTime, fc.getFileStatus(symlink).getAccessTime());
@@ -2055,7 +2032,6 @@ public class TestFsck {
     long replTime = fs.getFileStatus(replFilePath).getAccessTime();
     long ecTime = fs.getFileStatus(largeFilePath).getAccessTime();
     Thread.sleep(precision);
-    setupAuditLogs();
     String outStr = runFsck(conf, 0, true, "/");
     verifyAuditLogs();
     assertEquals(replTime, fs.getFileStatus(replFilePath).getAccessTime());

@@ -78,7 +78,7 @@ public class TestCapacitySchedulerWorkflowPriorityMapping {
     List<WorkflowPriorityMapping> mappings = Arrays.asList(
         new WorkflowPriorityMapping("workflow1", B, Priority.newInstance(2)),
         new WorkflowPriorityMapping("workflow2", A1, Priority.newInstance(3)),
-        new WorkflowPriorityMapping("workflow3", A, Priority.newInstance(4)));
+        new WorkflowPriorityMapping("Workflow3", A, Priority.newInstance(4)));
     conf.setWorkflowPriorityMappings(mappings);
   }
 
@@ -99,16 +99,10 @@ public class TestCapacitySchedulerWorkflowPriorityMapping {
     mockRM.start();
     cs.start();
 
-    Map<String, Map<String, Object>> expected = ImmutableMap.of(
-        A, ImmutableMap.of("workflow3",
-        new WorkflowPriorityMapping(
-            "workflow3", A, Priority.newInstance(4))),
-        B, ImmutableMap.of("workflow1",
-        new WorkflowPriorityMapping(
-            "workflow1", B, Priority.newInstance(2))),
-        A1, ImmutableMap.of("workflow2",
-        new WorkflowPriorityMapping(
-            "workflow2", A1, Priority.newInstance(3))));
+    Map<String, Object> expected = ImmutableMap.of(
+        A, ImmutableMap.of("workflow3", Priority.newInstance(4)),
+        B, ImmutableMap.of("workflow1", Priority.newInstance(2)),
+        A1, ImmutableMap.of("workflow2", Priority.newInstance(3)));
     assertEquals(expected, cs.getWorkflowPriorityMappingsManager()
         .getWorkflowPriorityMappings());
 

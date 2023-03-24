@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Collections;
 import java.util.stream.Collectors;
@@ -40,6 +41,7 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -71,10 +73,13 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHome
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
@@ -97,6 +102,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntry;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService.RequestInterceptorChainWrapper;
@@ -124,9 +131,12 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationBulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterUserInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.Assert;
@@ -1785,6 +1795,102 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   @Test
+  public void testReplaceLabelsOnNodes() throws Exception {
+    // subCluster0 -> node0:0 -> label:NodeLabel0
+    // subCluster1 -> node1:1 -> label:NodeLabel1
+    // subCluster2 -> node2:2 -> label:NodeLabel2
+    // subCluster3 -> node3:3 -> label:NodeLabel3
+    NodeToLabelsEntryList nodeToLabelsEntryList = new NodeToLabelsEntryList();
+    for (int i = 0; i < NUM_SUBCLUSTER; i++) {
+      // labels
+      List<String> labels = new ArrayList<>();
+      labels.add("NodeLabel" + i);
+      // nodes
+      String nodeId = "node" + i + ":" + i;
+      NodeToLabelsEntry nodeToLabelsEntry = new NodeToLabelsEntry(nodeId, labels);
+      List<NodeToLabelsEntry> nodeToLabelsEntries = nodeToLabelsEntryList.getNodeToLabels();
+      nodeToLabelsEntries.add(nodeToLabelsEntry);
+    }
+
+    // one of the results:
+    // subCluster#0:Success;subCluster#1:Success;subCluster#3:Success;subCluster#2:Success;
+    // We can't confirm the complete return order.
+    Response response = interceptor.replaceLabelsOnNodes(nodeToLabelsEntryList, null);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(200, response.getStatus());
+
+    Object entityObject = response.getEntity();
+    Assert.assertNotNull(entityObject);
+
+    String entityValue = String.valueOf(entityObject);
+    String[] entities = entityValue.split(",");
+    Assert.assertNotNull(entities);
+    Assert.assertEquals(4, entities.length);
+    String expectValue =
+        "subCluster-0:Success,subCluster-1:Success,subCluster-2:Success,subCluster-3:Success,";
+    for (String entity : entities) {
+      Assert.assertTrue(expectValue.contains(entity));
+    }
+  }
+
+  @Test
+  public void testReplaceLabelsOnNodesError() throws Exception {
+    // newNodeToLabels is null
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, newNodeToLabels must not be empty.",
+        () -> interceptor.replaceLabelsOnNodes(null, null));
+
+    // nodeToLabelsEntryList is Empty
+    NodeToLabelsEntryList nodeToLabelsEntryList = new NodeToLabelsEntryList();
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, nodeToLabelsEntries must not be empty.",
+        () -> interceptor.replaceLabelsOnNodes(nodeToLabelsEntryList, null));
+  }
+
+  @Test
+  public void testReplaceLabelsOnNode() throws Exception {
+    // subCluster3 -> node3:3 -> label:NodeLabel3
+    String nodeId = "node3:3";
+    Set<String> labels = Collections.singleton("NodeLabel3");
+
+    // We expect the following result: subCluster#3:Success;
+    String expectValue = "subCluster#3:Success;";
+    Response response = interceptor.replaceLabelsOnNode(labels, null, nodeId);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(200, response.getStatus());
+
+    Object entityObject = response.getEntity();
+    Assert.assertNotNull(entityObject);
+
+    String entityValue = String.valueOf(entityObject);
+    Assert.assertNotNull(entityValue);
+    Assert.assertEquals(expectValue, entityValue);
+  }
+
+  @Test
+  public void testReplaceLabelsOnNodeError() throws Exception {
+    // newNodeToLabels is null
+    String nodeId = "node3:3";
+    Set<String> labels = Collections.singleton("NodeLabel3");
+    Set<String> labelsEmpty = new HashSet<>();
+
+    // nodeId is null
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, nodeId must not be null or empty.",
+        () -> interceptor.replaceLabelsOnNode(labels, null, null));
+
+    // labels is null
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, newNodeLabelsName must not be empty.",
+        () -> interceptor.replaceLabelsOnNode(null, null, nodeId));
+
+    // labels is empty
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, newNodeLabelsName must not be empty.",
+        () -> interceptor.replaceLabelsOnNode(labelsEmpty, null, nodeId));
+  }
+
+  @Test
   public void testDumpSchedulerLogs() throws Exception {
     HttpServletRequest mockHsr = mockHttpServletRequestByUserName("admin");
     String dumpSchedulerLogsMsg = interceptor.dumpSchedulerLogs("1", mockHsr);
@@ -1898,5 +2004,215 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     LambdaTestUtils.intercept(IllegalArgumentException.class,
         "'groupBy' must not be empty.",
         () -> interceptor.getBulkActivities(null, "", 1));
+  }
+
+  @Test
+  public void testAddToClusterNodeLabels1() throws Exception {
+    // In this test, we try to add ALL label, all subClusters will return success.
+    NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
+    NodeLabelInfo nodeLabelInfo = new NodeLabelInfo("ALL", true);
+    nodeLabelsInfo.getNodeLabelsInfo().add(nodeLabelInfo);
+
+    Response response = interceptor.addToClusterNodeLabels(nodeLabelsInfo, null);
+    Assert.assertNotNull(response);
+
+    Object entityObj = response.getEntity();
+    Assert.assertNotNull(entityObj);
+
+    String entity = String.valueOf(entityObj);
+    String[] entities = StringUtils.split(entity, ",");
+    Assert.assertNotNull(entities);
+    Assert.assertEquals(4, entities.length);
+
+    // The order in which the cluster returns messages is uncertain,
+    // we confirm the result by contains
+    String expectedMsg =
+        "SubCluster-0:SUCCESS,SubCluster-1:SUCCESS,SubCluster-2:SUCCESS,SubCluster-3:SUCCESS";
+    Arrays.stream(entities).forEach(item -> {
+      Assert.assertTrue(expectedMsg.contains(item));
+    });
+  }
+
+  @Test
+  public void testAddToClusterNodeLabels2() throws Exception {
+    // In this test, we try to add A0 label,
+    // subCluster0 will return success, and other subClusters will return null
+    NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
+    NodeLabelInfo nodeLabelInfo = new NodeLabelInfo("A0", true);
+    nodeLabelsInfo.getNodeLabelsInfo().add(nodeLabelInfo);
+
+    Response response = interceptor.addToClusterNodeLabels(nodeLabelsInfo, null);
+    Assert.assertNotNull(response);
+
+    Object entityObj = response.getEntity();
+    Assert.assertNotNull(entityObj);
+
+    String expectedValue = "SubCluster-0:SUCCESS,";
+    String entity = String.valueOf(entityObj);
+    Assert.assertTrue(entity.contains(expectedValue));
+  }
+
+  @Test
+  public void testAddToClusterNodeLabelsError() throws Exception {
+    // the newNodeLabels is null
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the newNodeLabels is null.",
+        () -> interceptor.addToClusterNodeLabels(null, null));
+
+    // the nodeLabelsInfo is null
+    NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the nodeLabelsInfo is null or empty.",
+        () -> interceptor.addToClusterNodeLabels(nodeLabelsInfo, null));
+
+    // error nodeLabelsInfo
+    NodeLabelsInfo nodeLabelsInfo1 = new NodeLabelsInfo();
+    NodeLabelInfo nodeLabelInfo1 = new NodeLabelInfo("A", true);
+    nodeLabelsInfo1.getNodeLabelsInfo().add(nodeLabelInfo1);
+    LambdaTestUtils.intercept(YarnRuntimeException.class, "addToClusterNodeLabels Error",
+        () -> interceptor.addToClusterNodeLabels(nodeLabelsInfo1, null));
+  }
+
+  @Test
+  public void testRemoveFromClusterNodeLabels1() throws Exception {
+    Set<String> oldNodeLabels = Sets.newHashSet();
+    oldNodeLabels.add("ALL");
+
+    Response response = interceptor.removeFromClusterNodeLabels(oldNodeLabels, null);
+    Assert.assertNotNull(response);
+
+    Object entityObj = response.getEntity();
+    Assert.assertNotNull(entityObj);
+
+    String entity = String.valueOf(entityObj);
+    String[] entities = StringUtils.split(entity, ",");
+    Assert.assertNotNull(entities);
+    Assert.assertEquals(4, entities.length);
+
+    // The order in which the cluster returns messages is uncertain,
+    // we confirm the result by contains
+    String expectedMsg =
+        "SubCluster-0:SUCCESS,SubCluster-1:SUCCESS,SubCluster-2:SUCCESS,SubCluster-3:SUCCESS";
+    Arrays.stream(entities).forEach(item -> {
+      Assert.assertTrue(expectedMsg.contains(item));
+    });
+  }
+
+  @Test
+  public void testRemoveFromClusterNodeLabels2() throws Exception {
+    Set<String> oldNodeLabels = Sets.newHashSet();
+    oldNodeLabels.add("A0");
+
+    Response response = interceptor.removeFromClusterNodeLabels(oldNodeLabels, null);
+    Assert.assertNotNull(response);
+
+    Object entityObj = response.getEntity();
+    Assert.assertNotNull(entityObj);
+
+    String expectedValue = "SubCluster-0:SUCCESS,";
+    String entity = String.valueOf(entityObj);
+    Assert.assertTrue(entity.contains(expectedValue));
+  }
+
+  @Test
+  public void testRemoveFromClusterNodeLabelsError() throws Exception {
+    // the oldNodeLabels is null
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the oldNodeLabels is null or empty.",
+        () -> interceptor.removeFromClusterNodeLabels(null, null));
+
+    // the oldNodeLabels is empty
+    Set<String> oldNodeLabels = Sets.newHashSet();
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the oldNodeLabels is null or empty.",
+        () -> interceptor.removeFromClusterNodeLabels(oldNodeLabels, null));
+
+    // error oldNodeLabels
+    Set<String> oldNodeLabels1 = Sets.newHashSet();
+    oldNodeLabels1.add("A1");
+    LambdaTestUtils.intercept(YarnRuntimeException.class, "removeFromClusterNodeLabels Error",
+        () -> interceptor.removeFromClusterNodeLabels(oldNodeLabels1, null));
+  }
+
+  @Test
+  public void testGetClusterUserInfo() {
+    String requestUserName = "test-user";
+    HttpServletRequest hsr = mock(HttpServletRequest.class);
+    when(hsr.getRemoteUser()).thenReturn(requestUserName);
+    ClusterUserInfo clusterUserInfo = interceptor.getClusterUserInfo(hsr);
+
+    Assert.assertNotNull(clusterUserInfo);
+    Assert.assertTrue(clusterUserInfo instanceof FederationClusterUserInfo);
+
+    FederationClusterUserInfo federationClusterUserInfo =
+        (FederationClusterUserInfo) clusterUserInfo;
+
+    List<ClusterUserInfo> fedClusterUserInfoList = federationClusterUserInfo.getList();
+    Assert.assertNotNull(fedClusterUserInfoList);
+    Assert.assertEquals(4, fedClusterUserInfoList.size());
+
+    List<String> subClusterIds = subClusters.stream().map(
+        subClusterId -> subClusterId.getId()).collect(Collectors.toList());
+    MockRM mockRM = interceptor.getMockRM();
+
+    for (ClusterUserInfo fedClusterUserInfo : fedClusterUserInfoList) {
+      // Check subClusterId
+      String subClusterId = fedClusterUserInfo.getSubClusterId();
+      Assert.assertNotNull(subClusterId);
+      Assert.assertTrue(subClusterIds.contains(subClusterId));
+
+      // Check requestedUser
+      String requestedUser = fedClusterUserInfo.getRequestedUser();
+      Assert.assertNotNull(requestedUser);
+      Assert.assertEquals(requestUserName, requestedUser);
+
+      // Check rmLoginUser
+      String rmLoginUser = fedClusterUserInfo.getRmLoginUser();
+      Assert.assertNotNull(rmLoginUser);
+      Assert.assertEquals(mockRM.getRMLoginUser(), rmLoginUser);
+    }
+  }
+
+  @Test
+  public void testGetClusterInfo() {
+    ClusterInfo clusterInfos = interceptor.getClusterInfo();
+    Assert.assertNotNull(clusterInfos);
+    Assert.assertTrue(clusterInfos instanceof FederationClusterInfo);
+
+    FederationClusterInfo federationClusterInfos =
+        (FederationClusterInfo) (clusterInfos);
+
+    List<ClusterInfo> fedClusterInfosList = federationClusterInfos.getList();
+    Assert.assertNotNull(fedClusterInfosList);
+    Assert.assertEquals(4, fedClusterInfosList.size());
+
+    List<String> subClusterIds = subClusters.stream().map(
+        subClusterId -> subClusterId.getId()).collect(Collectors.toList());
+
+    MockRM mockRM = interceptor.getMockRM();
+    String yarnVersion = YarnVersionInfo.getVersion();
+
+    for (ClusterInfo clusterInfo : fedClusterInfosList) {
+      String subClusterId = clusterInfo.getSubClusterId();
+      // Check subClusterId
+      Assert.assertTrue(subClusterIds.contains(subClusterId));
+
+      // Check state
+      String clusterState = mockRM.getServiceState().toString();
+      Assert.assertEquals(clusterState, clusterInfo.getState());
+
+      // Check rmStateStoreName
+      String rmStateStoreName =
+          mockRM.getRMContext().getStateStore().getClass().getName();
+      Assert.assertEquals(rmStateStoreName, clusterInfo.getRMStateStore());
+
+      // Check RM Version
+      Assert.assertEquals(yarnVersion, clusterInfo.getRMVersion());
+
+      // Check haZooKeeperConnectionState
+      String rmHAZookeeperConnectionState = mockRM.getRMContext().getHAZookeeperConnectionState();
+      Assert.assertEquals(rmHAZookeeperConnectionState,
+          clusterInfo.getHAZookeeperConnectionState());
+    }
   }
 }

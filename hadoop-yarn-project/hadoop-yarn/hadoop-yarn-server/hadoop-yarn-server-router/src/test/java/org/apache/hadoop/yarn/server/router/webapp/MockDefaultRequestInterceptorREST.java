@@ -111,7 +111,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
@@ -137,6 +139,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationReque
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateResponseInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteResponseInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
@@ -159,7 +162,6 @@ import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT_FULL;
@@ -305,9 +307,14 @@ public class MockDefaultRequestInterceptorREST
     if (!isRunning) {
       throw new RuntimeException("RM is stopped");
     }
-    NodeInfo node = new NodeInfo();
-    node.setId(nodeId);
-    node.setLastHealthUpdate(Integer.valueOf(getSubClusterId().getId()));
+    NodeInfo node = null;
+    SubClusterId subCluster = getSubClusterId();
+    String subClusterId = subCluster.getId();
+    if (nodeId.contains(subClusterId) || nodeId.contains("test")) {
+      node = new NodeInfo();
+      node.setId(nodeId);
+      node.setLastHealthUpdate(Integer.valueOf(getSubClusterId().getId()));
+    }
     return node;
   }
 
@@ -1236,7 +1243,17 @@ public class MockDefaultRequestInterceptorREST
     return webSvc.dumpSchedulerLogs(time, hsr);
   }
 
+  public Response replaceLabelsOnNodes(NodeToLabelsEntryList newNodeToLabels,
+      HttpServletRequest hsr) throws IOException {
+    return super.replaceLabelsOnNodes(newNodeToLabels, hsr);
+  }
+
   @Override
+  public Response replaceLabelsOnNode(Set<String> newNodeLabelsName,
+      HttpServletRequest hsr, String nodeId) throws Exception {
+    return super.replaceLabelsOnNode(newNodeLabelsName, hsr, nodeId);
+  }
+
   public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId, String groupBy) {
     if (!EnumUtils.isValidEnum(RMWSConsts.ActivitiesGroupBy.class, groupBy.toUpperCase())) {
       String errMessage = "Got invalid groupBy: " + groupBy + ", valid groupBy types: "
@@ -1306,5 +1323,58 @@ public class MockDefaultRequestInterceptorREST
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  public Response addToClusterNodeLabels(NodeLabelsInfo newNodeLabels, HttpServletRequest hsr)
+      throws Exception {
+    List<NodeLabelInfo> nodeLabelInfoList = newNodeLabels.getNodeLabelsInfo();
+    NodeLabelInfo nodeLabelInfo = nodeLabelInfoList.get(0);
+    String nodeLabelName = nodeLabelInfo.getName();
+
+    // If nodeLabelName is ALL, we let all subclusters pass
+    if (StringUtils.equals("ALL", nodeLabelName)) {
+      return Response.status(Status.OK).build();
+    } else if (StringUtils.equals("A0", nodeLabelName)) {
+      SubClusterId subClusterId = getSubClusterId();
+      String id = subClusterId.getId();
+      if (StringUtils.contains("A0", id)) {
+        return Response.status(Status.OK).build();
+      } else {
+        return Response.status(Status.BAD_REQUEST).entity(null).build();
+      }
+    }
+    throw new YarnException("addToClusterNodeLabels Error");
+  }
+
+  @Override
+  public Response removeFromClusterNodeLabels(Set<String> oldNodeLabels, HttpServletRequest hsr)
+      throws Exception {
+    // If oldNodeLabels contains ALL, we let all subclusters pass
+    if (oldNodeLabels.contains("ALL")) {
+      return Response.status(Status.OK).build();
+    } else if (oldNodeLabels.contains("A0")) {
+      SubClusterId subClusterId = getSubClusterId();
+      String id = subClusterId.getId();
+      if (StringUtils.contains("A0", id)) {
+        return Response.status(Status.OK).build();
+      } else {
+        return Response.status(Status.BAD_REQUEST).entity(null).build();
+      }
+    }
+    throw new YarnException("removeFromClusterNodeLabels Error");
+  }
+
+  @Override
+  public ClusterInfo getClusterInfo() {
+    ClusterInfo clusterInfo = new ClusterInfo(mockRM);
+    return clusterInfo;
+  }
+
+  @Override
+  public ClusterUserInfo getClusterUserInfo(HttpServletRequest hsr) {
+    String remoteUser = hsr.getRemoteUser();
+    UserGroupInformation callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+    return new ClusterUserInfo(mockRM, callerUGI);
   }
 }
