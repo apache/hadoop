@@ -3987,17 +3987,11 @@ public class BlockManager implements BlockStatsMXBean {
     }
 
     if (shouldProcessExtraRedundancy(num, expectedRedundancy)) {
-      if (num.replicasOnStaleNodes() > 0) {
-        // If any of the replicas of this block are on nodes that are
-        // considered "stale", then these replicas may in fact have
-        // already been deleted. So, we cannot safely act on the
-        // over-replication until a later point in time, when
-        // the "stale" nodes have block reported.
+      // extra redundancy block
+      if (!processExtraRedundancyBlockWithoutPostpone(block, expectedRedundancy,
+          null, null)) {
         return MisReplicationResult.POSTPONE;
       }
-      
-      // extra redundancy block
-      processExtraRedundancyBlock(block, expectedRedundancy, null, null);
       return MisReplicationResult.OVER_REPLICATED;
     }
     
@@ -4020,12 +4014,22 @@ public class BlockManager implements BlockStatsMXBean {
     }
   }
 
+  private void processExtraRedundancyBlock(final BlockInfo block,
+      final short replication, final DatanodeDescriptor addedNode,
+      DatanodeDescriptor delNodeHint) {
+    if (!processExtraRedundancyBlockWithoutPostpone(block, replication,
+        addedNode, delNodeHint)) {
+      postponeBlock(block);
+    }
+  }
+
   /**
    * Find how many of the containing nodes are "extra", if any.
    * If there are any extras, call chooseExcessRedundancies() to
    * mark them in the excessRedundancyMap.
+   * @return if all redundancy replicas are removed
    */
-  private void processExtraRedundancyBlock(final BlockInfo block,
+  private boolean processExtraRedundancyBlockWithoutPostpone(final BlockInfo block,
       final short replication, final DatanodeDescriptor addedNode,
       DatanodeDescriptor delNodeHint) {
     assert namesystem.hasWriteLock();
@@ -4035,17 +4039,17 @@ public class BlockManager implements BlockStatsMXBean {
     Collection<DatanodeStorageInfo> nonExcess = new ArrayList<>();
     Collection<DatanodeDescriptor> corruptNodes = corruptReplicas
         .getNodes(block);
+    boolean hasStaleStorage = false;
+    DatanodeStorageInfo staleStorage = null;
     for (DatanodeStorageInfo storage : blocksMap.getStorages(block)) {
       if (storage.getState() != State.NORMAL) {
         continue;
       }
       final DatanodeDescriptor cur = storage.getDatanodeDescriptor();
       if (storage.areBlockContentsStale()) {
-        LOG.trace("BLOCK* processExtraRedundancyBlock: Postponing {}"
-            + " since storage {} does not yet have up-to-date information.",
-            block, storage);
-        postponeBlock(block);
-        return;
+        hasStaleStorage = true;
+        staleStorage = storage;
+        continue;
       }
       if (!isExcess(cur, block)) {
         if (cur.isInService()) {
@@ -4058,6 +4062,13 @@ public class BlockManager implements BlockStatsMXBean {
     }
     chooseExcessRedundancies(nonExcess, block, replication, addedNode,
         delNodeHint);
+    if (hasStaleStorage) {
+      LOG.trace("BLOCK* processExtraRedundancyBlockWithoutPostpone: Postponing {}"
+              + " since storage {} does not yet have up-to-date information.",
+          block, staleStorage);
+      return false;
+    }
+    return true;
   }
 
   private void chooseExcessRedundancies(
@@ -4071,12 +4082,14 @@ public class BlockManager implements BlockStatsMXBean {
     if (storedBlock.isStriped()) {
       chooseExcessRedundancyStriped(bc, nonExcess, storedBlock, delNodeHint);
     } else {
-      final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(
-          bc.getStoragePolicyID());
-      final List<StorageType> excessTypes = storagePolicy.chooseExcess(
-          replication, DatanodeStorageInfo.toStorageTypes(nonExcess));
-      chooseExcessRedundancyContiguous(nonExcess, storedBlock, replication,
-          addedNode, delNodeHint, excessTypes);
+      if (nonExcess.size() > replication) {
+        final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(
+            bc.getStoragePolicyID());
+        final List<StorageType> excessTypes = storagePolicy.chooseExcess(
+            replication, DatanodeStorageInfo.toStorageTypes(nonExcess));
+        chooseExcessRedundancyContiguous(nonExcess, storedBlock, replication,
+            addedNode, delNodeHint, excessTypes);
+      }
     }
   }
 
