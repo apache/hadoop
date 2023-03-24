@@ -249,7 +249,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     boolean isAutoCreateEnabled = conf.isAutoCreateChildQueueEnabled(fullQueueName);
     // if a queue is eligible for auto queue creation v2 it must be a ParentQueue
     // (even if it is empty)
-    final boolean isDynamicParent = oldQueue instanceof AbstractParentQueue && oldQueue.isDynamicQueue();
+    final boolean isDynamicParent = oldQueue instanceof AbstractParentQueue &&
+            oldQueue.isDynamicQueue();
     boolean isAutoQueueCreationEnabledParent = isDynamicParent || conf.isAutoQueueCreationV2Enabled(
         fullQueueName) || isAutoCreateEnabled;
 
@@ -668,7 +669,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
           0, parentsToCreate.get(0).lastIndexOf("."));
     }
 
-    AbstractParentQueue existingParentQueue = (AbstractParentQueue) getQueue(
+    ParentQueue existingParentQueue = (ParentQueue) getQueue(
         existingParentName);
 
     for (String current : parentsToCreate) {

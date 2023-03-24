@@ -87,7 +87,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
   private volatile int numApplications;
 
   private final RecordFactory recordFactory =
-    RecordFactoryProvider.getRecordFactory(null);
+      RecordFactoryProvider.getRecordFactory(null);
 
   private QueueOrderingPolicy queueOrderingPolicy;
 
@@ -108,30 +108,30 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
 
   public AbstractParentQueue(CapacitySchedulerQueueContext queueContext,
       String queueName, CSQueue parent, CSQueue old)
-    throws IOException {
+      throws IOException {
     this(queueContext, queueName, parent, old, false);
   }
 
   public AbstractParentQueue(CapacitySchedulerQueueContext queueContext,
-    String queueName, CSQueue parent, CSQueue old, boolean isDynamic) throws
+      String queueName, CSQueue parent, CSQueue old, boolean isDynamic) throws
       IOException {
 
-      super(queueContext, queueName, parent, old);
-      setDynamicQueue(isDynamic);
-      this.rootQueue = (parent == null);
+    super(queueContext, queueName, parent, old);
+    setDynamicQueue(isDynamic);
+    this.rootQueue = (parent == null);
 
-      float rawCapacity = queueContext.getConfiguration()
+    float rawCapacity = queueContext.getConfiguration()
           .getNonLabeledQueueCapacity(this.queuePath);
 
-      if (rootQueue &&
+    if (rootQueue &&
           (rawCapacity != CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE)) {
-        throw new IllegalArgumentException("Illegal " +
+      throw new IllegalArgumentException("Illegal " +
             "capacity of " + rawCapacity + " for queue " + queueName +
             ". Must be " + CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE);
-      }
+    }
 
-      this.childQueues = new ArrayList<>();
-      this.allowZeroCapacitySum =
+    this.childQueues = new ArrayList<>();
+    this.allowZeroCapacitySum =
           queueContext.getConfiguration()
               .getAllowZeroCapacitySum(getQueuePath());
 
@@ -201,7 +201,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
 
     // Check weight configuration, throw exception when configuration is invalid
   // return true when all children use weight mode.
-  private QueueCapacityType getCapacityConfigurationTypeForQueues(
+  public QueueCapacityType getCapacityConfigurationTypeForQueues(
       Collection<CSQueue> queues) throws IOException {
     // Do we have ANY queue set capacity in any labels?
     boolean percentageIsSet = false;
@@ -273,7 +273,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     }
   }
 
-  private enum QueueCapacityType {
+  public enum QueueCapacityType {
     WEIGHT, ABSOLUTE_RESOURCE, PERCENT;
   }
 
@@ -484,7 +484,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
         "numContainers=" + getNumContainers();
   }
 
-  private CSQueue createNewQueue(String childQueuePath, boolean isLeaf)
+  public CSQueue createNewQueue(String childQueuePath, boolean isLeaf)
       throws SchedulerDynamicEditException {
     try {
       AbstractCSQueue childQueue;
@@ -506,79 +506,6 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
       throw new SchedulerDynamicEditException(e.toString());
     }
   }
-
-
-  public AbstractParentQueue addDynamicParentQueue(String queuePath)
-      throws SchedulerDynamicEditException {
-    return (AbstractParentQueue) addDynamicChildQueue(queuePath, false);
-  }
-
-  public LeafQueue addDynamicLeafQueue(String queuePath)
-      throws SchedulerDynamicEditException {
-    return (LeafQueue) addDynamicChildQueue(queuePath, true);
-  }
-
-  // New method to add child queue
-  private CSQueue addDynamicChildQueue(String childQueuePath, boolean isLeaf)
-      throws SchedulerDynamicEditException {
-    writeLock.lock();
-    try {
-      // Check if queue exists, if queue exists, write a warning message (this
-      // should not happen, since it will be handled before calling this method)
-      // , but we will move on.
-      CSQueue queue =
-          queueContext.getQueueManager().getQueueByFullName(
-              childQueuePath);
-      if (queue != null) {
-        LOG.warn(
-            "This should not happen, trying to create queue=" + childQueuePath
-                + ", however the queue already exists");
-        return queue;
-      }
-
-      // Check if the max queue limit is exceeded.
-      int maxQueues = queueContext.getConfiguration().
-          getAutoCreatedQueuesV2MaxChildQueuesLimit(getQueuePath());
-      if (childQueues.size() >= maxQueues) {
-        throw new SchedulerDynamicEditException(
-            "Cannot auto create queue " + childQueuePath + ". Max Child "
-                + "Queue limit exceeded which is configured as: " + maxQueues
-                + " and number of child queues is: " + childQueues.size());
-      }
-
-      // First, check if we allow creation or not
-      boolean weightsAreUsed = false;
-      try {
-        weightsAreUsed = getCapacityConfigurationTypeForQueues(childQueues)
-            == QueueCapacityType.WEIGHT;
-      } catch (IOException e) {
-        LOG.warn("Caught Exception during auto queue creation", e);
-      }
-      if (!weightsAreUsed) {
-        throw new SchedulerDynamicEditException(
-            "Trying to create new queue=" + childQueuePath
-                + " but not all the queues under parent=" + this.getQueuePath()
-                + " are using weight-based capacity. Failed to created queue");
-      }
-
-      CSQueue newQueue = createNewQueue(childQueuePath, isLeaf);
-      this.childQueues.add(newQueue);
-      updateLastSubmittedTimeStamp();
-
-      // Call updateClusterResource.
-      // Which will deal with all effectiveMin/MaxResource
-      // Calculation
-      this.updateClusterResource(queueContext.getClusterResource(),
-          new ResourceLimits(queueContext.getClusterResource()));
-
-      return newQueue;
-    } finally {
-      writeLock.unlock();
-    }
-  }
-
-
-
 
   // New method to remove child queue
   public void removeChildQueue(CSQueue queue)
@@ -627,9 +554,9 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
         isAutoQueueCreationV2Enabled(getQueuePath());
   }
 
-    @Override
+  @Override
   public void reinitialize(CSQueue newlyParsedQueue,
-      Resource clusterResource) throws IOException {
+        Resource clusterResource) throws IOException {
     writeLock.lock();
     try {
       // We skip reinitialize for dynamic queues, when this is called, and
@@ -810,7 +737,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     // finish attempt logic.
   }
 
- private void addApplication(ApplicationId applicationId,
+  private void addApplication(ApplicationId applicationId,
       String user) {
     writeLock.lock();
     try {
@@ -856,10 +783,10 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     return parent != null ? parent.getQueuePath() : "";
   }
 
-   @Override
+  @Override
   public CSAssignment assignContainers(Resource clusterResource,
-      CandidateNodeSet<FiCaSchedulerNode> candidates,
-      ResourceLimits resourceLimits, SchedulingMode schedulingMode) {
+       CandidateNodeSet<FiCaSchedulerNode> candidates,
+       ResourceLimits resourceLimits, SchedulingMode schedulingMode) {
     FiCaSchedulerNode node = CandidateNodeSetUtils.getSingleNode(candidates);
 
     // if our queue cannot access this node, just return
@@ -1035,7 +962,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     return assignment;
   }
 
-    private boolean canAssign(Resource clusterResource, FiCaSchedulerNode node) {
+  private boolean canAssign(Resource clusterResource, FiCaSchedulerNode node) {
     // When node == null means global scheduling is enabled, always return true
     if (null == node) {
       return true;
@@ -1177,7 +1104,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
   private void printChildQueues() {
     if (LOG.isDebugEnabled()) {
       LOG.debug("printChildQueues - queue: " + getQueuePath()
-        + " child-queues: " + getChildQueuesToPrint());
+          + " child-queues: " + getChildQueuesToPrint());
     }
   }
 

@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -41,5 +43,74 @@ public class ParentQueue extends AbstractParentQueue {
       throws IOException {
     super(queueContext, queueName, parent, old, isDynamic);
     super.setupQueueConfigs(queueContext.getClusterResource());
+  }
+
+  public ParentQueue addDynamicParentQueue(String queuePath)
+      throws SchedulerDynamicEditException {
+    return (ParentQueue) addDynamicChildQueue(queuePath, false);
+  }
+
+  public LeafQueue addDynamicLeafQueue(String queuePath)
+      throws SchedulerDynamicEditException {
+    return (LeafQueue) addDynamicChildQueue(queuePath, true);
+  }
+
+  // New method to add child queue
+  private CSQueue addDynamicChildQueue(String childQueuePath, boolean isLeaf)
+      throws SchedulerDynamicEditException {
+    writeLock.lock();
+    try {
+      // Check if queue exists, if queue exists, write a warning message (this
+      // should not happen, since it will be handled before calling this method)
+      // , but we will move on.
+      CSQueue queue =
+          queueContext.getQueueManager().getQueueByFullName(
+              childQueuePath);
+      if (queue != null) {
+        LOG.warn(
+            "This should not happen, trying to create queue=" + childQueuePath
+                + ", however the queue already exists");
+        return queue;
+      }
+
+      // Check if the max queue limit is exceeded.
+      int maxQueues = queueContext.getConfiguration().
+          getAutoCreatedQueuesV2MaxChildQueuesLimit(getQueuePath());
+      if (childQueues.size() >= maxQueues) {
+        throw new SchedulerDynamicEditException(
+            "Cannot auto create queue " + childQueuePath + ". Max Child "
+                + "Queue limit exceeded which is configured as: " + maxQueues
+                + " and number of child queues is: " + childQueues.size());
+      }
+
+      // First, check if we allow creation or not
+      boolean weightsAreUsed = false;
+      try {
+        weightsAreUsed = getCapacityConfigurationTypeForQueues(childQueues)
+            == QueueCapacityType.WEIGHT;
+      } catch (IOException e) {
+        LOG.warn("Caught Exception during auto queue creation", e);
+      }
+      if (!weightsAreUsed) {
+        throw new SchedulerDynamicEditException(
+            "Trying to create new queue=" + childQueuePath
+                + " but not all the queues under parent=" + this.getQueuePath()
+                + " are using weight-based capacity. Failed to created queue");
+      }
+
+      CSQueue newQueue = createNewQueue(childQueuePath, isLeaf);
+      this.childQueues.add(newQueue);
+      updateLastSubmittedTimeStamp();
+
+      // Call updateClusterResource.
+      // Which will deal with all effectiveMin/MaxResource
+      // Calculation
+      this.updateClusterResource(queueContext.getClusterResource(),
+          new ResourceLimits(queueContext.getClusterResource()));
+
+      return newQueue;
+    } finally {
+      writeLock.unlock();
+    }
   }
 }
