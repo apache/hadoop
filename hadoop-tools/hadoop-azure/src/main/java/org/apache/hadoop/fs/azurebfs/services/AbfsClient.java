@@ -38,7 +38,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -57,6 +56,7 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
@@ -117,7 +117,9 @@ public class AbfsClient implements Closeable {
   private static final LogExactlyOnce ABFS_METADATA_INCOMPLETE_RENAME_FAILURE = new LogExactlyOnce(LOG);
 
   private AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
-                     final AbfsConfiguration abfsConfiguration, final AbfsClientContext abfsClientContext) throws IOException {
+                    final AbfsConfiguration abfsConfiguration,
+                    final AbfsClientContext abfsClientContext)
+      throws IOException {
     this.baseUrl = baseUrl;
     this.sharedKeyCredentials = sharedKeyCredentials;
     String baseUrlString = baseUrl.toString();
@@ -129,11 +131,12 @@ public class AbfsClient implements Closeable {
     this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
     this.renameResilience = abfsConfiguration.getRenameResilience();
 
-
-    String encryptionKey = this.abfsConfiguration.getClientProvidedEncryptionKey();
+    String encryptionKey = this.abfsConfiguration
+        .getClientProvidedEncryptionKey();
     if (encryptionKey != null) {
       this.clientProvidedEncryptionKey = getBase64EncodedString(encryptionKey);
-      this.clientProvidedEncryptionKeySHA = getBase64EncodedString(getSHA256Hash(encryptionKey));
+      this.clientProvidedEncryptionKeySHA = getBase64EncodedString(
+          getSHA256Hash(encryptionKey));
     } else {
       this.clientProvidedEncryptionKey = null;
       this.clientProvidedEncryptionKeySHA = null;
@@ -149,7 +152,8 @@ public class AbfsClient implements Closeable {
         sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory().getProviderName();
       } catch (IOException e) {
         // Suppress exception. Failure to init DelegatingSSLSocketFactory would have only performance impact.
-        LOG.trace("NonCritFailure: DelegatingSSLSocketFactory Init failed : " + "{}", e.getMessage());
+        LOG.trace("NonCritFailure: DelegatingSSLSocketFactory Init failed : "
+            + "{}", e.getMessage());
       }
     }
 
@@ -157,14 +161,17 @@ public class AbfsClient implements Closeable {
     this.abfsPerfTracker = abfsClientContext.getAbfsPerfTracker();
     this.abfsCounters = abfsClientContext.getAbfsCounters();
 
-    ThreadFactory tf = new ThreadFactoryBuilder().setNameFormat("AbfsClient Lease Ops").setDaemon(true).build();
-    this.executorService = MoreExecutors.listeningDecorator(HadoopExecutors.newScheduledThreadPool(this.abfsConfiguration.getNumLeaseThreads(), tf));
+    ThreadFactory tf =
+        new ThreadFactoryBuilder().setNameFormat("AbfsClient Lease Ops").setDaemon(true).build();
+    this.executorService = MoreExecutors.listeningDecorator(
+        HadoopExecutors.newScheduledThreadPool(this.abfsConfiguration.getNumLeaseThreads(), tf));
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
                     final AccessTokenProvider tokenProvider,
-                    final AbfsClientContext abfsClientContext) throws IOException {
+                    final AbfsClientContext abfsClientContext)
+      throws IOException {
     this(baseUrl, sharedKeyCredentials, abfsConfiguration, abfsClientContext);
     this.tokenProvider = tokenProvider;
   }
@@ -172,7 +179,8 @@ public class AbfsClient implements Closeable {
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
                     final SASTokenProvider sasTokenProvider,
-                    final AbfsClientContext abfsClientContext) throws IOException {
+                    final AbfsClientContext abfsClientContext)
+      throws IOException {
     this(baseUrl, sharedKeyCredentials, abfsConfiguration, abfsClientContext);
     this.sasTokenProvider = sasTokenProvider;
   }
@@ -238,11 +246,15 @@ public class AbfsClient implements Closeable {
     return requestHeaders;
   }
 
-  private void addCustomerProvidedKeyHeaders(final List<AbfsHttpHeader> requestHeaders) {
+  private void addCustomerProvidedKeyHeaders(
+      final List<AbfsHttpHeader> requestHeaders) {
     if (clientProvidedEncryptionKey != null) {
-      requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_KEY, clientProvidedEncryptionKey));
-      requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_KEY_SHA256, clientProvidedEncryptionKeySHA));
-      requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_ALGORITHM, SERVER_SIDE_ENCRYPTION_ALGORITHM));
+      requestHeaders.add(
+          new AbfsHttpHeader(X_MS_ENCRYPTION_KEY, clientProvidedEncryptionKey));
+      requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_KEY_SHA256,
+          clientProvidedEncryptionKeySHA));
+      requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_ALGORITHM,
+          SERVER_SIDE_ENCRYPTION_ALGORITHM));
     }
   }
 
@@ -382,7 +394,9 @@ public class AbfsClient implements Closeable {
       abfsUriQueryBuilder.addQuery(QUERY_PARAM_BLOBTYPE, APPEND_BLOB_TYPE);
     }
 
-    String operation = isFile ? SASTokenProvider.CREATE_FILE_OPERATION : SASTokenProvider.CREATE_DIRECTORY_OPERATION;
+    String operation = isFile
+        ? SASTokenProvider.CREATE_FILE_OPERATION
+        : SASTokenProvider.CREATE_DIRECTORY_OPERATION;
     appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
@@ -400,7 +414,8 @@ public class AbfsClient implements Closeable {
         throw ex;
       }
       if (!isFile && op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
-        String existingResource = op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
+        String existingResource =
+            op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
         if (existingResource != null && existingResource.equals(DIRECTORY)) {
           return op; //don't throw ex on mkdirs for existing directory
         }
@@ -421,16 +436,17 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.LeasePath,
-            this, HTTP_METHOD_POST,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.LeasePath,
+        this,
+        HTTP_METHOD_POST,
+        url,
+        requestHeaders);
     op.execute(tracingContext);
     return op;
   }
 
   public AbfsRestOperation renewLease(final String path, final String leaseId,
-                                      TracingContext tracingContext) throws AzureBlobFileSystemException {
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, RENEW_LEASE_ACTION));
@@ -440,17 +456,17 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.LeasePath,
-            this,
-            HTTP_METHOD_POST,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.LeasePath,
+        this,
+        HTTP_METHOD_POST,
+        url,
+        requestHeaders);
     op.execute(tracingContext);
     return op;
   }
 
-  public AbfsRestOperation releaseLease(final String path, final String leaseId,
-                                        TracingContext tracingContext) throws AzureBlobFileSystemException {
+  public AbfsRestOperation releaseLease(final String path,
+      final String leaseId, TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, RELEASE_LEASE_ACTION));
@@ -460,16 +476,17 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.LeasePath,
-            this,
-            HTTP_METHOD_POST,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.LeasePath,
+        this,
+        HTTP_METHOD_POST,
+        url,
+        requestHeaders);
     op.execute(tracingContext);
     return op;
   }
 
-  public AbfsRestOperation breakLease(final String path, TracingContext tracingContext) throws AzureBlobFileSystemException {
+  public AbfsRestOperation breakLease(final String path,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, BREAK_LEASE_ACTION));
@@ -479,11 +496,11 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.LeasePath,
-            this,
-            HTTP_METHOD_POST,
-            url,
-            requestHeaders);
+        AbfsRestOperationType.LeasePath,
+        this,
+        HTTP_METHOD_POST,
+        url,
+        requestHeaders);
     op.execute(tracingContext);
     return op;
   }
@@ -498,12 +515,11 @@ public class AbfsClient implements Closeable {
    * took place.
    * As rename recovery is only attempted if the source etag is non-empty,
    * in normal rename operations rename recovery will never happen.
-   *
-   * @param source                    path to source file
-   * @param destination               destination of rename.
-   * @param continuation              continuation.
-   * @param tracingContext            trace context
-   * @param sourceEtag                etag of source file. may be null or empty
+   * @param source path to source file
+   * @param destination destination of rename.
+   * @param continuation continuation.
+   * @param tracingContext trace context
+   * @param sourceEtag etag of source file. may be null or empty
    * @param isMetadataIncompleteState was there a rename failure due to
    *                                  incomplete metadata state?
    * @return AbfsClientRenameResult result of rename operation indicating the
@@ -589,7 +605,8 @@ public class AbfsClient implements Closeable {
         if (isEmpty(sourceEtagAfterFailure)) {
           // Doing a HEAD call resolves the incomplete metadata state and
           // then we can retry the rename operation.
-          AbfsRestOperation sourceStatusOp = getPathStatus(source, false, tracingContext);
+          AbfsRestOperation sourceStatusOp = getPathStatus(source, false,
+              tracingContext);
           isMetadataIncompleteState = true;
           // Extract the sourceEtag, using the status Op, and set it
           // for future rename recovery.
@@ -644,21 +661,19 @@ public class AbfsClient implements Closeable {
   /**
    * Check if the rename request failure is post a retry and if earlier rename
    * request might have succeeded at back-end.
-   * <p>
+   *
    * If a source etag was passed in, and the error was 404, get the
    * etag of any file at the destination.
    * If it matches the source etag, then the rename is considered
    * a success.
    * Exceptions raised in the probe of the destination are swallowed,
    * so that they do not interfere with the original rename failures.
-   *
-   * @param source         source path
-   * @param op             Rename request REST operation response with non-null HTTP response
-   * @param destination    rename destination path
-   * @param sourceEtag     etag of source file. may be null or empty
+   * @param source source path
+   * @param op Rename request REST operation response with non-null HTTP response
+   * @param destination rename destination path
+   * @param sourceEtag etag of source file. may be null or empty
    * @param tracingContext Tracks identifiers for request header
    * @return true if the file was successfully copied
-   * </p>
    */
   public boolean renameIdempotencyCheckOp(
           final String source,
