@@ -1918,7 +1918,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   @VisibleForTesting
-  public void setClient(AbfsClient client) {
+  void setClient(AbfsClient client) {
     this.client = client;
   }
 

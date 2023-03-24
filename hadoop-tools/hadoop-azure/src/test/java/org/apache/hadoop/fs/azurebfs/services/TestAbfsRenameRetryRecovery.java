@@ -47,6 +47,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.PATH_ALREADY_EXISTS;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
@@ -244,7 +246,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     touch(new Path(path1));
 
-    abfsStore.setClient(mockClient);
+    setAbfsClient(abfsStore, mockClient);
 
     // checking correct count in AbfsCounters
     AbfsCounters counter = mockClient.getAbfsCounters();
@@ -296,7 +298,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     fs.create(new Path(path2));
 
-    abfsStore.setClient(mockClient);
+    setAbfsClient(abfsStore, mockClient);
 
     // source eTag does not match -> rename should be a failure
     assertEquals(false, fs.rename(new Path(path1), new Path(path2)));
@@ -321,7 +323,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     fs.mkdirs(path1);
 
-    abfsStore.setClient(mockClient);
+    setAbfsClient(abfsStore, mockClient);
 
     // checking correct count in AbfsCounters
     AbfsCounters counter = mockClient.getAbfsCounters();
@@ -431,7 +433,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     touch(new Path(path1));
 
-    abfsStore.setClient(mockClient);
+    setAbfsClient(abfsStore, mockClient);
 
     // checking correct count in AbfsCounters
     AbfsCounters counter = mockClient.getAbfsCounters();
