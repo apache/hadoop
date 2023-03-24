@@ -36,7 +36,7 @@ public final class DfsPathCapabilities {
    * @return either a value to return or, if empty, a cue for the FS to
    * pass up to its superclass.
    */
-  public static Boolean hasPathCapability(final Path path,
+  public static boolean hasPathCapability(final Path path,
       final String capability) {
     switch (validatePathCapabilityArgs(path, capability)) {
 
@@ -56,7 +56,7 @@ public final class DfsPathCapabilities {
     case CommonPathCapabilities.FS_SYMLINKS:
       return FileSystem.areSymlinksEnabled();
     default:
-      return null;
+      return false;
     }
   }
 }
