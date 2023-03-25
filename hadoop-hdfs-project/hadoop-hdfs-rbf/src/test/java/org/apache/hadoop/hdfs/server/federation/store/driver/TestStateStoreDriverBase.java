@@ -596,17 +596,18 @@ public class TestStateStoreDriverBase {
     return mountTableCache;
   }
 
-  public void testCacheLoadMetrics(StateStoreDriver driver, long numRefresh)
-      throws IOException, IllegalArgumentException {
+  public void testCacheLoadMetrics(StateStoreDriver driver, long numRefresh,
+      double expectedHigherThan) throws IOException, IllegalArgumentException {
     final MutableRate mountTableCache = getMountTableCache(driver);
     // CacheMountTableLoadNumOps
     final long mountTableCacheLoadNumOps = getMountTableCacheLoadSamples(driver);
     assertEquals("Num of samples collected should match", numRefresh, mountTableCacheLoadNumOps);
     // CacheMountTableLoadAvgTime ms
     final double mountTableCacheLoadAvgTimeMs = mountTableCache.lastStat().mean();
-    assertTrue("Mean time duration for cache load is expected to be higher or equal to 0 ms."
-        + " Actual value: " + mountTableCacheLoadAvgTimeMs,
-        mountTableCacheLoadAvgTimeMs >= 0.0d);
+    assertTrue(
+        "Mean time duration for cache load is expected to be higher than " + expectedHigherThan
+            + " ms." + " Actual value: " + mountTableCacheLoadAvgTimeMs,
+        mountTableCacheLoadAvgTimeMs > expectedHigherThan);
   }
 
   /**
