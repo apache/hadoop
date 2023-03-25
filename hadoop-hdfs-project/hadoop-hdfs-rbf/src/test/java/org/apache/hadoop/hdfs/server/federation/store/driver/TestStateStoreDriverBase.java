@@ -602,14 +602,14 @@ public class TestStateStoreDriverBase {
     // CacheMountTableLoadNumOps
     final long mountTableCacheLoadNumOps = getMountTableCacheLoadSamples(driver);
     assertEquals("Num of samples collected should match", numRefresh, mountTableCacheLoadNumOps);
-    // CacheMountTableLoadAvgTime
-    final double mountTableCacheLoadAvgTime = mountTableCache.lastStat().mean();
-    // 2000 ms is pretty high enough value for the test, hence we expect mount table cache
+    // CacheMountTableLoadAvgTime ms
+    final double mountTableCacheLoadAvgTimeMs = mountTableCache.lastStat().mean();
+    // 2 seconds is a high enough value for the test, hence we expect mount table cache
     // with very few entries to be loaded by this time duration, hence not have this test result
     // show flaky behavior.
     assertTrue(
         "Mean time duration for cache load is expected to be less than 2000 ms. Actual value: "
-            + mountTableCacheLoadAvgTime, mountTableCacheLoadAvgTime < 2000d);
+            + mountTableCacheLoadAvgTimeMs, mountTableCacheLoadAvgTimeMs < 2000d);
   }
 
   /**
