@@ -325,7 +325,7 @@ class DistCpSync {
       throw new IOException(e.getCause());
     } catch (NoSuchMethodException|IllegalAccessException e) {
       throw new IllegalArgumentException(
-          "failed to invoke getSnapshotDiffReport.", e);
+          "Failed to invoke getSnapshotDiffReport.", e);
     }
   }
 
