@@ -115,7 +115,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
   @VisibleForTesting
   protected ResourceManagerAdministrationProtocol getAdminRMProxyForSubCluster(
-      SubClusterId subClusterId) throws YarnException {
+      SubClusterId subClusterId) throws Exception {
 
     if (adminRMProxies.containsKey(subClusterId)) {
       return adminRMProxies.get(subClusterId);

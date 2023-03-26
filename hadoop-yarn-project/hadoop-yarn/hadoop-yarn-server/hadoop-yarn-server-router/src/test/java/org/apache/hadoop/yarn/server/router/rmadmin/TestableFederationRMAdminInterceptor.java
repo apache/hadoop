@@ -48,12 +48,13 @@ public class TestableFederationRMAdminInterceptor extends FederationRMAdminInter
 
   // Used to Store the relationship between SubClusterId and RM
   private ConcurrentHashMap<SubClusterId, MockRM> mockRMs = new ConcurrentHashMap<>();
+
   // Store Bad subCluster
   private Set<SubClusterId> badSubCluster = new HashSet<>();
 
   @Override
   protected ResourceManagerAdministrationProtocol getAdminRMProxyForSubCluster(
-      SubClusterId subClusterId) throws YarnException {
+      SubClusterId subClusterId) throws Exception {
     MockRM mockRM;
     synchronized (this) {
       if (mockRMs.containsKey(subClusterId)) {
@@ -67,11 +68,7 @@ public class TestableFederationRMAdminInterceptor extends FederationRMAdminInter
         }
         mockRM.init(config);
         mockRM.start();
-        try {
-          mockRM.registerNode("127.0.0.1:1", 102400, 100);
-        } catch (Exception e) {
-          Assert.fail(e.getMessage());
-        }
+        mockRM.registerNode("127.0.0.1:1", 102400, 100);
         mockRMs.put(subClusterId, mockRM);
       }
       return mockRM.getAdminService();
