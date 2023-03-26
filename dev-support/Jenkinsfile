@@ -279,6 +279,7 @@ pipeline {
                             -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER%^
                             hadoop-windows-10-builder "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "/q" "C:\\src" "C:\\hadoop"^
                                 "&&" "C:\\Git\\bin\\bash.exe" "-c" \'"/c/src/dev-support/jenkins.sh" "run_ci"\''''
+                    bat 'docker image ls'
                 }
             }
 
@@ -331,11 +332,7 @@ pipeline {
         // Jenkins pipeline jobs fill slaves on PRs without this :(
         cleanup() {
             script {
-                bat '''
-                C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod -R u+rxw ${WORKSPACE}"
-                docker run --rm -v %WORKSPACE%\\out:C:\\out -v %WORKSPACE%\\src:C:\\src^
-                    hadoop-windows-10-builder "/c" "rmdir" "/s" "/q" "C:\\out"
-                '''
+                bat 'docker image ls'
                 deleteDir()
             }
         }
