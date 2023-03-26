@@ -23,7 +23,13 @@ def getGithubCreds() {
 
 // Publish JUnit results only if there are XML files under surefire-reports
 def publishJUnitResults() {
-    def findCmdExitCode = sh script: "find ${SOURCEDIR} -wholename */target/surefire-reports/*.xml | egrep .", returnStatus: true
+    def findCmdExitCode = 0
+    if (IS_WINDOWS == 1) {
+        findCmdExitCode = bat script: '''C:\\PROGRA~1\\Git\\bin\\bash.exe -c "find ${SOURCEDIR} -wholename */target/surefire-reports/*.xml | egrep ."''', returnStatus: true
+    } else {
+        findCmdExitCode = sh script: "find ${SOURCEDIR} -wholename */target/surefire-reports/*.xml | egrep .", returnStatus: true
+    }
+
     boolean surefireReportsExist = findCmdExitCode == 0
     if (surefireReportsExist) {
         echo "XML files found under surefire-reports, running junit"
@@ -260,10 +266,12 @@ pipeline {
                 DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_windows_10"
                 IS_OPTIONAL = 0
                 DOCKER_BUILDKIT = 0
+                IS_WINDOWS = 1
             }
 
             steps {
                 withCredentials(getGithubCreds()) {
+                    bat 'whoami /groups'
                     bat 'if not exist %WORKSPACE%\\out mkdir %WORKSPACE%\\out'
                     bat 'if not exist F:\\maven\\repository mkdir F:\\maven\\repository'
                     bat '''docker build --label org.apache.yetus=""^
@@ -278,8 +286,9 @@ pipeline {
                             -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out^
                             -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER%^
                             hadoop-windows-10-builder "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "/q" "C:\\src" "C:\\hadoop"^
-                                "&&" "C:\\Git\\bin\\bash.exe" "-c" \'"/c/src/dev-support/jenkins.sh" "run_ci"\''''
-                    bat 'docker image ls'
+                                "&&" "C:\\Git\\bin\\bash.exe" "-c" \'"/c/src/dev-support/jenkins.sh" "run_ci"\'
+                                "&&" "icacls" "C:\\out" "/q" "/c" "/t" "/grant" "Users:F"
+                        '''
                 }
             }
 
@@ -332,7 +341,6 @@ pipeline {
         // Jenkins pipeline jobs fill slaves on PRs without this :(
         cleanup() {
             script {
-                bat 'docker image ls'
                 deleteDir()
             }
         }
