@@ -286,7 +286,7 @@ pipeline {
                             -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out^
                             -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER%^
                             hadoop-windows-10-builder "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "/q" "C:\\src" "C:\\hadoop"^
-                                "&&" "C:\\Git\\bin\\bash.exe" "-c" \'"/c/src/dev-support/jenkins.sh" "run_ci"\'
+                                "&&" "C:\\Git\\bin\\bash.exe" "-c" \'"/c/src/dev-support/jenkins.sh" "run_ci"\'^
                                 "&&" "icacls" "C:\\out" "/q" "/c" "/t" "/grant" "Users:F"
                         '''
                 }
