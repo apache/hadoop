@@ -569,7 +569,7 @@ final class S3ADataBlocks {
         super(index, statistics);
         this.bufferSize = bufferSize > Integer.MAX_VALUE ?
             Integer.MAX_VALUE : (int) bufferSize;
-        blockBuffer = requestBuffer((int) bufferSize);
+        blockBuffer = requestBuffer(this.bufferSize);
         blockAllocated();
       }
 

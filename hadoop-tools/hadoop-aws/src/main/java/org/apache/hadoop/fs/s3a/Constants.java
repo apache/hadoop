@@ -1256,7 +1256,7 @@ public final class Constants {
   public static final String PREFETCH_BLOCK_COUNT_KEY = "fs.s3a.prefetch.block.count";
   public static final int PREFETCH_BLOCK_DEFAULT_COUNT = 8;
 
-  public static final String ALLOW_MULTIPART_UPLOADS = "fs.s3a.allow.multipart.uploads";
+  public static final String MULTIPART_UPLOADS_ENABLED = "fs.s3a.multipart.uploads.enabled";
 
-  public static final boolean IS_ALLOWED_MULTIPART_UPLOADS_DEFAULT = true;
+  public static final boolean MULTIPART_UPLOAD_ENABLED_DEFAULT = true;
 }

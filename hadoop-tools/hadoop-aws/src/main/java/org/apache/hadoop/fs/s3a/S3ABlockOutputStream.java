@@ -170,7 +170,7 @@ class S3ABlockOutputStream extends OutputStream implements
   private final IOStatisticsAggregator threadIOStatisticsAggregator;
 
   /**Is multipart upload allowed? */
-  private final boolean isMultipartAllowed;
+  private final boolean isMultipartEnabled;
 
   /**
    * An S3A output stream which uploads partitions in a separate pool of
@@ -203,7 +203,7 @@ class S3ABlockOutputStream extends OutputStream implements
     createBlockIfNeeded();
     LOG.debug("Initialized S3ABlockOutputStream for {}" +
         " output to {}", key, activeBlock);
-    this.isMultipartAllowed = builder.isMultipartAllowed;
+    this.isMultipartEnabled = builder.isMultipartAllowed;
     if (putTracker.initialize()) {
       LOG.debug("Put tracker requests multipart upload");
       initMultipartUpload();
@@ -373,7 +373,7 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   @Retries.RetryTranslated
   private void initMultipartUpload() throws IOException {
-    if (!isMultipartAllowed){
+    if (!isMultipartEnabled){
       return;
     }
     if (multiPartUpload == null) {

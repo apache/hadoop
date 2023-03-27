@@ -516,7 +516,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
       partSize = getMultipartSizeProperty(conf,
           MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
-      LOG.warn("Patcchhhh: The part size is : {}", partSize);
       multiPartThreshold = getMultipartSizeProperty(conf,
           MIN_MULTIPART_THRESHOLD, DEFAULT_MIN_MULTIPART_THRESHOLD);
 
@@ -596,7 +595,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       blockOutputBuffer = conf.getTrimmed(FAST_UPLOAD_BUFFER,
           DEFAULT_FAST_UPLOAD_BUFFER);
-      //partSize = ensureOutputParameterInRange(MULTIPART_SIZE, partSize);
       blockFactory = S3ADataBlocks.createFactory(this, blockOutputBuffer);
       blockOutputActiveBlocks = intOption(conf,
           FAST_UPLOAD_ACTIVE_BLOCKS, DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS, 1);
@@ -1861,8 +1859,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withPutOptions(putOptions)
         .withIOStatisticsAggregator(
             IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator())
-            .withMultipartAllowed(getConf().getBoolean(ALLOW_MULTIPART_UPLOADS,
-                IS_ALLOWED_MULTIPART_UPLOADS_DEFAULT));
+            .withMultipartAllowed(getConf().getBoolean(
+                MULTIPART_UPLOADS_ENABLED, MULTIPART_UPLOAD_ENABLED_DEFAULT));
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);

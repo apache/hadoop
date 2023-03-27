@@ -38,7 +38,7 @@ public class ITestS3AHugeFileUpload extends S3AScaleTestBase{
   @Override
   protected Configuration createScaleConfiguration() {
     Configuration configuration = super.createScaleConfiguration();
-    configuration.setBoolean(Constants.ALLOW_MULTIPART_UPLOADS, false);
+    configuration.setBoolean(Constants.MULTIPART_UPLOADS_ENABLED, false);
     configuration.setLong(MULTIPART_SIZE, 53687091200L);
     configuration.setInt(KEY_TEST_TIMEOUT, 36000);
     configuration.setInt(IO_CHUNK_BUFFER_SIZE, 655360);

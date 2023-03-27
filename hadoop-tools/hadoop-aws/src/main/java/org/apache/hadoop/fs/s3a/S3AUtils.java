@@ -1032,11 +1032,11 @@ public final class S3AUtils {
   }
 
   public static boolean checkDiskBuffer(Configuration conf){
-    boolean isAllowedMultipart = conf.getBoolean(ALLOW_MULTIPART_UPLOADS,
-        IS_ALLOWED_MULTIPART_UPLOADS_DEFAULT);
-    if (isAllowedMultipart) {
+    boolean isMultipartEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
+        MULTIPART_UPLOAD_ENABLED_DEFAULT);
+    if (isMultipartEnabled) {
       return true;
-    } else if (!isAllowedMultipart && conf.get(FAST_UPLOAD_BUFFER)
+    } else if (!isMultipartEnabled && conf.get(FAST_UPLOAD_BUFFER)
         .equals(FAST_UPLOAD_BUFFER_DISK)){
       return true;
     } else {
