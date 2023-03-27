@@ -748,8 +748,8 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
 
     //mkdir sub dirs in srcDir  mapping ns0 & ns1
     routerFs.mkdirs(new Path(srcDir + "/dir1"));
-    routerFs.mkdirs(new Path(srcDir + "/dir1/dir_11"));
-    routerFs.mkdirs(new Path(srcDir + "/dir1/dir_12"));
+    routerFs.mkdirs(new Path(srcDir + "/dir1/dir_1"));
+    routerFs.mkdirs(new Path(srcDir + "/dir1/dir_2"));
     routerFs.mkdirs(new Path(targetDir));
 
     //try to rename sub dir in srcDir (mapping to ns0 & ns1) to targetDir
@@ -757,7 +757,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     LambdaTestUtils.intercept(IOException.class, "The number of" +
             " remote locations for both source and target should be same.",
         () -> {
-          routerFs.rename(new Path(srcDir + "/dir1/dir_11"),
+          routerFs.rename(new Path(srcDir + "/dir1/dir_1"),
               new Path(targetDir));
         });
   }
