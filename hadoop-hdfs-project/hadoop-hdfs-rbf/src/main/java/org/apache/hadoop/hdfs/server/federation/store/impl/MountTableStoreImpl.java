@@ -117,7 +117,9 @@ public class MountTableStoreImpl extends MountTableStore {
       AddMountTableEntryResponse response =
           AddMountTableEntryResponse.newInstance();
       response.setStatus(status);
-      updateCacheAllRouters();
+      if (status) {
+        updateCacheAllRouters();
+      }
       return response;
     } else {
       AddMountTableEntryResponse response =
@@ -139,7 +141,9 @@ public class MountTableStoreImpl extends MountTableStore {
       UpdateMountTableEntryResponse response =
           UpdateMountTableEntryResponse.newInstance();
       response.setStatus(status);
-      updateCacheAllRouters();
+      if (status) {
+        updateCacheAllRouters();
+      }
       return response;
     } else {
       UpdateMountTableEntryResponse response =
@@ -170,7 +174,9 @@ public class MountTableStoreImpl extends MountTableStore {
     RemoveMountTableEntryResponse response =
         RemoveMountTableEntryResponse.newInstance();
     response.setStatus(status);
-    updateCacheAllRouters();
+    if (status) {
+      updateCacheAllRouters();
+    }
     return response;
   }
 

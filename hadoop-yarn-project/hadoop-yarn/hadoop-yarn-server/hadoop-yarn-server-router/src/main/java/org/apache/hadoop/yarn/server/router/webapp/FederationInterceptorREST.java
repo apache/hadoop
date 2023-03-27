@@ -129,6 +129,8 @@ import org.apache.hadoop.yarn.server.router.webapp.dao.FederationBulkActivitiesI
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.SubClusterResult;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterUserInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterInfo;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -1137,14 +1139,84 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     return getClusterInfo();
   }
 
+  /**
+   * This method retrieves the cluster information, and it is reachable by using
+   * {@link RMWSConsts#INFO}.
+   *
+   * In Federation mode, we will return a FederationClusterInfo object,
+   * which contains a set of ClusterInfo.
+   *
+   * @return the cluster information.
+   */
   @Override
   public ClusterInfo getClusterInfo() {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      long startTime = Time.now();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      Class[] argsClasses = new Class[]{};
+      Object[] args = new Object[]{};
+      ClientMethod remoteMethod = new ClientMethod("getClusterInfo", argsClasses, args);
+      Map<SubClusterInfo, ClusterInfo> subClusterInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, ClusterInfo.class);
+      FederationClusterInfo federationClusterInfo = new FederationClusterInfo();
+      subClusterInfoMap.forEach((subClusterInfo, clusterInfo) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        clusterInfo.setSubClusterId(subClusterId.getId());
+        federationClusterInfo.getList().add(clusterInfo);
+      });
+      long stopTime = Time.now();
+      routerMetrics.succeededGetClusterInfoRetrieved(stopTime - startTime);
+      return federationClusterInfo;
+    } catch (NotFoundException e) {
+      routerMetrics.incrGetClusterInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException | IOException e) {
+      routerMetrics.incrGetClusterInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("getClusterInfo error.", e);
+    }
+    routerMetrics.incrGetClusterInfoFailedRetrieved();
+    throw new RuntimeException("getClusterInfo error.");
   }
 
+  /**
+   * This method retrieves the cluster user information, and it is reachable by using
+   * {@link RMWSConsts#CLUSTER_USER_INFO}.
+   *
+   * In Federation mode, we will return a ClusterUserInfo object,
+   * which contains a set of ClusterUserInfo.
+   *
+   * @param hsr the servlet request
+   * @return the cluster user information
+   */
   @Override
   public ClusterUserInfo getClusterUserInfo(HttpServletRequest hsr) {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      long startTime = Time.now();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{HttpServletRequest.class};
+      Object[] args = new Object[]{hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("getClusterUserInfo", argsClasses, args);
+      Map<SubClusterInfo, ClusterUserInfo> subClusterInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, ClusterUserInfo.class);
+      FederationClusterUserInfo federationClusterUserInfo = new FederationClusterUserInfo();
+      subClusterInfoMap.forEach((subClusterInfo, clusterUserInfo) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        clusterUserInfo.setSubClusterId(subClusterId.getId());
+        federationClusterUserInfo.getList().add(clusterUserInfo);
+      });
+      long stopTime = Time.now();
+      routerMetrics.succeededGetClusterUserInfoRetrieved(stopTime - startTime);
+      return federationClusterUserInfo;
+    } catch (NotFoundException e) {
+      routerMetrics.incrGetClusterUserInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException | IOException e) {
+      routerMetrics.incrGetClusterUserInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("getClusterUserInfo error.", e);
+    }
+    routerMetrics.incrGetClusterUserInfoFailedRetrieved();
+    throw new RuntimeException("getClusterUserInfo error.");
   }
 
   /**
