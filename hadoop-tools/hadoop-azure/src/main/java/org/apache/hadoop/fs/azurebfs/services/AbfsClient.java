@@ -109,7 +109,6 @@ public class AbfsClient implements Closeable {
   private final ListeningScheduledExecutorService executorService;
 
   private boolean renameResilience;
-  private boolean isNamespaceEnabled;
 
   /**
    * logging the rename failure if metadata is in an incomplete state.
@@ -228,10 +227,6 @@ public class AbfsClient implements Closeable {
 
   AbfsThrottlingIntercept getIntercept() {
     return intercept;
-  }
-
-  public void setIsNamespaceEnabled(boolean isHnsEnabled) {
-    this.isNamespaceEnabled = isHnsEnabled;
   }
 
   List<AbfsHttpHeader> createDefaultHeaders() {
@@ -515,24 +510,27 @@ public class AbfsClient implements Closeable {
    * took place.
    * As rename recovery is only attempted if the source etag is non-empty,
    * in normal rename operations rename recovery will never happen.
-   * @param source path to source file
-   * @param destination destination of rename.
-   * @param continuation continuation.
-   * @param tracingContext trace context
-   * @param sourceEtag etag of source file. may be null or empty
+   *
+   * @param source                    path to source file
+   * @param destination               destination of rename.
+   * @param continuation              continuation.
+   * @param tracingContext            trace context
+   * @param sourceEtag                etag of source file. may be null or empty
    * @param isMetadataIncompleteState was there a rename failure due to
    *                                  incomplete metadata state?
+   * @param isNamespaceEnabled        whether namespace enabled account or not
    * @return AbfsClientRenameResult result of rename operation indicating the
    * AbfsRest operation, rename recovery and incomplete metadata state failure.
    * @throws AzureBlobFileSystemException failure, excluding any recovery from overload failures.
    */
   public AbfsClientRenameResult renamePath(
-      final String source,
-      final String destination,
-      final String continuation,
-      final TracingContext tracingContext,
-      String sourceEtag,
-      boolean isMetadataIncompleteState)
+          final String source,
+          final String destination,
+          final String continuation,
+          final TracingContext tracingContext,
+          String sourceEtag,
+          boolean isMetadataIncompleteState,
+          boolean isNamespaceEnabled)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
@@ -616,7 +614,7 @@ public class AbfsClient implements Closeable {
           sourceEtagAfterFailure = extractEtagHeader(sourceStatusResult);
         }
         renamePath(source, destination, continuation, tracingContext,
-                sourceEtagAfterFailure, isMetadataIncompleteState);
+                sourceEtagAfterFailure, isMetadataIncompleteState, isNamespaceEnabled);
       }
       // if we get out of the condition without a successful rename, then
       // it isn't metadata incomplete state issue.

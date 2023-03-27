@@ -154,9 +154,6 @@ public class AzureBlobFileSystem extends FileSystem
   /** Rate limiting for operations which use it to throttle their IO. */
   private RateLimiting rateLimiting;
 
-  /** Stores whether filesystem is namespace enabled or not. */
-  private boolean isNamespaceEnabled;
-
   @Override
   public void initialize(URI uri, Configuration configuration)
       throws IOException {
@@ -215,8 +212,6 @@ public class AzureBlobFileSystem extends FileSystem
         }
       }
     }
-    isNamespaceEnabled = abfsStore.getIsNamespaceEnabled(tracingContext);
-    abfsStore.setIsNamespaceEnabled(isNamespaceEnabled);
 
     LOG.trace("Initiate check for delegation token manager");
     if (UserGroupInformation.isSecurityEnabled()) {
@@ -447,7 +442,7 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     // Non-HNS account need to check dst status on driver side.
-    if (!isNamespaceEnabled && dstFileStatus == null) {
+    if (!getIsNamespaceEnabled(tracingContext) && dstFileStatus == null) {
       dstFileStatus = tryGetFileStatus(qualifiedDstPath, tracingContext);
     }
 

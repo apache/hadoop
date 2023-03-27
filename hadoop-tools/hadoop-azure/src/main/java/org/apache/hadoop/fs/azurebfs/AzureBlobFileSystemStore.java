@@ -268,10 +268,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         "abfs-bounded");
   }
 
-  void setIsNamespaceEnabled(boolean isHNSEnabled) {
-    client.setIsNamespaceEnabled(isHNSEnabled);
-  }
-
   /**
    * Checks if the given key in Azure Storage should be stored as a page
    * blob instead of block blob.
@@ -926,9 +922,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     do {
       try (AbfsPerfInfo perfInfo = startTracking("rename", "renamePath")) {
+        boolean isNamespaceEnabled = getIsNamespaceEnabled(tracingContext);
         final AbfsClientRenameResult abfsClientRenameResult =
             client.renamePath(sourceRelativePath, destinationRelativePath,
-                continuation, tracingContext, sourceEtag, false);
+                continuation, tracingContext, sourceEtag, false,
+                    isNamespaceEnabled);
 
         AbfsRestOperation op = abfsClientRenameResult.getOp();
         perfInfo.registerResult(op.getResult());
