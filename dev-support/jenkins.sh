@@ -115,10 +115,10 @@ function run_ci() {
   TESTPATCHBIN="${WORKSPACE}/${YETUS}/precommit/src/main/shell/test-patch.sh"
 
   # this must be clean for every run
-  if [[ -d "${PATCHDIR}" ]]; then
-    rm -rf "${PATCHDIR:?}"
-  fi
-  mkdir -p "${PATCHDIR}"
+  # if [[ -d "${PATCHDIR}" ]]; then
+  #   rm -rf "${PATCHDIR:?}"
+  # fi
+  # mkdir -p "${PATCHDIR}"
 
   # if given a JIRA issue, process it. If CHANGE_URL is set
   # (e.g., Github Branch Source plugin), process it.
