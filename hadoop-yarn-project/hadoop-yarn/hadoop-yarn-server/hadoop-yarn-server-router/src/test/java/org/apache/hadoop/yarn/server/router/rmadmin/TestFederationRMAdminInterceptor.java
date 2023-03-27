@@ -72,7 +72,7 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
   ////////////////////////////////
   private final static String USER_NAME = "test-user";
   private final static int NUM_SUBCLUSTER = 4;
-  private final int GB = 1024;
+  private final static int GB = 1024;
 
   private TestableFederationRMAdminInterceptor interceptor;
   private FederationStateStoreFacade facade;
@@ -348,7 +348,7 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
   public void testUpdateNodeResourceNormalRequest() throws Exception {
     // case 1, test the existing subCluster (SC-1).
     Map<NodeId, ResourceOption> nodeResourceMap = new HashMap<>();
-    NodeId nodeId = NodeId.newInstance("127.0.0.1",1);
+    NodeId nodeId = NodeId.newInstance("127.0.0.1", 1);
     ResourceOption resourceOption =
         ResourceOption.newInstance(Resource.newInstance(2 * GB, 1), -1);
     nodeResourceMap.put(nodeId, resourceOption);
