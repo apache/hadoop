@@ -120,7 +120,7 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
 
   @Override
   public synchronized void close() throws IOException {
-    if (closed.getAndSet(true)) {
+    if (closed.get()) {
       // already closed
       LOG.debug("Ignoring close() as stream is already closed");
       return;
@@ -156,6 +156,7 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
       }
     } finally {
       cleanupWithLogger(LOG, getActiveBlock(), blockFactory);
+      closed.set(true);
     }
   }
 
@@ -168,10 +169,20 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
   @Override
   public synchronized void write(byte[] b, int off, int len)
       throws IOException {
+    int totalWritten = 0;
+    while (totalWritten < len) {
+      int written = internalWrite(b, off + totalWritten, len - totalWritten);
+      totalWritten += written;
+      LOG.debug("Buffer len {}, written {},  total written {}",
+          len, written, totalWritten);
+    }
+  }
+  private synchronized int internalWrite(byte[] b, int off, int len)
+      throws IOException {
     OSSDataBlocks.validateWriteArgs(b, off, len);
     checkOpen();
     if (len == 0) {
-      return;
+      return 0;
     }
     OSSDataBlocks.DataBlock block = createBlockIfNeeded();
     int written = block.write(b, off, len);
@@ -183,15 +194,13 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
       // Trigger an upload then process the remainder.
       LOG.debug("writing more data than block has capacity -triggering upload");
       uploadCurrentBlock();
-      // tail recursion is mildly expensive, but given buffer sizes must be MB.
-      // it's unlikely to recurse very deeply.
-      this.write(b, off + written, len - written);
     } else {
       if (remainingCapacity == 0) {
         // the whole buffer is done, trigger an upload
         uploadCurrentBlock();
       }
     }
+    return written;
   }
 
   /**

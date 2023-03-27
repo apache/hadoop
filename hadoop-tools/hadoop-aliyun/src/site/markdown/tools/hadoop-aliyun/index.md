@@ -273,8 +273,9 @@ please raise your issues with them.
         If using either of these mechanisms, keep this value low
 
         The total number of threads performing work across all threads is set by
-        fs.oss.multipart.download.threads, with fs.oss.max.total.tasks values setting the number of queued
-        work items.
+        fs.oss.multipart.download.threads(Currently fast upload shares the same thread tool with download.
+        The thread pool size is specified in "fs.oss.multipart.download.threads"),
+        with fs.oss.max.total.tasks values setting the number of queued work items.
 
         "array_disk" and "bytebuffer_disk" support fallback to disk.
       </description>
