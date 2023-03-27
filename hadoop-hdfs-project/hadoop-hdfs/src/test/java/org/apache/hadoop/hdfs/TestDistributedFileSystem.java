@@ -22,6 +22,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_CLIENT_TOPOLOGY_RE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsAdmin.TRASH_PERMISSION;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -31,6 +32,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -123,9 +125,11 @@ import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.functional.RemoteIterators;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.InOrder;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -1555,6 +1559,56 @@ public class TestDistributedFileSystem {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testListFilesRecursive() throws IOException {
+    Configuration conf = getTestConfiguration();
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();) {
+      DistributedFileSystem fs = cluster.getFileSystem();
+
+      // Create some directories and files.
+      Path dir = new Path("/dir");
+      Path subDir1 = fs.makeQualified(new Path(dir, "subDir1"));
+      Path subDir2 = fs.makeQualified(new Path(dir, "subDir2"));
+
+      fs.create(new Path(dir, "foo1")).close();
+      fs.create(new Path(dir, "foo2")).close();
+      fs.create(new Path(subDir1, "foo3")).close();
+      fs.create(new Path(subDir2, "foo4")).close();
+
+      // Mock the filesystem, and throw FNF when listing is triggered for the subdirectory.
+      FileSystem mockFs = spy(fs);
+      Mockito.doThrow(new FileNotFoundException("")).when(mockFs).listLocatedStatus(eq(subDir1));
+      List<LocatedFileStatus> str = RemoteIterators.toList(mockFs.listFiles(dir, true));
+      assertThat(str).hasSize(3);
+
+      // Mock the filesystem to depict a scenario where the directory got deleted and a file
+      // got created with the same name.
+      Mockito.doReturn(getMockedIterator(subDir1)).when(mockFs).listLocatedStatus(eq(subDir1));
+
+      str = RemoteIterators.toList(mockFs.listFiles(dir, true));
+      assertThat(str).hasSize(4);
+    }
+  }
+
+  private static RemoteIterator<LocatedFileStatus> getMockedIterator(Path subDir1) {
+    return new RemoteIterator<LocatedFileStatus>() {
+      private int remainingEntries = 1;
+
+      @Override
+      public boolean hasNext() throws IOException {
+        return remainingEntries > 0;
+      }
+
+      @Override
+      public LocatedFileStatus next() throws IOException {
+        remainingEntries--;
+        return new LocatedFileStatus(0, false, 1, 1024, 0L, 0, null, null, null, null, subDir1,
+            false, false, false, null);
+      }
+    };
   }
 
   @Test
