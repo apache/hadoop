@@ -4031,7 +4031,7 @@ public class BlockManager implements BlockStatsMXBean {
    * Find how many of the containing nodes are "extra", if any.
    * If there are any extras, call chooseExcessRedundancies() to
    * mark them in the excessRedundancyMap.
-   * @return true if all redundancy replicas are removed
+   * @return true if all redundancy replicas are removed.
    */
   private boolean processExtraRedundancyBlockWithoutPostpone(final BlockInfo block,
       final short replication, final DatanodeDescriptor addedNode,
