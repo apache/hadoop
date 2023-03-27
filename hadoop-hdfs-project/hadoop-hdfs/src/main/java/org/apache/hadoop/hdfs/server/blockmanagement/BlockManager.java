@@ -4014,6 +4014,10 @@ public class BlockManager implements BlockStatsMXBean {
     }
   }
 
+  /**
+   * Process blocks with redundant replicas. If there are replicas in
+   * stale storages, mark them in the postponedMisreplicatedBlocks.
+   */
   private void processExtraRedundancyBlock(final BlockInfo block,
       final short replication, final DatanodeDescriptor addedNode,
       DatanodeDescriptor delNodeHint) {
@@ -4027,7 +4031,7 @@ public class BlockManager implements BlockStatsMXBean {
    * Find how many of the containing nodes are "extra", if any.
    * If there are any extras, call chooseExcessRedundancies() to
    * mark them in the excessRedundancyMap.
-   * @return if all redundancy replicas are removed
+   * @return true if all redundancy replicas are removed
    */
   private boolean processExtraRedundancyBlockWithoutPostpone(final BlockInfo block,
       final short replication, final DatanodeDescriptor addedNode,
@@ -4040,7 +4044,7 @@ public class BlockManager implements BlockStatsMXBean {
     Collection<DatanodeDescriptor> corruptNodes = corruptReplicas
         .getNodes(block);
     boolean hasStaleStorage = false;
-    DatanodeStorageInfo staleStorage = null;
+    Set<DatanodeStorageInfo> staleStorages = new HashSet<>();
     for (DatanodeStorageInfo storage : blocksMap.getStorages(block)) {
       if (storage.getState() != State.NORMAL) {
         continue;
@@ -4048,7 +4052,7 @@ public class BlockManager implements BlockStatsMXBean {
       final DatanodeDescriptor cur = storage.getDatanodeDescriptor();
       if (storage.areBlockContentsStale()) {
         hasStaleStorage = true;
-        staleStorage = storage;
+        staleStorages.add(storage);
         continue;
       }
       if (!isExcess(cur, block)) {
@@ -4064,8 +4068,8 @@ public class BlockManager implements BlockStatsMXBean {
         delNodeHint);
     if (hasStaleStorage) {
       LOG.trace("BLOCK* processExtraRedundancyBlockWithoutPostpone: Postponing {}"
-              + " since storage {} does not yet have up-to-date information.",
-          block, staleStorage);
+              + " since storages {} does not yet have up-to-date information.",
+          block, staleStorages);
       return false;
     }
     return true;
