@@ -56,7 +56,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -988,7 +987,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     long countAggregate = 0;
     boolean shouldContinue;
 
-    if(getAbfsConfiguration().getMode() == PrefixMode.BLOB) {
+    if(true) {
       /*
       * Destination can be either a file, directory.
       * To understand that its directory, we will do a listBlob API with prefix of

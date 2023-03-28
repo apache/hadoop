@@ -457,7 +457,7 @@ public class AzureBlobFileSystem extends FileSystem
       final TracingContext tracingContext,
       final AtomicBoolean isDstDirectory,
       final AtomicBoolean isDstExists) throws AzureBlobFileSystemException {
-    if(getAbfsStore().getAbfsConfiguration().getMode() == PrefixMode.BLOB) {
+    if(true) {
       List<BlobProperty> blobProperties = getAbfsStore()
           .getListBlobs(qualifiedDstPath, tracingContext, 2);
       if(blobProperties.size() > 0) {
