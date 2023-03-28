@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
-import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.TestAbfsPerfTracker;
 import org.apache.hadoop.fs.azurebfs.utils.TestMockHelpers;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -176,7 +176,7 @@ public class ITestAzureBlobFileSystemDelete extends
 
     final AzureBlobFileSystem fs = getFileSystem();
     AbfsClient abfsClient = fs.getAbfsStore().getClient();
-    AbfsClient testClient = TestAbfsClient.createTestClientFromCurrentContext(
+    AbfsClient testClient = ITestAbfsClient.createTestClientFromCurrentContext(
         abfsClient,
         abfsConfig);
 
@@ -223,7 +223,7 @@ public class ITestAzureBlobFileSystemDelete extends
   public void testDeleteIdempotencyTriggerHttp404() throws Exception {
 
     final AzureBlobFileSystem fs = getFileSystem();
-    AbfsClient client = TestAbfsClient.createTestClientFromCurrentContext(
+    AbfsClient client = ITestAbfsClient.createTestClientFromCurrentContext(
         fs.getAbfsStore().getClient(),
         this.getConfiguration());
 
@@ -242,7 +242,7 @@ public class ITestAzureBlobFileSystemDelete extends
         getTestTracingContext(fs, true)));
 
     // mock idempotency check to mimic retried case
-    AbfsClient mockClient = TestAbfsClient.getMockAbfsClient(
+    AbfsClient mockClient = ITestAbfsClient.getMockAbfsClient(
         fs.getAbfsStore().getClient(),
         this.getConfiguration());
     AzureBlobFileSystemStore mockStore = mock(AzureBlobFileSystemStore.class);
@@ -257,10 +257,10 @@ public class ITestAzureBlobFileSystemDelete extends
 
     // Case 2: Mimic retried case
     // Idempotency check on Delete always returns success
-    AbfsRestOperation idempotencyRetOp = TestAbfsClient.getRestOp(
+    AbfsRestOperation idempotencyRetOp = ITestAbfsClient.getRestOp(
         DeletePath, mockClient, HTTP_METHOD_DELETE,
-        TestAbfsClient.getTestUrl(mockClient, "/NonExistingPath"),
-        TestAbfsClient.getTestRequestHeaders(mockClient));
+        ITestAbfsClient.getTestUrl(mockClient, "/NonExistingPath"),
+        ITestAbfsClient.getTestRequestHeaders(mockClient));
     idempotencyRetOp.hardSetResult(HTTP_OK);
 
     doReturn(idempotencyRetOp).when(mockClient).deleteIdempotencyCheckOp(any());

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.router.rmadmin;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -112,7 +113,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
   @VisibleForTesting
   protected ResourceManagerAdministrationProtocol getAdminRMProxyForSubCluster(
-      SubClusterId subClusterId) throws YarnException {
+      SubClusterId subClusterId) throws Exception {
 
     if (adminRMProxies.containsKey(subClusterId)) {
       return adminRMProxies.get(subClusterId);
@@ -438,13 +439,75 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
   @Override
   public UpdateNodeResourceResponse updateNodeResource(UpdateNodeResourceRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrUpdateNodeResourceFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing UpdateNodeResource request.", null);
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrUpdateNodeResourceFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing UpdateNodeResource SubClusterId.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{UpdateNodeResourceRequest.class}, new Object[]{request});
+      Collection<UpdateNodeResourceResponse> updateNodeResourceResps =
+          remoteMethod.invokeConcurrent(this, UpdateNodeResourceResponse.class, subClusterId);
+      if (CollectionUtils.isNotEmpty(updateNodeResourceResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededUpdateNodeResourceRetrieved(stopTime - startTime);
+        return UpdateNodeResourceResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrUpdateNodeResourceFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to updateNodeResource due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrUpdateNodeResourceFailedRetrieved();
+    throw new YarnException("Unable to updateNodeResource.");
   }
 
   @Override
   public RefreshNodesResourcesResponse refreshNodesResources(RefreshNodesResourcesRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrRefreshNodesResourcesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshNodesResources request.", null);
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrRefreshNodesResourcesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshNodesResources SubClusterId.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{RefreshNodesResourcesRequest.class}, new Object[]{request});
+      Collection<RefreshNodesResourcesResponse> refreshNodesResourcesResps =
+          remoteMethod.invokeConcurrent(this, RefreshNodesResourcesResponse.class, subClusterId);
+      if (CollectionUtils.isNotEmpty(refreshNodesResourcesResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRefreshNodesResourcesRetrieved(stopTime - startTime);
+        return RefreshNodesResourcesResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRefreshNodesResourcesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshNodesResources due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrRefreshNodesResourcesFailedRetrieved();
+    throw new YarnException("Unable to refreshNodesResources.");
   }
 
   @Override

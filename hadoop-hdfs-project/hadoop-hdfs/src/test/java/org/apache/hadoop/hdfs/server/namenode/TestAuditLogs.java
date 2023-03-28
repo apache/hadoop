@@ -20,12 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.*;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -46,12 +41,15 @@ import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
 import org.apache.log4j.Logger;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -66,10 +64,9 @@ public class TestAuditLogs {
 
   private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(TestAuditLogs.class);
 
-  private static final File AUDIT_LOG_FILE =
-      new File(System.getProperty("hadoop.log.dir"), "hdfs-audit.log");
-
   final boolean useAsyncEdits;
+
+  private static LogCapturer auditLogCapture;
 
   @Parameters
   public static Collection<Object[]> data() {
@@ -111,9 +108,6 @@ public class TestAuditLogs {
 
   @Before
   public void setupCluster() throws Exception {
-    try (PrintWriter writer = new PrintWriter(AUDIT_LOG_FILE)) {
-      writer.print("");
-    }
     // must configure prior to instantiating the namesystem because it
     // will reconfigure the logger if async is enabled
     conf = new HdfsConfiguration();
@@ -132,21 +126,15 @@ public class TestAuditLogs {
         "org.apache.hadoop.hdfs.server.namenode.FSNamesystem.audit");
     @SuppressWarnings("unchecked")
     List<Appender> appenders = Collections.list(logger.getAllAppenders());
-    assertEquals(1, appenders.size());
     assertTrue(appenders.get(0) instanceof AsyncAppender);
     
     fnames = util.getFileNames(fileName);
     util.waitReplication(fs, fileName, (short)3);
     userGroupInfo = UserGroupInformation.createUserForTesting(username, groups);
-    LOG.info("Audit log file: {}, exists: {}, length: {}", AUDIT_LOG_FILE, AUDIT_LOG_FILE.exists(),
-        AUDIT_LOG_FILE.length());
  }
 
   @After
   public void teardownCluster() throws Exception {
-    try (PrintWriter writer = new PrintWriter(AUDIT_LOG_FILE)) {
-      writer.print("");
-    }
     util.cleanup(fs, "/srcdat");
     if (fs != null) {
       fs.close();
@@ -157,6 +145,17 @@ public class TestAuditLogs {
       cluster = null;
     }
   }
+
+  @BeforeClass
+  public static void beforeClass() {
+    auditLogCapture = LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
+  }
+
+  @AfterClass
+  public static void afterClass() {
+    auditLogCapture.stopCapturing();
+  }
+
 
   /** test that allowed operation puts proper entry in audit log */
   @Test
@@ -273,54 +272,47 @@ public class TestAuditLogs {
     verifySuccessCommandsAuditLogs(1, "foo", "cmd=create");
   }
 
-  private void verifySuccessCommandsAuditLogs(int leastExpected, String file, String cmd)
-      throws IOException {
-
-    try (BufferedReader reader = new BufferedReader(new FileReader(AUDIT_LOG_FILE))) {
-      String line;
-      int success = 0;
-      while ((line = reader.readLine()) != null) {
-        assertNotNull(line);
-        LOG.info("Line: {}", line);
-        if (SUCCESS_PATTERN.matcher(line).matches() && line.contains(file) && line.contains(
-            cmd)) {
-          assertTrue("Expected audit event not found in audit log",
-              AUDIT_PATTERN.matcher(line).matches());
-          LOG.info("Successful verification. Log line: {}", line);
-          success++;
-        }
+  private void verifySuccessCommandsAuditLogs(int leastExpected, String file, String cmd) {
+    String[] auditLogOutputLines = auditLogCapture.getOutput().split("\\n");
+    int success = 0;
+    for (String auditLogLine : auditLogOutputLines) {
+      if (!auditLogLine.contains("allowed=")) {
+        continue;
       }
-      if (success < leastExpected) {
-        throw new AssertionError(
-            "Least expected: " + leastExpected + ". Actual success: " + success);
+      String line = "allowed=" + auditLogLine.split("allowed=")[1];
+      LOG.info("Line: {}", line);
+      if (SUCCESS_PATTERN.matcher(line).matches() && line.contains(file) && line.contains(cmd)) {
+        assertTrue("Expected audit event not found in audit log",
+            AUDIT_PATTERN.matcher(line).matches());
+        LOG.info("Successful verification. Log line: {}", line);
+        success++;
       }
+    }
+    if (success < leastExpected) {
+      throw new AssertionError(
+          "Least expected: " + leastExpected + ". Actual success: " + success);
     }
   }
 
-  private void verifyFailedCommandsAuditLogs(int leastExpected, String file, String cmd)
-      throws IOException {
-
-    try (BufferedReader reader = new BufferedReader(new FileReader(AUDIT_LOG_FILE))) {
-      String line;
-      int success = 0;
-      while ((line = reader.readLine()) != null) {
-        assertNotNull(line);
-        LOG.info("Line: {}", line);
-        if (FAILURE_PATTERN.matcher(line).matches() && line.contains(file) && line.contains(
-            cmd)) {
-          assertTrue("Expected audit event not found in audit log",
-              AUDIT_PATTERN.matcher(line).matches());
-          LOG.info("Failure verification. Log line: {}", line);
-          success++;
-        }
+  private void verifyFailedCommandsAuditLogs(int expected, String file, String cmd) {
+    String[] auditLogOutputLines = auditLogCapture.getOutput().split("\\n");
+    int success = 0;
+    for (String auditLogLine : auditLogOutputLines) {
+      if (!auditLogLine.contains("allowed=")) {
+        continue;
       }
-      assertEquals("Expected: " + leastExpected + ". Actual failure: " + success, leastExpected,
-          success);
-      if (success < leastExpected) {
-        throw new AssertionError(
-            "Least expected: " + leastExpected + ". Actual success: " + success);
+      String line = "allowed=" + auditLogLine.split("allowed=")[1];
+      LOG.info("Line: {}", line);
+      if (FAILURE_PATTERN.matcher(line).matches() && line.contains(file) && line.contains(
+          cmd)) {
+        assertTrue("Expected audit event not found in audit log",
+            AUDIT_PATTERN.matcher(line).matches());
+        LOG.info("Failure verification. Log line: {}", line);
+        success++;
       }
     }
+    assertEquals("Expected: " + expected + ". Actual failure: " + success, expected,
+        success);
   }
 
 }

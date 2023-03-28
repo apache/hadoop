@@ -111,7 +111,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
@@ -160,7 +162,6 @@ import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT_FULL;
@@ -1362,5 +1363,18 @@ public class MockDefaultRequestInterceptorREST
       }
     }
     throw new YarnException("removeFromClusterNodeLabels Error");
+  }
+
+  @Override
+  public ClusterInfo getClusterInfo() {
+    ClusterInfo clusterInfo = new ClusterInfo(mockRM);
+    return clusterInfo;
+  }
+
+  @Override
+  public ClusterUserInfo getClusterUserInfo(HttpServletRequest hsr) {
+    String remoteUser = hsr.getRemoteUser();
+    UserGroupInformation callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+    return new ClusterUserInfo(mockRM, callerUGI);
   }
 }
