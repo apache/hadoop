@@ -401,7 +401,6 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = getFileSystem();
     String src = String.format("/testABC/test%s.xt", UUID.randomUUID());
     fs.create(new Path(src)).close();
-
     AbfsRestOperation abfsHttpRestOperation = fs.getAbfsClient()
         .renamePath(src, "/testABC" + "/abc.txt", null,
             getTestTracingContext(fs, false), null, false, isHNSEnabled)
