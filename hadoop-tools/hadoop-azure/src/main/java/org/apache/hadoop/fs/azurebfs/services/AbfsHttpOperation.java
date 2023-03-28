@@ -47,6 +47,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xml.sax.SAXException;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
@@ -415,14 +416,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         // need a better solution
         if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method)
             && buffer == null) {
-          if (url.toString().contains(COMP_BLOCKLIST)) {
-            parseBlockListResponse(stream);
+          if (url.toString().contains(COMP_LIST)) {
+            parsListBlobResponse(stream);
           } else {
-            if (url.toString().contains(COMP_LIST)) {
-              parsListBlobResponse(stream);
-            } else {
-              parseListFilesResponse(stream);
-            }
+            parseListFilesResponse(stream);
           }
         } else {
           if (buffer != null) {
