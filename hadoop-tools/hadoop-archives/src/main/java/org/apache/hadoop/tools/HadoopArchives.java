@@ -489,7 +489,7 @@ public class HadoopArchives implements Tool {
           + " should be a directory but is a file");
     }
     conf.set(DST_DIR_LABEL, outputPath.toString());
-    Credentials credentials = new Credentials();
+    Credentials credentials = conf.getCredentials();
     Path[] allPaths = new Path[] {parentPath, dest};
     TokenCache.obtainTokensForNamenodes(credentials, allPaths, conf);
     conf.setCredentials(credentials);
