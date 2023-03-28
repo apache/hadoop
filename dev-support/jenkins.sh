@@ -125,12 +125,12 @@ function run_ci() {
   # otherwise exit, because we don't want Hadoop to do a
   # full build.  We wouldn't normally do this check for smaller
   # projects. :)
-  if [[ -n "${JIRA_ISSUE_KEY}" ]]; then
-    YETUS_ARGS+=("${JIRA_ISSUE_KEY}")
-  elif [[ -z "${CHANGE_URL}" ]]; then
-    echo "Full build skipped" >"${PATCHDIR}/report.html"
-    exit 0
-  fi
+  #  if [[ -n "${JIRA_ISSUE_KEY}" ]]; then
+  #    YETUS_ARGS+=("${JIRA_ISSUE_KEY}")
+  #  elif [[ -z "${CHANGE_URL}" ]]; then
+  #    echo "Full build skipped" >"${PATCHDIR}/report.html"
+  #    exit 0
+  #  fi
 
   YETUS_ARGS+=("--patch-dir=${PATCHDIR}")
 
@@ -187,6 +187,7 @@ function run_ci() {
   YETUS_ARGS+=("--github-write-comment")
   YETUS_ARGS+=("--github-use-emoji-vote")
   YETUS_ARGS+=("--empty-patch")
+  YETUS_ARGS+=("--branch=win-yetus")
 
   "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
 }
