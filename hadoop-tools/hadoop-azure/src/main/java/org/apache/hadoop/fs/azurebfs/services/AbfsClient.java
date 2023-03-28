@@ -601,13 +601,13 @@ public class AbfsClient implements Closeable {
                 .info("Rename Failure attempting to resolve tracking metadata state and retrying.");
         // rename recovery should be attempted in this case also
         shouldAttemptRecovery = true;
+        isMetadataIncompleteState = true;
         String sourceEtagAfterFailure = sourceEtag;
         if (isEmpty(sourceEtagAfterFailure)) {
           // Doing a HEAD call resolves the incomplete metadata state and
           // then we can retry the rename operation.
           AbfsRestOperation sourceStatusOp = getPathStatus(source, false,
               tracingContext);
-          isMetadataIncompleteState = true;
           // Extract the sourceEtag, using the status Op, and set it
           // for future rename recovery.
           AbfsHttpOperation sourceStatusResult = sourceStatusOp.getResult();
