@@ -23,13 +23,23 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+
+import org.apache.hadoop.fs.azurebfs.BlobList;
+import org.apache.hadoop.fs.azurebfs.BlobListXmlParser;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
+
+import com.microsoft.azure.storage.core.Utility;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
@@ -42,6 +52,10 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COMP_BLOCKLIST;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COMP_LIST;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_TYPE;
 
 /**
  * Represents an HTTP operation.
@@ -81,6 +95,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private long sendRequestTimeMs;
   private long recvResponseTimeMs;
   private boolean shouldMask = false;
+  private BlobList blobList;
+  private List<String> blockIdList = new ArrayList<>();
 
   public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
       final URL url,
@@ -139,6 +155,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
   }
 
+  public String getRequestHeaderValue(String requestHeader) {
+    return connection.getRequestProperty(requestHeader);
+  }
+
   public String getExpectedAppendPos() {
     return expectedAppendPos;
   }
@@ -162,7 +182,13 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   public ListResultSchema getListResultSchema() {
     return listResultSchema;
   }
+  public List<String> getBlockIdList() {
+    return blockIdList;
+  }
 
+  public BlobList getBlobList() {
+    return blobList;
+  }
   public String getResponseHeader(String httpHeader) {
     return connection.getHeaderField(httpHeader);
   }
@@ -387,8 +413,17 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
         // this is a list operation and need to retrieve the data
         // need a better solution
-        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method) && buffer == null) {
-          parseListFilesResponse(stream);
+        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method)
+            && buffer == null) {
+          if (url.toString().contains(COMP_BLOCKLIST)) {
+            parseBlockListResponse(stream);
+          } else {
+            if (url.toString().contains(COMP_LIST)) {
+              parsListBlobResponse(stream);
+            } else {
+              parseListFilesResponse(stream);
+            }
+          }
         } else {
           if (buffer != null) {
             while (totalBytesRead < length) {
@@ -419,6 +454,31 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         this.bytesReceived = totalBytesRead;
       }
     }
+  }
+
+  private void parsListBlobResponse(final InputStream stream) {
+    //TODO: have proper exception handling.
+    try {
+      final SAXParser saxParser = Utility.getSAXParser();
+      BlobList blobList = new BlobList();
+      saxParser.parse(stream, new BlobListXmlParser(blobList, getBaseUrl()));
+      this.blobList = blobList;
+    } catch (ParserConfigurationException e) {
+      throw new RuntimeException(e);
+    } catch (SAXException e) {
+      throw new RuntimeException(e);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private String getBaseUrl() {
+    String urlStr = url.toString();
+    int queryParamStart = urlStr.indexOf("?");
+    if(queryParamStart == -1) {
+      return urlStr;
+    }
+    return urlStr.substring(0, queryParamStart);
   }
 
   public void setRequestProperty(String key, String value) {

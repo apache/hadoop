@@ -41,6 +41,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -395,34 +396,39 @@ public class AzureBlobFileSystem extends FileSystem
         fileSystemId, FSOperationType.RENAME, true, tracingHeaderFormat,
         listener);
     // rename under same folder;
-    if(makeQualified(parentFolder).equals(qualifiedDstPath)) {
+    if (makeQualified(parentFolder).equals(qualifiedDstPath)) {
       return tryGetFileStatus(qualifiedSrcPath, tracingContext) != null;
     }
 
-    FileStatus dstFileStatus = null;
     if (qualifiedSrcPath.equals(qualifiedDstPath)) {
       // rename to itself
       // - if it doesn't exist, return false
       // - if it is file, return true
       // - if it is dir, return false.
-      dstFileStatus = tryGetFileStatus(qualifiedDstPath, tracingContext);
-      if (dstFileStatus == null) {
+      final AtomicBoolean isDstDirectory = new AtomicBoolean();
+      final AtomicBoolean isDstExists = new AtomicBoolean();
+
+      getDstInformation(qualifiedDstPath, tracingContext, isDstDirectory, isDstExists);
+      if (!isDstExists.get()) {
         return false;
       }
-      return dstFileStatus.isDirectory() ? false : true;
+      return isDstDirectory.get() ? false : true;
     }
 
+    final AtomicBoolean isDstDirectory = new AtomicBoolean();
+    final AtomicBoolean isDstExists = new AtomicBoolean();
+
     // Non-HNS account need to check dst status on driver side.
-    if (!abfsStore.getIsNamespaceEnabled(tracingContext) && dstFileStatus == null) {
-      dstFileStatus = tryGetFileStatus(qualifiedDstPath, tracingContext);
+    if (!abfsStore.getIsNamespaceEnabled(tracingContext)) {
+      getDstInformation(qualifiedDstPath, tracingContext, isDstDirectory, isDstExists);
     }
 
     try {
       String sourceFileName = src.getName();
       Path adjustedDst = dst;
 
-      if (dstFileStatus != null) {
-        if (!dstFileStatus.isDirectory()) {
+      if (isDstExists.get()) {
+        if (!isDstDirectory.get()) {
           return qualifiedSrcPath.equals(qualifiedDstPath);
         }
         adjustedDst = new Path(dst, sourceFileName);
@@ -432,18 +438,40 @@ public class AzureBlobFileSystem extends FileSystem
 
       abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext);
       return true;
-    } catch(AzureBlobFileSystemException ex) {
+    } catch (AzureBlobFileSystemException ex) {
       LOG.debug("Rename operation failed. ", ex);
       checkException(
-              src,
-              ex,
-              AzureServiceErrorCode.PATH_ALREADY_EXISTS,
-              AzureServiceErrorCode.INVALID_RENAME_SOURCE_PATH,
-              AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND,
-              AzureServiceErrorCode.INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE,
-              AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND,
-              AzureServiceErrorCode.INTERNAL_OPERATION_ABORT);
+          src,
+          ex,
+          AzureServiceErrorCode.PATH_ALREADY_EXISTS,
+          AzureServiceErrorCode.INVALID_RENAME_SOURCE_PATH,
+          AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND,
+          AzureServiceErrorCode.INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE,
+          AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND,
+          AzureServiceErrorCode.INTERNAL_OPERATION_ABORT);
       return false;
+    }
+  }
+
+  private void getDstInformation(final Path qualifiedDstPath,
+      final TracingContext tracingContext,
+      final AtomicBoolean isDstDirectory,
+      final AtomicBoolean isDstExists) throws AzureBlobFileSystemException {
+    if(getAbfsStore().getAbfsConfiguration().getMode() == PrefixMode.BLOB) {
+      List<BlobProperty> blobProperties = getAbfsStore()
+          .getListBlobs(qualifiedDstPath, tracingContext, 2);
+      if(blobProperties.size() > 0) {
+        isDstExists.set(true);
+        if(blobProperties.size() > 1 || blobProperties.get(0).getIsDirectory()) {
+          isDstDirectory.set(true);
+        }
+      }
+    } else {
+      final FileStatus fileStatus = tryGetFileStatus(qualifiedDstPath, tracingContext);
+      if(fileStatus != null) {
+        isDstExists.set(true);
+        isDstDirectory.set(fileStatus.isDirectory());
+      }
     }
 
   }

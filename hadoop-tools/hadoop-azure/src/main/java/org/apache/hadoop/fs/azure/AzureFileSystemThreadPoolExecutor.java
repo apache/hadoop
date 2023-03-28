@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
-class AzureFileSystemThreadPoolExecutor {
+public class AzureFileSystemThreadPoolExecutor {
 
   public static final Logger LOG = LoggerFactory.getLogger(AzureFileSystemThreadPoolExecutor.class);
 

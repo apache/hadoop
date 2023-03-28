@@ -30,11 +30,17 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
+import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 
 /**
  * Test rename operation.
@@ -160,4 +166,51 @@ public class ITestAzureBlobFileSystemRename extends
     assertFalse(fs.exists(new Path("testDir2/test1/test2/test3")));
   }
 
+  @Test
+  public void testPosixRenameDirectoryWhereDirectoryAlreadyThereOnDestination() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    fs.mkdirs(new Path("testDir2/test1/test2/test3"));
+    fs.create(new Path("testDir2/test1/test2/test3/file"));
+    fs.mkdirs(new Path("testDir2/test4/test3"));
+    assertTrue(fs.exists(new Path("testDir2/test1/test2/test3/file")));
+    Assert.assertFalse(fs.rename(new Path("testDir2/test1/test2/test3"), new Path("testDir2/test4")));
+    assertTrue(fs.exists(new Path("testDir2")));
+    assertTrue(fs.exists(new Path("testDir2/test1/test2")));
+    assertTrue(fs.exists(new Path("testDir2/test4")));
+    assertTrue(fs.exists(new Path("testDir2/test1/test2/test3")));
+    if(getIsNamespaceEnabled(fs) || fs.getAbfsStore().getAbfsConfiguration().getMode() == PrefixMode.BLOB) {
+      assertFalse(fs.exists(new Path("testDir2/test4/test3/file")));
+      assertTrue(fs.exists(new Path("testDir2/test1/test2/test3/file")));
+    } else {
+      assertTrue(fs.exists(new Path("testDir2/test4/test3/file")));
+      assertFalse(fs.exists(new Path("testDir2/test1/test2/test3/file")));
+    }
+  }
+
+  @Test
+  public void testPosixRenameDirectoryWherePartAlreadyThereOnDestination() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    fs.mkdirs(new Path("testDir2/test1/test2/test3"));
+    fs.create(new Path("testDir2/test1/test2/test3/file"));
+    fs.create(new Path("testDir2/test1/test2/test3/file1"));
+    fs.mkdirs(new Path("testDir2/test4/"));
+    fs.create(new Path("testDir2/test4/file1"));
+    byte[] etag = fs.getXAttr(new Path("testDir2/test4/file1"), "ETag");
+    assertTrue(fs.exists(new Path("testDir2/test1/test2/test3/file")));
+    assertTrue(fs.exists(new Path("testDir2/test1/test2/test3/file1")));
+    Assert.assertTrue(fs.rename(new Path("testDir2/test1/test2/test3"), new Path("testDir2/test4")));
+    assertTrue(fs.exists(new Path("testDir2")));
+    assertTrue(fs.exists(new Path("testDir2/test1/test2")));
+    assertTrue(fs.exists(new Path("testDir2/test4")));
+    assertFalse(fs.exists(new Path("testDir2/test1/test2/test3")));
+
+
+    assertFalse(fs.exists(new Path("testDir2/test4/file")));
+    assertTrue(fs.exists(new Path("testDir2/test4/file1")));
+    assertTrue(fs.exists(new Path("testDir2/test4/test3/file")));
+    assertTrue(fs.exists(new Path("testDir2/test4/test3/file1")));
+    assertTrue(fs.exists(new Path("testDir2/test4/file1")));
+    assertFalse(fs.exists(new Path("testDir2/test1/test2/test3/file")));
+    assertFalse(fs.exists(new Path("testDir2/test1/test2/test3/file1")));
+  }
 }

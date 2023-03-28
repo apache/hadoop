@@ -33,6 +33,13 @@ public final class AbfsHttpConstants {
   public static final String FILE = "file";
   public static final String DIRECTORY = "directory";
   public static final String APPEND_ACTION = "append";
+  public static final String BLOCK = "block";
+  public static final String BLOCKLIST = "blocklist";
+  public static final String COMP_BLOCKLIST = "comp=blocklist";
+
+  public static final String COMP_LIST = "comp=list";
+  public static final String COMMITTED = "committed";
+  public static final String UNCOMMITTED = "uncommitted";
   public static final String FLUSH_ACTION = "flush";
   public static final String SET_PROPERTIES_ACTION = "setProperties";
   public static final String SET_ACCESS_CONTROL = "setAccessControl";
@@ -111,6 +118,22 @@ public final class AbfsHttpConstants {
   public static final char CHAR_EQUALS = '=';
   public static final char CHAR_STAR = '*';
   public static final char CHAR_PLUS = '+';
+
+  public static final String BLOB = "Blob";
+  private static final String PREFIX = "Prefix";
+  public static final String NEXT_MARKER = "NextMarker";
+  public static final String NAME = "Name";
+  public static final String METADATA = "Metadata";
+  public static final String PROPERTIES = "Properties";
+  public static final String BLOB_PREFIX = "BlobPrefix";
+  public static final String CONTENT_LEN = "Content-Length";
+  public static final String RESOURCE_TYPE = "ResourceType";
+  public static final String INVALID_XML = "Invalid XML";
+  public static final String COPY_STATUS_SUCCESS = "success";
+  public static final String COPY_STATUS_PENDING = "pending";
+  public static final String COPY_STATUS_ABORTED = "aborted";
+  public static final String COPY_STATUS_FAILED = "failed";
+  public static final String HDI_ISFOLDER = "hdi_isfolder";
 
   private AbfsHttpConstants() {}
 }

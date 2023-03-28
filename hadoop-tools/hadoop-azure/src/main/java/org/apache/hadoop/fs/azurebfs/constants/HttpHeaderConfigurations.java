@@ -70,6 +70,11 @@ public final class HttpHeaderConfigurations {
   public static final String X_MS_LEASE_ID = "x-ms-lease-id";
   public static final String X_MS_PROPOSED_LEASE_ID = "x-ms-proposed-lease-id";
   public static final String X_MS_LEASE_BREAK_PERIOD = "x-ms-lease-break-period";
+  public static final String X_MS_META_HDI_ISFOLDER = "x-ms-meta-hdi_isfolder";
+  public static final String X_MS_COPY_ID = "x-ms-copy-id";
+  public static final String X_MS_COPY_SOURCE = "x-ms-copy-source";
+  public static final String X_MS_COPY_STATUS_DESCRIPTION = "x-ms-copy-status-description";
+  public static final String X_MS_COPY_STATUS = "x-ms-copy-status";
 
   private HttpHeaderConfigurations() {}
 }
