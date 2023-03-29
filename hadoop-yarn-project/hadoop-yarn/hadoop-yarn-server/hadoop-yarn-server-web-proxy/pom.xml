@@ -104,12 +104,6 @@
       <artifactId>jetty-server</artifactId>
     </dependency>
 
-    <dependency>
-      <groupId>org.glassfish.grizzly</groupId>
-      <artifactId>grizzly-http-servlet</artifactId>
-      <scope>test</scope>
-    </dependency>
-
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
     <dependency>
       <groupId>com.sun.jersey.jersey-test-framework</groupId>

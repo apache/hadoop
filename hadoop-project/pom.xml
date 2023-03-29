@@ -141,7 +141,6 @@
     <kotlin-stdlib-common.version>1.4.10</kotlin-stdlib-common.version>
     <jdom.version>1.1</jdom.version>
     <jna.version>5.2.0</jna.version>
-    <grizzly.version>2.2.21</grizzly.version>
     <gson.version>2.9.0</gson.version>
     <metrics.version>3.2.4</metrics.version>
     <netty3.version>3.10.6.Final</netty3.version>
@@ -1519,22 +1518,6 @@
         <groupId>com.sun.jersey</groupId>
         <artifactId>jersey-client</artifactId>
         <version>${jersey.version}</version>
-      </dependency>
-
-      <dependency>
-        <groupId>org.glassfish.grizzly</groupId>
-        <artifactId>grizzly-http-servlet</artifactId>
-        <version>${grizzly.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.grizzly</groupId>
-        <artifactId>grizzly-http</artifactId>
-        <version>${grizzly.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.grizzly</groupId>
-        <artifactId>grizzly-http-server</artifactId>
-        <version>${grizzly.version}</version>
       </dependency>
 
       <dependency>
