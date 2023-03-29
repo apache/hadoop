@@ -37,8 +37,10 @@ public class TestSampleQuantiles {
       new Quantile(0.95, 0.005), new Quantile(0.99, 0.001) };
 
   SampleQuantiles estimator;
+  Random rnd = new Random(0xDEADDEAD);
+  final static int NUM_REPEATS = 10;
 
-  @Before
+    @Before
   public void init() {
     estimator = new SampleQuantiles(quantiles);
   }
@@ -92,22 +94,21 @@ public class TestSampleQuantiles {
   @Test
   public void testQuantileError() throws IOException {
     final int count = 100000;
-    Random r = new Random(0xDEADDEAD);
     int[] values = new int[count];
     for (int i = 0; i < count; i++) {
       values[i] = i + 1;
     }
 
-    // Do 10 shuffle/insert/check cycles
-    for (int i = 0; i < 10; i++) {
+    // Repeat shuffle/insert/check cycles 10 times
+    for (int i = 0; i < NUM_REPEATS; i++) {
 
       // Shuffle  
-      Collections.shuffle(Arrays.asList(values), r);
+      Collections.shuffle(Arrays.asList(values), rnd);
       estimator.clear();
 
       // Insert
-      for (int j = 0; j < count; j++) {
-        estimator.insert(values[j]);
+      for (int value : values) {
+        estimator.insert(value);
       }
       Map<Quantile, Long> snapshot;
       snapshot = estimator.snapshot();
@@ -131,21 +132,20 @@ public class TestSampleQuantiles {
   public void testInverseQuantiles() throws IOException {
     SampleQuantiles inverseQuantilesEstimator = new SampleQuantiles(MutableInverseQuantiles.INVERSE_QUANTILES);
     final int count = 100000;
-    Random r = new Random(0xDEADDEAD);
     int[] values = new int[count];
     for (int i = 0; i < count; i++) {
       values[i] = i + 1;
     }
 
-    // Do 10 shuffle/insert/check cycles
-    for (int i = 0; i < 10; i++) {
+    // Repeat shuffle/insert/check cycles 10 times
+    for (int i = 0; i < NUM_REPEATS; i++) {
       // Shuffle
-      Collections.shuffle(Arrays.asList(values), r);
+      Collections.shuffle(Arrays.asList(values), rnd);
       inverseQuantilesEstimator.clear();
 
       // Insert
-      for (int j = 0; j < count; j++) {
-        inverseQuantilesEstimator.insert(values[j]);
+      for (int value : values) {
+        inverseQuantilesEstimator.insert(value);
       }
       Map<Quantile, Long> snapshot;
       snapshot = inverseQuantilesEstimator.snapshot();
