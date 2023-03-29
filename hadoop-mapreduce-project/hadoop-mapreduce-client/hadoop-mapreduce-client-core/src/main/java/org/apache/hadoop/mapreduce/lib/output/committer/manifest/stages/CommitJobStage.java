@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
@@ -38,7 +39,11 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_BYTES_COMMITTED_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_FILES_COMMITTED_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_COMMIT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CREATE_TARGET_DIRS;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_LOAD_MANIFESTS;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_RENAME_FILES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.MANIFESTS;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.addHeapInformation;
 
 /**
  * Commit the Job.
@@ -68,7 +73,8 @@ public class CommitJobStage extends
         storeSupportsResilientCommit());
 
     boolean createMarker = arguments.isCreateMarker();
-
+    IOStatisticsSnapshot heapInfo = new IOStatisticsSnapshot();
+    addHeapInformation(heapInfo, "setup");
     // load the manifests
     final StageConfig stageConfig = getStageConfig();
     LoadManifestsStage.Result result
@@ -81,6 +87,7 @@ public class CommitJobStage extends
         getName(),
         summary.getFileCount(),
         byteCountToDisplaySize(summary.getTotalFileSize()));
+    addHeapInformation(heapInfo, OP_STAGE_JOB_LOAD_MANIFESTS);
 
 
     // add in the manifest statistics to our local IOStatistics for
@@ -92,6 +99,7 @@ public class CommitJobStage extends
     final CreateOutputDirectoriesStage.Result dirStageResults =
         new CreateOutputDirectoriesStage(stageConfig)
             .apply(manifests);
+    addHeapInformation(heapInfo, OP_STAGE_JOB_CREATE_TARGET_DIRS);
 
     // commit all the tasks.
     // The success data includes a snapshot of the IO Statistics
@@ -102,6 +110,8 @@ public class CommitJobStage extends
     if (LOG.isDebugEnabled()) {
       LOG.debug("{}: _SUCCESS file summary {}", getName(), successData.toJson());
     }
+    addHeapInformation(heapInfo, OP_STAGE_JOB_RENAME_FILES);
+
     // update the counter of bytes committed and files.
     // use setCounter so as to ignore any values accumulated when
     // aggregating tasks.
@@ -112,6 +122,8 @@ public class CommitJobStage extends
         COMMITTER_BYTES_COMMITTED_COUNT,
         summary.getTotalFileSize());
     successData.snapshotIOStatistics(iostats);
+    successData.getIOStatistics().aggregate(heapInfo);
+
 
 
     // rename manifests. Only warn on failure here.

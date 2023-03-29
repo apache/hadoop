@@ -76,7 +76,7 @@ public final class ManifestCommitterTestSupport {
    * default number of task attempts for some tests.
    * Value: {@value}.
    */
-  public static final int NUMBER_OF_TASK_ATTEMPTS = 200;
+  public static final int NUMBER_OF_TASK_ATTEMPTS = 2000;
 
   private ManifestCommitterTestSupport() {
   }

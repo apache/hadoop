@@ -21,6 +21,8 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +33,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.functional.TaskPool;
 
@@ -73,6 +76,11 @@ public class LoadManifestsStage extends
    */
   private final List<TaskManifest> manifests = new ArrayList<>();
 
+  /**
+   * Map of directories from manifests, coalesced to reduce duplication.
+   */
+  private final Map<String, DirEntry> directories = new ConcurrentHashMap<>();
+
   public LoadManifestsStage(final StageConfig stageConfig) {
     super(false, stageConfig, OP_STAGE_JOB_LOAD_MANIFESTS, true);
   }
@@ -106,7 +114,7 @@ public class LoadManifestsStage extends
 
     // collect any stats
     maybeAddIOStatistics(getIOStatistics(), manifestFiles);
-    return new LoadManifestsStage.Result(summaryInfo, manifestList);
+    return new LoadManifestsStage.Result(summaryInfo, manifestList, directories);
   }
 
   /**
@@ -153,6 +161,20 @@ public class LoadManifestsStage extends
   }
 
   /**
+   * Coalesce all directories and clear the entry in the manifest.
+   * @param manifest manifest
+   */
+  private void coalesceDirectories(TaskManifest manifest) {
+    final List<DirEntry> destDirectories = manifest.getDestDirectories();
+    synchronized (directories) {
+      destDirectories.forEach(entry -> {
+        directories.putIfAbsent(entry.getDir(), entry);
+      });
+    }
+    manifest.getDestDirectories().clear();
+  }
+
+  /**
    * Precommit preparation of a single manifest file.
    * To reduce the memory foot print, the IOStatistics and
    * extra data of each manifest is cleared.
@@ -187,10 +209,13 @@ public class LoadManifestsStage extends
 
     private final List<TaskManifest> manifests;
 
+    private final Map<String, DirEntry> directories;
+
     public Result(SummaryInfo summary,
-        List<TaskManifest> manifests) {
+        List<TaskManifest> manifests, final Map<String, DirEntry> directories) {
       this.summary = summary;
       this.manifests = manifests;
+      this.directories = directories;
     }
 
     public SummaryInfo getSummary() {

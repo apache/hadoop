@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.commit;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
@@ -50,6 +51,11 @@ public class ITestAbfsLoadManifestsStage extends TestLoadManifestsStage {
   @Override
   protected AbstractFSContract createContract(final Configuration conf) {
     return new AbfsFileSystemContract(conf, binding.isSecureMode());
+  }
+
+  @Override
+  protected int getTestTimeoutMillis() {
+    return AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS;
   }
 
 }

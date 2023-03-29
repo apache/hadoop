@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.commit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_SMALL_FILES_COMPLETELY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_STORE_OPERATIONS_CLASS;
 
 /**
@@ -43,6 +44,8 @@ final class AbfsCommitTestHelper {
     // use ABFS Store operations
     conf.set(OPT_STORE_OPERATIONS_CLASS,
         AbfsManifestStoreOperations.NAME);
+    // turn on small file read if not explicitly set to a value.
+    conf.setBooleanIfUnset(AZURE_READ_SMALL_FILES_COMPLETELY, true);
 
     return conf;
   }

@@ -18,19 +18,35 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestPrinter;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CreateOutputDirectoriesStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.LoadManifestsStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupJobStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
+
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_SUMMARY_REPORT_DIR;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_COMMIT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.addHeapInformation;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createJobSummaryFilename;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createManifestOutcome;
 
 /**
  * Test loading manifests from a store.
@@ -42,6 +58,8 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupJob
  * pool is used to save the manifests in parallel.
  */
 public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
+
+  public static final int FILES_PER_TASK_ATTEMPT = 100;
 
   private int taskAttemptCount;
 
@@ -63,6 +81,10 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
         .isGreaterThan(0);
   }
 
+  public long heapSize() {
+       return Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+   }
+
   /**
    * Build a large number of manifests, but without the real files
    * and directories.
@@ -79,28 +101,39 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     describe("Creating many manifests with fake file/dir entries,"
         + " load them and prepare the output dirs.");
 
-    int filesPerTaskAttempt = 10;
+    int filesPerTaskAttempt = FILES_PER_TASK_ATTEMPT;
     LOG.info("Number of task attempts: {}, files per task attempt {}",
         taskAttemptCount, filesPerTaskAttempt);
 
-    setJobStageConfig(createStageConfigForJob(JOB1, getDestDir()));
+    final StageConfig stageConfig = createStageConfigForJob(JOB1, getDestDir());
+    setJobStageConfig(stageConfig);
 
     // set up the job.
-    new SetupJobStage(getJobStageConfig()).apply(false);
+    new SetupJobStage(stageConfig).apply(false);
 
     LOG.info("Creating manifest files for {}", taskAttemptCount);
 
     executeTaskAttempts(taskAttemptCount, filesPerTaskAttempt);
 
+    IOStatisticsSnapshot heapInfo = new IOStatisticsSnapshot();
+    addHeapInformation(heapInfo, "initial");
+
     LOG.info("Loading in the manifests");
 
     // Load in the manifests
     LoadManifestsStage stage = new LoadManifestsStage(
-        getJobStageConfig());
+        stageConfig);
 
     LoadManifestsStage.Result result = stage.apply(true);
     LoadManifestsStage.SummaryInfo summary = result.getSummary();
     List<TaskManifest> loadedManifests = result.getManifests();
+
+    LOG.info("\nJob statistics after loading {}",
+        ioStatisticsToPrettyString(getStageStatistics()));
+    LOG.info("Heap size = {}", heapSize());
+    addHeapInformation(heapInfo, "load.manifests");
+
+
 
     Assertions.assertThat(summary.getManifestCount())
         .describedAs("Manifest count of  %s", summary)
@@ -112,6 +145,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
         .describedAs("File Size of  %s", summary)
         .isEqualTo(getTotalDataSize());
 
+
     // now that manifest list.
     List<String> manifestTaskIds = loadedManifests.stream()
         .map(TaskManifest::getTaskID)
@@ -122,9 +156,10 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
 
     // now let's see about aggregating a large set of directories
     Set<Path> createdDirectories = new CreateOutputDirectoriesStage(
-        getJobStageConfig())
+        stageConfig)
         .apply(loadedManifests)
         .getCreatedDirectories();
+    addHeapInformation(heapInfo, "create.directories");
 
     // but after the merge process, only one per generated file output
     // dir exists
@@ -134,8 +169,26 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
 
     // and skipping the rename stage (which is going to fail),
     // go straight to cleanup
-    new CleanupJobStage(getJobStageConfig()).apply(
+    new CleanupJobStage(stageConfig).apply(
         new CleanupJobStage.Arguments("", true, true, false));
+    addHeapInformation(heapInfo, "cleanup");
+
+    ManifestSuccessData success = createManifestOutcome(stageConfig, OP_STAGE_JOB_COMMIT);
+    success.snapshotIOStatistics(getStageStatistics());
+    success.getIOStatistics().aggregate(heapInfo);
+
+    Configuration conf = getConfiguration();
+    enableManifestCommitter(conf);
+    String reportDir = conf.getTrimmed(OPT_SUMMARY_REPORT_DIR, "");
+    Path reportDirPath = new Path(reportDir);
+    Path path = new Path(reportDirPath,
+        createJobSummaryFilename("TestLoadManifestsStage"));
+    final FileSystem summaryFS = path.getFileSystem(conf);
+    success.save(summaryFS, path, true);
+    LOG.info("Saved summary to {}", path);
+    ManifestPrinter showManifest = new ManifestPrinter();
+        ManifestSuccessData manifestSuccessData =
+            showManifest.loadAndPrintManifest(summaryFS, path);
   }
 
 }
