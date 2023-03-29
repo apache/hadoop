@@ -36,12 +36,14 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateVersionIncompatibleException;
 import org.apache.hadoop.yarn.server.federation.store.metrics.FederationStateStoreClientMetrics;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
@@ -97,6 +99,7 @@ import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembership
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
 import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -116,6 +119,9 @@ public class MemoryFederationStateStore implements FederationStateStore {
   private int maxAppsInStateStore;
   private AtomicInteger sequenceNum;
   private AtomicInteger masterKeyId;
+  private static final Version CURRENT_VERSION_INFO = Version
+      .newInstance(1, 1);
+  private static byte[] version;
 
   private final MonotonicClock clock = new MonotonicClock();
 
@@ -134,6 +140,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
         YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS);
     sequenceNum = new AtomicInteger();
     masterKeyId = new AtomicInteger();
+    version = ((VersionPBImpl) CURRENT_VERSION_INFO).getProto().toByteArray();
   }
 
   @Override
@@ -367,22 +374,39 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
   @Override
   public Version getCurrentVersion() {
-    throw new NotImplementedException("Code is not implemented");
+    return CURRENT_VERSION_INFO;
   }
 
   @Override
   public Version loadVersion() throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+    VersionProto versionProto = VersionProto.parseFrom(version);
+    return new VersionPBImpl(versionProto);
   }
 
   @Override
   public void storeVersion() throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+    version = ((VersionPBImpl) CURRENT_VERSION_INFO).getProto().toByteArray();
   }
 
   @Override
   public void checkVersion() throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+    Version loadedVersion = loadVersion();
+    LOG.info("Loaded Router State Version Info = {}.", loadedVersion);
+    Version currentVersion = getCurrentVersion();
+    if (loadedVersion != null && loadedVersion.equals(currentVersion)) {
+      return;
+    }
+    // if there is no version info, treat it as CURRENT_VERSION_INFO;
+    if (loadedVersion == null) {
+      loadedVersion = currentVersion;
+    }
+    if (loadedVersion.isCompatibleTo(currentVersion)) {
+      LOG.info("Storing Router State Version Info {}.", currentVersion);
+      storeVersion();
+    } else {
+      throw new FederationStateVersionIncompatibleException(
+          "Expecting RM state version " + currentVersion + ", but loading version " + loadedVersion);
+    }
   }
 
   @Override
