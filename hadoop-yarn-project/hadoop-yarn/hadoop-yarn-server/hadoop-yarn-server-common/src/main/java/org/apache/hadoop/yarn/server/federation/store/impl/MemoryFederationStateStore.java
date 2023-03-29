@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.Comparator;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -121,7 +120,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   private AtomicInteger masterKeyId;
   private static final Version CURRENT_VERSION_INFO = Version
       .newInstance(1, 1);
-  private static byte[] version;
+  private byte[] version;
 
   private final MonotonicClock clock = new MonotonicClock();
 
@@ -379,8 +378,11 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
   @Override
   public Version loadVersion() throws Exception {
-    VersionProto versionProto = VersionProto.parseFrom(version);
-    return new VersionPBImpl(versionProto);
+    if (version != null) {
+      VersionProto versionProto = VersionProto.parseFrom(version);
+      return new VersionPBImpl(versionProto);
+    }
+    return null;
   }
 
   @Override
@@ -405,7 +407,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
       storeVersion();
     } else {
       throw new FederationStateVersionIncompatibleException(
-          "Expecting RM state version " + currentVersion + ", but loading version " + loadedVersion);
+          "Expecting Router state version " + currentVersion +
+          ", but loading version " + loadedVersion);
     }
   }
 
