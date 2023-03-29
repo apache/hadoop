@@ -173,6 +173,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
+import org.apache.hadoop.hdfs.server.protocol.InvalidBlockReportLeaseException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
@@ -1635,6 +1636,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
             bm.processReport(nodeReg, reports[index].getStorage(),
                 blocks, context));
         }
+      } else {
+        throw new InvalidBlockReportLeaseException(context.getReportId(), context.getLeaseId());
       }
     } catch (UnregisteredNodeException une) {
       LOG.debug("Datanode {} is attempting to report but not register yet.",

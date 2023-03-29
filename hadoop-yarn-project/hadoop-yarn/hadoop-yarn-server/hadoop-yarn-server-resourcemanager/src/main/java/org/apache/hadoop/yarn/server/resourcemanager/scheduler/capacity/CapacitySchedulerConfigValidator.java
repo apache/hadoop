@@ -116,6 +116,8 @@ public final class CapacitySchedulerConfigValidator {
    *
    * @param queues existing queues
    * @param newQueues new queues
+   * @param newConf Capacity Scheduler Configuration.
+   * @throws IOException an I/O exception has occurred.
    */
   public static void validateQueueHierarchy(
       CSQueueStore queues,

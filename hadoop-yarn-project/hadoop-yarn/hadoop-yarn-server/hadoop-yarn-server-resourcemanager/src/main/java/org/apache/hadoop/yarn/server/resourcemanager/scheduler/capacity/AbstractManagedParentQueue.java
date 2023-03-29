@@ -68,7 +68,8 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
   /**
    * Add the specified child queue.
    * @param childQueue reference to the child queue to be added
-   * @throws SchedulerDynamicEditException
+   * @throws SchedulerDynamicEditException when addChildQueue fails.
+   * @throws IOException an I/O exception has occurred.
    */
   public void addChildQueue(CSQueue childQueue)
       throws SchedulerDynamicEditException, IOException {
@@ -91,7 +92,7 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
   /**
    * Remove the specified child queue.
    * @param childQueue reference to the child queue to be removed
-   * @throws SchedulerDynamicEditException
+   * @throws SchedulerDynamicEditException when removeChildQueue fails.
    */
   public void removeChildQueue(CSQueue childQueue)
       throws SchedulerDynamicEditException {
@@ -117,7 +118,8 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
   /**
    * Remove the specified child queue.
    * @param childQueueName name of the child queue to be removed
-   * @throws SchedulerDynamicEditException
+   * @return child queue.
+   * @throws SchedulerDynamicEditException when removeChildQueue fails.
    */
   public CSQueue removeChildQueue(String childQueueName)
       throws SchedulerDynamicEditException {

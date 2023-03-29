@@ -16,23 +16,26 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
+package org.apache.hadoop.hdfs.server.protocol;
 
-import org.apache.hadoop.yarn.exceptions.YarnException;
+import java.io.IOException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * A class implements Evaluable interface represents the internal state
- * of the class can be changed against a given target.
- * @param <T> a target to evaluate against
+ * This exception is thrown when a datanode sends a full block report but it is
+ * rejected by the Namenode due to an invalid lease (expired or otherwise).
+ *
  */
-public interface Evaluable<T> {
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+public class InvalidBlockReportLeaseException extends IOException {
+  /** for java.io.Serializable. */
+  private static final long serialVersionUID = 1L;
 
-  /**
-   * Evaluate against a given target, this process changes the internal state
-   * of current class.
-   *
-   * @param target a generic type target that impacts this evaluation.
-   * @throws YarnException if evaluate error.
-   */
-  void evaluate(T target) throws YarnException;
+  public InvalidBlockReportLeaseException(long blockReportID, long leaseID) {
+    super("Block report 0x" + Long.toHexString(blockReportID) + " was rejected as lease 0x"
+        + Long.toHexString(leaseID) +  " is invalid");
+  }
 }

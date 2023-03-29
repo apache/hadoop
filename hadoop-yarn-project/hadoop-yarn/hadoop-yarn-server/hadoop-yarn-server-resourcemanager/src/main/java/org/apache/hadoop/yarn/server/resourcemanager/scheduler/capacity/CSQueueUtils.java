@@ -170,6 +170,11 @@ public class CSQueueUtils {
   /**
    * Update partitioned resource usage, if nodePartition == null, will update
    * used resource for all partitions of this queue.
+   *
+   * @param rc resource calculator.
+   * @param totalPartitionResource total Partition Resource.
+   * @param nodePartition node label.
+   * @param childQueue child queue.
    */
   public static void updateUsedCapacity(final ResourceCalculator rc,
       final Resource totalPartitionResource, String nodePartition,
@@ -285,6 +290,12 @@ public class CSQueueUtils {
    * When nodePartition is null, all partition of
    * used-capacity/absolute-used-capacity will be updated.
    * </p>
+   *
+   * @param rc resource calculator.
+   * @param cluster cluster resource.
+   * @param childQueue child queue.
+   * @param nlm RMNodeLabelsManager.
+   * @param nodePartition node label.
    */
   @Lock(CSQueue.class)
   public static void updateQueueStatistics(
