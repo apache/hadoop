@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.time.Instant;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsUriQueryBuilder;
 
 /**
@@ -36,7 +37,8 @@ public class ServiceSASGenerator extends SASGenerator {
     super(accountKey);
   }
 
-  public String getContainerSASWithFullControl(String accountName, String containerName) {
+  public String getContainerSASWithFullControl(String accountName, String containerName) throws InvalidConfigurationValueException {
+    accountName = getCanonicalAccountName(accountName);
     String sp = "rcwdl";
     String sv = AuthenticationVersion.Feb20.toString();
     String sr = "c";

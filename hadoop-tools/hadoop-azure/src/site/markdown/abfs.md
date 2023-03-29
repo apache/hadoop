@@ -315,6 +315,7 @@ driven by them.
 1. Deployed in-Azure with the Azure VMs providing OAuth 2.0 tokens to the application,
  "Managed Instance".
 1. Using Shared Access Signature (SAS) tokens provided by a custom implementation of the SASTokenProvider interface.
+2. By directly configuring a fixed Shared Access Signature (SAS) token in the account configuration settings files.
 
 What can be changed is what secrets/credentials are used to authenticate the caller.
 
@@ -624,6 +625,24 @@ tokens by implementing the SASTokenProvider interface.
 ```
 
 The declared class must implement `org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider`.
+
+*Note:* When using a token provider implementation that provides a User Delegation SAS Token or Service SAS Token, some operations may be out of scope and may fail.
+
+### Fixed Shared Access Signature (SAS) Token
+
+A Shared Access Signature Token can be directly configured in the account settings file. This should ideally be used for an Account SAS Token, that can be fixed as a constant for an account.
+```xml
+<property>
+    <name>fs.azure.account.auth.type</name>
+    <value>SAS</value>
+</property>
+<property>
+    <name>fs.azure.sas.fixed.token</name>
+    <value>{SAS Token generated or obtained directly from public interfaces}</value>
+    <description>Fixed SAS Token directly configured</description>
+</property>
+```
+*Note:* When `fs.azure.sas.token.provider.type` and `fs.azure.fixed.sas.token` are both configured, precedence will be given to the custom token provider implementation.
 
 ## <a name="technical"></a> Technical notes
 
