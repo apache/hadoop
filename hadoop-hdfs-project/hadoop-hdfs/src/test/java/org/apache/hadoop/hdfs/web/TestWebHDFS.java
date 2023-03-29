@@ -2208,12 +2208,12 @@ public class TestWebHDFS {
     final Configuration conf = WebHdfsTestUtil.createConf();
 
     cluster = new MiniDFSCluster.Builder(conf)
-            .numDataNodes(3)
-            .build();
+        .numDataNodes(3)
+        .build();
     cluster.waitActive();
 
     final WebHdfsFileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
-            WebHdfsConstants.WEBHDFS_SCHEME);
+        WebHdfsConstants.WEBHDFS_SCHEME);
 
     // Symbolic link
     Path root = new Path("/webHdfsTest/");
