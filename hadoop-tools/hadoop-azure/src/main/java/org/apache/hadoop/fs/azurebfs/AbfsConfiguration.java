@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.DoubleConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.IntegerWithOutlierConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.LongConfigurationValidatorAnnotation;
@@ -273,9 +274,61 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ACCOUNT_OPERATION_IDLE_TIMEOUT_MS)
   private int accountOperationIdleTimeout;
 
+  /**
+   * Analysis Period for client-side throttling
+   */
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ANALYSIS_PERIOD,
           DefaultValue = DEFAULT_ANALYSIS_PERIOD_MS)
   private int analysisPeriod;
+
+  /**
+   * Lower limit of acceptable error percentage
+   */
+  @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MIN_ACCEPTABLE_ERROR_PERCENTAGE,
+      DefaultValue = DEFAULT_MIN_ACCEPTABLE_ERROR_PERCENTAGE)
+  private double minAcceptableErrorPercentage;
+
+  /**
+   * Maximum equilibrium error percentage
+   */
+  @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MAX_EQUILIBRIUM_ERROR_PERCENTAGE,
+          DefaultValue = DEFAULT_MAX_EQUILIBRIUM_ERROR_PERCENTAGE)
+  private double maxEquilibriumErrorPercentage;
+
+  /**
+   * Rapid sleep decrease factor to increase throughput
+   */
+  @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_RAPID_SLEEP_DECREASE_FACTOR,
+          DefaultValue = DEFAULT_RAPID_SLEEP_DECREASE_FACTOR)
+  private double rapidSleepDecreaseFactor;
+
+  /**
+   * Rapid sleep decrease transition period in milliseconds
+   */
+  @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_RAPID_SLEEP_DECREASE_TRANSITION_MS,
+          DefaultValue = DEFAULT_RAPID_SLEEP_DECREASE_TRANSITION_PERIOD_MS)
+  private double rapidSleepDecreaseTransitionPeriodMs;
+
+  /**
+   * Sleep decrease factor to increase throughput
+   */
+  @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SLEEP_DECREASE_FACTOR,
+          DefaultValue = DEFAULT_SLEEP_DECREASE_FACTOR)
+  private double sleepDecreaseFactor;
+
+  /**
+   * Sleep increase factor to reduce throughput
+   */
+  @DoubleConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SLEEP_INCREASE_FACTOR,
+          DefaultValue = DEFAULT_SLEEP_INCREASE_FACTOR)
+  private double sleepIncreaseFactor;
+
+  /**
+   * Enable throttling for retried requests
+   */
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_THROTTLE_RETRIES,
+  DefaultValue = false)
+  private boolean throttleRetries;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_IO_RATE_LIMIT,
       MinValue = 0,
@@ -769,6 +822,32 @@ public class AbfsConfiguration{
     return analysisPeriod;
   }
 
+  public double getMinErrorPercentage() {
+    return minAcceptableErrorPercentage;
+  }
+
+  public double getMaxEquilibriumErrorPercentage() {
+    return maxEquilibriumErrorPercentage;
+  }
+
+  public double getRapidSleepDecreaseFactor() {
+    return rapidSleepDecreaseFactor;
+  }
+
+  public double getRapidSleepDecreaseTransitionPeriod() {
+    return rapidSleepDecreaseTransitionPeriodMs;
+  }
+
+  public double getSleepDecreaseFactor() {
+    return sleepDecreaseFactor;
+  }
+
+  public double getSleepIncreaseFactor() {
+    return sleepIncreaseFactor;
+  }
+  public boolean shouldThrottleRetriedRequests() {
+    return throttleRetries;
+  }
   public int getRateLimit() {
     return rateLimit;
   }

@@ -25,6 +25,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -306,7 +307,11 @@ public class AbfsRestOperation {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
-      intercept.sendingRequest(operationType, abfsCounters);
+
+      if (retryCount == 0 || client.shouldThrottleRetries()) {
+        intercept.sendingRequest(operationType, abfsCounters);
+      }
+
       if (hasRequestBody) {
         // HttpUrlConnection requires
         httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
@@ -374,6 +379,10 @@ public class AbfsRestOperation {
     result = httpOperation;
 
     return true;
+  }
+
+  int getRetryCount() {
+    return retryCount;
   }
 
   /**

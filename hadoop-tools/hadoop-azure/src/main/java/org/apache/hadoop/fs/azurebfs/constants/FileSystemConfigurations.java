@@ -50,6 +50,14 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_BACKOFF_INTERVAL = SIXTY_SECONDS;
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_DELTA_BACKOFF = 2;
 
+  // Throttling Analysis defaults.
+  public static final double DEFAULT_MIN_ACCEPTABLE_ERROR_PERCENTAGE = 0.1;
+  public static final double DEFAULT_MAX_EQUILIBRIUM_ERROR_PERCENTAGE = 1;
+  public static final double DEFAULT_RAPID_SLEEP_DECREASE_FACTOR = 0.75;
+  public static final double DEFAULT_RAPID_SLEEP_DECREASE_TRANSITION_PERIOD_MS = 150 * 1000;
+  public static final double DEFAULT_SLEEP_DECREASE_FACTOR = 0.975;
+  public static final double DEFAULT_SLEEP_INCREASE_FACTOR = 1.05;
+
   public static final int ONE_KB = 1024;
   public static final int ONE_MB = ONE_KB * ONE_KB;
 

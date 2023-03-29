@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
+import static java.net.HttpURLConnection.HTTP_OK;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
@@ -32,6 +34,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -41,7 +45,12 @@ import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.mockito.Mockito;
 
+
+import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -140,7 +149,7 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     when(http500Op.getStatusCode()).thenReturn(HTTP_INTERNAL_ERROR);
     when(successOp.getResult()).thenReturn(http500Op);
 
-    AbfsConfiguration configuration = Mockito.mock(AbfsConfiguration.class);
+    AbfsConfiguration configuration = mock(AbfsConfiguration.class);
     when(configuration.getAnalysisPeriod()).thenReturn(ANALYSIS_PERIOD);
     when(configuration.isAutoThrottlingEnabled()).thenReturn(true);
     when(configuration.accountThrottlingEnabled()).thenReturn(false);
@@ -285,9 +294,55 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     Assert.assertEquals("Delta backoff interval was not set as expected.", expectedDeltaBackoff, policy.getDeltaBackoff());
   }
 
+  @Test
+  public void testReadThrottleNewRequest() throws IOException {
+    AzureBlobFileSystem fs = getFileSystem();
+    AbfsClient client = Mockito.spy(fs.getAbfsStore().getClient());
+
+    AbfsThrottlingIntercept intercept = mock(AbfsThrottlingIntercept.class);
+    Mockito.doNothing().when(intercept).sendingRequest(Mockito.any(AbfsRestOperationType.class), Mockito.any(AbfsCounters.class));
+    Mockito.doReturn(intercept).when(client).getIntercept();
+
+    // setting up the spy AbfsRestOperation class for read
+    final List<AbfsHttpHeader> requestHeaders = client.createDefaultHeaders();
+
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = client.createDefaultUriQueryBuilder();
+
+    final URL url = client.createRequestUrl("/dummyReadFile", abfsUriQueryBuilder.toString());
+    final AbfsRestOperation mockRestOp = Mockito.spy(new AbfsRestOperation(
+            AbfsRestOperationType.ReadFile,
+            client,
+            HTTP_METHOD_GET,
+            url,
+            requestHeaders));
+
+    // setting up mock behavior for the AbfsHttpOperation class
+    AbfsHttpOperation mockHttpOp = mock(AbfsHttpOperation.class);
+    HttpURLConnection mockUrlConnection = mock(HttpURLConnection.class);
+    Mockito.doNothing().when(mockUrlConnection).setRequestProperty(nullable(String.class), nullable(String.class));
+    SharedKeyCredentials mockSharedKeyCreds = mock(SharedKeyCredentials.class);
+    Mockito.doNothing().when(mockSharedKeyCreds).signRequest(Mockito.any(HttpURLConnection.class), Mockito.any(long.class));
+    Mockito.doReturn(mockSharedKeyCreds).when(client).getSharedKeyCredentials();
+    Mockito.doReturn(mockUrlConnection).when(mockHttpOp).getConnection();
+    Mockito.doReturn(HTTP_OK)
+            .when(mockHttpOp).getStatusCode();
+    Mockito.doNothing().when(mockHttpOp).setRequestProperty(nullable(String.class), nullable(String.class));
+    Mockito.doNothing().when(mockHttpOp).sendRequest(nullable(byte[].class), nullable(int.class), nullable(int.class));
+    Mockito.doThrow(IOException.class)
+            .doThrow(IOException.class)
+            .doThrow(IOException.class)
+            .doNothing().when(mockHttpOp).processResponse(nullable(byte[].class), nullable(int.class), nullable(int.class));
+
+    Mockito.doReturn(mockHttpOp).when(mockRestOp).createHttpOperation();
+    Mockito.doReturn(mockHttpOp).when(mockRestOp).getResult();
+
+    mockRestOp.execute(getTestTracingContext(fs, false));
+    Mockito.verify(intercept, times(1)).sendingRequest(Mockito.any(AbfsRestOperationType.class), Mockito.any(AbfsCounters.class));
+    assertEquals(3, mockRestOp.getRetryCount());
+  }
+
   private AbfsConfiguration getAbfsConfig() throws Exception {
-    Configuration
-        config = new Configuration(this.getRawConfiguration());
+    Configuration config = new Configuration(this.getRawConfiguration());
     return new AbfsConfiguration(config, "dummyAccountName");
   }
 
