@@ -93,27 +93,30 @@ public class TestSampleQuantiles {
   public void testQuantileError() throws IOException {
     final int count = 100000;
     Random r = new Random(0xDEADDEAD);
-    Long[] values = new Long[count];
+    int[] values = new int[count];
     for (int i = 0; i < count; i++) {
-      values[i] = (long) (i + 1);
+      values[i] = i + 1;
     }
+
     // Do 10 shuffle/insert/check cycles
     for (int i = 0; i < 10; i++) {
-      System.out.println("Starting run " + i);
+
+      // Shuffle  
       Collections.shuffle(Arrays.asList(values), r);
       estimator.clear();
+
+      // Insert
       for (int j = 0; j < count; j++) {
         estimator.insert(values[j]);
       }
       Map<Quantile, Long> snapshot;
       snapshot = estimator.snapshot();
+
+      // Check
       for (Quantile q : quantiles) {
         long actual = (long) (q.quantile * count);
         long error = (long) (q.error * count);
         long estimate = snapshot.get(q);
-        System.out
-            .println(String.format("Expected %d with error %d, estimated %d",
-                actual, error, estimate));
         assertThat(estimate <= actual + error).isTrue();
         assertThat(estimate >= actual - error).isTrue();
       }
@@ -129,27 +132,29 @@ public class TestSampleQuantiles {
     SampleQuantiles inverseQuantilesEstimator = new SampleQuantiles(MutableInverseQuantiles.INVERSE_QUANTILES);
     final int count = 100000;
     Random r = new Random(0xDEADDEAD);
-    Long[] values = new Long[count];
+    int[] values = new int[count];
     for (int i = 0; i < count; i++) {
-      values[i] = (long) (i + 1);
+      values[i] = i + 1;
     }
+
     // Do 10 shuffle/insert/check cycles
     for (int i = 0; i < 10; i++) {
-      System.out.println("Starting run " + i);
+      // Shuffle
       Collections.shuffle(Arrays.asList(values), r);
       inverseQuantilesEstimator.clear();
+
+      // Insert
       for (int j = 0; j < count; j++) {
         inverseQuantilesEstimator.insert(values[j]);
       }
       Map<Quantile, Long> snapshot;
       snapshot = inverseQuantilesEstimator.snapshot();
+
+      // Check
       for (Quantile q : MutableInverseQuantiles.INVERSE_QUANTILES) {
         long actual = (long) (q.quantile * count);
         long error = (long) (q.error * count);
         long estimate = snapshot.get(q);
-        System.out.println(String.format("For inverse quantile %f " +
-            "Expected %d with error %d, estimated %d",
-                (1 - q.quantile), actual, error, estimate));
         assertThat(estimate <= actual + error).isTrue();
         assertThat(estimate >= actual - error).isTrue();
       }

@@ -54,7 +54,7 @@ public class MutableQuantiles extends MutableMetric {
 
   private MetricsInfo numInfo;
   private MetricsInfo[] quantileInfos;
-  private int interval;
+  private int intervalSecs;
 
   private QuantileEstimator estimator;
   private long previousCount = 0;
@@ -99,7 +99,7 @@ public class MutableQuantiles extends MutableMetric {
     String descTemplate = "%d percentile " + lvName + " with " + interval
         + " second interval for " + desc;
     for (int i = 0; i < quantiles.length; i++) {
-      int percentile = (int) (100 * quantiles[i].quantile);
+      double percentile = 100 * quantiles[i].quantile;
       addQuantileInfo(i, info(String.format(nameTemplate, percentile),
           String.format(descTemplate, percentile)));
     }
@@ -138,10 +138,10 @@ public class MutableQuantiles extends MutableMetric {
   /**
    * Set info about the metrics.
    *
-   * @param numInfo info about the metrics.
+   * @param pNumInfo info about the metrics.
    */
-  public synchronized void setNumInfo(MetricsInfo numInfo) {
-    this.numInfo = numInfo;
+  public synchronized void setNumInfo(MetricsInfo pNumInfo) {
+    this.numInfo = pNumInfo;
   }
 
   /**
@@ -166,19 +166,19 @@ public class MutableQuantiles extends MutableMetric {
   /**
    * Set the rollover interval (in seconds) of the estimator.
    *
-   * @param interval (in seconds) of the estimator.
+   * @param pIntervalSecs (in seconds) of the estimator.
    */
-  public synchronized void setInterval(int interval) {
-    this.interval = interval;
+  public synchronized void setInterval(int pIntervalSecs) {
+    this.intervalSecs = pIntervalSecs;
   }
 
   /**
    * Get the rollover interval (in seconds) of the estimator.
    *
-   * @return  interval (in seconds) of the estimator.
+   * @return  intervalSecs (in seconds) of the estimator.
    */
   public synchronized int getInterval() {
-    return interval;
+    return intervalSecs;
   }
 
   public void stop() {

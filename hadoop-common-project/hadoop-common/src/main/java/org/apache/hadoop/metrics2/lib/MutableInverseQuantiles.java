@@ -21,7 +21,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.util.Quantile;
 import org.apache.hadoop.metrics2.util.SampleQuantiles;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -44,10 +43,16 @@ import static org.apache.hadoop.metrics2.lib.Interns.info;
 @InterfaceStability.Evolving
 public class MutableInverseQuantiles extends MutableQuantiles{
 
+  static class InversePercentile extends Quantile {
+    InversePercentile(double inversePercentile) {
+      super(inversePercentile/100, inversePercentile/1000);
+    }
+  }
+
   @VisibleForTesting
-  public static final Quantile[] INVERSE_QUANTILES = { new Quantile(0.50, 0.050),
-      new Quantile(0.25, 0.025), new Quantile(0.10, 0.010),
-      new Quantile(0.05, 0.005), new Quantile(0.01, 0.001) };
+  public static final Quantile[] INVERSE_QUANTILES = { new InversePercentile(50),
+      new InversePercentile(25), new InversePercentile(10),
+      new InversePercentile(5), new InversePercentile(1) };
 
   private ScheduledFuture<?> scheduledTask;
 
@@ -59,14 +64,14 @@ public class MutableInverseQuantiles extends MutableQuantiles{
    * Instantiates a new {@link MutableInverseQuantiles} for a metric that rolls itself
    * over on the specified time interval.
    *
-   * @param name        of the metric
-   * @param description long-form textual description of the metric
-   * @param sampleName  type of items in the stream (e.g., "Ops")
-   * @param valueName   type of the values
-   * @param interval    rollover interval (in seconds) of the estimator
+   * @param name          of the metric
+   * @param description   long-form textual description of the metric
+   * @param sampleName    type of items in the stream (e.g., "Ops")
+   * @param valueName     type of the values
+   * @param intervalSecs rollover interval (in seconds) of the estimator
    */
   public MutableInverseQuantiles(String name, String description, String sampleName,
-      String valueName, int interval) {
+      String valueName, int intervalSecs) {
     String ucName = StringUtils.capitalize(name);
     String usName = StringUtils.capitalize(sampleName);
     String uvName = StringUtils.capitalize(valueName);
@@ -75,28 +80,28 @@ public class MutableInverseQuantiles extends MutableQuantiles{
     String lvName = StringUtils.uncapitalize(valueName);
 
     setNumInfo(info(ucName + "Num" + usName, String.format(
-        "Number of %s for %s with %ds interval", lsName, desc, interval)));
+        "Number of %s for %s with %ds interval", lsName, desc, intervalSecs)));
     // Construct the MetricsInfos for the inverse quantiles, converting to inverse percentiles
     setQuantileInfos(INVERSE_QUANTILES.length);
     String nameTemplate = ucName + "%dthInversePercentile" + uvName;
-    String descTemplate = "%d inverse percentile " + lvName + " with " + interval
+    String descTemplate = "%d inverse percentile " + lvName + " with " + intervalSecs
         + " second interval for " + desc;
     for (int i = 0; i < INVERSE_QUANTILES.length; i++) {
-      int inversePercentile = (int) (100 * (1 - INVERSE_QUANTILES[i].quantile));
+      double inversePercentile = 100 * (1 - INVERSE_QUANTILES[i].quantile);
       addQuantileInfo(i, info(String.format(nameTemplate, inversePercentile),
           String.format(descTemplate, inversePercentile)));
     }
 
     setEstimator(new SampleQuantiles(INVERSE_QUANTILES));
-    setInterval(interval);
+    setInterval(intervalSecs);
     scheduledTask = SCHEDULAR.scheduleWithFixedDelay(new RolloverSample(this),
-        interval, interval, TimeUnit.SECONDS);
+        intervalSecs, intervalSecs, TimeUnit.SECONDS);
   }
 
   public void stop() {
     if (scheduledTask != null) {
       scheduledTask.cancel(false);
+      scheduledTask = null;
     }
-    scheduledTask = null;
   }
 }
