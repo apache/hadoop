@@ -1035,7 +1035,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
       if(isSrcDir) {
         final RenameAtomicityUtils renameAtomicityUtils;
-        if (isAtomicRenameKey(source.getName())) {
+        if (isAtomicRenameKey(source.toUri().getPath())) {
           renameAtomicityUtils = new RenameAtomicityUtils(azureBlobFileSystem,
               source, destination, tracingContext, srcBlobProperties);
         } else {

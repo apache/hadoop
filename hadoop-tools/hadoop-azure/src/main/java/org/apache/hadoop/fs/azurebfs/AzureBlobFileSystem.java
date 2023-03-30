@@ -646,7 +646,7 @@ public class AzureBlobFileSystem extends FileSystem
       FileStatus fileStatus = abfsStore.getFileStatus(qualifiedPath,
           tracingContext);
       if (fileStatus != null && fileStatus.isDirectory() &&
-          abfsStore.isAtomicRenameKey(path.getName()) &&
+          abfsStore.isAtomicRenameKey(path.toUri().getPath()) &&
           abfsStore.getRenamePendingFileStatusInDirectory(fileStatus, tracingContext)) {
         RenameAtomicityUtils renameAtomicityUtils = new RenameAtomicityUtils(
             this,

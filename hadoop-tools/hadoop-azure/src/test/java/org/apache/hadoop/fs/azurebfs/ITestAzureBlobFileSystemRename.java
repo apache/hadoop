@@ -27,19 +27,16 @@ import java.util.concurrent.Future;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
-import org.apache.hadoop.fs.statistics.IOStatistics;
 
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
+import static org.apache.hadoop.fs.azurebfs.RenameAtomicityUtils.SUFFIX;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 
 /**
  * Test rename operation.
@@ -211,5 +208,29 @@ public class ITestAzureBlobFileSystemRename extends
     assertTrue(fs.exists(new Path("testDir2/test4/file1")));
     assertFalse(fs.exists(new Path("testDir2/test1/test2/test3/file")));
     assertFalse(fs.exists(new Path("testDir2/test1/test2/test3/file1")));
+  }
+
+  @Test
+  public void testRenamePendingJsonIsRemovedPostSuccessfulRename() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    fs.setWorkingDirectory(new Path("/"));
+    fs.mkdirs(new Path("hbase/test1/test2/test3"));
+    fs.create(new Path("hbase/test1/test2/test3/file"));
+    fs.create(new Path("hbase/test1/test2/test3/file1"));
+    fs.mkdirs(new Path("hbase/test4/"));
+    fs.create(new Path("hbase/test4/file1"));
+    final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
+    final Integer[] correctDeletePathCount = new Integer[1];
+    correctDeletePathCount[0] = 0;
+
+    Mockito.doAnswer(answer -> {
+      final String correctDeletePath = "/hbase/test1/test2/test3" + SUFFIX;
+      if(correctDeletePath.equals(((Path)answer.getArgument(0)).toUri().getPath())) {
+        correctDeletePathCount[0] = 1;
+      }
+      return null;
+    }).when(spiedFs).delete(Mockito.any(Path.class), Mockito.anyBoolean());
+    Assert.assertTrue(spiedFs.rename(new Path("hbase/test1/test2/test3"), new Path("hbase/test4")));
+    Assert.assertTrue(correctDeletePathCount[0] == 1);
   }
 }
