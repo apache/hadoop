@@ -1,18 +1,32 @@
 package org.apache.hadoop.fs.azurebfs;
 
+import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.microsoft.azure.storage.StorageException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.permission.FsPermission;
 
@@ -21,26 +35,124 @@ public class RenameAtomicityUtils {
   private static final Logger LOG = LoggerFactory.getLogger(RenameAtomicityUtils.class);
 
   private final AzureBlobFileSystem azureBlobFileSystem;
-  private final Path srcPath;
-  private final Path dstPath;
-  private final TracingContext tracingContext;
-  private final List<BlobProperty> blobPropertyList;
+  private Path srcPath;
+  private Path dstPath;
+  private TracingContext tracingContext;
+  private List<BlobProperty> blobPropertyList;
 
   private static final int MAX_RENAME_PENDING_FILE_SIZE = 10000000;
   private static final int FORMATTING_BUFFER = 10000;
 
   public static final String SUFFIX = "-RenamePending.json";
 
+  private static final ObjectReader READER = new ObjectMapper()
+      .configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true)
+      .readerFor(JsonNode.class);
+
   RenameAtomicityUtils(final AzureBlobFileSystem azureBlobFileSystem,
   final Path srcPath, final Path dstPath, final TracingContext tracingContext,
-      List<BlobProperty> blobPropertyList) {
+      List<BlobProperty> blobPropertyList) throws IOException {
     this.azureBlobFileSystem = azureBlobFileSystem;
     this.srcPath = srcPath;
     this.dstPath = dstPath;
     this.tracingContext = tracingContext;
     this.blobPropertyList = blobPropertyList;
+
+    writeFile();
   }
 
+  RenameAtomicityUtils(final AzureBlobFileSystem azureBlobFileSystem,
+      final Path path, final RedoRenameInvocation redoRenameInvocation) throws IOException {
+    this.azureBlobFileSystem = azureBlobFileSystem;
+    final RenamePendingFileInfo renamePendingFileInfo = readFile(path);
+    if(renamePendingFileInfo != null) {
+      redoRenameInvocation.redo(renamePendingFileInfo.destination,
+          renamePendingFileInfo.srcList);
+    }
+  }
+
+  private RenamePendingFileInfo readFile(final Path redoFile) throws IOException {
+    Path f = redoFile;
+    FSDataInputStream input = azureBlobFileSystem.open(f);
+    byte[] bytes = new byte[MAX_RENAME_PENDING_FILE_SIZE];
+    int l = input.read(bytes);
+    if (l <= 0) {
+      // Jira HADOOP-12678 -Handle empty rename pending metadata file during
+      // atomic rename in redo path. If during renamepending file is created
+      // but not written yet, then this means that rename operation
+      // has not started yet. So we should delete rename pending metadata file.
+      LOG.error("Deleting empty rename pending file "
+          + redoFile + " -- no data available");
+      deleteRenamePendingFile(azureBlobFileSystem, redoFile);
+      return null;
+    }
+    if (l == MAX_RENAME_PENDING_FILE_SIZE) {
+      throw new IOException(
+          "Error reading pending rename file contents -- "
+              + "maximum file size exceeded");
+    }
+    String contents = new String(bytes, 0, l, StandardCharsets.UTF_8);
+
+    // parse the JSON
+    JsonNode json = null;
+    boolean committed;
+    try {
+      json = READER.readValue(contents);
+      committed = true;
+    } catch (JsonMappingException e) {
+
+      // The -RedoPending.json file is corrupted, so we assume it was
+      // not completely written
+      // and the redo operation did not commit.
+      committed = false;
+    } catch (JsonParseException e) {
+      committed = false;
+    }
+
+    if (!committed) {
+      LOG.error("Deleting corruped rename pending file {} \n {}",
+          redoFile, contents);
+
+      // delete the -RenamePending.json file
+      deleteRenamePendingFile(azureBlobFileSystem, redoFile);
+      return null;
+    }
+
+    // initialize this object's fields
+    JsonNode oldFolderName = json.get("OldFolderName");
+    JsonNode newFolderName = json.get("NewFolderName");
+    if (oldFolderName != null && StringUtils.isNotEmpty(oldFolderName.textValue())
+        && newFolderName != null && StringUtils.isNotEmpty(newFolderName.textValue())) {
+      RenamePendingFileInfo renamePendingFileInfo = new RenamePendingFileInfo();
+      renamePendingFileInfo.destination = new Path(newFolderName.textValue());
+      String srcDir = oldFolderName.textValue() + "/";
+      List<Path> srcPaths = new ArrayList<>();
+      JsonNode fileList = json.get("FileList");
+      for (int i = 0; i < fileList.size(); i++) {
+        srcPaths.add(new Path(srcDir + fileList.get(i).textValue()));
+      }
+      renamePendingFileInfo.srcList = srcPaths;
+      return renamePendingFileInfo;
+    }
+    return null;
+  }
+
+  private void deleteRenamePendingFile(FileSystem fs, Path redoFile)
+      throws IOException {
+    try {
+      fs.delete(redoFile, false);
+    } catch (IOException e) {
+      // If the rename metadata was not found then somebody probably
+      // raced with us and finished the delete first
+      Throwable t = e.getCause();
+      if (t != null && t instanceof StorageException
+          && "BlobNotFound".equals(((StorageException) t).getErrorCode())) {
+        LOG.warn("rename pending file " + redoFile + " is already deleted");
+      } else {
+        throw e;
+      }
+    }
+  }
 
   /**
    * Write to disk the information needed to redo folder rename,
@@ -69,7 +181,7 @@ public class RenameAtomicityUtils {
    * } }</pre>
    * @throws IOException Thrown when fail to write file.
    */
-  public void writeFile() throws IOException {
+  private void writeFile() throws IOException {
     Path path = getRenamePendingFilePath();
     LOG.debug("Preparing to write atomic rename state to {}", path.toString());
     OutputStream output = null;
@@ -216,5 +328,15 @@ public class RenameAtomicityUtils {
     String fileName = srcPath.toUri().getPath() + SUFFIX;
     Path fileNamePath = new Path(fileName);
     return fileNamePath;
+  }
+
+  private static class RenamePendingFileInfo {
+    public Path destination;
+    public List<Path> srcList;
+  }
+
+  static interface RedoRenameInvocation {
+    void redo(Path destination, List<Path> sourcePaths) throws
+        AzureBlobFileSystemException;
   }
 }

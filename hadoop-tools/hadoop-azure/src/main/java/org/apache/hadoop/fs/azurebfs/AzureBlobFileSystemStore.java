@@ -982,8 +982,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     client.breakLease(getRelativePath(path), tracingContext);
   }
 
-  public void rename(final Path source, final Path destination, TracingContext tracingContext) throws
-          AzureBlobFileSystemException {
+  public void rename(final Path source, final Path destination,
+      final AzureBlobFileSystem azureBlobFileSystem, TracingContext tracingContext) throws
+          IOException {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
     boolean shouldContinue;
@@ -1032,8 +1033,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(), null, null);
       }
       if(isSrcDir) {
+        final RenameAtomicityUtils renameAtomicityUtils;
         if (isAtomicRenameKey(source.getName())) {
-
+          renameAtomicityUtils = new RenameAtomicityUtils(azureBlobFileSystem,
+              source, destination, tracingContext, srcBlobProperties);
+        } else {
+          renameAtomicityUtils = null;
         }
         List<Future> futures = new ArrayList<>();
         for(BlobProperty blobProperty : srcBlobProperties) {
@@ -1053,6 +1058,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           } catch (ExecutionException e) {
             throw new RuntimeException(e);
           }
+        }
+        if(renameAtomicityUtils != null) {
+          renameAtomicityUtils.cleanup();;
         }
       } else {
         renameBlob(destination, tracingContext, srcBlobProperties.get(0));
