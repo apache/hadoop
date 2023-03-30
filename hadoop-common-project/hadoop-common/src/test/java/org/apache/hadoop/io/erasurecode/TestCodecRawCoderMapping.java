@@ -164,7 +164,7 @@ public class TestCodecRawCoderMapping {
     }
     ErasureCoderOptions coderOptions = new ErasureCoderOptions(
         numDataUnit, numParityUnit);
-    
+
     conf.setBoolean(CodecUtil.IO_ERASURECODE_CODEC_NATIVE_ENABLED_KEY,
         CodecUtil.IO_ERASURECODE_CODEC_NATIVE_ENABLED_DEFAULT);
     RawErasureEncoder rsEncoder = CodecUtil.createRawEncoder(
