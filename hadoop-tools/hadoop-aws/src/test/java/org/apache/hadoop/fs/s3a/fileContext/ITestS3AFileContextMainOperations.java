@@ -25,7 +25,7 @@ import org.junit.Test;
  * S3A implementation of FileContextMainOperationsBaseTest.
  */
 public class ITestS3AFileContextMainOperations
-    extends FileContextMainOperationsBaseTest {
+        extends FileContextMainOperationsBaseTest {
 
   @Before
   public void setUp() throws IOException, Exception {
