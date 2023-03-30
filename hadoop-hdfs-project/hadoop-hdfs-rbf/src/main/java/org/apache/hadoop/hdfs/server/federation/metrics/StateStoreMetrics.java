@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.metrics;
 import static org.apache.hadoop.metrics2.impl.MsInfo.ProcessName;
 import static org.apache.hadoop.metrics2.impl.MsInfo.SessionId;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,6 +55,7 @@ public class StateStoreMetrics implements StateStoreMBean {
   private MutableRate failures;
 
   private Map<String, MutableGaugeInt> cacheSizes;
+  private final Map<String, MutableRate> cacheLoadMetrics = new HashMap<>();
 
   protected StateStoreMetrics() {}
 
@@ -148,6 +150,32 @@ public class StateStoreMetrics implements StateStoreMBean {
       counter = registry.newGauge(name, name, count);
     }
     counter.set(count);
+  }
+
+  /**
+   * Set the cache loading metrics for the state store interface.
+   *
+   * @param name Name of the record of the cache.
+   * @param value The time duration interval as the cache value.
+   */
+  public void setCacheLoading(String name, long value) {
+    String cacheLoad = "Cache" + name + "Load";
+    MutableRate cacheLoadMetric = cacheLoadMetrics.get(cacheLoad);
+    if (cacheLoadMetric == null) {
+      cacheLoadMetric = registry.newRate(cacheLoad, name, false);
+      cacheLoadMetrics.put(cacheLoad, cacheLoadMetric);
+    }
+    cacheLoadMetrics.get(cacheLoad).add(value);
+  }
+
+  /**
+   * Retrieve unmodifiable map of cache loading metrics.
+   *
+   * @return unmodifiable map of cache loading metrics.
+   */
+  @VisibleForTesting
+  public Map<String, MutableRate> getCacheLoadMetrics() {
+    return Collections.unmodifiableMap(cacheLoadMetrics);
   }
 
   @VisibleForTesting

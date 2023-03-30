@@ -48,6 +48,8 @@ import org.apache.hadoop.hdfs.server.federation.store.records.Query;
 import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
+import org.apache.hadoop.metrics2.lib.MutableRate;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.slf4j.Logger;
@@ -74,6 +76,10 @@ public class TestStateStoreDriverBase {
    */
   protected StateStoreDriver getStateStoreDriver() {
     return stateStore.getDriver();
+  }
+
+  protected StateStoreService getStateStoreService() {
+    return stateStore;
   }
 
   @After
@@ -572,6 +578,36 @@ public class TestStateStoreDriverBase {
       }
     }
     return getters;
+  }
+
+  public long getMountTableCacheLoadSamples(StateStoreDriver driver) throws IOException {
+    final MutableRate mountTableCache = getMountTableCache(driver);
+    return mountTableCache.lastStat().numSamples();
+  }
+
+  private static MutableRate getMountTableCache(StateStoreDriver driver) throws IOException {
+    StateStoreMetrics metrics = stateStore.getMetrics();
+    final Query<MountTable> query = new Query<>(MountTable.newInstance());
+    driver.getMultiple(MountTable.class, query);
+    final Map<String, MutableRate> cacheLoadMetrics = metrics.getCacheLoadMetrics();
+    final MutableRate mountTableCache = cacheLoadMetrics.get("CacheMountTableLoad");
+    assertNotNull("CacheMountTableLoad should be present in the state store metrics",
+        mountTableCache);
+    return mountTableCache;
+  }
+
+  public void testCacheLoadMetrics(StateStoreDriver driver, long numRefresh,
+      double expectedHigherThan) throws IOException, IllegalArgumentException {
+    final MutableRate mountTableCache = getMountTableCache(driver);
+    // CacheMountTableLoadNumOps
+    final long mountTableCacheLoadNumOps = getMountTableCacheLoadSamples(driver);
+    assertEquals("Num of samples collected should match", numRefresh, mountTableCacheLoadNumOps);
+    // CacheMountTableLoadAvgTime ms
+    final double mountTableCacheLoadAvgTimeMs = mountTableCache.lastStat().mean();
+    assertTrue(
+        "Mean time duration for cache load is expected to be higher than " + expectedHigherThan
+            + " ms." + " Actual value: " + mountTableCacheLoadAvgTimeMs,
+        mountTableCacheLoadAvgTimeMs > expectedHigherThan);
   }
 
   /**
