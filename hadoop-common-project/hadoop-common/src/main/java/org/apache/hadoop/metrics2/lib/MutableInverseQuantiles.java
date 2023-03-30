@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.metrics2.util.Quantile;
 import org.apache.hadoop.metrics2.util.SampleQuantiles;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.text.DecimalFormat;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -33,7 +34,7 @@ import static org.apache.hadoop.metrics2.lib.Interns.info;
 /**
  * Watches a stream of long values, maintaining online estimates of specific
  * quantiles with provably low error bounds. Inverse quantiles are meant for
- * highly accurate low-percentile (e.g. 1st, 5th) latency metrics.
+ * highly accurate low-percentile (e.g. 1st, 5th) metrics.
  * InverseQuantiles are used for metrics where higher the value better it is.
  * ( eg: data transfer rate ).
  * The 1st percentile here corresponds to the 99th inverse percentile metric,
@@ -83,13 +84,14 @@ public class MutableInverseQuantiles extends MutableQuantiles{
         "Number of %s for %s with %ds interval", lsName, desc, intervalSecs)));
     // Construct the MetricsInfos for the inverse quantiles, converting to inverse percentiles
     setQuantileInfos(INVERSE_QUANTILES.length);
-    String nameTemplate = ucName + "%dthInversePercentile" + uvName;
-    String descTemplate = "%d inverse percentile " + lvName + " with " + intervalSecs
+    DecimalFormat df = new DecimalFormat("###.####");
+    String nameTemplate = "thInversePercentile" + uvName;
+    String descTemplate = " inverse percentile " + lvName + " with " + intervalSecs
         + " second interval for " + desc;
     for (int i = 0; i < INVERSE_QUANTILES.length; i++) {
       double inversePercentile = 100 * (1 - INVERSE_QUANTILES[i].quantile);
-      addQuantileInfo(i, info(String.format(nameTemplate, inversePercentile),
-          String.format(descTemplate, inversePercentile)));
+      addQuantileInfo(i, info(ucName + df.format(inversePercentile) + nameTemplate,
+          df.format(inversePercentile) + descTemplate));
     }
 
     setEstimator(new SampleQuantiles(INVERSE_QUANTILES));

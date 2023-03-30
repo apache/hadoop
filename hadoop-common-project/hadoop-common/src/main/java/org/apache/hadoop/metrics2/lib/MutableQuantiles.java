@@ -20,6 +20,7 @@ package org.apache.hadoop.metrics2.lib;
 
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 
+import java.text.DecimalFormat;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -90,18 +91,19 @@ public class MutableQuantiles extends MutableMetric {
     String desc = StringUtils.uncapitalize(description);
     String lsName = StringUtils.uncapitalize(sampleName);
     String lvName = StringUtils.uncapitalize(valueName);
+    DecimalFormat df = new DecimalFormat("###.####");
 
     setNumInfo(info(ucName + "Num" + usName, String.format(
         "Number of %s for %s with %ds interval", lsName, desc, interval)));
     // Construct the MetricsInfos for the quantiles, converting to percentiles
     setQuantileInfos(quantiles.length);
-    String nameTemplate = ucName + "%dthPercentile" + uvName;
-    String descTemplate = "%d percentile " + lvName + " with " + interval
+    String nameTemplate = "thPercentile" + uvName;
+    String descTemplate = " percentile " + lvName + " with " + interval
         + " second interval for " + desc;
     for (int i = 0; i < quantiles.length; i++) {
       double percentile = 100 * quantiles[i].quantile;
-      addQuantileInfo(i, info(String.format(nameTemplate, percentile),
-          String.format(descTemplate, percentile)));
+      addQuantileInfo(i, info(ucName + df.format(percentile) + nameTemplate,
+          df.format(percentile) + descTemplate));
     }
 
     setEstimator(new SampleQuantiles(quantiles));
@@ -166,7 +168,7 @@ public class MutableQuantiles extends MutableMetric {
   /**
    * Set the rollover interval (in seconds) of the estimator.
    *
-   * @param pIntervalSecs (in seconds) of the estimator.
+   * @param pIntervalSecs of the estimator.
    */
   public synchronized void setInterval(int pIntervalSecs) {
     this.intervalSecs = pIntervalSecs;
@@ -175,7 +177,7 @@ public class MutableQuantiles extends MutableMetric {
   /**
    * Get the rollover interval (in seconds) of the estimator.
    *
-   * @return  intervalSecs (in seconds) of the estimator.
+   * @return  intervalSecs of the estimator.
    */
   public synchronized int getInterval() {
     return intervalSecs;
