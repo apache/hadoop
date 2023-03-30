@@ -27,6 +27,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.S3A_SCHEME_DEFAULT;
+
 /**
  * S3A implementation of AbstractFileSystem.
  * This impl delegates to the S3AFileSystem
@@ -38,7 +40,7 @@ public class S3A extends DelegateToFileSystem {
   public S3A(URI theUri, Configuration conf)
       throws IOException, URISyntaxException {
     super(theUri, new S3AFileSystem(), conf,
-        theUri.getScheme().isEmpty() ? "s3a" : theUri.getScheme(), false);
+        theUri.getScheme().isEmpty() ? S3A_SCHEME_DEFAULT : theUri.getScheme(), false);
   }
 
   @Override
