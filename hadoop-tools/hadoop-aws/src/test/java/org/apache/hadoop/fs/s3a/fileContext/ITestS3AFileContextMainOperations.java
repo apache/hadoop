@@ -14,20 +14,18 @@
 package org.apache.hadoop.fs.s3a.fileContext;
 
 import java.io.IOException;
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContextMainOperationsBaseTest;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  * S3A implementation of FileContextMainOperationsBaseTest.
  */
 public class ITestS3AFileContextMainOperations
-        extends FileContextMainOperationsBaseTest {
+    extends FileContextMainOperationsBaseTest {
 
   @Before
   public void setUp() throws IOException, Exception {
