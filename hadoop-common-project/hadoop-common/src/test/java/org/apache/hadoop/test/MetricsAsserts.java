@@ -392,13 +392,13 @@ public class MetricsAsserts {
    */
   public static void assertQuantileGauges(String prefix,
       MetricsRecordBuilder rb, String valueName) {
-    verify(rb).addGauge(eqName(info(prefix + "NumOps", "")), geq(0l));
+    verify(rb).addGauge(eqName(info(prefix + "NumOps", "")), geq(0L));
     for (Quantile q : MutableQuantiles.quantiles) {
       String nameTemplate = prefix + "%dthPercentile" + valueName;
       int percentile = (int) (100 * q.quantile);
       verify(rb).addGauge(
           eqName(info(String.format(nameTemplate, percentile), "")),
-          geq(0l));
+          geq(0L));
     }
   }
 

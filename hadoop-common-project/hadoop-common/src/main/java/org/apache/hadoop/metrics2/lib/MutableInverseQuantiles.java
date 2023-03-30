@@ -50,9 +50,9 @@ public class MutableInverseQuantiles extends MutableQuantiles{
   }
 
   @VisibleForTesting
-  public static final Quantile[] INVERSE_QUANTILES = { new InversePercentile(50),
+  public static final Quantile[] INVERSE_QUANTILES = {new InversePercentile(50),
       new InversePercentile(25), new InversePercentile(10),
-      new InversePercentile(5), new InversePercentile(1) };
+      new InversePercentile(5), new InversePercentile(1)};
 
   private ScheduledFuture<?> scheduledTask;
 

@@ -37,10 +37,9 @@ public class TestSampleQuantiles {
       new Quantile(0.95, 0.005), new Quantile(0.99, 0.001) };
 
   SampleQuantiles estimator;
-  Random rnd = new Random(0xDEADDEAD);
   final static int NUM_REPEATS = 10;
 
-    @Before
+  @Before
   public void init() {
     estimator = new SampleQuantiles(quantiles);
   }
@@ -94,6 +93,7 @@ public class TestSampleQuantiles {
   @Test
   public void testQuantileError() throws IOException {
     final int count = 100000;
+    Random rnd = new Random(0xDEADDEAD);
     int[] values = new int[count];
     for (int i = 0; i < count; i++) {
       values[i] = i + 1;
@@ -102,7 +102,7 @@ public class TestSampleQuantiles {
     // Repeat shuffle/insert/check cycles 10 times
     for (int i = 0; i < NUM_REPEATS; i++) {
 
-      // Shuffle  
+      // Shuffle
       Collections.shuffle(Arrays.asList(values), rnd);
       estimator.clear();
 
@@ -130,8 +130,10 @@ public class TestSampleQuantiles {
    */
   @Test
   public void testInverseQuantiles() throws IOException {
-    SampleQuantiles inverseQuantilesEstimator = new SampleQuantiles(MutableInverseQuantiles.INVERSE_QUANTILES);
+    SampleQuantiles inverseQuantilesEstimator =
+        new SampleQuantiles(MutableInverseQuantiles.INVERSE_QUANTILES);
     final int count = 100000;
+    Random rnd = new Random(0xDEADDEAD);
     int[] values = new int[count];
     for (int i = 0; i < count; i++) {
       values[i] = i + 1;
