@@ -30,17 +30,22 @@ import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.XORRawDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.XORRawEncoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawEncoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.XORRawErasureCoderFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test the codec to raw coder mapping.
  */
 public class TestCodecRawCoderMapping {
-
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestCodecRawCoderMapping.class);
   private static Configuration conf;
   private static final int numDataUnit = 6;
   private static final int numParityUnit = 3;
@@ -149,5 +154,45 @@ public class TestCodecRawCoderMapping {
     RawErasureDecoder decoder = CodecUtil.createRawDecoder(
             conf, ErasureCodeConstants.XOR_CODEC_NAME, coderOptions);
     Assert.assertTrue(decoder instanceof XORRawDecoder);
+  }
+
+  @Test
+  public void testCodecNativeEnabled() {
+    if (!ErasureCodeNative.isNativeCodeLoaded()) {
+      LOG.warn("ISA-L support is not available in your platform.");
+      return;
+    }
+    ErasureCoderOptions coderOptions = new ErasureCoderOptions(
+        numDataUnit, numParityUnit);
+    
+    conf.setBoolean(CodecUtil.IO_ERASURECODE_CODEC_NATIVE_ENABLED_KEY,
+        CodecUtil.IO_ERASURECODE_CODEC_NATIVE_ENABLED_DEFAULT);
+    RawErasureEncoder rsEncoder = CodecUtil.createRawEncoder(
+        conf, ErasureCodeConstants.RS_CODEC_NAME, coderOptions);
+    RawErasureDecoder rsDecoder = CodecUtil.createRawDecoder(
+        conf, ErasureCodeConstants.RS_CODEC_NAME, coderOptions);
+    RawErasureEncoder xorEncoder = CodecUtil.createRawEncoder(
+        conf, ErasureCodeConstants.XOR_CODEC_NAME, coderOptions);
+    RawErasureDecoder xorDecoder = CodecUtil.createRawDecoder(
+        conf, ErasureCodeConstants.XOR_CODEC_NAME, coderOptions);
+    Assert.assertTrue(rsEncoder instanceof NativeRSRawEncoder);
+    Assert.assertTrue(rsDecoder instanceof NativeRSRawDecoder);
+    Assert.assertTrue(xorEncoder instanceof NativeXORRawEncoder);
+    Assert.assertTrue(xorDecoder instanceof NativeXORRawDecoder);
+
+    conf.setBoolean(CodecUtil.IO_ERASURECODE_CODEC_NATIVE_ENABLED_KEY,
+        false);
+    rsEncoder = CodecUtil.createRawEncoder(
+        conf, ErasureCodeConstants.RS_CODEC_NAME, coderOptions);
+    rsDecoder = CodecUtil.createRawDecoder(
+        conf, ErasureCodeConstants.RS_CODEC_NAME, coderOptions);
+    xorEncoder = CodecUtil.createRawEncoder(
+        conf, ErasureCodeConstants.XOR_CODEC_NAME, coderOptions);
+    xorDecoder = CodecUtil.createRawDecoder(
+        conf, ErasureCodeConstants.XOR_CODEC_NAME, coderOptions);
+    Assert.assertTrue(rsEncoder instanceof RSRawEncoder);
+    Assert.assertTrue(rsDecoder instanceof RSRawDecoder);
+    Assert.assertTrue(xorEncoder instanceof XORRawEncoder);
+    Assert.assertTrue(xorDecoder instanceof XORRawDecoder);
   }
 }

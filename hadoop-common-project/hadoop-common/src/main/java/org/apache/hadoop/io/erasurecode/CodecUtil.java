@@ -78,6 +78,10 @@ public final class CodecUtil {
   public static final String IO_ERASURECODE_CODEC_XOR_RAWCODERS_KEY =
       IO_ERASURECODE_CODEC + "xor.rawcoders";
 
+  public static final String IO_ERASURECODE_CODEC_NATIVE_ENABLED_KEY = "io.erasurecode.codec.native.enabled";
+
+  public static final boolean IO_ERASURECODE_CODEC_NATIVE_ENABLED_DEFAULT = true;
+
   private CodecUtil() { }
 
   /**
@@ -170,8 +174,14 @@ public final class CodecUtil {
 
   private static RawErasureEncoder createRawEncoderWithFallback(
       Configuration conf, String codecName, ErasureCoderOptions coderOptions) {
+    boolean ISALEnabled = conf.getBoolean(IO_ERASURECODE_CODEC_NATIVE_ENABLED_KEY,
+        IO_ERASURECODE_CODEC_NATIVE_ENABLED_DEFAULT);
     String[] rawCoderNames = getRawCoderNames(conf, codecName);
     for (String rawCoderName : rawCoderNames) {
+      if (!ISALEnabled && rawCoderName.split("_")[1].equals("native")) {
+        LOG.info("Disable the encoder with ISA-L.");
+        continue;
+      }
       try {
         if (rawCoderName != null) {
           RawErasureCoderFactory fact = createRawCoderFactory(
@@ -192,8 +202,14 @@ public final class CodecUtil {
 
   private static RawErasureDecoder createRawDecoderWithFallback(
       Configuration conf, String codecName, ErasureCoderOptions coderOptions) {
+    boolean ISALEnabled = conf.getBoolean(IO_ERASURECODE_CODEC_NATIVE_ENABLED_KEY,
+        IO_ERASURECODE_CODEC_NATIVE_ENABLED_DEFAULT);
     String[] coders = getRawCoderNames(conf, codecName);
     for (String rawCoderName : coders) {
+      if (!ISALEnabled && rawCoderName.split("_")[1].equals("native")) {
+        LOG.info("Disable the decoder with ISA-L.");
+        continue;
+      }
       try {
         if (rawCoderName != null) {
           RawErasureCoderFactory fact = createRawCoderFactory(

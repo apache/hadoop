@@ -920,6 +920,14 @@
   </description>
 </property>
 
+<property>
+  <name>io.erasurecode.codec.native.enabled</name>
+  <value>true</value>
+  <description>
+    Used to decide whether to enable native codec.
+  </description>
+</property>
+
   <!-- file system properties -->
 
 <property>
