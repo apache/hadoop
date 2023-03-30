@@ -37,7 +37,8 @@ public class S3A extends DelegateToFileSystem {
 
   public S3A(URI theUri, Configuration conf)
       throws IOException, URISyntaxException {
-    super(theUri, new S3AFileSystem(), conf, "s3a", false);
+    super(theUri, new S3AFileSystem(), conf,
+        theUri.getScheme().isEmpty() ? "s3a" : theUri.getScheme(), false);
   }
 
   @Override

@@ -15,11 +15,15 @@ package org.apache.hadoop.fs.s3a.fileContext;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.FileContextMainOperationsBaseTest;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * S3A implementation of FileContextMainOperationsBaseTest.
@@ -61,6 +65,14 @@ public class ITestS3AFileContextMainOperations
   @Ignore
   public void testSetVerifyChecksum() throws IOException {
     //checksums ignored, so test removed
+  }
+
+  @Test
+  public void checkScheme() throws IOException {
+    AbstractFileSystem fs = fc.getDefaultFileSystem();
+    assertEquals(fs.getUri().getScheme(), "s3a");
+    Path path = fs.makeQualified(new Path("/tmp/path"));
+    assertEquals(path.toUri().getScheme(), "s3a");
   }
 
 }
