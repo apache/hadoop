@@ -291,6 +291,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   protected DefaultRequestInterceptorREST getOrCreateInterceptorByAppId(String appId)
       throws YarnException {
+    // We first check the applicationId
+    RouterServerUtil.validateApplicationId(appId);
+
+    // Get homeSubCluster By appId
     SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
     return getOrCreateInterceptorForSubCluster(subClusterInfo);
   }
@@ -560,6 +564,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
       // Step3. We get subClusterInfo based on subClusterId.
       SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
+      if (subClusterInfo == null) {
+        throw new YarnException("Can't Find SubClusterId = " + subClusterId);
+      }
 
       // Step4. Submit the request, if the response is HttpServletResponse.SC_ACCEPTED,
       // We return the response, otherwise we throw an exception.
@@ -601,14 +608,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public AppInfo getApp(HttpServletRequest hsr, String appId, Set<String> unselectedFields) {
 
-    // We first check the applicationId
-    try {
-      RouterServerUtil.validateApplicationId(appId);
-    } catch (IllegalArgumentException e) {
-      routerMetrics.incrAppsFailedRetrieved();
-      throw e;
-    }
-
     try {
       long startTime = clock.getTime();
 
@@ -626,6 +625,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       routerMetrics.incrAppsFailedRetrieved();
       LOG.error("getApp Error, applicationId = {}.", appId, e);
       return null;
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrAppsFailedRetrieved();
+      throw e;
     }
   }
 
@@ -811,20 +813,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   /**
-   * Get the active subclusters in the federation.
-   * @return Map from subcluster id to its info.
-   * @throws NotFoundException If the subclusters cannot be found.
-   */
-  private Map<SubClusterId, SubClusterInfo> getActiveSubclusters()
-      throws NotFoundException {
-    try {
-      return federationFacade.getSubClusters(true);
-    } catch (YarnException e) {
-      throw new NotFoundException(e.getMessage());
-    }
-  }
-
-  /**
    * Get the active subcluster in the federation.
    *
    * @param subClusterId subClusterId.
@@ -835,13 +823,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throws NotFoundException {
     try {
       SubClusterId pSubClusterId = SubClusterId.newInstance(subClusterId);
-      Map<SubClusterId, SubClusterInfo> subClusterInfoMap =
-          federationFacade.getSubClusters(true);
-      SubClusterInfo subClusterInfo = subClusterInfoMap.get(pSubClusterId);
-      if (subClusterInfo == null) {
-        throw new NotFoundException(subClusterId + " not found.");
-      }
-      return subClusterInfo;
+      return federationFacade.getSubCluster(pSubClusterId);
     } catch (YarnException e) {
       throw new NotFoundException(e.getMessage());
     }
@@ -905,7 +887,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   private Map<SubClusterInfo, NodeInfo> getNode(Collection<SubClusterInfo> subClusters,
       String nodeId) {
 
-    //
+    // Parallel traversal of subClusters
     Stream<Pair<SubClusterInfo, NodeInfo>> pairStream = subClusters.parallelStream().map(
         subClusterInfo -> {
             final SubClusterId subClusterId = subClusterInfo.getSubClusterId();
@@ -1078,14 +1060,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public AppState getAppState(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
     try {
-      // Check that the appId format is accurate
-      RouterServerUtil.validateApplicationId(appId);
-
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
       if (interceptor != null) {
         return interceptor.getAppState(hsr, appId);
       }
-    } catch (YarnException e) {
+    } catch (YarnException | IllegalArgumentException e) {
       LOG.error("getHomeSubClusterInfoByAppId error, applicationId = {}.", appId, e);
     }
     return null;
@@ -1386,17 +1365,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       String appId, String time, Set<String> requestPriorities,
       Set<String> allocationRequestIds, String groupBy, String limit,
       Set<String> actions, boolean summarize) {
-
-    // Only verify the app_id,
-    // because the specific subCluster needs to be found according to the app_id,
-    // and other verifications are directly handed over to the corresponding subCluster RM
-    // Check that the appId format is accurate
-    try {
-      RouterServerUtil.validateApplicationId(appId);
-    } catch (IllegalArgumentException e) {
-      routerMetrics.incrGetAppActivitiesFailedRetrieved();
-      throw e;
-    }
 
     try {
       long startTime = clock.getTime();
@@ -1868,14 +1836,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public AppPriority getAppPriority(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
 
-    // Check that the appId format is accurate
-    try {
-      RouterServerUtil.validateApplicationId(appId);
-    } catch (IllegalArgumentException e) {
-      routerMetrics.incrGetAppPriorityFailedRetrieved();
-      throw e;
-    }
-
     try {
       long startTime = clock.getTime();
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
@@ -1901,14 +1861,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public Response updateApplicationPriority(AppPriority targetPriority,
       HttpServletRequest hsr, String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
-
-    // Check that the appId format is accurate
-    try {
-      RouterServerUtil.validateApplicationId(appId);
-    } catch (IllegalArgumentException e) {
-      routerMetrics.incrUpdateAppPriorityFailedRetrieved();
-      throw e;
-    }
 
     if (targetPriority == null) {
       routerMetrics.incrUpdateAppPriorityFailedRetrieved();
@@ -1940,14 +1892,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public AppQueue getAppQueue(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
 
-    // Check that the appId format is accurate
-    try {
-      RouterServerUtil.validateApplicationId(appId);
-    } catch (IllegalArgumentException e) {
-      routerMetrics.incrGetAppQueueFailedRetrieved();
-      throw e;
-    }
-
     try {
       long startTime = clock.getTime();
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
@@ -1972,14 +1916,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public Response updateAppQueue(AppQueue targetQueue, HttpServletRequest hsr,
       String appId) throws AuthorizationException, YarnException,
       InterruptedException, IOException {
-
-    // Check that the appId format is accurate
-    try {
-      RouterServerUtil.validateApplicationId(appId);
-    } catch (IllegalArgumentException e) {
-      routerMetrics.incrUpdateAppQueueFailedRetrieved();
-      throw e;
-    }
 
     if (targetQueue == null) {
       routerMetrics.incrUpdateAppQueueFailedRetrieved();
@@ -2497,19 +2433,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public AppTimeoutInfo getAppTimeout(HttpServletRequest hsr, String appId,
       String type) throws AuthorizationException {
 
-    if (appId == null || appId.isEmpty()) {
-      routerMetrics.incrGetAppTimeoutFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
-    }
-
-    // Check that the appId format is accurate
-    try {
-      ApplicationId.fromString(appId);
-    } catch (IllegalArgumentException e) {
-      routerMetrics.incrGetAppTimeoutFailedRetrieved();
-      throw e;
-    }
-
     if (type == null || type.isEmpty()) {
       routerMetrics.incrGetAppTimeoutFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the type is empty or null.");
@@ -2540,14 +2463,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public AppTimeoutsInfo getAppTimeouts(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
 
-    // Check that the appId format is accurate
-    try {
-      RouterServerUtil.validateApplicationId(appId);
-    } catch (IllegalArgumentException e) {
-      routerMetrics.incrGetAppTimeoutsFailedRetrieved();
-      throw e;
-    }
-
     try {
       long startTime = clock.getTime();
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
@@ -2574,14 +2489,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public Response updateApplicationTimeout(AppTimeoutInfo appTimeout,
       HttpServletRequest hsr, String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
-
-    // Check that the appId format is accurate
-    try {
-      RouterServerUtil.validateApplicationId(appId);
-    } catch (IllegalArgumentException e) {
-      routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
-      throw e;
-    }
 
     if (appTimeout == null) {
       routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
@@ -2612,14 +2519,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   @Override
   public AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId) {
-
-    // Check that the appId format is accurate
-    try {
-      RouterServerUtil.validateApplicationId(appId);
-    } catch (IllegalArgumentException e) {
-      routerMetrics.incrAppAttemptsFailedRetrieved();
-      throw e;
-    }
 
     try {
       long startTime = Time.now();
@@ -2701,7 +2600,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     // Check that the appId/appAttemptId format is accurate
     try {
-      RouterServerUtil.validateApplicationId(appId);
       RouterServerUtil.validateApplicationAttemptId(appAttemptId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrAppAttemptReportFailedRetrieved();
@@ -2791,7 +2689,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     // Check that the appId/appAttemptId/containerId format is accurate
     try {
-      RouterServerUtil.validateApplicationId(appId);
       RouterServerUtil.validateApplicationAttemptId(appAttemptId);
       RouterServerUtil.validateContainerId(containerId);
     } catch (IllegalArgumentException e) {
@@ -2900,13 +2797,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     try {
       long startTime = clock.getTime();
       FederationConfInfo federationConfInfo = new FederationConfInfo();
-      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      Collection<SubClusterInfo> subClustersActive = federationFacade.getActiveSubClusters();
       final HttpServletRequest hsrCopy = clone(hsr);
       Class[] argsClasses = new Class[]{HttpServletRequest.class};
       Object[] args = new Object[]{hsrCopy};
       ClientMethod remoteMethod = new ClientMethod("getSchedulerConfiguration", argsClasses, args);
       Map<SubClusterInfo, Response> responseMap =
-          invokeConcurrent(subClustersActive.values(), remoteMethod, Response.class);
+          invokeConcurrent(subClustersActive, remoteMethod, Response.class);
       responseMap.forEach((subClusterInfo, response) -> {
         SubClusterId subClusterId = subClusterInfo.getSubClusterId();
         if (response == null) {
@@ -2916,7 +2813,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           String errorMsg = String.valueOf(response.getEntity());
           federationConfInfo.getErrorMsgs().add(errorMsg);
         } else if (response.getStatus() == Status.OK.getStatusCode()) {
-          ConfInfo fedConfInfo = ConfInfo.class.cast(response.getEntity());
+          ConfInfo fedConfInfo = (ConfInfo) response.getEntity();
           fedConfInfo.setSubClusterId(subClusterId.getId());
           federationConfInfo.getList().add(fedConfInfo);
         }
