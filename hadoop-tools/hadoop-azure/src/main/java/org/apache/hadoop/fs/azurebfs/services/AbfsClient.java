@@ -1074,9 +1074,8 @@ public class AbfsClient implements Closeable {
     return null;
   }
 
-  public void deleteBlobPath(final BlobProperty blobProperty, final TracingContext tracingContext) throws AzureBlobFileSystemException{
+  public void deleteBlobPath(final Path blobPath, final TracingContext tracingContext) throws AzureBlobFileSystemException{
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    Path blobPath = blobProperty.getPath();
     String blobRelativePath = blobPath.toUri().getPath();
     URL url = null;
     try {

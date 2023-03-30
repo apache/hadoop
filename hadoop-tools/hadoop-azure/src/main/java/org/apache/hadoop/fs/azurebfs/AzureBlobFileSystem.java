@@ -516,6 +516,14 @@ public class AzureBlobFileSystem extends FileSystem
           fileSystemId, FSOperationType.LISTSTATUS, true, tracingHeaderFormat,
           listener);
       FileStatus[] result = abfsStore.listStatus(qualifiedPath, tracingContext);
+      FileStatus renamePendingFileStatus = abfsStore.getRenamePendingFileStatus(result);
+      if(renamePendingFileStatus != null) {
+        RenameAtomicityUtils renameAtomicityUtils =
+            new RenameAtomicityUtils(this,
+                renamePendingFileStatus.getPath(), abfsStore.getRedoRenameInvocation(tracingContext));
+        renameAtomicityUtils.cleanup();
+        result = abfsStore.listStatus(qualifiedPath, tracingContext);
+      }
       return result;
     } catch (AzureBlobFileSystemException ex) {
       checkException(f, ex);

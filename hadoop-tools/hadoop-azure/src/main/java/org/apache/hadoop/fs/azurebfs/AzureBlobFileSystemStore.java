@@ -133,6 +133,7 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.http.client.utils.URIBuilder;
 
+import static org.apache.hadoop.fs.azurebfs.RenameAtomicityUtils.SUFFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYPHEN;
@@ -1044,7 +1045,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         for(BlobProperty blobProperty : srcBlobProperties) {
           futures.add(renameBlobExecutorService.submit(() -> {
             try {
-              renameBlob(createDestinationPath(destination, blobProperty, source), tracingContext, blobProperty);
+              renameBlob(createDestinationPath(destination, blobProperty, source),
+                  tracingContext, blobProperty.getPath());
             } catch (AzureBlobFileSystemException e) {
               throw new RuntimeException(e);
             }
@@ -1063,7 +1065,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           renameAtomicityUtils.cleanup();;
         }
       } else {
-        renameBlob(destination, tracingContext, srcBlobProperties.get(0));
+        renameBlob(destination, tracingContext, srcBlobProperties.get(0).getPath());
       }
       return;
     }
@@ -1115,9 +1117,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   private void renameBlob(final Path destination,
       final TracingContext tracingContext,
-      final BlobProperty blobProperty) throws AzureBlobFileSystemException {
-    copyBlob(blobProperty.getPath(), destination, tracingContext);
-    client.deleteBlobPath(blobProperty, tracingContext);
+      final Path sourcePath) throws AzureBlobFileSystemException {
+    copyBlob(sourcePath, destination, tracingContext);
+    client.deleteBlobPath(sourcePath, tracingContext);
   }
 
   public void delete(final Path path, final boolean recursive,
@@ -1731,6 +1733,18 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return isKeyForDirectorySet(key, azureAtomicRenameDirSet);
   }
 
+  RenameAtomicityUtils.RedoRenameInvocation getRedoRenameInvocation(final TracingContext tracingContext) {
+    return new RenameAtomicityUtils.RedoRenameInvocation() {
+      @Override
+      public void redo(final Path destination, final List<Path> sourcePaths)
+          throws AzureBlobFileSystemException {
+        for (Path sourcePath : sourcePaths) {
+          renameBlob(destination, tracingContext, sourcePath);
+        }
+      }
+    };
+  }
+
   public boolean isInfiniteLeaseKey(String key) {
     if (azureInfiniteLeaseDirSet.isEmpty()) {
       return false;
@@ -1942,6 +1956,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   private AbfsPerfInfo startTracking(String callerName, String calleeName) {
     return new AbfsPerfInfo(abfsPerfTracker, callerName, calleeName);
+  }
+
+  public FileStatus getRenamePendingFileStatus(final FileStatus[] fileStatuses) {
+    for (FileStatus fileStatus : fileStatuses) {
+      if (fileStatus.getPath().toUri().getPath().endsWith(SUFFIX)) {
+        return fileStatus;
+      }
+    }
+    return null;
   }
 
   /**
