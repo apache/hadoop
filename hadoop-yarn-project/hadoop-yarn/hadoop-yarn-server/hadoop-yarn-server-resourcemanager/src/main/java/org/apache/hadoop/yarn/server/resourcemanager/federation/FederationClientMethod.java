@@ -29,7 +29,7 @@ import java.util.Arrays;
 /**
  * Class to define client method,params and arguments.
  */
-public class FederationClientMethod {
+public class FederationClientMethod<R> {
 
   public static final Logger LOG =
       LoggerFactory.getLogger(FederationClientMethod.class);
@@ -96,16 +96,14 @@ public class FederationClientMethod {
   /**
    * We will use the invoke method to call the method in FederationStateStoreService.
    *
-   * @param clazz response class. like GetSubClusterPolicyConfigurationResponse.class.
-   * @param <R> return object Class like GetSubClusterPolicyConfigurationResponse.
    * @return The result returned after calling the interface.
    * @throws YarnException yarn exception.
    */
-  protected <R> R invoke(Class<R> clazz) throws YarnException {
+  protected R invoke() throws YarnException {
     try {
       long startTime = clock.getTime();
       Method method = FederationStateStore.class.getMethod(methodName, types);
-      R result = clazz.cast(method.invoke(stateStoreClient, params));
+      R result = (R)(method.invoke(stateStoreClient, params));
       long stopTime = clock.getTime();
       FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
           methodName, stopTime - startTime);
