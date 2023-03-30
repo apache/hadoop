@@ -244,6 +244,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureAtomicRenameDirs().split(AbfsHttpConstants.COMMA)));
+    this.azureAtomicRenameDirSet.add("/hbase");
     updateInfiniteLeaseDirs();
     this.authType = abfsConfiguration.getAuthType(accountName);
     boolean usingOauth = (authType == AuthType.OAuth);
@@ -1031,6 +1032,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(), null, null);
       }
       if(isSrcDir) {
+        if (isAtomicRenameKey(source.getName())) {
+
+        }
         List<Future> futures = new ArrayList<>();
         for(BlobProperty blobProperty : srcBlobProperties) {
           futures.add(renameBlobExecutorService.submit(() -> {

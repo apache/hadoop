@@ -1044,6 +1044,7 @@ public class AbfsClient implements Closeable {
     if (maxResult != null) {
       abfsUriQueryBuilder.addQuery(QUERY_PARAM_MAXRESULT, maxResult + "");
     }
+    appendSASTokenToQuery(sourceDirBlobPath.toUri().getPath(), SASTokenProvider.LIST_OPERATION, abfsUriQueryBuilder);
     URL url = null;
     try {
       url = new URL(createRequestUrl(abfsUriQueryBuilder.toString()).toString()
