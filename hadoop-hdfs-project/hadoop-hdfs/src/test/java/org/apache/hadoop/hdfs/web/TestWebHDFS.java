@@ -2206,7 +2206,7 @@ public class TestWebHDFS {
   @Test
   public void testLinkTarget() throws Exception {
     final Configuration conf = WebHdfsTestUtil.createConf();
-
+    try {
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(3)
         .build();
@@ -2224,6 +2224,9 @@ public class TestWebHDFS {
 
     webHdfs.createSymlink(targetFile, symLink, false);
     assertEquals(webHdfs.getLinkTarget(symLink), targetFile);
+    } finally {
+      cluster.shutdown();
+    }
   }
 
   /**
