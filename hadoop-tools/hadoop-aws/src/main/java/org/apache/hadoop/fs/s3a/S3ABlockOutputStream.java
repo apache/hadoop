@@ -169,7 +169,7 @@ class S3ABlockOutputStream extends OutputStream implements
   /** Thread level IOStatistics Aggregator. */
   private final IOStatisticsAggregator threadIOStatisticsAggregator;
 
-  /**Is multipart upload allowed? */
+  /** Is multipart upload enabled? */
   private final boolean isMultipartEnabled;
 
   /**
@@ -203,7 +203,7 @@ class S3ABlockOutputStream extends OutputStream implements
     createBlockIfNeeded();
     LOG.debug("Initialized S3ABlockOutputStream for {}" +
         " output to {}", key, activeBlock);
-    this.isMultipartEnabled = builder.isMultipartAllowed;
+    this.isMultipartEnabled = builder.isMultipartEnabled;
     if (putTracker.initialize()) {
       LOG.debug("Put tracker requests multipart upload");
       initMultipartUpload();
@@ -373,9 +373,8 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   @Retries.RetryTranslated
   private void initMultipartUpload() throws IOException {
-    if (!isMultipartEnabled){
-      return;
-    }
+    Preconditions.checkState(!isMultipartEnabled,
+        "multipart upload is disabled");
     if (multiPartUpload == null) {
       LOG.debug("Initiating Multipart upload");
       multiPartUpload = new MultiPartUpload(key);
@@ -568,12 +567,11 @@ class S3ABlockOutputStream extends OutputStream implements
    * Upload the current block as a single PUT request; if the buffer is empty a
    * 0-byte PUT will be invoked, as it is needed to create an entry at the far
    * end.
-   *
    * @return number of bytes uploaded. If thread was interrupted while waiting
-   *     for upload to complete, returns zero with interrupted flag set on this
-   *     thread.
+   * for upload to complete, returns zero with interrupted flag set on this
+   * thread.
    * @throws IOException
-   *     any problem.
+   * any problem.
    */
   private long putObject() throws IOException {
     LOG.debug("Executing regular upload for {}", writeOperationHelper);
@@ -691,6 +689,9 @@ class S3ABlockOutputStream extends OutputStream implements
       // IOStatistics context support for thread-level IOStatistics.
     case StreamCapabilities.IOSTATISTICS_CONTEXT:
       return true;
+
+    case StreamCapabilities.MULTIPART_SUPPORTED:
+      return isMultipartEnabled;
 
     default:
       return false;
@@ -1136,9 +1137,9 @@ class S3ABlockOutputStream extends OutputStream implements
     private IOStatisticsAggregator ioStatisticsAggregator;
 
     /**
-     * Is Multipart Uploads enabled for the given upload
+     * Is Multipart Uploads enabled for the given upload.
      */
-    private boolean isMultipartAllowed;
+    private boolean isMultipartEnabled;
 
     private BlockOutputStreamBuilder() {
     }
@@ -1291,9 +1292,9 @@ class S3ABlockOutputStream extends OutputStream implements
       return this;
     }
 
-    public BlockOutputStreamBuilder withMultipartAllowed(
+    public BlockOutputStreamBuilder withMultipartEnabled(
         final boolean value) {
-      isMultipartAllowed = value;
+      isMultipartEnabled = value;
       return this;
     }
   }

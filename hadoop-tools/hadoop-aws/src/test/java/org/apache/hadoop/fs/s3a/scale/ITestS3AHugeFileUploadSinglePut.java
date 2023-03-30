@@ -18,21 +18,32 @@
 
 package org.apache.hadoop.fs.s3a.scale;
 
+import java.io.IOException;
+import java.util.Map;
+import java.util.Optional;
+
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
+import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.Constants;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-
 import static org.apache.hadoop.fs.contract.ContractTestUtils.IO_CHUNK_BUFFER_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBytes;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_REQUESTS;
 
-public class ITestS3AHugeFileUpload extends S3AScaleTestBase{
+/**
+ * Test a file upload using a single PUT operation. Multipart uploads will
+ * be disabled in the test.
+ */
+public class ITestS3AHugeFileUploadSinglePut extends S3AScaleTestBase{
   final private Logger LOG = LoggerFactory.getLogger(
-      ITestS3AHugeFileUpload.class.getName());
+      ITestS3AHugeFileUploadSinglePut.class.getName());
 
   private long fileSize = Integer.MAX_VALUE * 2L;
   @Override
@@ -42,7 +53,9 @@ public class ITestS3AHugeFileUpload extends S3AScaleTestBase{
     configuration.setLong(MULTIPART_SIZE, 53687091200L);
     configuration.setInt(KEY_TEST_TIMEOUT, 36000);
     configuration.setInt(IO_CHUNK_BUFFER_SIZE, 655360);
-    configuration.set("fs.s3a.connection.request.timeout", "1h");
+    configuration.set(REQUEST_TIMEOUT, "1h");
+    fileSize = getTestPropertyBytes(configuration, KEY_HUGE_FILESIZE,
+        DEFAULT_HUGE_FILESIZE);
     return configuration;
   }
 
@@ -50,6 +63,12 @@ public class ITestS3AHugeFileUpload extends S3AScaleTestBase{
   public void uploadFileSinglePut() throws IOException {
     LOG.info("Creating file with size : {}", fileSize);
     ContractTestUtils.createAndVerifyFile(getFileSystem(),
-        getTestPath(), fileSize );
+        getTestPath(), fileSize);
+    Map<String, Long> stats = IOStatisticsSupport.snapshotIOStatistics().counters();
+    LOG.warn("Patch: " + stats.toString());
+    stats = IOStatisticsContext.getCurrentIOStatisticsContext().getIOStatistics().counters();
+    LOG.warn("Patch:{}", stats.toString());
+    assertEquals(2L,
+        (long) stats.get(OBJECT_PUT_REQUESTS.getSymbol()));
   }
 }

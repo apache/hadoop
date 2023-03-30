@@ -1031,13 +1031,22 @@ public final class S3AUtils {
     return partSize;
   }
 
-  public static boolean checkDiskBuffer(Configuration conf){
+  /**
+   * Check whether the configuration for S3ABlockOutputStream is
+   * consistent or not. Multipart uploads allow all kinds of fast buffers to
+   * be supported. When the option is disabled only disk buffers are allowed to
+   * be used as the file size might be bigger than the buffer size that can be
+   * allocated.
+   * @param conf
+   * @return
+   */
+  public static boolean checkDiskBuffer(Configuration conf) {
     boolean isMultipartEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
         MULTIPART_UPLOAD_ENABLED_DEFAULT);
     if (isMultipartEnabled) {
       return true;
     } else if (!isMultipartEnabled && conf.get(FAST_UPLOAD_BUFFER)
-        .equals(FAST_UPLOAD_BUFFER_DISK)){
+        .equals(FAST_UPLOAD_BUFFER_DISK)) {
       return true;
     } else {
       return false;

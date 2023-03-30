@@ -440,7 +440,7 @@ final class S3ADataBlocks {
         BlockOutputStreamStatistics statistics) {
       super(index, statistics);
       this.limit = (limit > Integer.MAX_VALUE) ? Integer.MAX_VALUE : (int) limit;
-      buffer = new S3AByteArrayOutputStream((int) limit);
+      buffer = new S3AByteArrayOutputStream(this.limit);
       blockAllocated();
     }
 

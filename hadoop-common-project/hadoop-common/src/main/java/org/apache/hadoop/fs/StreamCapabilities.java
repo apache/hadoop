@@ -100,6 +100,11 @@ public interface StreamCapabilities {
   String IOSTATISTICS_CONTEXT = "fs.capability.iocontext.supported";
 
   /**
+   * Stream support multipart uploads to the given patch
+   */
+  String MULTIPART_SUPPORTED = "fs.capability.multipart.supported";
+
+  /**
    * Capabilities that a stream can support and be queried for.
    */
   @Deprecated
