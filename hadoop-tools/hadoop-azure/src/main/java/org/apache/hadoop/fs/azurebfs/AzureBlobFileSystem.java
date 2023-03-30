@@ -106,6 +106,7 @@ import org.apache.hadoop.util.Progressable;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
+import static org.apache.hadoop.fs.azurebfs.RenameAtomicityUtils.SUFFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR;
@@ -642,8 +643,23 @@ public class AzureBlobFileSystem extends FileSystem
     Path qualifiedPath = makeQualified(path);
 
     try {
-      return abfsStore.getFileStatus(qualifiedPath, tracingContext);
-    } catch(AzureBlobFileSystemException ex) {
+      FileStatus fileStatus = abfsStore.getFileStatus(qualifiedPath,
+          tracingContext);
+      if (fileStatus != null && fileStatus.isDirectory() &&
+          abfsStore.isAtomicRenameKey(path.getName()) &&
+          abfsStore.getRenamePendingFileStatusInDirectory(fileStatus, tracingContext)) {
+        RenameAtomicityUtils renameAtomicityUtils = new RenameAtomicityUtils(
+            this,
+            new Path(path.toUri().getPath() + "/" + SUFFIX),
+            abfsStore.getRedoRenameInvocation(tracingContext));
+        renameAtomicityUtils.cleanup();
+        throw new AbfsRestOperationException(HttpURLConnection.HTTP_NOT_FOUND,
+            AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(), null,
+            new FileNotFoundException(
+                qualifiedPath + ": No such file or directory."));
+      }
+      return fileStatus;
+    } catch (AzureBlobFileSystemException ex) {
       checkException(path, ex);
       return null;
     }

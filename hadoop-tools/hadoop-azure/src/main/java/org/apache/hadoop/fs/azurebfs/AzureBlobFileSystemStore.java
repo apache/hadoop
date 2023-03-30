@@ -1967,6 +1967,21 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return null;
   }
 
+  public boolean getRenamePendingFileStatusInDirectory(final FileStatus fileStatus,
+      final TracingContext tracingContext) throws IOException {
+    try {
+      getFileStatus(
+          new Path(fileStatus.getPath().toUri().getPath() + "/" + SUFFIX),
+          tracingContext);
+      return true;
+    } catch (AbfsRestOperationException ex) {
+      if(ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+        return false;
+      }
+      throw ex;
+    }
+  }
+
   /**
    * A File status with version info extracted from the etag value returned
    * in a LIST or HEAD request.
