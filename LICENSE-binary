@@ -210,9 +210,9 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/nvd3-1.8.5.* (css and js
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/AbstractFuture.java
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/TimeoutFuture.java
 
-com.aliyun:aliyun-java-sdk-core:3.4.0
-com.aliyun:aliyun-java-sdk-ecs:4.2.0
-com.aliyun:aliyun-java-sdk-ram:3.0.0
+com.aliyun:aliyun-java-sdk-core:4.5.10
+com.aliyun:aliyun-java-sdk-kms:2.11.0
+com.aliyun:aliyun-java-sdk-ram:3.1.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
 com.amazonaws:aws-java-sdk-bundle:1.12.316
@@ -250,8 +250,7 @@ commons-codec:commons-codec:1.11
 commons-collections:commons-collections:3.2.2
 commons-daemon:commons-daemon:1.0.13
 commons-io:commons-io:2.8.0
-commons-logging:commons-logging:1.1.3
-commons-net:commons-net:3.8.0
+commons-net:commons-net:3.9.0
 de.ruedigermoeller:fst:2.50
 io.grpc:grpc-api:1.26.0
 io.grpc:grpc-context:1.26.0
@@ -260,7 +259,6 @@ io.grpc:grpc-netty:1.26.0
 io.grpc:grpc-protobuf:1.26.0
 io.grpc:grpc-protobuf-lite:1.26.0
 io.grpc:grpc-stub:1.26.0
-io.netty:netty:3.10.6.Final
 io.netty:netty-all:4.1.77.Final
 io.netty:netty-buffer:4.1.77.Final
 io.netty:netty-codec:4.1.77.Final
@@ -324,26 +322,26 @@ org.apache.htrace:htrace-core:3.1.0-incubating
 org.apache.htrace:htrace-core4:4.1.0-incubating
 org.apache.httpcomponents:httpclient:4.5.6
 org.apache.httpcomponents:httpcore:4.4.10
-org.apache.kafka:kafka-clients:2.8.1
-org.apache.kerby:kerb-admin:2.0.2
-org.apache.kerby:kerb-client:2.0.2
-org.apache.kerby:kerb-common:2.0.2
-org.apache.kerby:kerb-core:2.0.2
-org.apache.kerby:kerb-crypto:2.0.2
-org.apache.kerby:kerb-identity:2.0.2
-org.apache.kerby:kerb-server:2.0.2
-org.apache.kerby:kerb-simplekdc:2.0.2
-org.apache.kerby:kerb-util:2.0.2
-org.apache.kerby:kerby-asn1:2.0.2
-org.apache.kerby:kerby-config:2.0.2
-org.apache.kerby:kerby-pkix:2.0.2
-org.apache.kerby:kerby-util:2.0.2
-org.apache.kerby:kerby-xdr:2.0.2
-org.apache.kerby:token-provider:2.0.2
+org.apache.kafka:kafka-clients:2.8.2
+org.apache.kerby:kerb-admin:2.0.3
+org.apache.kerby:kerb-client:2.0.3
+org.apache.kerby:kerb-common:2.0.3
+org.apache.kerby:kerb-core:2.0.3
+org.apache.kerby:kerb-crypto:2.0.3
+org.apache.kerby:kerb-identity:2.0.3
+org.apache.kerby:kerb-server:2.0.3
+org.apache.kerby:kerb-simplekdc:2.0.3
+org.apache.kerby:kerb-util:2.0.3
+org.apache.kerby:kerby-asn1:2.0.3
+org.apache.kerby:kerby-config:2.0.3
+org.apache.kerby:kerby-pkix:2.0.3
+org.apache.kerby:kerby-util:2.0.3
+org.apache.kerby:kerby-xdr:2.0.3
+org.apache.kerby:token-provider:2.0.3
 org.apache.solr:solr-solrj:8.8.2
 org.apache.yetus:audience-annotations:0.5.0
 org.apache.zookeeper:zookeeper:3.6.3
-org.codehaus.jettison:jettison:1.5.1
+org.codehaus.jettison:jettison:1.5.3
 org.eclipse.jetty:jetty-annotations:9.4.48.v20220622
 org.eclipse.jetty:jetty-http:9.4.48.v20220622
 org.eclipse.jetty:jetty-io:9.4.48.v20220622
@@ -359,11 +357,14 @@ org.eclipse.jetty:jetty-xml:9.4.48.v20220622
 org.eclipse.jetty.websocket:javax-websocket-client-impl:9.4.48.v20220622
 org.eclipse.jetty.websocket:javax-websocket-server-impl:9.4.48.v20220622
 org.ehcache:ehcache:3.3.1
+org.ini4j:ini4j:0.5.4
+org.jetbrains.kotlin:kotlin-stdlib:1.4.10
+org.jetbrains.kotlin:kotlin-stdlib-common:1.4.10
 org.lz4:lz4-java:1.7.1
 org.objenesis:objenesis:2.6
 org.xerial.snappy:snappy-java:1.0.5
-org.yaml:snakeyaml:1.33
-org.wildfly.openssl:wildfly-openssl:1.0.7.Final
+org.yaml:snakeyaml:2.0
+org.wildfly.openssl:wildfly-openssl:1.1.3.Final
 
 
 --------------------------------------------------------------------------------
@@ -518,6 +519,8 @@ Eclipse Public License 1.0
 --------------------------
 
 junit:junit:4.13.2
+org.jacoco:org.jacoco.agent:0.8.5
+
 
 
 HSQL License

@@ -123,6 +123,7 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.tracing.Span;
 import org.apache.hadoop.tracing.SpanContext;
 import org.apache.hadoop.tracing.TraceScope;
@@ -153,6 +154,13 @@ public abstract class Server {
   private ExceptionsHandler exceptionsHandler = new ExceptionsHandler();
   private Tracer tracer;
   private AlignmentContext alignmentContext;
+
+  /**
+   * Allow server to do force Kerberos re-login once after failure irrespective
+   * of the last login time.
+   */
+  private final AtomicBoolean canTryForceLogin = new AtomicBoolean(true);
+
   /**
    * Logical name of the server used in metrics and monitor.
    */
@@ -1977,11 +1985,26 @@ public abstract class Server {
     private long lastContact;
     private int dataLength;
     private Socket socket;
+
     // Cache the remote host & port info so that even if the socket is 
     // disconnected, we can say where it used to connect to.
-    private String hostAddress;
-    private int remotePort;
-    private InetAddress addr;
+
+    /**
+     * Client Host IP address from where the socket connection is being established to the Server.
+     */
+    private final String hostAddress;
+    /**
+     * Client remote port used for the given socket connection.
+     */
+    private final int remotePort;
+    /**
+     * Address to which the socket is connected to.
+     */
+    private final InetAddress addr;
+    /**
+     * Client Host address from where the socket connection is being established to the Server.
+     */
+    private final String hostName;
     
     IpcConnectionContextProto connectionContext;
     String protocolName;
@@ -2025,8 +2048,12 @@ public abstract class Server {
       this.isOnAuxiliaryPort = isOnAuxiliaryPort;
       if (addr == null) {
         this.hostAddress = "*Unknown*";
+        this.hostName = this.hostAddress;
       } else {
+        // host IP address
         this.hostAddress = addr.getHostAddress();
+        // host name for the IP address
+        this.hostName = addr.getHostName();
       }
       this.remotePort = socket.getPort();
       this.responseQueue = new LinkedList<RpcCall>();
@@ -2042,7 +2069,7 @@ public abstract class Server {
 
     @Override
     public String toString() {
-      return getHostAddress() + ":" + remotePort; 
+      return hostName + ":" + remotePort + " / " + hostAddress + ":" + remotePort;
     }
 
     boolean setShouldClose() {
@@ -2206,7 +2233,23 @@ public abstract class Server {
           AUDITLOG.warn(AUTH_FAILED_FOR + this.toString() + ":"
               + attemptingUser + " (" + e.getLocalizedMessage()
               + ") with true cause: (" + tce.getLocalizedMessage() + ")");
-          throw tce;
+          if (!UserGroupInformation.getLoginUser().isLoginSuccess()) {
+            doKerberosRelogin();
+            try {
+              // try processing message again
+              LOG.debug("Reprocessing sasl message for {}:{} after re-login",
+                  this.toString(), attemptingUser);
+              saslResponse = processSaslMessage(saslMessage);
+              AUDITLOG.info("Retry {}{}:{} after failure", AUTH_SUCCESSFUL_FOR,
+                  this.toString(), attemptingUser);
+              canTryForceLogin.set(true);
+            } catch (IOException exp) {
+              tce = (IOException) getTrueCause(e);
+              throw tce;
+            }
+          } else {
+            throw tce;
+          }
         }
         
         if (saslServer != null && saslServer.isComplete()) {
@@ -2439,19 +2482,18 @@ public abstract class Server {
             return -1;
           }
 
-          if(!RpcConstants.HEADER.equals(dataLengthBuffer)) {
-            LOG.warn("Incorrect RPC Header length from {}:{} "
-                + "expected length: {} got length: {}",
-                hostAddress, remotePort, RpcConstants.HEADER, dataLengthBuffer);
+          if (!RpcConstants.HEADER.equals(dataLengthBuffer)) {
+            LOG.warn("Incorrect RPC Header length from {}:{} / {}:{}. Expected: {}. Actual: {}",
+                hostName, remotePort, hostAddress, remotePort, RpcConstants.HEADER,
+                dataLengthBuffer);
             setupBadVersionResponse(version);
             return -1;
           }
           if (version != CURRENT_VERSION) {
             //Warning is ok since this is not supposed to happen.
-            LOG.warn("Version mismatch from " +
-                     hostAddress + ":" + remotePort +
-                     " got version " + version + 
-                     " expected version " + CURRENT_VERSION);
+            LOG.warn("Version mismatch from {}:{} / {}:{}. "
+                    + "Expected version: {}. Actual version: {} ", hostName,
+                remotePort, hostAddress, remotePort, CURRENT_VERSION, version);
             setupBadVersionResponse(version);
             return -1;
           }
@@ -3320,6 +3362,26 @@ public abstract class Server {
             .build());
     this.scheduledExecutorService.scheduleWithFixedDelay(new MetricsUpdateRunner(),
         metricsUpdaterInterval, metricsUpdaterInterval, TimeUnit.MILLISECONDS);
+  }
+
+  private synchronized void doKerberosRelogin() throws IOException {
+    if(UserGroupInformation.getLoginUser().isLoginSuccess()){
+      return;
+    }
+    LOG.warn("Initiating re-login from IPC Server");
+    if (canTryForceLogin.compareAndSet(true, false)) {
+      if (UserGroupInformation.isLoginKeytabBased()) {
+        UserGroupInformation.getLoginUser().forceReloginFromKeytab();
+      } else if (UserGroupInformation.isLoginTicketBased()) {
+        UserGroupInformation.getLoginUser().forceReloginFromTicketCache();
+      }
+    } else {
+      if (UserGroupInformation.isLoginKeytabBased()) {
+        UserGroupInformation.getLoginUser().reloginFromKeytab();
+      } else if (UserGroupInformation.isLoginTicketBased()) {
+        UserGroupInformation.getLoginUser().reloginFromTicketCache();
+      }
+    }
   }
 
   public synchronized void addAuxiliaryListener(int auxiliaryPort)

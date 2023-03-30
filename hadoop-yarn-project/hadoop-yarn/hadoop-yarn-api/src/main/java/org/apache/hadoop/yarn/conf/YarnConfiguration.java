@@ -4254,6 +4254,13 @@ public class YarnConfiguration extends Configuration {
           + "DefaultRequestInterceptorREST";
 
   /**
+   * ApplicationSubmissionContextInterceptor configurations.
+   **/
+  public static final String ROUTER_ASC_INTERCEPTOR_MAX_SIZE =
+      ROUTER_PREFIX + "asc-interceptor-max-size";
+  public static final String DEFAULT_ROUTER_ASC_INTERCEPTOR_MAX_SIZE = "1MB";
+
+  /**
    * The interceptor class used in FederationInterceptorREST should return
    * partial AppReports.
    */
@@ -4297,6 +4304,33 @@ public class YarnConfiguration extends Configuration {
   public static final String ROUTER_WEBAPP_ENABLE_CORS_FILTER =
       ROUTER_PREFIX + "webapp.cross-origin.enabled";
   public static final boolean DEFAULT_ROUTER_WEBAPP_ENABLE_CORS_FILTER = false;
+
+  /** Router Interceptor Allow Partial Result Enable. **/
+  public static final String ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED =
+      ROUTER_PREFIX + "interceptor.allow-partial-result.enable";
+  public static final boolean DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED = false;
+
+  /** Router SubCluster Cleaner Thread Clean Interval Time. **/
+  public static final String ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME =
+      ROUTER_PREFIX + "subcluster.cleaner.interval.time";
+  public static final long DEFAULT_ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME =
+      TimeUnit.SECONDS.toMillis(60);
+
+  /** Router SubCluster Timeout Allowed by Router. **/
+  public static final String ROUTER_SUBCLUSTER_EXPIRATION_TIME =
+      ROUTER_PREFIX + "subcluster.heartbeat.expiration.time";
+  public static final long DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME =
+      TimeUnit.MINUTES.toMillis(30);
+
+  /** Router Thread Pool Schedule Thread Number. **/
+  public static final String ROUTER_SCHEDULED_EXECUTOR_THREADS =
+      ROUTER_PREFIX + "scheduled.executor.threads";
+  public static final int DEFAULT_ROUTER_SCHEDULED_EXECUTOR_THREADS = 1;
+
+  /** Enable DeregisterSubCluster, enabled by default. **/
+  public static final String ROUTER_DEREGISTER_SUBCLUSTER_ENABLED =
+      ROUTER_PREFIX + "deregister.subcluster.enabled";
+  public static final boolean DEFAULT_ROUTER_DEREGISTER_SUBCLUSTER_ENABLED = true;
 
   ////////////////////////////////
   // CSI Volume configs

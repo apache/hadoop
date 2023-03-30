@@ -2413,8 +2413,14 @@ public abstract class FileSystem extends Configured
         if (stat.isFile()) { // file
           curFile = stat;
         } else if (recursive) { // directory
-          itors.push(curItor);
-          curItor = listLocatedStatus(stat.getPath());
+          try {
+            RemoteIterator<LocatedFileStatus> newDirItor = listLocatedStatus(stat.getPath());
+            itors.push(curItor);
+            curItor = newDirItor;
+          } catch (FileNotFoundException ignored) {
+            LOGGER.debug("Directory {} deleted while attempting for recursive listing",
+                stat.getPath());
+          }
         }
       }
 

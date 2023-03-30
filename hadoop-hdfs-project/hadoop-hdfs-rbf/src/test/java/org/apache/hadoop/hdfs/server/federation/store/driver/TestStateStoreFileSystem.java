@@ -17,16 +17,26 @@
  */
 package org.apache.hadoop.hdfs.server.federation.store.driver;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils;
+import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileBaseImpl;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileSystemImpl;
+import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.stubbing.Answer;
+
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
+
 
 /**
  * Test the FileSystem (e.g., HDFS) implementation of the State Store driver.
@@ -90,5 +100,31 @@ public class TestStateStoreFileSystem extends TestStateStoreDriverBase {
   public void testMetrics()
       throws IllegalArgumentException, IllegalAccessException, IOException {
     testMetrics(getStateStoreDriver());
+  }
+
+  @Test
+  public void testInsertWithErrorDuringWrite()
+      throws IllegalArgumentException, IllegalAccessException, IOException {
+    StateStoreFileBaseImpl driver = spy((StateStoreFileBaseImpl)getStateStoreDriver());
+    doAnswer((Answer<BufferedWriter>) a -> {
+      BufferedWriter writer = (BufferedWriter) a.callRealMethod();
+      BufferedWriter spyWriter = spy(writer);
+      doThrow(IOException.class).when(spyWriter).write(any(String.class));
+      return spyWriter;
+    }).when(driver).getWriter(any());
+
+    testInsertWithErrorDuringWrite(driver, MembershipState.class);
+  }
+
+  @Test
+  public void testCacheLoadMetrics() throws IOException {
+    // inject value of CacheMountTableLoad as -1 initially, if tests get CacheMountTableLoadAvgTime
+    // value as -1 ms, that would mean no other sample with value >= 0 would have been received and
+    // hence this would be failure to assert that mount table avg load time is higher than -1
+    getStateStoreService().getMetrics().setCacheLoading("MountTable", -1);
+    long curMountTableLoadNum = getMountTableCacheLoadSamples(getStateStoreDriver());
+    getStateStoreService().refreshCaches(true);
+    getStateStoreService().refreshCaches(true);
+    testCacheLoadMetrics(getStateStoreDriver(), curMountTableLoadNum + 2, -1);
   }
 }

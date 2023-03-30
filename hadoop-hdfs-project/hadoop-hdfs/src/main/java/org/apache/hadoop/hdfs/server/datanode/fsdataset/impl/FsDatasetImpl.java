@@ -1557,7 +1557,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override // FsDatasetSpi
   public Replica recoverClose(ExtendedBlock b, long newGS,
       long expectedBlockLen) throws IOException {
-    LOG.info("Recover failed close " + b);
+    LOG.info("Recover failed close {}, new GS:{}, expectedBlockLen:{}",
+        b, newGS, expectedBlockLen);
     while (true) {
       try {
         try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,

@@ -29,7 +29,6 @@ Changing the policy from the default value, `"delete"` _is not backwards compati
 Versions of Hadoop which are incompatible with other marker retention policies,
 as of August 2020.
 
--------------------------------------------------------
 |  Branch    | Compatible Since | Supported           |
 |------------|------------------|---------------------|
 | Hadoop 2.x |       n/a        | WONTFIX             |
@@ -37,7 +36,7 @@ as of August 2020.
 | Hadoop 3.1 |      check       | Read-only           |
 | Hadoop 3.2 |      check       | Read-only           |
 | Hadoop 3.3 |      3.3.1       | Done                |
--------------------------------------------------------
+
 
 *WONTFIX*
 
@@ -218,7 +217,7 @@ This can have adverse effects on those large directories, again.
 
 In the Presto [S3 connector](https://prestodb.io/docs/current/connector/hive.html#amazon-s3-configuration),
 `mkdirs()` is a no-op.
-Whenever it lists any path which isn't an object or a prefix of one more more objects, it returns an
+Whenever it lists any path which isn't an object or a prefix of one more objects, it returns an
 empty listing. That is:;  by default, every path is an empty directory.
 
 Provided no code probes for a directory existing and fails if it is there, this
@@ -524,7 +523,7 @@ Ignoring 3 markers in authoritative paths
 ```
 
 All of this S3A bucket _other_ than the authoritative path `/tables` will be safe for
-incompatible Hadoop releases to to use.
+incompatible Hadoop releases to use.
 
 
 ###  <a name="marker-tool-clean"></a>`markers clean`

@@ -29,10 +29,8 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
-import org.apache.hadoop.yarn.api.records.QueueConfigurations;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
-import org.apache.hadoop.yarn.api.records.QueueStatistics;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -117,6 +115,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       CapacityConfigType.NONE;
 
   protected Map<String, QueueCapacityVector> configuredCapacityVectors;
+  protected Map<String, QueueCapacityVector> configuredMaxCapacityVectors;
 
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
@@ -381,7 +380,10 @@ public abstract class AbstractCSQueue implements CSQueue {
       this.configuredCapacityVectors = configuration
           .parseConfiguredResourceVector(queuePath.getFullPath(),
               this.queueNodeLabelsSettings.getConfiguredNodeLabels());
-
+      this.configuredMaxCapacityVectors = configuration
+          .parseConfiguredMaximumCapacityVector(queuePath.getFullPath(),
+              this.queueNodeLabelsSettings.getConfiguredNodeLabels(),
+              QueueCapacityVector.newInstance());
       // Update metrics
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
           this, labelManager, null);
@@ -535,7 +537,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   private void validateAbsoluteVsPercentageCapacityConfig(
       CapacityConfigType localType) {
     if (!queuePath.isRoot()
-        && !this.capacityConfigType.equals(localType)) {
+        && !this.capacityConfigType.equals(localType) &&
+        queueContext.getConfiguration().isLegacyQueueMode()) {
       throw new IllegalArgumentException("Queue '" + getQueuePath()
           + "' should use either percentage based capacity"
           + " configuration or absolute resource.");
@@ -574,9 +577,23 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   @Override
-  public QueueCapacityVector getConfiguredCapacityVector(
-      String label) {
+  public QueueCapacityVector getConfiguredCapacityVector(String label) {
     return configuredCapacityVectors.get(label);
+  }
+
+  @Override
+  public QueueCapacityVector getConfiguredMaxCapacityVector(String label) {
+    return configuredMaxCapacityVectors.get(label);
+  }
+
+  @Override
+  public void setConfiguredMinCapacityVector(String label, QueueCapacityVector minCapacityVector) {
+    configuredCapacityVectors.put(label, minCapacityVector);
+  }
+
+  @Override
+  public void setConfiguredMaxCapacityVector(String label, QueueCapacityVector maxCapacityVector) {
+    configuredMaxCapacityVectors.put(label, maxCapacityVector);
   }
 
   protected QueueInfo getQueueInfo() {
@@ -584,83 +601,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     // from schedulerApplicationAttempt, to avoid deadlock, sacrifice
     // consistency here.
     // TODO, improve this
-    QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
-    queueInfo.setQueueName(queuePath.getLeafName());
-    queueInfo.setQueuePath(queuePath.getFullPath());
-    queueInfo.setAccessibleNodeLabels(queueNodeLabelsSettings.getAccessibleNodeLabels());
-    queueInfo.setCapacity(queueCapacities.getCapacity());
-    queueInfo.setMaximumCapacity(queueCapacities.getMaximumCapacity());
-    queueInfo.setQueueState(getState());
-    queueInfo.setDefaultNodeLabelExpression(queueNodeLabelsSettings.getDefaultLabelExpression());
-    queueInfo.setCurrentCapacity(getUsedCapacity());
-    queueInfo.setQueueStatistics(getQueueStatistics());
-    queueInfo.setPreemptionDisabled(preemptionSettings.isPreemptionDisabled());
-    queueInfo.setIntraQueuePreemptionDisabled(
-        getIntraQueuePreemptionDisabled());
-    queueInfo.setQueueConfigurations(getQueueConfigurations());
-    queueInfo.setWeight(queueCapacities.getWeight());
-    queueInfo.setMaxParallelApps(queueAppLifetimeSettings.getMaxParallelApps());
-    return queueInfo;
-  }
-
-  public QueueStatistics getQueueStatistics() {
-    // Deliberately doesn't use lock here, because this method will be invoked
-    // from schedulerApplicationAttempt, to avoid deadlock, sacrifice
-    // consistency here.
-    // TODO, improve this
-    QueueStatistics stats = recordFactory.newRecordInstance(
-        QueueStatistics.class);
-    stats.setNumAppsSubmitted(getMetrics().getAppsSubmitted());
-    stats.setNumAppsRunning(getMetrics().getAppsRunning());
-    stats.setNumAppsPending(getMetrics().getAppsPending());
-    stats.setNumAppsCompleted(getMetrics().getAppsCompleted());
-    stats.setNumAppsKilled(getMetrics().getAppsKilled());
-    stats.setNumAppsFailed(getMetrics().getAppsFailed());
-    stats.setNumActiveUsers(getMetrics().getActiveUsers());
-    stats.setAvailableMemoryMB(getMetrics().getAvailableMB());
-    stats.setAllocatedMemoryMB(getMetrics().getAllocatedMB());
-    stats.setPendingMemoryMB(getMetrics().getPendingMB());
-    stats.setReservedMemoryMB(getMetrics().getReservedMB());
-    stats.setAvailableVCores(getMetrics().getAvailableVirtualCores());
-    stats.setAllocatedVCores(getMetrics().getAllocatedVirtualCores());
-    stats.setPendingVCores(getMetrics().getPendingVirtualCores());
-    stats.setReservedVCores(getMetrics().getReservedVirtualCores());
-    stats.setPendingContainers(getMetrics().getPendingContainers());
-    stats.setAllocatedContainers(getMetrics().getAllocatedContainers());
-    stats.setReservedContainers(getMetrics().getReservedContainers());
-    return stats;
-  }
-
-  public Map<String, QueueConfigurations> getQueueConfigurations() {
-    Map<String, QueueConfigurations> queueConfigurations = new HashMap<>();
-    Set<String> nodeLabels = getNodeLabelsForQueue();
-    QueueResourceQuotas queueResourceQuotas = usageTracker.getQueueResourceQuotas();
-    for (String nodeLabel : nodeLabels) {
-      QueueConfigurations queueConfiguration =
-          recordFactory.newRecordInstance(QueueConfigurations.class);
-      float capacity = queueCapacities.getCapacity(nodeLabel);
-      float absoluteCapacity = queueCapacities.getAbsoluteCapacity(nodeLabel);
-      float maxCapacity = queueCapacities.getMaximumCapacity(nodeLabel);
-      float absMaxCapacity =
-          queueCapacities.getAbsoluteMaximumCapacity(nodeLabel);
-      float maxAMPercentage =
-          queueCapacities.getMaxAMResourcePercentage(nodeLabel);
-      queueConfiguration.setCapacity(capacity);
-      queueConfiguration.setAbsoluteCapacity(absoluteCapacity);
-      queueConfiguration.setMaxCapacity(maxCapacity);
-      queueConfiguration.setAbsoluteMaxCapacity(absMaxCapacity);
-      queueConfiguration.setMaxAMPercentage(maxAMPercentage);
-      queueConfiguration.setConfiguredMinCapacity(
-          queueResourceQuotas.getConfiguredMinResource(nodeLabel));
-      queueConfiguration.setConfiguredMaxCapacity(
-          queueResourceQuotas.getConfiguredMaxResource(nodeLabel));
-      queueConfiguration.setEffectiveMinCapacity(
-          queueResourceQuotas.getEffectiveMinResource(nodeLabel));
-      queueConfiguration.setEffectiveMaxCapacity(
-          queueResourceQuotas.getEffectiveMaxResource(nodeLabel));
-      queueConfigurations.put(nodeLabel, queueConfiguration);
-    }
-    return queueConfigurations;
+    return CSQueueInfoProvider.getQueueInfo(this);
   }
 
   @Private
@@ -718,6 +659,10 @@ public abstract class AbstractCSQueue implements CSQueue {
   /**
    * Returns whether we should continue to look at all heart beating nodes even
    * after the reservation limit was hit.
+   *
+   * @return true,
+   * continue to look at all heart beating nodes even after the reservation limit was hit.
+   * otherwise false.
    */
   @Private
   public boolean isReservationsContinueLooking() {
@@ -767,6 +712,11 @@ public abstract class AbstractCSQueue implements CSQueue {
   @Override
   public ReentrantReadWriteLock.ReadLock getReadLock() {
     return readLock;
+  }
+
+  @Override
+  public ReentrantReadWriteLock.WriteLock getWriteLock() {
+    return writeLock;
   }
 
   private Resource getCurrentLimitResource(String nodePartition,
@@ -903,6 +853,11 @@ public abstract class AbstractCSQueue implements CSQueue {
       readLock.unlock();
     }
 
+  }
+
+  @Override
+  public Set<String> getConfiguredNodeLabels() {
+    return queueNodeLabelsSettings.getConfiguredNodeLabels();
   }
 
   private static String ensurePartition(String partition) {

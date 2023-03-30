@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.router.rmadmin;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -112,7 +113,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
   @VisibleForTesting
   protected ResourceManagerAdministrationProtocol getAdminRMProxyForSubCluster(
-      SubClusterId subClusterId) throws YarnException {
+      SubClusterId subClusterId) throws Exception {
 
     if (adminRMProxies.containsKey(subClusterId)) {
       return adminRMProxies.get(subClusterId);
@@ -145,6 +146,23 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
        + "is correct");
   }
 
+  /**
+   * Refresh queue requests.
+   *
+   * The Router supports refreshing all SubCluster queues at once,
+   * and also supports refreshing queues by SubCluster.
+   *
+   * @param request RefreshQueuesRequest, If subClusterId is not empty,
+   * it means that we want to refresh the queue of the specified subClusterId.
+   * If subClusterId is empty, it means we want to refresh all queues.
+   *
+   * @return RefreshQueuesResponse, There is no specific information in the response,
+   * as long as it is not empty, it means that the request is successful.
+   *
+   * @throws StandbyException exception thrown by non-active server.
+   * @throws YarnException indicates exceptions from yarn servers.
+   * @throws IOException io error occurs.
+   */
   @Override
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request)
       throws StandbyException, YarnException, IOException {
@@ -161,8 +179,9 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
            new Class[] {RefreshQueuesRequest.class}, new Object[] {request});
 
+      String subClusterId = request.getSubClusterId();
       Collection<RefreshQueuesResponse> refreshQueueResps =
-          remoteMethod.invokeConcurrent(this, RefreshQueuesResponse.class);
+          remoteMethod.invokeConcurrent(this, RefreshQueuesResponse.class, subClusterId);
 
       // If we get the return result from refreshQueueResps,
       // it means that the call has been successful,
@@ -172,57 +191,323 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         routerMetrics.succeededRefreshQueuesRetrieved(stopTime - startTime);
         return RefreshQueuesResponse.newInstance();
       }
-    } catch (Exception e) {
+    } catch (YarnException e) {
       routerMetrics.incrRefreshQueuesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to refreshQueue to exception.", e);
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshQueue due to exception. " + e.getMessage());
     }
 
     routerMetrics.incrRefreshQueuesFailedRetrieved();
     throw new YarnException("Unable to refreshQueue.");
   }
 
+  /**
+   * Refresh node requests.
+   *
+   * The Router supports refreshing all SubCluster nodes at once,
+   * and also supports refreshing node by SubCluster.
+   *
+   * @param request RefreshNodesRequest, If subClusterId is not empty,
+   * it means that we want to refresh the node of the specified subClusterId.
+   * If subClusterId is empty, it means we want to refresh all nodes.
+   *
+   * @return RefreshNodesResponse, There is no specific information in the response,
+   * as long as it is not empty, it means that the request is successful.
+   *
+   * @throws StandbyException exception thrown by non-active server.
+   * @throws YarnException indicates exceptions from yarn servers.
+   * @throws IOException io error occurs.
+   */
   @Override
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
       throws StandbyException, YarnException, IOException {
-    throw new NotImplementedException();
+
+    // parameter verification.
+    // We will not check whether the DecommissionType is empty,
+    // because this parameter has a default value at the proto level.
+    if (request == null) {
+      routerMetrics.incrRefreshNodesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshNodes request.", null);
+    }
+
+    // call refreshNodes of activeSubClusters.
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[] {RefreshNodesRequest.class}, new Object[] {request});
+
+      String subClusterId = request.getSubClusterId();
+      Collection<RefreshNodesResponse> refreshNodesResps =
+          remoteMethod.invokeConcurrent(this, RefreshNodesResponse.class, subClusterId);
+
+      if (CollectionUtils.isNotEmpty(refreshNodesResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRefreshNodesRetrieved(stopTime - startTime);
+        return RefreshNodesResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRefreshNodesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshNodes due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrRefreshNodesFailedRetrieved();
+    throw new YarnException("Unable to refreshNodes due to exception.");
   }
 
+  /**
+   * Refresh SuperUserGroupsConfiguration requests.
+   *
+   * The Router supports refreshing all subCluster SuperUserGroupsConfiguration at once,
+   * and also supports refreshing SuperUserGroupsConfiguration by SubCluster.
+   *
+   * @param request RefreshSuperUserGroupsConfigurationRequest,
+   * If subClusterId is not empty, it means that we want to
+   * refresh the superuser groups configuration of the specified subClusterId.
+   * If subClusterId is empty, it means we want to
+   * refresh all subCluster superuser groups configuration.
+   *
+   * @return RefreshSuperUserGroupsConfigurationResponse,
+   * There is no specific information in the response, as long as it is not empty,
+   * it means that the request is successful.
+   *
+   * @throws StandbyException exception thrown by non-active server.
+   * @throws YarnException indicates exceptions from yarn servers.
+   * @throws IOException io error occurs.
+   */
   @Override
   public RefreshSuperUserGroupsConfigurationResponse refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
       throws StandbyException, YarnException, IOException {
-    throw new NotImplementedException();
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrRefreshSuperUserGroupsConfigurationFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshSuperUserGroupsConfiguration request.",
+          null);
+    }
+
+    // call refreshSuperUserGroupsConfiguration of activeSubClusters.
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[] {RefreshSuperUserGroupsConfigurationRequest.class}, new Object[] {request});
+
+      String subClusterId = request.getSubClusterId();
+      Collection<RefreshSuperUserGroupsConfigurationResponse> refreshSuperUserGroupsConfResps =
+          remoteMethod.invokeConcurrent(this, RefreshSuperUserGroupsConfigurationResponse.class,
+          subClusterId);
+
+      if (CollectionUtils.isNotEmpty(refreshSuperUserGroupsConfResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRefreshSuperUserGroupsConfRetrieved(stopTime - startTime);
+        return RefreshSuperUserGroupsConfigurationResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRefreshSuperUserGroupsConfigurationFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshSuperUserGroupsConfiguration due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrRefreshSuperUserGroupsConfigurationFailedRetrieved();
+    throw new YarnException("Unable to refreshSuperUserGroupsConfiguration.");
   }
 
+  /**
+   * Refresh UserToGroupsMappings requests.
+   *
+   * The Router supports refreshing all subCluster UserToGroupsMappings at once,
+   * and also supports refreshing UserToGroupsMappings by subCluster.
+   *
+   * @param request RefreshUserToGroupsMappingsRequest,
+   * If subClusterId is not empty, it means that we want to
+   * refresh the user groups mapping of the specified subClusterId.
+   * If subClusterId is empty, it means we want to
+   * refresh all subCluster user groups mapping.
+   *
+   * @return RefreshUserToGroupsMappingsResponse,
+   * There is no specific information in the response, as long as it is not empty,
+   * it means that the request is successful.
+   *
+   * @throws StandbyException exception thrown by non-active server.
+   * @throws YarnException indicates exceptions from yarn servers.
+   * @throws IOException io error occurs.
+   */
   @Override
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
-      RefreshUserToGroupsMappingsRequest request)
-      throws StandbyException, YarnException, IOException {
-    throw new NotImplementedException();
+      RefreshUserToGroupsMappingsRequest request) throws StandbyException, YarnException,
+      IOException {
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrRefreshUserToGroupsMappingsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshUserToGroupsMappings request.", null);
+    }
+
+    // call refreshUserToGroupsMappings of activeSubClusters.
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[] {RefreshUserToGroupsMappingsRequest.class}, new Object[] {request});
+
+      String subClusterId = request.getSubClusterId();
+      Collection<RefreshUserToGroupsMappingsResponse> refreshUserToGroupsMappingsResps =
+          remoteMethod.invokeConcurrent(this, RefreshUserToGroupsMappingsResponse.class,
+          subClusterId);
+
+      if (CollectionUtils.isNotEmpty(refreshUserToGroupsMappingsResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRefreshUserToGroupsMappingsRetrieved(stopTime - startTime);
+        return RefreshUserToGroupsMappingsResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRefreshUserToGroupsMappingsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshUserToGroupsMappings due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrRefreshUserToGroupsMappingsFailedRetrieved();
+    throw new YarnException("Unable to refreshUserToGroupsMappings.");
   }
 
   @Override
   public RefreshAdminAclsResponse refreshAdminAcls(RefreshAdminAclsRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrRefreshAdminAclsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshAdminAcls request.", null);
+    }
+
+    // call refreshAdminAcls of activeSubClusters.
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[] {RefreshAdminAclsRequest.class}, new Object[] {request});
+      String subClusterId = request.getSubClusterId();
+      Collection<RefreshAdminAclsResponse> refreshAdminAclsResps =
+          remoteMethod.invokeConcurrent(this, RefreshAdminAclsResponse.class, subClusterId);
+      if (CollectionUtils.isNotEmpty(refreshAdminAclsResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRefreshAdminAclsRetrieved(stopTime - startTime);
+        return RefreshAdminAclsResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRefreshAdminAclsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshAdminAcls due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrRefreshAdminAclsFailedRetrieved();
+    throw new YarnException("Unable to refreshAdminAcls.");
   }
 
   @Override
   public RefreshServiceAclsResponse refreshServiceAcls(RefreshServiceAclsRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrRefreshServiceAclsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshServiceAcls request.", null);
+    }
+
+    // call refreshAdminAcls of activeSubClusters.
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{RefreshServiceAclsRequest.class}, new Object[]{request});
+      String subClusterId = request.getSubClusterId();
+      Collection<RefreshServiceAclsResponse> refreshServiceAclsResps =
+          remoteMethod.invokeConcurrent(this, RefreshServiceAclsResponse.class, subClusterId);
+      if (CollectionUtils.isNotEmpty(refreshServiceAclsResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRefreshServiceAclsRetrieved(stopTime - startTime);
+        return RefreshServiceAclsResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRefreshServiceAclsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshAdminAcls due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrRefreshServiceAclsFailedRetrieved();
+    throw new YarnException("Unable to refreshServiceAcls.");
   }
 
   @Override
   public UpdateNodeResourceResponse updateNodeResource(UpdateNodeResourceRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrUpdateNodeResourceFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing UpdateNodeResource request.", null);
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrUpdateNodeResourceFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing UpdateNodeResource SubClusterId.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{UpdateNodeResourceRequest.class}, new Object[]{request});
+      Collection<UpdateNodeResourceResponse> updateNodeResourceResps =
+          remoteMethod.invokeConcurrent(this, UpdateNodeResourceResponse.class, subClusterId);
+      if (CollectionUtils.isNotEmpty(updateNodeResourceResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededUpdateNodeResourceRetrieved(stopTime - startTime);
+        return UpdateNodeResourceResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrUpdateNodeResourceFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to updateNodeResource due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrUpdateNodeResourceFailedRetrieved();
+    throw new YarnException("Unable to updateNodeResource.");
   }
 
   @Override
   public RefreshNodesResourcesResponse refreshNodesResources(RefreshNodesResourcesRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrRefreshNodesResourcesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshNodesResources request.", null);
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrRefreshNodesResourcesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshNodesResources SubClusterId.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{RefreshNodesResourcesRequest.class}, new Object[]{request});
+      Collection<RefreshNodesResourcesResponse> refreshNodesResourcesResps =
+          remoteMethod.invokeConcurrent(this, RefreshNodesResourcesResponse.class, subClusterId);
+      if (CollectionUtils.isNotEmpty(refreshNodesResourcesResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRefreshNodesResourcesRetrieved(stopTime - startTime);
+        return RefreshNodesResourcesResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRefreshNodesResourcesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshNodesResources due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrRefreshNodesResourcesFailedRetrieved();
+    throw new YarnException("Unable to refreshNodesResources.");
   }
 
   @Override

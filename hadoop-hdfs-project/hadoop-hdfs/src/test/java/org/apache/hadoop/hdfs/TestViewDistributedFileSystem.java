@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
@@ -191,4 +192,21 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
       }
     }
   }
+
+  @Test
+  public void testPathCapabilities() throws IOException {
+    Configuration conf = getTestConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build()) {
+      URI defaultUri = URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
+      conf.set("fs.viewfs.mounttable." + defaultUri.getHost() + ".linkFallback",
+          defaultUri.toString());
+      try (ViewDistributedFileSystem fileSystem = (ViewDistributedFileSystem) FileSystem.get(
+          conf)) {
+        final Path testFile = new Path("/test");
+        assertTrue("ViewDfs supports truncate",
+            fileSystem.hasPathCapability(testFile, CommonPathCapabilities.FS_TRUNCATE));
+      }
+    }
+  }
+
 }

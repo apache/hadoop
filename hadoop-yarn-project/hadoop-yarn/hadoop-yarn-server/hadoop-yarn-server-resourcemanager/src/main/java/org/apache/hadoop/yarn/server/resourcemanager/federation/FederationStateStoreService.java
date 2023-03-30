@@ -266,8 +266,18 @@ public class FederationStateStoreService extends AbstractService
   }
 
   @Override
-  public Version loadVersion() {
+  public Version loadVersion() throws Exception {
     return stateStoreClient.getCurrentVersion();
+  }
+
+  @Override
+  public void storeVersion() throws Exception {
+    stateStoreClient.storeVersion();
+  }
+
+  @Override
+  public void checkVersion() throws Exception {
+    stateStoreClient.checkVersion();
   }
 
   @Override
@@ -421,6 +431,31 @@ public class FederationStateStoreService extends AbstractService
   public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
     return stateStoreClient.getTokenByRouterStoreToken(request);
+  }
+
+  @Override
+  public int incrementDelegationTokenSeqNum() {
+    return stateStoreClient.incrementDelegationTokenSeqNum();
+  }
+
+  @Override
+  public int getDelegationTokenSeqNum() {
+    return stateStoreClient.getDelegationTokenSeqNum();
+  }
+
+  @Override
+  public void setDelegationTokenSeqNum(int seqNum) {
+    stateStoreClient.setDelegationTokenSeqNum(seqNum);
+  }
+
+  @Override
+  public int getCurrentKeyId() {
+    return stateStoreClient.getCurrentKeyId();
+  }
+
+  @Override
+  public int incrementCurrentKeyId() {
+    return stateStoreClient.incrementCurrentKeyId();
   }
 
   /**
