@@ -18,15 +18,14 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.DelegateToFileSystem;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.DelegateToFileSystem;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.S3A_SCHEME_DEFAULT;
 
 /**
