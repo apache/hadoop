@@ -112,16 +112,17 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         // 设置下载域名
         this.downloadDomain = fsConfig.download.domain;
         if (this.downloadDomain == null) {
-            // 下载域名未配置时
-            if (fsConfig.customRegion.id == null) {
-                // 公有云通过uc query api获取源站域名构造下载链接
-                this.downloadDomain = UCQuery.getDownloadDomainFromUC(client, fsConfig.auth.accessKey, bucket);
-            } else {
+            // 下载域名未配置时, 若配置了私有云regionId则认为是私有云部署
+            // 私有云部署时需要手动配置下载域名，若未配置则抛出异常
+            if (fsConfig.customRegion.id != null) {
                 // 私有云未配置下载域名时抛出异常
                 throw new QiniuException(new MissingConfigFieldException(String.format(
                         "download domain can't be empty, you should set it with %s in core-site.xml",
                         fsConfig.download.KEY_DOMAIN
                 )));
+            } else {
+                // 公有云场景且未配置下载域名，则直接获取源站域名来构造下载链接
+                this.downloadDomain = bucketManager.getDefaultIoSrcHost(bucket);
             }
         }
 
