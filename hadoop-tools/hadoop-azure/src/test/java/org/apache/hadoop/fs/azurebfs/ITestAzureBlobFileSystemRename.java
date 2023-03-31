@@ -25,6 +25,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,6 +35,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.RenameAtomicityUtils.SUFFIX;
@@ -276,6 +278,7 @@ public class ITestAzureBlobFileSystemRename extends
 
     }
     Assert.assertTrue(fs.exists(new Path(failedCopyPath)));
+    Assert.assertFalse(spiedFs.exists(new Path(failedCopyPath.replace("test1/test2/test3/", "test4/test3/"))));
 
     //call listPath API, it will recover the rename atomicity.
     final AzureBlobFileSystem spiedFsForListPath = Mockito.spy(fs);
@@ -289,8 +292,37 @@ public class ITestAzureBlobFileSystemRename extends
       return fs.open(path);
     }).when(spiedFsForListPath).open(Mockito.any(Path.class));
 
+    /*
+    * Check if the fs.delete is on the renameJson file.
+    */
+    AtomicInteger deletedCount = new AtomicInteger(0);
+    Mockito.doAnswer(answer -> {
+      Path path = answer.getArgument(0);
+      Boolean recursive = answer.getArgument(1);
+      Assert.assertTrue(("/" + "hbase/test1/test2/test3" +SUFFIX).equalsIgnoreCase(path.toUri().getPath()));
+      deletedCount.incrementAndGet();
+      return fs.delete(path, recursive);
+    }).when(spiedFsForListPath).delete(Mockito.any(Path.class), Mockito.anyBoolean());
+
+    /*
+    * Check if the blob which will be retried is deleted from the renameBlob
+    * method.
+    */
+    AbfsClient client = spiedFsForListPath.getAbfsClient();
+    final AbfsClient spiedClientForListPath = Mockito.spy(client);
+    spiedFsForListPath.getAbfsStore().setClient(spiedClientForListPath);
+    Mockito.doAnswer(answer -> {
+      Path path = answer.getArgument(0);
+      TracingContext tracingContext = answer.getArgument(1);
+      Assert.assertTrue(("/" + failedCopyPath).equalsIgnoreCase(path.toUri().getPath()));
+      deletedCount.incrementAndGet();
+      client.deleteBlobPath(path, tracingContext);
+      return null;
+    }).when(spiedClientForListPath).deleteBlobPath(Mockito.any(Path.class), Mockito.any(TracingContext.class));
+
     spiedFsForListPath.listStatus(new Path("hbase/test1/test2"));
     Assert.assertTrue(openRequiredFile[0] == 1);
+    Assert.assertTrue(deletedCount.get() == 2);
     Assert.assertFalse(spiedFsForListPath.exists(new Path(failedCopyPath)));
     Assert.assertTrue(spiedFsForListPath.exists(new Path(failedCopyPath.replace("test1/test2/test3/", "test4/test3/"))));
   }
