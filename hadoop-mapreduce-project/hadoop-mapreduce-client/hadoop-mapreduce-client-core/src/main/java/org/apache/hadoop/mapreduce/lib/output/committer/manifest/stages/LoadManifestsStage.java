@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,7 +56,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Man
  */
 public class LoadManifestsStage extends
     AbstractJobOrTaskStage<
-        Boolean,
+        LoadManifestsStage.Arguments,
         LoadManifestsStage.Result> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -93,13 +94,13 @@ public class LoadManifestsStage extends
    */
   @Override
   protected LoadManifestsStage.Result executeStage(
-      final Boolean prune) throws IOException {
+      final LoadManifestsStage.Arguments arguments) throws IOException {
 
     final Path manifestDir = getTaskManifestDir();
     LOG.info("{}: Executing Manifest Job Commit with manifests in {}",
         getName(),
         manifestDir);
-    pruneManifests = prune;
+    pruneManifests = true;
     // build a list of all task manifests successfully committed
     //
     msync(manifestDir);
@@ -114,7 +115,7 @@ public class LoadManifestsStage extends
 
     // collect any stats
     maybeAddIOStatistics(getIOStatistics(), manifestFiles);
-    return new LoadManifestsStage.Result(summaryInfo, manifestList, directories);
+    return new LoadManifestsStage.Result(summaryInfo, null, manifestList, directories);
   }
 
   /**
@@ -202,18 +203,50 @@ public class LoadManifestsStage extends
   }
 
   /**
+   * Stage arguments.
+   */
+  public static final class Arguments {
+    /**
+     * File where the listing has been saved.
+     */
+    private final File renameListFile;
+
+    /**
+     * build a list of manifests and return them?
+     */
+    private final boolean cacheManifests;
+
+    public Arguments(final File renameListFile, final boolean cacheManifests) {
+      this.renameListFile = renameListFile;
+      this.cacheManifests = cacheManifests;
+    }
+  }
+
+  /**
    * Result of the stage.
    */
   public static final class Result {
     private final SummaryInfo summary;
 
+    /**
+     * File where the listing has been saved.
+     */
+    private final File renameListFile;
+
+    /**
+     * manifest list, non-null only if cacheManifests is true.
+     */
     private final List<TaskManifest> manifests;
 
+    /**
+     * Map of directories.
+     */
     private final Map<String, DirEntry> directories;
 
     public Result(SummaryInfo summary,
-        List<TaskManifest> manifests, final Map<String, DirEntry> directories) {
+        final File renameListFile, List<TaskManifest> manifests, final Map<String, DirEntry> directories) {
       this.summary = summary;
+      this.renameListFile = renameListFile;
       this.manifests = manifests;
       this.directories = directories;
     }

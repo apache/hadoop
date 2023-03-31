@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.files;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Objects;
@@ -29,6 +31,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Writable;
 
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData.marshallPath;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData.unmarshallPath;
@@ -42,7 +45,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.Ab
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public final class FileEntry implements Serializable {
+public final class FileEntry implements Serializable, Writable {
 
   private static final long serialVersionUID = -550288489009777867L;
 
@@ -62,7 +65,7 @@ public final class FileEntry implements Serializable {
   private String etag;
 
   /**
-   * Constructor only for use by jackson.
+   * Constructor for use by jackson/writable
    * Do Not Delete.
    */
   private FileEntry() {
@@ -179,6 +182,22 @@ public final class FileEntry implements Serializable {
     return size == that.size && source.equals(that.source) && dest.equals(
         that.dest) &&
         Objects.equals(etag, that.etag);
+  }
+
+  @Override
+  public void write(final DataOutput out) throws IOException {
+    out.writeUTF(source);
+    out.writeUTF(dest);
+    out.writeUTF(etag);
+    out.writeLong(size);
+  }
+
+  @Override
+  public void readFields(final DataInput in) throws IOException {
+    source = in.readUTF();
+    dest = in.readUTF();
+    etag = in.readUTF();
+    size = in.readLong();
   }
 
   @Override

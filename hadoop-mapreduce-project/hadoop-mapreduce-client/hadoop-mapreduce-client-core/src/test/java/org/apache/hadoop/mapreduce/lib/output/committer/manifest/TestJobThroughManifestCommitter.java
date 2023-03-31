@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
@@ -482,7 +483,8 @@ public class TestJobThroughManifestCommitter
 
     // load manifests stage will load all the task manifests again
     List<TaskManifest> manifests = new LoadManifestsStage(getJobStageConfig())
-        .apply(true).getManifests();
+        .apply(new LoadManifestsStage.Arguments(
+                    File.createTempFile("manifest", ".list"), true)).getManifests();
     // Now verify their files exist, returning the list of renamed files.
     List<String> committedFiles = new ValidateRenamedFilesStage(getJobStageConfig())
         .apply(manifests)

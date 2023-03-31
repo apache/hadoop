@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -77,8 +78,9 @@ public class CommitJobStage extends
     addHeapInformation(heapInfo, "setup");
     // load the manifests
     final StageConfig stageConfig = getStageConfig();
-    LoadManifestsStage.Result result
-        = new LoadManifestsStage(stageConfig).apply(true);
+    LoadManifestsStage.Result result = new LoadManifestsStage(stageConfig).apply(
+        new LoadManifestsStage.Arguments(
+            File.createTempFile("manifest", ".list"), false));
     List<TaskManifest> manifests = result.getManifests();
     LoadManifestsStage.SummaryInfo summary = result.getSummary();
 
