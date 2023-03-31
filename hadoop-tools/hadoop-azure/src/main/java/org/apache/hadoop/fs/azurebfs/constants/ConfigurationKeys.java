@@ -238,6 +238,9 @@ public final class ConfigurationKeys {
   /** Key for rate limit capacity, as used by IO operations which try to throttle themselves. */
   public static final String FS_AZURE_ABFS_IO_RATE_LIMIT = "fs.azure.io.rate.limit";
 
+  /** Add extra resilience to rename failures, at the expense of performance. */
+  public static final String FS_AZURE_ABFS_RENAME_RESILIENCE = "fs.azure.enable.rename.resilience";
+
   public static String accountProperty(String property, String account) {
     return property + "." + account;
   }
