@@ -1569,6 +1569,11 @@ public class AzureBlobFileSystem extends FileSystem
     return clientCorrelationId;
   }
 
+  @org.apache.hadoop.classification.VisibleForTesting
+  void setAbfsStore(final AzureBlobFileSystemStore abfsStore) {
+    this.abfsStore = abfsStore;
+  }
+
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {

@@ -233,4 +233,22 @@ public class ITestAzureBlobFileSystemRename extends
     Assert.assertTrue(spiedFs.rename(new Path("hbase/test1/test2/test3"), new Path("hbase/test4")));
     Assert.assertTrue(correctDeletePathCount[0] == 1);
   }
+
+  @Test
+  public void testHBaseHandlingForFailedRename() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    fs.setWorkingDirectory(new Path("/"));
+    fs.mkdirs(new Path("hbase/test1/test2/test3"));
+    fs.create(new Path("hbase/test1/test2/test3/file"));
+    fs.create(new Path("hbase/test1/test2/test3/file1"));
+    fs.mkdirs(new Path("hbase/test4/"));
+    fs.create(new Path("hbase/test4/file1"));
+    final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
+    final AzureBlobFileSystemStore azureBlobFileSystemStore = Mockito.spy(spiedFs.getAbfsStore());
+    spiedFs.setAbfsStore(azureBlobFileSystemStore);
+    final Integer[] correctDeletePathCount = new Integer[1];
+    correctDeletePathCount[0] = 0;
+
+    Assert.assertFalse(spiedFs.rename(new Path("hbase/test1/test2/test3"), new Path("hbase/test4")));
+  }
 }
