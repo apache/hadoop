@@ -52,7 +52,7 @@ public class TestStateStoreFile extends TestStateStoreDriverBase {
 
   private static void setupCluster(String numFsAsyncThreads) throws Exception {
     Configuration conf = getStateStoreConfiguration(StateStoreFileImpl.class);
-    conf.set(FEDERATION_STORE_FILE_ASYNC_THREADS, numFsAsyncThreads);
+    conf.setInt(FEDERATION_STORE_FILE_ASYNC_THREADS, Integer.parseInt(numFsAsyncThreads));
     getStateStore(conf);
   }
 

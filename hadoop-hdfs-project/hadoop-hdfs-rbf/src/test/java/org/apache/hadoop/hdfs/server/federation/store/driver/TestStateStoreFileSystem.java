@@ -61,7 +61,7 @@ public class TestStateStoreFileSystem extends TestStateStoreDriverBase {
     Configuration conf =
         FederationStateStoreTestUtils.getStateStoreConfiguration(StateStoreFileSystemImpl.class);
     conf.set(StateStoreFileSystemImpl.FEDERATION_STORE_FS_PATH, "/hdfs-federation/");
-    conf.set(FEDERATION_STORE_FS_ASYNC_THREADS, numFsAsyncThreads);
+    conf.setInt(FEDERATION_STORE_FS_ASYNC_THREADS, Integer.parseInt(numFsAsyncThreads));
 
     // Create HDFS cluster to back the state tore
     MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf);

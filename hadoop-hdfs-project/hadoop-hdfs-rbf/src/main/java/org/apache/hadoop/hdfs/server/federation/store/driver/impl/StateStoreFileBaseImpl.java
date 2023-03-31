@@ -183,7 +183,7 @@ public abstract class StateStoreFileBaseImpl
     }
     setInitialized(true);
     int threads = getConcurrentFilesAccessNumThreads();
-    if (threads > 0) {
+    if (threads > 1) {
       this.concurrentStoreAccessPool =
           new ThreadPoolExecutor(threads, threads, 0L, TimeUnit.MILLISECONDS,
               new LinkedBlockingQueue<>(),
@@ -203,6 +203,7 @@ public abstract class StateStoreFileBaseImpl
       this.concurrentStoreAccessPool.shutdown();
       boolean isTerminated = this.concurrentStoreAccessPool.awaitTermination(5, TimeUnit.SECONDS);
       LOG.info("Concurrent store access pool is terminated: {}", isTerminated);
+      this.concurrentStoreAccessPool = null;
     }
   }
 
