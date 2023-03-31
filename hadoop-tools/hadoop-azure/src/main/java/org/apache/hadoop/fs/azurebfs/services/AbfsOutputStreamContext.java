@@ -33,6 +33,8 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   private boolean enableFlush;
 
+  private boolean enableExpectHeader;
+
   private boolean enableSmallWriteOptimization;
 
   private boolean disableOutputStreamFlush;
@@ -75,6 +77,11 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public AbfsOutputStreamContext enableFlush(final boolean enableFlush) {
     this.enableFlush = enableFlush;
+    return this;
+  }
+
+  public AbfsOutputStreamContext enableExpectHeader(final boolean enableExpectHeader) {
+    this.enableExpectHeader = enableExpectHeader;
     return this;
   }
 
@@ -182,6 +189,10 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public boolean isEnableFlush() {
     return enableFlush;
+  }
+
+  public boolean isExpectHeaderEnabled() {
+    return enableExpectHeader;
   }
 
   public boolean isDisableOutputStreamFlush() {

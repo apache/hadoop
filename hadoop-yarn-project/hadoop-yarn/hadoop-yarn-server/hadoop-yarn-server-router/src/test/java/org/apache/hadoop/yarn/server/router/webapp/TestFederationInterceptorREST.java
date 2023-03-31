@@ -73,10 +73,13 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHome
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
@@ -123,15 +126,22 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDelet
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeAllocationInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationConfInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationBulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterUserInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
+import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
+import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -165,6 +175,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   private final static int NUM_SUBCLUSTER = 4;
   private static final int BAD_REQUEST = 400;
   private static final int ACCEPTED = 202;
+  private static final int OK = 200;
   private static String user = "test-user";
   private TestableFederationInterceptorREST interceptor;
   private MemoryFederationStateStore stateStore;
@@ -2126,5 +2137,151 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     oldNodeLabels1.add("A1");
     LambdaTestUtils.intercept(YarnRuntimeException.class, "removeFromClusterNodeLabels Error",
         () -> interceptor.removeFromClusterNodeLabels(oldNodeLabels1, null));
+  }
+
+  @Test
+  public void testGetSchedulerConfiguration() throws Exception {
+    Response response = interceptor.getSchedulerConfiguration(null);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(OK, response.getStatus());
+
+    Object entity = response.getEntity();
+    Assert.assertNotNull(entity);
+    Assert.assertTrue(entity instanceof FederationConfInfo);
+
+    FederationConfInfo federationConfInfo = FederationConfInfo.class.cast(entity);
+    List<ConfInfo> confInfos = federationConfInfo.getList();
+    Assert.assertNotNull(confInfos);
+    Assert.assertEquals(4, confInfos.size());
+
+    List<String> errors = federationConfInfo.getErrorMsgs();
+    Assert.assertEquals(0, errors.size());
+
+    Set<String> subClusterSet = subClusters.stream()
+        .map(subClusterId -> subClusterId.getId()).collect(Collectors.toSet());
+
+    for (ConfInfo confInfo : confInfos) {
+      List<ConfInfo.ConfItem> confItems = confInfo.getItems();
+      Assert.assertNotNull(confItems);
+      Assert.assertTrue(confItems.size() > 0);
+      Assert.assertTrue(subClusterSet.contains(confInfo.getSubClusterId()));
+    }
+  }
+
+  @Test
+  public void testGetClusterUserInfo() {
+    String requestUserName = "test-user";
+    HttpServletRequest hsr = mock(HttpServletRequest.class);
+    when(hsr.getRemoteUser()).thenReturn(requestUserName);
+    ClusterUserInfo clusterUserInfo = interceptor.getClusterUserInfo(hsr);
+
+    Assert.assertNotNull(clusterUserInfo);
+    Assert.assertTrue(clusterUserInfo instanceof FederationClusterUserInfo);
+
+    FederationClusterUserInfo federationClusterUserInfo =
+        (FederationClusterUserInfo) clusterUserInfo;
+
+    List<ClusterUserInfo> fedClusterUserInfoList = federationClusterUserInfo.getList();
+    Assert.assertNotNull(fedClusterUserInfoList);
+    Assert.assertEquals(4, fedClusterUserInfoList.size());
+
+    List<String> subClusterIds = subClusters.stream().map(
+        subClusterId -> subClusterId.getId()).collect(Collectors.toList());
+    MockRM mockRM = interceptor.getMockRM();
+
+    for (ClusterUserInfo fedClusterUserInfo : fedClusterUserInfoList) {
+      // Check subClusterId
+      String subClusterId = fedClusterUserInfo.getSubClusterId();
+      Assert.assertNotNull(subClusterId);
+      Assert.assertTrue(subClusterIds.contains(subClusterId));
+
+      // Check requestedUser
+      String requestedUser = fedClusterUserInfo.getRequestedUser();
+      Assert.assertNotNull(requestedUser);
+      Assert.assertEquals(requestUserName, requestedUser);
+
+      // Check rmLoginUser
+      String rmLoginUser = fedClusterUserInfo.getRmLoginUser();
+      Assert.assertNotNull(rmLoginUser);
+      Assert.assertEquals(mockRM.getRMLoginUser(), rmLoginUser);
+    }
+  }
+
+  @Test
+  public void testUpdateSchedulerConfigurationErrorMsg() throws Exception {
+    SchedConfUpdateInfo mutationInfo = new SchedConfUpdateInfo();
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the subClusterId is empty or null.",
+        () -> interceptor.updateSchedulerConfiguration(mutationInfo, null));
+
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the schedConfUpdateInfo is empty or null.",
+        () -> interceptor.updateSchedulerConfiguration(null, null));
+  }
+
+  @Test
+  public void testUpdateSchedulerConfiguration()
+      throws AuthorizationException, InterruptedException {
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+    updateInfo.setSubClusterId("1");
+    Map<String, String> goodUpdateMap = new HashMap<>();
+    goodUpdateMap.put("goodKey", "goodVal");
+    QueueConfigInfo goodUpdateInfo = new
+        QueueConfigInfo("root.default", goodUpdateMap);
+    updateInfo.getUpdateQueueInfo().add(goodUpdateInfo);
+    Response response = interceptor.updateSchedulerConfiguration(updateInfo, null);
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(OK, response.getStatus());
+
+    String expectMsg = "Configuration change successfully applied.";
+    Object entity = response.getEntity();
+    Assert.assertNotNull(entity);
+
+    String entityMsg = String.valueOf(entity);
+    Assert.assertEquals(expectMsg, entityMsg);
+  }
+
+  @Test
+  public void testGetClusterInfo() {
+    ClusterInfo clusterInfos = interceptor.getClusterInfo();
+    Assert.assertNotNull(clusterInfos);
+    Assert.assertTrue(clusterInfos instanceof FederationClusterInfo);
+
+    FederationClusterInfo federationClusterInfos =
+        (FederationClusterInfo) (clusterInfos);
+
+    List<ClusterInfo> fedClusterInfosList = federationClusterInfos.getList();
+    Assert.assertNotNull(fedClusterInfosList);
+    Assert.assertEquals(4, fedClusterInfosList.size());
+
+    List<String> subClusterIds = subClusters.stream().map(
+        subClusterId -> subClusterId.getId()).collect(Collectors.toList());
+
+    MockRM mockRM = interceptor.getMockRM();
+    String yarnVersion = YarnVersionInfo.getVersion();
+
+    for (ClusterInfo clusterInfo : fedClusterInfosList) {
+      String subClusterId = clusterInfo.getSubClusterId();
+      // Check subClusterId
+      Assert.assertTrue(subClusterIds.contains(subClusterId));
+
+      // Check state
+      String clusterState = mockRM.getServiceState().toString();
+      Assert.assertEquals(clusterState, clusterInfo.getState());
+
+      // Check rmStateStoreName
+      String rmStateStoreName =
+          mockRM.getRMContext().getStateStore().getClass().getName();
+      Assert.assertEquals(rmStateStoreName, clusterInfo.getRMStateStore());
+
+      // Check RM Version
+      Assert.assertEquals(yarnVersion, clusterInfo.getRMVersion());
+
+      // Check haZooKeeperConnectionState
+      String rmHAZookeeperConnectionState = mockRM.getRMContext().getHAZookeeperConnectionState();
+      Assert.assertEquals(rmHAZookeeperConnectionState,
+          clusterInfo.getHAZookeeperConnectionState());
+    }
   }
 }
