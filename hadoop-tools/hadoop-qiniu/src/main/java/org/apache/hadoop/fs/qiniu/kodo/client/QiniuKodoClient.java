@@ -11,7 +11,6 @@ import com.qiniu.storage.model.FileListing;
 import com.qiniu.util.Auth;
 import com.qiniu.util.StringMap;
 import com.qiniu.util.StringUtils;
-import okhttp3.Request;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.BatchOperationConsumer;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.ListingProducer;
@@ -184,14 +183,11 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      */
     @Override
     public long getLength(String key) throws IOException {
-        Request.Builder requestBuilder = new Request.Builder()
-                .url(getFileUrlByKey(key))
-                .header("Accept-Encoding", "identity")    // Content-Length返回的是压缩后的大小
-                .head();
-
         try {
-            Response response = client.send(requestBuilder, null);
+            Response response = client.head(getFileUrlByKey(key),
+                    new StringMap().put("Accept-Encoding", "identity"));
             String len = response.header("content-length", null);
+
             if (len == null) {
                 throw new IOException(String.format("Cannot get object length by key: %s", key));
             }
@@ -214,6 +210,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
     @Override
     public boolean exists(String key) throws IOException {
+        // 这里如果使用head判断404，会导致某些场景下命中缓存，导致文件被删除但是返回200
         return getFileStatus(key) != null;
     }
 
