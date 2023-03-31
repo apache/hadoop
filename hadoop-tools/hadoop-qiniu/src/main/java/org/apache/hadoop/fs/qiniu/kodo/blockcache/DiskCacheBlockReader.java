@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListener<KeyBlockIdCacheKey, Path>, IBlockManager {
+public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListener<KeyBlockIdCacheKey, Path> {
     private static final Logger LOG = LoggerFactory.getLogger(DiskCacheBlockReader.class);
     private static final String META_FILE_NAME = ".BUFFER_META.json";
     private final IBlockReader source;
@@ -48,9 +48,7 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
     @Override
     public void deleteBlocks(String key) {
         LOG.debug("key: {}", key);
-        if (source instanceof IBlockManager) {
-            ((IBlockManager) source).deleteBlocks(key);
-        }
+        source.deleteBlocks(key);
         synchronized (lruCache) {
             for (KeyBlockIdCacheKey kbck : lruCache.keySet()) {
                 if (kbck.key.equals(key)) {

@@ -1,13 +1,12 @@
 package org.apache.hadoop.fs.qiniu.kodo.download.blockreader;
 
-import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockManager;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.MemoryCacheBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
 
 import java.io.IOException;
 
-public class QiniuKodoRandomBlockReader implements IBlockReader, IBlockManager {
+public class QiniuKodoRandomBlockReader implements IBlockReader {
     private final MemoryCacheBlockReader memoryCacheReader;
     private final int blockSize;
 

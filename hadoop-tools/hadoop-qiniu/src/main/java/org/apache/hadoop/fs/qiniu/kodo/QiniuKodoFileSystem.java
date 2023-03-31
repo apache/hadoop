@@ -137,6 +137,11 @@ public class QiniuKodoFileSystem extends FileSystem {
         return uploadExecutorService;
     }
 
+    private void deleteKeyBlocks(String key) throws IOException {
+        generalblockReader.deleteBlocks(key);
+        randomBlockReader.deleteBlocks(key);
+    }
+
     /**
      * 创建一个文件，返回一个可以被写入的输出流
      */
@@ -153,9 +158,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
 
-        if (overwrite) {
-            generalblockReader.deleteBlocks(key);
-        }
+        if (overwrite) deleteKeyBlocks(key);
 
         return new FSDataOutputStream(
                 new QiniuKodoOutputStream(
@@ -178,9 +181,8 @@ public class QiniuKodoFileSystem extends FileSystem {
         if (path.isRoot()) throw new IOException("Cannot create file named /");
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        if (overwrite) {
-            generalblockReader.deleteBlocks(key);
-        }
+        if (overwrite) deleteKeyBlocks(key);
+
         return new FSDataOutputStream(
                 new QiniuKodoOutputStream(
                         kodoClient,
@@ -327,7 +329,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     private boolean deleteFile(String fileKey) throws IOException {
         fileKey = QiniuKodoUtils.keyToFileKey(fileKey);
         LOG.debug("delete, fileKey:" + fileKey);
-        generalblockReader.deleteBlocks(fileKey);
+        deleteKeyBlocks(fileKey);
         return kodoClient.deleteKey(fileKey);
     }
 
@@ -338,7 +340,7 @@ public class QiniuKodoFileSystem extends FileSystem {
             // 若非递归且不止一个，那么抛异常
             throw new IOException("Dir is not empty");
         }
-        generalblockReader.deleteBlocks(dirKey);
+        deleteKeyBlocks(dirKey);
         return kodoClient.deleteKeys(dirKey);
     }
 

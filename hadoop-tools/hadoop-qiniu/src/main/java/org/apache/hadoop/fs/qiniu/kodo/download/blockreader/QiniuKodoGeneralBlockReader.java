@@ -1,7 +1,6 @@
 package org.apache.hadoop.fs.qiniu.kodo.download.blockreader;
 
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.DiskCacheBlockReader;
-import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockManager;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.MemoryCacheBlockReader;
 import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
@@ -11,7 +10,7 @@ import org.apache.hadoop.fs.qiniu.kodo.config.download.cache.MemoryCacheConfig;
 
 import java.io.IOException;
 
-public class QiniuKodoGeneralBlockReader implements IBlockReader, IBlockManager {
+public class QiniuKodoGeneralBlockReader implements IBlockReader {
 
     private IBlockReader finalReader;
     private final int blockSize;
@@ -64,8 +63,6 @@ public class QiniuKodoGeneralBlockReader implements IBlockReader, IBlockManager 
 
     @Override
     public void deleteBlocks(String key) {
-        if (finalReader instanceof IBlockManager) {
-            ((IBlockManager) finalReader).deleteBlocks(key);
-        }
+        finalReader.deleteBlocks(key);
     }
 }

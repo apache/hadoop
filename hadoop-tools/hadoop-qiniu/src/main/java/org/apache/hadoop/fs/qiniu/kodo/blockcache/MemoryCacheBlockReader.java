@@ -4,7 +4,7 @@ import org.apache.hadoop.fs.qiniu.kodo.util.LRUCache;
 
 import java.io.IOException;
 
-public class MemoryCacheBlockReader implements IBlockReader, IBlockManager {
+public class MemoryCacheBlockReader implements IBlockReader {
     private final IBlockReader source;
     private final LRUCache<KeyBlockIdCacheKey, byte[]> lruCache;
     private final int blockSize;
@@ -38,9 +38,7 @@ public class MemoryCacheBlockReader implements IBlockReader, IBlockManager {
 
     @Override
     public void deleteBlocks(String key) {
-        if (source instanceof IBlockManager) {
-            ((IBlockManager) source).deleteBlocks(key);
-        }
+        source.deleteBlocks(key);
         for (KeyBlockIdCacheKey kbck : lruCache.keySet()) {
             if (kbck.key.equals(key)) {
                 lruCache.remove(kbck);

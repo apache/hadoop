@@ -3,10 +3,13 @@ package org.apache.hadoop.fs.qiniu.kodo.download;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.qiniu.kodo.blockcache.IBlockReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 public class QiniuKodoInputStream extends FSInputStream {
+    private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoInputStream.class);
     private final boolean useRandomReader;
     private final FSInputStream generalStrategy;
     private final FSInputStream randomStrategy;
@@ -24,8 +27,9 @@ public class QiniuKodoInputStream extends FSInputStream {
         this.generalStrategy = new QiniuKodoCommonInputStream(key, generalReader, contentLength, statistics);
         this.randomStrategy = new QiniuKodoCommonInputStream(key, randomReader, contentLength, statistics);
 
-        // 默认通用块
+        // 默认通用策略
         this.currentStrategy = generalStrategy;
+        LOG.info("Current read strategy is general reader");
     }
 
     @Override
@@ -37,6 +41,7 @@ public class QiniuKodoInputStream extends FSInputStream {
     public void seek(long pos) throws IOException {
         if (useRandomReader) {
             this.currentStrategy = randomStrategy;
+            LOG.info("Current read strategy switch to random reader");
         }
         currentStrategy.seek(pos);
     }
