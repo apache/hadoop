@@ -43,9 +43,14 @@ public final class TestConfigurationKeys {
   public static final String FS_AZURE_BLOB_FS_CLIENT_SECRET = "fs.azure.account.oauth2.client.secret";
 
   public static final String FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID = "fs.azure.account.test.oauth2.client.id";
+
+  public static final String FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID_2 = "fs.azure.account.test2.oauth2.client.id";
   public static final String FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET = "fs.azure.account.test.oauth2.client.secret";
+  public static final String FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET_2 = "fs.azure.account.test2.oauth2.client.secret";
 
   public static final String FS_AZURE_BLOB_FS_CHECKACCESS_TEST_USER_GUID = "fs.azure.check.access.testuser.guid";
+
+  public static final String FS_AZURE_BLOB_FS_CHECKACCESS_TEST_USER_2_GUID = "fs.azure.check.access.testuser2.guid";
 
   public static final String MOCK_SASTOKENPROVIDER_FAIL_INIT = "mock.sastokenprovider.fail.init";
   public static final String MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN = "mock.sastokenprovider.return.empty.sasToken";
