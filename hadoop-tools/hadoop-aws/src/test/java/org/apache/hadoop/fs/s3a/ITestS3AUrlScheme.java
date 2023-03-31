@@ -40,8 +40,12 @@ public class ITestS3AUrlScheme extends AbstractS3ATestBase{
   public void testFSScheme() throws IOException, URISyntaxException {
     FileSystem fs = FileSystem.get(new URI("s3://mybucket/path"),
         getConfiguration());
-    assertEquals("s3a", fs.getScheme());
-    Path path = fs.makeQualified(new Path("tmp/path"));
-    assertEquals("s3", path.toUri().getScheme());
+    try {
+      assertEquals("s3", fs.getScheme());
+      Path path = fs.makeQualified(new Path("tmp/path"));
+      assertEquals("s3", path.toUri().getScheme());
+    } finally {
+      fs.close();
+    }
   }
 }

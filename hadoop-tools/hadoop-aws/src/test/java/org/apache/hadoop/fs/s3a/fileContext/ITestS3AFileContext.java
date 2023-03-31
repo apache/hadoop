@@ -13,20 +13,22 @@
  */
 package org.apache.hadoop.fs.s3a.fileContext;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
-import org.junit.Test;
-
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.junit.Test;
 import static org.junit.Assert.assertEquals;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.TestFileContext;
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
 
 /**
  * Implementation of TestFileContext for S3a.
  */
-public class ITestS3AFileContext extends TestFileContext{
+public class ITestS3AFileContext extends TestFileContext {
 
   @Test
   public void testScheme()

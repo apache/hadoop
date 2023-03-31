@@ -1196,7 +1196,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Override
   public String getScheme() {
-    return "s3a";
+    if (this.uri != null && this.uri.getScheme() != null){
+      return this.uri.getScheme();
+    } else {
+      return FS_S3A;
+    }
   }
 
   /**
