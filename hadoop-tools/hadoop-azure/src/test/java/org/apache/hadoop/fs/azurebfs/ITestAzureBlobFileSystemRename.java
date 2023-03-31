@@ -328,4 +328,90 @@ public class ITestAzureBlobFileSystemRename extends
   }
 
   //test for nested.
+  @Test
+  public void testHBaseHandlingForFailedRenameForNestedSource() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    final String failedCopyPath = "hbase/test1/test2/test3/file1";
+    fs.setWorkingDirectory(new Path("/"));
+    fs.mkdirs(new Path("hbase/test1/test2/test3"));
+    fs.create(new Path("hbase/test1/test2/test3/file"));
+    fs.create(new Path(failedCopyPath));
+    fs.mkdirs(new Path("hbase/test4/"));
+    fs.create(new Path("hbase/test4/file1"));
+    final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
+    final AzureBlobFileSystemStore azureBlobFileSystemStore = Mockito.spy(spiedFs.getAbfsStore());
+    spiedFs.setAbfsStore(azureBlobFileSystemStore);
+    final Integer[] correctDeletePathCount = new Integer[1];
+    correctDeletePathCount[0] = 0;
+
+    //fail copy of /hbase/test1/test2/test3/file1.
+    AzureBlobFileSystemStore spiedAbfsStore = Mockito.spy(spiedFs.getAbfsStore());
+    spiedFs.setAbfsStore(spiedAbfsStore);
+    Mockito.doAnswer(answer -> {
+      final Path srcPath = answer.getArgument(0);
+      final Path dstPath = answer.getArgument(1);
+      final TracingContext tracingContext = answer.getArgument(2);
+      if(("/" + failedCopyPath).equalsIgnoreCase(srcPath.toUri().getPath())) {
+        throw new AbfsRestOperationException(HttpURLConnection.HTTP_UNAVAILABLE,
+            AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT.getErrorCode(), "Ingress is over the account limit.", new Exception());
+      }
+      fs.getAbfsStore().copyBlob(srcPath, dstPath, tracingContext);
+      return null;
+    }).when(spiedAbfsStore).copyBlob(Mockito.any(Path.class), Mockito.any(Path.class),
+        Mockito.any(TracingContext.class));
+    try {
+      spiedFs.rename(new Path("hbase/test1/test2"),
+          new Path("hbase/test4"));
+    } catch (Exception ex) {
+
+    }
+    Assert.assertTrue(fs.exists(new Path(failedCopyPath)));
+    Assert.assertFalse(spiedFs.exists(new Path(failedCopyPath.replace("test1/test2/test3/", "test4/test3/"))));
+
+    //call listPath API, it will recover the rename atomicity.
+    final AzureBlobFileSystem spiedFsForListPath = Mockito.spy(fs);
+    final int[] openRequiredFile = new int[1];
+    openRequiredFile[0] = 0;
+    Mockito.doAnswer(answer -> {
+      final Path path = answer.getArgument(0);
+      if(("/" + "hbase/test1/test2" +SUFFIX).equalsIgnoreCase(path.toUri().getPath())) {
+        openRequiredFile[0] = 1;
+      }
+      return fs.open(path);
+    }).when(spiedFsForListPath).open(Mockito.any(Path.class));
+
+    /*
+     * Check if the fs.delete is on the renameJson file.
+     */
+    AtomicInteger deletedCount = new AtomicInteger(0);
+    Mockito.doAnswer(answer -> {
+      Path path = answer.getArgument(0);
+      Boolean recursive = answer.getArgument(1);
+      Assert.assertTrue(("/" + "hbase/test1/test2" +SUFFIX).equalsIgnoreCase(path.toUri().getPath()));
+      deletedCount.incrementAndGet();
+      return fs.delete(path, recursive);
+    }).when(spiedFsForListPath).delete(Mockito.any(Path.class), Mockito.anyBoolean());
+
+    /*
+     * Check if the blob which will be retried is deleted from the renameBlob
+     * method.
+     */
+    AbfsClient client = spiedFsForListPath.getAbfsClient();
+    final AbfsClient spiedClientForListPath = Mockito.spy(client);
+    spiedFsForListPath.getAbfsStore().setClient(spiedClientForListPath);
+    Mockito.doAnswer(answer -> {
+      Path path = answer.getArgument(0);
+      TracingContext tracingContext = answer.getArgument(1);
+      Assert.assertTrue(("/" + failedCopyPath).equalsIgnoreCase(path.toUri().getPath()));
+      deletedCount.incrementAndGet();
+      client.deleteBlobPath(path, tracingContext);
+      return null;
+    }).when(spiedClientForListPath).deleteBlobPath(Mockito.any(Path.class), Mockito.any(TracingContext.class));
+
+    spiedFsForListPath.listStatus(new Path("hbase/test1"));
+    Assert.assertTrue(openRequiredFile[0] == 1);
+    Assert.assertTrue(deletedCount.get() == 2);
+    Assert.assertFalse(spiedFsForListPath.exists(new Path(failedCopyPath)));
+    Assert.assertTrue(spiedFsForListPath.exists(new Path(failedCopyPath.replace("test1/test2/test3/", "test4/test2/test3/"))));
+  }
 }
