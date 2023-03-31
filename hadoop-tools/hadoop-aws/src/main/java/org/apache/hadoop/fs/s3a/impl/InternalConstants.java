@@ -182,9 +182,4 @@ public final class InternalConstants {
       Collections.unmodifiableSet(
           new HashSet<>(Arrays.asList(Constants.FS_S3A_CREATE_PERFORMANCE)));
 
-  /**
-   *  The default scheme for S3A filesystem.
-   */
-  public static final String S3A_SCHEME_DEFAULT = "s3a";
-
 }
