@@ -1,7 +1,5 @@
 package org.apache.hadoop.fs.azurebfs;
 
-import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
@@ -28,7 +26,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.hadoop.fs.permission.FsPermission;
 
 public class RenameAtomicityUtils {
 
@@ -67,7 +64,7 @@ public class RenameAtomicityUtils {
     final RenamePendingFileInfo renamePendingFileInfo = readFile(path);
     if(renamePendingFileInfo != null) {
       redoRenameInvocation.redo(renamePendingFileInfo.destination,
-          renamePendingFileInfo.srcList);
+          renamePendingFileInfo.srcList, renamePendingFileInfo.destinationSuffix);
     }
   }
 
@@ -127,11 +124,14 @@ public class RenameAtomicityUtils {
       renamePendingFileInfo.destination = new Path(newFolderName.textValue());
       String srcDir = oldFolderName.textValue() + "/";
       List<Path> srcPaths = new ArrayList<>();
+      List<String> destinationSuffix = new ArrayList<>();
       JsonNode fileList = json.get("FileList");
       for (int i = 0; i < fileList.size(); i++) {
+        destinationSuffix.add(fileList.get(i).textValue());
         srcPaths.add(new Path(srcDir + fileList.get(i).textValue()));
       }
       renamePendingFileInfo.srcList = srcPaths;
+      renamePendingFileInfo.destinationSuffix = destinationSuffix;
       return renamePendingFileInfo;
     }
     return null;
@@ -192,6 +192,8 @@ public class RenameAtomicityUtils {
     try {
       output = azureBlobFileSystem.create(path, false);
       output.write(contents.getBytes(Charset.forName("UTF-8")));
+      output.flush();
+      output.close();
     } catch (IOException e) {
       throw new IOException("Unable to write RenamePending file for folder rename from "
           + srcPath.toUri().getPath() + " to " + dstPath.toUri().getPath(), e);
@@ -217,7 +219,19 @@ public class RenameAtomicityUtils {
         builder.append(",\n");
       }
       builder.append("    ");
-      String noPrefix = StringUtils.removeStart(blobPropertyList.get(i).getPath().toUri().getPath(), srcPath.toUri().getPath() + "/");
+      final String noPrefix;
+      /*
+      * The marker file for the source directory has the same path on non-HNS.
+      * For the other files, the fileList has to save the filePath relative to the
+      * source directory.
+      */
+      if(!blobPropertyList.get(i).getPath().toUri().getPath().equals(srcPath.toUri().getPath())) {
+        noPrefix = StringUtils.removeStart(
+            blobPropertyList.get(i).getPath().toUri().getPath(),
+            srcPath.toUri().getPath() + "/");
+      } else {
+        noPrefix = "";
+      }
 
       // Quote string file names, escaping any possible " characters or other
       // necessary characters in the name.
@@ -337,10 +351,15 @@ public class RenameAtomicityUtils {
   private static class RenamePendingFileInfo {
     public Path destination;
     public List<Path> srcList;
+    /**
+     * Relative paths from the destination path.
+     */
+    public List<String> destinationSuffix;
   }
 
   static interface RedoRenameInvocation {
-    void redo(Path destination, List<Path> sourcePaths) throws
+    void redo(Path destination, List<Path> sourcePaths,
+        final List<String> destinationSuffix) throws
         AzureBlobFileSystemException;
   }
 }

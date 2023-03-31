@@ -292,6 +292,8 @@ public class ITestAzureBlobFileSystemRename extends
     spiedFsForListPath.listStatus(new Path("hbase/test1/test2"));
     Assert.assertTrue(openRequiredFile[0] == 1);
     Assert.assertFalse(spiedFsForListPath.exists(new Path(failedCopyPath)));
-    Assert.assertTrue(spiedFsForListPath.exists(new Path(failedCopyPath.replace("test3/", "test4/test3/"))));
+    Assert.assertTrue(spiedFsForListPath.exists(new Path(failedCopyPath.replace("test1/test2/test3/", "test4/test3/"))));
   }
+
+  //test for nested.
 }

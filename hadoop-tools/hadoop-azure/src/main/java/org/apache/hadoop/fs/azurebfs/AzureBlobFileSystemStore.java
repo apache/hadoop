@@ -143,7 +143,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UND
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_ABORTED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_FAILED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_SUCCESS;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VERSION;
@@ -1737,10 +1736,23 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   RenameAtomicityUtils.RedoRenameInvocation getRedoRenameInvocation(final TracingContext tracingContext) {
     return new RenameAtomicityUtils.RedoRenameInvocation() {
       @Override
-      public void redo(final Path destination, final List<Path> sourcePaths)
+      public void redo(final Path destination, final List<Path> sourcePaths,
+          final List<String> destinationSuffix)
           throws AzureBlobFileSystemException {
-        for (Path sourcePath : sourcePaths) {
-          renameBlob(destination, tracingContext, sourcePath);
+        for (int i = 0; i < sourcePaths.size();i++) {
+          try {
+            final Path destinationPath;
+            if(destinationSuffix.get(i).isEmpty()) {
+              destinationPath = destination;
+            } else {
+              destinationPath = new Path(destination, destinationSuffix.get(i));
+            }
+            renameBlob(destinationPath, tracingContext, sourcePaths.get(i));
+          } catch (AbfsRestOperationException ex) {
+            if(ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+              continue;
+            }
+          }
         }
       }
     };
