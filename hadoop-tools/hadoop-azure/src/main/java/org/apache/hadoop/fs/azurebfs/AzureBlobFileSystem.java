@@ -522,7 +522,7 @@ public class AzureBlobFileSystem extends FileSystem
         RenameAtomicityUtils renameAtomicityUtils =
             new RenameAtomicityUtils(this,
                 renamePendingFileStatus.getPath(), abfsStore.getRedoRenameInvocation(tracingContext));
-        renameAtomicityUtils.cleanup();
+        renameAtomicityUtils.cleanup(renamePendingFileStatus.getPath());
         result = abfsStore.listStatus(qualifiedPath, tracingContext);
       }
       return result;
@@ -652,7 +652,7 @@ public class AzureBlobFileSystem extends FileSystem
             this,
             new Path(path.toUri().getPath() + "/" + SUFFIX),
             abfsStore.getRedoRenameInvocation(tracingContext));
-        renameAtomicityUtils.cleanup();
+        renameAtomicityUtils.cleanup(new Path(path.toUri().getPath() + "/" + SUFFIX));
         throw new AbfsRestOperationException(HttpURLConnection.HTTP_NOT_FOUND,
             AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(), null,
             new FileNotFoundException(

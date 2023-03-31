@@ -499,7 +499,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
-  private void copyBlob(Path srcPath,
+  @org.apache.hadoop.classification.VisibleForTesting
+  void copyBlob(Path srcPath,
       Path dstPath,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsRestOperation copyOp = null;

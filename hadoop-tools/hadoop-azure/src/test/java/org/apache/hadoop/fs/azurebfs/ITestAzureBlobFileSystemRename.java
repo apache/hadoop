@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -31,6 +32,9 @@ import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.RenameAtomicityUtils.SUFFIX;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
@@ -237,10 +241,11 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testHBaseHandlingForFailedRename() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    final String failedCopyPath = "hbase/test1/test2/test3/file1";
     fs.setWorkingDirectory(new Path("/"));
     fs.mkdirs(new Path("hbase/test1/test2/test3"));
     fs.create(new Path("hbase/test1/test2/test3/file"));
-    fs.create(new Path("hbase/test1/test2/test3/file1"));
+    fs.create(new Path(failedCopyPath));
     fs.mkdirs(new Path("hbase/test4/"));
     fs.create(new Path("hbase/test4/file1"));
     final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
@@ -249,6 +254,44 @@ public class ITestAzureBlobFileSystemRename extends
     final Integer[] correctDeletePathCount = new Integer[1];
     correctDeletePathCount[0] = 0;
 
-    Assert.assertFalse(spiedFs.rename(new Path("hbase/test1/test2/test3"), new Path("hbase/test4")));
+    //fail copy of /hbase/test1/test2/test3/file1.
+    AzureBlobFileSystemStore spiedAbfsStore = Mockito.spy(spiedFs.getAbfsStore());
+    spiedFs.setAbfsStore(spiedAbfsStore);
+    Mockito.doAnswer(answer -> {
+      final Path srcPath = answer.getArgument(0);
+      final Path dstPath = answer.getArgument(1);
+      final TracingContext tracingContext = answer.getArgument(2);
+      if(("/" + failedCopyPath).equalsIgnoreCase(srcPath.toUri().getPath())) {
+        throw new AbfsRestOperationException(HttpURLConnection.HTTP_UNAVAILABLE,
+            AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT.getErrorCode(), "Ingress is over the account limit.", new Exception());
+      }
+      fs.getAbfsStore().copyBlob(srcPath, dstPath, tracingContext);
+      return null;
+    }).when(spiedAbfsStore).copyBlob(Mockito.any(Path.class), Mockito.any(Path.class),
+        Mockito.any(TracingContext.class));
+    try {
+      spiedFs.rename(new Path("hbase/test1/test2/test3"),
+          new Path("hbase/test4"));
+    } catch (Exception ex) {
+
+    }
+    Assert.assertTrue(fs.exists(new Path(failedCopyPath)));
+
+    //call listPath API, it will recover the rename atomicity.
+    final AzureBlobFileSystem spiedFsForListPath = Mockito.spy(fs);
+    final int[] openRequiredFile = new int[1];
+    openRequiredFile[0] = 0;
+    Mockito.doAnswer(answer -> {
+      final Path path = answer.getArgument(0);
+      if(("/" + "hbase/test1/test2/test3" +SUFFIX).equalsIgnoreCase(path.toUri().getPath())) {
+        openRequiredFile[0] = 1;
+      }
+      return fs.open(path);
+    }).when(spiedFsForListPath).open(Mockito.any(Path.class));
+
+    spiedFsForListPath.listStatus(new Path("hbase/test1/test2"));
+    Assert.assertTrue(openRequiredFile[0] == 1);
+    Assert.assertFalse(spiedFsForListPath.exists(new Path(failedCopyPath)));
+    Assert.assertTrue(spiedFsForListPath.exists(new Path(failedCopyPath.replace("test3/", "test4/test3/"))));
   }
 }

@@ -324,6 +324,10 @@ public class RenameAtomicityUtils {
       // folder file was deleted.
   }
 
+  public void cleanup(Path redoFile) throws IOException {
+    azureBlobFileSystem.delete(redoFile, false);
+  }
+
   private Path getRenamePendingFilePath() {
     String fileName = srcPath.toUri().getPath() + SUFFIX;
     Path fileNamePath = new Path(fileName);
