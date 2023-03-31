@@ -733,43 +733,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_DEFAULT_AUDIT_LOGGER_NAME = "default";
   public static final String  DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY = "dfs.namenode.audit.log.token.tracking.id";
   public static final boolean DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT = false;
-  /**
-   * Deprecated. Use log4j properties instead.
-   * Set system env variable HDFS_AUDIT_LOGGER, which in tern assigns the value to
-   * "hdfs.audit.logger" for log4j properties to determine log level and appender.
-   */
-  @Deprecated
-  public static final String DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY = "dfs.namenode.audit.log.async";
-  @Deprecated
-  public static final boolean DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT = false;
-
-  /**
-   * Deprecated. Use log4j properties instead.
-   * Set value to Async appender "blocking" property as part of log4j properties configuration.
-   * <p>
-   * For example,
-   * log4j.appender.ASYNCAPPENDER=org.apache.log4j.AsyncAppender
-   * log4j.appender.ASYNCAPPENDER.blocking=false
-   */
-  @Deprecated
-  public static final String DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_KEY =
-      "dfs.namenode.audit.log.async.blocking";
-  @Deprecated
-  public static final boolean DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_DEFAULT = true;
-
-  /**
-   * Deprecated. Use log4j properties instead.
-   * Set value to Async appender "bufferSize" property as part of log4j properties configuration.
-   * <p>
-   * For example,
-   * log4j.appender.ASYNCAPPENDER=org.apache.log4j.AsyncAppender
-   * log4j.appender.ASYNCAPPENDER.bufferSize=128
-   */
-  @Deprecated
-  public static final String DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_KEY =
-      "dfs.namenode.audit.log.async.buffer.size";
-  @Deprecated
-  public static final int DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_DEFAULT = 128;
   public static final String  DFS_NAMENODE_AUDIT_LOG_DEBUG_CMDLIST = "dfs.namenode.audit.log.debug.cmdlist";
   public static final String  DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_KEY =
       "dfs.namenode.metrics.logger.period.seconds";

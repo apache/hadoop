@@ -44,7 +44,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
@@ -129,11 +128,15 @@ import org.apache.hadoop.yarn.server.router.webapp.dao.FederationBulkActivitiesI
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.SubClusterResult;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationConfInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterUserInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationClusterInfo;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
+import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
@@ -847,6 +850,29 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   /**
+   * Get the active subcluster in the federation.
+   *
+   * @param subClusterId subClusterId.
+   * @return subClusterInfo.
+   * @throws NotFoundException If the subclusters cannot be found.
+   */
+  private SubClusterInfo getActiveSubCluster(String subClusterId)
+      throws NotFoundException {
+    try {
+      SubClusterId pSubClusterId = SubClusterId.newInstance(subClusterId);
+      Map<SubClusterId, SubClusterInfo> subClusterInfoMap =
+          federationFacade.getSubClusters(true);
+      SubClusterInfo subClusterInfo = subClusterInfoMap.get(pSubClusterId);
+      if (subClusterInfo == null) {
+        throw new NotFoundException(subClusterId + " not found.");
+      }
+      return subClusterInfo;
+    } catch (YarnException e) {
+      throw new NotFoundException(e.getMessage());
+    }
+  }
+
+  /**
    * The YARN Router will forward to the request to all the SubClusters to find
    * where the node is running.
    * <p>
@@ -1137,14 +1163,84 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     return getClusterInfo();
   }
 
+  /**
+   * This method retrieves the cluster information, and it is reachable by using
+   * {@link RMWSConsts#INFO}.
+   *
+   * In Federation mode, we will return a FederationClusterInfo object,
+   * which contains a set of ClusterInfo.
+   *
+   * @return the cluster information.
+   */
   @Override
   public ClusterInfo getClusterInfo() {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      long startTime = Time.now();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      Class[] argsClasses = new Class[]{};
+      Object[] args = new Object[]{};
+      ClientMethod remoteMethod = new ClientMethod("getClusterInfo", argsClasses, args);
+      Map<SubClusterInfo, ClusterInfo> subClusterInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, ClusterInfo.class);
+      FederationClusterInfo federationClusterInfo = new FederationClusterInfo();
+      subClusterInfoMap.forEach((subClusterInfo, clusterInfo) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        clusterInfo.setSubClusterId(subClusterId.getId());
+        federationClusterInfo.getList().add(clusterInfo);
+      });
+      long stopTime = Time.now();
+      routerMetrics.succeededGetClusterInfoRetrieved(stopTime - startTime);
+      return federationClusterInfo;
+    } catch (NotFoundException e) {
+      routerMetrics.incrGetClusterInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException | IOException e) {
+      routerMetrics.incrGetClusterInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("getClusterInfo error.", e);
+    }
+    routerMetrics.incrGetClusterInfoFailedRetrieved();
+    throw new RuntimeException("getClusterInfo error.");
   }
 
+  /**
+   * This method retrieves the cluster user information, and it is reachable by using
+   * {@link RMWSConsts#CLUSTER_USER_INFO}.
+   *
+   * In Federation mode, we will return a ClusterUserInfo object,
+   * which contains a set of ClusterUserInfo.
+   *
+   * @param hsr the servlet request
+   * @return the cluster user information
+   */
   @Override
   public ClusterUserInfo getClusterUserInfo(HttpServletRequest hsr) {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      long startTime = Time.now();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{HttpServletRequest.class};
+      Object[] args = new Object[]{hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("getClusterUserInfo", argsClasses, args);
+      Map<SubClusterInfo, ClusterUserInfo> subClusterInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, ClusterUserInfo.class);
+      FederationClusterUserInfo federationClusterUserInfo = new FederationClusterUserInfo();
+      subClusterInfoMap.forEach((subClusterInfo, clusterUserInfo) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        clusterUserInfo.setSubClusterId(subClusterId.getId());
+        federationClusterUserInfo.getList().add(clusterUserInfo);
+      });
+      long stopTime = Time.now();
+      routerMetrics.succeededGetClusterUserInfoRetrieved(stopTime - startTime);
+      return federationClusterUserInfo;
+    } catch (NotFoundException e) {
+      routerMetrics.incrGetClusterUserInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException | IOException e) {
+      routerMetrics.incrGetClusterUserInfoFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("getClusterUserInfo error.", e);
+    }
+    routerMetrics.incrGetClusterUserInfoFailedRetrieved();
+    throw new RuntimeException("getClusterUserInfo error.");
   }
 
   /**
@@ -2834,17 +2930,117 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     throw new RuntimeException("getContainer Failed.");
   }
 
+  /**
+   * This method updates the Scheduler configuration, and it is reachable by
+   * using {@link RMWSConsts#SCHEDULER_CONF}.
+   *
+   * @param mutationInfo th information for making scheduler configuration
+   *        changes (supports adding, removing, or updating a queue, as well
+   *        as global scheduler conf changes)
+   * @param hsr the servlet request
+   * @return Response containing the status code
+   * @throws AuthorizationException if the user is not authorized to invoke this
+   *         method
+   * @throws InterruptedException if interrupted
+   */
   @Override
   public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
-      HttpServletRequest hsr)
-      throws AuthorizationException, InterruptedException {
-    throw new NotImplementedException("Code is not implemented");
+      HttpServletRequest hsr) throws AuthorizationException, InterruptedException {
+
+    // Make Sure mutationInfo is not null.
+    if (mutationInfo == null) {
+      routerMetrics.incrUpdateSchedulerConfigurationFailedRetrieved();
+      throw new IllegalArgumentException(
+          "Parameter error, the schedConfUpdateInfo is empty or null.");
+    }
+
+    // In federated mode, we may have a mix of multiple schedulers.
+    // In order to ensure accurate update scheduler configuration,
+    // we need users to explicitly set subClusterId.
+    String pSubClusterId = mutationInfo.getSubClusterId();
+    if (StringUtils.isBlank(pSubClusterId)) {
+      routerMetrics.incrUpdateSchedulerConfigurationFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, " +
+          "the subClusterId is empty or null.");
+    }
+
+    // Get the subClusterInfo , then update the scheduler configuration.
+    try {
+      long startTime = clock.getTime();
+      SubClusterInfo subClusterInfo = getActiveSubCluster(pSubClusterId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      Response response = interceptor.updateSchedulerConfiguration(mutationInfo, hsr);
+      if (response != null) {
+        long endTime = clock.getTime();
+        routerMetrics.succeededUpdateSchedulerConfigurationRetrieved(endTime - startTime);
+        return Response.status(response.getStatus()).entity(response.getEntity()).build();
+      }
+    } catch (NotFoundException e) {
+      routerMetrics.incrUpdateSchedulerConfigurationFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Get subCluster error. subClusterId = %s", pSubClusterId);
+    } catch (Exception e) {
+      routerMetrics.incrUpdateSchedulerConfigurationFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "UpdateSchedulerConfiguration error. subClusterId = %s", pSubClusterId);
+    }
+
+    routerMetrics.incrUpdateSchedulerConfigurationFailedRetrieved();
+    throw new RuntimeException("UpdateSchedulerConfiguration error. subClusterId = "
+        + pSubClusterId);
   }
 
+  /**
+   * This method retrieves all the Scheduler configuration, and it is reachable
+   * by using {@link RMWSConsts#SCHEDULER_CONF}.
+   *
+   * @param hsr the servlet request
+   * @return Response containing the status code
+   * @throws AuthorizationException if the user is not authorized to invoke this
+   *      method.
+   */
   @Override
   public Response getSchedulerConfiguration(HttpServletRequest hsr)
       throws AuthorizationException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      long startTime = clock.getTime();
+      FederationConfInfo federationConfInfo = new FederationConfInfo();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{HttpServletRequest.class};
+      Object[] args = new Object[]{hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("getSchedulerConfiguration", argsClasses, args);
+      Map<SubClusterInfo, Response> responseMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, Response.class);
+      responseMap.forEach((subClusterInfo, response) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        if (response == null) {
+          String errorMsg = subClusterId + " Can't getSchedulerConfiguration.";
+          federationConfInfo.getErrorMsgs().add(errorMsg);
+        } else if (response.getStatus() == Status.BAD_REQUEST.getStatusCode()) {
+          String errorMsg = String.valueOf(response.getEntity());
+          federationConfInfo.getErrorMsgs().add(errorMsg);
+        } else if (response.getStatus() == Status.OK.getStatusCode()) {
+          ConfInfo fedConfInfo = ConfInfo.class.cast(response.getEntity());
+          fedConfInfo.setSubClusterId(subClusterId.getId());
+          federationConfInfo.getList().add(fedConfInfo);
+        }
+      });
+      long endTime = clock.getTime();
+      routerMetrics.succeededGetSchedulerConfigurationRetrieved(endTime - startTime);
+      return Response.status(Status.OK).entity(federationConfInfo).build();
+    } catch (NotFoundException e) {
+      RouterServerUtil.logAndThrowRunTimeException("get all active sub cluster(s) error.", e);
+      routerMetrics.incrGetSchedulerConfigurationFailedRetrieved();
+    } catch (Exception e) {
+      routerMetrics.incrGetSchedulerConfigurationFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("getSchedulerConfiguration error.", e);
+      return Response.status(Status.BAD_REQUEST).entity("getSchedulerConfiguration error.").build();
+    }
+
+    routerMetrics.incrGetSchedulerConfigurationFailedRetrieved();
+    throw new RuntimeException("getSchedulerConfiguration error.");
   }
 
   @Override

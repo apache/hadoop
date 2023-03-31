@@ -87,7 +87,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     String destNoParentPath = "/NoParent/Dest";
     AzureBlobFileSystem fs = getFileSystem();
 
-    AbfsClient mockClient = TestAbfsClient.getMockAbfsClient(
+    AbfsClient mockClient = ITestAbfsClient.getMockAbfsClient(
         fs.getAbfsStore().getClient(),
         fs.getAbfsStore().getAbfsConfiguration());
 
