@@ -11,15 +11,19 @@ hadoop-qiniu接入的jar包: hadoop-qiniu-{version}.jar
 ### 手动编译hadoop-qiniu接入的jar包
 
 在/hadoop-tools/hadoop-qiniu子模块下，执行如下命令开始jar包的编译
+
 ```sh
 mvn package -Pdist -DskipTests -Dtar -Dmaven
 ```
+
 在target文件夹下可获得对应jar包
 
 ### 直接下载hadoop-qiniu接入的jar包
+
 [下载地址]()
 
 ### 直接下载qiniu-java-sdk包
+
 [this latest JAR](https://search.maven.org/remote_content?g=com.qiniu&a=qiniu-java-sdk&v=LATEST)
 
 ## 安装依赖
@@ -43,6 +47,7 @@ done
 ## Hadoop 配置
 
 修改`$HADOOP/etc/hadoop/core-site.xml`，增加Kodo相关的用户配置与实现类相关信息。
+
 ```xml
 
 <configuration>
@@ -85,16 +90,21 @@ done
 
 ```
 
-更多具体配置项说明可参考文档：[配置项.md](配置项.md)
+更多具体配置项说明与默认值可参考yml文件：[config.yml](config.yml)
+
+可自行通过"."分隔符将yml分级描述的配置项转换为xml配置项
 
 ## put命令
+
 ```shell
 mkdir testDir
 touch testDir/input.txt
 echo "a b c d ee a b s" > testDir/input.txt
 hadoop fs -put testDir kodo:///testDir
 ```
+
 ## ls命令
+
 ```shell
 hadoop fs -ls -R kodo://example-bucket/
 drwx--xr-x   - root root          0 1970-01-01 08:00 kodo://example-bucket/user
@@ -113,11 +123,13 @@ total 8
 ```
 
 ## 运行wordcount
+
 ```shell
 hadoop jar $HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-examples-{version}.jar wordcount kodo://example-bucket/testDir/input.txt kodo://example-bucket/testDir/output
 ```
 
 执行成功后返回统计信息
+
 ```text
 2023-01-18 16:00:49,228 INFO mapreduce.Job: Counters: 35
 	File System Counters
@@ -174,6 +186,7 @@ drwx--xr-x   - root root          0 1970-01-01 08:00 kodo://example-bucket/testD
 ```
 
 ## cat命令
+
 ```text
 $ hadoop fs -cat kodo://example-bucket/testDir/output/part-r-00000
 a	2

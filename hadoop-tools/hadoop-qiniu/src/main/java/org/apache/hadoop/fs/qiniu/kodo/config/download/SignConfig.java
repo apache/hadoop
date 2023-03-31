@@ -25,7 +25,7 @@ public class SignConfig extends AConfigBase {
      * 下载签名过期时间
      */
     private int expires() {
-        return conf.getInt(namespace + ".expires", 7 * 24 * 3600);
+        return conf.getInt(namespace + ".expires", 3 * 60);
     }
 
 }
