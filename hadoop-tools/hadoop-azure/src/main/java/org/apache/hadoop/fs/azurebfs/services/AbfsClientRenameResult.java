@@ -61,10 +61,13 @@ public class AbfsClientRenameResult {
 
   @Override
   public String toString() {
-    return "AbfsClientRenameResult{" +
-        "op=" + op +
-        ", renameRecovered=" + renameRecovered +
-        ", isIncompleteMetadataState=" + isIncompleteMetadataState +
-        '}';
+    return "AbfsClientRenameResult{"
+            + "op="
+            + op
+            + ", renameRecovered="
+            + renameRecovered
+            + ", isIncompleteMetadataState="
+            + isIncompleteMetadataState
+            + '}';
   }
 }

@@ -352,6 +352,7 @@ public class AbfsRestOperation {
         httpOperation.setMaskForSAS(); //mask sig/oid from url for logs
         break;
       case SharedKey:
+      default:
         // sign the HTTP request
         LOG.debug("Signing request with shared key");
         // sign the HTTP request
