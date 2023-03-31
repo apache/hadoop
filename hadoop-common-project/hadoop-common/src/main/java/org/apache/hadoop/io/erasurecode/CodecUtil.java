@@ -178,7 +178,7 @@ public final class CodecUtil {
         IO_ERASURECODE_CODEC_NATIVE_ENABLED_DEFAULT);
     String[] rawCoderNames = getRawCoderNames(conf, codecName);
     for (String rawCoderName : rawCoderNames) {
-      if (!ISALEnabled && rawCoderName.split("_")[1].equals("native")) {
+      if (!ISALEnabled && rawCoderName.contains("native")) {
         LOG.info("Disable the encoder with ISA-L.");
         continue;
       }
@@ -206,7 +206,7 @@ public final class CodecUtil {
         IO_ERASURECODE_CODEC_NATIVE_ENABLED_DEFAULT);
     String[] coders = getRawCoderNames(conf, codecName);
     for (String rawCoderName : coders) {
-      if (!ISALEnabled && rawCoderName.split("_")[1].equals("native")) {
+      if (!ISALEnabled && rawCoderName.contains("native")) {
         LOG.info("Disable the decoder with ISA-L.");
         continue;
       }
