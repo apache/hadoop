@@ -234,6 +234,7 @@ message RouterMasterKeyResponseProto {
 message RouterStoreTokenProto {
   optional YARNDelegationTokenIdentifierProto token_identifier = 1;
   optional int64 renew_date = 2;
+  optional string token_info = 3;
 }
 
 message RouterRMTokenRequestProto {

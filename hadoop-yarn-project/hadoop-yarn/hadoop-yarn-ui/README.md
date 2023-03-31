@@ -24,7 +24,7 @@ The YARN UI is an Ember based web-app that provides visualization of the applica
 You can point the UI to custom locations by setting the environment variables in `src/main/webapp/config/configs.env`.
 
 In order to make the UI running on Ember server (started by `yarn start`)
-work with independently running ResouceManager,
+work with independently running ResourceManager,
 you need to enable CORS by setting `hadoop.http.cross-origin.enabled` to true
 and adding `org.apache.hadoop.security.HttpCrossOriginFilterInitializer`
 to `hadoop.http.filter.initializers` in core-site.xml of the ResourceManager.

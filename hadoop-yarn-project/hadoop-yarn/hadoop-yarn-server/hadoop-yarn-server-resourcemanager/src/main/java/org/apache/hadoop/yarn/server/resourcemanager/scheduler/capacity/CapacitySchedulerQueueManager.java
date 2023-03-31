@@ -81,6 +81,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
   private CSQueue root;
   private final RMNodeLabelsManager labelManager;
   private AppPriorityACLsManager appPriorityACLManager;
+  private CapacitySchedulerQueueCapacityHandler queueCapacityHandler;
 
   private QueueStateManager<CSQueue, CapacitySchedulerConfiguration>
       queueStateManager;
@@ -100,6 +101,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     this.queueStateManager = new QueueStateManager<>();
     this.appPriorityACLManager = appPriorityACLManager;
     this.configuredNodeLabels = new ConfiguredNodeLabels();
+    this.queueCapacityHandler = new CapacitySchedulerQueueCapacityHandler(labelManager);
   }
 
   @Override
@@ -413,6 +415,10 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     return this.queueStateManager;
   }
 
+  public CapacitySchedulerQueueCapacityHandler getQueueCapacityHandler() {
+    return queueCapacityHandler;
+  }
+
   /**
    * Removes an {@code AutoCreatedLeafQueue} from the manager collection and
    * from its parent children collection.
@@ -568,6 +574,11 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       }
 
       firstExistingStaticParent = getQueue(parentCandidate.toString());
+    }
+
+    if (firstExistingParent == null || firstExistingStaticParent == null) {
+      throw new SchedulerDynamicEditException("Could not auto-create queue "
+          + queue + " parent queue does not exist.");
     }
 
     int maximumDepthOfStaticParent = csContext.getConfiguration().getMaximumAutoCreatedQueueDepth(

@@ -24,23 +24,27 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertThrows;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAccumulator;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.ClientGSIContext;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RouterFederatedStateProto;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
+import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
@@ -48,6 +52,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServi
 import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
@@ -91,8 +96,11 @@ public class TestObserverWithRouter {
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
     conf.set(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, "0ms");
+    conf.setBoolean(DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, true);
     if (confOverrides != null) {
-      conf.addResource(confOverrides);
+      confOverrides
+          .iterator()
+          .forEachRemaining(entry -> conf.set(entry.getKey(), entry.getValue()));
     }
     cluster = new MiniRouterDFSCluster(true, 2, numberOfNamenode);
     cluster.addNamenodeOverrides(conf);
@@ -356,7 +364,7 @@ public class TestObserverWithRouter {
       }
       sb.append(suffix);
     }
-    routerConf.set(DFS_ROUTER_MONITOR_NAMENODE, sb.toString());
+    routerConf.set(RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE, sb.toString());
     routerConf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
     routerConf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
     routerConf.set(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, "0ms");
@@ -544,5 +552,134 @@ public class TestObserverWithRouter {
         clientGSIContext.getRouterFederatedState());
     Assertions.assertEquals(1, latestFederateState.size());
     Assertions.assertEquals(10L, latestFederateState.get("ns0"));
+  }
+
+  @Test
+  public void testStateIdProgressionInRouter() throws Exception {
+    Path rootPath = new Path("/");
+    fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads());
+    RouterStateIdContext routerStateIdContext = routerContext
+        .getRouterRpcServer()
+        .getRouterStateIdContext();
+    for (int i = 0; i < 10; i++) {
+      fileSystem.create(new Path(rootPath, "file" + i)).close();
+    }
+
+    // Get object storing state of the namespace in the shared RouterStateIdContext
+    LongAccumulator namespaceStateId  = routerStateIdContext.getNamespaceStateId("ns0");
+    assertEquals("Router's shared should have progressed.", 21, namespaceStateId.get());
+  }
+
+  @Test
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
+  public void testSharedStateInRouterStateIdContext() throws Exception {
+    Path rootPath = new Path("/");
+    long cleanupPeriodMs = 1000;
+
+    Configuration conf = new Configuration(false);
+    conf.setLong(RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_POOL_CLEAN, cleanupPeriodMs);
+    conf.setLong(RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_CLEAN_MS, cleanupPeriodMs / 10);
+    startUpCluster(1, conf);
+    fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads());
+    RouterStateIdContext routerStateIdContext = routerContext.getRouterRpcServer()
+        .getRouterStateIdContext();
+
+    // First read goes to active and creates connection pool for this user to active
+    fileSystem.listStatus(rootPath);
+    // Second read goes to observer and creates connection pool for this user to observer
+    fileSystem.listStatus(rootPath);
+    // Get object storing state of the namespace in the shared RouterStateIdContext
+    LongAccumulator namespaceStateId1  = routerStateIdContext.getNamespaceStateId("ns0");
+
+    // Wait for connection pools to expire and be cleaned up.
+    Thread.sleep(cleanupPeriodMs * 2);
+
+    // Third read goes to observer.
+    // New connection pool to observer is created since existing one expired.
+    fileSystem.listStatus(rootPath);
+    fileSystem.close();
+    // Get object storing state of the namespace in the shared RouterStateIdContext
+    LongAccumulator namespaceStateId2  = routerStateIdContext.getNamespaceStateId("ns0");
+
+    long rpcCountForActive = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    long rpcCountForObserver = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
+
+    // First list status goes to active
+    assertEquals("One call should be sent to active", 1, rpcCountForActive);
+    // Last two listStatuses  go to observer.
+    assertEquals("Two calls should be sent to observer", 2, rpcCountForObserver);
+
+    Assertions.assertSame(namespaceStateId1, namespaceStateId2,
+        "The same object should be used in the shared RouterStateIdContext");
+  }
+
+
+  @Test
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
+  public void testRouterStateIdContextCleanup() throws Exception {
+    Path rootPath = new Path("/");
+    long recordExpiry = TimeUnit.SECONDS.toMillis(1);
+
+    Configuration confOverride = new Configuration(false);
+    confOverride.setLong(RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS, recordExpiry);
+
+    startUpCluster(1, confOverride);
+    fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads());
+    RouterStateIdContext routerStateIdContext = routerContext.getRouterRpcServer()
+        .getRouterStateIdContext();
+
+    fileSystem.listStatus(rootPath);
+    List<String> namespace1 = routerStateIdContext.getNamespaces();
+    fileSystem.close();
+
+    MockResolver mockResolver = (MockResolver) routerContext.getRouter().getNamenodeResolver();
+    mockResolver.cleanRegistrations();
+    mockResolver.setDisableRegistration(true);
+    Thread.sleep(recordExpiry * 2);
+
+    List<String> namespace2 = routerStateIdContext.getNamespaces();
+    assertEquals(1, namespace1.size());
+    assertEquals("ns0", namespace1.get(0));
+    assertTrue(namespace2.isEmpty());
+  }
+
+  @Test
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
+  public void testPeriodicStateRefreshUsingActiveNamenode() throws Exception {
+    Path rootPath = new Path("/");
+
+    Configuration confOverride = new Configuration(false);
+    confOverride.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_KEY, "500ms");
+    confOverride.set(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, "3s");
+    startUpCluster(1, confOverride);
+
+    fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads());
+    fileSystem.listStatus(rootPath);
+    int initialLengthOfRootListing = fileSystem.listStatus(rootPath).length;
+
+    DFSClient activeClient = cluster.getNamenodes("ns0")
+        .stream()
+        .filter(nnContext -> nnContext.getNamenode().isActiveState())
+        .findFirst().orElseThrow(() -> new IllegalStateException("No active namenode."))
+        .getClient();
+
+    for (int i = 0; i < 10; i++) {
+      activeClient.mkdirs("/dir" + i, null, false);
+    }
+    activeClient.close();
+
+    // Wait long enough for state in router to be considered stale.
+    GenericTestUtils.waitFor(
+        () -> !routerContext
+            .getRouterRpcClient()
+            .isNamespaceStateIdFresh("ns0"),
+        100,
+        10000,
+        "Timeout: Namespace state was never considered stale.");
+    FileStatus[] rootFolderAfterMkdir = fileSystem.listStatus(rootPath);
+    assertEquals("List-status should show newly created directories.",
+        initialLengthOfRootListing + 10, rootFolderAfterMkdir.length);
   }
 }

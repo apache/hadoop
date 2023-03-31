@@ -15,6 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * Implementation of compression/decompression for the Snappy
+ * compression algorithm.
+ *
+ * @see <a href="http://code.google.com/p/snappy/">Snappy</a>
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 package org.apache.hadoop.io.compress.snappy;

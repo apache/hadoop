@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.rmadmin;
 
 import org.apache.commons.collections.MapUtils;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -35,6 +36,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_CLUSTER_ID;
+
 public class TestableFederationRMAdminInterceptor extends FederationRMAdminInterceptor {
 
   // Record log information
@@ -49,18 +52,21 @@ public class TestableFederationRMAdminInterceptor extends FederationRMAdminInter
 
   @Override
   protected ResourceManagerAdministrationProtocol getAdminRMProxyForSubCluster(
-      SubClusterId subClusterId) throws YarnException {
+      SubClusterId subClusterId) throws Exception {
     MockRM mockRM;
     synchronized (this) {
       if (mockRMs.containsKey(subClusterId)) {
         mockRM = mockRMs.get(subClusterId);
       } else {
-        mockRM = new MockRM();
+        YarnConfiguration config = new YarnConfiguration(super.getConf());
+        config.set(RM_CLUSTER_ID, "subcluster." + subClusterId);
+        mockRM = new MockRM(config);
         if (badSubCluster.contains(subClusterId)) {
           return new MockRMAdminBadService(mockRM);
         }
-        mockRM.init(super.getConf());
+        mockRM.init(config);
         mockRM.start();
+        mockRM.registerNode("127.0.0.1:1", 102400, 100);
         mockRMs.put(subClusterId, mockRM);
       }
       return mockRM.getAdminService();

@@ -309,7 +309,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
           null, encryptionAdapter, getTestTracingContext(fs, false));
       case APPEND:
         return client.append(path, "val".getBytes(),
-            new AppendRequestParameters(3, 0, 3, APPEND_MODE, false, null),
+            new AppendRequestParameters(3, 0, 3, APPEND_MODE, false, null, true),
             null, encryptionAdapter, getTestTracingContext(fs, false));
       case SET_ACL:
         return client.setAcl(path, AclEntry.aclSpecToString(

@@ -43,7 +43,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
-import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
@@ -256,7 +256,7 @@ public abstract class AbstractAbfsIntegrationTest extends
   }
 
   public AccessTokenProvider getAccessTokenProvider(final AzureBlobFileSystem fs) {
-    return TestAbfsClient.getAccessTokenProvider(fs.getAbfsStore().getClient());
+    return ITestAbfsClient.getAccessTokenProvider(fs.getAbfsStore().getClient());
   }
 
   public void loadConfiguredFileSystem() throws Exception {
