@@ -1140,6 +1140,22 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).access
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getServerDefaults
 
+### Get Link Target
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETLINKTARGET"
+
+    The client receives a response with a [`Path` JSON object](#Path_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {"Path": "/targetRoot/targetFile"}
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTarget
+
 Storage Policy Operations
 -------------------------
 
