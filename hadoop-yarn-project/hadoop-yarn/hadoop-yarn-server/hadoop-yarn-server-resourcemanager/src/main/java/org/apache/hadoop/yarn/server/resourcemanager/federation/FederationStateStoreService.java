@@ -318,8 +318,8 @@ public class FederationStateStoreService extends AbstractService
   }
 
   @Override
-  public SubClusterRegisterResponse registerSubCluster(
-      SubClusterRegisterRequest request) throws YarnException {
+  public SubClusterRegisterResponse registerSubCluster(SubClusterRegisterRequest request)
+      throws YarnException {
     FederationClientMethod<SubClusterRegisterResponse> clientMethod =
         new FederationClientMethod<>("registerSubCluster",
         SubClusterRegisterRequest.class, request,
@@ -328,8 +328,8 @@ public class FederationStateStoreService extends AbstractService
   }
 
   @Override
-  public SubClusterDeregisterResponse deregisterSubCluster(
-      SubClusterDeregisterRequest request) throws YarnException {
+  public SubClusterDeregisterResponse deregisterSubCluster(SubClusterDeregisterRequest request)
+      throws YarnException {
     FederationClientMethod<SubClusterDeregisterResponse> clientMethod =
         new FederationClientMethod<>("deregisterSubCluster",
         SubClusterDeregisterRequest.class, request,
@@ -338,8 +338,8 @@ public class FederationStateStoreService extends AbstractService
   }
 
   @Override
-  public SubClusterHeartbeatResponse subClusterHeartbeat(
-      SubClusterHeartbeatRequest request) throws YarnException {
+  public SubClusterHeartbeatResponse subClusterHeartbeat(SubClusterHeartbeatRequest request)
+      throws YarnException {
     FederationClientMethod<SubClusterHeartbeatResponse> clientMethod =
         new FederationClientMethod<>("subClusterHeartbeat",
         SubClusterHeartbeatRequest.class, request,
@@ -348,21 +348,21 @@ public class FederationStateStoreService extends AbstractService
   }
 
   @Override
-  public GetSubClusterInfoResponse getSubCluster(
-      GetSubClusterInfoRequest request) throws YarnException {
+  public GetSubClusterInfoResponse getSubCluster(GetSubClusterInfoRequest request)
+      throws YarnException {
     FederationClientMethod<GetSubClusterInfoResponse> clientMethod =
-        new FederationClientMethod<>("subClusterHeartbeat",
+        new FederationClientMethod<>("getSubCluster",
         GetSubClusterInfoRequest.class, request,
         GetSubClusterInfoResponse.class, stateStoreClient, clock);
     return clientMethod.invoke();
   }
 
   @Override
-  public GetSubClustersInfoResponse getSubClusters(
-      GetSubClustersInfoRequest request) throws YarnException {
+  public GetSubClustersInfoResponse getSubClusters(GetSubClustersInfoRequest request)
+      throws YarnException {
     FederationClientMethod<GetSubClustersInfoResponse> clientMethod =
         new FederationClientMethod<>("getSubClusters",
-        GetSubClusterInfoRequest.class, request,
+        GetSubClustersInfoRequest.class, request,
         GetSubClustersInfoResponse.class, stateStoreClient, clock);
     return clientMethod.invoke();
   }
