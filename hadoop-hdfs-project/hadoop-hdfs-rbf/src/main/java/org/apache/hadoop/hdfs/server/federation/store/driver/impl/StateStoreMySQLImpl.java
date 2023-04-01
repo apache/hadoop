@@ -222,7 +222,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
   @Override
   public <T extends BaseRecord> boolean removeAll(Class<T> clazz) throws IOException {
     verifyDriverReady();
-    long start = Time.monotonicNow();
+    long startTimeMs = Time.monotonicNow();
     StateStoreMetrics metrics = getMetrics();
     boolean success = true;
     String tableName = getAndValidateTableNameForClass(clazz);
@@ -236,11 +236,11 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
     }
 
     if (metrics != null) {
-      long time = Time.monotonicNow() - start;
+      long durationMs = Time.monotonicNow() - startTimeMs;
       if (success) {
-        metrics.addRemove(time);
+        metrics.addRemove(durationMs);
       } else {
-        metrics.addFailure(time);
+        metrics.addFailure(durationMs);
       }
     }
     return success;
@@ -254,7 +254,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
       return 0;
     }
 
-    long start = Time.monotonicNow();
+    long startTimeMs = Time.monotonicNow();
     StateStoreMetrics metrics = getMetrics();
     int removed = 0;
     // Get the current records
@@ -277,18 +277,18 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
       if (!success) {
         LOG.error("Cannot remove records {} query {}", clazz, query);
         if (metrics != null) {
-          metrics.addFailure(monotonicNow() - start);
+          metrics.addFailure(monotonicNow() - startTimeMs);
         }
       }
     } catch (IOException e) {
       LOG.error("Cannot remove records {} query {}", clazz, query, e);
       if (metrics != null) {
-        metrics.addFailure(monotonicNow() - start);
+        metrics.addFailure(monotonicNow() - startTimeMs);
       }
     }
 
     if (removed > 0 && metrics != null) {
-      metrics.addRemove(monotonicNow() - start);
+      metrics.addRemove(monotonicNow() - startTimeMs);
     }
     return removed;
   }
