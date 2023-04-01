@@ -315,7 +315,7 @@ public class WebHdfsFileSystem extends FileSystem
         HdfsClientConfigKeys.DFS_CLIENT_WEBHDFS_USE_BASE_PATH_KEY,
         HdfsClientConfigKeys.DFS_CLIENT_WEBHDFS_USE_BASE_PATH_DEFAULT
     );
-    if (uri.getPath() != null && !uri.getPath().equals("") && useBasePath) {
+    if (uri != null && uri.getPath() != null && !uri.getPath().equals("") && useBasePath) {
       pathPrefix = uri.getPath();
       if (pathPrefix.endsWith("/")) {
         pathPrefix = pathPrefix.substring(0, pathPrefix.length() - 1);
