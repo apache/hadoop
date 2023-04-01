@@ -53,6 +53,8 @@ public class FederationClientMethod<R> {
 
   private Clock clock = null;
 
+  private Class<R> clazz;
+
   public FederationClientMethod(String method, Class<?>[] pTypes, Object... pParams)
       throws YarnException {
     if (pParams.length != pTypes.length) {
@@ -69,11 +71,12 @@ public class FederationClientMethod<R> {
     this(method, new Class[]{pTypes}, new Object[]{pParams});
   }
 
-  public FederationClientMethod(String method, Class pTypes, Object pParams,
+  public FederationClientMethod(String method, Class pTypes, Object pParams, Class<R> rTypes,
       FederationStateStore fedStateStore, Clock fedClock) throws YarnException {
     this(method, pTypes, pParams);
     this.stateStoreClient = fedStateStore;
     this.clock = fedClock;
+    this.clazz = rTypes;
   }
 
   public Object[] getParams() {
@@ -103,7 +106,8 @@ public class FederationClientMethod<R> {
     try {
       long startTime = clock.getTime();
       Method method = FederationStateStore.class.getMethod(methodName, types);
-      R result = (R)(method.invoke(stateStoreClient, params));
+      R result = clazz.cast(method.invoke(stateStoreClient, params));
+
       long stopTime = clock.getTime();
       FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
           methodName, stopTime - startTime);
