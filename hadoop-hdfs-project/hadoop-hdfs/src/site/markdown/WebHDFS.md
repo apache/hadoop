@@ -1152,7 +1152,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getServer
         Content-Type: application/json
         Transfer-Encoding: chunked
 
-        {"Path": "/targetRoot/targetFile"}
+        {"Path": "/user/username/targetFile"}
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTarget
 
