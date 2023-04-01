@@ -149,6 +149,10 @@ public class TracingContext {
     this.opType = operation;
   }
 
+  public int getRetryCount() {
+    return retryCount;
+  }
+
   public void setRetryCount(int retryCount) {
     this.retryCount = retryCount;
   }
