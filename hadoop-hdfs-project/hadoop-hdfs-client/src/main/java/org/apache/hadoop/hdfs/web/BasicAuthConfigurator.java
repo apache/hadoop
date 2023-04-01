@@ -33,16 +33,6 @@ public class BasicAuthConfigurator implements ConnectionConfigurator {
   private final ConnectionConfigurator parent;
   private final String credentials;
 
-  static public ConnectionConfigurator getConfigurator(
-      ConnectionConfigurator configurator, String basicAuthCred
-  ) {
-    if (basicAuthCred != null && !basicAuthCred.isEmpty()) {
-      return new BasicAuthConfigurator(configurator, basicAuthCred);
-    } else {
-      return configurator;
-    }
-  }
-
   /**
    * @param credentials a string of the form "username:password"
    */

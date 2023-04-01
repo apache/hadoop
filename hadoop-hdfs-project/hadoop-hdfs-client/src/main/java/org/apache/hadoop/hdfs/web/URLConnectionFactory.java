@@ -136,7 +136,7 @@ public class URLConnectionFactory {
       }
     }
 
-    return BasicAuthConfigurator.getConfigurator(conn, basicAuthCredentials);
+    return createBasicAuthConfigurator(conn, basicAuthCredentials);
   }
 
   /**
@@ -166,7 +166,7 @@ public class URLConnectionFactory {
     } catch (Exception e) {
       throw new IOException("Unable to load OAuth2 connection factory.", e);
     }
-    conn = BasicAuthConfigurator.getConfigurator(conn, basicAuthCredentials);
+    conn = createBasicAuthConfigurator(conn, basicAuthCredentials);
     return new URLConnectionFactory(conn);
   }
 
@@ -236,6 +236,24 @@ public class URLConnectionFactory {
                                   int readTimeout) {
     connection.setConnectTimeout(connectTimeout);
     connection.setReadTimeout(readTimeout);
+  }
+
+  /**
+   * Create a new ConnectionConfigurator wrapping the given one with HTTP Basic Authentication.
+   * It will return the original configurator if no credentials are specified.
+   *
+   * @param configurator  Parent connection configurator.
+   * @param basicAuthCred Credentials for HTTP Basic Authentication in "username:password" format,
+   *                      or null / empty string if no credentials are to be used.
+   */
+  private static ConnectionConfigurator createBasicAuthConfigurator(
+      ConnectionConfigurator configurator, String basicAuthCred
+  ) {
+    if (basicAuthCred != null && !basicAuthCred.isEmpty()) {
+      return new BasicAuthConfigurator(configurator, basicAuthCred);
+    } else {
+      return configurator;
+    }
   }
 
   public void destroy() {
