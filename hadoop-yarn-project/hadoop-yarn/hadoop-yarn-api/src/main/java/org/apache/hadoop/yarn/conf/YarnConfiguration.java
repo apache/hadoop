@@ -43,6 +43,8 @@ import org.apache.hadoop.util.BasicDiskValidator;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 
+import static java.util.concurrent.TimeUnit.MINUTES;
+
 @Public
 @Evolving
 public class YarnConfiguration extends Configuration {
@@ -4055,6 +4057,43 @@ public class YarnConfiguration extends Configuration {
       FEDERATION_STATESTORE_SQL_PREFIX + "max-connections";
 
   public static final int DEFAULT_FEDERATION_STATESTORE_SQL_MAXCONNECTIONS = 1;
+
+  /** Database connection pool minimum number of connections. **/
+  public static final String FEDERATION_STATESTORE_SQL_MINIMUMIDLE =
+      FEDERATION_STATESTORE_SQL_PREFIX + "minimum-idle";
+
+  /** The default value of the minimum number of connections in the database connection pool. **/
+  public static final int DEFAULT_FEDERATION_STATESTORE_SQL_MINIMUMIDLE = 1;
+
+  /** The name of the database connection pool. **/
+  public static final String FEDERATION_STATESTORE_POOL_NAME =
+      FEDERATION_STATESTORE_SQL_PREFIX + "pool-name";
+
+  /** The default name of the database connection pool. **/
+  public static final String DEFAULT_FEDERATION_STATESTORE_POOL_NAME =
+      "YARN-Federation-DataBasePool";
+
+  /** The maximum lifetime of a database connection. **/
+  public static final String FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME =
+      FEDERATION_STATESTORE_SQL_PREFIX + "max-life-time";
+
+  /** Database connection maximum lifetime. **/
+  public static final long DEFAULT_FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME =
+      TimeUnit.MINUTES.toMillis(30);
+
+  /** Database connection idle timeout time. **/
+  public static final String FEDERATION_STATESTORE_CONN_IDLE_TIMEOUT_TIME =
+      FEDERATION_STATESTORE_SQL_PREFIX + "idle-time-out";
+
+  public static final long DEFAULT_FEDERATION_STATESTORE_CONN_IDLE_TIMEOUT_TIME =
+      TimeUnit.MINUTES.toMillis(10);
+
+  /** Database connection timeout time. **/
+  public static final String FEDERATION_STATESTORE_CONNECTION_TIMEOUT =
+      FEDERATION_STATESTORE_SQL_PREFIX + "conn-time-out";
+
+  public static final long DEFAULT_FEDERATION_STATESTORE_CONNECTION_TIMEOUT_TIME =
+      TimeUnit.MINUTES.toMillis(10);
 
   public static final String FEDERATION_STATESTORE_MAX_APPLICATIONS =
       FEDERATION_PREFIX + "state-store.max-applications";

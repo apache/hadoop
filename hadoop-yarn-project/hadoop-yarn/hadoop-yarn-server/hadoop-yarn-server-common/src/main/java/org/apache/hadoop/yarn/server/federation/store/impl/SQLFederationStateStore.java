@@ -217,15 +217,29 @@ public class SQLFederationStateStore implements FederationStateStore {
   @VisibleForTesting
   private Connection conn = null;
   private int maxAppsInStateStore;
+  private int minimumIdle;
+  private String dataSourcePoolName;
+  private long maxLifeTime;
+  private long idleTimeout;
+  private long connectionTimeout;
 
   @Override
   public void init(Configuration conf) throws YarnException {
-    driverClass =
-        conf.get(YarnConfiguration.FEDERATION_STATESTORE_SQL_JDBC_CLASS,
-            YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_SQL_JDBC_CLASS);
-    maximumPoolSize =
-        conf.getInt(YarnConfiguration.FEDERATION_STATESTORE_SQL_MAXCONNECTIONS,
-            YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_SQL_MAXCONNECTIONS);
+    // Database connection configuration
+    driverClass = conf.get(YarnConfiguration.FEDERATION_STATESTORE_SQL_JDBC_CLASS,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_SQL_JDBC_CLASS);
+    maximumPoolSize = conf.getInt(YarnConfiguration.FEDERATION_STATESTORE_SQL_MAXCONNECTIONS,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_SQL_MAXCONNECTIONS);
+    minimumIdle = conf.getInt(YarnConfiguration.FEDERATION_STATESTORE_SQL_MINIMUMIDLE,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_SQL_MINIMUMIDLE);
+    dataSourcePoolName = conf.get(YarnConfiguration.FEDERATION_STATESTORE_POOL_NAME,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_POOL_NAME);
+    maxLifeTime = conf.getLong(YarnConfiguration.FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME);
+    idleTimeout = conf.getLong(YarnConfiguration.FEDERATION_STATESTORE_CONN_IDLE_TIMEOUT_TIME,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CONN_IDLE_TIMEOUT_TIME);
+    connectionTimeout = conf.getLong(YarnConfiguration.FEDERATION_STATESTORE_CONNECTION_TIMEOUT,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CONNECTION_TIMEOUT_TIME);
 
     // An helper method avoids to assign a null value to these property
     userName = conf.get(YarnConfiguration.FEDERATION_STATESTORE_SQL_USERNAME);
@@ -245,7 +259,14 @@ public class SQLFederationStateStore implements FederationStateStore {
     FederationStateStoreUtils.setPassword(dataSource, password);
     FederationStateStoreUtils.setProperty(dataSource,
         FederationStateStoreUtils.FEDERATION_STORE_URL, url);
+
     dataSource.setMaximumPoolSize(maximumPoolSize);
+    dataSource.setPoolName(dataSourcePoolName);
+    dataSource.setMinimumIdle(minimumIdle);
+    dataSource.setMaxLifetime(maxLifeTime);
+    dataSource.setIdleTimeout(idleTimeout);
+    dataSource.setConnectionTimeout(connectionTimeout);
+
     LOG.info("Initialized connection pool to the Federation StateStore database at address: {}.",
         url);
 
