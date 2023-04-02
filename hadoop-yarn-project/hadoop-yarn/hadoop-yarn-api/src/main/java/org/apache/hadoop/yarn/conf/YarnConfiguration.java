@@ -43,8 +43,6 @@ import org.apache.hadoop.util.BasicDiskValidator;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 
-import static java.util.concurrent.TimeUnit.MINUTES;
-
 @Public
 @Evolving
 public class YarnConfiguration extends Configuration {
