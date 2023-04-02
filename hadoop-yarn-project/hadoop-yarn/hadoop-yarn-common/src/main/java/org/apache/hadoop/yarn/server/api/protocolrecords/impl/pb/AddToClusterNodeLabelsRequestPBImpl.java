@@ -152,4 +152,14 @@ public class AddToClusterNodeLabelsRequestPBImpl extends
     initLocalNodeLabels();
     return this.updatedNodeLabels;
   }
+
+  @Override
+  public String getSubClusterId() {
+    return null;
+  }
+
+  @Override
+  public void setSubClusterId(String subClusterId) {
+
+  }
 }

@@ -95,6 +95,7 @@ message RefreshNodesResourcesResponseProto {
 message AddToClusterNodeLabelsRequestProto {
   repeated string deprecatedNodeLabels = 1;
   repeated NodeLabelProto nodeLabels = 2;
+  optional string sub_cluster_id = 3;
 }
 
 message AddToClusterNodeLabelsResponseProto {
