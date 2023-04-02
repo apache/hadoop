@@ -915,6 +915,7 @@ public class StripedBlockUtil {
       ByteBuffer tmp;
       int len;
       for (ByteBuffer slice : slices) {
+        src.position(src.position() + slice.position());
         len = slice.remaining();
         tmp = src.duplicate();
         tmp.limit(tmp.position() + len);
