@@ -167,8 +167,9 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin, argv));
     assertEquals(-1, ToolRunner.run(admin, argv));
 
-
     stateStore.loadCache(MountTableStoreImpl.class, true);
+    verifyMountTableContents(src, dest);
+
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
         .newInstance(src);
     GetMountTableEntriesResponse getResponse = client.getMountTableManager()
@@ -205,6 +206,15 @@ public class TestRouterAdminCLI {
     assertEquals(dest, loc3.getDest());
     assertTrue(mountTable.isReadOnly());
     assertTrue(mountTable.isFaultTolerant());
+  }
+
+  private void verifyMountTableContents(String src, String dest) throws Exception {
+    String[] argv = new String[] {"-ls", "/"};
+    System.setOut(new PrintStream(out));
+    assertEquals(0, ToolRunner.run(admin, argv));
+    String response = out.toString();
+    assertTrue("The response should have " + src + ": " + response, response.contains(src));
+    assertTrue("The response should have " + dest + ": " + response, response.contains(dest));
   }
 
   @Test

@@ -592,17 +592,19 @@ StateStoreMetrics
 -----------------
 StateStoreMetrics shows the statistics of the State Store component in Router-based federation.
 
-| Name | Description |
-|:---- |:---- |
-| `ReadsNumOps` | Number of GET transactions for State Store within an interval time of metric |
-| `ReadsAvgTime` | Average time of GET transactions for State Store in milliseconds |
-| `WritesNumOps` | Number of PUT transactions for State Store within an interval time of metric |
-| `WritesAvgTime` | Average time of PUT transactions for State Store in milliseconds |
-| `RemovesNumOps` | Number of REMOVE transactions for State Store within an interval time of metric |
-| `RemovesAvgTime` | Average time of REMOVE transactions for State Store in milliseconds |
-| `FailuresNumOps` | Number of failed transactions for State Store within an interval time of metric |
-| `FailuresAvgTime` | Average time of failed transactions for State Store in milliseconds |
-| `Cache`*BaseRecord*`Size` | Number of store records to cache in State Store |
+| Name                                      | Description                                                                        |
+|:------------------------------------------|:-----------------------------------------------------------------------------------|
+| `ReadsNumOps`                             | Number of GET transactions for State Store within an interval time of metric       |
+| `ReadsAvgTime`                            | Average time of GET transactions for State Store in milliseconds                   |
+| `WritesNumOps`                            | Number of PUT transactions for State Store within an interval time of metric       |
+| `WritesAvgTime`                           | Average time of PUT transactions for State Store in milliseconds                   |
+| `RemovesNumOps`                           | Number of REMOVE transactions for State Store within an interval time of metric    |
+| `RemovesAvgTime`                          | Average time of REMOVE transactions for State Store in milliseconds                |
+| `FailuresNumOps`                          | Number of failed transactions for State Store within an interval time of metric    |
+| `FailuresAvgTime`                         | Average time of failed transactions for State Store in milliseconds                |
+| `Cache`*BaseRecord*`Size`                 | Number of store records to cache in State Store                                    |
+| `Cache`*BaseRecord*`LoadNumOps`           | Number of times store records are loaded in the State Store Cache from State Store |
+| `Cache`*BaseRecord*`LoadAvgTime`          | Average time of loading State Store Cache from State Store in milliseconds         |
 
 yarn context
 ============

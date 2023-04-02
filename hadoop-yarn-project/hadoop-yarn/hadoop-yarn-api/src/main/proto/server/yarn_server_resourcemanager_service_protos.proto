@@ -79,12 +79,14 @@ message GetGroupsForUserResponseProto {
 
 message UpdateNodeResourceRequestProto {
   repeated NodeResourceMapProto node_resource_map = 1;
+  optional string sub_cluster_id = 2;
 }
 
 message UpdateNodeResourceResponseProto {
 }
 
 message RefreshNodesResourcesRequestProto {
+  optional string sub_cluster_id = 1;
 }
 
 message RefreshNodesResourcesResponseProto {
