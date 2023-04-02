@@ -2154,7 +2154,7 @@ public class WebHdfsFileSystem extends FileSystem
     final HttpOpParam.Op op = GetOpParam.Op.GETLINKTARGET;
     return new FsPathResponseRunner<Path>(op, f) {
       @Override
-      Path decodeResponse(Map<?,?> json) {
+      Path decodeResponse(Map<?, ?> json) {
         return new Path((String) json.get(Path.class.getSimpleName()));
       }
     }.run();
