@@ -1,52 +1,18 @@
-# 安装方法
+# 使用七牛 Kodo 作为 Hadoop 兼容的文件系统
 
-## 获取依赖
+## 配置方法
 
-需要两个依赖，分别如下
+### hadoop-env.sh 配置
 
-七牛的sdk的jar包: qiniu-java-sdk-{version}.jar
-
-hadoop-qiniu接入的jar包: hadoop-qiniu-{version}.jar
-
-### 手动编译hadoop-qiniu接入的jar包
-
-在/hadoop-tools/hadoop-qiniu子模块下，执行如下命令开始jar包的编译
-
-```sh
-mvn package -Pdist -DskipTests -Dtar -Dmaven
-```
-
-在target文件夹下可获得对应jar包
-
-### 直接下载hadoop-qiniu接入的jar包
-
-[下载地址]()
-
-### 直接下载qiniu-java-sdk包
-
-[this latest JAR](https://search.maven.org/remote_content?g=com.qiniu&a=qiniu-java-sdk&v=LATEST)
-
-## 安装依赖
-
-将两个jar包拷贝到`$HADOOP_HOME/share/hadoop/tools/lib`目录下
-
-修改`$HADOOP_HOME/etc/hadoop/hadoop_env.sh`文件，增加如下内容，将相关jar包加入Hadoop的CLASSPATH环境变量。
+打开文件$HADOOP_HOME/etc/hadoop/hadoop-env.sh，添加如下配置：
 
 ```shell
-for f in $HADOOP_HOME/share/hadoop/tools/lib/*.jar; do
-  if [ "$HADOOP_CLASSPATH" ]; then
-    export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$f
-  else
-    export HADOOP_CLASSPATH=$f
-  fi
-done
+export HADOOP_OPTIONAL_TOOLS="hadoop-qiniu"
 ```
 
-# 使用方法
+### core-site.xml 配置
 
-## Hadoop 配置
-
-修改`$HADOOP/etc/hadoop/core-site.xml`，增加Kodo相关的用户配置与实现类相关信息。
+修改`$HADOOP_HOME/etc/hadoop/core-site.xml`，增加Kodo相关的用户配置与实现类相关信息。
 
 ```xml
 
@@ -54,7 +20,6 @@ done
     <property>
         <name>fs.qiniu.download.blockSize</name>
         <value>4194304</value>
-        <description>分块下载大小</description>
     </property>
 
     <property>
@@ -66,44 +31,70 @@ done
         <name>fs.qiniu.auth.secretKey</name>
         <value>XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</value>
     </property>
-    
+
     <property>
         <name>fs.kodo.impl</name>
         <value>org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem</value>
-        <description>
-            The implementation class of the Qiniu Kodo Filesystem.
-        </description>
     </property>
     <property>
         <name>fs.AbstractFileSystem.kodo.impl</name>
         <value>org.apache.hadoop.fs.qiniu.kodo.QiniuKodo</value>
-        <description>
-            The implementation class of the Qiniu Kodo AbstractFileSystem.
-        </description>
     </property>
     <property>
         <name>fs.defaultFS</name>
         <value>kodo://example-bucket-name/</value>
     </property>
-
 </configuration>
 
 ```
 
 更多具体配置项说明与默认值可参考yml文件：[config.yml](config.yml)
 
-可自行通过"."分隔符将yml分级描述的配置项转换为xml配置项
+可自行通过"."分隔符将yml分级描述的配置项转换为xml配置项，并补充命名空间前缀 fs.qiniu
 
-## put命令
+如对于代理配置：
+
+```yml
+# 代理设置
+proxy:
+  enable: true
+  hostname: '127.0.0.1'
+  port: 8080
+```
+
+转换为xml配置项为：
+
+```xml
+
+<configuration>
+    <property>
+        <name>fs.qiniu.proxy.enable</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>fs.qiniu.proxy.hostname</name>
+        <value>127.0.0.1</value>
+    </property>
+    <property>
+        <name>fs.qiniu.proxy.port</name>
+        <value>8080</value>
+    </property>
+</configuration>
+```
+
+## 测试运行 mapreduce 示例程序 wordcount
+
+### put命令
 
 ```shell
 mkdir testDir
 touch testDir/input.txt
 echo "a b c d ee a b s" > testDir/input.txt
 hadoop fs -put testDir kodo:///testDir
+
 ```
 
-## ls命令
+### ls命令
 
 ```shell
 hadoop fs -ls -R kodo://example-bucket/
@@ -113,7 +104,7 @@ drwx--xr-x   - root root          0 1970-01-01 08:00 kodo://example-bucket/testD
 -rw-rw-rw-   0 root root         17 2023-01-18 15:54 kodo://example-bucket/testDir/input.txt
 ```
 
-## get命令
+### get命令
 
 ```shell
 $ hadoop fs -get kodo:///testDir testDir1
@@ -122,7 +113,7 @@ total 8
 -rw-r--r--  1 root  staff  17 Jan 18 15:57 input.txt
 ```
 
-## 运行wordcount
+### 运行 wordcount 示例
 
 ```shell
 hadoop jar $HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-examples-{version}.jar wordcount kodo://example-bucket/testDir/input.txt kodo://example-bucket/testDir/output
@@ -185,7 +176,7 @@ drwx--xr-x   - root root          0 1970-01-01 08:00 kodo://example-bucket/testD
 -rw-rw-rw-   0 root root         25 2023-01-18 16:00 kodo://example-bucket/testDir/output/part-r-00000
 ```
 
-## cat命令
+### cat命令
 
 ```text
 $ hadoop fs -cat kodo://example-bucket/testDir/output/part-r-00000
