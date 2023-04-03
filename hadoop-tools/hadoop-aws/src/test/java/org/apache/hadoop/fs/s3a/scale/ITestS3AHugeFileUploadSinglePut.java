@@ -19,18 +19,16 @@
 package org.apache.hadoop.fs.s3a.scale;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.Optional;
 
-import org.apache.hadoop.fs.statistics.IOStatisticsContext;
-import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.Constants;
+
 import static org.apache.hadoop.fs.contract.ContractTestUtils.IO_CHUNK_BUFFER_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
@@ -62,13 +60,14 @@ public class ITestS3AHugeFileUploadSinglePut extends S3AScaleTestBase{
   @Test
   public void uploadFileSinglePut() throws IOException {
     LOG.info("Creating file with size : {}", fileSize);
-    ContractTestUtils.createAndVerifyFile(getFileSystem(),
+    S3AFileSystem fs = getFileSystem();
+    ContractTestUtils.createAndVerifyFile(fs,
         getTestPath(), fileSize);
-    Map<String, Long> stats = IOStatisticsSupport.snapshotIOStatistics().counters();
-    LOG.warn("Patch: " + stats.toString());
-    stats = IOStatisticsContext.getCurrentIOStatisticsContext().getIOStatistics().counters();
-    LOG.warn("Patch:{}", stats.toString());
-    assertEquals(2L,
-        (long) stats.get(OBJECT_PUT_REQUESTS.getSymbol()));
+    //No more than three put requests should be made during the upload of the file
+    //First one being the creation of test/ directory marker
+    //Second being the creation of the file with tests3ascale/<file-name>
+    //Third being the creation of directory marker tests3ascale/ on the file delete
+    assertEquals(3L,
+        (long) fs.getIOStatistics().counters().get(OBJECT_PUT_REQUESTS.getSymbol()));
   }
 }
