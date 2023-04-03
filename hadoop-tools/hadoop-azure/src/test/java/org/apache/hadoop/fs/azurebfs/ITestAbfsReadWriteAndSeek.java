@@ -49,7 +49,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatistic
  */
 @RunWith(Parameterized.class)
 public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
-  private static final Path TEST_PATH = new Path("/testfile");
+  private static final String TEST_PATH = "/testfile";
 
   /**
    * Parameterize on read buffer size and readahead.
