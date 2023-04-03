@@ -146,7 +146,17 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
-import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.*;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_NEW_APP;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.SUBMIT_NEW_APP;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_APP_REPORT;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.FORCE_KILL_APP;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.TARGET_CLIENT_RM_SERVICE;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UNKNOWN;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CLUSTERNODES;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_QUEUE_USER_ACLS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_APPLICATIONS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CLUSTERMETRICS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_QUEUEINFO;
 
 /**
  * Extends the {@code AbstractRequestInterceptorClient} class and provides an
@@ -323,6 +333,8 @@ public class FederationClientInterceptor
       }
     } catch (Exception e) {
       routerMetrics.incrAppsFailedCreated();
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_APP, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, e.getMessage());
       RouterServerUtil.logAndThrowException(e.getMessage(), e);
     }
 
@@ -480,6 +492,8 @@ public class FederationClientInterceptor
 
     } catch (Exception e) {
       routerMetrics.incrAppsFailedSubmitted();
+      RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, e.getMessage(), applicationId);
       RouterServerUtil.logAndThrowException(e.getMessage(), e);
     }
 
@@ -742,10 +756,15 @@ public class FederationClientInterceptor
       applications = invokeConcurrent(remoteMethod, GetApplicationsResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrMultipleAppsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get applications due to exception.", ex);
+      String msg = "Unable to get applications due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APPLICATIONS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededMultipleAppsRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_APPLICATIONS,
+        TARGET_CLIENT_RM_SERVICE);
     // Merge the Application Reports
     return RouterYarnClientUtils.mergeApplications(applications, returnPartialReport);
   }
@@ -768,10 +787,15 @@ public class FederationClientInterceptor
       clusterMetrics = invokeConcurrent(remoteMethod, GetClusterMetricsResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrGetClusterMetricsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get cluster metrics due to exception.", ex);
+      String msg = "Unable to get cluster metrics due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERMETRICS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetClusterMetricsRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_CLUSTERMETRICS,
+        TARGET_CLIENT_RM_SERVICE);
     return RouterYarnClientUtils.merge(clusterMetrics);
   }
 
@@ -851,10 +875,15 @@ public class FederationClientInterceptor
           invokeConcurrent(remoteMethod, GetClusterNodesResponse.class);
       long stopTime = clock.getTime();
       routerMetrics.succeededGetClusterNodesRetrieved(stopTime - startTime);
+      RouterAuditLogger.logSuccess(user.getShortUserName(), GET_CLUSTERNODES,
+          TARGET_CLIENT_RM_SERVICE);
       return RouterYarnClientUtils.mergeClusterNodesResponse(clusterNodes);
     } catch (Exception ex) {
       routerMetrics.incrClusterNodesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get cluster nodes due to exception.", ex);
+      String msg = "Unable to get cluster nodes due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERNODES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     throw new YarnException("Unable to get cluster nodes.");
   }
@@ -878,11 +907,14 @@ public class FederationClientInterceptor
       queues = invokeConcurrent(remoteMethod, GetQueueInfoResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrGetQueueInfoFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get queue [" +
-          request.getQueueName() + "] to exception.", ex);
+      String msg = "Unable to get queue [" + request.getQueueName() + "] to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_QUEUEINFO, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetQueueInfoRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_QUEUEINFO, TARGET_CLIENT_RM_SERVICE);
     // Merge the GetQueueInfoResponse
     return RouterYarnClientUtils.mergeQueues(queues);
   }
@@ -905,10 +937,14 @@ public class FederationClientInterceptor
       queueUserAcls = invokeConcurrent(remoteMethod, GetQueueUserAclsInfoResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrQueueUserAclsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get queue user Acls due to exception.", ex);
+      String msg = "Unable to get queue user Acls due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_QUEUE_USER_ACLS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetQueueUserAclsRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_QUEUE_USER_ACLS, TARGET_CLIENT_RM_SERVICE);
     // Merge the QueueUserAclsInfoResponse
     return RouterYarnClientUtils.mergeQueueUserAcls(queueUserAcls);
   }
@@ -936,6 +972,8 @@ public class FederationClientInterceptor
     } catch (YarnException e) {
       routerMetrics.incrMoveApplicationAcrossQueuesFailedRetrieved();
       String errMsgFormat = "Application %s does not exist in FederationStateStore.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_QUEUE_USER_ACLS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, String.format(errMsgFormat, applicationId));
       RouterServerUtil.logAndThrowException(e, errMsgFormat, applicationId);
     }
 
@@ -957,6 +995,8 @@ public class FederationClientInterceptor
     }
 
     long stopTime = clock.getTime();
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_QUEUE_USER_ACLS,
+        TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
     routerMetrics.succeededMoveApplicationAcrossQueuesRetrieved(stopTime - startTime);
     return response;
   }

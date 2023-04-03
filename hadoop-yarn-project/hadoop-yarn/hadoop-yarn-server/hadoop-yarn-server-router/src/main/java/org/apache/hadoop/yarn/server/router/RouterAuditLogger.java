@@ -58,6 +58,12 @@ public final class RouterAuditLogger {
     public static final String GET_QUEUE_USER_ACLS = "Get QueueUserAcls";
   }
 
+  public static void logSuccess(String user, String operation, String target) {
+    if (LOG.isInfoEnabled()) {
+      LOG.info(createSuccessLog(user, operation, target, null, null));
+    }
+  }
+
   /**
    * Create a readable and parseable audit log string for a successful event.
    *
