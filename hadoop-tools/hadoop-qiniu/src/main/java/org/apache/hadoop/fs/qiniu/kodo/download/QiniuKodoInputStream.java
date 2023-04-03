@@ -14,6 +14,7 @@ public class QiniuKodoInputStream extends FSInputStream {
     private final FSInputStream generalStrategy;
     private final FSInputStream randomStrategy;
     private FSInputStream currentStrategy;
+    private final String key;
 
     public QiniuKodoInputStream(
             String key,
@@ -23,13 +24,15 @@ public class QiniuKodoInputStream extends FSInputStream {
             long contentLength,
             FileSystem.Statistics statistics
     ) {
+        this.key = key;
+
         this.useRandomReader = useRandomReader;
         this.generalStrategy = new QiniuKodoCommonInputStream(key, generalReader, contentLength, statistics);
         this.randomStrategy = new QiniuKodoCommonInputStream(key, randomReader, contentLength, statistics);
 
         // 默认通用策略
         this.currentStrategy = generalStrategy;
-        LOG.info("Current read strategy is general reader");
+        LOG.trace("File {} read strategy is general reader", key);
     }
 
     @Override
@@ -41,7 +44,7 @@ public class QiniuKodoInputStream extends FSInputStream {
     public void seek(long pos) throws IOException {
         if (useRandomReader) {
             this.currentStrategy = randomStrategy;
-            LOG.info("Current read strategy switch to random reader");
+            LOG.info("File {} read strategy switch to random reader", key);
         }
         currentStrategy.seek(pos);
     }
