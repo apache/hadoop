@@ -646,13 +646,13 @@ public class AzureBlobFileSystem extends FileSystem
       FileStatus fileStatus = abfsStore.getFileStatus(qualifiedPath,
           tracingContext);
       if (fileStatus != null && fileStatus.isDirectory() &&
-          abfsStore.isAtomicRenameKey(path.toUri().getPath()) &&
+          abfsStore.isAtomicRenameKey(fileStatus.getPath().toUri().getPath()) &&
           abfsStore.getRenamePendingFileStatusInDirectory(fileStatus, tracingContext)) {
         RenameAtomicityUtils renameAtomicityUtils = new RenameAtomicityUtils(
             this,
-            new Path(path.toUri().getPath() + "/" + SUFFIX),
+            new Path(fileStatus.getPath().toUri().getPath() + SUFFIX),
             abfsStore.getRedoRenameInvocation(tracingContext));
-        renameAtomicityUtils.cleanup(new Path(path.toUri().getPath() + "/" + SUFFIX));
+        renameAtomicityUtils.cleanup(new Path(fileStatus.getPath().toUri().getPath() + SUFFIX));
         throw new AbfsRestOperationException(HttpURLConnection.HTTP_NOT_FOUND,
             AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(), null,
             new FileNotFoundException(

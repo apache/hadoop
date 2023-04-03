@@ -1984,7 +1984,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final TracingContext tracingContext) throws IOException {
     try {
       getFileStatus(
-          new Path(fileStatus.getPath().toUri().getPath() + "/" + SUFFIX),
+          new Path(fileStatus.getPath().toUri().getPath() + SUFFIX),
           tracingContext);
       return true;
     } catch (AbfsRestOperationException ex) {
