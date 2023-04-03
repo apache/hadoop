@@ -1733,6 +1733,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return isKeyForDirectorySet(key, azureAtomicRenameDirSet);
   }
 
+  @org.apache.hadoop.classification.VisibleForTesting
+  void addToAzureAtomicRenameDir(String key) {
+    azureAtomicRenameDirSet.add(key);
+  }
+
   RenameAtomicityUtils.RedoRenameInvocation getRedoRenameInvocation(final TracingContext tracingContext) {
     return new RenameAtomicityUtils.RedoRenameInvocation() {
       @Override
