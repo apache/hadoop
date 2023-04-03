@@ -1,5 +1,6 @@
 package org.apache.hadoop.fs.azurebfs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
@@ -144,9 +145,7 @@ public class RenameAtomicityUtils {
     } catch (IOException e) {
       // If the rename metadata was not found then somebody probably
       // raced with us and finished the delete first
-      Throwable t = e.getCause();
-      if (t != null && t instanceof StorageException
-          && "BlobNotFound".equals(((StorageException) t).getErrorCode())) {
+      if (e instanceof FileNotFoundException) {
         LOG.warn("rename pending file " + redoFile + " is already deleted");
       } else {
         throw e;
