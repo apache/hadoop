@@ -2320,15 +2320,12 @@
 </property>
 
 <property>
-<<<<<<< HEAD
-=======
   <name>fs.azure.enable.readahead</name>
   <value>true</value>
   <description>Enabled readahead/prefetching in AbfsInputStream.</description>
 </property>
 
 <property>
->>>>>>> c67c2b75690... HADOOP-18546. ABFS. disable purging list of in progress reads in abfs stream close() (#5176)
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
   <description>The minimum block size for compression in block compressed

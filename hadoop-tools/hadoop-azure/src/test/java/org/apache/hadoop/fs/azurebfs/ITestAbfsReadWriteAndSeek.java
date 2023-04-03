@@ -32,6 +32,9 @@ import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
@@ -46,7 +49,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatistic
  */
 @RunWith(Parameterized.class)
 public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
-  private static final Path TEST_PATH = new Path("/testfile");
+  private static final String TEST_PATH = "/testfile";
 
   /**
    * Parameterize on read buffer size and readahead.
@@ -86,13 +89,20 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);
 
-    try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
+    Path testPath = path(TEST_PATH);
+    FSDataOutputStream stream = fs.create(testPath);
+    try {
       stream.write(b);
+    } finally{
+      stream.close();
     }
+    logIOStatisticsAtLevel(LOG, IOSTATISTICS_LOGGING_LEVEL_INFO, stream);
 
     final byte[] readBuffer = new byte[2 * bufferSize];
     int result;
-    try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
+    IOStatisticsSource statisticsSource = null;
+    try (FSDataInputStream inputStream = fs.open(testPath)) {
+      statisticsSource = inputStream;
       ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(
           new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
               fs.getFileSystemId(), FSOperationType.READ, true, 0,
@@ -111,6 +121,8 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
       result = inputStream.read(readBuffer, 0, bufferSize);
     }
 
+    logIOStatisticsAtLevel(LOG, IOSTATISTICS_LOGGING_LEVEL_INFO, statisticsSource);
+
     assertNotEquals("data read in final read()", -1, result);
     assertArrayEquals(readBuffer, b);
   }
@@ -125,7 +137,8 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
 
     final byte[] b = new byte[bufferSize * 10];
     new Random().nextBytes(b);
-    try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
+    Path testPath = path(TEST_PATH);
+    try (FSDataOutputStream stream = fs.create(testPath)) {
       ((AbfsOutputStream) stream.getWrappedStream()).registerListener(
           new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
               fs.getFileSystemId(), FSOperationType.WRITE, false, 0,
@@ -141,7 +154,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     fs.registerListener(
         new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
             fs.getFileSystemId(), FSOperationType.OPEN, false, 0));
-    try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
+    try (FSDataInputStream inputStream = fs.open(testPath)) {
       ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(
           new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
               fs.getFileSystemId(), FSOperationType.READ, false, 0,
