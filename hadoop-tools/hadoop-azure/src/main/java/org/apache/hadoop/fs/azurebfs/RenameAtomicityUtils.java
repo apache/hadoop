@@ -3,6 +3,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -25,6 +26,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
@@ -194,6 +196,20 @@ public class RenameAtomicityUtils {
       output.flush();
       output.close();
     } catch (IOException e) {
+      if (e instanceof FileNotFoundException) {
+        /*
+         * In case listStatus done on directory before any content could be written,
+         * that particular thread running on some worker-node of the cluster would
+         * delete the RenamePending JSON file.
+         * ref: https://issues.apache.org/jira/browse/HADOOP-12678.
+         * To recover from parallel delete, we will give it a second try.
+         */
+        output = azureBlobFileSystem.create(path, false);
+        output.write(contents.getBytes(Charset.forName("UTF-8")));
+        output.flush();
+        output.close();
+        return;
+      }
       throw new IOException("Unable to write RenamePending file for folder rename from "
           + srcPath.toUri().getPath() + " to " + dstPath.toUri().getPath(), e);
     }

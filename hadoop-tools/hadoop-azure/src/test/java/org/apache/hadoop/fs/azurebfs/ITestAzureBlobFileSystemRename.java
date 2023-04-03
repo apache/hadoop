@@ -34,6 +34,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -542,7 +543,6 @@ public class ITestAzureBlobFileSystemRename extends
     final Integer[] correctDeletePathCount = new Integer[1];
     correctDeletePathCount[0] = 0;
 
-    //fail copy of /hbase/test1/test2/test3/file1.
     AzureBlobFileSystemStore spiedAbfsStore = Mockito.spy(spiedFs.getAbfsStore());
     spiedFs.setAbfsStore(spiedAbfsStore);
 
@@ -576,7 +576,7 @@ public class ITestAzureBlobFileSystemRename extends
           }
         }
         try {
-          spiedFs.listStatus(new Path("hbase/test1/test2"));
+          spiedFs.listStatus(new Path("hbase/test1"));
           parallelListStatusCalledOnTheDirBeingRenamed[0] = true;
         } catch (IOException e) {
           throw new RuntimeException(e);
@@ -593,6 +593,95 @@ public class ITestAzureBlobFileSystemRename extends
 
   @Test
   public void testHbaseEmptyRenamePendingJsonDeletedBeforeListStatusCanDelete() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    final String failedCopyPath = "hbase/test1/test2/test3/file1";
+    fs.setWorkingDirectory(new Path("/"));
+    fs.mkdirs(new Path("hbase/test1/test2/test3"));
+    fs.create(new Path("hbase/test1/test2/test3/file"));
+    fs.create(new Path(failedCopyPath));
+    fs.mkdirs(new Path("hbase/test4/"));
+    fs.create(new Path("hbase/test4/file1"));
+    final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
+    final AzureBlobFileSystemStore azureBlobFileSystemStore = Mockito.spy(spiedFs.getAbfsStore());
+    spiedFs.setAbfsStore(azureBlobFileSystemStore);
+    final Integer[] correctDeletePathCount = new Integer[1];
+    correctDeletePathCount[0] = 0;
 
+    AzureBlobFileSystemStore spiedAbfsStore = Mockito.spy(spiedFs.getAbfsStore());
+    spiedFs.setAbfsStore(spiedAbfsStore);
+    AzureBlobFileSystem listFileFs = Mockito.spy(fs);
+
+
+    Boolean[] renamePendingJsonCreated = new Boolean[1];
+    renamePendingJsonCreated[0] = false;
+    Boolean[] parallelListStatusCalledOnTheDirBeingRenamed = new Boolean[1];
+    parallelListStatusCalledOnTheDirBeingRenamed[0] = false;
+    Boolean[] parallelDeleteOfRenamePendingFileFromRenameFlow = new Boolean[1];
+    parallelDeleteOfRenamePendingFileFromRenameFlow[0] = false;
+    Mockito.doAnswer(answer -> {
+      Path path = answer.getArgument(0);
+      Boolean recursive = answer.getArgument(1);
+      FSDataOutputStream outputStream = fs.create(path, recursive);
+      renamePendingJsonCreated[0] = true;
+      while(!parallelListStatusCalledOnTheDirBeingRenamed[0]) {
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
+      return outputStream;
+    }).when(spiedFs).create(Mockito.any(Path.class), Mockito.anyBoolean());
+
+    Mockito.doAnswer(answer -> {
+      Path path = answer.getArgument(0);
+      Boolean recursive = answer.getArgument(1);
+      if(("/hbase/test1/test2" + SUFFIX).equalsIgnoreCase(path.toUri().getPath())) {
+        while(!parallelListStatusCalledOnTheDirBeingRenamed[0]) {
+          Thread.sleep(100);
+        }
+        parallelDeleteOfRenamePendingFileFromRenameFlow[0] = true;
+        return fs.delete(path, recursive);
+      }
+      return fs.delete(path, recursive);
+    }).when(spiedFs).delete(Mockito.any(Path.class), Mockito.anyBoolean());
+
+    Mockito.doAnswer(answer -> {
+      Path path = answer.getArgument(0);
+      if(("/hbase/test1/test2" + SUFFIX).equalsIgnoreCase(path.toUri().getPath())) {
+        FSDataInputStream inputStream = fs.open(path);
+        parallelListStatusCalledOnTheDirBeingRenamed[0] = true;
+        while(!parallelDeleteOfRenamePendingFileFromRenameFlow[0]) {
+          Thread.sleep(100);
+        }
+        return inputStream;
+      }
+      return fs.open(path);
+    }).when(listFileFs).open(Mockito.any(Path.class));
+
+    try {
+      new Thread(() -> {
+        //wait for the renamePending created;
+        while(!renamePendingJsonCreated[0]) {
+          try {
+            Thread.sleep(100);
+          } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+          }
+        }
+        try {
+          listFileFs.listStatus(new Path("hbase/test1"));
+          parallelListStatusCalledOnTheDirBeingRenamed[0] = true;
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }).start();
+      spiedFs.rename(new Path("hbase/test1/test2"),
+          new Path("hbase/test4"));
+    } catch (Exception ex) {
+
+    }
+    Assert.assertFalse(fs.exists(new Path(failedCopyPath)));
+    Assert.assertTrue(spiedFs.exists(new Path(failedCopyPath.replace("test1/", "test4/"))));
   }
 }
