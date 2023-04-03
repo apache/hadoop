@@ -17,18 +17,12 @@
  */
 package org.apache.hadoop.metrics2.lib;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.metrics2.util.Quantile;
 import org.apache.hadoop.metrics2.util.SampleQuantiles;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.text.DecimalFormat;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 
 /**
@@ -55,12 +49,6 @@ public class MutableInverseQuantiles extends MutableQuantiles{
       new InversePercentile(25), new InversePercentile(10),
       new InversePercentile(5), new InversePercentile(1)};
 
-  private ScheduledFuture<?> scheduledTask;
-
-  private static final ScheduledExecutorService SCHEDULAR = Executors
-      .newScheduledThreadPool(1, new ThreadFactoryBuilder().setDaemon(true)
-          .setNameFormat("MutableInverseQuantiles-%d").build());
-
   /**
    * Instantiates a new {@link MutableInverseQuantiles} for a metric that rolls itself
    * over on the specified time interval.
@@ -69,41 +57,33 @@ public class MutableInverseQuantiles extends MutableQuantiles{
    * @param description   long-form textual description of the metric
    * @param sampleName    type of items in the stream (e.g., "Ops")
    * @param valueName     type of the values
-   * @param intervalSecs rollover interval (in seconds) of the estimator
+   * @param intervalSecs  rollover interval (in seconds) of the estimator
    */
   public MutableInverseQuantiles(String name, String description, String sampleName,
       String valueName, int intervalSecs) {
-    String ucName = StringUtils.capitalize(name);
-    String usName = StringUtils.capitalize(sampleName);
-    String uvName = StringUtils.capitalize(valueName);
-    String desc = StringUtils.uncapitalize(description);
-    String lsName = StringUtils.uncapitalize(sampleName);
-    String lvName = StringUtils.uncapitalize(valueName);
+    super(name, description, sampleName, valueName, intervalSecs);
+  }
 
-    setNumInfo(info(ucName + "Num" + usName, String.format(
-        "Number of %s for %s with %ds interval", lsName, desc, intervalSecs)));
-    // Construct the MetricsInfos for the inverse quantiles, converting to inverse percentiles
+  /**
+   * Sets quantileInfo and estimator.
+   *
+   * @param ucName capitalized name of the metric
+   * @param uvName capitalized type of the values
+   * @param desc uncapitalized long-form textual description of the metric
+   * @param lvName uncapitalized type of the values
+   * @param df Number formatter for inverse percentile value
+   */
+  void setQuantiles(String ucName, String uvName, String desc, String lvName, DecimalFormat df) {
+    // Construct the MetricsInfos for inverse quantiles, converting to inverse percentiles
     setQuantileInfos(INVERSE_QUANTILES.length);
-    DecimalFormat df = new DecimalFormat("###.####");
-    String nameTemplate = "thInversePercentile" + uvName;
-    String descTemplate = " inverse percentile " + lvName + " with " + intervalSecs
-        + " second interval for " + desc;
     for (int i = 0; i < INVERSE_QUANTILES.length; i++) {
       double inversePercentile = 100 * (1 - INVERSE_QUANTILES[i].quantile);
-      addQuantileInfo(i, info(ucName + df.format(inversePercentile) + nameTemplate,
-          df.format(inversePercentile) + descTemplate));
+      String nameTemplate = ucName + df.format(inversePercentile) + "thInversePercentile" + uvName;
+      String descTemplate = df.format(inversePercentile) + " inverse percentile " + lvName
+          + " with " + getInterval() + " second interval for " + desc;
+      addQuantileInfo(i, info(nameTemplate, descTemplate));
     }
 
     setEstimator(new SampleQuantiles(INVERSE_QUANTILES));
-    setInterval(intervalSecs);
-    scheduledTask = SCHEDULAR.scheduleWithFixedDelay(new RolloverSample(this),
-        intervalSecs, intervalSecs, TimeUnit.SECONDS);
-  }
-
-  public void stop() {
-    if (scheduledTask != null) {
-      scheduledTask.cancel(false);
-      scheduledTask = null;
-    }
   }
 }

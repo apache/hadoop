@@ -56,6 +56,7 @@ public class MutableQuantiles extends MutableMetric {
   private MetricsInfo numInfo;
   private MetricsInfo[] quantileInfos;
   private int intervalSecs;
+  private static DecimalFormat decimalFormat = new DecimalFormat("###.####");
 
   private QuantileEstimator estimator;
   private long previousCount = 0;
@@ -91,26 +92,36 @@ public class MutableQuantiles extends MutableMetric {
     String desc = StringUtils.uncapitalize(description);
     String lsName = StringUtils.uncapitalize(sampleName);
     String lvName = StringUtils.uncapitalize(valueName);
-    DecimalFormat df = new DecimalFormat("###.####");
 
+    setInterval(interval);
     setNumInfo(info(ucName + "Num" + usName, String.format(
         "Number of %s for %s with %ds interval", lsName, desc, interval)));
+    scheduledTask = scheduler.scheduleWithFixedDelay(new RolloverSample(this),
+        interval, interval, TimeUnit.SECONDS);
+    setQuantiles(ucName, uvName, desc, lvName, decimalFormat);
+  }
+
+  /**
+   * Sets quantileInfo and estimator.
+   *
+   * @param ucName capitalized name of the metric
+   * @param uvName capitalized type of the values
+   * @param desc uncapitalized long-form textual description of the metric
+   * @param lvName uncapitalized type of the values
+   * @param pDecimalFormat Number formatter for percentile value
+   */
+  void setQuantiles(String ucName, String uvName, String desc, String lvName, DecimalFormat pDecimalFormat) {
     // Construct the MetricsInfos for the quantiles, converting to percentiles
     setQuantileInfos(quantiles.length);
-    String nameTemplate = "thPercentile" + uvName;
-    String descTemplate = " percentile " + lvName + " with " + interval
-        + " second interval for " + desc;
     for (int i = 0; i < quantiles.length; i++) {
       double percentile = 100 * quantiles[i].quantile;
-      addQuantileInfo(i, info(ucName + df.format(percentile) + nameTemplate,
-          df.format(percentile) + descTemplate));
+      String nameTemplate = ucName + pDecimalFormat.format(percentile) + "thPercentile" + uvName;
+      String descTemplate = pDecimalFormat.format(percentile) + " percentile " + lvName
+          + " with " + getInterval() + " second interval for " + desc;
+      addQuantileInfo(i, info(nameTemplate, descTemplate));
     }
 
     setEstimator(new SampleQuantiles(quantiles));
-
-    setInterval(interval);
-    scheduledTask = scheduler.scheduleWithFixedDelay(new RolloverSample(this),
-        interval, interval, TimeUnit.SECONDS);
   }
 
   public MutableQuantiles() {}
@@ -208,7 +219,7 @@ public class MutableQuantiles extends MutableMetric {
    * Runnable used to periodically roll over the internal
    * {@link SampleQuantiles} every interval.
    */
-  static class RolloverSample implements Runnable {
+  private static class RolloverSample implements Runnable {
 
     MutableQuantiles parent;
 
