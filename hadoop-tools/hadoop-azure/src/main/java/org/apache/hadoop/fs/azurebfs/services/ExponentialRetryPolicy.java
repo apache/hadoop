@@ -125,7 +125,9 @@ public class ExponentialRetryPolicy {
 
   /**
    * Returns if a request should be retried based on the retry count, current response,
-   * and the current strategy.
+   * and the current strategy. The valid http status code lies in the range of 1xx-5xx.
+   * But an invalid status code might be set due to network or timeout kind of issues.
+   * Such invalid status code also qualify for retry.
    * HTTP status code 410 qualifies for retry based on
    * https://docs.microsoft.com/en-in/azure/virtual-machines/linux/
    * instance-metadata-service?tabs=windows#errors-and-debugging
