@@ -273,6 +273,20 @@ public abstract class StateStoreFileBaseImpl
     return new QueryResult<>(result, getTime());
   }
 
+  /**
+   * Get the state store record from the given path (path/child) and add the record to the
+   * result list.
+   *
+   * @param clazz Class of the record.
+   * @param result The list of results record. The records would be added to it unless the given
+   * path represents old temp file.
+   * @param path The parent path.
+   * @param child The child path under the parent path. Both path and child completes the file
+   * location for the given record.
+   * @param <T> Record class of the records.
+   * @return Void.
+   * @throws IOException If the file read operation fails.
+   */
   private <T extends BaseRecord> Void getRecordsFromFileAndRemoveOldTmpRecords(Class<T> clazz,
       List<T> result, String path, String child) throws IOException {
     String pathRecord = path + "/" + child;
@@ -442,6 +456,16 @@ public abstract class StateStoreFileBaseImpl
     return success.get();
   }
 
+  /**
+   * Writes the state store record to the file. At first, the record is written to a temp location
+   * and then later renamed to the final location that is passed with the entry key.
+   *
+   * @param success The atomic boolean that gets updated to false if the file write operation fails.
+   * @param entry The entry of the record path and the state store record to be written to the file
+   * by first writing to a temp location and then renaming it to the record path.
+   * @param <T> Record class of the records.
+   * @return Void.
+   */
   private <T extends BaseRecord> Void writeRecordToFile(AtomicBoolean success,
       Entry<String, T> entry) {
     String recordPath = entry.getKey();
