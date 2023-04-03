@@ -24,6 +24,8 @@ import java.net.HttpURLConnection;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.classification.VisibleForTesting;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
+
 /**
  * Retry policy used by AbfsClient.
  * */
@@ -125,7 +127,9 @@ public class ExponentialRetryPolicy {
 
   /**
    * Returns if a request should be retried based on the retry count, current response,
-   * and the current strategy.
+   * and the current strategy. The valid http status code lies in the range of 1xx-5xx.
+   * But an invalid status code might be set due to network or timeout kind of issues.
+   * Such invalid status code also qualify for retry.
    * HTTP status code 410 qualifies for retry based on
    * https://docs.microsoft.com/en-in/azure/virtual-machines/linux/
    * instance-metadata-service?tabs=windows#errors-and-debugging
@@ -136,7 +140,7 @@ public class ExponentialRetryPolicy {
    */
   public boolean shouldRetry(final int retryCount, final int statusCode) {
     return retryCount < this.retryCount
-        && (statusCode == -1
+        && (statusCode < HTTP_CONTINUE
         || statusCode == HttpURLConnection.HTTP_CLIENT_TIMEOUT
         || statusCode == HttpURLConnection.HTTP_GONE
         || statusCode == HTTP_TOO_MANY_REQUESTS

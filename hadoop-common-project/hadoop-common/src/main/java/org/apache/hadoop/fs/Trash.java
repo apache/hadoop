@@ -69,7 +69,7 @@ public class Trash extends Configured {
    * Hence we get the file system of the fully-qualified resolved-path and
    * then move the path p to the trashbin in that volume,
    * @param fs - the filesystem of path p
-   * @param p - the  path being deleted - to be moved to trasg
+   * @param p - the path being deleted - to be moved to trash
    * @param conf - configuration
    * @return false if the item is already in the trash or trash is disabled
    * @throws IOException on error

@@ -65,7 +65,7 @@ public class TestCSMappingPlacementRule {
 
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
-
+  
   private Map<String, Set<String>> userGroups =
       ImmutableMap.<String, Set<String>>builder()
       .put("alice", ImmutableSet.of("p_alice", "unique", "user"))
@@ -85,6 +85,7 @@ public class TestCSMappingPlacementRule {
         .withQueue("root.user.alice")
         .withQueue("root.user.bob")
         .withQueue("root.user.test_dot_user")
+        .withQueue("root.user.testuser")
         .withQueue("root.groups.main_dot_grp")
         .withQueue("root.groups.sec_dot_test_dot_grp")
         .withQueue("root.secondaryTests.unique")
@@ -855,6 +856,46 @@ public class TestCSMappingPlacementRule {
     //Create app, submit to placement engine, expecting queue=testGroup0 (the new primary group)
     engine = initPlacementEngine(cs);
     assertPlace(engine, app, user, "root.man.testGroup0");
+  }
+
+  @Test
+  public void testOriginalUserNameWithDotCanBeUsedInMatchExpression() throws IOException {
+    List<MappingRule> rules = new ArrayList<>();
+    rules.add(
+            new MappingRule(
+                    MappingRuleMatchers.createUserMatcher("test.user"),
+                    (MappingRuleActions.createUpdateDefaultAction("root.user.testuser"))
+                            .setFallbackSkip()));
+    rules.add(new MappingRule(
+            MappingRuleMatchers.createUserMatcher("test.user"),
+            (MappingRuleActions.createPlaceToDefaultAction())
+                    .setFallbackReject()));
+
+    CSMappingPlacementRule engine = setupEngine(true, rules);
+    ApplicationSubmissionContext app = createApp("app");
+    assertPlace(
+            "test.user should be placed to root.user",
+            engine, app, "test.user", "root.user.testuser");
+  }
+
+  @Test
+  public void testOriginalGroupNameWithDotCanBeUsedInMatchExpression() throws IOException {
+    List<MappingRule> rules = new ArrayList<>();
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserGroupMatcher("sec.test.grp"),
+            (MappingRuleActions.createUpdateDefaultAction("root.user.testuser"))
+                .setFallbackSkip()));
+    rules.add(new MappingRule(
+        MappingRuleMatchers.createUserMatcher("test.user"),
+        (MappingRuleActions.createPlaceToDefaultAction())
+            .setFallbackReject()));
+
+    CSMappingPlacementRule engine = setupEngine(true, rules);
+    ApplicationSubmissionContext app = createApp("app");
+    assertPlace(
+        "test.user should be placed to root.user",
+        engine, app, "test.user", "root.user.testuser");
   }
 
   private CSMappingPlacementRule initPlacementEngine(CapacityScheduler cs) throws IOException {

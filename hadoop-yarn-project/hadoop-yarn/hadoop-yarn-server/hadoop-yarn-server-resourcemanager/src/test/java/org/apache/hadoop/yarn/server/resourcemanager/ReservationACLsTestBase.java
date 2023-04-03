@@ -57,7 +57,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
     .allocationfile.AllocationFileQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
     .allocationfile.AllocationFileWriter;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -69,7 +69,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
 
   private final int defaultDuration = 600000;
   private final ReservationRequest defaultRequest = ReservationRequest
-          .newInstance(BuilderUtils.newResource(1024, 1), 1, 1,
+          .newInstance(Resources.createResource(1024), 1, 1,
                   defaultDuration);
   private final ReservationRequests defaultRequests = ReservationRequests
           .newInstance(Collections.singletonList(defaultRequest),

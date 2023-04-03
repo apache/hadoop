@@ -618,7 +618,7 @@ Below are the pre-requiste steps to follow:
 
 ```
 XInclude is supported, so for extra security secrets may be
-kept out of the source tree then referenced through an an XInclude element:
+kept out of the source tree then referenced through an XInclude element:
 
       <include xmlns="http://www.w3.org/2001/XInclude"
         href="/users/self/.secrets/auth-keys.xml" />

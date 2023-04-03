@@ -58,4 +58,16 @@ public class AbfsClientRenameResult {
   public boolean isIncompleteMetadataState() {
     return isIncompleteMetadataState;
   }
+
+  @Override
+  public String toString() {
+    return "AbfsClientRenameResult{"
+            + "op="
+            + op
+            + ", renameRecovered="
+            + renameRecovered
+            + ", isIncompleteMetadataState="
+            + isIncompleteMetadataState
+            + '}';
+  }
 }

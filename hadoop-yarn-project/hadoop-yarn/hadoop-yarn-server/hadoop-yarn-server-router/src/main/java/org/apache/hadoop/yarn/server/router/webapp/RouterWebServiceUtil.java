@@ -111,6 +111,7 @@ public final class RouterWebServiceUtil {
    * @param formParam the form parameters as input for a specific REST call
    * @param additionalParam the query parameters as input for a specific REST
    *          call in case the call has no servlet request
+   * @param conf configuration.
    * @param client same client used to reduce number of clients created
    * @return the retrieved entity from the REST call
    */
@@ -509,6 +510,11 @@ public final class RouterWebServiceUtil {
 
   /**
    * Extract from HttpServletRequest the MediaType in output.
+   *
+   * @param request the servlet request.
+   * @param returnType the return type of the REST call.
+   * @param <T> Generic Type T.
+   * @return MediaType.
    */
   protected static <T> String getMediaTypeFromHttpServletRequest(
       HttpServletRequest request, final Class<T> returnType) {
