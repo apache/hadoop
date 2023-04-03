@@ -48,7 +48,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils.*;
-import static org.apache.hadoop.util.Time.*;
 
 /**
  * StateStoreDriver implementation based on MySQL.
@@ -133,7 +132,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
       throws IOException {
     String tableName = getAndValidateTableNameForClass(clazz);
     verifyDriverReady();
-    long start = monotonicNow();
+    long start = Time.monotonicNow();
     StateStoreMetrics metrics = getMetrics();
     List<T> ret = new ArrayList<>();
     try (Connection connection = connectionFactory.getConnection();
@@ -148,7 +147,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
       }
     } catch (SQLException e) {
       if (metrics != null) {
-        metrics.addFailure(monotonicNow() - start);
+        metrics.addFailure(Time.monotonicNow() - start);
       }
       String msg = "Cannot fetch records for " + clazz.getSimpleName();
       LOG.error(msg, e);
@@ -156,7 +155,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
     }
 
     if (metrics != null) {
-      metrics.addRead(monotonicNow() - start);
+      metrics.addRead(Time.monotonicNow() - start);
     }
     return new QueryResult<>(ret, getTime());
   }
@@ -171,7 +170,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
     verifyDriverReady();
     StateStoreMetrics metrics = getMetrics();
 
-    long start = monotonicNow();
+    long start = Time.monotonicNow();
 
     boolean success = true;
     for (T record : records) {
@@ -193,7 +192,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
             LOG.error("Attempted to insert record {} that already exists "
                 + "in table {} and updates are disallowed.", primaryKey, tableName);
             if (metrics != null) {
-              metrics.addFailure(monotonicNow() - start);
+              metrics.addFailure(Time.monotonicNow() - start);
             }
             return false;
           } else {
@@ -208,7 +207,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
       }
     }
 
-    long end = monotonicNow();
+    long end = Time.monotonicNow();
     if (metrics != null) {
       if (success) {
         metrics.addWrite(end - start);
@@ -277,18 +276,18 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
       if (!success) {
         LOG.error("Cannot remove records {} query {}", clazz, query);
         if (metrics != null) {
-          metrics.addFailure(monotonicNow() - startTimeMs);
+          metrics.addFailure(Time.monotonicNow() - startTimeMs);
         }
       }
     } catch (IOException e) {
       LOG.error("Cannot remove records {} query {}", clazz, query, e);
       if (metrics != null) {
-        metrics.addFailure(monotonicNow() - startTimeMs);
+        metrics.addFailure(Time.monotonicNow() - startTimeMs);
       }
     }
 
     if (removed > 0 && metrics != null) {
-      metrics.addRemove(monotonicNow() - startTimeMs);
+      metrics.addRemove(Time.monotonicNow() - startTimeMs);
     }
     return removed;
   }
