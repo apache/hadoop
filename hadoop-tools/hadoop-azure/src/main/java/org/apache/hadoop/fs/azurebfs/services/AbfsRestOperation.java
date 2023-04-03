@@ -25,6 +25,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -244,7 +245,7 @@ public class AbfsRestOperation {
     AbfsHttpOperation httpOperation = null;
     try {
       // initialize the HTTP request and open the connection
-      httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
+      httpOperation = createHttpOperation();
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
       tracingContext.constructHeader(httpOperation);
 
@@ -329,6 +330,15 @@ public class AbfsRestOperation {
     result = httpOperation;
 
     return true;
+  }
+
+  /**
+   * Creates new object of {@link AbfsHttpOperation} with the url, method, and
+   * requestHeaders fields of the AbfsRestOperation object.
+   */
+  @VisibleForTesting
+  AbfsHttpOperation createHttpOperation() throws IOException {
+    return new AbfsHttpOperation(url, method, requestHeaders);
   }
 
   /**

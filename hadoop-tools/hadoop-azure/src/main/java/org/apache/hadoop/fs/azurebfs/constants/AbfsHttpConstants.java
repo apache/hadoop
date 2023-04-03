@@ -46,6 +46,7 @@ public final class AbfsHttpConstants {
   public static final String DEFAULT_LEASE_BREAK_PERIOD = "0";
   public static final String DEFAULT_TIMEOUT = "90";
   public static final String APPEND_BLOB_TYPE = "appendblob";
+  public static final String BLOCK_BLOB_TYPE = "BlockBlob";
   public static final String TOKEN_VERSION = "2";
 
   public static final String JAVA_VENDOR = "java.vendor";
@@ -90,6 +91,7 @@ public final class AbfsHttpConstants {
   public static final String GMT_TIMEZONE = "GMT";
   public static final String APPLICATION_JSON = "application/json";
   public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
+  public static final String APPLICATION_XML = "application/xml";
 
   public static final String ROOT_PATH = "/";
   public static final String ACCESS_MASK = "mask:";
