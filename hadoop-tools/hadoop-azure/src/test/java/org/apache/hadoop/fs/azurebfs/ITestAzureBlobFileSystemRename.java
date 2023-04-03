@@ -684,4 +684,20 @@ public class ITestAzureBlobFileSystemRename extends
     Assert.assertFalse(fs.exists(new Path(failedCopyPath)));
     Assert.assertTrue(spiedFs.exists(new Path(failedCopyPath.replace("test1/", "test4/"))));
   }
+
+  @Test
+  public void testInvalidJsonForRenamePendingFile() throws  Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    fs.setWorkingDirectory(new Path("/"));
+    fs.mkdirs(new Path("hbase/test1/test2/test3"));
+    fs.create(new Path("hbase/test1/test2/test3/file"));
+    fs.create(new Path("hbase/test1/test2/test3/file1"));
+    FSDataOutputStream outputStream = fs.create(new Path("hbase/test1/test2/test3" + SUFFIX));
+    outputStream.writeChars("{ some wrong json");
+    outputStream.flush();
+    outputStream.close();
+
+    fs.listStatus(new Path("hbase/test1/test2"));
+    Assert.assertFalse(fs.exists(new Path("hbase/test1/test2/test3" + SUFFIX)));
+  }
 }
