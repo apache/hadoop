@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.lang.reflect.Field;
 
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
@@ -83,6 +84,7 @@ public class AbfsConfiguration{
   private final Configuration rawConfig;
   private final String accountName;
   private final boolean isSecure;
+  private PrefixMode prefixMode;
   private static final Logger LOG = LoggerFactory.getLogger(AbfsConfiguration.class);
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
@@ -334,6 +336,14 @@ public class AbfsConfiguration{
 
   public Trilean getIsNamespaceEnabledAccount() {
     return Trilean.getTrilean(isNamespaceEnabledAccount);
+  }
+
+  public PrefixMode getPrefixMode() {
+    return prefixMode;
+  }
+
+  public void setPrefixMode(final PrefixMode prefixMode) {
+    this.prefixMode = prefixMode;
   }
 
   /**
