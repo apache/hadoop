@@ -157,6 +157,15 @@ import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConsta
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_APPLICATIONS;
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CLUSTERMETRICS;
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_QUEUEINFO;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.MOVE_APPLICATION_ACROSS_QUEUES;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_NEW_RESERVATION;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.SUBMIT_RESERVATION;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.LIST_RESERVATIONS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UPDATE_RESERVATION;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.DELETE_RESERVATION;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_NODETOLABELS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_LABELSTONODES;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CLUSTERNODELABELS;
 
 /**
  * Extends the {@code AbstractRequestInterceptorClient} class and provides an
@@ -957,7 +966,7 @@ public class FederationClientInterceptor
       routerMetrics.incrMoveApplicationAcrossQueuesFailedRetrieved();
       String msg = "Missing moveApplicationAcrossQueues request or " +
           "applicationId or target queue.";
-      RouterAuditLogger.logFailure(user.getShortUserName(), GET_QUEUE_USER_ACLS, UNKNOWN,
+      RouterAuditLogger.logFailure(user.getShortUserName(), MOVE_APPLICATION_ACROSS_QUEUES, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg);
     }
@@ -972,7 +981,7 @@ public class FederationClientInterceptor
     } catch (YarnException e) {
       routerMetrics.incrMoveApplicationAcrossQueuesFailedRetrieved();
       String errMsgFormat = "Application %s does not exist in FederationStateStore.";
-      RouterAuditLogger.logFailure(user.getShortUserName(), GET_QUEUE_USER_ACLS, UNKNOWN,
+      RouterAuditLogger.logFailure(user.getShortUserName(), MOVE_APPLICATION_ACROSS_QUEUES, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, String.format(errMsgFormat, applicationId));
       RouterServerUtil.logAndThrowException(e, errMsgFormat, applicationId);
     }
@@ -995,7 +1004,7 @@ public class FederationClientInterceptor
     }
 
     long stopTime = clock.getTime();
-    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_QUEUE_USER_ACLS,
+    RouterAuditLogger.logSuccess(user.getShortUserName(), MOVE_APPLICATION_ACROSS_QUEUES,
         TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
     routerMetrics.succeededMoveApplicationAcrossQueuesRetrieved(stopTime - startTime);
     return response;
@@ -1008,6 +1017,8 @@ public class FederationClientInterceptor
     if (request == null) {
       routerMetrics.incrGetNewReservationFailedRetrieved();
       String errMsg = "Missing getNewReservation request.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_RESERVATION, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, errMsg);
       RouterServerUtil.logAndThrowException(errMsg, null);
     }
 
@@ -1023,16 +1034,23 @@ public class FederationClientInterceptor
         if (response != null) {
           long stopTime = clock.getTime();
           routerMetrics.succeededGetNewReservationRetrieved(stopTime - startTime);
+          RouterAuditLogger.logSuccess(user.getShortUserName(), GET_NEW_RESERVATION,
+              TARGET_CLIENT_RM_SERVICE);
           return response;
         }
       } catch (Exception e) {
-        LOG.warn("Unable to create a new Reservation in SubCluster {}.", subClusterId.getId(), e);
+        String logFormatted = "Unable to create a new Reservation in SubCluster {}.";
+        LOG.warn(logFormatted, subClusterId.getId(), e);
+        RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_RESERVATION, UNKNOWN,
+            TARGET_CLIENT_RM_SERVICE, logFormatted, subClusterId.getId());
         subClustersActive.remove(subClusterId);
       }
     }
 
     routerMetrics.incrGetNewReservationFailedRetrieved();
     String errMsg = "Failed to create a new reservation.";
+    RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_RESERVATION, UNKNOWN,
+        TARGET_CLIENT_RM_SERVICE, errMsg);
     throw new YarnException(errMsg);
   }
 
@@ -1043,9 +1061,11 @@ public class FederationClientInterceptor
     if (request == null || request.getReservationId() == null
         || request.getReservationDefinition() == null || request.getQueue() == null) {
       routerMetrics.incrSubmitReservationFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing submitReservation request or reservationId " +
-          "or reservation definition or queue.", null);
+      String msg = "Missing submitReservation request or reservationId " +
+          "or reservation definition or queue.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_RESERVATION, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
 
     long startTime = clock.getTime();
@@ -1082,6 +1102,8 @@ public class FederationClientInterceptor
           LOG.info("Reservation {} submitted on subCluster {}.", reservationId, subClusterId);
           long stopTime = clock.getTime();
           routerMetrics.succeededSubmitReservationRetrieved(stopTime - startTime);
+          RouterAuditLogger.logSuccess(user.getShortUserName(), SUBMIT_RESERVATION,
+              TARGET_CLIENT_RM_SERVICE);
           return response;
         }
       } catch (Exception e) {
@@ -1091,6 +1113,8 @@ public class FederationClientInterceptor
 
     routerMetrics.incrSubmitReservationFailedRetrieved();
     String msg = String.format("Reservation %s failed to be submitted.", reservationId);
+    RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_RESERVATION, UNKNOWN,
+        TARGET_CLIENT_RM_SERVICE, msg);
     throw new YarnException(msg);
   }
 
@@ -1099,7 +1123,10 @@ public class FederationClientInterceptor
       ReservationListRequest request) throws YarnException, IOException {
     if (request == null || request.getReservationId() == null) {
       routerMetrics.incrListReservationsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing listReservations request.", null);
+      String msg = "Missing listReservations request.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), LIST_RESERVATIONS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("listReservations",
@@ -1108,12 +1135,16 @@ public class FederationClientInterceptor
     try {
       listResponses = invokeConcurrent(remoteMethod, ReservationListResponse.class);
     } catch (Exception ex) {
+      String msg = "Unable to list reservations node due to exception.";
       routerMetrics.incrListReservationsFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Unable to list reservations node due to exception.", ex);
+      RouterAuditLogger.logFailure(user.getShortUserName(), LIST_RESERVATIONS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededListReservationsRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), LIST_RESERVATIONS,
+        TARGET_CLIENT_RM_SERVICE);
     // Merge the ReservationListResponse
     return RouterYarnClientUtils.mergeReservationsList(listResponses);
   }
@@ -1125,8 +1156,10 @@ public class FederationClientInterceptor
     if (request == null || request.getReservationId() == null
         || request.getReservationDefinition() == null) {
       routerMetrics.incrUpdateReservationFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing updateReservation request or reservationId or reservation definition.", null);
+      String msg = "Missing updateReservation request or reservationId or reservation definition.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), UPDATE_RESERVATION, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
 
     long startTime = clock.getTime();
@@ -1139,16 +1172,22 @@ public class FederationClientInterceptor
       if (response != null) {
         long stopTime = clock.getTime();
         routerMetrics.succeededUpdateReservationRetrieved(stopTime - startTime);
+        RouterAuditLogger.logSuccess(user.getShortUserName(), UPDATE_RESERVATION,
+            TARGET_CLIENT_RM_SERVICE);
         return response;
       }
     } catch (Exception ex) {
       routerMetrics.incrUpdateReservationFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Unable to reservation update due to exception.", ex);
+      String msg = "Unable to reservation update due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), UPDATE_RESERVATION, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
 
     routerMetrics.incrUpdateReservationFailedRetrieved();
     String msg = String.format("Reservation %s failed to be update.", reservationId);
+    RouterAuditLogger.logFailure(user.getShortUserName(), UPDATE_RESERVATION, UNKNOWN,
+        TARGET_CLIENT_RM_SERVICE, msg);
     throw new YarnException(msg);
   }
 
@@ -1157,8 +1196,10 @@ public class FederationClientInterceptor
       ReservationDeleteRequest request) throws YarnException, IOException {
     if (request == null || request.getReservationId() == null) {
       routerMetrics.incrDeleteReservationFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing deleteReservation request or reservationId.", null);
+      String msg = "Missing deleteReservation request or reservationId.";
+      RouterServerUtil.logAndThrowException(msg, null);
+      RouterAuditLogger.logFailure(user.getShortUserName(), DELETE_RESERVATION, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
     }
 
     long startTime = clock.getTime();
@@ -1172,16 +1213,22 @@ public class FederationClientInterceptor
         federationFacade.deleteReservationHomeSubCluster(reservationId);
         long stopTime = clock.getTime();
         routerMetrics.succeededDeleteReservationRetrieved(stopTime - startTime);
+        RouterAuditLogger.logSuccess(user.getShortUserName(), DELETE_RESERVATION,
+            TARGET_CLIENT_RM_SERVICE);
         return response;
       }
     } catch (Exception ex) {
       routerMetrics.incrUpdateReservationFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Unable to reservation delete due to exception.", ex);
+      String msg = "Unable to reservation delete due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), DELETE_RESERVATION, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
 
     routerMetrics.incrDeleteReservationFailedRetrieved();
     String msg = String.format("Reservation %s failed to be delete.", reservationId);
+    RouterAuditLogger.logFailure(user.getShortUserName(), DELETE_RESERVATION, UNKNOWN,
+        TARGET_CLIENT_RM_SERVICE, msg);
     throw new YarnException(msg);
   }
 
@@ -1190,20 +1237,28 @@ public class FederationClientInterceptor
       GetNodesToLabelsRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrNodeToLabelsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getNodesToLabels request.", null);
+      String msg = "Missing getNodesToLabels request.";
+      RouterServerUtil.logAndThrowException(msg, null);
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_NODETOLABELS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getNodeToLabels",
-         new Class[] {GetNodesToLabelsRequest.class}, new Object[] {request});
+        new Class[] {GetNodesToLabelsRequest.class}, new Object[] {request});
     Collection<GetNodesToLabelsResponse> clusterNodes = null;
     try {
       clusterNodes = invokeConcurrent(remoteMethod, GetNodesToLabelsResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrNodeToLabelsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get node label due to exception.", ex);
+      String msg = "Unable to get node label due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_NODETOLABELS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetNodeToLabelsRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_NODETOLABELS,
+        TARGET_CLIENT_RM_SERVICE);
     // Merge the NodesToLabelsResponse
     return RouterYarnClientUtils.mergeNodesToLabelsResponse(clusterNodes);
   }
@@ -1213,7 +1268,10 @@ public class FederationClientInterceptor
       GetLabelsToNodesRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getLabelsToNodes request.", null);
+      String msg = "Missing getNodesToLabels request.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_LABELSTONODES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getLabelsToNodes",
@@ -1223,10 +1281,15 @@ public class FederationClientInterceptor
       labelNodes = invokeConcurrent(remoteMethod, GetLabelsToNodesResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get label node due to exception.", ex);
+      String msg = "Unable to get label node due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_LABELSTONODES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetLabelsToNodesRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_LABELSTONODES,
+        TARGET_CLIENT_RM_SERVICE);
     // Merge the LabelsToNodesResponse
     return RouterYarnClientUtils.mergeLabelsToNodes(labelNodes);
   }
@@ -1236,7 +1299,10 @@ public class FederationClientInterceptor
       GetClusterNodeLabelsRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrClusterNodeLabelsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getClusterNodeLabels request.", null);
+      String msg = "Missing getClusterNodeLabels request.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERNODELABELS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getClusterNodeLabels",
@@ -1246,8 +1312,10 @@ public class FederationClientInterceptor
       nodeLabels = invokeConcurrent(remoteMethod, GetClusterNodeLabelsResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrClusterNodeLabelsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get cluster nodeLabels due to exception.",
-          ex);
+      String msg = "Unable to get cluster nodeLabels due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERNODELABELS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetClusterNodeLabelsRetrieved(stopTime - startTime);

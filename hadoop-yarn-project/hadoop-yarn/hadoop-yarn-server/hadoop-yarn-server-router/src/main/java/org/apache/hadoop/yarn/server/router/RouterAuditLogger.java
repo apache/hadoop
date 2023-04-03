@@ -56,6 +56,15 @@ public final class RouterAuditLogger {
     public static final String GET_CLUSTERNODES = "Get ClusterNodes";
     public static final String GET_QUEUEINFO = "Get QueueInfo";
     public static final String GET_QUEUE_USER_ACLS = "Get QueueUserAcls";
+    public static final String MOVE_APPLICATION_ACROSS_QUEUES = "Move ApplicationAcrossQueues";
+    public static final String GET_NEW_RESERVATION = "Get NewReservation";
+    public static final String SUBMIT_RESERVATION = "Submit Reservation";
+    public static final String LIST_RESERVATIONS = "List Reservations";
+    public static final String UPDATE_RESERVATION = "Update Reservation";
+    public static final String DELETE_RESERVATION = "Delete Reservation";
+    public static final String GET_NODETOLABELS = "Get NodeToLabels";
+    public static final String GET_LABELSTONODES = "Get LabelsToNodes";
+    public static final String GET_CLUSTERNODELABELS = "Get ClusterNodeLabels";
   }
 
   public static void logSuccess(String user, String operation, String target) {
