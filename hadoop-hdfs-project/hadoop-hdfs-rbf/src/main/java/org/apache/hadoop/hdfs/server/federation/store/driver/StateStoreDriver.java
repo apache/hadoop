@@ -21,6 +21,7 @@ import java.net.InetAddress;
 import java.util.Collection;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -37,6 +38,7 @@ import org.slf4j.LoggerFactory;
  * the default methods.
  */
 @InterfaceAudience.Public
+@InterfaceStability.Evolving
 public abstract class StateStoreDriver implements StateStoreRecordOperations {
 
   private static final Logger LOG =
