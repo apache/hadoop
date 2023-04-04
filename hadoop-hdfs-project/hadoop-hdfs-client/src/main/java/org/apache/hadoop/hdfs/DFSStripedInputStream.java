@@ -331,15 +331,17 @@ public class DFSStripedInputStream extends DFSInputStream {
    * its ThreadLocal.
    *
    * @param stats striped read stats
+   * @param duration read time metrics             
+   *              
    */
-  void updateReadStats(final StripedBlockUtil.BlockReadStats stats) {
+  void updateReadStats(final StripedBlockUtil.BlockReadStats stats, long duration) {
     if (stats == null) {
       return;
     }
     updateReadStatistics(readStatistics, stats.getBytesRead(),
         stats.isShortCircuit(), stats.getNetworkDistance());
     dfsClient.updateFileSystemReadStats(stats.getNetworkDistance(),
-        stats.getBytesRead());
+        stats.getBytesRead(), duration);
     assert readStatistics.getBlockType() == BlockType.STRIPED;
     dfsClient.updateFileSystemECReadStats(stats.getBytesRead());
   }

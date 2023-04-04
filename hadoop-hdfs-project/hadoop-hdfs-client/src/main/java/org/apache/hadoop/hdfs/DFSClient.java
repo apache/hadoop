@@ -3090,10 +3090,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  void updateFileSystemReadStats(int distance, int nRead) {
+  void updateFileSystemReadStats(int distance, int nRead, long duration) {
     if (stats != null) {
       stats.incrementBytesRead(nRead);
       stats.incrementBytesReadByDistance(distance, nRead);
+      if (distance > 0) {
+        //remote read
+        stats.increaseRemoteBytesReadTime(duration);
+      }
     }
   }
 

@@ -3942,6 +3942,7 @@ public abstract class FileSystem extends Configured
       private volatile long bytesReadDistanceOfThreeOrFour;
       private volatile long bytesReadDistanceOfFiveOrLarger;
       private volatile long bytesReadErasureCoded;
+      private volatile long remoteBytesReadTime;
 
       /**
        * Add another StatisticsData object to this one.
@@ -3959,6 +3960,7 @@ public abstract class FileSystem extends Configured
         this.bytesReadDistanceOfFiveOrLarger +=
             other.bytesReadDistanceOfFiveOrLarger;
         this.bytesReadErasureCoded += other.bytesReadErasureCoded;
+        this.remoteBytesReadTime += other.remoteBytesReadTime;
       }
 
       /**
@@ -3977,6 +3979,7 @@ public abstract class FileSystem extends Configured
         this.bytesReadDistanceOfFiveOrLarger =
             -this.bytesReadDistanceOfFiveOrLarger;
         this.bytesReadErasureCoded = -this.bytesReadErasureCoded;
+        this.remoteBytesReadTime = -this.remoteBytesReadTime;
       }
 
       @Override
@@ -4024,6 +4027,10 @@ public abstract class FileSystem extends Configured
 
       public long getBytesReadErasureCoded() {
         return bytesReadErasureCoded;
+      }
+
+      public long getRemoteBytesReadTime() {
+        return remoteBytesReadTime;
       }
     }
 
@@ -4253,6 +4260,14 @@ public abstract class FileSystem extends Configured
     }
 
     /**
+     * Increment the time taken to read bytes from remote in the statistics.
+     * @param duration time taken to read bytes from remote
+     */
+    public void increaseRemoteBytesReadTime(long duration) {
+      getThreadStatistics().remoteBytesReadTime += duration;
+    }
+    
+    /**
      * Apply the given aggregator to all StatisticsData objects associated with
      * this Statistics object.
      *
@@ -4398,7 +4413,26 @@ public abstract class FileSystem extends Configured
       }
       return bytesRead;
     }
+    
+    /**
+     * Get total time taken for bytes read from remote.
+     * @return time taken for remote bytes read.
+     */
+    public long getRemoteBytesReadTime() {
+      return visitAll(new StatisticsAggregator<Long>() {
+        private long remoteBytesReadTime = 0;
 
+        @Override
+        public void accept(StatisticsData data) {
+          remoteBytesReadTime += data.remoteBytesReadTime;
+        }
+
+        public Long aggregate() {
+          return remoteBytesReadTime;
+        }
+      });
+    }
+    
     /**
      * Get all statistics data.
      * MR or other frameworks can use the method to get all statistics at once.
