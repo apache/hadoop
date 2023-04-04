@@ -1037,8 +1037,8 @@ public final class S3AUtils {
    * be supported. When the option is disabled only disk buffers are allowed to
    * be used as the file size might be bigger than the buffer size that can be
    * allocated.
-   * @param conf
-   * @return
+   * @param conf : configuration object for the given context
+   * @return true if the disk buffer and the multipart settings are supported
    */
   public static boolean checkDiskBuffer(Configuration conf) {
     boolean isMultipartEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,

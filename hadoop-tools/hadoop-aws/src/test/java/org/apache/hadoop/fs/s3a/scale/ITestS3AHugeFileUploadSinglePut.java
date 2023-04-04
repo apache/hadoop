@@ -34,6 +34,7 @@ import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBytes;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_REQUESTS;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 
 /**
  * Test a file upload using a single PUT operation. Multipart uploads will
@@ -67,7 +68,7 @@ public class ITestS3AHugeFileUploadSinglePut extends S3AScaleTestBase{
     //First one being the creation of test/ directory marker
     //Second being the creation of the file with tests3ascale/<file-name>
     //Third being the creation of directory marker tests3ascale/ on the file delete
-    assertEquals(3L,
-        (long) fs.getIOStatistics().counters().get(OBJECT_PUT_REQUESTS.getSymbol()));
+    assertThatStatisticCounter(fs.getIOStatistics(), OBJECT_PUT_REQUESTS.getSymbol())
+        .isEqualTo(3);
   }
 }

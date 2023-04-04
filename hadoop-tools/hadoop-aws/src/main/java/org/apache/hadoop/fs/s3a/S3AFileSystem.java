@@ -415,6 +415,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private ArnResource accessPoint;
 
   /**
+   * Is this S3A FS instance has multipart uploads enabled?
+   */
+  private boolean isMultipartEnabled;
+
+  /**
    * A cache of files that should be deleted when the FileSystem is closed
    * or the JVM is exited.
    */
@@ -533,6 +538,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       this.prefetchBlockSize = (int) prefetchBlockSizeLong;
       this.prefetchBlockCount =
           intOption(conf, PREFETCH_BLOCK_COUNT_KEY, PREFETCH_BLOCK_DEFAULT_COUNT, 1);
+      this.isMultipartEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
+          MULTIPART_UPLOAD_ENABLED_DEFAULT);
 
       initThreadPools(conf);
 
@@ -1831,8 +1838,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         new PutObjectOptions(keep, null, options.getHeaders());
 
     if(!checkDiskBuffer(getConf())){
-      throw new IOException("The filesystem conf is not " +
-          "proper for the output stream");
+      throw new IOException("Unable to create OutputStream with the given"
+          + "multipart upload and buffer configuration.");
     }
 
     final S3ABlockOutputStream.BlockOutputStreamBuilder builder =
@@ -1859,8 +1866,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withPutOptions(putOptions)
         .withIOStatisticsAggregator(
             IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator())
-            .withMultipartEnabled(getConf().getBoolean(
-                MULTIPART_UPLOADS_ENABLED, MULTIPART_UPLOAD_ENABLED_DEFAULT));
+            .withMultipartEnabled(isMultipartEnabled);
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);
