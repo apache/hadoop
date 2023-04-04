@@ -95,12 +95,10 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     testConfig.set(ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
     testConfig.set(MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN, "true");
 
-    testFs.initialize(fs.getUri(),
-        this.getConfiguration().getRawConfiguration());
-    intercept(SASTokenProviderException.class,
-        () -> {
-          testFs.create(new org.apache.hadoop.fs.Path("/testFile"));
-        });
+    intercept(SASTokenProviderException.class, () -> {
+      testFs.initialize(fs.getUri(),
+              this.getConfiguration().getRawConfiguration());
+    });
   }
 
   @Test
@@ -111,11 +109,9 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     Configuration testConfig = this.getConfiguration().getRawConfiguration();
     testConfig.set(ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
 
-    testFs.initialize(fs.getUri(), this.getConfiguration().getRawConfiguration());
-    intercept(SASTokenProviderException.class,
-        ()-> {
-          testFs.create(new org.apache.hadoop.fs.Path("/testFile"));
-        });
+    intercept(SASTokenProviderException.class, () -> {
+      testFs.initialize(fs.getUri(), this.getConfiguration().getRawConfiguration());
+    });
   }
 
   @Test
