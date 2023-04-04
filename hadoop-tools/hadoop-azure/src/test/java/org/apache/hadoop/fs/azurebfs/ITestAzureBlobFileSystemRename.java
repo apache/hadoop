@@ -24,6 +24,7 @@ import java.net.HttpURLConnection;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -871,5 +872,22 @@ public class ITestAzureBlobFileSystemRename extends
     Assert.assertTrue(spiedFs.exists(new Path("test4/test3/file2")));
     Assert.assertTrue(hasBeenCalled[0]);
     Assert.assertTrue(connectionResetThrown[0]);
+  }
+
+  @Test
+  public void testRenameLargeNestedDir() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    String dir = "/";
+    for(int i=0;i<100;i++) {
+      dir += ("dir" + i + "/");
+      fs.mkdirs(new Path(dir));
+    }
+    fs.mkdirs(new Path("/dst"));
+    fs.rename(new Path("/dir0"), new Path("/dst"));
+    dir = "";
+    for(int i=0;i<100;i++) {
+      dir += ("dir" + i + "/");
+      Assert.assertTrue("" + i, fs.exists(new Path("/dst/" + dir)));
+    }
   }
 }
