@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.OutputValidationException;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbortTaskStage;
@@ -64,6 +65,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.validateGeneratedFiles;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.PRINCIPAL;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.STAGE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.ENTRY_WRITER_QUEUE_CAPACITY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.manifestPathForTask;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage.DISABLED;
 import static org.apache.hadoop.security.UserGroupInformation.getCurrentUser;
@@ -443,8 +445,11 @@ public class TestJobThroughManifestCommitter
   @Test
   public void test_0400_loadManifests() throws Throwable {
     describe("Load all manifests; committed must be TA01 and TA10");
+    File entryFile = File.createTempFile("entry", ".seq");
+    LoadManifestsStage.Arguments args = new LoadManifestsStage.Arguments(
+        entryFile, false, InternalConstants.ENTRY_WRITER_QUEUE_CAPACITY);
     LoadManifestsStage.Result result
-        = new LoadManifestsStage(getJobStageConfig()).apply(true);
+        = new LoadManifestsStage(getJobStageConfig()).apply(args);
     String summary = result.getSummary().toString();
     LOG.info("Manifest summary {}", summary);
     List<TaskManifest> manifests = result.getManifests();
@@ -484,7 +489,10 @@ public class TestJobThroughManifestCommitter
     // load manifests stage will load all the task manifests again
     List<TaskManifest> manifests = new LoadManifestsStage(getJobStageConfig())
         .apply(new LoadManifestsStage.Arguments(
-                    File.createTempFile("manifest", ".list"), true)).getManifests();
+            File.createTempFile("manifest", ".list"),
+            true,
+            ENTRY_WRITER_QUEUE_CAPACITY))
+        .getManifests();
     // Now verify their files exist, returning the list of renamed files.
     List<String> committedFiles = new ValidateRenamedFilesStage(getJobStageConfig())
         .apply(manifests)

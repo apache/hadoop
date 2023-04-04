@@ -251,6 +251,7 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
   StageConfig createStageConfig() {
     StageConfig stageConfig = new StageConfig();
     stageConfig
+        .withConfiguration(conf)
         .withIOStatistics(iostatistics)
         .withJobAttemptNumber(jobAttemptNumber)
         .withJobDirectories(dirs)

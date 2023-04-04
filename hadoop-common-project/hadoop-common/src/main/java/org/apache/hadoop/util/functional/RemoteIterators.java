@@ -192,6 +192,20 @@ public final class RemoteIterators {
   }
 
   /**
+   * Wrap an iterator with one which adds a continuation probe.
+   * This allows work to exit fast without complicated breakout logic
+   * @param iterator source
+   * @param continueWork predicate which will trigger a fast halt if it returns false.
+   * @param <S> source type.
+   * @return a new iterator
+   */
+  public static <S> RemoteIterator<S> haltableRemoteIterator(
+      final RemoteIterator<S> iterator,
+      final CallableRaisingIOE<Boolean> continueWork) {
+    return new HaltableRemoteIterator<>(iterator, continueWork);
+  }
+
+  /**
    * Build a list from a RemoteIterator.
    * @param source source iterator
    * @param <T> type
@@ -391,10 +405,12 @@ public final class RemoteIterators {
   /**
    * Wrapper of another remote iterator; IOStatistics
    * and Closeable methods are passed down if implemented.
+   * This class may be subclasses if custom iterators
+   * are needed.
    * @param <S> source type
    * @param <T> type of returned value
    */
-  private static abstract class WrappingRemoteIterator<S, T>
+  public static abstract class WrappingRemoteIterator<S, T>
       implements RemoteIterator<T>, IOStatisticsSource, Closeable {
 
     /**
@@ -715,4 +731,43 @@ public final class RemoteIterators {
       }
     }
   }
+
+  /**
+   * An iterator which allows for a fast exit predicate.
+   * @param <S> source type
+   */
+  private static final class HaltableRemoteIterator<S>
+      extends WrappingRemoteIterator<S, S> {
+
+    private final CallableRaisingIOE<Boolean> continueWork;
+
+
+    /**
+     * Wrap an iterator with one which adds a continuation probe.
+     * @param source source iterator.
+     * @param continueWork predicate which will trigger a fast halt if it returns false.
+     */
+    private HaltableRemoteIterator(
+        final RemoteIterator<S> source,
+        final CallableRaisingIOE<Boolean> continueWork) {
+      super(source);
+      this.continueWork = continueWork;
+    }
+
+    @Override
+    public boolean hasNext() throws IOException {
+      return sourceHasNext();
+    }
+
+    @Override
+    public S next() throws IOException {
+      return sourceNext();
+    }
+
+    @Override
+    protected boolean sourceHasNext() throws IOException {
+      return continueWork.apply() && super.sourceHasNext();
+    }
+  }
+
 }

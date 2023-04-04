@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
@@ -151,6 +152,13 @@ public class StageConfig {
    * Name for logging.
    */
   private String name = "";
+
+  /**
+   * Configuration used where needed.
+   * Default value is a configuration with the normal constructor;
+   * jobs should override this with what was passed down.j
+   */
+  private Configuration conf = new Configuration();
 
   public StageConfig() {
   }
@@ -403,6 +411,24 @@ public class StageConfig {
    */
   public String getName() {
     return name;
+  }
+
+  /**
+   * Set configuration.
+   * @param value new value
+   * @return the builder
+   */
+  public StageConfig withConfiguration(Configuration value) {
+    conf = value;
+    return this;
+  }
+
+  /**
+   * Get configuration.
+   * @return the configuration
+   */
+  public Configuration getConf() {
+    return conf;
   }
 
   /**

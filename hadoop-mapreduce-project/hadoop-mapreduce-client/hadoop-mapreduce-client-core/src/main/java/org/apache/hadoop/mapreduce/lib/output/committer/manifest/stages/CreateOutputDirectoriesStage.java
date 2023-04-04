@@ -21,7 +21,9 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -37,7 +39,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.EntryStatus;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.functional.TaskPool;
 
 import static java.util.Objects.requireNonNull;
@@ -75,16 +76,14 @@ import static org.apache.hadoop.util.OperationDuration.humanTime;
  */
 public class CreateOutputDirectoriesStage extends
     AbstractJobOrTaskStage<
-        List<TaskManifest>,
+        Collection<DirEntry>,
         CreateOutputDirectoriesStage.Result> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       CreateOutputDirectoriesStage.class);
 
   /**
-   * Directories as a map of (path, path).
-   * Using a map rather than any set for efficient concurrency; the
-   * concurrent sets don't do lookups so fast.
+   * Directories as a map of (path, DirMapState).
    */
   private final Map<Path, DirMapState> dirMap = new ConcurrentHashMap<>();
 
@@ -101,20 +100,20 @@ public class CreateOutputDirectoriesStage extends
 
   @Override
   protected Result executeStage(
-      final List<TaskManifest> taskManifests)
+      final Collection<DirEntry> manifestDirs)
       throws IOException {
 
-    final List<Path> directories = createAllDirectories(taskManifests);
+    final List<Path> directories = createAllDirectories(manifestDirs);
     LOG.debug("{}: Created {} directories", getName(), directories.size());
     return new Result(new HashSet<>(directories), dirMap);
   }
 
   /**
-   * For each task, build the list of directories it wants.
-   * @param taskManifests task manifests
+   * Build the list of directories to create.
+   * @param manifestDirs dir entries from the manifests
    * @return the list of paths which have been created.
    */
-  private List<Path> createAllDirectories(final List<TaskManifest> taskManifests)
+  private List<Path> createAllDirectories(final Collection<DirEntry> manifestDirs)
       throws IOException {
 
     // all directories which need to exist across all
@@ -128,32 +127,27 @@ public class CreateOutputDirectoriesStage extends
     // will be created at that path.
     final Set<Path> filesToDelete = new HashSet<>();
 
-    // iterate through the task manifests
-    // and all output dirs into the set of dirs to
-    // create.
-    // hopefully there is a lot of overlap, so the
-    // final number of dirs to create is small.
-    for (TaskManifest task: taskManifests) {
-      final List<DirEntry> destDirectories = task.getDestDirectories();
-      Collections.sort(destDirectories, (o1, o2) ->
-          o1.getLevel() - o2.getLevel());
-      for (DirEntry entry: destDirectories) {
-        // add the dest entry
-        final Path path = entry.getDestPath();
-        if (!leaves.containsKey(path)) {
-          leaves.put(path, entry);
+    // sort the values of dir map by directory level: parent dirs will
+    // come first in the sorting
+    List<DirEntry> destDirectories = new ArrayList<>(manifestDirs);
 
-          // if it is a file to delete, record this.
-          if (entry.getStatus() == EntryStatus.file) {
-            filesToDelete.add(path);
-          }
-          final Path parent = path.getParent();
-          if (parent != null && leaves.containsKey(parent)) {
-            // there's a parent dir, move it from the leaf list
-            // to parent list
-            parents.put(parent,
-                leaves.remove(parent));
-          }
+    Collections.sort(destDirectories, Comparator.comparingInt(DirEntry::getLevel));
+    // iterate through the directory map
+    for (DirEntry entry: destDirectories) {
+      // add the dest entry
+      final Path path = entry.getDestPath();
+      if (!leaves.containsKey(path)) {
+        leaves.put(path, entry);
+
+        // if it is a file to delete, record this.
+        if (entry.getStatus() == EntryStatus.file) {
+          filesToDelete.add(path);
+        }
+        final Path parent = path.getParent();
+        if (parent != null && leaves.containsKey(parent)) {
+          // there's a parent dir, move it from the leaf list
+          // to parent list
+          parents.put(parent, leaves.remove(parent));
         }
       }
     }
@@ -168,7 +162,9 @@ public class CreateOutputDirectoriesStage extends
 
     // Now the real work.
     final int createCount = leaves.size();
-    LOG.info("Preparing {} directory/directories", createCount);
+    LOG.info("Preparing {} directory/directories; {} parent dirs implicitly created",
+        createCount, parents.size());
+
     // now probe for and create the leaf dirs, which are those at the
     // bottom level
     Duration d = measureDurationOfInvocation(getIOStatistics(), OP_CREATE_DIRECTORIES, () ->
@@ -188,7 +184,7 @@ public class CreateOutputDirectoriesStage extends
 
   /**
    * report a single directory failure.
-   * @param path path which could not be deleted
+   * @param dirEntry dir which could not be deleted
    * @param e exception raised.
    */
   private void reportMkDirFailure(DirEntry dirEntry, Exception e) {
@@ -274,8 +270,8 @@ public class CreateOutputDirectoriesStage extends
    * Try to efficiently and robustly create a directory in a method which is
    * expected to be executed in parallel with operations creating
    * peer directories.
-   * @param path path to create
-   * @return true if dir created/found
+   * @param dirEntry dir to create
+   * @return Outcome
    * @throws IOException IO Failure.
    */
   private DirMapState maybeCreateOneDirectory(DirEntry dirEntry) throws IOException {

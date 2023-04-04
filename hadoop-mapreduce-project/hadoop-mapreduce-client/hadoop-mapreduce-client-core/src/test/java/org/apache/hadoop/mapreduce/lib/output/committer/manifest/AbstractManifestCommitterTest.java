@@ -787,6 +787,7 @@ public abstract class AbstractManifestCommitterTest
             jobId, jobAttemptNumber);
     StageConfig config = new StageConfig();
     config
+        .withConfiguration(getConfiguration())
         .withIOProcessors(getSubmitter())
         .withIOStatistics(getStageStatistics())
         .withJobId(jobId)

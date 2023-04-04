@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.LoadedManifestData;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.io.FileUtils.byteCountToDisplaySize;
@@ -44,6 +45,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_LOAD_MANIFESTS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_RENAME_FILES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.MANIFESTS;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.ENTRY_WRITER_QUEUE_CAPACITY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.addHeapInformation;
 
 /**
@@ -80,9 +82,11 @@ public class CommitJobStage extends
     final StageConfig stageConfig = getStageConfig();
     LoadManifestsStage.Result result = new LoadManifestsStage(stageConfig).apply(
         new LoadManifestsStage.Arguments(
-            File.createTempFile("manifest", ".list"), false));
+            File.createTempFile("manifest", ".list"), false,
+            ENTRY_WRITER_QUEUE_CAPACITY));
     List<TaskManifest> manifests = result.getManifests();
     LoadManifestsStage.SummaryInfo summary = result.getSummary();
+    final LoadedManifestData manifestData = result.getLoadedManifestData();
 
     LOG.debug("{}: Job Summary {}", getName(), summary);
     LOG.info("{}: Committing job with file count: {}; total size {} bytes",
@@ -100,7 +104,7 @@ public class CommitJobStage extends
     // prepare destination directories.
     final CreateOutputDirectoriesStage.Result dirStageResults =
         new CreateOutputDirectoriesStage(stageConfig)
-            .apply(manifests);
+            .apply(manifestData.getDirectories());
     addHeapInformation(heapInfo, OP_STAGE_JOB_CREATE_TARGET_DIRS);
 
     // commit all the tasks.

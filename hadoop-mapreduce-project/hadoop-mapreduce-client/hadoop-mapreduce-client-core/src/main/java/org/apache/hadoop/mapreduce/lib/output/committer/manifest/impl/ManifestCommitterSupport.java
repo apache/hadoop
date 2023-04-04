@@ -89,10 +89,7 @@ public final class ManifestCommitterSupport {
     final IOStatisticsStoreBuilder store
         = iostatisticsStore();
 
-    store.withCounters(COUNTER_STATISTICS);
-    store.withMaximums(COUNTER_STATISTICS);
-    store.withMinimums(COUNTER_STATISTICS);
-    store.withMeanStatistics(COUNTER_STATISTICS);
+    store.withSampleTracking(COUNTER_STATISTICS);
     store.withDurationTracking(DURATION_STATISTICS);
     return store;
   }

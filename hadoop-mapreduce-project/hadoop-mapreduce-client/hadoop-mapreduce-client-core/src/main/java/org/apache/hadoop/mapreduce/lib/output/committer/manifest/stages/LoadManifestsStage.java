@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,17 +35,23 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.EntryFileIO;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.LoadedManifestData;
 import org.apache.hadoop.util.functional.TaskPool;
 
 import static org.apache.commons.io.FileUtils.byteCountToDisplaySize;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASK_DIRECTORY_COUNT_MEAN;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASK_FILE_COUNT_MEAN;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASK_MANIFEST_FILE_SIZE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_LOAD_ALL_MANIFESTS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_LOAD_MANIFESTS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.maybeAddIOStatistics;
+import static org.apache.hadoop.util.functional.RemoteIterators.haltableRemoteIterator;
 
 /**
  * Stage to load all the task manifests in the job attempt directory.
@@ -67,10 +74,8 @@ public class LoadManifestsStage extends
    */
   private final SummaryInfo summaryInfo = new SummaryInfo();
 
-  /**
-   * Should manifests be pruned of IOStatistics?
-   */
-  private boolean pruneManifests;
+
+
 
   /**
    * List of loaded manifests.
@@ -82,13 +87,24 @@ public class LoadManifestsStage extends
    */
   private final Map<String, DirEntry> directories = new ConcurrentHashMap<>();
 
+  /**
+   * Writer of entries.
+   */
+  private EntryFileIO.EntryWriter entryWriter;
+
+  /**
+   * Should the manifests be cached and returned?
+   * only for testing.
+   */
+  private boolean cacheManifests;
+
   public LoadManifestsStage(final StageConfig stageConfig) {
     super(false, stageConfig, OP_STAGE_JOB_LOAD_MANIFESTS, true);
   }
 
   /**
    * Load the manifests.
-   * @param prune should manifests be pruned of IOStatistics?
+   * @param arguments stage arguments
    * @return the summary and a list of manifests.
    * @throws IOException IO failure.
    */
@@ -96,26 +112,51 @@ public class LoadManifestsStage extends
   protected LoadManifestsStage.Result executeStage(
       final LoadManifestsStage.Arguments arguments) throws IOException {
 
+    EntryFileIO entryFileIO = new EntryFileIO(getStageConfig().getConf());
+
     final Path manifestDir = getTaskManifestDir();
     LOG.info("{}: Executing Manifest Job Commit with manifests in {}",
         getName(),
         manifestDir);
-    pruneManifests = true;
-    // build a list of all task manifests successfully committed
-    //
-    msync(manifestDir);
-    final RemoteIterator<FileStatus> manifestFiles = listManifests();
+    cacheManifests = arguments.cacheManifests;
 
-    final List<TaskManifest> manifestList = loadAllManifests(manifestFiles);
-    LOG.info("{}: Summary of {} manifests loaded in {}: {}",
-        getName(),
-        manifestList.size(),
-        manifestDir,
-        summaryInfo);
+    final Path entrySequenceFile = arguments.getEntrySequenceFile();
 
-    // collect any stats
-    maybeAddIOStatistics(getIOStatistics(), manifestFiles);
-    return new LoadManifestsStage.Result(summaryInfo, null, manifestList, directories);
+    // the entry writer for queuing data.
+    entryWriter = entryFileIO.launchEntryWriter(
+            entryFileIO.createWriter(entrySequenceFile),
+            arguments.queueCapacity);
+    try {
+
+      // sync fs before the listj
+      msync(manifestDir);
+
+      // build a list of all task manifests successfully committed,
+      // which will break out if the writing is stopped (due to any failure)
+      final RemoteIterator<FileStatus> manifestFiles =
+          haltableRemoteIterator(listManifests(), () -> entryWriter.isActive());
+
+      final List<TaskManifest> manifestList = loadAllManifests(manifestFiles);
+      LOG.info("{}: Summary of {} manifests loaded in {}: {}",
+          getName(),
+          manifestList.size(),
+          manifestDir,
+          summaryInfo);
+
+      // close cleanly
+      entryWriter.close();
+
+      // collect any stats
+      maybeAddIOStatistics(getIOStatistics(), manifestFiles);
+    } finally {
+      entryWriter.close();
+    }
+    final LoadedManifestData loadedManifestData = new LoadedManifestData(
+        new ArrayList<>(directories.values()),  // new array to free up the map
+        entrySequenceFile,
+        entryWriter.getCount());
+
+    return new LoadManifestsStage.Result(summaryInfo, loadedManifestData, null);
   }
 
   /**
@@ -147,32 +188,55 @@ public class LoadManifestsStage extends
     TaskManifest m = fetchTaskManifest(status);
     progress();
 
-    // update the manifest list in a synchronized block.
+    // update the directories
+    coalesceDirectories(m);
 
-    synchronized (manifests) {
-      manifests.add(m);
-      // and the summary info in the same block, to
-      // eliminate the need to acquire a second lock.
-      summaryInfo.add(m);
-    }
-    if (pruneManifests) {
+    // queue those files.
+    entryWriter.enqueue(m.getFilesToCommit());
+
+    // add to the summary.
+    summaryInfo.add(m);
+
+    // if manifests are cached, clear extra data
+    // and then save.
+    if (cacheManifests) {
       m.setIOStatistics(null);
       m.getExtraData().clear();
+      // update the manifest list in a synchronized block.
+      synchronized (manifests) {
+        manifests.add(m);
+      }
     }
+
+
   }
 
   /**
    * Coalesce all directories and clear the entry in the manifest.
-   * @param manifest manifest
+   * There's only ever one writer at a time, which it is hoped reduces
+   * contention. before the lock is acquired: if there are no new directories,
+   * the write lock is never needed.
+   * @param manifest manifest to process
    */
-  private void coalesceDirectories(TaskManifest manifest) {
-    final List<DirEntry> destDirectories = manifest.getDestDirectories();
-    synchronized (directories) {
-      destDirectories.forEach(entry -> {
-        directories.putIfAbsent(entry.getDir(), entry);
-      });
+  private void coalesceDirectories(final TaskManifest manifest) {
+
+    // build a list of dirs to create.
+    // this scans the map
+    final List<DirEntry> toCreate = manifest.getDestDirectories().stream()
+        .filter(e -> !directories.containsKey(e))
+        .collect(Collectors.toList());
+    if (!toCreate.isEmpty()) {
+      // need to add more directories;
+      // still a possibility that they may be created between the
+      // filtering and this thread having the write lock.
+
+      synchronized (directories) {
+        toCreate.forEach(entry -> {
+          directories.putIfAbsent(entry.getDir(), entry);
+        });
+      }
     }
-    manifest.getDestDirectories().clear();
+
   }
 
   /**
@@ -196,9 +260,13 @@ public class LoadManifestsStage extends
     final long size = manifest.getTotalFileSize();
     LOG.info("{}: Task Attempt {} file {}: File count: {}; data size={}",
         getName(), id, status.getPath(), filecount, size);
-    // record file size for tracking of memory consumption.
-    getIOStatistics().addMeanStatisticSample(COMMITTER_TASK_MANIFEST_FILE_SIZE,
-        status.getLen());
+
+    // record file size for tracking of memory consumption, work etc.
+    final IOStatisticsStore iostats = getIOStatistics();
+    iostats.addSample(COMMITTER_TASK_MANIFEST_FILE_SIZE, status.getLen());
+    iostats.addSample(COMMITTER_TASK_FILE_COUNT_MEAN, filecount);
+    iostats.addSample(COMMITTER_TASK_DIRECTORY_COUNT_MEAN,
+        manifest.getDestDirectories().size());
     return manifest;
   }
 
@@ -209,16 +277,29 @@ public class LoadManifestsStage extends
     /**
      * File where the listing has been saved.
      */
-    private final File renameListFile;
+    private final File entrySequenceFile;
 
     /**
      * build a list of manifests and return them?
      */
     private final boolean cacheManifests;
 
-    public Arguments(final File renameListFile, final boolean cacheManifests) {
-      this.renameListFile = renameListFile;
+    /**
+     * Capacity for queue between manifest loader and the writers.
+     */
+    private final int queueCapacity;
+
+    public Arguments(final File entrySequenceFile,
+        final boolean cacheManifests,
+        final int queueCapacity) {
+      this.entrySequenceFile = entrySequenceFile;
       this.cacheManifests = cacheManifests;
+      this.queueCapacity = queueCapacity;
+    }
+
+    private Path getEntrySequenceFile() {
+      return new Path(entrySequenceFile.toURI());
+
     }
   }
 
@@ -229,26 +310,21 @@ public class LoadManifestsStage extends
     private final SummaryInfo summary;
 
     /**
-     * File where the listing has been saved.
-     */
-    private final File renameListFile;
-
-    /**
      * manifest list, non-null only if cacheManifests is true.
      */
     private final List<TaskManifest> manifests;
 
     /**
-     * Map of directories.
+     * Output of this stage to pass on to the subsequence stages.
      */
-    private final Map<String, DirEntry> directories;
+    private final LoadedManifestData loadedManifestData;
 
     public Result(SummaryInfo summary,
-        final File renameListFile, List<TaskManifest> manifests, final Map<String, DirEntry> directories) {
+        final LoadedManifestData loadedManifestData,
+        final List<TaskManifest> manifests) {
       this.summary = summary;
-      this.renameListFile = renameListFile;
       this.manifests = manifests;
-      this.directories = directories;
+      this.loadedManifestData = loadedManifestData;
     }
 
     public SummaryInfo getSummary() {
@@ -259,6 +335,9 @@ public class LoadManifestsStage extends
       return manifests;
     }
 
+    public LoadedManifestData getLoadedManifestData() {
+      return loadedManifestData;
+    }
   }
 
   /**
@@ -269,7 +348,12 @@ public class LoadManifestsStage extends
     /**
      * Aggregate IOStatistics.
      */
-    private IOStatisticsSnapshot iostatistics = snapshotIOStatistics();
+    private final IOStatisticsSnapshot iostatistics = snapshotIOStatistics();
+
+    /**
+     * Task IDs.
+     */
+    private final List<String> taskIDs = new ArrayList<>();
 
     /**
      * How many manifests were loaded.
@@ -319,16 +403,21 @@ public class LoadManifestsStage extends
       return manifestCount;
     }
 
+    public List<String> getTaskIDs() {
+      return taskIDs;
+    }
+
     /**
-     * Add all statistics.
+     * Add all statistics; synchronized.
      * @param manifest manifest to add.
      */
-    public void add(TaskManifest manifest) {
+    public synchronized void add(TaskManifest manifest) {
       manifestCount++;
       iostatistics.aggregate(manifest.getIOStatistics());
       fileCount += manifest.getFilesToCommit().size();
       directoryCount += manifest.getDestDirectories().size();
       totalFileSize += manifest.getTotalFileSize();
+      taskIDs.add(manifest.getTaskID());
     }
 
     /**

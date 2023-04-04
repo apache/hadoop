@@ -18,11 +18,9 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
-import java.util.HashMap;
+import java.io.File;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -31,10 +29,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestPrinter;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CreateOutputDirectoriesStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.LoadManifestsStage;
@@ -63,6 +60,8 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
 
   private int taskAttemptCount;
 
+  private File entryFile;
+
   /**
    * How many task attempts to make?
    * Override point.
@@ -81,9 +80,17 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
         .isGreaterThan(0);
   }
 
+  @Override
+  public void teardown() throws Exception {
+    if (entryFile != null) {
+      entryFile.delete();
+    }
+    super.teardown();
+  }
+
   public long heapSize() {
-       return Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-   }
+    return Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+  }
 
   /**
    * Build a large number of manifests, but without the real files
@@ -123,16 +130,16 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     // Load in the manifests
     LoadManifestsStage stage = new LoadManifestsStage(
         stageConfig);
-
-    LoadManifestsStage.Result result = stage.apply(true);
+    entryFile = File.createTempFile("entry", ".seq");
+    LoadManifestsStage.Arguments args = new LoadManifestsStage.Arguments(
+        entryFile, false, InternalConstants.ENTRY_WRITER_QUEUE_CAPACITY);
+    LoadManifestsStage.Result result = stage.apply(args);
     LoadManifestsStage.SummaryInfo summary = result.getSummary();
-    List<TaskManifest> loadedManifests = result.getManifests();
 
     LOG.info("\nJob statistics after loading {}",
         ioStatisticsToPrettyString(getStageStatistics()));
     LOG.info("Heap size = {}", heapSize());
     addHeapInformation(heapInfo, "load.manifests");
-
 
 
     Assertions.assertThat(summary.getManifestCount())
@@ -147,9 +154,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
 
 
     // now that manifest list.
-    List<String> manifestTaskIds = loadedManifests.stream()
-        .map(TaskManifest::getTaskID)
-        .collect(Collectors.toList());
+    List<String> manifestTaskIds = summary.getTaskIDs();
     Assertions.assertThat(getTaskIds())
         .describedAs("Task IDs of all tasks")
         .containsExactlyInAnyOrderElementsOf(manifestTaskIds);
@@ -157,7 +162,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     // now let's see about aggregating a large set of directories
     Set<Path> createdDirectories = new CreateOutputDirectoriesStage(
         stageConfig)
-        .apply(loadedManifests)
+        .apply(result.getLoadedManifestData().getDirectories())
         .getCreatedDirectories();
     addHeapInformation(heapInfo, "create.directories");
 
@@ -187,8 +192,8 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     success.save(summaryFS, path, true);
     LOG.info("Saved summary to {}", path);
     ManifestPrinter showManifest = new ManifestPrinter();
-        ManifestSuccessData manifestSuccessData =
-            showManifest.loadAndPrintManifest(summaryFS, path);
+    ManifestSuccessData manifestSuccessData =
+        showManifest.loadAndPrintManifest(summaryFS, path);
   }
 
 }

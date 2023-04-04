@@ -40,6 +40,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  */
 @InterfaceAudience.Private
 public final class InternalConstants {
+
   private InternalConstants() {
   }
 
@@ -127,4 +128,16 @@ public final class InternalConstants {
   /** Schemas of filesystems we know to not work with this committer. */
   public static final Set<String> UNSUPPORTED_FS_SCHEMAS =
       ImmutableSet.of("s3a", "wasb");
+
+  /**
+   * Queue capacity between task manifest loading an entry file writer.
+   * If more than this number of manifest lists are waiting to be written,
+   * the enqueue is blocking.
+   * There's an expectation that writing to the local file is a lot faster
+   * than the parallelized buffer reads, therefore that this queue can
+   * be emptied at the same rate it is filled.
+   * Value {@value}.
+   */
+  public static final int ENTRY_WRITER_QUEUE_CAPACITY = 32;
+
 }
