@@ -973,15 +973,21 @@ public class AbfsClient implements Closeable {
     List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     requestHeaders.add(new AbfsHttpHeader(X_MS_COPY_SOURCE, sourcePathUrl));
 
-    final AbfsRestOperation op = new AbfsRestOperation(
+    final AbfsRestOperation op = getCopyBlobOperation(url, requestHeaders);
+    op.execute(tracingContext);
+
+    return op;
+  }
+
+  @org.apache.hadoop.classification.VisibleForTesting
+  AbfsRestOperation getCopyBlobOperation(final URL url,
+      final List<AbfsHttpHeader> requestHeaders) {
+    return new AbfsRestOperation(
         AbfsRestOperationType.CopyBlob,
         this,
         HTTP_METHOD_PUT,
         url,
         requestHeaders);
-    op.execute(tracingContext);
-
-    return op;
   }
 
   /**

@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -41,9 +42,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationTestUtil;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
 import static org.apache.hadoop.fs.azurebfs.RenameAtomicityUtils.SUFFIX;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
@@ -795,5 +802,51 @@ public class ITestAzureBlobFileSystemRename extends
     Assert.assertTrue(deletedCount.get() == 2);
     Assert.assertFalse(spiedFsForListPath.exists(new Path(srcDir)));
     Assert.assertTrue(spiedFsForListPath.getFileStatus(new Path(srcDir.replace("test1/test2/test3", "test4/test3/"))).isDirectory());
+  }
+
+  @Test
+  public void testRenameBlobIdempotency() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    String srcDir = "/test1/test2/test3";
+    fs.mkdirs(new Path(srcDir));
+    fs.create(new Path(srcDir, "file1"));
+    fs.create(new Path(srcDir, "file2"));
+
+    fs.mkdirs(new Path("/test4"));
+
+    final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
+    final AzureBlobFileSystemStore spiedStore = Mockito.spy(fs.getAbfsStore());
+    spiedFs.setAbfsStore(spiedStore);
+    final AbfsClient spiedClient = Mockito.spy(fs.getAbfsClient());
+    spiedStore.setClient(spiedClient);
+
+    /*
+    * First call to copyBlob for file1 will fail with connection-reset, but the
+    * backend has got the call. Retry of that API would give 409 error.
+    */
+    AbfsClientTestUtil.setMockAbfsRestOperationForCopyBlobOperation(spiedClient, (spiedRestOp, actualCallMakerOp) -> {
+      boolean[] hasBeenCalled = new boolean[1];
+      hasBeenCalled[0] = false;
+      Mockito.doAnswer(answer -> {
+        if(spiedRestOp.getUrl().toString().contains("file1") && !hasBeenCalled[0]) {
+          hasBeenCalled[0] = true;
+          actualCallMakerOp.execute(answer.getArgument(0));
+          AbfsRestOperationTestUtil.addAbfsHttpOpProcessResponseMock(spiedRestOp, (mockAbfsHttpOp) -> {
+            Mockito.doThrow(new SocketException("connection-reset")).when(mockAbfsHttpOp)
+                .sendRequest(Mockito.any(byte[].class), Mockito.anyInt(), Mockito.anyInt());
+            return mockAbfsHttpOp;
+          });
+          Mockito.doCallRealMethod().when(spiedRestOp).execute(Mockito.any(TracingContext.class));
+          spiedRestOp.execute(answer.getArgument(0));
+          return spiedRestOp;
+        } else {
+          actualCallMakerOp.execute(answer.getArgument(0));
+          return actualCallMakerOp;
+        }
+      }).when(spiedRestOp).execute(Mockito.any(TracingContext.class));
+      return spiedRestOp;
+    });
+
+    spiedFs.rename(new Path(srcDir), new Path("/test4"));
   }
 }

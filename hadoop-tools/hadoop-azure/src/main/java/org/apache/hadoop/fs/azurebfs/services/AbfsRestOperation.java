@@ -28,6 +28,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -244,7 +245,7 @@ public class AbfsRestOperation {
     AbfsHttpOperation httpOperation = null;
     try {
       // initialize the HTTP request and open the connection
-      httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
+      httpOperation = createNewHttpOperation();
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
       tracingContext.constructHeader(httpOperation);
 
@@ -329,6 +330,16 @@ public class AbfsRestOperation {
     result = httpOperation;
 
     return true;
+  }
+
+  @VisibleForTesting
+  AbfsHttpOperation createNewHttpOperation() throws IOException {
+    return new AbfsHttpOperation(url, method, requestHeaders);
+  }
+
+  @VisibleForTesting
+  String getMethod() {
+    return method;
   }
 
   /**
