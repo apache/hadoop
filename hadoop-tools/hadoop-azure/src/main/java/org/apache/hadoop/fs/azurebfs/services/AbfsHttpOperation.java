@@ -34,6 +34,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.BlobList;
 import org.apache.hadoop.fs.azurebfs.BlobListXmlParser;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
@@ -480,6 +481,11 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public void setRequestProperty(String key, String value) {
     this.connection.setRequestProperty(key, value);
+  }
+
+  @VisibleForTesting
+  void setConnection(HttpURLConnection connection) {
+    this.connection = connection;
   }
 
   /**

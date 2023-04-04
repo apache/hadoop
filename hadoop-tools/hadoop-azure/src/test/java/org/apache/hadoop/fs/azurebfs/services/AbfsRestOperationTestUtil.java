@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.mockito.Mockito;
 
+import org.apache.hadoop.util.functional.BiFunctionRaisingIOE;
 import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
 public final class AbfsRestOperationTestUtil {
@@ -31,13 +32,19 @@ public final class AbfsRestOperationTestUtil {
   }
 
   public static void addAbfsHttpOpProcessResponseMock(final AbfsRestOperation spiedRestOp,
-      FunctionRaisingIOE<AbfsHttpOperation, AbfsHttpOperation> functionRaisingIOE)
+      BiFunctionRaisingIOE<AbfsHttpOperation, AbfsHttpOperation, AbfsHttpOperation> functionRaisingIOE)
       throws IOException {
     Mockito.doAnswer(answer -> {
       AbfsHttpOperation op = new AbfsHttpOperation(spiedRestOp.getUrl(),
           spiedRestOp.getMethod(), spiedRestOp.getRequestHeaders());
+      AbfsHttpOperation actualOp = new AbfsHttpOperation(spiedRestOp.getUrl(),
+          spiedRestOp.getMethod(), spiedRestOp.getRequestHeaders());
       AbfsHttpOperation spiedOp = Mockito.spy(op);
-      return functionRaisingIOE.apply(spiedOp);
+      return functionRaisingIOE.apply(spiedOp, actualOp);
     }).when(spiedRestOp).createNewHttpOperation();
+  }
+
+  public static void setResult(final AbfsRestOperation op, final AbfsHttpOperation result) {
+    op.setResult(result);
   }
 }

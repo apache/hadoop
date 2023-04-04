@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOpTestUtil;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationTestUtil;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
@@ -831,9 +832,21 @@ public class ITestAzureBlobFileSystemRename extends
         if(spiedRestOp.getUrl().toString().contains("file1") && !hasBeenCalled[0]) {
           hasBeenCalled[0] = true;
           actualCallMakerOp.execute(answer.getArgument(0));
-          AbfsRestOperationTestUtil.addAbfsHttpOpProcessResponseMock(spiedRestOp, (mockAbfsHttpOp) -> {
-            Mockito.doThrow(new SocketException("connection-reset")).when(mockAbfsHttpOp)
-                .sendRequest(Mockito.any(byte[].class), Mockito.anyInt(), Mockito.anyInt());
+          boolean[] connectionResetThrown = new boolean[1];
+          connectionResetThrown[0] = false;
+          AbfsRestOperationTestUtil.addAbfsHttpOpProcessResponseMock(spiedRestOp, (mockAbfsHttpOp, actualAbfsHttpOp) -> {
+            Mockito.doAnswer(sendRequestAnswer -> {
+              if(!connectionResetThrown[0]) {
+                connectionResetThrown[0] = true;
+                throw new SocketException("connection-reset");
+              }
+              spiedRestOp.signRequest(actualAbfsHttpOp, sendRequestAnswer.getArgument(2));
+              actualAbfsHttpOp.sendRequest(sendRequestAnswer.getArgument(0), sendRequestAnswer.getArgument(1), sendRequestAnswer.getArgument(2));
+              AbfsHttpOpTestUtil.setConnection(mockAbfsHttpOp, actualAbfsHttpOp);
+              return mockAbfsHttpOp;
+            }).when(mockAbfsHttpOp)
+                .sendRequest(Mockito.nullable(byte[].class), Mockito.anyInt(), Mockito.anyInt());
+
             return mockAbfsHttpOp;
           });
           Mockito.doCallRealMethod().when(spiedRestOp).execute(Mockito.any(TracingContext.class));
@@ -841,6 +854,7 @@ public class ITestAzureBlobFileSystemRename extends
           return spiedRestOp;
         } else {
           actualCallMakerOp.execute(answer.getArgument(0));
+          AbfsRestOperationTestUtil.setResult(spiedRestOp, actualCallMakerOp.getResult());
           return actualCallMakerOp;
         }
       }).when(spiedRestOp).execute(Mockito.any(TracingContext.class));
