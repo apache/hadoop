@@ -552,6 +552,10 @@ public class TestMountTableResolver {
 
     assertEquals(100000, mountTable.getMountPoints("/").size());
     assertEquals(100000, mountTable.getMounts("/").size());
+    for (int i = 0; i < 20; i++) {
+      mountTable.getDestinationForPath("/" + i);
+    }
+    assertEquals(TEST_MAX_CACHE_SIZE, mountTable.getCacheSize());
 
     // Add 1000 entries in deep list
     mountTable.refreshEntries(emptyList);

@@ -678,11 +678,16 @@ public class MountTableResolver
    * @return Size of the cache.
    * @throws IOException If the cache is not initialized.
    */
-  protected long getCacheSize() throws IOException{
-    if (this.locationCache != null) {
-      return this.locationCache.size();
+  protected long getCacheSize() throws IOException {
+    this.readLock.lock();
+    try {
+      if (this.locationCache != null) {
+        return this.locationCache.size();
+      }
+      throw new IOException("localCache is null");
+    } finally {
+      this.readLock.unlock();
     }
-    throw new IOException("localCache is null");
   }
 
   @VisibleForTesting
