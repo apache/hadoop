@@ -262,6 +262,14 @@ public class AzureBlobFileSystem extends FileSystem
     listener = listener1;
   }
 
+  public boolean isNamespaceEnabled() {
+    return isNamespaceEnabled;
+  }
+
+  public PrefixMode getPrefixMode() {
+    return prefixMode;
+  }
+
   @Override
   public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
     LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path, bufferSize);

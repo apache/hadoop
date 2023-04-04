@@ -34,6 +34,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DNS_PREFIX;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.WASB_DNS_PREFIX;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -118,12 +120,15 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     rawConfig
         .setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
     rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
-        getNonExistingUrl());
+        getNonExistingUrl(isNamespaceEnabledAccount));
     return (AzureBlobFileSystem) FileSystem.get(rawConfig);
   }
 
-  private String getNonExistingUrl() {
+  private String getNonExistingUrl(String isNamespaceEnabled) {
     String testUri = this.getTestUrl();
+    if (Boolean.parseBoolean(isNamespaceEnabled)) {
+      testUri = testUri.replace(WASB_DNS_PREFIX, ABFS_DNS_PREFIX);
+    }
     return getAbfsScheme() + "://" + UUID.randomUUID() + testUri
         .substring(testUri.indexOf("@"));
   }

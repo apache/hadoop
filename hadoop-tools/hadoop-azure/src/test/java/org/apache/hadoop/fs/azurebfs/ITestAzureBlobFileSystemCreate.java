@@ -178,7 +178,7 @@ public class ITestAzureBlobFileSystemCreate extends
       out.write('2');
       out.hsync();
       fail("Expected a failure");
-    } catch (FileNotFoundException fnfe) {
+    } catch (IOException fnfe) {
       //appendblob outputStream does not generate suppressed exception on close as it is
       //single threaded code
       if (!fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testPath).toString())) {
@@ -396,6 +396,21 @@ public class ITestAzureBlobFileSystemCreate extends
             isNamespaceEnabled ? any(String.class) : eq(null),
             any(boolean.class), eq(null), any(TracingContext.class));
 
+    // mock for overwrite=false
+    doThrow(conflictResponseEx) // Scn1: GFS fails with Http404
+            .doThrow(conflictResponseEx) // Scn2: GFS fails with Http500
+            .doThrow(
+                    conflictResponseEx) // Scn3: create overwrite=true fails with Http412
+            .doThrow(
+                    conflictResponseEx) // Scn4: create overwrite=true fails with Http500
+            .doThrow(
+                    serverErrorResponseEx) // Scn5: create overwrite=false fails with Http500
+            .when(mockClient)
+            .createPathBlob(any(String.class), eq(true), eq(false),
+                    any(), isNamespaceEnabled ? any(String.class) : eq(null),
+                    isNamespaceEnabled ? any(String.class) : eq(null),
+                    eq(null), any(TracingContext.class));
+
     doThrow(fileNotFoundResponseEx) // Scn1: GFS fails with Http404
         .doThrow(serverErrorResponseEx) // Scn2: GFS fails with Http500
         .doReturn(successOp) // Scn3: create overwrite=true fails with Http412
@@ -405,14 +420,25 @@ public class ITestAzureBlobFileSystemCreate extends
 
     // mock for overwrite=true
     doThrow(
-        preConditionResponseEx) // Scn3: create overwrite=true fails with Http412
-        .doThrow(
-            serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
-        .when(mockClient)
-        .createPath(any(String.class), eq(true), eq(true),
-            isNamespaceEnabled ? any(String.class) : eq(null),
-            isNamespaceEnabled ? any(String.class) : eq(null),
-            any(boolean.class), eq(null), any(TracingContext.class));
+            preConditionResponseEx) // Scn3: create overwrite=true fails with Http412
+            .doThrow(
+                    serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
+            .when(mockClient)
+            .createPathBlob(any(String.class), eq(true), eq(true),
+                    any(), isNamespaceEnabled ? any(String.class) : eq(null),
+                    isNamespaceEnabled ? any(String.class) : eq(null),
+                    eq(null), any(TracingContext.class));
+
+    // mock for overwrite=true
+    doThrow(
+            preConditionResponseEx) // Scn3: create overwrite=true fails with Http412
+            .doThrow(
+                    serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
+            .when(mockClient)
+            .createPath(any(String.class), eq(true), eq(true),
+                    isNamespaceEnabled ? any(String.class) : eq(null),
+                    isNamespaceEnabled ? any(String.class) : eq(null),
+                    any(boolean.class), eq(null), any(TracingContext.class));
 
     // Scn1: GFS fails with Http404
     // Sequence of events expected:

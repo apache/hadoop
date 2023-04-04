@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.contract;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractEtagTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.junit.Assume;
 
 /**
  * Contract test for etag support.
@@ -38,6 +39,7 @@ public class ITestAbfsFileSystemContractEtag extends AbstractContractEtagTest {
   public void setup() throws Exception {
     binding.setup();
     super.setup();
+    Assume.assumeTrue(binding.getFileSystem().isNamespaceEnabled());
     // Base rename contract test class re-uses the test folder
     // This leads to failures when the test is re-run as same ABFS test
     // containers are re-used for test run and creation of source and
