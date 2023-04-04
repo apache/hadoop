@@ -850,8 +850,23 @@ public abstract class AbstractFileSystem implements PathCapabilities {
       FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, UnresolvedLinkException, IOException {
     // Default implementation deals with overwrite in a non-atomic way
-    final FileStatus srcStatus = getFileLinkStatus(src);
+    if (checkIfCanRename(src, dst, overwrite)) {
+      delete(dst, false);
+    }
+    renameInternal(src, dst);
+  }
 
+  /**
+   * Check if the given rename can proceed and return true if the destination directory or file needs
+   * to be deleted for the rename to proceed.
+   * @param src source of the file
+   * @param dst dst of the rename
+   * @param overwrite if overwrite is allowed
+   * @return a boolean reflecting if the dst needs to be deleted
+   * @throws IOException
+   */
+  public boolean checkIfCanRename(Path src, Path dst, boolean overwrite) throws IOException {
+    final FileStatus srcStatus = getFileLinkStatus(src);
     FileStatus dstStatus;
     try {
       dstStatus = getFileLinkStatus(dst);
@@ -884,16 +899,15 @@ public abstract class AbstractFileSystem implements PathCapabilities {
               "Rename cannot overwrite non empty destination directory " + dst);
         }
       }
-      delete(dst, false);
+      return true;
     } else {
       final Path parent = dst.getParent();
       final FileStatus parentStatus = getFileStatus(parent);
       if (parentStatus.isFile()) {
-        throw new ParentNotDirectoryException("Rename destination parent "
-            + parent + " is a file.");
+        throw new ParentNotDirectoryException("Rename destination parent " + parent + " is a file.");
       }
     }
-    renameInternal(src, dst);
+    return false;
   }
   
   /**

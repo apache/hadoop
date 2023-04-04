@@ -1255,4 +1255,10 @@ public final class Constants {
    */
   public static final String PREFETCH_BLOCK_COUNT_KEY = "fs.s3a.prefetch.block.count";
   public static final int PREFETCH_BLOCK_DEFAULT_COUNT = 8;
+
+  /**
+   * Create a fake parent directory on deletes
+   */
+  public static final String CREATE_FAKE_PARENT_DIRECTORY = "fs.s3a.create.fake.parent.directory";
+  public static final boolean CREATE_FAKE_PARENT_DIRECTORY_DEFAULT = true;
 }

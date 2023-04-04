@@ -38,6 +38,7 @@ public class ITestS3AEmptyDirectory extends AbstractS3ATestBase {
 
     // 1. set up non-empty dir
     Path dir = path("testEmptyDir");
+    // add a rm of dir to guarantee its not there
     Path child = path("testEmptyDir/dir2");
     mkdirs(child);
 
@@ -47,7 +48,7 @@ public class ITestS3AEmptyDirectory extends AbstractS3ATestBase {
     // 2. Make testEmptyDir empty
     assertDeleted(child, false);
     status = getS3AFileStatus(fs, dir);
-
+    // all parent directories are being created and if not then we expect this to fail
     assertEmptyDirectory(true, status);
   }
 

@@ -22,7 +22,15 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DelegateToFileSystem;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.security.AccessControlException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -34,6 +42,8 @@ import java.net.URISyntaxException;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class S3A extends DelegateToFileSystem {
+
+  private final Logger LOG = LoggerFactory.getLogger(this.getClass().getName());
 
   public S3A(URI theUri, Configuration conf)
       throws IOException, URISyntaxException {
@@ -53,6 +63,13 @@ public class S3A extends DelegateToFileSystem {
     sb.append("; fsImpl=").append(fsImpl);
     sb.append('}');
     return sb.toString();
+  }
+
+  @Override
+  public void renameInternal(final Path src, final Path dst,
+      boolean overwrite) throws IOException {
+    checkIfCanRename(src, dst, overwrite);
+    fsImpl.rename(src, dst);
   }
 
   /**

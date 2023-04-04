@@ -419,6 +419,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private final Set<Path> deleteOnExit = new TreeSet<>();
 
+  /**
+   * Fake parent directory for cleanup
+   */
+  private boolean createFakeParentDirectory;
+
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
@@ -524,6 +529,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
       multiPartThreshold = getMultipartSizeProperty(conf,
           MIN_MULTIPART_THRESHOLD, DEFAULT_MIN_MULTIPART_THRESHOLD);
+      createFakeParentDirectory = conf.getBoolean(CREATE_FAKE_PARENT_DIRECTORY, CREATE_FAKE_PARENT_DIRECTORY_DEFAULT);
 
       //check but do not store the block size
       longBytesOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
@@ -2099,7 +2105,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // at this point the destination is an empty directory
       } else {
         // source is a file. The destination must be a directory,
-        // empty or not
+        // empty or not existing
         if (dstStatus.isFile()) {
           throw new FileAlreadyExistsException(
               "Failed to rename " + src + " to " + dst
@@ -2161,22 +2167,28 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     Path src = qualify(source);
     Path dst = qualify(dest);
 
-    LOG.debug("Rename path {} to {}", src, dst);
+    LOG.warn("Rename path {} to {}", src, dst);
 
     String srcKey = pathToKey(src);
     String dstKey = pathToKey(dst);
-
-    Pair<S3AFileStatus, S3AFileStatus> p = initiateRename(src, dst);
+    Pair<S3AFileStatus, S3AFileStatus> p;
+    try{
+       p = initiateRename(src, dst);
+      RenameOperation renameOperation = new RenameOperation(
+          createStoreContext(),
+          src, srcKey, p.getLeft(),
+          dst, dstKey, p.getRight(),
+          new OperationCallbacksImpl(),
+          pageSize);
+      LOG.warn("Please do your thing:");
+      return renameOperation.execute();
+    } catch (Exception e) {
+      LOG.error("This is why it doesn't work", e);
+    }
 
     // Initiate the rename.
     // this will call back into this class via the rename callbacks
-    RenameOperation renameOperation = new RenameOperation(
-        createStoreContext(),
-        src, srcKey, p.getLeft(),
-        dst, dstKey, p.getRight(),
-        new OperationCallbacksImpl(),
-        pageSize);
-    return renameOperation.execute();
+    return 0;
   }
 
   @Override public Token<? extends TokenIdentifier> getFsDelegationToken()
@@ -3258,7 +3270,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   protected void maybeCreateFakeParentDirectory(Path path)
       throws IOException, AmazonClientException {
     Path parent = path.getParent();
-    if (parent != null && !parent.isRoot() && !isUnderMagicCommitPath(parent)) {
+    if (parent != null && !parent.isRoot() && !isUnderMagicCommitPath(parent) && createFakeParentDirectory) {
       createFakeDirectoryIfNecessary(parent);
     }
   }
