@@ -521,8 +521,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
       throw ex;
     }
-    final String progress = copyOp.getResult()
-        .getResponseHeader(X_MS_COPY_STATUS);
+    final String progress = getCopyBlobProgress(copyOp);
     if (COPY_STATUS_SUCCESS.equals(progress)) {
       return;
     }
@@ -534,21 +533,42 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       } catch (Exception e) {
 
       }
-      BlobProperty blobProperty = getBlobPropertyWithNotFoundHandling(dstPath,
-          tracingContext);
-      if (blobProperty != null && copyId.equals(blobProperty.getCopyId())) {
-        if (COPY_STATUS_SUCCESS.equals(blobProperty.getCopyStatus())) {
-          return;
-        }
-        if (COPY_STATUS_ABORTED.equals(blobProperty.getCopyStatus())
-            || COPY_STATUS_FAILED.equals(blobProperty.getCopyStatus())) {
-          throw new AbfsRestOperationException(
-              HttpURLConnection.HTTP_INTERNAL_ERROR, "CopyBlobFailed", null,
-              new Exception("CopyBlobFailed"));
-        }
-      }
+      if (handleCopyInProgress(dstPath, tracingContext, copyId)) {return;}
       counter++;
     }
+
+    /*
+    * If no destination is found in all iteration, it can be assumed that the
+    * destination blob is deleted and is cause of a race-condition. developer has to be informed.
+    */
+    throw new AbfsRestOperationException(
+        HttpURLConnection.HTTP_INTERNAL_ERROR, "CopyBlobFailed", null,
+        new Exception("CopyBlobFailedBecauseOfRaceCondition"));
+  }
+
+@org.apache.hadoop.classification.VisibleForTesting
+  boolean handleCopyInProgress(final Path dstPath,
+      final TracingContext tracingContext,
+      final String copyId) throws AzureBlobFileSystemException {
+    BlobProperty blobProperty = getBlobPropertyWithNotFoundHandling(dstPath,
+        tracingContext);
+    if (blobProperty != null && copyId.equals(blobProperty.getCopyId())) {
+      if (COPY_STATUS_SUCCESS.equals(blobProperty.getCopyStatus())) {
+        return true;
+      }
+      if (COPY_STATUS_ABORTED.equals(blobProperty.getCopyStatus())
+          || COPY_STATUS_FAILED.equals(blobProperty.getCopyStatus())) {
+        throw new AbfsRestOperationException(
+            HttpURLConnection.HTTP_INTERNAL_ERROR, "CopyBlobFailed", null,
+            new Exception("CopyBlobFailed"));
+      }
+    }
+    return false;
+  }
+
+  @org.apache.hadoop.classification.VisibleForTesting
+  String getCopyBlobProgress(final AbfsRestOperation copyOp) {
+    return getCopyStatus(copyOp.getResult());
   }
 
   private BlobProperty getBlobPropertyWithNotFoundHandling(Path blobPath,
@@ -575,9 +595,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     blobProperty.setPath(blobPath);
     blobProperty.setCopySourceUrl(opResult.getResponseHeader(X_MS_COPY_SOURCE));
     blobProperty.setStatusDescription(opResult.getResponseHeader(X_MS_COPY_STATUS_DESCRIPTION));
-    blobProperty.setCopyStatus(opResult.getResponseHeader(X_MS_COPY_STATUS));
+    blobProperty.setCopyStatus(getCopyStatus(opResult));
     blobProperty.setContentLength(Long.parseLong(opResult.getResponseHeader(CONTENT_LENGTH)));
     return blobProperty;
+  }
+
+  @org.apache.hadoop.classification.VisibleForTesting
+  String getCopyStatus(final AbfsHttpOperation opResult) {
+    return opResult.getResponseHeader(X_MS_COPY_STATUS);
   }
 
   /**

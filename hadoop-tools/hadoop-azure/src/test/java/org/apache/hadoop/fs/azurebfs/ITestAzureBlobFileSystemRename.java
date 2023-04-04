@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOpTestUtil;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationTestUtil;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
@@ -52,6 +53,9 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
 import static org.apache.hadoop.fs.azurebfs.RenameAtomicityUtils.SUFFIX;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_FAILED;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_PENDING;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_SUCCESS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
@@ -914,5 +918,61 @@ public class ITestAzureBlobFileSystemRename extends
     fs.create(new Path("/test7/file"));
     fs.rename(new Path("/test7"), new Path("/test1/test2/test4/test5/test6"));
     Assert.assertTrue(fs.exists(new Path("/test1/test2/test4/test5/test6/file")));
+  }
+
+  @Test
+  public void testCopyBlobTakeTime() throws Exception {
+    AzureBlobFileSystem fileSystem = getFileSystem();
+    AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
+    fileSystem.setAbfsStore(store);
+    Mockito.doReturn(COPY_STATUS_PENDING).when(store)
+        .getCopyBlobProgress(Mockito.any(AbfsRestOperation.class));
+    fileSystem.create(new Path("/test1/file"));
+    fileSystem.rename(new Path("/test1/file"), new Path("/test1/file2"));
+    Assert.assertTrue(fileSystem.exists(new Path("/test1/file2")));
+    Mockito.verify(store, Mockito.times(1))
+        .handleCopyInProgress(Mockito.any(Path.class), Mockito.any(TracingContext.class), Mockito.any(String.class));
+  }
+
+  @Test
+  public void testCopyBlobTakeTimeAndEventullyFail() throws Exception {
+    AzureBlobFileSystem fileSystem = getFileSystem();
+    AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
+    fileSystem.setAbfsStore(store);
+    Mockito.doReturn(COPY_STATUS_PENDING).when(store)
+        .getCopyBlobProgress(Mockito.any(AbfsRestOperation.class));
+    Mockito.doReturn(COPY_STATUS_FAILED).when(store).getCopyStatus(Mockito.any(
+        AbfsHttpOperation.class));
+    fileSystem.create(new Path("/test1/file"));
+    try {
+      fileSystem.rename(new Path("/test1/file"), new Path("/test1/file2"));
+    } catch (Exception e) {
+
+    }
+    Assert.assertTrue(fileSystem.exists(new Path("/test1/file")));
+    Mockito.verify(store, Mockito.times(1))
+        .handleCopyInProgress(Mockito.any(Path.class), Mockito.any(TracingContext.class), Mockito.any(String.class));
+  }
+
+  @Test
+  public void testCopyBlobTakeTimeAndBlobIsDeleted() throws Exception {
+    AzureBlobFileSystem fileSystem = getFileSystem();
+    AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
+    String srcFile = "/test1/file";
+    String dstFile = "/test1/file2";
+    fileSystem.setAbfsStore(store);
+    Mockito.doAnswer(answer -> {
+          fileSystem.delete(new Path(dstFile), false);
+          return  COPY_STATUS_PENDING;
+        }).when(store)
+        .getCopyBlobProgress(Mockito.any(AbfsRestOperation.class));
+    fileSystem.create(new Path(srcFile));
+
+    try {
+      fileSystem.rename(new Path(srcFile), new Path(dstFile));
+    } catch (Exception e) {
+
+    }
+    Assert.assertFalse(fileSystem.exists(new Path(dstFile)));
   }
 }
