@@ -163,5 +163,7 @@ public final class CommonPathCapabilities {
   public static final String ETAGS_PRESERVED_IN_RENAME =
       "fs.capability.etags.preserved.in.rename";
 
+  public static final String LEASE_RECOVERABLE =
+    "fs.capability.lease.recoverable";
 
 }

@@ -25,11 +25,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeMode;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.apache.hadoop.fs.CommonPathCapabilities.LEASE_RECOVERABLE;
 
 public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
   
@@ -71,5 +75,17 @@ public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
   @Test
   public void testAppend() throws IOException {
     AppendTestUtil.testAppend(fs, new Path("/testAppend/f"));
+  }
+
+  @Test
+  public void testFileSystemCapabilities() throws Exception {
+    final Path p = new Path("testFileSystemCapabilities");
+    final boolean leaseRecovery = fs.hasPathCapability(p, LEASE_RECOVERABLE);
+    Assertions.assertThat(leaseRecovery)
+      .describedAs("path capabilities %s=%s in %s",
+        LEASE_RECOVERABLE, leaseRecovery, fs)
+      .isTrue();
+    // we should not have enter safe mode when checking it.
+    Assertions.assertThat(fs instanceof SafeMode).isTrue();
   }
 }
