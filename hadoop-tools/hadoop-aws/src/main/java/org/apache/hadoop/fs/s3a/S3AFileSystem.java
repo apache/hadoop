@@ -421,7 +421,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private final Set<Path> deleteOnExit = new TreeSet<>();
 
   /**
-   * Scheme for the current filesystem
+   * Scheme for the current filesystem.
    */
   private String scheme = FS_S3A;
 
