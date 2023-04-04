@@ -825,15 +825,18 @@ public class ITestAzureBlobFileSystemRename extends
     * First call to copyBlob for file1 will fail with connection-reset, but the
     * backend has got the call. Retry of that API would give 409 error.
     */
+    boolean[] hasBeenCalled = new boolean[1];
+    hasBeenCalled[0] = false;
+
+    boolean[] connectionResetThrown = new boolean[1];
+    connectionResetThrown[0] = false;
+
     AbfsClientTestUtil.setMockAbfsRestOperationForCopyBlobOperation(spiedClient, (spiedRestOp, actualCallMakerOp) -> {
-      boolean[] hasBeenCalled = new boolean[1];
-      hasBeenCalled[0] = false;
+
       Mockito.doAnswer(answer -> {
         if(spiedRestOp.getUrl().toString().contains("file1") && !hasBeenCalled[0]) {
           hasBeenCalled[0] = true;
           actualCallMakerOp.execute(answer.getArgument(0));
-          boolean[] connectionResetThrown = new boolean[1];
-          connectionResetThrown[0] = false;
           AbfsRestOperationTestUtil.addAbfsHttpOpProcessResponseMock(spiedRestOp, (mockAbfsHttpOp, actualAbfsHttpOp) -> {
             Mockito.doAnswer(sendRequestAnswer -> {
               if(!connectionResetThrown[0]) {
@@ -861,6 +864,12 @@ public class ITestAzureBlobFileSystemRename extends
       return spiedRestOp;
     });
 
-    spiedFs.rename(new Path(srcDir), new Path("/test4"));
+    spiedFs.setWorkingDirectory(new Path("/"));
+
+    Assert.assertTrue(spiedFs.rename(new Path(srcDir), new Path("/test4")));
+    Assert.assertTrue(spiedFs.exists(new Path("test4/test3/file1")));
+    Assert.assertTrue(spiedFs.exists(new Path("test4/test3/file2")));
+    Assert.assertTrue(hasBeenCalled[0]);
+    Assert.assertTrue(connectionResetThrown[0]);
   }
 }

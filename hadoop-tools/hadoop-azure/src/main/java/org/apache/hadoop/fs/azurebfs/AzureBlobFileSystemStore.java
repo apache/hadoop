@@ -507,13 +507,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       copyOp = client.copyBlob(srcPath, dstPath,
           tracingContext);
     } catch (AbfsRestOperationException ex) {
-      if(copyOp == null || !copyOp.hasResult()) {
-        throw ex;
-      }
-      if(copyOp.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+      if(ex.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
         final BlobProperty dstBlobProperty = getBlobProperty(dstPath, tracingContext);
-        if(dstBlobProperty.getCopySourceUrl().equals(copyOp.getResult().getRequestHeaderValue(X_MS_COPY_SOURCE))) {
-          return;
+        try {
+          if(("/" + client.getFileSystem() + srcPath.toUri().getPath()).equals(new URL(dstBlobProperty.getCopySourceUrl()).toURI().getPath())) {
+            return;
+          }
+        } catch (URISyntaxException e) {
+          throw new RuntimeException(e);
+        } catch (MalformedURLException e) {
+          throw new RuntimeException(e);
         }
       }
       throw ex;

@@ -972,6 +972,7 @@ public class AbfsClient implements Closeable {
         new AbfsUriQueryBuilder().toString()).toString().replace(".dfs.", ".blob.");
     List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     requestHeaders.add(new AbfsHttpHeader(X_MS_COPY_SOURCE, sourcePathUrl));
+    requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, STAR));
 
     final AbfsRestOperation op = getCopyBlobOperation(url, requestHeaders);
     op.execute(tracingContext);
