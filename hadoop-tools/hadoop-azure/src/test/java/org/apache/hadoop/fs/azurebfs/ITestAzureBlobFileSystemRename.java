@@ -890,4 +890,29 @@ public class ITestAzureBlobFileSystemRename extends
       Assert.assertTrue("" + i, fs.exists(new Path("/dst/" + dir)));
     }
   }
+
+  @Test
+  public void testRenameDirWhenMarkerBlobIsAbsent() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    fs.mkdirs(new Path("/test1"));
+    fs.mkdirs(new Path("/test1/test2"));
+    fs.mkdirs(new Path("/test1/test2/test3"));
+    fs.create(new Path("/test1/test2/test3/file"));
+
+    fs.getAbfsClient().deleteBlobPath(new Path("/test1/test2"), Mockito.mock(TracingContext.class));
+    fs.mkdirs(new Path("/test4/test5"));
+    fs.rename(new Path("/test4"), new Path("/test1/test2"));
+
+    Assert.assertTrue(fs.exists(new Path("/test1/test2/test4/test5")));
+
+    fs.mkdirs(new Path("/test6"));
+    fs.rename(new Path("/test6"), new Path("/test1/test2/test4/test5"));
+    Assert.assertTrue(fs.exists(new Path("/test1/test2/test4/test5/test6")));
+
+    fs.getAbfsClient().deleteBlobPath(new Path("/test1/test2/test4/test5/test6"), Mockito.mock(TracingContext.class));
+    fs.mkdirs(new Path("/test7"));
+    fs.create(new Path("/test7/file"));
+    fs.rename(new Path("/test7"), new Path("/test1/test2/test4/test5/test6"));
+    Assert.assertTrue(fs.exists(new Path("/test1/test2/test4/test5/test6/file")));
+  }
 }
