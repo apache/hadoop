@@ -2207,23 +2207,24 @@ public class TestWebHDFS {
   public void testLinkTarget() throws Exception {
     final Configuration conf = WebHdfsTestUtil.createConf();
     try {
-    cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(3)
-        .build();
-    cluster.waitActive();
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(3)
+          .build();
+      cluster.waitActive();
 
-    final WebHdfsFileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
-        WebHdfsConstants.WEBHDFS_SCHEME);
+      final WebHdfsFileSystem webHdfs =
+          WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+              WebHdfsConstants.WEBHDFS_SCHEME);
 
-    // Symbolic link
-    Path root = new Path("/webHdfsTest/");
-    Path targetFile = new Path(root, "debug.log");
-    FileSystemTestHelper.createFile(webHdfs, targetFile);
+      // Symbolic link
+      Path root = new Path("/webHdfsTest/");
+      Path targetFile = new Path(root, "debug.log");
+      FileSystemTestHelper.createFile(webHdfs, targetFile);
 
-    Path symLink = new Path(root, "debug.link");
+      Path symLink = new Path(root, "debug.link");
 
-    webHdfs.createSymlink(targetFile, symLink, false);
-    assertEquals(webHdfs.getLinkTarget(symLink), targetFile);
+      webHdfs.createSymlink(targetFile, symLink, false);
+      assertEquals(webHdfs.getLinkTarget(symLink), targetFile);
     } finally {
       cluster.shutdown();
     }
