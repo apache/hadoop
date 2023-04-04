@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs.azurebfs;
 
-import org.apache.hadoop.fs.Path;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -48,15 +47,16 @@ public class ITestSharedKeyAuth extends AbstractAbfsIntegrationTest {
     String secret = "XjUjsGherkDpljuyThd7RpljhR6uhsFjhlxRpmhgD12lnj7lhfRn8kgPt5"
         + "+MJHS7UJNDER+jn6KP6Jnm2ONQlm==";
     config.set(configkKey, secret);
+
     AbfsClient abfsClient = this.getFileSystem(config).getAbfsClient();
     intercept(AbfsRestOperationException.class,
-            "\"Server failed to authenticate the request. Make sure the value of "
-                    + "Authorization header is formed correctly including the "
-                    + "signature.\", 403",
-            () -> {
-              abfsClient
-                      .getAclStatus(getTestUrl(), getTestTracingContext(getFileSystem(), false));
-            });
+        "\"Server failed to authenticate the request. Make sure the value of "
+            + "Authorization header is formed correctly including the "
+            + "signature.\", 403",
+        () -> {
+          abfsClient
+              .getAclStatus(getTestUrl(), getTestTracingContext(getFileSystem(), false));
+        });
   }
 
 }
