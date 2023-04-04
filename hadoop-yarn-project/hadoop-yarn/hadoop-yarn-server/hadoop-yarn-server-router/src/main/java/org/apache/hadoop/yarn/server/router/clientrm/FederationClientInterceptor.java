@@ -115,6 +115,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityReque
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -166,6 +167,7 @@ import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConsta
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_NODETOLABELS;
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_LABELSTONODES;
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CLUSTERNODELABELS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_APPLICATION_ATTEMPT_REPORT;
 
 /**
  * Extends the {@code AbstractRequestInterceptorClient} class and provides an
@@ -1319,6 +1321,8 @@ public class FederationClientInterceptor
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetClusterNodeLabelsRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_CLUSTERNODELABELS,
+        TARGET_CLIENT_RM_SERVICE);
     // Merge the ClusterNodeLabelsResponse
     return RouterYarnClientUtils.mergeClusterNodeLabelsResponse(nodeLabels);
   }
@@ -1347,9 +1351,11 @@ public class FederationClientInterceptor
     if (request == null || request.getApplicationAttemptId() == null
             || request.getApplicationAttemptId().getApplicationId() == null) {
       routerMetrics.incrAppAttemptReportFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing getApplicationAttemptReport request or applicationId " +
-          "or applicationAttemptId information.", null);
+      String msg = "Missing getApplicationAttemptReport request or applicationId " +
+          "or applicationAttemptId information.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APPLICATION_ATTEMPT_REPORT, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
 
     long startTime = clock.getTime();
@@ -1359,10 +1365,12 @@ public class FederationClientInterceptor
       subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (YarnException e) {
       routerMetrics.incrAppAttemptReportFailedRetrieved();
-      RouterServerUtil.logAndThrowException("ApplicationAttempt " +
-          request.getApplicationAttemptId() + " belongs to Application " +
-          request.getApplicationAttemptId().getApplicationId() +
-          " does not exist in FederationStateStore.", e);
+      String msgFormat = "ApplicationAttempt %s belongs to " +
+          "Application %s does not exist in FederationStateStore.";
+      ApplicationAttemptId applicationAttemptId = request.getApplicationAttemptId();
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APPLICATION_ATTEMPT_REPORT, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msgFormat, applicationAttemptId, applicationId);
+      RouterServerUtil.logAndThrowException(e, msgFormat, applicationAttemptId, applicationId);
     }
 
     ApplicationClientProtocol clientRMProxy =
@@ -1376,6 +1384,8 @@ public class FederationClientInterceptor
       String msg = String.format(
           "Unable to get the applicationAttempt report for %s to SubCluster %s.",
           request.getApplicationAttemptId(), subClusterId.getId());
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APPLICATION_ATTEMPT_REPORT, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, e);
     }
 
@@ -1387,6 +1397,8 @@ public class FederationClientInterceptor
 
     long stopTime = clock.getTime();
     routerMetrics.succeededAppAttemptReportRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_APPLICATION_ATTEMPT_REPORT,
+        TARGET_CLIENT_RM_SERVICE);
     return response;
   }
 
