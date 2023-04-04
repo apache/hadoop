@@ -833,8 +833,6 @@ public abstract class INodeReference extends INode {
           // recordModification before the rename
           INodeFile file = referred.asFile();
           Preconditions.checkState(file.isWithSnapshot());
-          // make sure we mark the file as deleted
-          file.getFileWithSnapshotFeature().deleteCurrentFile();
           // when calling cleanSubtree of the referred node, since we
           // compute quota usage updates before calling this destroy
           // function, we use true for countDiffChange

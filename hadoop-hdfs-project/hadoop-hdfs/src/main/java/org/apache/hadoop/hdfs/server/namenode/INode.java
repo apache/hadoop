@@ -239,11 +239,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     }
     final INode child = parentDir.getChild(getLocalNameBytes(),
             Snapshot.CURRENT_STATE_ID);
-    if (this == child) {
-      return true;
-    }
-    return child != null && child.isReference() &&
-        this.equals(child.asReference().getReferredINode());
+    return equalsToChild(child);
   }
 
   /** Is this inode in the latest snapshot? */
@@ -265,11 +261,19 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
       return false;
     }
     final INode child = parentDir.getChild(getLocalNameBytes(), latestSnapshotId);
-    if (this == child) {
+    return equalsToChild(child);
+  }
+
+  private boolean equalsToChild(INode child) {
+    if (this.equals(child)) {
       return true;
     }
-    return child != null && child.isReference() &&
-        this == child.asReference().getReferredINode();
+    if (child != null && child.isReference()) {
+      final INode withCount = child.asReference().getReferredINode();
+      Preconditions.checkState(withCount instanceof WithCount);
+      return this.equals(withCount.asReference().getReferredINode());
+    }
+    return false;
   }
   
   /** @return true if the given inode is an ancestor directory of this inode. */
@@ -302,7 +306,11 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     }
     INodeReference withCount = getParentReference();
     if (withCount != null) {
-      int dstSnapshotId = withCount.getParentReference().getDstSnapshotId();
+      final INodeReference dstRef = getParentReference();
+      if (dstRef == null) {
+        return false;
+      }
+      final int dstSnapshotId = dstRef.getDstSnapshotId();
       if (dstSnapshotId != Snapshot.CURRENT_STATE_ID
           && dstSnapshotId >= latestInDst) {
         return true;
@@ -1009,6 +1017,13 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * Context object to record blocks and inodes that need to be reclaimed
    */
   public static class ReclaimContext {
+    static ReclaimContext deleteSnapshot(BlockStoragePolicySuite bsps,
+        BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes) {
+      return new ReclaimContext(bsps, collectedBlocks, removedINodes,
+          null, true);
+    }
+
+    private final boolean isDeleteSnapshot;
     protected final BlockStoragePolicySuite bsps;
     protected final BlocksMapUpdateInfo collectedBlocks;
     protected final List<INode> removedINodes;
@@ -1030,11 +1045,23 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     public ReclaimContext(
         BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks,
         List<INode> removedINodes, List<Long> removedUCFiles) {
+      this(bsps, collectedBlocks, removedINodes, removedUCFiles, false);
+    }
+
+    private ReclaimContext(
+        BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks,
+        List<INode> removedINodes, List<Long> removedUCFiles,
+        boolean isDeleteSnapshot) {
+      this.isDeleteSnapshot = isDeleteSnapshot;
       this.bsps = bsps;
       this.collectedBlocks = collectedBlocks;
       this.removedINodes = removedINodes;
       this.removedUCFiles = removedUCFiles;
       this.quotaDelta = new QuotaDelta();
+    }
+
+    public boolean isDeleteSnapshot() {
+      return isDeleteSnapshot;
     }
 
     public BlockStoragePolicySuite storagePolicySuite() {
@@ -1055,7 +1082,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
      */
     public ReclaimContext getCopy() {
       return new ReclaimContext(bsps, collectedBlocks, removedINodes,
-          removedUCFiles);
+          removedUCFiles, isDeleteSnapshot);
     }
   }
 

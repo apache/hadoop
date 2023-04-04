@@ -124,7 +124,7 @@ public class FileWithSnapshotFeature implements INode.Feature {
       byte storagePolicyId) {
     if (snapshotId == Snapshot.CURRENT_STATE_ID) {
       // delete the current file while the file has snapshot feature
-      if (!isCurrentFileDeleted()) {
+      if (!isCurrentFileDeleted() && !reclaimContext.isDeleteSnapshot()) {
         file.recordModification(priorSnapshotId);
         deleteCurrentFile();
       }
