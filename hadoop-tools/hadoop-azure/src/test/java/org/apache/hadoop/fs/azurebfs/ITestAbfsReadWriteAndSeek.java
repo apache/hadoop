@@ -106,8 +106,8 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
       ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(
         new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
           fs.getFileSystemId(), FSOperationType.READ, true, 0,
-            ((AbfsInputStream) inputStream.getWrappedStream())
-              .getStreamID()));
+          ((AbfsInputStream) inputStream.getWrappedStream())
+            .getStreamID()));
       inputStream.seek(bufferSize);
       result = inputStream.read(readBuffer, bufferSize, bufferSize);
       assertNotEquals(-1, result);
@@ -140,10 +140,10 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     Path testPath = path(TEST_PATH);
     try (FSDataOutputStream stream = fs.create(testPath)) {
       ((AbfsOutputStream) stream.getWrappedStream()).registerListener(
-          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
-              fs.getFileSystemId(), FSOperationType.WRITE, false, 0,
-              ((AbfsOutputStream) stream.getWrappedStream())
-                  .getStreamID()));
+        new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
+          fs.getFileSystemId(), FSOperationType.WRITE, false, 0,
+          ((AbfsOutputStream) stream.getWrappedStream())
+            .getStreamID()));
       stream.write(b);
       logIOStatisticsAtLevel(LOG, IOSTATISTICS_LOGGING_LEVEL_INFO, stream);
     }
@@ -152,14 +152,14 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     final byte[] readBuffer = new byte[4 * bufferSize];
     int result;
     fs.registerListener(
-        new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
-            fs.getFileSystemId(), FSOperationType.OPEN, false, 0));
+      new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
+        fs.getFileSystemId(), FSOperationType.OPEN, false, 0));
     try (FSDataInputStream inputStream = fs.open(testPath)) {
       ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(
-          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
-              fs.getFileSystemId(), FSOperationType.READ, false, 0,
-              ((AbfsInputStream) inputStream.getWrappedStream())
-                  .getStreamID()));
+        new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
+          fs.getFileSystemId(), FSOperationType.READ, false, 0,
+          ((AbfsInputStream) inputStream.getWrappedStream())
+            .getStreamID()));
       result = inputStream.read(readBuffer, 0, bufferSize*4);
       logIOStatisticsAtLevel(LOG, IOSTATISTICS_LOGGING_LEVEL_INFO, inputStream);
     }
