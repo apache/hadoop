@@ -105,7 +105,6 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
   private final Map<String, Map<String, Float>> effectiveMinResourceRatio =
       new ConcurrentHashMap<>();
 
-
   public AbstractParentQueue(CapacitySchedulerQueueContext queueContext,
       String queueName, CSQueue parent, CSQueue old)
       throws IOException {
@@ -199,7 +198,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
 
   private static float PRECISION = 0.0005f; // 0.05% precision
 
-    // Check weight configuration, throw exception when configuration is invalid
+  // Check weight configuration, throw exception when configuration is invalid
   // return true when all children use weight mode.
   public QueueCapacityType getCapacityConfigurationTypeForQueues(
       Collection<CSQueue> queues) throws IOException {
@@ -404,7 +403,6 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     }
   }
 
-
   @Override
   public QueueInfo getQueueInfo(
       boolean includeChildQueues, boolean recursive) {
@@ -427,7 +425,6 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     }
 
   }
-
 
   private QueueUserACLInfo getUserAclInfo(
       UserGroupInformation user) {
@@ -663,7 +660,6 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     }
   }
 
-
   private Map<String, CSQueue> getQueuesMap(List<CSQueue> queues) {
     Map<String, CSQueue> queuesMap = new HashMap<String, CSQueue>();
     for (CSQueue queue : queues) {
@@ -716,7 +712,6 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
       writeLock.unlock();
     }
   }
-
 
   @Override
   public void submitApplicationAttempt(FiCaSchedulerApp application,
