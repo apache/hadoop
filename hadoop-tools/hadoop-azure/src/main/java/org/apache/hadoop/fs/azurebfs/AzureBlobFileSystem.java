@@ -43,6 +43,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -144,6 +145,8 @@ public class AzureBlobFileSystem extends FileSystem
   private DataBlocks.BlockFactory blockFactory;
   /** Maximum Active blocks per OutputStream. */
   private int blockOutputActiveBlocks;
+  private PrefixMode prefixMode = PrefixMode.DFS;
+  private boolean isNamespaceEnabled;
 
   @Override
   public void initialize(URI uri, Configuration configuration)
@@ -192,9 +195,25 @@ public class AzureBlobFileSystem extends FileSystem
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
     this.setWorkingDirectory(this.getHomeDirectory());
 
+    TracingContext tracingContext = new TracingContext(clientCorrelationId,
+            fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
+    try {
+      isNamespaceEnabled = getIsNamespaceEnabled(tracingContext);
+    } catch (AbfsRestOperationException ex) {
+      /* since the filesystem has not been created. The API for HNS account would
+       * return 404 status.
+       */
+      if(ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+        isNamespaceEnabled = true;
+      } else {
+        throw ex;
+      }
+    }
+    if (!isNamespaceEnabled && uri.toString().contains(FileSystemUriSchemes.WASB_DNS_PREFIX)) {
+      this.prefixMode = PrefixMode.BLOB;
+    }
+    abfsConfiguration.setPrefixMode(this.prefixMode);
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
-      TracingContext tracingContext = new TracingContext(clientCorrelationId,
-          fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
       if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH), tracingContext) == null) {
         try {
           this.createFileSystem(tracingContext);
