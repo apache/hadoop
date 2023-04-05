@@ -127,6 +127,7 @@ public class LoadManifestsStage extends
     entryWriter = entryFileIO.launchEntryWriter(
             entryFileIO.createWriter(entrySequenceFile),
             arguments.queueCapacity);
+    List<TaskManifest> manifestList;
     try {
 
       // sync fs before the listj
@@ -137,7 +138,8 @@ public class LoadManifestsStage extends
       final RemoteIterator<FileStatus> manifestFiles =
           haltableRemoteIterator(listManifests(), () -> entryWriter.isActive());
 
-      final List<TaskManifest> manifestList = loadAllManifests(manifestFiles);
+      manifestList = loadAllManifests(manifestFiles);
+
       LOG.info("{}: Summary of {} manifests loaded in {}: {}",
           getName(),
           manifestList.size(),
@@ -160,7 +162,7 @@ public class LoadManifestsStage extends
         entrySequenceFile,
         entryWriter.getCount());
 
-    return new LoadManifestsStage.Result(summaryInfo, loadedManifestData, null);
+    return new LoadManifestsStage.Result(summaryInfo, loadedManifestData, manifestList);
   }
 
   /**

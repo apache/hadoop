@@ -447,7 +447,7 @@ public class TestJobThroughManifestCommitter
     describe("Load all manifests; committed must be TA01 and TA10");
     File entryFile = File.createTempFile("entry", ".seq");
     LoadManifestsStage.Arguments args = new LoadManifestsStage.Arguments(
-        entryFile, false, InternalConstants.ENTRY_WRITER_QUEUE_CAPACITY);
+        entryFile, true, InternalConstants.ENTRY_WRITER_QUEUE_CAPACITY);
     LoadManifestsStage.Result result
         = new LoadManifestsStage(getJobStageConfig()).apply(args);
     String summary = result.getSummary().toString();
