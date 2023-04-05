@@ -552,8 +552,14 @@ public class TestMountTableResolver {
 
     assertEquals(100000, mountTable.getMountPoints("/").size());
     assertEquals(100000, mountTable.getMounts("/").size());
+    // test concurrency for mount table cache size when it gets updated frequently
     for (int i = 0; i < 20; i++) {
       mountTable.getDestinationForPath("/" + i);
+      if (i >= 10) {
+        assertEquals(TEST_MAX_CACHE_SIZE, mountTable.getCacheSize());
+      } else {
+        assertEquals(i + 1, mountTable.getCacheSize());
+      }
     }
     assertEquals(TEST_MAX_CACHE_SIZE, mountTable.getCacheSize());
 
