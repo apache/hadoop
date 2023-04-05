@@ -84,15 +84,11 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
 
   @Override
   public void setup() throws Exception {
-    createFilesystemForSASTests();
-    super.setup();
-    assumptionChecks();
-  }
-
-  protected void assumptionChecks() throws IOException {
     boolean isHNSEnabled = this.getConfiguration().getBoolean(
         TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
     Assume.assumeTrue(isHNSEnabled);
+    createFilesystemForSASTests();
+    super.setup();
   }
 
   @Test

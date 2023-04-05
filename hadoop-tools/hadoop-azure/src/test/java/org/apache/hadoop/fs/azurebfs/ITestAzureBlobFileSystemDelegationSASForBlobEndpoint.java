@@ -9,20 +9,36 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_PENDING;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
 
-public class ITestAzureBlobFileSystemDelegationSASForBlobEndpoint extends  ITestAzureBlobFileSystemDelegationSAS {
+public class ITestAzureBlobFileSystemDelegationSASForBlobEndpoint extends  AbstractAbfsIntegrationTest {
 
   public ITestAzureBlobFileSystemDelegationSASForBlobEndpoint()
       throws Exception {
+    // These tests rely on specific settings in azure-auth-keys.xml:
+    String sasProvider = getRawConfiguration().get(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE);
+    Assume.assumeTrue(MockDelegationSASTokenProvider.class.getCanonicalName().equals(sasProvider));
+    Assume.assumeNotNull(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_ID));
+    Assume.assumeNotNull(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_SECRET));
+    Assume.assumeNotNull(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_TENANT_ID));
+    Assume.assumeNotNull(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID));
+    // The test uses shared key to create a random filesystem and then creates another
+    // instance of this filesystem using SAS authorization.
+    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
   }
 
   @Override
-  protected void assumptionChecks() throws IOException {
+  public void setup() throws Exception {
+    createFilesystemForSASTests();
+    super.setup();
     Assume.assumeTrue(getFileSystem().getAbfsStore().getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB);
   }
 

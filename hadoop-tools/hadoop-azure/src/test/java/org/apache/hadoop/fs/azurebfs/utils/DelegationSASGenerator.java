@@ -65,6 +65,9 @@ public class DelegationSASGenerator extends SASGenerator {
       case SASTokenProvider.DELETE_OPERATION:
         sp = "d";
         break;
+      case SASTokenProvider.DELETE_BLOB_OPERATION:
+        sp = "d";
+        break;
       case SASTokenProvider.DELETE_RECURSIVE_OPERATION:
         sp = "d";
         sr = "d";
@@ -89,6 +92,7 @@ public class DelegationSASGenerator extends SASGenerator {
         sp = "r";
         break;
       case SASTokenProvider.GET_PROPERTIES_OPERATION:
+      case SASTokenProvider.GET_BLOB_PROPERTIES_OPERATION:
       case SASTokenProvider.READ_OPERATION:
         sp = "r";
         break;
