@@ -25,10 +25,12 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
@@ -138,7 +140,7 @@ public class EntryFileIO {
 
     private final SequenceFile.Writer writer;
 
-    private final Queue<List<FileEntry>> queue;
+    private final BlockingQueue<List<FileEntry>> queue;
 
     /**
      * stop flag.
@@ -158,7 +160,7 @@ public class EntryFileIO {
     private Future<Integer> future;
 
     /**
-     * count of files opened; only updated in one thread
+     * count of file entries saved; only updated in one thread
      * so volatile.
      */
     private volatile int count;
@@ -218,6 +220,10 @@ public class EntryFileIO {
      * @return whether the queue worked.
      */
     public boolean enqueue(List<FileEntry> entries) {
+      if (entries.isEmpty()) {
+        // exit fast, but return true.
+        return true;
+      }
       if (active.get()) {
         queue.add(entries);
         return false;
@@ -234,8 +240,19 @@ public class EntryFileIO {
      */
     private int processor() {
       int count = 0;
-      while (!stop.get()) {
-        queue.poll().forEach(this::append);
+      try {
+        while (!stop.get()) {
+          final List<FileEntry> entries = queue.take();
+          if (entries.isEmpty()) {
+            // exit list reached.
+            stop.set(true);
+          } else {
+            entries.forEach(this::append);
+          }
+        }
+      } catch (InterruptedException e) {
+        // assume we are stopped here
+        stop.set(true);
       }
       return count;
     }
@@ -257,32 +274,53 @@ public class EntryFileIO {
       }
     }
 
+    /**
+     * Close: stop accepting new writes, wait for queued writes to complete
+     * @throws IOException failure closing that writer, or somehow the future
+     * raises an IOE which isn't caught for later.
+     */
+
     @Override
     public void close() throws IOException {
-      if (stop.getAndSet(true)) {
+
+      // declare as inactive.
+      // this stops queueing more data, but leaves
+      // the worker thread still polling and writing.
+      if (!active.getAndSet(false)) {
         // already stopped
         return;
       }
       LOG.debug("Shutting down writer");
-      // signal queue closure by
-      // clearing the current list
-      // and queue an empty list
-      queue.clear();
+      // signal queue closure by queue an empty list
       queue.add(new ArrayList<>());
       try {
         // wait for the op to finish.
-        final int count = FutureIO.awaitFuture(future);
-        LOG.debug("Processed {} files", count);
+        int total = FutureIO.awaitFuture(future, 1, TimeUnit.MINUTES);
+        LOG.debug("Processed {} files", total);
+        executor.shutdown();
+      } catch (TimeoutException e) {
+        // trouble. force close
+        executor.shutdownNow();
         // close the stream
       } finally {
         writer.close();
+      }
+    }
+
+    /**
+     * Raise any IOException caught during execution of the writer thread.
+     * @throws IOException if one was caught and saved.
+     */
+    public void maybeRaiseWriteException() throws IOException {
+      if (failure != null) {
+        throw failure;
       }
     }
   }
 
   /**
    * Iterator to retrieve file entries from the sequence file.
-   * Closeable.
+   * Closeable; it will close automatically when the last element is read.
    */
   private final class EntryIterator implements RemoteIterator<FileEntry>, Closeable {
 
@@ -290,13 +328,18 @@ public class EntryFileIO {
 
     private FileEntry fetched;
 
+    private boolean closed;
+
     private EntryIterator(final SequenceFile.Reader reader) {
       this.reader = requireNonNull(reader);
     }
 
     @Override
     public void close() throws IOException {
-      reader.close();
+      if (!closed) {
+        closed = true;
+        reader.close();
+      }
     }
 
     @Override
@@ -311,6 +354,7 @@ public class EntryFileIO {
         return true;
       } else {
         fetched = null;
+        close();
         return false;
       }
     }
@@ -324,6 +368,7 @@ public class EntryFileIO {
       fetched = null;
       return r;
     }
+
   }
 
 }

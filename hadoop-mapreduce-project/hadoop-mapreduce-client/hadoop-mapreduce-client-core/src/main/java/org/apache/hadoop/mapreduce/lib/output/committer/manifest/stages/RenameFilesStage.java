@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,16 +30,18 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.EntryFileIO;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.LoadedManifestData;
 import org.apache.hadoop.util.functional.TaskPool;
 
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER_FILE_LIMIT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_COMMIT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_RENAME_FILES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createManifestOutcome;
-import static org.apache.hadoop.thirdparty.com.google.common.collect.Iterables.concat;
 
 /**
  * This stage renames all the files.
@@ -51,7 +54,7 @@ import static org.apache.hadoop.thirdparty.com.google.common.collect.Iterables.c
  */
 public class RenameFilesStage extends
     AbstractJobOrTaskStage<
-        Pair<List<TaskManifest>, Set<Path>>,
+        Pair<LoadedManifestData, Set<Path>>,
         ManifestSuccessData> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -92,37 +95,43 @@ public class RenameFilesStage extends
 
   /**
    * Rename files in job commit.
-   * @param taskManifests a list of task manifests containing files.
+   * @param args tuple of (manifest data, set of created dirs)
    * @return the job report.
    * @throws IOException failure
    */
   @Override
   protected ManifestSuccessData executeStage(
-      Pair<List<TaskManifest>, Set<Path>> args)
+      Pair<LoadedManifestData, Set<Path>> args)
       throws IOException {
 
-    final List<TaskManifest> taskManifests = args.getLeft();
+
+    final LoadedManifestData manifestData = args.getLeft();
     createdDirectories = args.getRight();
+    final EntryFileIO entryFileIO = new EntryFileIO(getStageConfig().getConf());
+    final SequenceFile.Reader reader =
+        entryFileIO.createReader(manifestData.getEntrySequenceFile());
+
 
     final ManifestSuccessData success = createManifestOutcome(getStageConfig(),
         OP_STAGE_JOB_COMMIT);
-    final int manifestCount = taskManifests.size();
 
-    LOG.info("{}: Executing Manifest Job Commit with {} manifests in {}",
-        getName(), manifestCount, getTaskManifestDir());
+    LOG.info("{}: Executing Manifest Job Commit with {} files",
+        getName(), manifestData.getFileCount());
 
-    // first step is to aggregate the output of all manifests into a single
-    // list of files to commit.
-    // Which Guava can do in a zero-copy concatenated iterator
+    // iterate over the
 
-    final Iterable<FileEntry> filesToCommit = concat(taskManifests.stream()
-        .map(TaskManifest::getFilesToCommit)
-        .collect(Collectors.toList()));
+    final RemoteIterator<FileEntry> entries = entryFileIO.iterateOver(reader);
+    try {
+      TaskPool.foreach(entries)
+          .executeWith(getIOProcessors())
+          .stopOnFailure()
+          .run(this::commitOneFile);
+    } finally {
+      // close the input. Automatic on a successful scan, but
+      // a rename failure will abort the operation.
+      ((Closeable)entries).close();
 
-    TaskPool.foreach(filesToCommit)
-        .executeWith(getIOProcessors())
-        .stopOnFailure()
-        .run(this::commitOneFile);
+    }
 
     // synchronized block to keep spotbugs happy.
     List<FileEntry> committed = getFilesCommitted();

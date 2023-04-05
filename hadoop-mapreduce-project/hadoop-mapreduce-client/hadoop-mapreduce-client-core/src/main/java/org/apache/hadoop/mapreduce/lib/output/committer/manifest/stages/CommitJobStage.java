@@ -82,9 +82,9 @@ public class CommitJobStage extends
     final StageConfig stageConfig = getStageConfig();
     LoadManifestsStage.Result result = new LoadManifestsStage(stageConfig).apply(
         new LoadManifestsStage.Arguments(
-            File.createTempFile("manifest", ".list"), false,
+            File.createTempFile("manifest", ".list"),
+            false,
             ENTRY_WRITER_QUEUE_CAPACITY));
-    List<TaskManifest> manifests = result.getManifests();
     LoadManifestsStage.SummaryInfo summary = result.getSummary();
     final LoadedManifestData manifestData = result.getLoadedManifestData();
 
@@ -112,7 +112,7 @@ public class CommitJobStage extends
     // and hence all aggregate stats from the tasks.
     ManifestSuccessData successData;
     successData = new RenameFilesStage(stageConfig).apply(
-        Pair.of(manifests, dirStageResults.getCreatedDirectories()));
+        Pair.of(manifestData, dirStageResults.getCreatedDirectories()));
     if (LOG.isDebugEnabled()) {
       LOG.debug("{}: _SUCCESS file summary {}", getName(), successData.toJson());
     }

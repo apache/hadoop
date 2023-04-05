@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
@@ -146,6 +147,9 @@ public class LoadManifestsStage extends
       // close cleanly
       entryWriter.close();
 
+      // if anything failed, raise it.
+      entryWriter.maybeRaiseWriteException();
+
       // collect any stats
       maybeAddIOStatistics(getIOStatistics(), manifestFiles);
     } finally {
@@ -185,30 +189,35 @@ public class LoadManifestsStage extends
       throws IOException {
     updateAuditContext(OP_LOAD_ALL_MANIFESTS);
 
-    TaskManifest m = fetchTaskManifest(status);
+    TaskManifest manifest = fetchTaskManifest(status);
     progress();
 
     // update the directories
-    coalesceDirectories(m);
+    final int created = coalesceDirectories(manifest);
+    LOG.debug("{}: task {} added {} directories",
+        getName(), manifest.getTaskID(), created);
 
     // queue those files.
-    entryWriter.enqueue(m.getFilesToCommit());
+    final boolean enqueued = entryWriter.enqueue(manifest.getFilesToCommit());
+    if (!enqueued) {
+      LOG.warn("{}: Failed to write manifest for task {}",
+          getName(),
+          manifest.getTaskID());
+    }
 
     // add to the summary.
-    summaryInfo.add(m);
+    summaryInfo.add(manifest);
 
     // if manifests are cached, clear extra data
     // and then save.
     if (cacheManifests) {
-      m.setIOStatistics(null);
-      m.getExtraData().clear();
+      manifest.setIOStatistics(null);
+      manifest.getExtraData().clear();
       // update the manifest list in a synchronized block.
       synchronized (manifests) {
-        manifests.add(m);
+        manifests.add(manifest);
       }
     }
-
-
   }
 
   /**
@@ -217,8 +226,10 @@ public class LoadManifestsStage extends
    * contention. before the lock is acquired: if there are no new directories,
    * the write lock is never needed.
    * @param manifest manifest to process
+   * @return the number of directories created;
    */
-  private void coalesceDirectories(final TaskManifest manifest) {
+  @VisibleForTesting
+  int coalesceDirectories(final TaskManifest manifest) {
 
     // build a list of dirs to create.
     // this scans the map
@@ -236,6 +247,7 @@ public class LoadManifestsStage extends
         });
       }
     }
+    return toCreate.size();
 
   }
 
