@@ -1018,7 +1018,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     long countAggregate = 0;
     boolean shouldContinue;
 
-    if(getAbfsConfiguration().getMode() == PrefixMode.BLOB) {
+    if(getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
       /*
       * Destination can be either a file, directory.
       * To understand that its directory, we will do a listBlob API with prefix of

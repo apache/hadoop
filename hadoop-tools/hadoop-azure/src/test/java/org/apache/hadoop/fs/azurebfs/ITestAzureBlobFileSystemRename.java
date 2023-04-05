@@ -206,7 +206,7 @@ public class ITestAzureBlobFileSystemRename extends
     assertTrue(fs.exists(new Path("testDir2/test1/test2")));
     assertTrue(fs.exists(new Path("testDir2/test4")));
     assertTrue(fs.exists(new Path("testDir2/test1/test2/test3")));
-    if(getIsNamespaceEnabled(fs) || fs.getAbfsStore().getAbfsConfiguration().getMode() == PrefixMode.BLOB) {
+    if(getIsNamespaceEnabled(fs) || fs.getAbfsStore().getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
       assertFalse(fs.exists(new Path("testDir2/test4/test3/file")));
       assertTrue(fs.exists(new Path("testDir2/test1/test2/test3/file")));
     } else {
