@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azure.security;
 
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,10 +39,10 @@ public final class TokenUtils {
   public static Token<DelegationTokenIdentifier> toDelegationToken(
       final Map<?, ?> inputMap) throws IOException {
     final Map<?, ?> m = (Map<?, ?>) inputMap.get(Token.class.getSimpleName());
-    return (Token<DelegationTokenIdentifier>) toToken(m);
+    return toToken(m);
   }
 
-  public static Token<? extends TokenIdentifier> toToken(final Map<?, ?> m)
+  public static Token<DelegationTokenIdentifier> toToken(final Map<?, ?> m)
       throws IOException {
     if (m == null) {
       return null;
