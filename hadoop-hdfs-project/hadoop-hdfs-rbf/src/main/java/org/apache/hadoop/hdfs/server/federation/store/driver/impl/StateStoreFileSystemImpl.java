@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
 /**
  * {@link StateStoreDriver} implementation based on a filesystem. The common
  * implementation uses HDFS as a backend. The path can be specified setting
- * dfs.federation.router.driver.fs.path=hdfs://host:port/path/to/store.
+ * dfs.federation.router.store.driver.fs.path=hdfs://host:port/path/to/store.
  */
 public class StateStoreFileSystemImpl extends StateStoreFileBaseImpl {
 
@@ -118,7 +118,14 @@ public class StateStoreFileSystemImpl extends StateStoreFileBaseImpl {
   }
 
   @Override
+  protected int getConcurrentFilesAccessNumThreads() {
+    return getConf().getInt(RBFConfigKeys.FEDERATION_STORE_FS_ASYNC_THREADS,
+        RBFConfigKeys.FEDERATION_STORE_FS_ASYNC_THREADS_DEFAULT);
+  }
+
+  @Override
   public void close() throws Exception {
+    super.close();
     if (fs != null) {
       fs.close();
     }

@@ -57,6 +57,7 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`GETSNAPSHOTLIST`](#Get_Snapshot_List)
     * [`GETFILEBLOCKLOCATIONS`](#Get_File_Block_Locations) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileBlockLocations)
     * [`GETECPOLICY`](#Get_EC_Policy) (see [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).getErasureCodingPolicy)
+    * [`GETSERVERDEFAULTS`](#Get_Server_Defaults) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getServerDefaults)
 *   HTTP PUT
     * [`CREATE`](#Create_and_Write_to_a_File) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).create)
     * [`MKDIRS`](#Make_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).mkdirs)
@@ -1108,6 +1109,35 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getAclSta
         Content-Length: 0
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).access
+
+### Get Server Defaults
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETSERVERDEFAULTS"
+
+  The client receives a response with a [`ServerDefaults` JSON object](Server_Defaults_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {
+            "FsServerDefaults": {
+                "replication": 3,
+                "encryptDataTransfer": "false",
+                "defaultStoragePolicyId":7,
+                "writePacketSize": 65536,
+                "fileBufferSize": 4096,
+                "checksumType": 2,
+                "trashInterval": 10080,
+                "keyProviderUri": "",
+                "blockSize": 134217728,
+                "bytesPerChecksum": 512
+            }
+        }
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getServerDefaults
 
 Storage Policy Operations
 -------------------------
@@ -3041,6 +3071,24 @@ var blockLocationProperties =
     }
   }
 };
+```
+### Server Defaults JSON Schema
+
+```json
+{
+  "FsServerDefaults": {
+    "replication": 3,
+    "encryptDataTransfer": false,
+    "defaultStoragePolicyId": 7,
+    "writePacketSize": 65536,
+    "fileBufferSize": 4096,
+    "checksumType": 2,
+    "trashInterval": 10080,
+    "keyProviderUri": "",
+    "blockSize": 134217728,
+    "bytesPerChecksum": 512
+  }
+}
 ```
 
 HTTP Query Parameter Dictionary

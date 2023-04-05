@@ -102,6 +102,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueu
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.MutableCSConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
@@ -159,6 +160,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
+import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1007,7 +1010,7 @@ public class MockDefaultRequestInterceptorREST
     }
 
     if (resContext.getReservationId() == null) {
-      throw new BadRequestException("Update operations must specify an existing ReservaitonId");
+      throw new BadRequestException("Update operations must specify an existing ReservationId");
     }
 
     ReservationRequestInterpreter[] values = ReservationRequestInterpreter.values();
@@ -1366,6 +1369,29 @@ public class MockDefaultRequestInterceptorREST
   }
 
   @Override
+  public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
+      HttpServletRequest req) throws AuthorizationException, InterruptedException {
+    RMContext rmContext = mockRM.getRMContext();
+    MutableCSConfigurationProvider provider = new MutableCSConfigurationProvider(rmContext);
+    try {
+      Configuration conf = new Configuration();
+      conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+          YarnConfiguration.MEMORY_CONFIGURATION_STORE);
+      provider.init(conf);
+      provider.logAndApplyMutation(UserGroupInformation.getCurrentUser(), mutationInfo);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return Response.status(Status.OK).
+        entity("Configuration change successfully applied.").build();
+  }
+
+  @Override
+  public Response getSchedulerConfiguration(HttpServletRequest req) throws AuthorizationException {
+    return Response.status(Status.OK).entity(new ConfInfo(mockRM.getConfig()))
+        .build();
+  }
+
   public ClusterInfo getClusterInfo() {
     ClusterInfo clusterInfo = new ClusterInfo(mockRM);
     return clusterInfo;
