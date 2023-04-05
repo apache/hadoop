@@ -155,11 +155,17 @@ public class AddToClusterNodeLabelsRequestPBImpl extends
 
   @Override
   public String getSubClusterId() {
-    return null;
+    AddToClusterNodeLabelsRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasSubClusterId()) ? p.getSubClusterId() : null;
   }
 
   @Override
   public void setSubClusterId(String subClusterId) {
-
+    maybeInitBuilder();
+    if (subClusterId == null) {
+      builder.clearSubClusterId();
+      return;
+    }
+    builder.setSubClusterId(subClusterId);
   }
 }

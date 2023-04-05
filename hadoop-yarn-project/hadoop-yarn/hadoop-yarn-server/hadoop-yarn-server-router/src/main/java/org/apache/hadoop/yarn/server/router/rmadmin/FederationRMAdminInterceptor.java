@@ -512,22 +512,111 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
   @Override
   public AddToClusterNodeLabelsResponse addToClusterNodeLabels(
-      AddToClusterNodeLabelsRequest request)
-      throws YarnException, IOException {
-    throw new NotImplementedException();
+      AddToClusterNodeLabelsRequest request) throws YarnException, IOException {
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing AddToClusterNodeLabels request.", null);
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing AddToClusterNodeLabels SubClusterId.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{AddToClusterNodeLabelsRequest.class}, new Object[]{request});
+      Collection<AddToClusterNodeLabelsResponse> addToClusterNodeLabelsResps =
+          remoteMethod.invokeConcurrent(this, AddToClusterNodeLabelsResponse.class, subClusterId);
+      if (CollectionUtils.isNotEmpty(addToClusterNodeLabelsResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededAddToClusterNodeLabelsRetrieved(stopTime - startTime);
+        return AddToClusterNodeLabelsResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+         "Unable to addToClusterNodeLabels due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+    throw new YarnException("Unable to addToClusterNodeLabels.");
   }
 
   @Override
   public RemoveFromClusterNodeLabelsResponse removeFromClusterNodeLabels(
       RemoveFromClusterNodeLabelsRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RemoveFromClusterNodeLabels request.", null);
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RemoveFromClusterNodeLabels SubClusterId.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{RemoveFromClusterNodeLabelsRequest.class}, new Object[]{request});
+      Collection<RemoveFromClusterNodeLabelsResponse> refreshNodesResourcesResps =
+          remoteMethod.invokeConcurrent(this, RemoveFromClusterNodeLabelsResponse.class, subClusterId);
+      if (CollectionUtils.isNotEmpty(refreshNodesResourcesResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRemoveFromClusterNodeLabelsRetrieved(stopTime - startTime);
+        return RemoveFromClusterNodeLabelsResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+         "Unable to removeFromClusterNodeLabels due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+    throw new YarnException("Unable to removeFromClusterNodeLabels.");
   }
 
   @Override
   public ReplaceLabelsOnNodeResponse replaceLabelsOnNode(ReplaceLabelsOnNodeRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing ReplaceLabelsOnNode request.", null);
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing ReplaceLabelsOnNode SubClusterId.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{ReplaceLabelsOnNodeRequest.class}, new Object[]{request});
+      Collection<ReplaceLabelsOnNodeResponse> replaceLabelsOnNodeResps =
+          remoteMethod.invokeConcurrent(this, ReplaceLabelsOnNodeResponse.class, subClusterId);
+      if (CollectionUtils.isNotEmpty(replaceLabelsOnNodeResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRemoveFromClusterNodeLabelsRetrieved(stopTime - startTime);
+        return ReplaceLabelsOnNodeResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to replaceLabelsOnNode due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+    throw new YarnException("Unable to replaceLabelsOnNode.");
   }
 
   @Override

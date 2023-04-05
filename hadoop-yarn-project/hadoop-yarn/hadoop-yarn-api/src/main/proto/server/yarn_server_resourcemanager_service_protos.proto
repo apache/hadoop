@@ -103,6 +103,7 @@ message AddToClusterNodeLabelsResponseProto {
 
 message RemoveFromClusterNodeLabelsRequestProto {
   repeated string nodeLabels = 1;
+  optional string sub_cluster_id = 2;
 }
 
 message RemoveFromClusterNodeLabelsResponseProto {
@@ -111,6 +112,7 @@ message RemoveFromClusterNodeLabelsResponseProto {
 message ReplaceLabelsOnNodeRequestProto {
   repeated NodeIdToLabelsProto nodeToLabels = 1;
   optional bool failOnUnknownNodes = 2;
+  optional string sub_cluster_id = 3;
 }
 
 message ReplaceLabelsOnNodeResponseProto {
