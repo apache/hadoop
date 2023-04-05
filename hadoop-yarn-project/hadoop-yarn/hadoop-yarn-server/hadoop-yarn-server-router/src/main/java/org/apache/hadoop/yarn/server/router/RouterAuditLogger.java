@@ -66,6 +66,10 @@ public final class RouterAuditLogger {
     public static final String GET_LABELSTONODES = "Get LabelsToNodes";
     public static final String GET_CLUSTERNODELABELS = "Get ClusterNodeLabels";
     public static final String GET_APPLICATION_ATTEMPT_REPORT = "Get ApplicationAttemptReport";
+    public static final String GET_APPLICATION_ATTEMPTS = "Get ApplicationAttempts";
+    public static final String GET_CONTAINERREPORT = "Get ContainerReport";
+
+    public static final String GET_CONTAINERS = "Get Containers";
   }
 
   public static void logSuccess(String user, String operation, String target) {
