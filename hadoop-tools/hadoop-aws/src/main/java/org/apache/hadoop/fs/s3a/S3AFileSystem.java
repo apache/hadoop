@@ -404,6 +404,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private final Set<Path> deleteOnExit = new TreeSet<>();
 
+  /**
+   * Scheme for the current filesystem.
+   */
+  private String scheme = FS_S3A;
+
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
@@ -617,6 +622,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       vectoredActiveRangeReads = intOption(conf,
               AWS_S3_VECTOR_ACTIVE_RANGE_READS, DEFAULT_AWS_S3_VECTOR_ACTIVE_RANGE_READS, 1);
       vectoredIOContext = populateVectoredIOContext(conf);
+      scheme = (this.uri != null && this.uri.getScheme() != null) ? this.uri.getScheme() : FS_S3A;
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
@@ -1162,7 +1168,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Override
   public String getScheme() {
-    return "s3a";
+    return this.scheme;
   }
 
   /**
