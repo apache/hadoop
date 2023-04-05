@@ -155,6 +155,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_STATUS;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_STATUS_DESCRIPTION;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_META_HDI_ISFOLDER;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.COPY_BLOB_ABORTED;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.COPY_BLOB_FAILED;
 
 /**
  * Provides the bridging logic between Hadoop's abstract filesystem and Azure Storage.
@@ -510,7 +512,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       if(ex.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
         final BlobProperty dstBlobProperty = getBlobProperty(dstPath, tracingContext);
         try {
-          if(("/" + client.getFileSystem() + srcPath.toUri().getPath()).equals(new URL(dstBlobProperty.getCopySourceUrl()).toURI().getPath())) {
+          if(dstBlobProperty.getCopySourceUrl() != null &&
+              ("/" + client.getFileSystem() + srcPath.toUri().getPath()).equals(new URL(dstBlobProperty.getCopySourceUrl()).toURI().getPath())) {
             return;
           }
         } catch (URISyntaxException e) {
@@ -536,31 +539,27 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       if (handleCopyInProgress(dstPath, tracingContext, copyId)) {return;}
       counter++;
     }
-
-    /*
-    * If no destination is found in all iteration, it can be assumed that the
-    * destination blob is deleted and is cause of a race-condition. developer has to be informed.
-    */
-    throw new AbfsRestOperationException(
-        HttpURLConnection.HTTP_INTERNAL_ERROR, "CopyBlobFailed", null,
-        new Exception("CopyBlobFailedBecauseOfRaceCondition"));
   }
 
 @org.apache.hadoop.classification.VisibleForTesting
   boolean handleCopyInProgress(final Path dstPath,
       final TracingContext tracingContext,
       final String copyId) throws AzureBlobFileSystemException {
-    BlobProperty blobProperty = getBlobPropertyWithNotFoundHandling(dstPath,
+    BlobProperty blobProperty = getBlobProperty(dstPath,
         tracingContext);
     if (blobProperty != null && copyId.equals(blobProperty.getCopyId())) {
       if (COPY_STATUS_SUCCESS.equals(blobProperty.getCopyStatus())) {
         return true;
       }
-      if (COPY_STATUS_ABORTED.equals(blobProperty.getCopyStatus())
-          || COPY_STATUS_FAILED.equals(blobProperty.getCopyStatus())) {
+      if (COPY_STATUS_FAILED.equals(blobProperty.getCopyStatus())) {
         throw new AbfsRestOperationException(
-            HttpURLConnection.HTTP_INTERNAL_ERROR, "CopyBlobFailed", null,
-            new Exception("CopyBlobFailed"));
+            COPY_BLOB_FAILED.getStatusCode(), COPY_BLOB_FAILED.getErrorCode(), null,
+            new Exception(COPY_BLOB_FAILED.getErrorCode()));
+      }
+      if(COPY_STATUS_ABORTED.equals(blobProperty.getCopyStatus())) {
+        throw new AbfsRestOperationException(
+            COPY_BLOB_ABORTED.getStatusCode(), COPY_BLOB_ABORTED.getErrorCode(), null,
+            new Exception(COPY_BLOB_ABORTED.getErrorCode()));
       }
     }
     return false;

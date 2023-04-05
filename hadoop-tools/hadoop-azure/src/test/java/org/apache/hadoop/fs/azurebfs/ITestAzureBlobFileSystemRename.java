@@ -38,6 +38,7 @@ import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -50,13 +51,17 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationTestUtil;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
 import static org.apache.hadoop.fs.azurebfs.RenameAtomicityUtils.SUFFIX;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_ABORTED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_FAILED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_PENDING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_SUCCESS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.COPY_BLOB_ABORTED;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.COPY_BLOB_FAILED;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
@@ -879,6 +884,155 @@ public class ITestAzureBlobFileSystemRename extends
   }
 
   @Test
+  public void testRenameBlobIdempotencyWhereDstIsCreatedFromSomeOtherProcess() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    String srcDir = "/test1/test2/test3";
+    fs.mkdirs(new Path(srcDir));
+    fs.create(new Path(srcDir, "file1"));
+    fs.create(new Path(srcDir, "file2"));
+
+    fs.mkdirs(new Path("/test4"));
+
+    final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
+    final AzureBlobFileSystemStore spiedStore = Mockito.spy(fs.getAbfsStore());
+    spiedFs.setAbfsStore(spiedStore);
+    final AbfsClient spiedClient = Mockito.spy(fs.getAbfsClient());
+    spiedStore.setClient(spiedClient);
+
+    /*
+     * First call to copyBlob for file1 will fail with connection-reset, but the
+     * backend has got the call. Retry of that API would give 409 error.
+     */
+    boolean[] hasBeenCalled = new boolean[1];
+    hasBeenCalled[0] = false;
+
+    boolean[] connectionResetThrown = new boolean[1];
+    connectionResetThrown[0] = false;
+
+    AbfsClientTestUtil.setMockAbfsRestOperationForCopyBlobOperation(spiedClient, (spiedRestOp, actualCallMakerOp) -> {
+
+      Mockito.doAnswer(answer -> {
+        if(spiedRestOp.getUrl().toString().contains("file1") && !hasBeenCalled[0]) {
+          hasBeenCalled[0] = true;
+          fs.create(new Path("/test4/test3", "file1"));
+          AbfsRestOperationTestUtil.addAbfsHttpOpProcessResponseMock(spiedRestOp, (mockAbfsHttpOp, actualAbfsHttpOp) -> {
+            Mockito.doAnswer(sendRequestAnswer -> {
+                  if(!connectionResetThrown[0]) {
+                    connectionResetThrown[0] = true;
+                    throw new SocketException("connection-reset");
+                  }
+                  spiedRestOp.signRequest(actualAbfsHttpOp, sendRequestAnswer.getArgument(2));
+                  actualAbfsHttpOp.sendRequest(sendRequestAnswer.getArgument(0), sendRequestAnswer.getArgument(1), sendRequestAnswer.getArgument(2));
+                  AbfsHttpOpTestUtil.setConnection(mockAbfsHttpOp, actualAbfsHttpOp);
+                  return mockAbfsHttpOp;
+                }).when(mockAbfsHttpOp)
+                .sendRequest(Mockito.nullable(byte[].class), Mockito.anyInt(), Mockito.anyInt());
+
+            return mockAbfsHttpOp;
+          });
+          Mockito.doCallRealMethod().when(spiedRestOp).execute(Mockito.any(TracingContext.class));
+          spiedRestOp.execute(answer.getArgument(0));
+          return spiedRestOp;
+        } else {
+          actualCallMakerOp.execute(answer.getArgument(0));
+          AbfsRestOperationTestUtil.setResult(spiedRestOp, actualCallMakerOp.getResult());
+          return actualCallMakerOp;
+        }
+      }).when(spiedRestOp).execute(Mockito.any(TracingContext.class));
+      return spiedRestOp;
+    });
+
+    spiedFs.setWorkingDirectory(new Path("/"));
+
+    Boolean dstAlreadyThere = false;
+    try {
+      spiedFs.rename(new Path(srcDir), new Path("/test4"));
+    } catch (RuntimeException ex) {
+      if(ex.getMessage().contains(HttpURLConnection.HTTP_CONFLICT + "")) {
+        dstAlreadyThere = true;
+      }
+    }
+    Assert.assertTrue(dstAlreadyThere);
+    Assert.assertTrue(hasBeenCalled[0]);
+    Assert.assertTrue(connectionResetThrown[0]);
+  }
+
+  @Test
+  public void testRenameBlobIdempotencyWhereDstIsCopiedFromSomeOtherProcess() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    String srcDir = "/test1/test2/test3";
+    fs.mkdirs(new Path(srcDir));
+    fs.create(new Path(srcDir, "file1"));
+    fs.create(new Path(srcDir, "file2"));
+
+    fs.mkdirs(new Path("/test4"));
+
+    final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
+    final AzureBlobFileSystemStore spiedStore = Mockito.spy(fs.getAbfsStore());
+    spiedFs.setAbfsStore(spiedStore);
+    final AbfsClient spiedClient = Mockito.spy(fs.getAbfsClient());
+    spiedStore.setClient(spiedClient);
+
+    /*
+     * First call to copyBlob for file1 will fail with connection-reset, but the
+     * backend has got the call. Retry of that API would give 409 error.
+     */
+    boolean[] hasBeenCalled = new boolean[1];
+    hasBeenCalled[0] = false;
+
+    boolean[] connectionResetThrown = new boolean[1];
+    connectionResetThrown[0] = false;
+
+    AbfsClientTestUtil.setMockAbfsRestOperationForCopyBlobOperation(spiedClient, (spiedRestOp, actualCallMakerOp) -> {
+
+      Mockito.doAnswer(answer -> {
+        if(spiedRestOp.getUrl().toString().contains("file1") && !hasBeenCalled[0]) {
+          hasBeenCalled[0] = true;
+          fs.create(new Path("/randomDir/test3/file1"));
+          fs.rename(new Path("/randomDir/test3/file1"), new Path("/test4/test3/file1"));
+          AbfsRestOperationTestUtil.addAbfsHttpOpProcessResponseMock(spiedRestOp, (mockAbfsHttpOp, actualAbfsHttpOp) -> {
+            Mockito.doAnswer(sendRequestAnswer -> {
+                  if(!connectionResetThrown[0]) {
+                    connectionResetThrown[0] = true;
+                    throw new SocketException("connection-reset");
+                  }
+                  spiedRestOp.signRequest(actualAbfsHttpOp, sendRequestAnswer.getArgument(2));
+                  actualAbfsHttpOp.sendRequest(sendRequestAnswer.getArgument(0), sendRequestAnswer.getArgument(1), sendRequestAnswer.getArgument(2));
+                  AbfsHttpOpTestUtil.setConnection(mockAbfsHttpOp, actualAbfsHttpOp);
+                  return mockAbfsHttpOp;
+                }).when(mockAbfsHttpOp)
+                .sendRequest(Mockito.nullable(byte[].class), Mockito.anyInt(), Mockito.anyInt());
+
+            return mockAbfsHttpOp;
+          });
+          Mockito.doCallRealMethod().when(spiedRestOp).execute(Mockito.any(TracingContext.class));
+          spiedRestOp.execute(answer.getArgument(0));
+          return spiedRestOp;
+        } else {
+          actualCallMakerOp.execute(answer.getArgument(0));
+          AbfsRestOperationTestUtil.setResult(spiedRestOp, actualCallMakerOp.getResult());
+          return actualCallMakerOp;
+        }
+      }).when(spiedRestOp).execute(Mockito.any(TracingContext.class));
+      return spiedRestOp;
+    });
+
+    spiedFs.setWorkingDirectory(new Path("/"));
+
+    Boolean dstAlreadyThere = false;
+    try {
+      spiedFs.rename(new Path(srcDir), new Path("/test4"));
+    } catch (RuntimeException ex) {
+      if(ex.getMessage().contains(HttpURLConnection.HTTP_CONFLICT + "")) {
+        dstAlreadyThere = true;
+      }
+    }
+    Assert.assertTrue(dstAlreadyThere);
+    Assert.assertTrue(hasBeenCalled[0]);
+    Assert.assertTrue(connectionResetThrown[0]);
+  }
+
+  @Test
   public void testRenameLargeNestedDir() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     String dir = "/";
@@ -944,11 +1098,39 @@ public class ITestAzureBlobFileSystemRename extends
     Mockito.doReturn(COPY_STATUS_FAILED).when(store).getCopyStatus(Mockito.any(
         AbfsHttpOperation.class));
     fileSystem.create(new Path("/test1/file"));
+    Boolean copyBlobFailureCaught = false;
     try {
       fileSystem.rename(new Path("/test1/file"), new Path("/test1/file2"));
-    } catch (Exception e) {
-
+    } catch (AbfsRestOperationException e) {
+      if(COPY_BLOB_FAILED.equals(e.getErrorCode())) {
+        copyBlobFailureCaught = true;
+      }
     }
+    Assert.assertTrue(copyBlobFailureCaught);
+    Assert.assertTrue(fileSystem.exists(new Path("/test1/file")));
+    Mockito.verify(store, Mockito.times(1))
+        .handleCopyInProgress(Mockito.any(Path.class), Mockito.any(TracingContext.class), Mockito.any(String.class));
+  }
+
+  @Test
+  public void testCopyBlobTakeTimeAndEventullyAborted() throws Exception {
+    AzureBlobFileSystem fileSystem = getFileSystem();
+    AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
+    fileSystem.setAbfsStore(store);
+    Mockito.doReturn(COPY_STATUS_PENDING).when(store)
+        .getCopyBlobProgress(Mockito.any(AbfsRestOperation.class));
+    Mockito.doReturn(COPY_STATUS_ABORTED).when(store).getCopyStatus(Mockito.any(
+        AbfsHttpOperation.class));
+    fileSystem.create(new Path("/test1/file"));
+    Boolean copyBlobFailureCaught = false;
+    try {
+      fileSystem.rename(new Path("/test1/file"), new Path("/test1/file2"));
+    } catch (AbfsRestOperationException e) {
+      if(COPY_BLOB_ABORTED.equals(e.getErrorCode())) {
+        copyBlobFailureCaught = true;
+      }
+    }
+    Assert.assertTrue(copyBlobFailureCaught);
     Assert.assertTrue(fileSystem.exists(new Path("/test1/file")));
     Mockito.verify(store, Mockito.times(1))
         .handleCopyInProgress(Mockito.any(Path.class), Mockito.any(TracingContext.class), Mockito.any(String.class));
@@ -968,11 +1150,10 @@ public class ITestAzureBlobFileSystemRename extends
         .getCopyBlobProgress(Mockito.any(AbfsRestOperation.class));
     fileSystem.create(new Path(srcFile));
 
-    try {
-      fileSystem.rename(new Path(srcFile), new Path(dstFile));
-    } catch (Exception e) {
 
-    }
+    LambdaTestUtils.intercept(FileNotFoundException.class, () -> {
+      fileSystem.rename(new Path(srcFile), new Path(dstFile));
+    });
     Assert.assertFalse(fileSystem.exists(new Path(dstFile)));
   }
 }
