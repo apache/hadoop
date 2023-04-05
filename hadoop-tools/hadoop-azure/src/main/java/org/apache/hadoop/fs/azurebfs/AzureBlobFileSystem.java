@@ -323,6 +323,7 @@ public class AzureBlobFileSystem extends FileSystem
             fileSystemId, FSOperationType.CREATE, overwrite, tracingHeaderFormat, listener);
 
     Path qualifiedPath = makeQualified(f);
+    // This fix is needed for create idempotency, should throw error if overwrite is false and file status is not null.
     boolean fileOverwrite = overwrite;
     if (!fileOverwrite) {
       FileStatus fileStatus = tryGetFileStatus(qualifiedPath, tracingContext);
@@ -1508,7 +1509,7 @@ public class AzureBlobFileSystem extends FileSystem
   }
 
   @VisibleForTesting
-  public AzureBlobFileSystemStore getAbfsStore() {
+  AzureBlobFileSystemStore getAbfsStore() {
     return abfsStore;
   }
 

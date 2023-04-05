@@ -1890,7 +1890,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   @VisibleForTesting
-  public AbfsClient getClient() {
+  AbfsClient getClient() {
     return this.client;
   }
 
