@@ -331,8 +331,8 @@ public class DFSStripedInputStream extends DFSInputStream {
    * its ThreadLocal.
    *
    * @param stats striped read stats
-   * @param duration read time metrics             
-   *              
+   * @param duration read time metrics
+   *
    */
   void updateReadStats(final StripedBlockUtil.BlockReadStats stats, long duration) {
     if (stats == null) {

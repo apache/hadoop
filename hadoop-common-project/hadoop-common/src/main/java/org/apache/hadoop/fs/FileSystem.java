@@ -4266,7 +4266,7 @@ public abstract class FileSystem extends Configured
     public void increaseRemoteBytesReadTime(long duration) {
       getThreadStatistics().remoteBytesReadTime += duration;
     }
-    
+
     /**
      * Apply the given aggregator to all StatisticsData objects associated with
      * this Statistics object.
@@ -4413,7 +4413,7 @@ public abstract class FileSystem extends Configured
       }
       return bytesRead;
     }
-    
+
     /**
      * Get total time taken for bytes read from remote.
      * @return time taken for remote bytes read.
@@ -4432,7 +4432,7 @@ public abstract class FileSystem extends Configured
         }
       });
     }
-    
+
     /**
      * Get all statistics data.
      * MR or other frameworks can use the method to get all statistics at once.
