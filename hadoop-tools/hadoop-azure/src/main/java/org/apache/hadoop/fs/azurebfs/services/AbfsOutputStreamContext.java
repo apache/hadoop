@@ -63,6 +63,8 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   private TracingContext tracingContext;
 
+  private String eTag;
+
   public AbfsOutputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
   }
@@ -147,6 +149,12 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
   public AbfsOutputStreamContext withTracingContext(
       final TracingContext tracingContext) {
     this.tracingContext = tracingContext;
+    return this;
+  }
+
+  public AbfsOutputStreamContext withETag(
+          final String eTag) {
+    this.eTag = eTag;
     return this;
   }
 
@@ -249,5 +257,9 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public TracingContext getTracingContext() {
     return tracingContext;
+  }
+
+  public String getETag() {
+    return eTag;
   }
 }

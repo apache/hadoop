@@ -39,6 +39,7 @@ public interface SASTokenProvider {
   String DELETE_RECURSIVE_OPERATION = "delete-recursive";
   String GET_ACL_OPERATION = "get-acl";
   String GET_STATUS_OPERATION = "get-status";
+  String GET_BLOCK_LIST = "get-block-list";
   String GET_PROPERTIES_OPERATION = "get-properties";
   String LIST_OPERATION = "list";
   String READ_OPERATION = "read";

@@ -47,6 +47,11 @@ public final class AbfsHttpConstants {
   public static final String DEFAULT_TIMEOUT = "90";
   public static final String APPEND_BLOB_TYPE = "appendblob";
   public static final String TOKEN_VERSION = "2";
+  public static final String BLOCK = "block";
+  public static final String BLOCKLIST = "blocklist";
+  public static final String COMP_BLOCKLIST = "comp=blocklist";
+  public static final String COMMITTED = "committed";
+  public static final String UNCOMMITTED = "uncommitted";
 
   public static final String JAVA_VENDOR = "java.vendor";
   public static final String JAVA_VERSION = "java.version";

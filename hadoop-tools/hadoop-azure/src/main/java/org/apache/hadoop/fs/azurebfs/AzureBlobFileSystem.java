@@ -1500,6 +1500,10 @@ public class AzureBlobFileSystem extends FileSystem
     return abfsStore.getClient();
   }
 
+  public PrefixMode getPrefixMode() {
+    return prefixMode;
+  }
+
   /**
    * Get any Delegation Token manager created by the filesystem.
    * @return the DT manager or null.

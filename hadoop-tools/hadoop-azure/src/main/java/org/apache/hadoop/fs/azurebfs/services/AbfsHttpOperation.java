@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -42,6 +45,8 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COMP_BLOCKLIST;
 
 /**
  * Represents an HTTP operation.
@@ -81,6 +86,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private long sendRequestTimeMs;
   private long recvResponseTimeMs;
   private boolean shouldMask = false;
+  private List<String> blockIdList = new ArrayList<>();
 
   public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
       final URL url,
@@ -165,6 +171,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public String getResponseHeader(String httpHeader) {
     return connection.getHeaderField(httpHeader);
+  }
+
+  public List<String> getBlockIdList() {
+    return blockIdList;
   }
 
   // Returns a trace message for the request
@@ -388,7 +398,11 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         // this is a list operation and need to retrieve the data
         // need a better solution
         if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method) && buffer == null) {
-          parseListFilesResponse(stream);
+          if (url.toString().contains(COMP_BLOCKLIST)) {
+            parseBlockListResponse(stream);
+          } else {
+            parseListFilesResponse(stream);
+          }
         } else {
           if (buffer != null) {
             while (totalBytesRead < length) {
@@ -423,6 +437,59 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public void setRequestProperty(String key, String value) {
     this.connection.setRequestProperty(key, value);
+  }
+
+  /**
+   * Gets the connection response message.
+   * @return response message.
+   * @throws IOException
+   */
+  String getConnResponseMessage() throws IOException {
+    return connection.getResponseMessage();
+  }
+
+  /**
+   * Parses the get block list response and returns list of committed blocks.
+   *
+   * @param stream InputStream contains the list results.
+   * @throws IOException
+   */
+  private void parseBlockListResponse(final InputStream stream) throws IOException {
+    if (stream == null) {
+      return;
+    }
+
+    if (blockIdList.size() != 0) {
+      // already parsed the response
+      return;
+    }
+
+    BufferedReader in = new BufferedReader(new InputStreamReader(stream));
+    String inputLine;
+    StringBuilder response = new StringBuilder();
+    while ((inputLine = in.readLine()) != null) {
+      response.append(inputLine);
+    }
+    in.close();
+
+    // Extract the list of block IDs from the response
+    String xmlResponse = response.toString();
+    int startIndex = xmlResponse.indexOf("<CommittedBlocks>");
+    int endIndex = xmlResponse.indexOf("</CommittedBlocks>");
+    if (startIndex > 0 && endIndex > 0) {
+      String committedBlocksXml = xmlResponse.substring(startIndex, endIndex);
+      startIndex = committedBlocksXml.indexOf("<Block>");
+      while (startIndex >= 0) {
+        endIndex = committedBlocksXml.indexOf("</Block>", startIndex);
+        String blockXml = committedBlocksXml.substring(startIndex, endIndex);
+        startIndex = committedBlocksXml.indexOf("<Block>", endIndex);
+
+        int idStartIndex = blockXml.indexOf("<Name>");
+        int idEndIndex = blockXml.indexOf("</Name>", idStartIndex);
+        String blockId = blockXml.substring(idStartIndex + 6, idEndIndex);
+        blockIdList.add(blockId);
+      }
+    }
   }
 
   /**
