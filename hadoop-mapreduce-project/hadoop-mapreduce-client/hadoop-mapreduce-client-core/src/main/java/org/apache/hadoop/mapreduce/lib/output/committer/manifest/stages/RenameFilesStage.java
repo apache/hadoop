@@ -109,7 +109,7 @@ public class RenameFilesStage extends
     createdDirectories = args.getRight();
     final EntryFileIO entryFileIO = new EntryFileIO(getStageConfig().getConf());
     final SequenceFile.Reader reader =
-        entryFileIO.createReader(manifestData.getEntrySequenceFile());
+        entryFileIO.createReader(manifestData.getEntrySequenceData());
 
 
     final ManifestSuccessData success = createManifestOutcome(getStageConfig(),

@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -78,7 +79,7 @@ public class EntryFileIO {
    * @throws IOException fail to open the file
    */
   public SequenceFile.Writer createWriter(File file) throws IOException {
-    return createWriter(new Path(file.toURI()));
+    return createWriter(toPath(file));
   }
 
   public SequenceFile.Writer createWriter(Path path) throws IOException {
@@ -96,7 +97,7 @@ public class EntryFileIO {
    * @throws IOException failure to open
    */
   public SequenceFile.Reader createReader(File file) throws IOException {
-    return createReader(new Path(file.toURI()));
+    return createReader(toPath(file));
   }
 
   /**
@@ -131,6 +132,42 @@ public class EntryFileIO {
     ew.start();
     return ew;
   }
+
+  /**
+   * Write a sequence of entries to the writer.
+   * @param writer writer
+   * @param entries entries
+   * @param close close the stream afterwards
+   * @return number of entries written
+   * @throws IOException write failure.
+   */
+  public static int write(SequenceFile.Writer writer, 
+      Collection<FileEntry> entries,
+      boolean close)
+      throws IOException {
+    try {
+      for (FileEntry entry: entries) {
+        writer.append(NullWritable.get(), entry);
+      }
+      writer.flush();
+    } finally {
+      if (close) {
+        writer.close();
+      }
+    }
+    return entries.size();
+  }
+
+
+  /**
+   * Given a file, create a Path.
+   * @param file file
+   * @return path to the file
+   */
+  public static Path toPath(final File file) {
+    return new Path(file.toURI());
+  }
+
 
   /**
    * Writer takes a list of entries at a time; queues for writing.

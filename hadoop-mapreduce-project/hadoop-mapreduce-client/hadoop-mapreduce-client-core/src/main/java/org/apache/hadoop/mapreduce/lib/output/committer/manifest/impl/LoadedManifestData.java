@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl;
 
+import java.io.File;
 import java.util.Collection;
 
 import org.apache.hadoop.fs.Path;
@@ -41,7 +42,7 @@ public final class LoadedManifestData {
    * files to rename.
    * This will be a sequence file of long -> FileEntry
    */
-  private final Path entrySequenceFile;
+  private final Path entrySequenceData;
 
   /**
    * How many files will be renamed.
@@ -54,7 +55,7 @@ public final class LoadedManifestData {
       final int fileCount) {
     this.directories = directories;
     this.fileCount = fileCount;
-    this.entrySequenceFile = entrySequenceFile;
+    this.entrySequenceData = entrySequenceFile;
   }
 
   public Collection<DirEntry> getDirectories() {
@@ -65,8 +66,11 @@ public final class LoadedManifestData {
     return fileCount;
   }
 
-  public Path getEntrySequenceFile() {
-    return entrySequenceFile;
+  public Path getEntrySequenceData() {
+    return entrySequenceData;
   }
 
+  public File getEntrySequenceFile() {
+    return new File(entrySequenceData.toUri());
+  }
 }

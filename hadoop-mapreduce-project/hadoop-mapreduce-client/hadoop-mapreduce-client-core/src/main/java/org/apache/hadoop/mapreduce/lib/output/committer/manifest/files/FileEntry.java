@@ -35,6 +35,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData.marshallPath;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData.unmarshallPath;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData.verify;
@@ -196,9 +197,9 @@ public final class FileEntry implements Serializable, Writable {
 
   @Override
   public void write(final DataOutput out) throws IOException {
-    Text.writeString(out, source);
-    Text.writeString(out, dest);
-    Text.writeString(out, etag);
+    Text.writeString(out, requireNonNull(source, "null source"));
+    Text.writeString(out, requireNonNull(dest, "null dest"));
+    Text.writeString(out, etag != null ? etag : "");
     WritableUtils.writeVLong(out, size);
   }
 

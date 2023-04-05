@@ -37,6 +37,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -47,11 +48,15 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestPrinter;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.EntryFileIO;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.LoadedManifestData;
 import org.apache.hadoop.util.functional.RemoteIterators;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_CLASSNAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.EntryFileIO.toPath;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -293,6 +298,24 @@ public final class ManifestCommitterTestSupport {
     assertThat(fileOrDir.getType())
         .describedAs("type of " + entry)
         .isEqualTo(type);
+  }
+
+  /**
+   * Save a manifest to an entry file; returning the loaded manifest data.
+   * Caller MUST clean up the temp file.
+   * @param entryFileIO IO class
+   * @param manifest manifest to process.
+   * @return info about the load
+   * @throws IOException write failure
+   */
+  public static LoadedManifestData saveManifest(EntryFileIO entryFileIO, TaskManifest manifest)
+      throws IOException {
+    final File tempFile = File.createTempFile("entries", ".seq");
+    final SequenceFile.Writer writer = entryFileIO.createWriter(tempFile);
+    return new LoadedManifestData(
+        manifest.getDestDirectories(),
+        toPath(tempFile),
+        EntryFileIO.write(writer, manifest.getFilesToCommit(), true));
   }
 
   /**
