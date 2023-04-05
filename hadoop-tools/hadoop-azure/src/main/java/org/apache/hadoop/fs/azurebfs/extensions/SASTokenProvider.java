@@ -41,6 +41,9 @@ public interface SASTokenProvider {
   String GET_STATUS_OPERATION = "get-status";
   String GET_PROPERTIES_OPERATION = "get-properties";
   String LIST_OPERATION = "list";
+  String LIST_BLOB_OPERATION = "list-blob";
+  String COPY_BLOB_DESTINATION = "copy-blob-dst";
+  String COPY_BLOB_SOURCE = "copy-blob-src";
   String READ_OPERATION = "read";
   String RENAME_SOURCE_OPERATION = "rename-source";
   String RENAME_DESTINATION_OPERATION = "rename-destination";

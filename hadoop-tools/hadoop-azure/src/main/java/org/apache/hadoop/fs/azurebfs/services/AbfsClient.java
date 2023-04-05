@@ -1026,13 +1026,17 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation copyBlob(Path sourceBlobPath,
       Path destinationBlobPath,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
-    AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    String blobRelativePath = destinationBlobPath.toUri().getPath();
-    final URL url = createRequestUrl(blobRelativePath,
-        abfsUriQueryBuilder.toString());
+    AbfsUriQueryBuilder abfsUriQueryBuilderDst = createDefaultUriQueryBuilder();
+    AbfsUriQueryBuilder abfsUriQueryBuilderSrc = new AbfsUriQueryBuilder();
+    String dstBlobRelativePath = destinationBlobPath.toUri().getPath();
+    String srcBlobRelativePath = sourceBlobPath.toUri().getPath();
+    appendSASTokenToQuery(dstBlobRelativePath, SASTokenProvider.COPY_BLOB_DESTINATION, abfsUriQueryBuilderDst);
+    appendSASTokenToQuery(srcBlobRelativePath, SASTokenProvider.COPY_BLOB_SOURCE, abfsUriQueryBuilderSrc);
+    final URL url = createRequestUrl(dstBlobRelativePath,
+        abfsUriQueryBuilderDst.toString());
     final String sourcePathUrl = createRequestUrl(
-        sourceBlobPath.toUri().getPath(),
-        new AbfsUriQueryBuilder().toString()).toString();
+        srcBlobRelativePath,
+        abfsUriQueryBuilderSrc.toString()).toString();
     List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     requestHeaders.add(new AbfsHttpHeader(X_MS_COPY_SOURCE, sourcePathUrl));
     requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, STAR));
@@ -1062,6 +1066,7 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation getBlobProperty(Path blobPath, TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     String blobRelativePath = blobPath.toUri().getPath();
+    appendSASTokenToQuery(blobRelativePath, SASTokenProvider.GET_PROPERTIES_OPERATION, abfsUriQueryBuilder);
     final URL url = createRequestUrl(blobRelativePath, abfsUriQueryBuilder.toString());
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -1109,6 +1114,7 @@ public class AbfsClient implements Closeable {
     if (maxResult != null) {
       abfsUriQueryBuilder.addQuery(QUERY_PARAM_MAXRESULT, maxResult + "");
     }
+    appendSASTokenToQuery(sourceDirBlobPath.toUri().getPath(), SASTokenProvider.LIST_BLOB_OPERATION, abfsUriQueryBuilder);
     URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -1135,6 +1141,7 @@ public class AbfsClient implements Closeable {
   public void deleteBlobPath(final Path blobPath, final TracingContext tracingContext) throws AzureBlobFileSystemException{
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     String blobRelativePath = blobPath.toUri().getPath();
+    appendSASTokenToQuery(blobRelativePath, SASTokenProvider.DELETE_OPERATION, abfsUriQueryBuilder);
     final URL url = createRequestUrl(blobRelativePath, abfsUriQueryBuilder.toString());
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     final AbfsRestOperation op = new AbfsRestOperation(

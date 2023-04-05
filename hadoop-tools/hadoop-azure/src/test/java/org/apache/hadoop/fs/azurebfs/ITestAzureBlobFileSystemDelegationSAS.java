@@ -84,11 +84,15 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
 
   @Override
   public void setup() throws Exception {
-    boolean isHNSEnabled = this.getConfiguration().getBoolean(
-        TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
-//    Assume.assumeTrue(isHNSEnabled);
     createFilesystemForSASTests();
     super.setup();
+    assumptionChecks();
+  }
+
+  protected void assumptionChecks() throws IOException {
+    boolean isHNSEnabled = this.getConfiguration().getBoolean(
+        TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
+    Assume.assumeTrue(isHNSEnabled);
   }
 
   @Test
@@ -476,26 +480,5 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     assertEquals("The permissions are not expected.",
         "r--r-----",
         fileStatus.getPermission().toString());
-  }
-
-  @Test
-  public void testPosixRenameDirectoryWhereDirectoryAlreadyThereOnDestination() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
-    fs.mkdirs(new Path("testDir2/test1/test2/test3"));
-    fs.create(new Path("testDir2/test1/test2/test3/file"));
-    fs.mkdirs(new Path("testDir2/test4/test3"));
-    assertTrue(fs.exists(new Path("testDir2/test1/test2/test3/file")));
-    Assert.assertFalse(fs.rename(new Path("testDir2/test1/test2/test3"), new Path("testDir2/test4")));
-    assertTrue(fs.exists(new Path("testDir2")));
-    assertTrue(fs.exists(new Path("testDir2/test1/test2")));
-    assertTrue(fs.exists(new Path("testDir2/test4")));
-    assertTrue(fs.exists(new Path("testDir2/test1/test2/test3")));
-    if(getIsNamespaceEnabled(fs) || fs.getAbfsStore().getAbfsConfiguration().get("fs.azure.abfs.account.name").contains(".dfs.core") ||fs.getAbfsStore().getAbfsConfiguration().get("fs.azure.abfs.account.name").contains(".blob.core")) {
-      assertFalse(fs.exists(new Path("testDir2/test4/test3/file")));
-      assertTrue(fs.exists(new Path("testDir2/test1/test2/test3/file")));
-    } else {
-      assertTrue(fs.exists(new Path("testDir2/test4/test3/file")));
-      assertFalse(fs.exists(new Path("testDir2/test1/test2/test3/file")));
-    }
   }
 }

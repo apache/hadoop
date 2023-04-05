@@ -78,6 +78,16 @@ public class DelegationSASGenerator extends SASGenerator {
       case SASTokenProvider.LIST_OPERATION:
         sp = "l";
         break;
+    case SASTokenProvider.LIST_BLOB_OPERATION:
+        sp = "l";
+        sr = "c";
+        break;
+    case SASTokenProvider.COPY_BLOB_DESTINATION:
+        sp = "w";
+        break;
+    case SASTokenProvider.COPY_BLOB_SOURCE:
+        sp = "r";
+        break;
       case SASTokenProvider.GET_PROPERTIES_OPERATION:
       case SASTokenProvider.READ_OPERATION:
         sp = "r";
