@@ -71,6 +71,7 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.IS_FOLDER_METADATA_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DNS_PREFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
@@ -429,7 +430,6 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation createPathBlob(final String path, final boolean isFile, final boolean overwrite,
                                           final HashMap<String, String> metadata,
-                                          final String permission, final String umask,
                                           final String eTag,
                                           TracingContext tracingContext)
           throws AzureBlobFileSystemException {
@@ -440,15 +440,6 @@ public class AbfsClient implements Closeable {
     if (!overwrite) {
       requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, AbfsHttpConstants.STAR));
     }
-
-    if (permission != null && !permission.isEmpty()) {
-      requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_PERMISSIONS, permission));
-    }
-
-    if (umask != null && !umask.isEmpty()) {
-      requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_UMASK, umask));
-    }
-
     if (eTag != null && !eTag.isEmpty()) {
       requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.IF_MATCH, eTag));
     }
@@ -474,11 +465,18 @@ public class AbfsClient implements Closeable {
             requestHeaders);
     try {
       op.execute(tracingContext);
-    }  catch (AzureBlobFileSystemException ex) {
+    } catch (AzureBlobFileSystemException ex) {
       // If we have no HTTP response, throw the original exception.
       if (!op.hasResult()) {
         throw ex;
       }
+      if (!isFile && op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+        if (metadata != null && metadata.containsKey(IS_FOLDER_METADATA_KEY)
+                && metadata.get(IS_FOLDER_METADATA_KEY).equals(TRUE)) {
+          return op; //don't throw ex on mkdirs for existing directory
+        }
+      }
+      throw ex;
     }
     return op;
   }

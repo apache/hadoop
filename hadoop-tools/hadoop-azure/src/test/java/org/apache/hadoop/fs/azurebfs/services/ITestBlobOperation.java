@@ -193,7 +193,7 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
             futures.add(executorService.submit(() -> {
                 try {
                     AbfsRestOperation op = testClient.createPathBlob(testPath.toUri().getPath(),
-                            true, false, null, null, null, null, tracingContext);
+                            true, false, null, null, tracingContext);
                     if (op.getResult().getStatusCode() == HTTP_CONFLICT) {
                         throw new IOException("BlobAlreadyExists");
                     }

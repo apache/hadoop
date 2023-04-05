@@ -577,8 +577,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           op = client.createPathBlob(relativePath, true,
                   overwrite,
                   metadata,
-                  isNamespaceEnabled ? getOctalNotation(permission) : null,
-                  isNamespaceEnabled ? getOctalNotation(umask) : null,
                   null,
                   tracingContext);
         } else {
@@ -632,7 +630,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // avoided for cases when no pre-existing file is present (major portion
       // of create file traffic falls into the case of no pre-existing file).
       if (getPrefixMode() == PrefixMode.BLOB) {
-        op = client.createPathBlob(relativePath, true, false, metadata, permission, umask,
+        op = client.createPathBlob(relativePath, true, false, metadata,
                 null, tracingContext);
       } else {
         op = client.createPath(relativePath, true, false, permission, umask,
@@ -662,7 +660,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         try {
           // overwrite only if eTag matches with the file properties fetched before.
           if (getPrefixMode() == PrefixMode.BLOB) {
-            op = client.createPathBlob(relativePath, true, true, metadata, permission, umask,
+            op = client.createPathBlob(relativePath, true, true, metadata,
                     eTag, tracingContext);
           } else {
             op = client.createPath(relativePath, true, true, permission, umask,

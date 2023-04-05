@@ -407,9 +407,7 @@ public class ITestAzureBlobFileSystemCreate extends
                     serverErrorResponseEx) // Scn5: create overwrite=false fails with Http500
             .when(mockClient)
             .createPathBlob(any(String.class), eq(true), eq(false),
-                    any(), isNamespaceEnabled ? any(String.class) : eq(null),
-                    isNamespaceEnabled ? any(String.class) : eq(null),
-                    eq(null), any(TracingContext.class));
+                    any(), eq(null), any(TracingContext.class));
 
     doThrow(fileNotFoundResponseEx) // Scn1: GFS fails with Http404
         .doThrow(serverErrorResponseEx) // Scn2: GFS fails with Http500
@@ -425,9 +423,7 @@ public class ITestAzureBlobFileSystemCreate extends
                     serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
             .when(mockClient)
             .createPathBlob(any(String.class), eq(true), eq(true),
-                    any(), isNamespaceEnabled ? any(String.class) : eq(null),
-                    isNamespaceEnabled ? any(String.class) : eq(null),
-                    eq(null), any(TracingContext.class));
+                    any(), eq(null), any(TracingContext.class));
 
     // mock for overwrite=true
     doThrow(

@@ -114,7 +114,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
                       tracingContext);
     } else {
       op = fs.getAbfsClient()
-              .createPathBlob(path, false, true, new HashMap<String, String>(), permission, umask, null,
+              .createPathBlob(path, false, true, new HashMap<String, String>(), null,
                       tracingContext);
     }
 
