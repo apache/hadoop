@@ -32,6 +32,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -242,9 +243,14 @@ public class ITestAzureBlobFileSystemRename extends
     assertFalse(fs.exists(new Path("testDir2/test1/test2/test3/file1")));
   }
 
+  private void assumeNonHnsAccountBlobEndpoint(final AzureBlobFileSystem fs) {
+    Assume.assumeTrue("To work on only on non-HNS Blob endpoint", fs.getAbfsStore().getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB);
+  }
+
   @Test
   public void testRenamePendingJsonIsRemovedPostSuccessfulRename() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
     fs.setWorkingDirectory(new Path("/"));
     fs.mkdirs(new Path("hbase/test1/test2/test3"));
     fs.create(new Path("hbase/test1/test2/test3/file"));
@@ -269,6 +275,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testHBaseHandlingForFailedRename() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
     final String failedCopyPath = "hbase/test1/test2/test3/file1";
     fs.setWorkingDirectory(new Path("/"));
     fs.mkdirs(new Path("hbase/test1/test2/test3"));
@@ -357,6 +364,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testHBaseHandlingForFailedRenameForNestedSourceThroughListFile() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
     final String failedCopyPath = "hbase/test1/test2/test3/file1";
     fs.setWorkingDirectory(new Path("/"));
     fs.mkdirs(new Path("hbase/test1/test2/test3"));
@@ -449,6 +457,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testHBaseHandlingForFailedRenameForNestedSourceThroughGetPathStatus() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
     final String failedCopyPath = "hbase/test1/test2/test3/file1";
     fs.setWorkingDirectory(new Path("/"));
     fs.mkdirs(new Path("hbase/test1/test2/test3"));
@@ -551,6 +560,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testHbaseListStatusBeforeRenamePendingFileAppended() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
     final String failedCopyPath = "hbase/test1/test2/test3/file1";
     fs.setWorkingDirectory(new Path("/"));
     fs.mkdirs(new Path("hbase/test1/test2/test3"));
@@ -615,6 +625,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testHbaseEmptyRenamePendingJsonDeletedBeforeListStatusCanDelete() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
     final String failedCopyPath = "hbase/test1/test2/test3/file1";
     fs.setWorkingDirectory(new Path("/"));
     fs.mkdirs(new Path("hbase/test1/test2/test3"));
@@ -709,6 +720,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testInvalidJsonForRenamePendingFile() throws  Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
     fs.setWorkingDirectory(new Path("/"));
     fs.mkdirs(new Path("hbase/test1/test2/test3"));
     fs.create(new Path("hbase/test1/test2/test3/file"));
@@ -725,6 +737,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testEmptyDirRenameResolveFromListStatus() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
     String srcDir = "/hbase/test1/test2/test3";
     fs.setWorkingDirectory(new Path("/"));
     fs.mkdirs(new Path(srcDir));
@@ -821,6 +834,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameBlobIdempotency() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
     String srcDir = "/test1/test2/test3";
     fs.mkdirs(new Path(srcDir));
     fs.create(new Path(srcDir, "file1"));
@@ -889,6 +903,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameBlobIdempotencyWhereDstIsCreatedFromSomeOtherProcess() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
     String srcDir = "/test1/test2/test3";
     fs.mkdirs(new Path(srcDir));
     fs.create(new Path(srcDir, "file1"));
@@ -963,6 +978,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameBlobIdempotencyWhereDstIsCopiedFromSomeOtherProcess() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
     String srcDir = "/test1/test2/test3";
     fs.mkdirs(new Path(srcDir));
     fs.create(new Path(srcDir, "file1"));
@@ -1038,6 +1054,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameLargeNestedDir() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
     String dir = "/";
     for(int i=0;i<100;i++) {
       dir += ("dir" + i + "/");
@@ -1055,6 +1072,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameDirWhenMarkerBlobIsAbsent() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
     fs.mkdirs(new Path("/test1"));
     fs.mkdirs(new Path("/test1/test2"));
     fs.mkdirs(new Path("/test1/test2/test3"));
@@ -1080,6 +1098,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testCopyBlobTakeTime() throws Exception {
     AzureBlobFileSystem fileSystem = getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fileSystem);
     AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
     fileSystem.setAbfsStore(store);
     Mockito.doReturn(COPY_STATUS_PENDING).when(store)
@@ -1094,6 +1113,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testCopyBlobTakeTimeAndEventullyFail() throws Exception {
     AzureBlobFileSystem fileSystem = getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fileSystem);
     AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
     fileSystem.setAbfsStore(store);
     Mockito.doReturn(COPY_STATUS_PENDING).when(store)
@@ -1118,6 +1138,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testCopyBlobTakeTimeAndEventullyAborted() throws Exception {
     AzureBlobFileSystem fileSystem = getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fileSystem);
     AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
     fileSystem.setAbfsStore(store);
     Mockito.doReturn(COPY_STATUS_PENDING).when(store)
@@ -1142,6 +1163,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testCopyBlobTakeTimeAndBlobIsDeleted() throws Exception {
     AzureBlobFileSystem fileSystem = getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fileSystem);
     AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
     String srcFile = "/test1/file";
     String dstFile = "/test1/file2";
