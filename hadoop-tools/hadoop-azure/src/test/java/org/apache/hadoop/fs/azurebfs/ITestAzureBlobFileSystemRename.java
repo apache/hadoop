@@ -53,6 +53,9 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.functional.FunctionRaisingIOE;
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
+import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 
 import static org.apache.hadoop.fs.azurebfs.RenameAtomicityUtils.SUFFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_ABORTED;
@@ -203,7 +206,7 @@ public class ITestAzureBlobFileSystemRename extends
     assertTrue(fs.exists(new Path("testDir2/test1/test2")));
     assertTrue(fs.exists(new Path("testDir2/test4")));
     assertTrue(fs.exists(new Path("testDir2/test1/test2/test3")));
-    if(getIsNamespaceEnabled(fs) || fs.getAbfsStore().getAbfsConfiguration().get("fs.azure.abfs.account.name").contains(".dfs.core") ||fs.getAbfsStore().getAbfsConfiguration().get("fs.azure.abfs.account.name").contains(".blob.core")) {
+    if(getIsNamespaceEnabled(fs) || fs.getAbfsStore().getAbfsConfiguration().getMode() == PrefixMode.BLOB) {
       assertFalse(fs.exists(new Path("testDir2/test4/test3/file")));
       assertTrue(fs.exists(new Path("testDir2/test1/test2/test3/file")));
     } else {
