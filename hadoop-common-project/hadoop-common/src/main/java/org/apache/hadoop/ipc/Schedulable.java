@@ -29,5 +29,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 public interface Schedulable {
   public UserGroupInformation getUserGroupInformation();
 
+  default public CallerContext getCallerContext() {
+    return null;
+  }
+
   int getPriorityLevel();
 }
