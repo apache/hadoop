@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -173,7 +174,11 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     a(factory.newListObjectsV1Request(path, "/", 1));
     a(factory.newListNextBatchOfObjectsRequest(new ObjectListing()));
     a(factory.newListObjectsV2Request(path, "/", 1));
-    a(factory.newMultipartUploadRequest(path, null));
+    try {
+      a(factory.newMultipartUploadRequest(path, null));
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     File srcfile = new File("/tmp/a");
     a(factory.newPutObjectRequest(path,
         factory.newObjectMetadata(-1), null, srcfile));

@@ -1087,6 +1087,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withRequestPreparer(getAuditManager()::requestCreated)
         .withContentEncoding(contentEncoding)
         .withStorageClass(storageClass)
+        .withMultipartEnabled(isMultipartEnabled)
         .build();
   }
 
@@ -1839,7 +1840,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     if(!checkDiskBuffer(getConf())){
       throw new IOException("Unable to create OutputStream with the given"
-          + "multipart upload and buffer configuration.");
+          + " multipart upload and buffer configuration.");
     }
 
     final S3ABlockOutputStream.BlockOutputStreamBuilder builder =
@@ -5423,5 +5424,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   public boolean isCSEEnabled() {
     return isCSEEnabled;
+  }
+
+  public boolean isMultipartEnabled() {
+    return isMultipartEnabled;
   }
 }

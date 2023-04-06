@@ -125,6 +125,11 @@ public class RequestFactoryImpl implements RequestFactory {
   private final StorageClass storageClass;
 
   /**
+   * Is Multipart Enabled
+   */
+  private final boolean isMultipartEnabled;
+
+  /**
    * Constructor.
    * @param builder builder with all the configuration.
    */
@@ -137,6 +142,7 @@ public class RequestFactoryImpl implements RequestFactory {
     this.requestPreparer = builder.requestPreparer;
     this.contentEncoding = builder.contentEncoding;
     this.storageClass = builder.storageClass;
+    this.isMultipartEnabled = builder.isMultipartEnabled;
   }
 
   /**
@@ -460,7 +466,10 @@ public class RequestFactoryImpl implements RequestFactory {
   @Override
   public InitiateMultipartUploadRequest newMultipartUploadRequest(
       final String destKey,
-      @Nullable final PutObjectOptions options) {
+      @Nullable final PutObjectOptions options) throws IOException {
+    if(!isMultipartEnabled){
+      throw new IOException("Multipart uploads are disabled on the given filesystem.");
+    }
     final ObjectMetadata objectMetadata = newObjectMetadata(-1);
     maybeSetMetadata(options, objectMetadata);
     final InitiateMultipartUploadRequest initiateMPURequest =
@@ -682,6 +691,11 @@ public class RequestFactoryImpl implements RequestFactory {
      */
     private PrepareRequest requestPreparer;
 
+    /**
+     * Is Multipart Enabled on the path.
+     */
+    private boolean isMultipartEnabled = true;
+
     private RequestFactoryBuilder() {
     }
 
@@ -765,6 +779,18 @@ public class RequestFactoryImpl implements RequestFactory {
     public RequestFactoryBuilder withRequestPreparer(
         final PrepareRequest value) {
       this.requestPreparer = value;
+      return this;
+    }
+
+    /**
+     * Multipart enabled
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public RequestFactoryBuilder withMultipartEnabled(
+        final boolean value) {
+      this.isMultipartEnabled = value;
       return this;
     }
   }
