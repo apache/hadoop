@@ -354,9 +354,9 @@ abstract class StripeReader {
         long beginRead = Time.monotonicNow();
         StripingChunkReadResult r = StripedBlockUtil
             .getNextCompletedStripedRead(service, futures, 0);
-        long duration = Time.monotonicNow() - beginRead;
+        long readTimeMS = Time.monotonicNow() - beginRead;
 
-        dfsStripedInputStream.updateReadStats(r.getReadStats(), duration);
+        dfsStripedInputStream.updateReadStats(r.getReadStats(), readTimeMS);
         DFSClient.LOG.debug("Read task returned: {}, for stripe {}",
             r, alignedStripe);
         StripingChunk returnedChunk = alignedStripe.chunks[r.index];

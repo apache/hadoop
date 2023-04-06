@@ -109,7 +109,7 @@ public class FileSystemStorageStatistics extends StorageStatistics {
     case "bytesReadErasureCoded":
       return data.getBytesReadErasureCoded();
     case "remoteBytesReadTime":
-      return data.getRemoteBytesReadTime();
+      return data.getRemoteBytesReadTimeMS();
     default:
       return null;
     }

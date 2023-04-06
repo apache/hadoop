@@ -853,7 +853,7 @@ public class DFSInputStream extends FSInputStream
           }
           long beginRead = Time.monotonicNow();
           int result = readBuffer(strategy, realLen, corruptedBlocks);
-          long duration = Time.monotonicNow() - beginRead;
+          long readTimeMS = Time.monotonicNow() - beginRead;
           if (result >= 0) {
             pos += result;
           } else {
@@ -862,7 +862,7 @@ public class DFSInputStream extends FSInputStream
           }
           updateReadStatistics(readStatistics, result, blockReader);
           dfsClient.updateFileSystemReadStats(blockReader.getNetworkDistance(),
-              result, duration);
+              result, readTimeMS);
           if (readStatistics.getBlockType() == BlockType.STRIPED) {
             dfsClient.updateFileSystemECReadStats(result);
           }
@@ -1195,12 +1195,12 @@ public class DFSInputStream extends FSInputStream
           }
           nread += ret;
         }
-        long duration = Time.monotonicNow() - beginRead;
+        long readTimeMS = Time.monotonicNow() - beginRead;
         buf.position(buf.position() + nread);
 
         IOUtilsClient.updateReadStatistics(readStatistics, nread, reader);
         dfsClient.updateFileSystemReadStats(
-            reader.getNetworkDistance(), nread, duration);
+            reader.getNetworkDistance(), nread, readTimeMS);
         if (readStatistics.getBlockType() == BlockType.STRIPED) {
           dfsClient.updateFileSystemECReadStats(nread);
         }
