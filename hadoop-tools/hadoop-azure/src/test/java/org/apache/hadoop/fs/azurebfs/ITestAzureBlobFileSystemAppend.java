@@ -80,6 +80,14 @@ public class ITestAzureBlobFileSystemAppend extends
     fs.append(folderPath);
   }
 
+  @Test(expected = FileNotFoundException.class)
+  public void testAppendImplicitDirectory() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final Path folderPath = TEST_FOLDER_PATH;
+    fs.mkdirs(folderPath);
+    fs.append(folderPath.getParent());
+  }
+
   @Test
   public void testTracingForAppend() throws IOException {
     AzureBlobFileSystem fs = getFileSystem();
