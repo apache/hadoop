@@ -113,6 +113,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
@@ -478,6 +479,20 @@ public class AzureBlobFileSystem extends FileSystem
 
       } else {
         qualifiedDstPath = makeQualified(adjustedDst);
+        /*
+        * Check if parent of dst exists.
+        */
+        Path parent = qualifiedDstPath.getParent();
+        if(parent == null || !parent.isRoot()) {
+          isDstDirectory.set(false);
+          isDstExists.set(false);
+          getDstInformation(parent, tracingContext, isDstDirectory, isDstExists);
+          if(!isDstExists.get() || !isDstDirectory.get()) {
+            throw new AbfsRestOperationException(HttpURLConnection.HTTP_NOT_FOUND,
+                RENAME_DESTINATION_PARENT_PATH_NOT_FOUND.getErrorCode(), null,
+                new Exception(RENAME_DESTINATION_PARENT_PATH_NOT_FOUND.getErrorCode()));
+          }
+        }
       }
 
       abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, this,
@@ -492,7 +507,7 @@ public class AzureBlobFileSystem extends FileSystem
           AzureServiceErrorCode.INVALID_RENAME_SOURCE_PATH,
           AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND,
           AzureServiceErrorCode.INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE,
-          AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND,
+          RENAME_DESTINATION_PARENT_PATH_NOT_FOUND,
           AzureServiceErrorCode.INTERNAL_OPERATION_ABORT);
       return false;
     }
