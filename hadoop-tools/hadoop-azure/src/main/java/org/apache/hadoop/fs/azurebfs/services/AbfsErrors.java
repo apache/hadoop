@@ -48,6 +48,7 @@ public final class AbfsErrors {
       + "operation";
   public static final String ERR_NO_LEASE_THREADS = "Lease desired but no lease threads "
       + "configured, set " + FS_AZURE_LEASE_THREADS;
+  public static final String BLOB_OPERATION_NOT_SUPPORTED = "Blob operation is not supported.";
 
   private AbfsErrors() {}
 }
