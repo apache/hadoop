@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -36,7 +35,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
-import com.microsoft.azure.storage.StorageException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,13 +43,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 public class RenameAtomicityUtils {
 
-  private static final Logger LOG = LoggerFactory.getLogger(RenameAtomicityUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      RenameAtomicityUtils.class);
 
   private final AzureBlobFileSystem azureBlobFileSystem;
   private Path srcPath;
@@ -68,7 +67,9 @@ public class RenameAtomicityUtils {
       .readerFor(JsonNode.class);
 
   RenameAtomicityUtils(final AzureBlobFileSystem azureBlobFileSystem,
-  final Path srcPath, final Path dstPath, final TracingContext tracingContext,
+      final Path srcPath,
+      final Path dstPath,
+      final TracingContext tracingContext,
       List<BlobProperty> blobPropertyList) throws IOException {
     this.azureBlobFileSystem = azureBlobFileSystem;
     this.srcPath = srcPath;
@@ -80,16 +81,19 @@ public class RenameAtomicityUtils {
   }
 
   RenameAtomicityUtils(final AzureBlobFileSystem azureBlobFileSystem,
-      final Path path, final RedoRenameInvocation redoRenameInvocation) throws IOException {
+      final Path path, final RedoRenameInvocation redoRenameInvocation)
+      throws IOException {
     this.azureBlobFileSystem = azureBlobFileSystem;
     final RenamePendingFileInfo renamePendingFileInfo = readFile(path);
-    if(renamePendingFileInfo != null) {
+    if (renamePendingFileInfo != null) {
       redoRenameInvocation.redo(renamePendingFileInfo.destination,
-          renamePendingFileInfo.srcList, renamePendingFileInfo.destinationSuffix);
+          renamePendingFileInfo.srcList,
+          renamePendingFileInfo.destinationSuffix);
     }
   }
 
-  private RenamePendingFileInfo readFile(final Path redoFile) throws IOException {
+  private RenamePendingFileInfo readFile(final Path redoFile)
+      throws IOException {
     Path f = redoFile;
     FSDataInputStream input = azureBlobFileSystem.open(f);
     byte[] bytes = new byte[MAX_RENAME_PENDING_FILE_SIZE];
@@ -139,8 +143,10 @@ public class RenameAtomicityUtils {
     // initialize this object's fields
     JsonNode oldFolderName = json.get("OldFolderName");
     JsonNode newFolderName = json.get("NewFolderName");
-    if (oldFolderName != null && StringUtils.isNotEmpty(oldFolderName.textValue())
-        && newFolderName != null && StringUtils.isNotEmpty(newFolderName.textValue())) {
+    if (oldFolderName != null && StringUtils.isNotEmpty(
+        oldFolderName.textValue())
+        && newFolderName != null && StringUtils.isNotEmpty(
+        newFolderName.textValue())) {
       RenamePendingFileInfo renamePendingFileInfo = new RenamePendingFileInfo();
       renamePendingFileInfo.destination = new Path(newFolderName.textValue());
       String srcDir = oldFolderName.textValue() + "/";
@@ -228,8 +234,10 @@ public class RenameAtomicityUtils {
         output.close();
         return;
       }
-      throw new IOException("Unable to write RenamePending file for folder rename from "
-          + srcPath.toUri().getPath() + " to " + dstPath.toUri().getPath(), e);
+      throw new IOException(
+          "Unable to write RenamePending file for folder rename from "
+              + srcPath.toUri().getPath() + " to " + dstPath.toUri().getPath(),
+          e);
     }
   }
 
@@ -254,11 +262,15 @@ public class RenameAtomicityUtils {
       builder.append("    ");
       final String noPrefix;
       /*
-      * The marker file for the source directory has the same path on non-HNS.
-      * For the other files, the fileList has to save the filePath relative to the
-      * source directory.
-      */
-      if(!blobPropertyList.get(i).getPath().toUri().getPath().equals(srcPath.toUri().getPath())) {
+       * The marker file for the source directory has the same path on non-HNS.
+       * For the other files, the fileList has to save the filePath relative to the
+       * source directory.
+       */
+      if (!blobPropertyList.get(i)
+          .getPath()
+          .toUri()
+          .getPath()
+          .equals(srcPath.toUri().getPath())) {
         noPrefix = StringUtils.removeStart(
             blobPropertyList.get(i).getPath().toUri().getPath(),
             srcPath.toUri().getPath() + "/");
@@ -273,7 +285,8 @@ public class RenameAtomicityUtils {
           MAX_RENAME_PENDING_FILE_SIZE - FORMATTING_BUFFER) {
 
         // Give up now to avoid using too much memory.
-        LOG.error("Internal error: Exceeded maximum rename pending file size of {} bytes.",
+        LOG.error(
+            "Internal error: Exceeded maximum rename pending file size of {} bytes.",
             MAX_RENAME_PENDING_FILE_SIZE);
 
         // return some bad JSON with an error message to make it human readable
@@ -305,7 +318,7 @@ public class RenameAtomicityUtils {
    * text to be delivered in HTML. In JSON text, a string cannot contain a
    * control character or an unescaped quote or backslash.
    * @param string A String
-   * @return  A String correctly formatted for insertion in a JSON text.
+   * @return A String correctly formatted for insertion in a JSON text.
    */
   private String quote(String string) {
     if (string == null || string.length() == 0) {
@@ -313,8 +326,8 @@ public class RenameAtomicityUtils {
     }
 
     char c = 0;
-    int  i;
-    int  len = string.length();
+    int i;
+    int len = string.length();
     StringBuilder sb = new StringBuilder(len + 4);
     String t;
 
@@ -364,11 +377,11 @@ public class RenameAtomicityUtils {
    * */
   public void cleanup() throws IOException {
 
-      // Remove RenamePending file
-      azureBlobFileSystem.delete(getRenamePendingFilePath(), false);
+    // Remove RenamePending file
+    azureBlobFileSystem.delete(getRenamePendingFilePath(), false);
 
-      // Freeing source folder lease is not necessary since the source
-      // folder file was deleted.
+    // Freeing source folder lease is not necessary since the source
+    // folder file was deleted.
   }
 
   public void cleanup(Path redoFile) throws IOException {

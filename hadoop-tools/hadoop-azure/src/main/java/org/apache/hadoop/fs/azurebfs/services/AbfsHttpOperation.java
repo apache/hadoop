@@ -184,9 +184,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   public ListResultSchema getListResultSchema() {
     return listResultSchema;
   }
-  public List<String> getBlockIdList() {
-    return blockIdList;
-  }
 
   public BlobList getBlobList() {
     return blobList;
@@ -455,7 +452,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   }
 
   private void parsListBlobResponse(final InputStream stream) {
-    //TODO: have proper exception handling.
     try {
       final SAXParser saxParser = Utility.getSAXParser();
       BlobList blobList = new BlobList();
@@ -473,7 +469,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private String getBaseUrl() {
     String urlStr = url.toString();
     int queryParamStart = urlStr.indexOf("?");
-    if(queryParamStart == -1) {
+    if (queryParamStart == -1) {
       return urlStr;
     }
     return urlStr.substring(0, queryParamStart);

@@ -510,11 +510,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       copyOp = client.copyBlob(srcPath, dstPath,
           tracingContext);
     } catch (AbfsRestOperationException ex) {
-      if(ex.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
-        final BlobProperty dstBlobProperty = getBlobProperty(dstPath, tracingContext);
+      if (ex.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+        final BlobProperty dstBlobProperty = getBlobProperty(dstPath,
+            tracingContext);
         try {
-          if(dstBlobProperty.getCopySourceUrl() != null &&
-              ("/" + client.getFileSystem() + srcPath.toUri().getPath()).equals(new URL(dstBlobProperty.getCopySourceUrl()).toURI().getPath())) {
+          if (dstBlobProperty.getCopySourceUrl() != null &&
+              ("/" + client.getFileSystem() + srcPath.toUri().getPath()).equals(
+                  new URL(dstBlobProperty.getCopySourceUrl()).toURI()
+                      .getPath())) {
             return;
           }
         } catch (URISyntaxException e) {
@@ -542,7 +545,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
-@org.apache.hadoop.classification.VisibleForTesting
+  @org.apache.hadoop.classification.VisibleForTesting
   boolean handleCopyInProgress(final Path dstPath,
       final TracingContext tracingContext,
       final String copyId) throws AzureBlobFileSystemException {
@@ -554,12 +557,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
       if (COPY_STATUS_FAILED.equals(blobProperty.getCopyStatus())) {
         throw new AbfsRestOperationException(
-            COPY_BLOB_FAILED.getStatusCode(), COPY_BLOB_FAILED.getErrorCode(), null,
+            COPY_BLOB_FAILED.getStatusCode(), COPY_BLOB_FAILED.getErrorCode(),
+            null,
             new Exception(COPY_BLOB_FAILED.getErrorCode()));
       }
-      if(COPY_STATUS_ABORTED.equals(blobProperty.getCopyStatus())) {
+      if (COPY_STATUS_ABORTED.equals(blobProperty.getCopyStatus())) {
         throw new AbfsRestOperationException(
-            COPY_BLOB_ABORTED.getStatusCode(), COPY_BLOB_ABORTED.getErrorCode(), null,
+            COPY_BLOB_ABORTED.getStatusCode(), COPY_BLOB_ABORTED.getErrorCode(),
+            null,
             new Exception(COPY_BLOB_ABORTED.getErrorCode()));
       }
     }
@@ -584,7 +589,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
 
-  private BlobProperty getBlobProperty(Path blobPath, TracingContext tracingContext) throws AzureBlobFileSystemException {
+  private BlobProperty getBlobProperty(Path blobPath,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsRestOperation op = client.getBlobProperty(blobPath, tracingContext);
     BlobProperty blobProperty = new BlobProperty();
     final AbfsHttpOperation opResult = op.getResult();
@@ -594,9 +600,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     blobProperty.setCopyId(opResult.getResponseHeader(X_MS_COPY_ID));
     blobProperty.setPath(blobPath);
     blobProperty.setCopySourceUrl(opResult.getResponseHeader(X_MS_COPY_SOURCE));
-    blobProperty.setStatusDescription(opResult.getResponseHeader(X_MS_COPY_STATUS_DESCRIPTION));
+    blobProperty.setStatusDescription(
+        opResult.getResponseHeader(X_MS_COPY_STATUS_DESCRIPTION));
     blobProperty.setCopyStatus(getCopyStatus(opResult));
-    blobProperty.setContentLength(Long.parseLong(opResult.getResponseHeader(CONTENT_LENGTH)));
+    blobProperty.setContentLength(
+        Long.parseLong(opResult.getResponseHeader(CONTENT_LENGTH)));
     return blobProperty;
   }
 
@@ -1018,36 +1026,40 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     long countAggregate = 0;
     boolean shouldContinue;
 
-    if(getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
+    if (getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
       /*
-      * Destination can be either a file, directory.
-      * To understand that its directory, we will do a listBlob API with prefix of
-      * the destination with maxResult = 2. In case, the API results only one object,
-      * we will check if there is is_Hdi metadata. If not, we will mark it as a directory.
-      * If there are more than one object, then it is straight a directory.
-      * If there is zero object returned, then we will understand that there is
-      * nothing on the destination.
-      */
+       * Destination can be either a file, directory.
+       * To understand that its directory, we will do a listBlob API with prefix of
+       * the destination with maxResult = 2. In case, the API results only one object,
+       * we will check if there is is_Hdi metadata. If not, we will mark it as a directory.
+       * If there are more than one object, then it is straight a directory.
+       * If there is zero object returned, then we will understand that there is
+       * nothing on the destination.
+       */
       final Boolean isDstExist;
-      List<BlobProperty> dstProperties = getListBlobs(destination, tracingContext, 2);
-      if(dstProperties.size() > 0) {
+      List<BlobProperty> dstProperties = getListBlobs(destination,
+          tracingContext, 2);
+      if (dstProperties.size() > 0) {
         isDstExist = true;
       } else {
         isDstExist = false;
       }
 
-      if(isDstExist) {
+      if (isDstExist) {
         //destination already there. Rename should not be overwriting.
         throw new AbfsRestOperationException(HttpURLConnection.HTTP_CONFLICT,
-            AzureServiceErrorCode.PATH_ALREADY_EXISTS.getErrorCode(), null, null);
+            AzureServiceErrorCode.PATH_ALREADY_EXISTS.getErrorCode(), null,
+            null);
       }
 
       final Boolean isSrcExist;
       final Boolean isSrcDir;
-      List<BlobProperty> srcBlobProperties = getListBlobs(source, tracingContext, null);
-      if(srcBlobProperties.size() > 0) {
+      List<BlobProperty> srcBlobProperties = getListBlobs(source,
+          tracingContext, null);
+      if (srcBlobProperties.size() > 0) {
         isSrcExist = true;
-        if(srcBlobProperties.size() > 1 || srcBlobProperties.get(0).getIsDirectory()) {
+        if (srcBlobProperties.size() > 1 || srcBlobProperties.get(0)
+            .getIsDirectory()) {
           isSrcDir = true;
         } else {
           isSrcDir = false;
@@ -1057,11 +1069,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         isSrcDir = false;
       }
 
-      if(!isSrcExist) {
+      if (!isSrcExist) {
         throw new AbfsRestOperationException(HttpURLConnection.HTTP_NOT_FOUND,
             AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(), null, null);
       }
-      if(isSrcDir) {
+      if (isSrcDir) {
         final RenameAtomicityUtils renameAtomicityUtils;
         if (isAtomicRenameKey(source.toUri().getPath())) {
           renameAtomicityUtils = new RenameAtomicityUtils(azureBlobFileSystem,
@@ -1070,17 +1082,18 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           renameAtomicityUtils = null;
         }
         List<Future> futures = new ArrayList<>();
-        for(BlobProperty blobProperty : srcBlobProperties) {
+        for (BlobProperty blobProperty : srcBlobProperties) {
           futures.add(renameBlobExecutorService.submit(() -> {
             try {
-              renameBlob(createDestinationPath(destination, blobProperty, source),
+              renameBlob(
+                  createDestinationPath(destination, blobProperty, source),
                   tracingContext, blobProperty.getPath());
             } catch (AzureBlobFileSystemException e) {
               throw new RuntimeException(e);
             }
           }));
         }
-        for(Future future : futures) {
+        for (Future future : futures) {
           try {
             future.get();
           } catch (InterruptedException e) {
@@ -1089,11 +1102,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             throw new RuntimeException(e);
           }
         }
-        if(renameAtomicityUtils != null) {
-          renameAtomicityUtils.cleanup();;
+        if (renameAtomicityUtils != null) {
+          renameAtomicityUtils.cleanup();
         }
       } else {
-        renameBlob(destination, tracingContext, srcBlobProperties.get(0).getPath());
+        renameBlob(destination, tracingContext,
+            srcBlobProperties.get(0).getPath());
       }
       return;
     }
@@ -1137,10 +1151,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     String destinationPathStr = destination.toUri().getPath();
     String sourcePathStr = source.toUri().getPath();
     String srcBlobPropertyPathStr = srcBlobProperty.getPath().toUri().getPath();
-    if(sourcePathStr.equals(srcBlobPropertyPathStr)) {
+    if (sourcePathStr.equals(srcBlobPropertyPathStr)) {
       return destination;
     }
-    return new Path(destinationPathStr + "/" + srcBlobPropertyPathStr.substring(sourcePathStr.length()));
+    return new Path(destinationPathStr + "/" + srcBlobPropertyPathStr.substring(
+        sourcePathStr.length()));
   }
 
   private void renameBlob(final Path destination,
@@ -1772,17 +1787,17 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       public void redo(final Path destination, final List<Path> sourcePaths,
           final List<String> destinationSuffix)
           throws AzureBlobFileSystemException {
-        for (int i = 0; i < sourcePaths.size();i++) {
+        for (int i = 0; i < sourcePaths.size(); i++) {
           try {
             final Path destinationPath;
-            if(destinationSuffix.get(i).isEmpty()) {
+            if (destinationSuffix.get(i).isEmpty()) {
               destinationPath = destination;
             } else {
               destinationPath = new Path(destination, destinationSuffix.get(i));
             }
             renameBlob(destinationPath, tracingContext, sourcePaths.get(i));
           } catch (AbfsRestOperationException ex) {
-            if(ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+            if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
               continue;
             }
           }
@@ -1870,7 +1885,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final boolean isSecure) {
     final URIBuilder uriBuilder = getURIBuilder(accountName, isSecure);
 
-    final String url = uriBuilder.toString() + AbfsHttpConstants.FORWARD_SLASH + fileSystemName;
+    final String url = uriBuilder.toString() + AbfsHttpConstants.FORWARD_SLASH
+        + fileSystemName;
     return url;
   }
 
@@ -2021,7 +2037,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           tracingContext);
       return true;
     } catch (AbfsRestOperationException ex) {
-      if(ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+      if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
         return false;
       }
       throw ex;

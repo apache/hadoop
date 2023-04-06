@@ -428,7 +428,8 @@ public class AzureBlobFileSystem extends FileSystem
       final AtomicBoolean isDstDirectory = new AtomicBoolean();
       final AtomicBoolean isDstExists = new AtomicBoolean();
 
-      getDstInformation(qualifiedDstPath, tracingContext, isDstDirectory, isDstExists);
+      getDstInformation(qualifiedDstPath, tracingContext, isDstDirectory,
+          isDstExists);
       if (!isDstExists.get()) {
         return false;
       }
@@ -440,7 +441,8 @@ public class AzureBlobFileSystem extends FileSystem
 
     // Non-HNS account need to check dst status on driver side.
     if (!abfsStore.getIsNamespaceEnabled(tracingContext)) {
-      getDstInformation(qualifiedDstPath, tracingContext, isDstDirectory, isDstExists);
+      getDstInformation(qualifiedDstPath, tracingContext, isDstDirectory,
+          isDstExists);
     }
 
     try {
@@ -456,7 +458,8 @@ public class AzureBlobFileSystem extends FileSystem
 
       qualifiedDstPath = makeQualified(adjustedDst);
 
-      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, this, tracingContext);
+      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, this,
+          tracingContext);
       return true;
     } catch (AzureBlobFileSystemException ex) {
       LOG.debug("Rename operation failed. ", ex);
@@ -477,23 +480,25 @@ public class AzureBlobFileSystem extends FileSystem
       final TracingContext tracingContext,
       final AtomicBoolean isDstDirectory,
       final AtomicBoolean isDstExists) throws AzureBlobFileSystemException {
-    if(getAbfsStore().getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
+    if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
+        == PrefixMode.BLOB) {
       List<BlobProperty> blobProperties = getAbfsStore()
           .getListBlobs(qualifiedDstPath, tracingContext, 2);
-      if(blobProperties.size() > 0) {
+      if (blobProperties.size() > 0) {
         isDstExists.set(true);
-        if(blobProperties.size() > 1 || blobProperties.get(0).getIsDirectory()) {
+        if (blobProperties.size() > 1 || blobProperties.get(0)
+            .getIsDirectory()) {
           isDstDirectory.set(true);
         }
       }
     } else {
-      final FileStatus fileStatus = tryGetFileStatus(qualifiedDstPath, tracingContext);
-      if(fileStatus != null) {
+      final FileStatus fileStatus = tryGetFileStatus(qualifiedDstPath,
+          tracingContext);
+      if (fileStatus != null) {
         isDstExists.set(true);
         isDstDirectory.set(fileStatus.isDirectory());
       }
     }
-
   }
 
   @Override
@@ -536,13 +541,18 @@ public class AzureBlobFileSystem extends FileSystem
           fileSystemId, FSOperationType.LISTSTATUS, true, tracingHeaderFormat,
           listener);
       FileStatus[] result = abfsStore.listStatus(qualifiedPath, tracingContext);
-      FileStatus renamePendingFileStatus = abfsStore.getRenamePendingFileStatus(result);
-      if(renamePendingFileStatus != null) {
-        RenameAtomicityUtils renameAtomicityUtils =
-            new RenameAtomicityUtils(this,
-                renamePendingFileStatus.getPath(), abfsStore.getRedoRenameInvocation(tracingContext));
-        renameAtomicityUtils.cleanup(renamePendingFileStatus.getPath());
-        result = abfsStore.listStatus(qualifiedPath, tracingContext);
+      if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
+          == PrefixMode.BLOB) {
+        FileStatus renamePendingFileStatus
+            = abfsStore.getRenamePendingFileStatus(result);
+        if (renamePendingFileStatus != null) {
+          RenameAtomicityUtils renameAtomicityUtils =
+              new RenameAtomicityUtils(this,
+                  renamePendingFileStatus.getPath(),
+                  abfsStore.getRedoRenameInvocation(tracingContext));
+          renameAtomicityUtils.cleanup(renamePendingFileStatus.getPath());
+          result = abfsStore.listStatus(qualifiedPath, tracingContext);
+        }
       }
       return result;
     } catch (AzureBlobFileSystemException ex) {
@@ -664,14 +674,18 @@ public class AzureBlobFileSystem extends FileSystem
     try {
       FileStatus fileStatus = abfsStore.getFileStatus(qualifiedPath,
           tracingContext);
-      if (fileStatus != null && fileStatus.isDirectory() &&
+      if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
+          == PrefixMode.BLOB && fileStatus != null && fileStatus.isDirectory()
+          &&
           abfsStore.isAtomicRenameKey(fileStatus.getPath().toUri().getPath()) &&
-          abfsStore.getRenamePendingFileStatusInDirectory(fileStatus, tracingContext)) {
+          abfsStore.getRenamePendingFileStatusInDirectory(fileStatus,
+              tracingContext)) {
         RenameAtomicityUtils renameAtomicityUtils = new RenameAtomicityUtils(
             this,
             new Path(fileStatus.getPath().toUri().getPath() + SUFFIX),
             abfsStore.getRedoRenameInvocation(tracingContext));
-        renameAtomicityUtils.cleanup(new Path(fileStatus.getPath().toUri().getPath() + SUFFIX));
+        renameAtomicityUtils.cleanup(
+            new Path(fileStatus.getPath().toUri().getPath() + SUFFIX));
         throw new AbfsRestOperationException(HttpURLConnection.HTTP_NOT_FOUND,
             AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(), null,
             new FileNotFoundException(

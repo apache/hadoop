@@ -242,13 +242,15 @@ public class AbfsRestOperation {
    * @throws IOException failure
    */
   @VisibleForTesting
-  public void signRequest(final AbfsHttpOperation httpOperation, int bytesToSign) throws IOException {
-    switch(client.getAuthType()) {
+  public void signRequest(final AbfsHttpOperation httpOperation,
+      int bytesToSign) throws IOException {
+    switch (client.getAuthType()) {
     case Custom:
     case OAuth:
       LOG.debug("Authenticating request with OAuth2 access token");
-      httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
-          client.getAccessToken());
+      httpOperation.getConnection()
+          .setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+              client.getAccessToken());
       break;
     case SAS:
       // do nothing; the SAS token should already be appended to the query string

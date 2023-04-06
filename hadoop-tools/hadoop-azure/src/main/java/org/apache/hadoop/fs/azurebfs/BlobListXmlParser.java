@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import java.net.URISyntaxException;
-import java.text.ParseException;
 import java.util.Stack;
 
 import org.xml.sax.Attributes;
@@ -104,7 +102,7 @@ public class BlobListXmlParser extends DefaultHandler {
     }
     if (parentNode.equals(AbfsHttpConstants.METADATA)) {
       currentBlobProperty.addMetadata(currentNode, value);
-      if(HDI_ISFOLDER.equals(currentNode)) {
+      if (HDI_ISFOLDER.equals(currentNode)) {
         currentBlobProperty.setIsDirectory(Boolean.valueOf(value));
       }
     }
