@@ -144,6 +144,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UND
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_ABORTED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_FAILED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_SUCCESS;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HDI_ISFOLDER;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VERSION;
@@ -576,7 +577,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return getCopyStatus(copyOp.getResult());
   }
 
-  private BlobProperty getBlobPropertyWithNotFoundHandling(Path blobPath,
+  BlobProperty getBlobPropertyWithNotFoundHandling(Path blobPath,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     try {
       return getBlobProperty(blobPath, tracingContext);
@@ -587,7 +588,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       throw ex;
     }
   }
-
 
   private BlobProperty getBlobProperty(Path blobPath,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
@@ -1027,47 +1027,42 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     boolean shouldContinue;
 
     if (getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
-      /*
-       * Destination can be either a file, directory.
-       * To understand that its directory, we will do a listBlob API with prefix of
-       * the destination with maxResult = 2. In case, the API results only one object,
-       * we will check if there is is_Hdi metadata. If not, we will mark it as a directory.
-       * If there are more than one object, then it is straight a directory.
-       * If there is zero object returned, then we will understand that there is
-       * nothing on the destination.
-       */
-      final Boolean isDstExist;
-      List<BlobProperty> dstProperties = getListBlobs(destination,
-          tracingContext, 2);
-      if (dstProperties.size() > 0) {
-        isDstExist = true;
-      } else {
-        isDstExist = false;
-      }
-
-      if (isDstExist) {
-        //destination already there. Rename should not be overwriting.
-        throw new AbfsRestOperationException(HttpURLConnection.HTTP_CONFLICT,
-            AzureServiceErrorCode.PATH_ALREADY_EXISTS.getErrorCode(), null,
-            null);
-      }
-
       final Boolean isSrcExist;
       final Boolean isSrcDir;
       List<BlobProperty> srcBlobProperties = getListBlobs(source,
           tracingContext, null);
+      final BlobProperty blobPropOnSrc;
       if (srcBlobProperties.size() > 0) {
         isSrcExist = true;
-        if (srcBlobProperties.size() > 1 || srcBlobProperties.get(0)
-            .getIsDirectory()) {
-          isSrcDir = true;
+        isSrcDir = true;
+        BlobProperty blobPropOnSrcNullable = getBlobPropertyWithNotFoundHandling(source, tracingContext);
+        if(blobPropOnSrcNullable == null) {
+          //create marker file; add in srcBlobProperties;
+          azureBlobFileSystem.create(source);
+          Hashtable<String, String> props = new Hashtable<>();
+          props.put(HDI_ISFOLDER, "true");
+          setPathProperties(source, props, tracingContext);
+          blobPropOnSrc = new BlobProperty();
+          blobPropOnSrc.setIsDirectory(true);
+          blobPropOnSrc.setPath(source);
         } else {
-          isSrcDir = false;
+          blobPropOnSrc = blobPropOnSrcNullable;
         }
       } else {
-        isSrcExist = false;
-        isSrcDir = false;
+        blobPropOnSrc = getBlobPropertyWithNotFoundHandling(source, tracingContext);
+        if(blobPropOnSrc != null) {
+          isSrcExist = true;
+          if(blobPropOnSrc.getIsDirectory()) {
+            isSrcDir = true;
+          } else {
+            isSrcDir = false;
+          }
+        } else {
+          isSrcExist = false;
+          isSrcDir = false;
+        }
       }
+      srcBlobProperties.add(blobPropOnSrc);
 
       if (!isSrcExist) {
         throw new AbfsRestOperationException(HttpURLConnection.HTTP_NOT_FOUND,

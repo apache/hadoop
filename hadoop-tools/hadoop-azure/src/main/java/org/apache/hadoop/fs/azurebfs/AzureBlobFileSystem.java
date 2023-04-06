@@ -454,9 +454,31 @@ public class AzureBlobFileSystem extends FileSystem
           return qualifiedSrcPath.equals(qualifiedDstPath);
         }
         adjustedDst = new Path(dst, sourceFileName);
-      }
+        qualifiedDstPath = makeQualified(adjustedDst);
+        /*
+         * Destination can be either a file, directory.
+         * To understand that its directory, we will do a listBlob API with prefix of
+         * the destination with maxResult = 2. In case, the API results only one object,
+         * we will check if there is is_Hdi metadata. If not, we will mark it as a directory.
+         * If there are more than one object, then it is straight a directory.
+         * If there is zero object returned, then we will understand that there is
+         * nothing on the destination.
+         */
+        if(getAbfsStore().getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
+          isDstDirectory.set(false);
+          isDstExists.set(false);
+          getDstInformation(qualifiedDstPath, tracingContext, isDstDirectory, isDstExists);
+          if(isDstExists.get()) {
+            //destination already there. Rename should not be overwriting.
+            throw new AbfsRestOperationException(HttpURLConnection.HTTP_CONFLICT,
+                AzureServiceErrorCode.PATH_ALREADY_EXISTS.getErrorCode(), null,
+                null);
+          }
+        }
 
-      qualifiedDstPath = makeQualified(adjustedDst);
+      } else {
+        qualifiedDstPath = makeQualified(adjustedDst);
+      }
 
       abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, this,
           tracingContext);
@@ -486,8 +508,15 @@ public class AzureBlobFileSystem extends FileSystem
           .getListBlobs(qualifiedDstPath, tracingContext, 2);
       if (blobProperties.size() > 0) {
         isDstExists.set(true);
-        if (blobProperties.size() > 1 || blobProperties.get(0)
-            .getIsDirectory()) {
+        isDstDirectory.set(true);
+        return;
+      }
+      BlobProperty blobProperty
+          = getAbfsStore().getBlobPropertyWithNotFoundHandling(qualifiedDstPath,
+          tracingContext);
+      if (blobProperty != null) {
+        isDstExists.set(true);
+        if (blobProperty.getIsDirectory()) {
           isDstDirectory.set(true);
         }
       }

@@ -1110,7 +1110,7 @@ public class AbfsClient implements Closeable {
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_INCLUDE,
         QUERY_PARAM_INCLUDE_VALUE_METADATA);
     if (prefix == null) {
-      prefix = sourceDirBlobPath.toUri().getPath();
+      prefix = sourceDirBlobPath.toUri().getPath() + "/";
     }
     prefix = removeInitialSlash(prefix);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_PREFIX, prefix);

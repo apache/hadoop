@@ -1219,6 +1219,23 @@ public class ITestAzureBlobFileSystemRename extends
   }
 
   @Test
+  public void testBlobRenameSrcDirHasNoMarker() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    fs.create(new Path("/test1/test2/file1"));
+    fs.getAbfsStore()
+        .getClient()
+        .deleteBlobPath(new Path("/test1"), Mockito.mock(TracingContext.class));
+    Assert.assertNull(fs.getAbfsStore()
+        .getBlobPropertyWithNotFoundHandling(new Path("/test1"),
+            Mockito.mock(TracingContext.class)));
+    fs.mkdirs(new Path("/test2"));
+    fs.rename(new Path("/test1"), new Path("/test2"));
+    Assert.assertNotNull(fs.getAbfsStore()
+        .getBlobPropertyWithNotFoundHandling(new Path("/test2/test1"),
+            Mockito.mock(TracingContext.class)));
+  }
+
+  @Test
   public void testCopyBlobTakeTime() throws Exception {
     AzureBlobFileSystem fileSystem = getFileSystem();
     assumeNonHnsAccountBlobEndpoint(fileSystem);
