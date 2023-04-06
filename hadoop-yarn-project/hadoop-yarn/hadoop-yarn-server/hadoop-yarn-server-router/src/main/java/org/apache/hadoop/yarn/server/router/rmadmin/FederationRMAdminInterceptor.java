@@ -539,7 +539,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     } catch (YarnException e) {
       routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
       RouterServerUtil.logAndThrowException(e,
-         "Unable to addToClusterNodeLabels due to exception. " + e.getMessage());
+          "Unable to addToClusterNodeLabels due to exception. " + e.getMessage());
     }
 
     routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
@@ -559,7 +559,8 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     String subClusterId = request.getSubClusterId();
     if (StringUtils.isBlank(subClusterId)) {
       routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing RemoveFromClusterNodeLabels SubClusterId.", null);
+      RouterServerUtil.logAndThrowException("Missing RemoveFromClusterNodeLabels SubClusterId.",
+          null);
     }
 
     try {
@@ -567,7 +568,8 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
           new Class[]{RemoveFromClusterNodeLabelsRequest.class}, new Object[]{request});
       Collection<RemoveFromClusterNodeLabelsResponse> refreshNodesResourcesResps =
-          remoteMethod.invokeConcurrent(this, RemoveFromClusterNodeLabelsResponse.class, subClusterId);
+          remoteMethod.invokeConcurrent(this, RemoveFromClusterNodeLabelsResponse.class,
+          subClusterId);
       if (CollectionUtils.isNotEmpty(refreshNodesResourcesResps)) {
         long stopTime = clock.getTime();
         routerMetrics.succeededRemoveFromClusterNodeLabelsRetrieved(stopTime - startTime);
@@ -576,7 +578,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     } catch (YarnException e) {
       routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
       RouterServerUtil.logAndThrowException(e,
-         "Unable to removeFromClusterNodeLabels due to exception. " + e.getMessage());
+          "Unable to removeFromClusterNodeLabels due to exception. " + e.getMessage());
     }
 
     routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();

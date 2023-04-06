@@ -440,7 +440,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     // null request2.
     RemoveFromClusterNodeLabelsRequest request =
         RemoveFromClusterNodeLabelsRequest.newInstance(null, null);
-    LambdaTestUtils.intercept(YarnException.class, "Missing RemoveFromClusterNodeLabels SubClusterId.",
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing RemoveFromClusterNodeLabels SubClusterId.",
         () -> interceptor.removeFromClusterNodeLabels(request));
   }
 
@@ -465,13 +466,15 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
 
     RemoveFromClusterNodeLabelsRequest request1 =
         RemoveFromClusterNodeLabelsRequest.newInstance("SC-1", labels);
-    RemoveFromClusterNodeLabelsResponse response = interceptor.removeFromClusterNodeLabels(request1);
+    RemoveFromClusterNodeLabelsResponse response =
+        interceptor.removeFromClusterNodeLabels(request1);
     assertNotNull(response);
 
     // case2, test the non-exist subCluster.
     RemoveFromClusterNodeLabelsRequest request2 =
         RemoveFromClusterNodeLabelsRequest.newInstance("SC-NON", labels);
-    LambdaTestUtils.intercept(YarnException.class, "subClusterId = SC-NON is not an active subCluster.",
+    LambdaTestUtils.intercept(YarnException.class,
+        "subClusterId = SC-NON is not an active subCluster.",
         () -> interceptor.removeFromClusterNodeLabels(request2));
   }
 
@@ -514,7 +517,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     // case2, test the non-exist subCluster.
     ReplaceLabelsOnNodeRequest request2 =
         ReplaceLabelsOnNodeRequest.newInstance(pMap, "SC-NON");
-    LambdaTestUtils.intercept(YarnException.class, "subClusterId = SC-NON is not an active subCluster.",
+    LambdaTestUtils.intercept(YarnException.class,
+        "subClusterId = SC-NON is not an active subCluster.",
         () -> interceptor.replaceLabelsOnNode(request2));
   }
 }
