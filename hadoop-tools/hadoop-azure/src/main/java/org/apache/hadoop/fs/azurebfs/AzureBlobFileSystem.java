@@ -262,11 +262,13 @@ public class AzureBlobFileSystem extends FileSystem
     listener = listener1;
   }
 
-  public boolean isNamespaceEnabled() {
+  @VisibleForTesting
+  boolean isNamespaceEnabled() {
     return isNamespaceEnabled;
   }
 
-  public PrefixMode getPrefixMode() {
+  @VisibleForTesting
+  PrefixMode getPrefixMode() {
     return prefixMode;
   }
 

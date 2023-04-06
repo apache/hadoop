@@ -39,7 +39,7 @@ public class ITestAbfsFileSystemContractEtag extends AbstractContractEtagTest {
   public void setup() throws Exception {
     binding.setup();
     super.setup();
-    Assume.assumeTrue(binding.getFileSystem().isNamespaceEnabled());
+    Assume.assumeTrue(binding.isNamespaceEnabled(binding.getFileSystem()));
     // Base rename contract test class re-uses the test folder
     // This leads to failures when the test is re-run as same ABFS test
     // containers are re-used for test run and creation of source and

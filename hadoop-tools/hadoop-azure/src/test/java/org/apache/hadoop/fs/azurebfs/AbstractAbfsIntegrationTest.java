@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -430,6 +431,14 @@ public abstract class AbstractAbfsIntegrationTest extends
 
   public AbfsClient getClient(final AzureBlobFileSystem fs) {
     return fs.getAbfsStore().getClient();
+  }
+
+  public boolean isNamespaceEnabled(final AzureBlobFileSystem fs) {
+    return fs.isNamespaceEnabled();
+  }
+
+  public PrefixMode getPrefixMode(final AzureBlobFileSystem fs) {
+    return fs.getPrefixMode();
   }
 
   public Path makeQualified(Path path) throws java.io.IOException {
