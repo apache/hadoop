@@ -33,10 +33,12 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -141,12 +143,12 @@ public class EntryFileIO {
    * @return number of entries written
    * @throws IOException write failure.
    */
-  public static int write(SequenceFile.Writer writer, 
+  public static int write(SequenceFile.Writer writer,
       Collection<FileEntry> entries,
       boolean close)
       throws IOException {
     try {
-      for (FileEntry entry: entries) {
+      for (FileEntry entry : entries) {
         writer.append(NullWritable.get(), entry);
       }
       writer.flush();
@@ -200,7 +202,7 @@ public class EntryFileIO {
      * count of file entries saved; only updated in one thread
      * so volatile.
      */
-    private volatile int count;
+    private final AtomicInteger count = new AtomicInteger();
 
     /**
      * any failure.
@@ -230,7 +232,7 @@ public class EntryFileIO {
      * @return the count
      */
     public int getCount() {
-      return count;
+      return count.get();
     }
 
     /**
@@ -249,6 +251,7 @@ public class EntryFileIO {
       active.set(true);
       executor = HadoopExecutors.newSingleThreadExecutor();
       future = executor.submit(this::processor);
+      LOG.debug("Started entry writer {}", this);
     }
 
     /**
@@ -258,12 +261,19 @@ public class EntryFileIO {
      */
     public boolean enqueue(List<FileEntry> entries) {
       if (entries.isEmpty()) {
+        LOG.debug("ignoring enqueue of empty list");
         // exit fast, but return true.
         return true;
       }
       if (active.get()) {
-        queue.add(entries);
-        return false;
+        try {
+          queue.put(entries);
+          LOG.debug("Queued {}", entries.size());
+          return true;
+        } catch (InterruptedException e) {
+          Thread.interrupted();
+          return false;
+        }
       } else {
         LOG.debug("Queue inactive; discarding {} entries", entries.size());
         return false;
@@ -276,22 +286,27 @@ public class EntryFileIO {
      * @throws UncheckedIOException on write failure
      */
     private int processor() {
-      int count = 0;
       try {
         while (!stop.get()) {
           final List<FileEntry> entries = queue.take();
           if (entries.isEmpty()) {
             // exit list reached.
+            LOG.debug("List termination initiated");
             stop.set(true);
           } else {
-            entries.forEach(this::append);
+            LOG.debug("Adding block of {} entries", entries.size());
+            for (FileEntry entry : entries) {
+              append(entry);
+            }
           }
         }
       } catch (InterruptedException e) {
         // assume we are stopped here
+        LOG.debug("interrupted", e);
+        active.set(false);
         stop.set(true);
       }
-      return count;
+      return count.get();
     }
 
     /**
@@ -300,14 +315,15 @@ public class EntryFileIO {
      * @throws UncheckedIOException on write failure
      */
     private void append(FileEntry entry) {
-      if (failure != null) {
-        try {
-          writer.append(NullWritable.get(), entry);
-          count++;
-        } catch (IOException e) {
-          failure = e;
-          throw new UncheckedIOException(e);
-        }
+      try {
+        writer.append(NullWritable.get(), entry);
+
+        final int c = count.incrementAndGet();
+        LOG.trace("Added entry #{}: {}", c, entry);
+      } catch (IOException e) {
+        LOG.debug("Write failure", e);
+        failure = e;
+        throw new UncheckedIOException(e);
       }
     }
 
@@ -329,7 +345,11 @@ public class EntryFileIO {
       }
       LOG.debug("Shutting down writer");
       // signal queue closure by queue an empty list
-      queue.add(new ArrayList<>());
+      try {
+        queue.put(new ArrayList<>());
+      } catch (InterruptedException e) {
+        Thread.interrupted();
+      }
       try {
         // wait for the op to finish.
         int total = FutureIO.awaitFuture(future, 1, TimeUnit.MINUTES);
@@ -353,19 +373,34 @@ public class EntryFileIO {
         throw failure;
       }
     }
+
+    @Override
+    public String toString() {
+      return "EntryWriter{" +
+          "stop=" + stop.get() +
+          ", active=" + active.get() +
+          ", count=" + count.get() +
+          ", queue depth=" + queue.size() +
+          ", failure=" + failure +
+          '}';
+    }
   }
 
   /**
    * Iterator to retrieve file entries from the sequence file.
    * Closeable; it will close automatically when the last element is read.
+   * No thread safety.
    */
-  private final class EntryIterator implements RemoteIterator<FileEntry>, Closeable {
+  @VisibleForTesting
+  final class EntryIterator implements RemoteIterator<FileEntry>, Closeable {
 
     private final SequenceFile.Reader reader;
 
     private FileEntry fetched;
 
     private boolean closed;
+
+    private int count;
 
     private EntryIterator(final SequenceFile.Reader reader) {
       this.reader = requireNonNull(reader);
@@ -380,6 +415,15 @@ public class EntryFileIO {
     }
 
     @Override
+    public String toString() {
+      return "EntryIterator{" +
+          "closed=" + closed +
+          ", count=" + count +
+          ", fetched=" + fetched +
+          '}';
+    }
+
+    @Override
     public boolean hasNext() throws IOException {
       return fetched != null || fetchNext();
     }
@@ -388,6 +432,7 @@ public class EntryFileIO {
       FileEntry readBack = new FileEntry();
       if (reader.next(NullWritable.get(), readBack)) {
         fetched = readBack;
+        count++;
         return true;
       } else {
         fetched = null;
@@ -406,6 +451,17 @@ public class EntryFileIO {
       return r;
     }
 
+    /**
+     * Is the stream closed.
+     * @return true if closed.
+     */
+    public boolean isClosed() {
+      return closed;
+    }
+
+    int getCount() {
+      return count;
+    }
   }
 
 }
