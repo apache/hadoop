@@ -470,8 +470,8 @@ public class FederationStateStoreService extends AbstractService
   @Override
   public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    FederationClientMethod<RouterMasterKeyResponse> clientMethod =
-        new FederationClientMethod<>("storeNewMasterKey",
+    FederationClientMethod<RouterMasterKeyResponse> clientMethod = new FederationClientMethod<>(
+        "storeNewMasterKey",
         RouterMasterKeyRequest.class, request,
         RouterMasterKeyResponse.class, stateStoreClient, clock);
     return clientMethod.invoke();
@@ -480,8 +480,8 @@ public class FederationStateStoreService extends AbstractService
   @Override
   public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    FederationClientMethod<RouterMasterKeyResponse> clientMethod =
-        new FederationClientMethod<>("removeStoredMasterKey",
+    FederationClientMethod<RouterMasterKeyResponse> clientMethod = new FederationClientMethod<>(
+        "removeStoredMasterKey",
         RouterMasterKeyRequest.class, request,
         RouterMasterKeyResponse.class, stateStoreClient, clock);
     return clientMethod.invoke();
@@ -490,8 +490,8 @@ public class FederationStateStoreService extends AbstractService
   @Override
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    FederationClientMethod<RouterMasterKeyResponse> clientMethod =
-        new FederationClientMethod<>("getMasterKeyByDelegationKey",
+    FederationClientMethod<RouterMasterKeyResponse> clientMethod = new FederationClientMethod<>(
+        "getMasterKeyByDelegationKey",
         RouterMasterKeyRequest.class, request,
         RouterMasterKeyResponse.class, stateStoreClient, clock);
     return clientMethod.invoke();
@@ -500,8 +500,8 @@ public class FederationStateStoreService extends AbstractService
   @Override
   public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    FederationClientMethod<RouterRMTokenResponse> clientMethod =
-        new FederationClientMethod<>("storeNewToken",
+    FederationClientMethod<RouterRMTokenResponse> clientMethod = new FederationClientMethod<>(
+        "storeNewToken",
         RouterRMTokenRequest.class, request,
         RouterRMTokenResponse.class, stateStoreClient, clock);
     return clientMethod.invoke();
@@ -510,8 +510,8 @@ public class FederationStateStoreService extends AbstractService
   @Override
   public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    FederationClientMethod<RouterRMTokenResponse> clientMethod =
-        new FederationClientMethod<>("updateStoredToken",
+    FederationClientMethod<RouterRMTokenResponse> clientMethod = new FederationClientMethod<>(
+        "updateStoredToken",
         RouterRMTokenRequest.class, request,
         RouterRMTokenResponse.class, stateStoreClient, clock);
     return clientMethod.invoke();
@@ -520,8 +520,8 @@ public class FederationStateStoreService extends AbstractService
   @Override
   public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    FederationClientMethod<RouterRMTokenResponse> clientMethod =
-        new FederationClientMethod<>("removeStoredToken",
+    FederationClientMethod<RouterRMTokenResponse> clientMethod = new FederationClientMethod<>(
+        "removeStoredToken",
         RouterRMTokenRequest.class, request,
         RouterRMTokenResponse.class, stateStoreClient, clock);
     return clientMethod.invoke();
@@ -530,8 +530,8 @@ public class FederationStateStoreService extends AbstractService
   @Override
   public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    FederationClientMethod<RouterRMTokenResponse> clientMethod =
-        new FederationClientMethod<>("getTokenByRouterStoreToken",
+    FederationClientMethod<RouterRMTokenResponse> clientMethod = new FederationClientMethod<>(
+        "getTokenByRouterStoreToken",
         RouterRMTokenRequest.class, request,
         RouterRMTokenResponse.class, stateStoreClient, clock);
     return clientMethod.invoke();
