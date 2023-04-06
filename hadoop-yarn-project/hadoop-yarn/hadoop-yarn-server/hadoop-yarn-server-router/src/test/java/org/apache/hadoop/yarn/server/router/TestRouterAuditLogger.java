@@ -65,7 +65,7 @@ public class TestRouterAuditLogger {
    * Test the AuditLog format with key-val pair.
    */
   @Test
-  public void testKeyValLogFormat() throws Exception {
+  public void testKeyValLogFormat() {
     StringBuilder actLog = new StringBuilder();
     StringBuilder expLog = new StringBuilder();
 
@@ -80,7 +80,7 @@ public class TestRouterAuditLogger {
     assertEquals(expLog.toString(), actLog.toString());
 
     // append another k1=null pair and test
-    RouterAuditLogger.add(RouterAuditLogger.Keys.APPID, (String) null, actLog);
+    RouterAuditLogger.add(RouterAuditLogger.Keys.APPID, null, actLog);
     expLog.append("\tAPPID=null");
     assertEquals(expLog.toString(), actLog.toString());
 
@@ -102,7 +102,10 @@ public class TestRouterAuditLogger {
     expLog.append("USER=test\t");
     if (checkIP) {
       InetAddress ip = Server.getRemoteIp();
-      expLog.append(RouterAuditLogger.Keys.IP.name() + "=" + ip.getHostAddress() + "\t");
+      if (ip != null && ip.getHostAddress() != null) {
+        expLog.append(RouterAuditLogger.Keys.IP.name())
+            .append("=").append(ip.getHostAddress()).append("\t");
+      }
     }
     expLog.append("OPERATION=oper\tTARGET=tgt\tRESULT=SUCCESS");
     if (appId != null) {
@@ -149,7 +152,11 @@ public class TestRouterAuditLogger {
     expLog.append("USER=test\t");
     if (checkIP) {
       InetAddress ip = Server.getRemoteIp();
-      expLog.append(RouterAuditLogger.Keys.IP.name() + "=" + ip.getHostAddress() + "\t");
+      if (ip != null && ip.getHostAddress() != null) {
+        expLog.append(RouterAuditLogger.Keys.IP.name())
+            .append("=")
+            .append(ip.getHostAddress()).append("\t");
+      }
     }
     expLog.append("OPERATION=oper\tTARGET=tgt\tRESULT=FAILURE\t");
     expLog.append("DESCRIPTION=description of an audit log");
@@ -179,7 +186,7 @@ public class TestRouterAuditLogger {
    *  Test {@link RouterAuditLogger}.
    */
   @Test
-  public void testRouterAuditLoggerWithOutIP() throws Exception {
+  public void testRouterAuditLoggerWithOutIP() {
     testSuccessLogFormat(false);
     testFailureLogFormat(false);
   }

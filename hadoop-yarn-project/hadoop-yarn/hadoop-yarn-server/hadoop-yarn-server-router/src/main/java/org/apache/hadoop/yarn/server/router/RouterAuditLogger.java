@@ -68,8 +68,20 @@ public final class RouterAuditLogger {
     public static final String GET_APPLICATION_ATTEMPT_REPORT = "Get ApplicationAttemptReport";
     public static final String GET_APPLICATION_ATTEMPTS = "Get ApplicationAttempts";
     public static final String GET_CONTAINERREPORT = "Get ContainerReport";
-
     public static final String GET_CONTAINERS = "Get Containers";
+    public static final String GET_DELEGATIONTOKEN = "Get DelegationToken";
+    public static final String RENEW_DELEGATIONTOKEN = "Renew DelegationToken";
+    public static final String CANCEL_DELEGATIONTOKEN = "Cancel DelegationToken";
+    public static final String FAIL_APPLICATIONATTEMPT = "Fail ApplicationAttempt";
+    public static final String UPDATE_APPLICATIONPRIORITY = "Update ApplicationPriority";
+    public static final String SIGNAL_TOCONTAINER = "Signal ToContainer";
+    public static final String UPDATE_APPLICATIONTIMEOUTS = "Update ApplicationTimeouts";
+    public static final String GET_RESOURCEPROFILES = "Get ResourceProfiles";
+    public static final String GET_RESOURCEPROFILE = "Get ResourceProfile";
+    public static final String GET_RESOURCETYPEINFO = "Get ResourceTypeInfo";
+    public static final String GET_ATTRIBUTESTONODES = "Get AttributesToNodes";
+    public static final String GET_CLUSTERNODEATTRIBUTES = "Get ClusterNodeAttributes";
+    public static final String GET_NODESTOATTRIBUTES = "Get NodesToAttributes";
   }
 
   public static void logSuccess(String user, String operation, String target) {
