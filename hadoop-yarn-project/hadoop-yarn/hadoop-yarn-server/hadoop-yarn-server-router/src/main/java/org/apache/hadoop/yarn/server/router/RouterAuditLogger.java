@@ -191,6 +191,7 @@ public final class RouterAuditLogger {
    * @param perm Target permissions.
    * @param target The target on which the operation is being performed.
    * @param descriptionFormat the description message format string.
+   * @param args format parameter.
    *
    * <br><br>
    * Note that the {@link RouterAuditLogger} uses tabs ('\t') as a key-val
