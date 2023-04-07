@@ -29,7 +29,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 public interface Schedulable {
   public UserGroupInformation getUserGroupInformation();
 
-  default public CallerContext getCallerContext() {
+  default CallerContext getCallerContext() {
     return null;
   }
 
