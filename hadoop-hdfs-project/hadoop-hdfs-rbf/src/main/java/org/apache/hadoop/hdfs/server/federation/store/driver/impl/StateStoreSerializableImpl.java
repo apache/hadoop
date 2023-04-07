@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.federation.store.driver.impl;
 import java.io.IOException;
 import java.util.Collection;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreSerializer;
@@ -29,6 +31,8 @@ import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
  * State Store driver that stores a serialization of the records. The serializer
  * is pluggable.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public abstract class StateStoreSerializableImpl extends StateStoreBaseImpl {
 
   /** Mark for slashes in path names. */

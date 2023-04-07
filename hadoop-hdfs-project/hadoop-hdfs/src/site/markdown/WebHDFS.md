@@ -58,6 +58,7 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`GETFILEBLOCKLOCATIONS`](#Get_File_Block_Locations) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileBlockLocations)
     * [`GETECPOLICY`](#Get_EC_Policy) (see [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).getErasureCodingPolicy)
     * [`GETSERVERDEFAULTS`](#Get_Server_Defaults) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getServerDefaults)
+    * [`GETLINKTARGET`](#Get_Link_Target) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTarget)
 *   HTTP PUT
     * [`CREATE`](#Create_and_Write_to_a_File) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).create)
     * [`MKDIRS`](#Make_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).mkdirs)
@@ -1138,6 +1139,22 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).access
         }
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getServerDefaults
+
+### Get Link Target
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETLINKTARGET"
+
+    The client receives a response with a [`Path` JSON object](#Path_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {"Path": "/user/username/targetFile"}
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTarget
 
 Storage Policy Operations
 -------------------------
