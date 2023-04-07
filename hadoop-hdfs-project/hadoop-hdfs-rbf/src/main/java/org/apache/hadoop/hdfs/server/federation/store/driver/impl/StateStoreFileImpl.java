@@ -110,6 +110,12 @@ public class StateStoreFileImpl extends StateStoreFileBaseImpl {
   }
 
   @Override
+  protected int getConcurrentFilesAccessNumThreads() {
+    return getConf().getInt(RBFConfigKeys.FEDERATION_STORE_FILE_ASYNC_THREADS,
+        RBFConfigKeys.FEDERATION_STORE_FILE_ASYNC_THREADS_DEFAULT);
+  }
+
+  @Override
   protected <T extends BaseRecord> BufferedReader getReader(String filename) {
     BufferedReader reader = null;
     try {
@@ -144,6 +150,7 @@ public class StateStoreFileImpl extends StateStoreFileBaseImpl {
 
   @Override
   public void close() throws Exception {
+    super.close();
     setInitialized(false);
   }
 

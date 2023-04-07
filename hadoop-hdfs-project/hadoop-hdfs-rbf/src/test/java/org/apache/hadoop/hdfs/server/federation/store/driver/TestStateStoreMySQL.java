@@ -17,54 +17,56 @@
  */
 package org.apache.hadoop.hdfs.server.federation.store.driver;
 
-import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_STORE_FILE_ASYNC_THREADS;
-
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl;
-
-import org.junit.After;
+import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreMySQLImpl;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+
+import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.*;
 
 /**
  * Test the FileSystem (e.g., HDFS) implementation of the State Store driver.
  */
-@RunWith(Parameterized.class)
-public class TestStateStoreFile extends TestStateStoreDriverBase {
+public class TestStateStoreMySQL extends TestStateStoreDriverBase {
+  private static final String CONNECTION_URL = "jdbc:derby:memory:StateStore";
 
-  private final String numFileAsyncThreads;
+  @BeforeClass
+  public static void initDatabase() throws Exception {
+    Connection connection =  DriverManager.getConnection(CONNECTION_URL + ";create=true");
+    Statement s =  connection.createStatement();
+    s.execute("CREATE SCHEMA TESTUSER");
 
-  public TestStateStoreFile(String numFileAsyncThreads) {
-    this.numFileAsyncThreads = numFileAsyncThreads;
-  }
-
-  @Parameterized.Parameters(name = "numFileAsyncThreads-{0}")
-  public static List<String[]> data() {
-    return Arrays.asList(new String[][] {{"20"}, {"0"}});
-  }
-
-  private static void setupCluster(String numFsAsyncThreads) throws Exception {
-    Configuration conf = getStateStoreConfiguration(StateStoreFileImpl.class);
-    conf.setInt(FEDERATION_STORE_FILE_ASYNC_THREADS, Integer.parseInt(numFsAsyncThreads));
+    Configuration conf =
+        getStateStoreConfiguration(StateStoreMySQLImpl.class);
+    conf.set(StateStoreMySQLImpl.CONNECTION_URL, CONNECTION_URL);
+    conf.set(StateStoreMySQLImpl.CONNECTION_USERNAME, "testuser");
+    conf.set(StateStoreMySQLImpl.CONNECTION_PASSWORD, "testpassword");
+    conf.set(StateStoreMySQLImpl.CONNECTION_DRIVER, "org.apache.derby.jdbc.EmbeddedDriver");
     getStateStore(conf);
   }
 
   @Before
-  public void startup() throws Exception {
-    setupCluster(numFileAsyncThreads);
+  public void startup() throws IOException {
     removeAll(getStateStoreDriver());
   }
 
-  @After
-  public void tearDown() throws Exception {
-    tearDownCluster();
+  @AfterClass
+  public static void cleanupDatabase() {
+    try {
+      DriverManager.getConnection(CONNECTION_URL + ";drop=true");
+    } catch (SQLException e) {
+      // SQLException expected when database is dropped
+      if (!e.getMessage().contains("dropped")) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 
   @Test
@@ -97,16 +99,4 @@ public class TestStateStoreFile extends TestStateStoreDriverBase {
       throws IllegalArgumentException, IllegalAccessException, IOException {
     testMetrics(getStateStoreDriver());
   }
-
-  @Test
-  public void testCacheLoadMetrics() throws IOException {
-    // inject value of CacheMountTableLoad as -1 initially, if tests get CacheMountTableLoadAvgTime
-    // value as -1 ms, that would mean no other sample with value >= 0 would have been received and
-    // hence this would be failure to assert that mount table avg load time is higher than -1
-    getStateStoreService().getMetrics().setCacheLoading("MountTable", -1);
-    long curMountTableLoadNum = getMountTableCacheLoadSamples(getStateStoreDriver());
-    getStateStoreService().refreshCaches(true);
-    testCacheLoadMetrics(getStateStoreDriver(), curMountTableLoadNum + 1, -1);
-  }
-
 }
