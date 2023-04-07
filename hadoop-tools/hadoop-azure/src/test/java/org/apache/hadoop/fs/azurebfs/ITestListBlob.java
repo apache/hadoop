@@ -51,11 +51,19 @@ public class ITestListBlob extends
     }
     List<BlobProperty> blobProperties = fs.getAbfsStore()
         .getListBlobs(new Path("dir"),
-            Mockito.mock(TracingContext.class), null);
+            Mockito.mock(TracingContext.class), null, false);
     Assertions.assertThat(blobProperties)
         .describedAs(
             "BlobList should match the number of files created in tests + the directory itself")
         .hasSize(11);
+
+    blobProperties = fs.getAbfsStore()
+        .getListBlobs(new Path("dir"),
+            Mockito.mock(TracingContext.class), null, true);
+    Assertions.assertThat(blobProperties)
+        .describedAs(
+            "BlobList should match the number of files created in tests")
+        .hasSize(10);
   }
 
   @Test
@@ -74,7 +82,7 @@ public class ITestListBlob extends
     fs.getAbfsStore().setClient(spiedClient);
     List<BlobProperty> blobProperties = fs.getAbfsStore()
         .getListBlobs(new Path("dir"),
-            Mockito.mock(TracingContext.class), 1);
+            Mockito.mock(TracingContext.class), 1, false);
     Assertions.assertThat(blobProperties)
         .describedAs(
             "BlobList should match the number of files created in tests + the directory itself")
@@ -83,6 +91,19 @@ public class ITestListBlob extends
         .getListBlobs(Mockito.any(Path.class),
             Mockito.any(TracingContext.class),
             Mockito.nullable(String.class), Mockito.nullable(String.class),
-            Mockito.anyInt());
+            Mockito.anyInt(), Mockito.anyBoolean());
+
+    blobProperties = fs.getAbfsStore()
+        .getListBlobs(new Path("dir"),
+            Mockito.mock(TracingContext.class), 1, true);
+    Assertions.assertThat(blobProperties)
+        .describedAs(
+            "BlobList should match the number of files created in tests + the directory itself")
+        .hasSize(10);
+    Mockito.verify(spiedClient, Mockito.times(21))
+        .getListBlobs(Mockito.any(Path.class),
+            Mockito.any(TracingContext.class),
+            Mockito.nullable(String.class), Mockito.nullable(String.class),
+            Mockito.anyInt(), Mockito.anyBoolean());
   }
 }

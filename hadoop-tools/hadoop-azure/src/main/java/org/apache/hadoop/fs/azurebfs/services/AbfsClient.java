@@ -1086,23 +1086,26 @@ public class AbfsClient implements Closeable {
 
   /**
    * Call server API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/list-blobs">BlobList</a>.
+   *
    * @param sourceDirBlobPath path from where the list of blob is requried.
    * @param tracingContext object of {@link TracingContext}
-   * @param maxResult define how many blobs can client handle in server response.
-   * In case maxResult <= 5000, server sends number of blobs equal to the value. In
-   * case maxResult > 5000, server sends maximum 5000 blobs.
    * @param marker optional value. To be sent in case this method call in a non-first
    * iteration to the blobList API. Value has to be equal to the field NextMarker in the response
    * of previous iteration for the same operation.
+   * @param maxResult define how many blobs can client handle in server response.
+   * In case maxResult <= 5000, server sends number of blobs equal to the value. In
+   * case maxResult > 5000, server sends maximum 5000 blobs.
+   * @param absoluteDirSeach
    *
    * @return list of {@link BlobProperty}
+   *
    * @throws AzureBlobFileSystemException thrown from server-call / xml-parsing
    */
   public AbfsRestOperation getListBlobs(Path sourceDirBlobPath,
       TracingContext tracingContext,
       String marker,
       String prefix,
-      Integer maxResult)
+      Integer maxResult, final Boolean absoluteDirSeach)
       throws AzureBlobFileSystemException {
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESTYPE, CONTAINER);
@@ -1110,7 +1113,7 @@ public class AbfsClient implements Closeable {
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_INCLUDE,
         QUERY_PARAM_INCLUDE_VALUE_METADATA);
     if (prefix == null) {
-      prefix = sourceDirBlobPath.toUri().getPath() + "/";
+      prefix = sourceDirBlobPath.toUri().getPath() + (absoluteDirSeach ?"/" : "");
     }
     prefix = removeInitialSlash(prefix);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_PREFIX, prefix);

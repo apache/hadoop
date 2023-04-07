@@ -532,7 +532,7 @@ public class AzureBlobFileSystem extends FileSystem
     if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
         == PrefixMode.BLOB) {
       List<BlobProperty> blobProperties = getAbfsStore()
-          .getListBlobs(qualifiedDstPath, tracingContext, 2);
+          .getListBlobs(qualifiedDstPath, tracingContext, 2, true);
       if (blobProperties.size() > 0) {
         isDstExists.set(true);
         isDstDirectory.set(true);

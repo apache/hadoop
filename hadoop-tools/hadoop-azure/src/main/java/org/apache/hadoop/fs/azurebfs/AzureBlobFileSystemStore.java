@@ -625,17 +625,21 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param maxResult define how many blobs can client handle in server response.
    * In case maxResult <= 5000, server sends number of blobs equal to the value. In
    * case maxResult > 5000, server sends maximum 5000 blobs.
+   * @param absoluteDirSearch
+   *
    * @return List of blobProperties
+   *
    * @throws AbfsRestOperationException exception from server-calls / xml-parsing
    */
   public List<BlobProperty> getListBlobs(Path sourceDirBlobPath,
-      TracingContext tracingContext, Integer maxResult)
+      TracingContext tracingContext, Integer maxResult,
+      final Boolean absoluteDirSearch)
       throws AzureBlobFileSystemException {
     List<BlobProperty> blobProperties = new ArrayList<>();
     String nextMarker = null;
     do {
       AbfsRestOperation op = client.getListBlobs(sourceDirBlobPath,
-          tracingContext, nextMarker, null, maxResult);
+          tracingContext, nextMarker, null, maxResult, absoluteDirSearch);
       BlobList blobList = op.getResult().getBlobList();
       nextMarker = blobList.getNextMarker();
       blobProperties.addAll(blobList.getBlobPropertyList());
@@ -1030,7 +1034,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final Boolean isSrcExist;
       final Boolean isSrcDir;
       List<BlobProperty> srcBlobProperties = getListBlobs(source,
-          tracingContext, null);
+          tracingContext, null, true);
       final BlobProperty blobPropOnSrc;
       if (srcBlobProperties.size() > 0) {
         isSrcExist = true;
