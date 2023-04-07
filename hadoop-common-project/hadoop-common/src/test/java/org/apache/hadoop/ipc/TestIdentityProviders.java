@@ -20,7 +20,7 @@ package org.apache.hadoop.ipc;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
 
 import org.junit.Test;
 
@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.conf.Configuration;
 
 public class TestIdentityProviders {
-  public class FakeSchedulable implements Schedulable {
+  public static class FakeSchedulable implements Schedulable {
     public FakeSchedulable() {
     }
 
@@ -61,7 +61,7 @@ public class TestIdentityProviders {
       CommonConfigurationKeys.IPC_IDENTITY_PROVIDER_KEY,
       IdentityProvider.class);
 
-    assertTrue(providers.size() == 1);
+    assertEquals(1, providers.size());
 
     IdentityProvider ip = providers.get(0);
     assertNotNull(ip);
@@ -71,7 +71,12 @@ public class TestIdentityProviders {
   @Test
   public void testUserIdentityProvider() throws IOException {
     UserIdentityProvider uip = new UserIdentityProvider();
-    String identity = uip.makeIdentity(new FakeSchedulable());
+    FakeSchedulable fakeSchedulable = new FakeSchedulable();
+    String identity = uip.makeIdentity(fakeSchedulable);
+
+    // FakeSchedulable doesn't override getCallerContext()
+    // and therefore it should return null
+    assertNull(fakeSchedulable.getCallerContext());
 
     // Get our username
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
