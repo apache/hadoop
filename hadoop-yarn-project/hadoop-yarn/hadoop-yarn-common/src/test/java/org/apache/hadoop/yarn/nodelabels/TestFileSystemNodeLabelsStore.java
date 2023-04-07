@@ -143,7 +143,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
             "p4", toSet(toNodeId("n4")),
             "p2", toSet(toNodeId("n2"))));
 
-    // stutdown mgr and start a new mgr
+    // shutdown mgr and start a new mgr
     mgr.stop();
     mgr = new MockNodeLabelManager();
     mgr.init(conf);

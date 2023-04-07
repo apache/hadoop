@@ -241,7 +241,7 @@ public class TestTimelineClientV2Impl {
   @Test
   void testSyncCall() throws Exception {
     try {
-      // sync entity should not be be merged with Async
+      // sync entity should not be merged with Async
       client.putEntities(generateEntity("1"));
       client.putEntitiesAsync(generateEntity("2"));
       client.putEntitiesAsync(generateEntity("3"));
@@ -360,7 +360,7 @@ public class TestTimelineClientV2Impl {
         new byte[0], "kind", new byte[0], "service");
     client.setTimelineCollectorInfo(CollectorInfo.newInstance(null, token));
     assertNull(client.currentTimelineToken,
-        "Timeline token in v2 client should not be set as token kind " + "is unexepcted.");
+        "Timeline token in v2 client should not be set as token kind " + "is unexpected.");
     assertEquals(0, ugi.getTokens().size());
 
     token = Token.newInstance(new byte[0], TimelineDelegationTokenIdentifier.
