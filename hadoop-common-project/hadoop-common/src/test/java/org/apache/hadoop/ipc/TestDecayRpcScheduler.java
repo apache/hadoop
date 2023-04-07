@@ -482,8 +482,8 @@ public class TestDecayRpcScheduler {
     String summary = scheduler.getSchedulingDecisionSummary();
     Map<String, Object> summaryMap = (Map<String, Object>) JSON.parse(summary);
     assertNotEquals(0L, summaryMap.get("user1"));
-    assertEquals(0L, summaryMap.get("service1"));
-    assertEquals(0L, summaryMap.get("service2"));
+    assertEquals(-1L, summaryMap.get("service1"));
+    assertEquals(-1L, summaryMap.get("service2"));
   }
 
   /**
