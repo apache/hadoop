@@ -1066,7 +1066,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       if (!isSrcExist) {
         throw new AbfsRestOperationException(HttpURLConnection.HTTP_NOT_FOUND,
-            AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(), null, null);
+            AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND.getErrorCode(), null, null);
       }
       if (isSrcDir) {
         final RenameAtomicityUtils renameAtomicityUtils;

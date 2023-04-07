@@ -413,6 +413,18 @@ public class AzureBlobFileSystem extends FileSystem
     Path qualifiedSrcPath = makeQualified(src);
     Path qualifiedDstPath = makeQualified(dst);
 
+    Path nestedDstParent = dst.getParent();
+    if(getAbfsStore().getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
+      while (nestedDstParent != null) {
+        if (makeQualified(nestedDstParent).equals(qualifiedSrcPath)) {
+          //testRenameChildDirForbidden.
+          return false;
+        }
+        nestedDstParent = nestedDstParent.getParent();
+      }
+    }
+
+
     TracingContext tracingContext = new TracingContext(clientCorrelationId,
         fileSystemId, FSOperationType.RENAME, true, tracingHeaderFormat,
         listener);
