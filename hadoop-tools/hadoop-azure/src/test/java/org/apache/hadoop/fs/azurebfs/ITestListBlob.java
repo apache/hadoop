@@ -22,12 +22,14 @@ package org.apache.hadoop.fs.azurebfs;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 public class ITestListBlob extends
@@ -40,10 +42,7 @@ public class ITestListBlob extends
   @Test
   public void testListBlob() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    if (fs.getAbfsStore().getAbfsConfiguration().getIsNamespaceEnabledAccount()
-        == Trilean.TRUE) {
-      return;
-    }
+    assumeNonHnsAccountBlobEndpoint(fs);
     int i = 0;
     while (i < 10) {
       fs.create(new Path("/dir/" + i));
@@ -69,10 +68,7 @@ public class ITestListBlob extends
   @Test
   public void testListBlobWithMarkers() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    if (fs.getAbfsStore().getAbfsConfiguration().getIsNamespaceEnabledAccount()
-        == Trilean.TRUE) {
-      return;
-    }
+    assumeNonHnsAccountBlobEndpoint(fs);
     int i = 0;
     while (i < 10) {
       fs.create(new Path("/dir/" + i));
@@ -105,5 +101,11 @@ public class ITestListBlob extends
             Mockito.any(TracingContext.class),
             Mockito.nullable(String.class), Mockito.nullable(String.class),
             Mockito.anyInt(), Mockito.anyBoolean());
+  }
+
+  private void assumeNonHnsAccountBlobEndpoint(final AzureBlobFileSystem fs) {
+    Assume.assumeTrue("To work on only on non-HNS Blob endpoint",
+        fs.getAbfsStore().getAbfsConfiguration().getPrefixMode()
+            == PrefixMode.BLOB);
   }
 }

@@ -1221,6 +1221,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testBlobRenameSrcDirHasNoMarker() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
     fs.create(new Path("/test1/test2/file1"));
     fs.getAbfsStore()
         .getClient()
