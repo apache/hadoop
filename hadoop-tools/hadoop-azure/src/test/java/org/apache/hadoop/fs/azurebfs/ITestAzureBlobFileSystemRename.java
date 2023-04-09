@@ -189,6 +189,21 @@ public class ITestAzureBlobFileSystemRename extends
     assertFalse(fs.exists(new Path("testDir2/test1/test2/test3")));
   }
 
+  /**
+   * <pre>
+   * Test to check behaviour of rename API if the destination directory is already
+   * there. The HNS call and the one for Blob endpoint should have same behaviour.
+   *
+   * /testDir2/test1/test2/test3 contains (/file)
+   * There is another path that exists: /testDir2/test4/test3
+   * On rename(/testDir2/test1/test2/test3, /testDir2/test4).
+   * </pre>
+   *
+   * Expectation for HNS / Blob endpoint:<ol>
+   * <li>Rename should fail</li>
+   * <li>No file should be transferred to destination directory</li>
+   * </ol>
+   */
   @Test
   public void testPosixRenameDirectoryWhereDirectoryAlreadyThereOnDestination()
       throws Exception {
@@ -249,6 +264,10 @@ public class ITestAzureBlobFileSystemRename extends
             == PrefixMode.BLOB);
   }
 
+  /**
+   * Test that after completing rename for a directory which is enabled for
+   * AtomicRename, the RenamePending JSON file is deleted.
+   */
   @Test
   public void testRenamePendingJsonIsRemovedPostSuccessfulRename()
       throws Exception {
@@ -277,6 +296,12 @@ public class ITestAzureBlobFileSystemRename extends
     Assert.assertTrue(correctDeletePathCount[0] == 1);
   }
 
+  /**
+   * Test for a directory in /hbase directory. To simulate the crash of process,
+   * test will throw an exception with 503 on a copy of one of the blob.<br>
+   * ListStatus API will be called on the directory. Expectation is that the ListStatus
+   * API of {@link AzureBlobFileSystem} should recover the paused rename.
+   */
   @Test
   public void testHBaseHandlingForFailedRename() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
@@ -381,7 +406,13 @@ public class ITestAzureBlobFileSystemRename extends
         failedCopyPath.replace("test1/test2/test3/", "test4/test3/"))));
   }
 
-  //test for nested.
+  /**
+   * Test for a directory in /hbase directory. To simulate the crash of process,
+   * test will throw an exception with 503 on a copy of one of the blob. The
+   * source directory is a nested directory.<br>
+   * ListStatus API will be called on the directory. Expectation is that the ListStatus
+   * API of {@link AzureBlobFileSystem} should recover the paused rename.
+   */
   @Test
   public void testHBaseHandlingForFailedRenameForNestedSourceThroughListFile()
       throws Exception {
@@ -492,6 +523,14 @@ public class ITestAzureBlobFileSystemRename extends
     Assert.assertTrue(listFileResult.length == 0);
   }
 
+  /**
+   * Test for a directory in /hbase directory. To simulate the crash of process,
+   * test will throw an exception with 503 on a copy of one of the blob. The
+   * source directory is a nested directory.<br>
+   * GetFileStatus API will be called on the directory. Expectation is that the
+   * GetFileStatus API of {@link AzureBlobFileSystem} should recover the paused
+   * rename.
+   */
   @Test
   public void testHBaseHandlingForFailedRenameForNestedSourceThroughGetPathStatus()
       throws Exception {
@@ -612,6 +651,14 @@ public class ITestAzureBlobFileSystemRename extends
         failedCopyPath.replace("test1/test2/test3/", "test4/test2/test3/"))));
   }
 
+  /**
+   * Simulates a scenario where HMaster in Hbase starts up and executes listStatus
+   * API on the directory that has to be renamed by some other executor-machine.
+   * The scenario is that RenamePending JSON is created but before it could be
+   * appended, it has been opened by the HMaster. The HMaster will delete it. The
+   * machine doing rename would have to recreate the JSON file.
+   * ref: <a href="https://issues.apache.org/jira/browse/HADOOP-12678">issue</a>
+   */
   @Test
   public void testHbaseListStatusBeforeRenamePendingFileAppended()
       throws Exception {
@@ -1253,7 +1300,7 @@ public class ITestAzureBlobFileSystemRename extends
   }
 
   @Test
-  public void testCopyBlobTakeTimeAndEventullyFail() throws Exception {
+  public void testCopyBlobTakeTimeAndEventuallyFail() throws Exception {
     AzureBlobFileSystem fileSystem = getFileSystem();
     assumeNonHnsAccountBlobEndpoint(fileSystem);
     AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
@@ -1279,7 +1326,7 @@ public class ITestAzureBlobFileSystemRename extends
   }
 
   @Test
-  public void testCopyBlobTakeTimeAndEventullyAborted() throws Exception {
+  public void testCopyBlobTakeTimeAndEventuallyAborted() throws Exception {
     AzureBlobFileSystem fileSystem = getFileSystem();
     assumeNonHnsAccountBlobEndpoint(fileSystem);
     AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
