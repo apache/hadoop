@@ -502,6 +502,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
+  /**
+   * Orchestrates the copying of blob from given source to a given destination.
+   * @param srcPath source path
+   * @param dstPath destination path
+   * @param tracingContext object of TracingContext used for the tracing of the
+   * server calls.
+   * @throws AzureBlobFileSystemException exception thrown from the server calls,
+   * or if it is discovered that the copying is failed or aborted.
+   */
   @org.apache.hadoop.classification.VisibleForTesting
   void copyBlob(Path srcPath,
       Path dstPath,
@@ -521,9 +530,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
                       .getPath())) {
             return;
           }
-        } catch (URISyntaxException e) {
-          throw new RuntimeException(e);
-        } catch (MalformedURLException e) {
+        } catch (URISyntaxException | MalformedURLException e) {
           throw new RuntimeException(e);
         }
       }
@@ -546,6 +553,19 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
+  /**
+   * Verifies if the blob copy is success or a failure or still in progress.
+   * @param dstPath path of the destination for the copying
+   * @param tracingContext object of tracingContext used for the tracing of the
+   * server calls.
+   * @param copyId id returned by server on the copy server-call. This id gets
+   * attached to blob and is returned by GetBlobProperties API on the destination.
+   *
+   * @return true if copying is success, false if it is still in progress.
+   * @throws AzureBlobFileSystemException exception returned in making server call
+   * for GetBlobProperties on the path. It can be thrown if the copyStatus is failure
+   * or is aborted.
+   */
   @org.apache.hadoop.classification.VisibleForTesting
   boolean handleCopyInProgress(final Path dstPath,
       final TracingContext tracingContext,
@@ -577,6 +597,19 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return getCopyStatus(copyOp.getResult());
   }
 
+  /**
+   * Wrapper on {@link #getBlobProperty(Path, TracingContext)} with the handling
+   * for the httpStatusCode = 404 on the server response.
+   *
+   * @param blobPath path for which the property information is required
+   * @param tracingContext object of TracingContext required for the tracing of
+   * server calls
+   * @return instance of BlobProperty if the blob is present on the given path.
+   * <code>null</code> if there is no blob on the given path.
+   * @throws AzureBlobFileSystemException exception other than
+   * {@link AbfsRestOperationException} for httpStatusCode = 404 on the server
+   * response.
+   */
   BlobProperty getBlobPropertyWithNotFoundHandling(Path blobPath,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     try {
@@ -589,6 +622,17 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
+  /**
+   * Calls {@link AbfsClient#getBlobProperty(Path, TracingContext)} on the given
+   * path. Extract the headers from the server-response and converts it to an object
+   * of {@link BlobProperty}.
+   *
+   * @param blobPath blobPath for which property information is requried
+   * @param tracingContext object of TracingContext required for tracing server calls.
+   * @return BlobProperty for the given path
+   * @throws AzureBlobFileSystemException exception thrown from
+   * {@link AbfsClient#getBlobProperty(Path, TracingContext)} call
+   */
   private BlobProperty getBlobProperty(Path blobPath,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsRestOperation op = client.getBlobProperty(blobPath, tracingContext);
@@ -625,9 +669,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param maxPerServerCallResult define how many blobs can client handle in server response.
    * In case maxResult <= 5000, server sends number of blobs equal to the value. In
    * case maxResult > 5000, server sends maximum 5000 blobs.
-   * @param maxResult
-   * @param absoluteDirSearch
-   *
+   * @param maxResult defines maximum blobs the method should process
+   * @param absoluteDirSearch defines if (true) it is blobList search on a
+   * definitive directory, if (false) it is blobList search on a prefix.
    * @return List of blobProperties
    *
    * @throws AbfsRestOperationException exception from server-calls / xml-parsing
@@ -640,11 +684,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     String nextMarker = null;
     do {
       AbfsRestOperation op = client.getListBlobs(sourceDirBlobPath,
-          tracingContext, nextMarker, null, maxPerServerCallResult, absoluteDirSearch);
+          tracingContext, nextMarker, null, maxPerServerCallResult,
+          absoluteDirSearch);
       BlobList blobList = op.getResult().getBlobList();
       nextMarker = blobList.getNextMarker();
       blobProperties.addAll(blobList.getBlobPropertyList());
-      if(maxResult != null && blobProperties.size() >= maxResult) {
+      if (maxResult != null && blobProperties.size() >= maxResult) {
         break;
       }
     } while (nextMarker != null);
@@ -1835,9 +1880,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * {@link org.apache.hadoop.fs.azurebfs.RenameAtomicityUtils.RedoRenameInvocation}.
    */
   RenameAtomicityUtils.RedoRenameInvocation getRedoRenameInvocation(final TracingContext tracingContext) {
-    /**
-     *
-     */
     return new RenameAtomicityUtils.RedoRenameInvocation() {
       @Override
       public void redo(final Path destination, final List<Path> sourcePaths,
@@ -2076,6 +2118,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return new AbfsPerfInfo(abfsPerfTracker, callerName, calleeName);
   }
 
+  /**
+   * Search for a FileStatus corresponding to a RenamePending JSON file.
+   * @param fileStatuses array of fileStatus from which JSON file has to be searched.
+   * @return filestatus corresponding to RenamePending JSON file.
+   */
   public FileStatus getRenamePendingFileStatus(final FileStatus[] fileStatuses) {
     for (FileStatus fileStatus : fileStatuses) {
       if (fileStatus.getPath().toUri().getPath().endsWith(SUFFIX)) {
@@ -2085,6 +2132,17 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return null;
   }
 
+  /**
+   * For a given directory, returns back the fileStatus information for the
+   * RenamePending JSON file for the directory.
+   *
+   * @param fileStatus FileStatus object of the directory for which JSON file has
+   * to be searched.
+   * @param tracingContext TracingContext object for tracing the backend server calls
+   * for the operation.
+   * @throws IOException exception thrown from the call to {@link #getPathStatus(Path, TracingContext)}
+   * method.
+   */
   public boolean getRenamePendingFileStatusInDirectory(final FileStatus fileStatus,
       final TracingContext tracingContext) throws IOException {
     try {
