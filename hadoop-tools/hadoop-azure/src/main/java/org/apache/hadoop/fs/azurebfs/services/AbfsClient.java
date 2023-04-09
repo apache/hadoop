@@ -1095,7 +1095,7 @@ public class AbfsClient implements Closeable {
    * @param maxResult define how many blobs can client handle in server response.
    * In case maxResult <= 5000, server sends number of blobs equal to the value. In
    * case maxResult > 5000, server sends maximum 5000 blobs.
-   * @param absoluteDirSeach
+   * @param absoluteDirSearch
    *
    * @return list of {@link BlobProperty}
    *
@@ -1105,7 +1105,7 @@ public class AbfsClient implements Closeable {
       TracingContext tracingContext,
       String marker,
       String prefix,
-      Integer maxResult, final Boolean absoluteDirSeach)
+      Integer maxResult, final Boolean absoluteDirSearch)
       throws AzureBlobFileSystemException {
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESTYPE, CONTAINER);
@@ -1113,7 +1113,7 @@ public class AbfsClient implements Closeable {
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_INCLUDE,
         QUERY_PARAM_INCLUDE_VALUE_METADATA);
     if (prefix == null) {
-      prefix = sourceDirBlobPath.toUri().getPath() + (absoluteDirSeach ?"/" : "");
+      prefix = sourceDirBlobPath.toUri().getPath() + (absoluteDirSearch ?"/" : "");
     }
     prefix = removeInitialSlash(prefix);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_PREFIX, prefix);
