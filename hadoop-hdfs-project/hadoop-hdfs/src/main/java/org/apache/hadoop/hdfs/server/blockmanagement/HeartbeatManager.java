@@ -183,6 +183,10 @@ class HeartbeatManager implements DatanodeStatistics {
   public int getNumDatanodesInService() {
     return stats.getNodesInService();
   }
+
+  public int getInServiceAvailableVolumeCount() {
+    return stats.getNodesInServiceAvailableVolumeCount();
+  }
   
   @Override
   public long getCacheCapacity() {
