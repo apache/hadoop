@@ -24,6 +24,9 @@ import java.util.Map;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 
+/**
+ * Encapsulates all the information related to a Blob.
+ */
 public class BlobProperty {
   private Boolean isDirectory = false;
   private String name;

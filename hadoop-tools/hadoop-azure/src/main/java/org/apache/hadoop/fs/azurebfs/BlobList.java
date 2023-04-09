@@ -21,10 +21,23 @@ package org.apache.hadoop.fs.azurebfs;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ *  Contains result of GetBlobList API in processable state.
+ */
 public class BlobList {
 
-  private List<BlobProperty> blobProperties = new ArrayList<>();
+  /**
+   * List of {@link BlobProperty} returned by server
+   */
+  private final List<BlobProperty> blobProperties = new ArrayList<>();
 
+  /**
+   * Since there could be many blobs which can be returned by server on the
+   * GetBlobList API on a path and server wants to return only limited number of
+   * blob-information in one go. The expectation from the server is to use a token
+   * called as <code>nextMarker</code> and call the GetBlobList API again for the
+   * same path.
+   */
   private String nextMarker;
 
   void addBlobProperty(final BlobProperty blobProperty) {
