@@ -622,9 +622,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    *
    * @param sourceDirBlobPath path from where the list of blob is requried.
    * @param tracingContext object of {@link TracingContext}
-   * @param maxResult define how many blobs can client handle in server response.
+   * @param maxPerServerCallResult define how many blobs can client handle in server response.
    * In case maxResult <= 5000, server sends number of blobs equal to the value. In
    * case maxResult > 5000, server sends maximum 5000 blobs.
+   * @param maxResult
    * @param absoluteDirSearch
    *
    * @return List of blobProperties
@@ -632,17 +633,20 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws AbfsRestOperationException exception from server-calls / xml-parsing
    */
   public List<BlobProperty> getListBlobs(Path sourceDirBlobPath,
-      TracingContext tracingContext, Integer maxResult,
-      final Boolean absoluteDirSearch)
+      TracingContext tracingContext, Integer maxPerServerCallResult,
+      final Integer maxResult, final Boolean absoluteDirSearch)
       throws AzureBlobFileSystemException {
     List<BlobProperty> blobProperties = new ArrayList<>();
     String nextMarker = null;
     do {
       AbfsRestOperation op = client.getListBlobs(sourceDirBlobPath,
-          tracingContext, nextMarker, null, maxResult, absoluteDirSearch);
+          tracingContext, nextMarker, null, maxPerServerCallResult, absoluteDirSearch);
       BlobList blobList = op.getResult().getBlobList();
       nextMarker = blobList.getNextMarker();
       blobProperties.addAll(blobList.getBlobPropertyList());
+      if(maxResult != null && blobProperties.size() >= maxResult) {
+        break;
+      }
     } while (nextMarker != null);
     return blobProperties;
   }
@@ -1039,7 +1043,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       * Fetch the list of blobs in the given sourcePath.
       */
       List<BlobProperty> srcBlobProperties = getListBlobs(source,
-          tracingContext, null, true);
+          tracingContext, null, null, true);
       final BlobProperty blobPropOnSrc;
       if (srcBlobProperties.size() > 0) {
         LOG.debug("src {} exists and is a directory", source);

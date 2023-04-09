@@ -27,7 +27,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -50,7 +49,7 @@ public class ITestListBlob extends
     }
     List<BlobProperty> blobProperties = fs.getAbfsStore()
         .getListBlobs(new Path("dir"),
-            Mockito.mock(TracingContext.class), null, false);
+            Mockito.mock(TracingContext.class), null, null, false);
     Assertions.assertThat(blobProperties)
         .describedAs(
             "BlobList should match the number of files created in tests + the directory itself")
@@ -58,7 +57,7 @@ public class ITestListBlob extends
 
     blobProperties = fs.getAbfsStore()
         .getListBlobs(new Path("dir"),
-            Mockito.mock(TracingContext.class), null, true);
+            Mockito.mock(TracingContext.class), null, null, true);
     Assertions.assertThat(blobProperties)
         .describedAs(
             "BlobList should match the number of files created in tests")
@@ -78,7 +77,7 @@ public class ITestListBlob extends
     fs.getAbfsStore().setClient(spiedClient);
     List<BlobProperty> blobProperties = fs.getAbfsStore()
         .getListBlobs(new Path("dir"),
-            Mockito.mock(TracingContext.class), 1, false);
+            Mockito.mock(TracingContext.class), 1, null, false);
     Assertions.assertThat(blobProperties)
         .describedAs(
             "BlobList should match the number of files created in tests + the directory itself")
@@ -91,12 +90,50 @@ public class ITestListBlob extends
 
     blobProperties = fs.getAbfsStore()
         .getListBlobs(new Path("dir"),
-            Mockito.mock(TracingContext.class), 1, true);
+            Mockito.mock(TracingContext.class), 1, null, true);
     Assertions.assertThat(blobProperties)
         .describedAs(
             "BlobList should match the number of files created in tests + the directory itself")
         .hasSize(10);
     Mockito.verify(spiedClient, Mockito.times(21))
+        .getListBlobs(Mockito.any(Path.class),
+            Mockito.any(TracingContext.class),
+            Mockito.nullable(String.class), Mockito.nullable(String.class),
+            Mockito.anyInt(), Mockito.anyBoolean());
+  }
+
+  @Test
+  public void testListBlobWithMarkersWithMaxResult() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
+    int i = 0;
+    while (i < 10) {
+      fs.create(new Path("/dir/" + i));
+      i++;
+    }
+    AbfsClient spiedClient = Mockito.spy(fs.getAbfsClient());
+    fs.getAbfsStore().setClient(spiedClient);
+    List<BlobProperty> blobProperties = fs.getAbfsStore()
+        .getListBlobs(new Path("dir"),
+            Mockito.mock(TracingContext.class), 1, 5, false);
+    Assertions.assertThat(blobProperties)
+        .describedAs(
+            "BlobList should match the number of files created in tests + the directory itself")
+        .hasSize(5);
+    Mockito.verify(spiedClient, Mockito.times(5))
+        .getListBlobs(Mockito.any(Path.class),
+            Mockito.any(TracingContext.class),
+            Mockito.nullable(String.class), Mockito.nullable(String.class),
+            Mockito.anyInt(), Mockito.anyBoolean());
+
+    blobProperties = fs.getAbfsStore()
+        .getListBlobs(new Path("dir"),
+            Mockito.mock(TracingContext.class), 1, 5, true);
+    Assertions.assertThat(blobProperties)
+        .describedAs(
+            "BlobList should match the number of files created in tests + the directory itself")
+        .hasSize(5);
+    Mockito.verify(spiedClient, Mockito.times(10))
         .getListBlobs(Mockito.any(Path.class),
             Mockito.any(TracingContext.class),
             Mockito.nullable(String.class), Mockito.nullable(String.class),
