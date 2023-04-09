@@ -1031,17 +1031,31 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     boolean shouldContinue;
 
     if (getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
+      LOG.debug("Rename for src: {} dst: {} for non-HNS blob-endpoint",
+          source, destination);
       final Boolean isSrcExist;
       final Boolean isSrcDir;
+      /*
+      * Fetch the list of blobs in the given sourcePath.
+      */
       List<BlobProperty> srcBlobProperties = getListBlobs(source,
           tracingContext, null, true);
       final BlobProperty blobPropOnSrc;
       if (srcBlobProperties.size() > 0) {
+        LOG.debug("src {} exists and is a directory", source);
         isSrcExist = true;
         isSrcDir = true;
+        /*
+        * Fetch if there is a marker-blob for the source blob.
+        */
         BlobProperty blobPropOnSrcNullable = getBlobPropertyWithNotFoundHandling(source, tracingContext);
         if(blobPropOnSrcNullable == null) {
+          /*
+          * There is no marker-blob, the client has to create marker blob before
+          * starting the rename.
+          */
           //create marker file; add in srcBlobProperties;
+          LOG.debug("Source {} is a directory but there is no marker-blob", source);
           azureBlobFileSystem.create(source);
           Hashtable<String, String> props = new Hashtable<>();
           props.put(HDI_ISFOLDER, "true");
@@ -1050,18 +1064,24 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           blobPropOnSrc.setIsDirectory(true);
           blobPropOnSrc.setPath(source);
         } else {
+          LOG.debug("Source {} is a directory but there is a marker-blob", source);
           blobPropOnSrc = blobPropOnSrcNullable;
         }
       } else {
+        LOG.debug("source {} doesn't have any blob in its hierarchy. Checking"
+            + "if there is marker blob for it.", source);
         blobPropOnSrc = getBlobPropertyWithNotFoundHandling(source, tracingContext);
         if(blobPropOnSrc != null) {
           isSrcExist = true;
           if(blobPropOnSrc.getIsDirectory()) {
+            LOG.debug("source {} is a marker blob", source);
             isSrcDir = true;
           } else {
+            LOG.debug("source {} exists but is not a marker blob", source);
             isSrcDir = false;
           }
         } else {
+          LOG.debug("source {} doesn't exist", source);
           isSrcExist = false;
           isSrcDir = false;
         }
@@ -1069,15 +1089,23 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       srcBlobProperties.add(blobPropOnSrc);
 
       if (!isSrcExist) {
+        LOG.info("source {} doesn't exists", source);
         throw new AbfsRestOperationException(HttpURLConnection.HTTP_NOT_FOUND,
             AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND.getErrorCode(), null, null);
       }
       if (isSrcDir) {
+        /*
+        * If source is a directory, all the blobs in the directory have to be
+        * individually copied and then deleted at the source.
+        */
+        LOG.debug("source {} is a directory", source);
         final RenameAtomicityUtils renameAtomicityUtils;
         if (isAtomicRenameKey(source.toUri().getPath())) {
+          LOG.debug("source dir {} is an atomicRenameKey", source.toUri().getPath());
           renameAtomicityUtils = new RenameAtomicityUtils(azureBlobFileSystem,
               source, destination, tracingContext, srcBlobProperties);
         } else {
+          LOG.debug("source dir {} is not an atomicRenameKey", source.toUri().getPath());
           renameAtomicityUtils = null;
         }
         List<Future> futures = new ArrayList<>();
@@ -1085,9 +1113,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           futures.add(renameBlobExecutorService.submit(() -> {
             try {
               renameBlob(
-                  createDestinationPath(destination, blobProperty, source),
+                  createDestinationPathForBlobPartOfRenameSrcDir(destination, blobProperty, source),
                   tracingContext, blobProperty.getPath());
             } catch (AzureBlobFileSystemException e) {
+              LOG.error(String.format("rename from %s to %s for blob %s failed",
+                  source, destination, blobProperty.getPath()), e);
               throw new RuntimeException(e);
             }
           }));
@@ -1096,8 +1126,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           try {
             future.get();
           } catch (InterruptedException e) {
+            LOG.error(String.format("rename from %s to %s failed", source, destination), e);
             throw new RuntimeException(e);
           } catch (ExecutionException e) {
+            LOG.error(String.format("rename from %s to %s failed", source, destination), e);
             throw new RuntimeException(e);
           }
         }
@@ -1105,9 +1137,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           renameAtomicityUtils.cleanup();
         }
       } else {
+        LOG.debug("source {} is not directory", source);
         renameBlob(destination, tracingContext,
             srcBlobProperties.get(0).getPath());
       }
+      LOG.info("Rename from source {} to destination {} done", source, destination);
       return;
     }
 
@@ -1144,19 +1178,36 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     } while (shouldContinue);
   }
 
-  private Path createDestinationPath(final Path destination,
+  /**
+   * Translates the destination path for a blob part of a source directory getting
+   * renamed.
+   * @param destinationDir destination directory for the rename operation
+   * @param srcBlobProperty blob part of the source directory getting renamed
+   * @param sourceDir source directory for the rename operation
+   * @return translated path for the blob
+   */
+  private Path createDestinationPathForBlobPartOfRenameSrcDir(final Path destinationDir,
       final BlobProperty srcBlobProperty,
-      final Path source) {
-    String destinationPathStr = destination.toUri().getPath();
-    String sourcePathStr = source.toUri().getPath();
+      final Path sourceDir) {
+    String destinationPathStr = destinationDir.toUri().getPath();
+    String sourcePathStr = sourceDir.toUri().getPath();
     String srcBlobPropertyPathStr = srcBlobProperty.getPath().toUri().getPath();
     if (sourcePathStr.equals(srcBlobPropertyPathStr)) {
-      return destination;
+      return destinationDir;
     }
     return new Path(destinationPathStr + "/" + srcBlobPropertyPathStr.substring(
         sourcePathStr.length()));
   }
 
+  /**
+   * Renames blob.
+   * It copies the source blob to the destination. After copy is succesful, it
+   * deletes the source blob
+   * @param destination destination path to which the source has to be moved
+   * @param sourcePath source path which gets copied to the destination
+   * @param tracingContext tracingContext for tracing the API calls
+   * @throws AzureBlobFileSystemException exception in making server calls
+   */
   private void renameBlob(final Path destination,
       final TracingContext tracingContext,
       final Path sourcePath) throws AzureBlobFileSystemException {
@@ -1775,12 +1826,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return isKeyForDirectorySet(key, azureAtomicRenameDirSet);
   }
 
-  @org.apache.hadoop.classification.VisibleForTesting
-  void addToAzureAtomicRenameDir(String key) {
-    azureAtomicRenameDirSet.add(key);
-  }
-
+  /**
+   * Provides a standard implementation of
+   * {@link org.apache.hadoop.fs.azurebfs.RenameAtomicityUtils.RedoRenameInvocation}.
+   */
   RenameAtomicityUtils.RedoRenameInvocation getRedoRenameInvocation(final TracingContext tracingContext) {
+    /**
+     *
+     */
     return new RenameAtomicityUtils.RedoRenameInvocation() {
       @Override
       public void redo(final Path destination, final List<Path> sourcePaths,
