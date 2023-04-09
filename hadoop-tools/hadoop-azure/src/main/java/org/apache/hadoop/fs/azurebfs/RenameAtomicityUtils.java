@@ -46,6 +46,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
+/**
+ * For a directory enabled for atomic-rename, before rename starts, a
+ * file with -RenamePending.json suffix is created. In this file, the states required
+ * for the rename are given. This file is created by {@link #writeFile()} method.
+ * This is important in case the JVM process crashes during rename, the atomicity
+ * will be maintained, when the job calls {@link AzureBlobFileSystem#listStatus(Path)}
+ * ot {@link AzureBlobFileSystem#getFileStatus(Path)}. On these API calls to filesystem,
+ * it will be checked if there is any RenamePending JSON file. If yes, the rename
+ * would be resumed as per the file.
+ */
 public class RenameAtomicityUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(

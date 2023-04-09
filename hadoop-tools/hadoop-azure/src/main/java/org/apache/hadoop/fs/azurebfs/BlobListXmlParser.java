@@ -96,8 +96,8 @@ public class BlobListXmlParser extends DefaultHandler {
       throws SAXException {
     String currentNode = elements.pop();
     /*
-    * Check if the ending tag is correct to the starting tag in the stack.
-    */
+     * Check if the ending tag is correct to the starting tag in the stack.
+     */
     if (!currentNode.equals(localName)) {
       throw new SAXException(INVALID_XML);
     }
@@ -112,9 +112,9 @@ public class BlobListXmlParser extends DefaultHandler {
     }
 
     /*
-    * If the closing tag is Blob, there are no more properties to be set in
-    * currentBlobProperty.
-    */
+     * If the closing tag is Blob, there are no more properties to be set in
+     * currentBlobProperty.
+     */
     if (AbfsHttpConstants.BLOB.equals(currentNode)) {
       blobList.addBlobProperty(currentBlobProperty);
       currentBlobProperty = null;
@@ -130,11 +130,11 @@ public class BlobListXmlParser extends DefaultHandler {
       }
     }
     /*
-    * For case:
-    * <Blob>
-    * <Name>value</name>
-    * ....</Blob>
-    */
+     * For case:
+     * <Blob>
+     * <Name>value</name>
+     * ....</Blob>
+     */
     if (parentNode.equals(AbfsHttpConstants.BLOB)) {
       if (currentNode.equals(AbfsHttpConstants.NAME)) {
         currentBlobProperty.setName(value);
@@ -173,8 +173,8 @@ public class BlobListXmlParser extends DefaultHandler {
       }
     }
     /*
-    * refresh bld for the next XML-tag value
-    */
+     * refresh bld for the next XML-tag value
+     */
     bld = new StringBuilder();
   }
 
