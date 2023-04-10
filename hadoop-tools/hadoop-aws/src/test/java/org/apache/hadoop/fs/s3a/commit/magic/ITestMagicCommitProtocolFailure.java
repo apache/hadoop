@@ -32,6 +32,7 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_UPLOADS_ENABLED;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_NAME;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.S3A_COMMITTER_FACTORY_KEY;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 public class ITestMagicCommitProtocolFailure extends AbstractS3ATestBase {
 
@@ -45,13 +46,13 @@ public class ITestMagicCommitProtocolFailure extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testCreateCommitter() {
+  public void testCreateCommitter() throws Exception {
     TaskAttemptContext tContext = new TaskAttemptContextImpl(getConfiguration(),
         new TaskAttemptID());
     Path commitPath = getFileSystem().makeQualified(
         new Path(getContract().getTestPath(), "/testpath"));
-    LOG.debug("{}", commitPath);
-    assertThrows(PathCommitException.class,
+    LOG.debug("Trying to create a committer on the path: {}", commitPath);
+    intercept(PathCommitException.class,
         () -> new MagicS3GuardCommitter(commitPath, tContext));
   }
 }

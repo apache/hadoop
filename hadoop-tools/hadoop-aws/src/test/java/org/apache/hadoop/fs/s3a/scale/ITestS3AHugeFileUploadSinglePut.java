@@ -44,7 +44,7 @@ public class ITestS3AHugeFileUploadSinglePut extends S3AScaleTestBase{
   final private Logger LOG = LoggerFactory.getLogger(
       ITestS3AHugeFileUploadSinglePut.class.getName());
 
-  private long fileSize = Integer.MAX_VALUE * 2L;
+  private long fileSize;
   @Override
   protected Configuration createScaleConfiguration() {
     Configuration configuration = super.createScaleConfiguration();

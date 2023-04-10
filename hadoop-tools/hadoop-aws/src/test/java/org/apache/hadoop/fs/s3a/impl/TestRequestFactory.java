@@ -156,7 +156,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
    * Create objects through the factory.
    * @param factory factory
    */
-  private void createFactoryObjects(RequestFactory factory) {
+  private void createFactoryObjects(RequestFactory factory) throws IOException {
     String path = "path";
     String path2 = "path2";
     String id = "1";
@@ -174,11 +174,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     a(factory.newListObjectsV1Request(path, "/", 1));
     a(factory.newListNextBatchOfObjectsRequest(new ObjectListing()));
     a(factory.newListObjectsV2Request(path, "/", 1));
-    try {
-      a(factory.newMultipartUploadRequest(path, null));
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    a(factory.newMultipartUploadRequest(path, null));
     File srcfile = new File("/tmp/a");
     a(factory.newPutObjectRequest(path,
         factory.newObjectMetadata(-1), null, srcfile));

@@ -1032,6 +1032,18 @@ public final class S3AUtils {
   }
 
   /**
+   * Validates the output stream configuration
+   * @param conf : configuration object for the given context
+   * @throws IOException : throws an IOException on config mismatch
+   */
+  public static void validateOutputStreamConfiguration(Configuration conf) throws IOException {
+    if(!checkDiskBuffer(conf)){
+      throw new IOException("Unable to create OutputStream with the given"
+          + " multipart upload and buffer configuration.");
+    }
+  }
+
+  /**
    * Check whether the configuration for S3ABlockOutputStream is
    * consistent or not. Multipart uploads allow all kinds of fast buffers to
    * be supported. When the option is disabled only disk buffers are allowed to
@@ -1041,11 +1053,11 @@ public final class S3AUtils {
    * @return true if the disk buffer and the multipart settings are supported
    */
   public static boolean checkDiskBuffer(Configuration conf) {
-    boolean isMultipartEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
+    boolean isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
         MULTIPART_UPLOAD_ENABLED_DEFAULT);
-    if (isMultipartEnabled) {
+    if (isMultipartUploadEnabled) {
       return true;
-    } else if (!isMultipartEnabled && conf.get(FAST_UPLOAD_BUFFER)
+    } else if (!isMultipartUploadEnabled && conf.get(FAST_UPLOAD_BUFFER)
         .equals(FAST_UPLOAD_BUFFER_DISK)) {
       return true;
     } else {

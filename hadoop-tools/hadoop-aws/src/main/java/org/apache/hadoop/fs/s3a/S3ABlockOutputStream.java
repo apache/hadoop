@@ -170,7 +170,7 @@ class S3ABlockOutputStream extends OutputStream implements
   private final IOStatisticsAggregator threadIOStatisticsAggregator;
 
   /** Is multipart upload enabled? */
-  private final boolean isMultipartEnabled;
+  private final boolean isMultipartUploadEnabled;
 
   /**
    * An S3A output stream which uploads partitions in a separate pool of
@@ -203,7 +203,7 @@ class S3ABlockOutputStream extends OutputStream implements
     createBlockIfNeeded();
     LOG.debug("Initialized S3ABlockOutputStream for {}" +
         " output to {}", key, activeBlock);
-    this.isMultipartEnabled = builder.isMultipartEnabled;
+    this.isMultipartUploadEnabled = builder.isMultipartUploadEnabled;
     if (putTracker.initialize()) {
       LOG.debug("Put tracker requests multipart upload");
       initMultipartUpload();
@@ -373,7 +373,7 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   @Retries.RetryTranslated
   private void initMultipartUpload() throws IOException {
-    Preconditions.checkState(!isMultipartEnabled,
+    Preconditions.checkState(!isMultipartUploadEnabled,
         "multipart upload is disabled");
     if (multiPartUpload == null) {
       LOG.debug("Initiating Multipart upload");
@@ -691,7 +691,7 @@ class S3ABlockOutputStream extends OutputStream implements
       return true;
 
     case StreamCapabilities.MULTIPART_SUPPORTED:
-      return isMultipartEnabled;
+      return isMultipartUploadEnabled;
 
     default:
       return false;
@@ -1139,7 +1139,7 @@ class S3ABlockOutputStream extends OutputStream implements
     /**
      * Is Multipart Uploads enabled for the given upload.
      */
-    private boolean isMultipartEnabled;
+    private boolean isMultipartUploadEnabled;
 
     private BlockOutputStreamBuilder() {
     }
@@ -1294,7 +1294,7 @@ class S3ABlockOutputStream extends OutputStream implements
 
     public BlockOutputStreamBuilder withMultipartEnabled(
         final boolean value) {
-      isMultipartEnabled = value;
+      isMultipartUploadEnabled = value;
       return this;
     }
   }
