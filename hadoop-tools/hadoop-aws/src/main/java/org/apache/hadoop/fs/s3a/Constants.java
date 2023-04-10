@@ -1269,4 +1269,11 @@ public final class Constants {
    * {@value}
    */
   public static final boolean MULTIPART_UPLOAD_ENABLED_DEFAULT = true;
+
+  /**
+   * Stream supports multipart uploads to the given path.
+   */
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_MULTIPART_UPLOAD_ENABLED =
+      "fs.s3a.capability.multipart.uploads.enabled";
+
 }

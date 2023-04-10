@@ -690,9 +690,6 @@ class S3ABlockOutputStream extends OutputStream implements
     case StreamCapabilities.IOSTATISTICS_CONTEXT:
       return true;
 
-    case StreamCapabilities.MULTIPART_SUPPORTED:
-      return isMultipartUploadEnabled;
-
     default:
       return false;
     }
