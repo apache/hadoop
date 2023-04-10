@@ -590,7 +590,7 @@ public class Client implements AutoCloseable {
       InetSocketAddress currentAddr = NetUtils.createSocketAddrForHost(
                                server.getHostName(), server.getPort());
 
-      if (!server.equals(currentAddr)) {
+      if (!currentAddr.isUnresolved() && !server.equals(currentAddr)) {
         LOG.warn("Address change detected. Old: " + server.toString() +
                                  " New: " + currentAddr.toString());
         server = currentAddr;
