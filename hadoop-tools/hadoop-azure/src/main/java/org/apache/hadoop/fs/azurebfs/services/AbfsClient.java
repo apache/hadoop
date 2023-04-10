@@ -1158,7 +1158,7 @@ public class AbfsClient implements Closeable {
         abfsUriQueryBuilder.toString());
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     final AbfsRestOperation op = new AbfsRestOperation(
-        AbfsRestOperationType.GetBlobProperties,
+        AbfsRestOperationType.DeleteBlob,
         this,
         HTTP_METHOD_DELETE,
         url,
