@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.CONDITION_NOT_MET;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_EXPIRED_DFS;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_ID_SPECIFIED_BLOB;
 import static org.mockito.ArgumentMatchers.any;
@@ -159,7 +160,11 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
         out2.hsync();
       } catch (IOException e) {
         if (expectException) {
-          GenericTestUtils.assertExceptionContains(ERR_ACQUIRING_LEASE, e);
+          if (getConfiguration().getPrefixMode() == PrefixMode.DFS) {
+            GenericTestUtils.assertExceptionContains(ERR_ACQUIRING_LEASE, e);
+          } else {
+            GenericTestUtils.assertExceptionContains(CONDITION_NOT_MET, e);
+          }
         } else {
           throw e;
         }
