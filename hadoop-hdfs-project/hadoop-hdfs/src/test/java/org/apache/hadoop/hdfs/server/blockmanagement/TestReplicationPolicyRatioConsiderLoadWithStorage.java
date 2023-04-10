@@ -32,6 +32,9 @@ import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+/**
+ * Verify that chooseTarget can exclude nodes with high volume average load.
+ */
 public class TestReplicationPolicyRatioConsiderLoadWithStorage
     extends BaseReplicationPolicyTest {
 
@@ -81,7 +84,6 @@ public class TestReplicationPolicyRatioConsiderLoadWithStorage
     }
     return descriptors;
   }
-
 
   /**
    * Tests that chooseTarget with considerLoad and consider volume load set to

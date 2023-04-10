@@ -233,6 +233,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   // HB processing can use it to tell if it is the first HB since DN restarted
   private boolean heartbeatedSinceRegistration = false;
 
+  /** The number of volumes that can be written.*/
   private int numVolumesAvailable = 0;
 
   /**
@@ -988,6 +989,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return volumeFailureSummary;
   }
 
+  /**
+   * Return the number of volumes that can be written.
+   * @return the number of volumes that can be written.
+   */
   public int getNumVolumesAvailable() {
     return numVolumesAvailable;
   }
