@@ -240,6 +240,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_READ_AHEAD_QUEUE_DEPTH)
   private int readAheadQueueDepth;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_BLOB_DIR_RENAME_MAX_THREAD,
+      DefaultValue = 0)
+  private int blobDirRenameMaxThread;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_READ_AHEAD_BLOCK_SIZE,
       MinValue = MIN_BUFFER_SIZE,
       MaxValue = MAX_BUFFER_SIZE,
@@ -1021,6 +1025,10 @@ public class AbfsConfiguration{
   public String getClientProvidedEncryptionKey() {
     String accSpecEncKey = accountConf(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY);
     return rawConfig.get(accSpecEncKey, null);
+  }
+
+  public int getBlobDirRenameMaxThread() {
+    return blobDirRenameMaxThread;
   }
 
   @VisibleForTesting

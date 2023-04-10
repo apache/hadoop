@@ -190,7 +190,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   private final Boolean useSecureHttp;
 
-  private final static ExecutorService renameBlobExecutorService = Executors.newFixedThreadPool(5);
+  private final ExecutorService renameBlobExecutorService;
 
   /**
    * The set of directories where we should store files as append blobs.
@@ -283,6 +283,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         abfsConfiguration.getMaxWriteRequestsToQueue(),
         10L, TimeUnit.SECONDS,
         "abfs-bounded");
+    if (abfsConfiguration.getBlobDirRenameMaxThread() == 0) {
+      renameBlobExecutorService = Executors.newFixedThreadPool(
+          Runtime.getRuntime()
+              .availableProcessors());
+    } else {
+      renameBlobExecutorService = Executors.newFixedThreadPool(
+          abfsConfiguration.getBlobDirRenameMaxThread());
+    }
   }
 
   /**
@@ -541,15 +549,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       return;
     }
     final String copyId = copyOp.getResult().getResponseHeader(X_MS_COPY_ID);
-    int counter = 0;
-    while (counter < 10) {//TODO: better condition.
+    while (true) {//TODO: better condition.
+      if (handleCopyInProgress(dstPath, tracingContext, copyId)) {
+        return;
+      }
       try {
-        Thread.sleep(100); //TODO: better logic for sleep period.
+        Thread.sleep(1000l); //Taken sleep time from AzureNativeFileSystemStore.
       } catch (Exception e) {
 
       }
-      if (handleCopyInProgress(dstPath, tracingContext, copyId)) {return;}
-      counter++;
     }
   }
 
