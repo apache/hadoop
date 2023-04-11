@@ -669,10 +669,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public void storeVersion() throws Exception {
     byte[] data = ((VersionPBImpl) CURRENT_VERSION_INFO).getProto().toByteArray();
-    boolean isUpdate = false;
-    if (exists(versionNode)) {
-      isUpdate = true;
-    }
+    boolean isUpdate = exists(versionNode);
     put(versionNode, data, isUpdate);
   }
 

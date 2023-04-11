@@ -284,8 +284,8 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     ZookeeperFederationStateStore zkFederationStateStore =
         ZookeeperFederationStateStore.class.cast(this.getStateStore());
     Version version = zkFederationStateStore.getCurrentVersion();
-    assertEquals(version.getMajorVersion(), 1);
-    assertEquals(version.getMinorVersion(), 1);
+    assertEquals(1, version.getMajorVersion());
+    assertEquals(1, version.getMinorVersion());
   }
 
   @Test
@@ -294,8 +294,8 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
         ZookeeperFederationStateStore.class.cast(this.getStateStore());
     zkFederationStateStore.storeVersion();
     Version version = zkFederationStateStore.loadVersion();
-    assertEquals(version.getMajorVersion(), 1);
-    assertEquals(version.getMinorVersion(), 1);
+    assertEquals(1, version.getMajorVersion());
+    assertEquals(1, version.getMinorVersion());
   }
 
   @Test
@@ -309,8 +309,8 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     // After storing the version information, we will get the accurate version information.
     zkFederationStateStore.storeVersion();
     Version version1 = zkFederationStateStore.loadVersion();
-    assertEquals(version1.getMajorVersion(), 1);
-    assertEquals(version1.getMinorVersion(), 1);
+    assertEquals(1, version1.getMajorVersion());
+    assertEquals(1, version1.getMinorVersion());
   }
 
   @Test
@@ -319,7 +319,7 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
         ZookeeperFederationStateStore.class.cast(this.getStateStore());
     zkFederationStateStore.checkVersion();
     Version version = zkFederationStateStore.loadVersion();
-    assertEquals(version.getMajorVersion(), 1);
-    assertEquals(version.getMinorVersion(), 1);
+    assertEquals(1, version.getMajorVersion());
+    assertEquals(1, version.getMinorVersion());
   }
 }
