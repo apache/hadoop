@@ -38,17 +38,22 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_N
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.S3A_COMMITTER_FACTORY_KEY;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
+/**
+ * Verify that a staging committer cannot be created if the FS doesn't support multipart
+ * uploads.
+ */
 public class ITestStagingCommitProtocolFailure extends AbstractS3ATestBase {
+
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    conf.setBoolean(MULTIPART_UPLOADS_ENABLED, false);
-    conf.set(S3A_COMMITTER_FACTORY_KEY, CommitConstants.S3A_COMMITTER_FACTORY);
-    conf.set(FS_S3A_COMMITTER_NAME, InternalCommitterConstants.COMMITTER_NAME_STAGING);
     removeBucketOverrides(getTestBucketName(conf), conf,
         S3A_COMMITTER_FACTORY_KEY,
         FS_S3A_COMMITTER_NAME,
         MULTIPART_UPLOADS_ENABLED);
+    conf.setBoolean(MULTIPART_UPLOADS_ENABLED, false);
+    conf.set(S3A_COMMITTER_FACTORY_KEY, CommitConstants.S3A_COMMITTER_FACTORY);
+    conf.set(FS_S3A_COMMITTER_NAME, InternalCommitterConstants.COMMITTER_NAME_STAGING);
     return conf;
   }
 
@@ -56,8 +61,7 @@ public class ITestStagingCommitProtocolFailure extends AbstractS3ATestBase {
   public void testCreateCommitter() throws Exception {
     TaskAttemptContext tContext = new TaskAttemptContextImpl(getConfiguration(),
         new TaskAttemptID());
-    Path commitPath = getFileSystem().makeQualified(
-        new Path(getContract().getTestPath(), "/testpath"));
+    Path commitPath = methodPath();
     LOG.debug("Trying to create a committer on the path: {}", commitPath);
     intercept(PathCommitException.class,
         () -> new StagingCommitter(commitPath, tContext));

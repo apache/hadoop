@@ -81,8 +81,6 @@ import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.test.HadoopTestBase;
 
-import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_UPLOADS_ENABLED;
-import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_UPLOAD_ENABLED_DEFAULT;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -133,7 +131,7 @@ public class StagingTestBase {
   protected static S3AFileSystem createAndBindMockFSInstance(Configuration conf,
       Pair<StagingTestBase.ClientResults, StagingTestBase.ClientErrors> outcome)
       throws IOException {
-    S3AFileSystem mockFs = mockS3AFileSystemRobustly(conf);
+    S3AFileSystem mockFs = mockS3AFileSystemRobustly();
     MockS3AFileSystem wrapperFS = new MockS3AFileSystem(mockFs, outcome);
     URI uri = RAW_BUCKET_URI;
     wrapperFS.initialize(uri, conf);
@@ -144,14 +142,12 @@ public class StagingTestBase {
     return mockFs;
   }
 
-  private static S3AFileSystem mockS3AFileSystemRobustly(Configuration conf) {
+  private static S3AFileSystem mockS3AFileSystemRobustly() {
     S3AFileSystem mockFS = mock(S3AFileSystem.class);
     doNothing().when(mockFS).incrementReadOperations();
     doNothing().when(mockFS).incrementWriteOperations();
     doNothing().when(mockFS).incrementWriteOperations();
     doNothing().when(mockFS).incrementWriteOperations();
-    doReturn(conf.getBoolean(MULTIPART_UPLOADS_ENABLED, MULTIPART_UPLOAD_ENABLED_DEFAULT)).
-        when(mockFS).isMultipartUploadEnabled();
     return mockFS;
   }
 

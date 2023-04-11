@@ -394,6 +394,8 @@ final class S3ADataBlocks {
     DataBlock create(long index, long limit,
         BlockOutputStreamStatistics statistics)
         throws IOException {
+      Preconditions.checkArgument(limit > 0,
+          "Invalid block size: %d", limit);
       return new ByteArrayBlock(0, limit, statistics);
     }
 
@@ -517,6 +519,8 @@ final class S3ADataBlocks {
     ByteBufferBlock create(long index, long limit,
         BlockOutputStreamStatistics statistics)
         throws IOException {
+      Preconditions.checkArgument(limit > 0,
+          "Invalid block size: %d", limit);
       return new ByteBufferBlock(index, limit, statistics);
     }
 
@@ -803,7 +807,7 @@ final class S3ADataBlocks {
      * Create a temp file and a {@link DiskBlock} instance to manage it.
      *
      * @param index block index
-     * @param limit limit of the block.
+     * @param limit limit of the block. -1 means "no limit"
      * @param statistics statistics to update
      * @return the new block
      * @throws IOException IO problems
@@ -813,6 +817,8 @@ final class S3ADataBlocks {
         long limit,
         BlockOutputStreamStatistics statistics)
         throws IOException {
+      Preconditions.checkArgument(limit != 0,
+          "Invalid block size: %d", limit);
       File destFile = getOwner()
           .createTmpFileForWrite(String.format("s3ablock-%04d-", index),
               limit, getOwner().getConf());
@@ -849,14 +855,29 @@ final class S3ADataBlocks {
       return bytesWritten;
     }
 
-    @Override
-    boolean hasCapacity(long bytes) {
-      return dataSize() + bytes <= limit;
+    /**
+     * Does this block have unlimited space?
+     * @return true if a block with no size limit was created.
+     */
+    private boolean unlimited() {
+      return limit < 0;
     }
 
     @Override
+    boolean hasCapacity(long bytes) {
+      return unlimited() || dataSize() + bytes <= limit;
+    }
+
+    /**
+     * {@inheritDoc}.
+     * If there is no limit to capacity, return MAX_VALUE.
+     * @return capacity in the block.
+     */
+    @Override
     long remainingCapacity() {
-      return limit - bytesWritten;
+      return unlimited()
+          ? Integer.MAX_VALUE
+          : limit - bytesWritten;
     }
 
     @Override

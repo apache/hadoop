@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
@@ -1033,12 +1034,15 @@ public final class S3AUtils {
 
   /**
    * Validates the output stream configuration.
+   * @param path path: for error messages
    * @param conf : configuration object for the given context
-   * @throws IOException : throws an IOException on config mismatch
+   * @throws PathIOException Unsupported configuration.
    */
-  public static void validateOutputStreamConfiguration(Configuration conf) throws IOException {
+  public static void validateOutputStreamConfiguration(final Path path,
+      Configuration conf) throws PathIOException {
     if(!checkDiskBuffer(conf)){
-      throw new IOException("Unable to create OutputStream with the given"
+      throw new PathIOException(path.toString(),
+          "Unable to create OutputStream with the given"
           + " multipart upload and buffer configuration.");
     }
   }
@@ -1054,9 +1058,10 @@ public final class S3AUtils {
    */
   public static boolean checkDiskBuffer(Configuration conf) {
     boolean isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
-        MULTIPART_UPLOAD_ENABLED_DEFAULT);
+        DEFAULT_MULTIPART_UPLOAD_ENABLED);
     return isMultipartUploadEnabled
-        || FAST_UPLOAD_BUFFER_DISK.equals(conf.get(FAST_UPLOAD_BUFFER, DEFAULT_FAST_UPLOAD_BUFFER));
+        || FAST_UPLOAD_BUFFER_DISK.equals(
+            conf.get(FAST_UPLOAD_BUFFER, DEFAULT_FAST_UPLOAD_BUFFER));
   }
 
   /**

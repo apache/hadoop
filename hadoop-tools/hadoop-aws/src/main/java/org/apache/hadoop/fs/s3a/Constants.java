@@ -1260,7 +1260,7 @@ public final class Constants {
    * Option to enable or disable the multipart uploads.
    * Value: {@value}.
    * <p>
-   * Default is {@link #MULTIPART_UPLOAD_ENABLED_DEFAULT}.
+   * Default is {@link #DEFAULT_MULTIPART_UPLOAD_ENABLED}.
    */
   public static final String MULTIPART_UPLOADS_ENABLED = "fs.s3a.multipart.uploads.enabled";
 
@@ -1268,7 +1268,7 @@ public final class Constants {
    * Default value for multipart uploads.
    * {@value}
    */
-  public static final boolean MULTIPART_UPLOAD_ENABLED_DEFAULT = true;
+  public static final boolean DEFAULT_MULTIPART_UPLOAD_ENABLED = true;
 
   /**
    * Stream supports multipart uploads to the given path.

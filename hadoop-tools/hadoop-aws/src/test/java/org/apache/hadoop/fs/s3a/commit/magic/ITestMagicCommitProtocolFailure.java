@@ -37,19 +37,23 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_EN
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.S3A_COMMITTER_FACTORY_KEY;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
+/**
+ * Verify that the magic committer cannot be created if the FS doesn't support multipart
+ * uploads.
+ */
 public class ITestMagicCommitProtocolFailure extends AbstractS3ATestBase {
 
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    conf.setBoolean(MULTIPART_UPLOADS_ENABLED, false);
-    conf.set(S3A_COMMITTER_FACTORY_KEY, CommitConstants.S3A_COMMITTER_FACTORY);
-    conf.set(FS_S3A_COMMITTER_NAME, CommitConstants.COMMITTER_NAME_MAGIC);
     removeBucketOverrides(getTestBucketName(conf), conf,
         MAGIC_COMMITTER_ENABLED,
         S3A_COMMITTER_FACTORY_KEY,
         FS_S3A_COMMITTER_NAME,
         MULTIPART_UPLOADS_ENABLED);
+    conf.setBoolean(MULTIPART_UPLOADS_ENABLED, false);
+    conf.set(S3A_COMMITTER_FACTORY_KEY, CommitConstants.S3A_COMMITTER_FACTORY);
+    conf.set(FS_S3A_COMMITTER_NAME, CommitConstants.COMMITTER_NAME_MAGIC);
     return conf;
   }
 
@@ -57,8 +61,7 @@ public class ITestMagicCommitProtocolFailure extends AbstractS3ATestBase {
   public void testCreateCommitter() throws Exception {
     TaskAttemptContext tContext = new TaskAttemptContextImpl(getConfiguration(),
         new TaskAttemptID());
-    Path commitPath = getFileSystem().makeQualified(
-        new Path(getContract().getTestPath(), "/testpath"));
+    Path commitPath = methodPath();
     LOG.debug("Trying to create a committer on the path: {}", commitPath);
     intercept(PathCommitException.class,
         () -> new MagicS3GuardCommitter(commitPath, tContext));

@@ -415,9 +415,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private ArnResource accessPoint;
 
   /**
-   * Is this S3A FS instance has multipart upload enabled?
+   * Does this S3A FS instance have multipart upload enabled?
    */
-  private boolean isMultipartUploadEnabled;
+  private boolean isMultipartUploadEnabled = DEFAULT_MULTIPART_UPLOAD_ENABLED;
 
   /**
    * A cache of files that should be deleted when the FileSystem is closed
@@ -539,7 +539,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       this.prefetchBlockCount =
           intOption(conf, PREFETCH_BLOCK_COUNT_KEY, PREFETCH_BLOCK_DEFAULT_COUNT, 1);
       this.isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
-          MULTIPART_UPLOAD_ENABLED_DEFAULT);
+          DEFAULT_MULTIPART_UPLOAD_ENABLED);
       initThreadPools(conf);
 
       int listVersion = conf.getInt(LIST_VERSION, DEFAULT_LIST_VERSION);
@@ -609,8 +609,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         blockOutputActiveBlocks = 1;
       }
       LOG.debug("Using S3ABlockOutputStream with buffer = {}; block={};" +
-              " queue limit={}",
-          blockOutputBuffer, partSize, blockOutputActiveBlocks);
+              " queue limit={}; multipart={}",
+          blockOutputBuffer, partSize, blockOutputActiveBlocks, isMultipartUploadEnabled);
       // verify there's no S3Guard in the store config.
       checkNoS3Guard(this.getUri(), getConf());
 
@@ -1837,7 +1837,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     final PutObjectOptions putOptions =
         new PutObjectOptions(keep, null, options.getHeaders());
 
-    validateOutputStreamConfiguration(getConf());
+    validateOutputStreamConfiguration(path, getConf());
 
     final S3ABlockOutputStream.BlockOutputStreamBuilder builder =
         S3ABlockOutputStream.builder()

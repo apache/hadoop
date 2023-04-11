@@ -184,7 +184,6 @@ class S3ABlockOutputStream extends OutputStream implements
     this.builder = builder;
     this.key = builder.key;
     this.blockFactory = builder.blockFactory;
-    this.blockSize = builder.blockSize;
     this.statistics = builder.statistics;
     // test instantiations may not provide statistics;
     this.iostatistics = statistics.getIOStatistics();
@@ -198,18 +197,26 @@ class S3ABlockOutputStream extends OutputStream implements
         (ProgressListener) progress
         : new ProgressableListener(progress);
     downgradeSyncableExceptions = builder.downgradeSyncableExceptions;
-    // create that first block. This guarantees that an open + close sequence
-    // writes a 0-byte entry.
-    createBlockIfNeeded();
-    LOG.debug("Initialized S3ABlockOutputStream for {}" +
-        " output to {}", key, activeBlock);
+
+    // look for multipart support.
     this.isMultipartUploadEnabled = builder.isMultipartUploadEnabled;
+    // block size is infinite if multipart is disabled, so ignore
+    // what was passed in from the builder.
+    this.blockSize = isMultipartUploadEnabled
+        ? builder.blockSize
+        : -1;
+
     if (putTracker.initialize()) {
       LOG.debug("Put tracker requests multipart upload");
       initMultipartUpload();
     }
     this.isCSEEnabled = builder.isCSEEnabled;
     this.threadIOStatisticsAggregator = builder.ioStatisticsAggregator;
+    // create that first block. This guarantees that an open + close sequence
+    // writes a 0-byte entry.
+    createBlockIfNeeded();
+    LOG.debug("Initialized S3ABlockOutputStream for {}" +
+        " output to {}", key, activeBlock);
   }
 
   /**
@@ -322,6 +329,14 @@ class S3ABlockOutputStream extends OutputStream implements
     statistics.writeBytes(len);
     S3ADataBlocks.DataBlock block = createBlockIfNeeded();
     int written = block.write(source, offset, len);
+    if (!isMultipartUploadEnabled) {
+      // no need to check for space as multipart uploads
+      // are not available...everything is saved to a single
+      // (disk) block.
+      return;
+    }
+    // look to see if another block is needed to complete
+    // the upload or exactly a block was written.
     int remainingCapacity = (int) block.remainingCapacity();
     if (written < len) {
       // not everything was written —the block has run out
@@ -624,6 +639,7 @@ class S3ABlockOutputStream extends OutputStream implements
         "S3ABlockOutputStream{");
     sb.append(writeOperationHelper.toString());
     sb.append(", blockSize=").append(blockSize);
+    sb.append(", isMultipartUploadEnabled=").append(isMultipartUploadEnabled);
     // unsynced access; risks consistency in exchange for no risk of deadlock.
     S3ADataBlocks.DataBlock block = activeBlock;
     if (block != null) {

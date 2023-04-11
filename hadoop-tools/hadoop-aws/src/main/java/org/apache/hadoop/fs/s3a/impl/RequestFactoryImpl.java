@@ -466,9 +466,9 @@ public class RequestFactoryImpl implements RequestFactory {
   @Override
   public InitiateMultipartUploadRequest newMultipartUploadRequest(
       final String destKey,
-      @Nullable final PutObjectOptions options) throws IOException {
+      @Nullable final PutObjectOptions options) throws PathIOException {
     if (!isMultipartUploadEnabled) {
-      throw new IOException("Multipart uploads are disabled on the given filesystem.");
+      throw new PathIOException(destKey, "Multipart uploads are disabled.");
     }
     final ObjectMetadata objectMetadata = newObjectMetadata(-1);
     maybeSetMetadata(options, objectMetadata);
