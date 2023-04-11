@@ -22,6 +22,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Random;
 
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
+import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -87,6 +89,20 @@ public class ITestAzureBlobFileSystemAppend extends
     fs.mkdirs(folderPath);
     fs.append(folderPath.getParent());
   }
+
+  /** Create file over dfs endpoint and append over blob endpoint **/
+  @Test
+  public void testCreateOverDfsAppendOverBlob() throws IOException {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Assume.assumeTrue(fs.getAbfsStore().getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB);
+    fs.getAbfsClient().createPath(makeQualified(TEST_FILE_PATH).toUri().getPath(), true, false,
+            null, null, false,
+            null, getTestTracingContext(fs, true));
+    FSDataOutputStream outputStream = fs.append(TEST_FILE_PATH);
+    outputStream.write(10);
+    outputStream.hsync();
+  }
+
 
   @Test
   public void testTracingForAppend() throws IOException {

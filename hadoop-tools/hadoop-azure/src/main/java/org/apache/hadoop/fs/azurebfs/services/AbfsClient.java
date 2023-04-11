@@ -584,7 +584,10 @@ public class AbfsClient implements Closeable {
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
 
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
+    URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
+    if (url.toString().contains(WASB_DNS_PREFIX)) {
+      url = changePrefixFromBlobtoDfs(url);
+    }
     final AbfsRestOperation op = new AbfsRestOperation(
         AbfsRestOperationType.Append,
         this,
@@ -715,7 +718,10 @@ public class AbfsClient implements Closeable {
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION,
             abfsUriQueryBuilder, cachedSasToken);
 
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
+    URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
+    if (url.toString().contains(WASB_DNS_PREFIX)) {
+      url = changePrefixFromBlobtoDfs(url);
+    }
     final AbfsRestOperation op = new AbfsRestOperation(
             AbfsRestOperationType.PutBlockList,
             this,
