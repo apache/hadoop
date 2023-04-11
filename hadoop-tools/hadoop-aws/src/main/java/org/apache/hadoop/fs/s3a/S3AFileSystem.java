@@ -414,6 +414,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private ArnResource accessPoint;
 
   /**
+   * Is this S3A FS instance has multipart upload enabled?
+   */
+  private boolean isMultipartUploadEnabled;
+
+  /**
    * A cache of files that should be deleted when the FileSystem is closed
    * or the JVM is exited.
    */
@@ -543,7 +548,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       this.prefetchBlockSize = (int) prefetchBlockSizeLong;
       this.prefetchBlockCount =
           intOption(conf, PREFETCH_BLOCK_COUNT_KEY, PREFETCH_BLOCK_DEFAULT_COUNT, 1);
-
+      this.isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
+          MULTIPART_UPLOAD_ENABLED_DEFAULT);
       initThreadPools(conf);
 
       int listVersion = conf.getInt(LIST_VERSION, DEFAULT_LIST_VERSION);
@@ -605,7 +611,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       blockOutputBuffer = conf.getTrimmed(FAST_UPLOAD_BUFFER,
           DEFAULT_FAST_UPLOAD_BUFFER);
-      partSize = ensureOutputParameterInRange(MULTIPART_SIZE, partSize);
       blockFactory = S3ADataBlocks.createFactory(this, blockOutputBuffer);
       blockOutputActiveBlocks = intOption(conf,
           FAST_UPLOAD_ACTIVE_BLOCKS, DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS, 1);
@@ -1092,6 +1097,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withRequestPreparer(getAuditManager()::requestCreated)
         .withContentEncoding(contentEncoding)
         .withStorageClass(storageClass)
+        .withMultipartUploadEnabled(isMultipartUploadEnabled)
         .build();
   }
 
@@ -1842,6 +1848,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     final PutObjectOptions putOptions =
         new PutObjectOptions(keep, null, options.getHeaders());
 
+    validateOutputStreamConfiguration(getConf());
+
     final S3ABlockOutputStream.BlockOutputStreamBuilder builder =
         S3ABlockOutputStream.builder()
         .withKey(destKey)
@@ -1865,7 +1873,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withCSEEnabled(isCSEEnabled)
         .withPutOptions(putOptions)
         .withIOStatisticsAggregator(
-            IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator());
+            IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator())
+        .withMultipartEnabled(isMultipartUploadEnabled);
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);
@@ -5103,6 +5112,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE:
       return !keepDirectoryMarkers(path);
 
+    case STORE_CAPABILITY_DIRECTORY_MARKER_MULTIPART_UPLOAD_ENABLED:
+      return isMultipartUploadEnabled();
+
     // create file options
     case FS_S3A_CREATE_PERFORMANCE:
     case FS_S3A_CREATE_HEADER:
@@ -5418,5 +5430,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   public boolean isCSEEnabled() {
     return isCSEEnabled;
+  }
+
+  public boolean isMultipartUploadEnabled() {
+    return isMultipartUploadEnabled;
   }
 }

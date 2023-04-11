@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.api;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
@@ -196,10 +197,11 @@ public interface RequestFactory {
    * @param destKey destination object key
    * @param options options for the request
    * @return the request.
+   * @throws IOException if the multipart uploads are disabled
    */
   InitiateMultipartUploadRequest newMultipartUploadRequest(
       String destKey,
-      @Nullable PutObjectOptions options);
+      @Nullable PutObjectOptions options) throws IOException;
 
   /**
    * Complete a multipart upload.
@@ -248,7 +250,7 @@ public interface RequestFactory {
       String destKey,
       String uploadId,
       int partNumber,
-      int size,
+      long size,
       InputStream uploadStream,
       File sourceFile,
       long offset) throws PathIOException;
