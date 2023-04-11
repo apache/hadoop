@@ -73,6 +73,8 @@ public abstract class INodeReference extends INode {
     return super.toDetailString() + ", ->" + s;
   }
 
+  public abstract String getReferenceDetails();
+
   /**
    * Try to remove the given reference and then return the reference count.
    * If the given inode is not a reference, return -1;
@@ -321,6 +323,31 @@ public abstract class INodeReference extends INode {
     }
   }
 
+  /**
+   * When lastSnapshotId >= snapshotToBeDeleted,
+   * this reference cannot in snapshotToBeDeleted
+   * and this reference should not be destroyed.
+   *
+   * @param context to {@link ReclaimContext#getSnapshotIdToBeDeleted()}
+   * @param lastSnapshotId the last snapshot when creating this reference.
+   * @return
+   */
+  boolean shouldDestroy(ReclaimContext context, int lastSnapshotId) {
+    final int snapshotToBeDeleted = context.getSnapshotIdToBeDeleted();
+    if (lastSnapshotId < snapshotToBeDeleted) {
+      return true;
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("{}, lastSnapshotId = {} >= snapshotToBeDeleted = {}, {}",
+          getReferenceDetails(), lastSnapshotId, snapshotToBeDeleted,
+          getFullPathAndObjectString());
+      final INode r = getReferredINode().asReference().getReferredINode();
+      LOG.debug("isInCurrentState? {}, {}",
+          r.isInCurrentState(), r.getFullPathAndObjectString());
+    }
+    return false;
+  }
+
   @Override
   public ContentSummaryComputationContext computeContentSummary(int snapshotId,
       ContentSummaryComputationContext summary) throws AccessControlException {
@@ -409,9 +436,9 @@ public abstract class INodeReference extends INode {
       final StringBuilder b = new StringBuilder("[");
       if (!withNameList.isEmpty()) {
         final Iterator<WithName> i = withNameList.iterator();
-        b.append(i.next().getFullPathAndObjectString());
+        b.append(i.next().getReferenceDetails());
         for(; i.hasNext();) {
-          b.append(", ").append(i.next().getFullPathAndObjectString());
+          b.append(", ").append(i.next().getReferenceDetails());
         }
       }
       b.append("]");
@@ -421,6 +448,11 @@ public abstract class INodeReference extends INode {
     @Override
     public String toDetailString() {
       return super.toDetailString() + getCountDetails();
+    }
+
+    @Override
+    public String getReferenceDetails() {
+      return getCountDetails();
     }
 
     private void assertDstReference(INodeReference parentRef) {
@@ -565,6 +597,12 @@ public abstract class INodeReference extends INode {
     }
 
     @Override
+    public String getReferenceDetails() {
+      return getClass().getSimpleName() + "[" + getLocalName()
+          + ", lastSnapshot=" + lastSnapshotId + "]";
+    }
+
+    @Override
     void assertReferences() {
       final INode ref= getReferredINode();
       final String err;
@@ -677,6 +715,10 @@ public abstract class INodeReference extends INode {
     @Override
     public void destroyAndCollectBlocks(ReclaimContext reclaimContext) {
       int snapshot = getSelfSnapshot();
+      if (!shouldDestroy(reclaimContext, lastSnapshotId)) {
+        return;
+      }
+
       reclaimContext.quotaDelta().add(computeQuotaUsage(reclaimContext.bsps));
       if (removeReference(this) <= 0) {
         getReferredINode().destroyAndCollectBlocks(reclaimContext.getCopy());
@@ -750,6 +792,13 @@ public abstract class INodeReference extends INode {
       referred.addReference(this);
 
       INodeReferenceValidation.add(this, DstReference.class);
+    }
+
+
+    @Override
+    public String getReferenceDetails() {
+      return getClass().getSimpleName() + "[" + getLocalName()
+          + ", dstSnapshot=" + dstSnapshotId + "]";
     }
 
     @Override
@@ -826,7 +875,10 @@ public abstract class INodeReference extends INode {
         Preconditions.checkState(prior != Snapshot.NO_SNAPSHOT_ID);
         // identify the snapshot created after prior
         int snapshot = getSelfSnapshot(prior);
-        
+        if (!shouldDestroy(reclaimContext, dstSnapshotId)) {
+          return;
+        }
+
         INode referred = getReferredINode().asReference().getReferredINode();
         if (referred.isFile()) {
           // if referred is a file, it must be a file with snapshot since we did

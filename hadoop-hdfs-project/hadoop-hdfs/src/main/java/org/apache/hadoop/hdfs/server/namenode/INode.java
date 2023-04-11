@@ -49,6 +49,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.
@@ -239,7 +240,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     }
     final INode child = parentDir.getChild(getLocalNameBytes(),
             Snapshot.CURRENT_STATE_ID);
-    return equalsToChild(child);
+    // equals(..) compares IDs, will work for references
+    return this.equals(child);
   }
 
   /** Is this inode in the latest snapshot? */
@@ -261,19 +263,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
       return false;
     }
     final INode child = parentDir.getChild(getLocalNameBytes(), latestSnapshotId);
-    return equalsToChild(child);
-  }
-
-  private boolean equalsToChild(INode child) {
-    if (this.equals(child)) {
-      return true;
-    }
-    if (child != null && child.isReference()) {
-      final INode withCount = child.asReference().getReferredINode();
-      Preconditions.checkState(withCount instanceof WithCount);
-      return this.equals(withCount.asReference().getReferredINode());
-    }
-    return false;
+    // equals(..) compares IDs, will work for references
+    return this.equals(child);
   }
   
   /** @return true if the given inode is an ancestor directory of this inode. */
@@ -901,7 +892,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
   @VisibleForTesting
   public final void dumpTreeRecursively(PrintStream out) {
-    out.println(dumpTreeRecursively().toString());
+    dumpTreeRecursively(new PrintWriter(out, true), new StringBuilder(),
+        Snapshot.CURRENT_STATE_ID);
   }
 
   /**
@@ -1017,19 +1009,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * Context object to record blocks and inodes that need to be reclaimed
    */
   public static class ReclaimContext {
-    static ReclaimContext deleteSnapshot(BlockStoragePolicySuite bsps,
-        BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes) {
-      return new ReclaimContext(bsps, collectedBlocks, removedINodes,
-          null, true);
-    }
-
-    private final boolean isDeleteSnapshot;
     protected final BlockStoragePolicySuite bsps;
     protected final BlocksMapUpdateInfo collectedBlocks;
     protected final List<INode> removedINodes;
     protected final List<Long> removedUCFiles;
     /** Used to collect quota usage delta */
     private final QuotaDelta quotaDelta;
+
+    private Snapshot snapshotToBeDeleted = null;
 
     /**
      * @param bsps
@@ -1045,14 +1032,6 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     public ReclaimContext(
         BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks,
         List<INode> removedINodes, List<Long> removedUCFiles) {
-      this(bsps, collectedBlocks, removedINodes, removedUCFiles, false);
-    }
-
-    private ReclaimContext(
-        BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks,
-        List<INode> removedINodes, List<Long> removedUCFiles,
-        boolean isDeleteSnapshot) {
-      this.isDeleteSnapshot = isDeleteSnapshot;
       this.bsps = bsps;
       this.collectedBlocks = collectedBlocks;
       this.removedINodes = removedINodes;
@@ -1060,8 +1039,34 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
       this.quotaDelta = new QuotaDelta();
     }
 
-    public boolean isDeleteSnapshot() {
-      return isDeleteSnapshot;
+    /**
+     * Set the snapshot to be deleted
+     * for {@link FSEditLogOpCodes#OP_DELETE_SNAPSHOT}.
+     *
+     * @param snapshot the snapshot to be deleted
+     */
+    public void setSnapshotToBeDeleted(Snapshot snapshot) {
+      this.snapshotToBeDeleted = Objects.requireNonNull(
+          snapshot, "snapshot == null");
+    }
+
+    /**
+     * For {@link FSEditLogOpCodes#OP_DELETE_SNAPSHOT},
+     * return the snapshot to be deleted.
+     * For other ops, return {@link Snapshot#CURRENT_STATE_ID}.
+     */
+    public int getSnapshotIdToBeDeleted() {
+      return snapshotToBeDeleted != null? snapshotToBeDeleted.getId()
+          : Snapshot.CURRENT_STATE_ID;
+    }
+
+    public int getSnapshotIdToBeDeleted(int snapshotId) {
+      final int snapshotIdToBeDeleted = getSnapshotIdToBeDeleted();
+      if (snapshotId != snapshotIdToBeDeleted) {
+        LOG.warn("Snapshot changed: current = {}, original = {}",
+            snapshotId, snapshotToBeDeleted);
+      }
+      return snapshotIdToBeDeleted;
     }
 
     public BlockStoragePolicySuite storagePolicySuite() {
@@ -1082,7 +1087,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
      */
     public ReclaimContext getCopy() {
       return new ReclaimContext(bsps, collectedBlocks, removedINodes,
-          removedUCFiles, isDeleteSnapshot);
+          removedUCFiles);
     }
   }
 
