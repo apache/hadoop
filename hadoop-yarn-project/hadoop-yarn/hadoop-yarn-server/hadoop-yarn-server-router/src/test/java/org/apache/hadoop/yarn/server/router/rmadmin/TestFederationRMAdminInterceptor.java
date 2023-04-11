@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
@@ -42,6 +43,12 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceReque
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
@@ -55,6 +62,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 import static org.junit.Assert.assertNotNull;
 
@@ -387,5 +396,129 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     RefreshNodesResourcesRequest request1 = RefreshNodesResourcesRequest.newInstance("SC-NON");
     LambdaTestUtils.intercept(Exception.class, "subClusterId = SC-NON is not an active subCluster.",
         () -> interceptor.refreshNodesResources(request1));
+  }
+
+  @Test
+  public void testAddToClusterNodeLabelsEmptyRequest() throws Exception {
+    // null request1.
+    LambdaTestUtils.intercept(YarnException.class, "Missing AddToClusterNodeLabels request.",
+        () -> interceptor.addToClusterNodeLabels(null));
+
+    // null request2.
+    AddToClusterNodeLabelsRequest request = AddToClusterNodeLabelsRequest.newInstance(null, null);
+    LambdaTestUtils.intercept(YarnException.class, "Missing AddToClusterNodeLabels SubClusterId.",
+        () -> interceptor.addToClusterNodeLabels(request));
+  }
+
+  @Test
+  public void testAddToClusterNodeLabelsNormalRequest() throws Exception {
+    // case1, We add NodeLabel to subCluster SC-1
+    NodeLabel nodeLabelA = NodeLabel.newInstance("a");
+    NodeLabel nodeLabelB = NodeLabel.newInstance("b");
+    List<NodeLabel> labels = new ArrayList<>();
+    labels.add(nodeLabelA);
+    labels.add(nodeLabelB);
+
+    AddToClusterNodeLabelsRequest request =
+        AddToClusterNodeLabelsRequest.newInstance("SC-1", labels);
+    AddToClusterNodeLabelsResponse response = interceptor.addToClusterNodeLabels(request);
+    assertNotNull(response);
+
+    // case2, test the non-exist subCluster.
+    AddToClusterNodeLabelsRequest request1 =
+        AddToClusterNodeLabelsRequest.newInstance("SC-NON", labels);
+    LambdaTestUtils.intercept(Exception.class, "subClusterId = SC-NON is not an active subCluster.",
+        () -> interceptor.addToClusterNodeLabels(request1));
+  }
+
+  @Test
+  public void testRemoveFromClusterNodeLabelsEmptyRequest() throws Exception {
+    // null request1.
+    LambdaTestUtils.intercept(YarnException.class, "Missing RemoveFromClusterNodeLabels request.",
+        () -> interceptor.removeFromClusterNodeLabels(null));
+
+    // null request2.
+    RemoveFromClusterNodeLabelsRequest request =
+        RemoveFromClusterNodeLabelsRequest.newInstance(null, null);
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing RemoveFromClusterNodeLabels SubClusterId.",
+        () -> interceptor.removeFromClusterNodeLabels(request));
+  }
+
+  @Test
+  public void testRemoveFromClusterNodeLabelsNormalRequest() throws Exception {
+    // case1, We add nodelabel a for SC-1, and then remove nodelabel a
+
+    // Step1. Add NodeLabel for subCluster SC-1
+    NodeLabel nodeLabelA = NodeLabel.newInstance("a");
+    NodeLabel nodeLabelB = NodeLabel.newInstance("b");
+    List<NodeLabel> nodeLabels = new ArrayList<>();
+    nodeLabels.add(nodeLabelA);
+    nodeLabels.add(nodeLabelB);
+
+    AddToClusterNodeLabelsRequest request =
+        AddToClusterNodeLabelsRequest.newInstance("SC-1", nodeLabels);
+    interceptor.addToClusterNodeLabels(request);
+
+    // Step2. We delete the label a of subCluster SC-1
+    Set<String> labels = new HashSet<>();
+    labels.add("a");
+
+    RemoveFromClusterNodeLabelsRequest request1 =
+        RemoveFromClusterNodeLabelsRequest.newInstance("SC-1", labels);
+    RemoveFromClusterNodeLabelsResponse response =
+        interceptor.removeFromClusterNodeLabels(request1);
+    assertNotNull(response);
+
+    // case2, test the non-exist subCluster.
+    RemoveFromClusterNodeLabelsRequest request2 =
+        RemoveFromClusterNodeLabelsRequest.newInstance("SC-NON", labels);
+    LambdaTestUtils.intercept(YarnException.class,
+        "subClusterId = SC-NON is not an active subCluster.",
+        () -> interceptor.removeFromClusterNodeLabels(request2));
+  }
+
+  @Test
+  public void testReplaceLabelsOnNodeEmptyRequest() throws Exception {
+    // null request1.
+    LambdaTestUtils.intercept(YarnException.class, "Missing ReplaceLabelsOnNode request.",
+        () -> interceptor.replaceLabelsOnNode(null));
+
+    // null request2.
+    Map<NodeId, Set<String>> labelMap = new HashMap<>();
+    ReplaceLabelsOnNodeRequest request = ReplaceLabelsOnNodeRequest.newInstance(labelMap, null);
+    LambdaTestUtils.intercept(YarnException.class, "Missing ReplaceLabelsOnNode SubClusterId.",
+        () -> interceptor.replaceLabelsOnNode(request));
+  }
+
+  @Test
+  public void tesReplaceLabelsOnNodeEmptyNormalRequest() throws Exception {
+    // case1, We add nodelabel for SC-1, and then replace the label for the specific node.
+    NodeLabel nodeLabelA = NodeLabel.newInstance("a");
+    NodeLabel nodeLabelB = NodeLabel.newInstance("b");
+    List<NodeLabel> nodeLabels = new ArrayList<>();
+    nodeLabels.add(nodeLabelA);
+    nodeLabels.add(nodeLabelB);
+
+    AddToClusterNodeLabelsRequest request =
+        AddToClusterNodeLabelsRequest.newInstance("SC-1", nodeLabels);
+    interceptor.addToClusterNodeLabels(request);
+
+    Map<NodeId, Set<String>> pMap = new HashMap<>();
+    NodeId nodeId = NodeId.newInstance("127.0.0.1", 0);
+    Set<String> labels = new HashSet<>();
+    labels.add("a");
+    pMap.put(nodeId, labels);
+
+    ReplaceLabelsOnNodeRequest request1 = ReplaceLabelsOnNodeRequest.newInstance(pMap, "SC-1");
+    ReplaceLabelsOnNodeResponse response = interceptor.replaceLabelsOnNode(request1);
+    assertNotNull(response);
+
+    // case2, test the non-exist subCluster.
+    ReplaceLabelsOnNodeRequest request2 =
+        ReplaceLabelsOnNodeRequest.newInstance(pMap, "SC-NON");
+    LambdaTestUtils.intercept(YarnException.class,
+        "subClusterId = SC-NON is not an active subCluster.",
+        () -> interceptor.replaceLabelsOnNode(request2));
   }
 }
