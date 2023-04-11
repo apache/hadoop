@@ -62,7 +62,7 @@ public interface DatanodeStatistics {
   public int getNumDatanodesInService();
 
   /** @return average xceiver count for writable volumes. */
-  public int getInServiceAvailableVolumeCount();
+  int getInServiceAvailableVolumeCount();
   /**
    * @return the total used space by data nodes for non-DFS purposes
    * such as storing temporary files on the local file system

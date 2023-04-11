@@ -414,7 +414,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     long totalNonDfsUsed = 0;
     Set<String> visitedMount = new HashSet<>();
     Set<DatanodeStorageInfo> failedStorageInfos = null;
-    int numVolumesAvailable = 0;
+    int volumesAvailable = 0;
 
     // Decide if we should check for any missing StorageReport and mark it as
     // failed. There are different scenarios.
@@ -494,10 +494,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
         }
       }
       if (report.getRemaining() > 0 && storage.getState() != State.FAILED) {
-        numVolumesAvailable += 1;
+        volumesAvailable += 1;
       }
     }
-    this.numVolumesAvailable = numVolumesAvailable;
+    this.numVolumesAvailable = volumesAvailable;
 
     // Update total metrics for the node.
     setCapacity(totalCapacity);

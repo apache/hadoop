@@ -102,7 +102,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   protected boolean considerLoad;
   private boolean considerLoadByStorageType;
   protected double considerLoadFactor;
-  protected boolean considerLoadByVolume = false;
+  private boolean considerLoadByVolume = false;
   private boolean preferLocalNode;
   private boolean dataNodePeerStatsEnabled;
   private volatile boolean excludeSlowNodesEnabled;

@@ -69,7 +69,7 @@ public interface FSClusterStats {
    *         writes that are currently occurring on the volumes of the
    *         cluster.
    */
-  public double getInServiceXceiverAverageForVolume();
+  double getInServiceXceiverAverageForVolume();
 
   /**
    * Indicates the storage statistics per storage type.
