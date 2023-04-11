@@ -851,9 +851,9 @@ public class DFSInputStream extends FSInputStream
                   locatedBlocks.getFileLength() - pos);
             }
           }
-          long beginRead = Time.monotonicNow();
+          long beginReadMS = Time.monotonicNow();
           int result = readBuffer(strategy, realLen, corruptedBlocks);
-          long readTimeMS = Time.monotonicNow() - beginRead;
+          long readTimeMS = Time.monotonicNow() - beginReadMS;
           if (result >= 0) {
             pos += result;
           } else {
@@ -1185,7 +1185,7 @@ public class DFSInputStream extends FSInputStream
         ByteBuffer tmp = buf.duplicate();
         tmp.limit(tmp.position() + len);
         tmp = tmp.slice();
-        long beginRead = Time.monotonicNow();
+        long beginReadMS = Time.monotonicNow();
         int nread = 0;
         int ret;
         while (true) {
@@ -1195,7 +1195,7 @@ public class DFSInputStream extends FSInputStream
           }
           nread += ret;
         }
-        long readTimeMS = Time.monotonicNow() - beginRead;
+        long readTimeMS = Time.monotonicNow() - beginReadMS;
         buf.position(buf.position() + nread);
 
         IOUtilsClient.updateReadStatistics(readStatistics, nread, reader);
