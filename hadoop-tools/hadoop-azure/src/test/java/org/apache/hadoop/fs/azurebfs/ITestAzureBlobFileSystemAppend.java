@@ -121,10 +121,9 @@ public class ITestAzureBlobFileSystemAppend extends
   }
 
   /**
-   * Create directory over dfs endpoint and append over blob endpoint.
-   * Should return error as append is not supported for directory.
-   * **/
-  @Test
+   * Recreate file between append and flush. Etag mismatch happens.
+   **/
+  @Test(expected = IOException.class)
   public void testRecreateAppendAndFlush() throws IOException {
     final AzureBlobFileSystem fs = getFileSystem();
     Assume.assumeTrue(fs.getAbfsStore().getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB);
@@ -133,7 +132,7 @@ public class ITestAzureBlobFileSystemAppend extends
     outputStream.write(10);
     final AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration());
     FSDataOutputStream outputStream1 = fs1.create(TEST_FILE_PATH);
-    outputStream1.hsync();
+    outputStream.hsync();
   }
 
   @Test
