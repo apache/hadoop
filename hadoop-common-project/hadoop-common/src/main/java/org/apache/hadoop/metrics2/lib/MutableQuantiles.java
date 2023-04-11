@@ -20,6 +20,7 @@ package org.apache.hadoop.metrics2.lib;
 
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 
+import java.text.DecimalFormat;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -52,9 +53,10 @@ public class MutableQuantiles extends MutableMetric {
       new Quantile(0.75, 0.025), new Quantile(0.90, 0.010),
       new Quantile(0.95, 0.005), new Quantile(0.99, 0.001) };
 
-  private final MetricsInfo numInfo;
-  private final MetricsInfo[] quantileInfos;
-  private final int interval;
+  private MetricsInfo numInfo;
+  private MetricsInfo[] quantileInfos;
+  private int intervalSecs;
+  private static DecimalFormat decimalFormat = new DecimalFormat("###.####");
 
   private QuantileEstimator estimator;
   private long previousCount = 0;
@@ -91,25 +93,38 @@ public class MutableQuantiles extends MutableMetric {
     String lsName = StringUtils.uncapitalize(sampleName);
     String lvName = StringUtils.uncapitalize(valueName);
 
-    numInfo = info(ucName + "Num" + usName, String.format(
-        "Number of %s for %s with %ds interval", lsName, desc, interval));
-    // Construct the MetricsInfos for the quantiles, converting to percentiles
-    quantileInfos = new MetricsInfo[quantiles.length];
-    String nameTemplate = ucName + "%dthPercentile" + uvName;
-    String descTemplate = "%d percentile " + lvName + " with " + interval
-        + " second interval for " + desc;
-    for (int i = 0; i < quantiles.length; i++) {
-      int percentile = (int) (100 * quantiles[i].quantile);
-      quantileInfos[i] = info(String.format(nameTemplate, percentile),
-          String.format(descTemplate, percentile));
-    }
-
-    estimator = new SampleQuantiles(quantiles);
-
-    this.interval = interval;
+    setInterval(interval);
+    setNumInfo(info(ucName + "Num" + usName, String.format(
+        "Number of %s for %s with %ds interval", lsName, desc, interval)));
     scheduledTask = scheduler.scheduleWithFixedDelay(new RolloverSample(this),
         interval, interval, TimeUnit.SECONDS);
+    setQuantiles(ucName, uvName, desc, lvName, decimalFormat);
   }
+
+  /**
+   * Sets quantileInfo and estimator.
+   *
+   * @param ucName capitalized name of the metric
+   * @param uvName capitalized type of the values
+   * @param desc uncapitalized long-form textual description of the metric
+   * @param lvName uncapitalized type of the values
+   * @param pDecimalFormat Number formatter for percentile value
+   */
+  void setQuantiles(String ucName, String uvName, String desc, String lvName, DecimalFormat pDecimalFormat) {
+    // Construct the MetricsInfos for the quantiles, converting to percentiles
+    setQuantileInfos(quantiles.length);
+    for (int i = 0; i < quantiles.length; i++) {
+      double percentile = 100 * quantiles[i].quantile;
+      String nameTemplate = ucName + pDecimalFormat.format(percentile) + "thPercentile" + uvName;
+      String descTemplate = pDecimalFormat.format(percentile) + " percentile " + lvName
+          + " with " + getInterval() + " second interval for " + desc;
+      addQuantileInfo(i, info(nameTemplate, descTemplate));
+    }
+
+    setEstimator(new SampleQuantiles(quantiles));
+  }
+
+  public MutableQuantiles() {}
 
   @Override
   public synchronized void snapshot(MetricsRecordBuilder builder, boolean all) {
@@ -133,8 +148,50 @@ public class MutableQuantiles extends MutableMetric {
     estimator.insert(value);
   }
 
-  public int getInterval() {
-    return interval;
+  /**
+   * Set info about the metrics.
+   *
+   * @param pNumInfo info about the metrics.
+   */
+  public synchronized void setNumInfo(MetricsInfo pNumInfo) {
+    this.numInfo = pNumInfo;
+  }
+
+  /**
+   * Initialize quantileInfos array.
+   *
+   * @param length of the quantileInfos array.
+   */
+  public synchronized void setQuantileInfos(int length) {
+    this.quantileInfos = new MetricsInfo[length];
+  }
+
+  /**
+   * Add entry to quantileInfos array.
+   *
+   * @param i array index.
+   * @param info info to be added to  quantileInfos array.
+   */
+  public synchronized void addQuantileInfo(int i, MetricsInfo info) {
+    this.quantileInfos[i] = info;
+  }
+
+  /**
+   * Set the rollover interval (in seconds) of the estimator.
+   *
+   * @param pIntervalSecs of the estimator.
+   */
+  public synchronized void setInterval(int pIntervalSecs) {
+    this.intervalSecs = pIntervalSecs;
+  }
+
+  /**
+   * Get the rollover interval (in seconds) of the estimator.
+   *
+   * @return  intervalSecs of the estimator.
+   */
+  public synchronized int getInterval() {
+    return intervalSecs;
   }
 
   public void stop() {
