@@ -1032,7 +1032,7 @@ public final class S3AUtils {
   }
 
   /**
-   * Validates the output stream configuration
+   * Validates the output stream configuration.
    * @param conf : configuration object for the given context
    * @throws IOException : throws an IOException on config mismatch
    */
@@ -1055,14 +1055,8 @@ public final class S3AUtils {
   public static boolean checkDiskBuffer(Configuration conf) {
     boolean isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
         MULTIPART_UPLOAD_ENABLED_DEFAULT);
-    if (isMultipartUploadEnabled) {
-      return true;
-    } else if (!isMultipartUploadEnabled && conf.get(FAST_UPLOAD_BUFFER)
-        .equals(FAST_UPLOAD_BUFFER_DISK)) {
-      return true;
-    } else {
-      return false;
-    }
+    return isMultipartUploadEnabled
+        || FAST_UPLOAD_BUFFER_DISK.equals(conf.get(FAST_UPLOAD_BUFFER, DEFAULT_FAST_UPLOAD_BUFFER));
   }
 
   /**

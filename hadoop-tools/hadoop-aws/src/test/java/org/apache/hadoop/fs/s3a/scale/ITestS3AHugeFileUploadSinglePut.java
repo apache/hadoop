@@ -41,7 +41,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatSt
  * be disabled in the test.
  */
 public class ITestS3AHugeFileUploadSinglePut extends S3AScaleTestBase{
-  final private Logger LOG = LoggerFactory.getLogger(
+  final static private Logger LOG = LoggerFactory.getLogger(
       ITestS3AHugeFileUploadSinglePut.class.getName());
 
   private long fileSize;
@@ -49,12 +49,13 @@ public class ITestS3AHugeFileUploadSinglePut extends S3AScaleTestBase{
   protected Configuration createScaleConfiguration() {
     Configuration configuration = super.createScaleConfiguration();
     configuration.setBoolean(Constants.MULTIPART_UPLOADS_ENABLED, false);
-    configuration.setLong(MULTIPART_SIZE, 53687091200L);
+    fileSize = getTestPropertyBytes(configuration, KEY_HUGE_FILESIZE,
+        DEFAULT_HUGE_FILESIZE);
+    //setting the multipart size which is treated as the block size for the upload
+    configuration.setLong(MULTIPART_SIZE, fileSize * 2);
     configuration.setInt(KEY_TEST_TIMEOUT, 36000);
     configuration.setInt(IO_CHUNK_BUFFER_SIZE, 655360);
     configuration.set(REQUEST_TIMEOUT, "1h");
-    fileSize = getTestPropertyBytes(configuration, KEY_HUGE_FILESIZE,
-        DEFAULT_HUGE_FILESIZE);
     return configuration;
   }
 

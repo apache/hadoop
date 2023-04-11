@@ -30,7 +30,10 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_UPLOADS_ENABLED;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_NAME;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.S3A_COMMITTER_FACTORY_KEY;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -42,6 +45,11 @@ public class ITestMagicCommitProtocolFailure extends AbstractS3ATestBase {
     conf.setBoolean(MULTIPART_UPLOADS_ENABLED, false);
     conf.set(S3A_COMMITTER_FACTORY_KEY, CommitConstants.S3A_COMMITTER_FACTORY);
     conf.set(FS_S3A_COMMITTER_NAME, CommitConstants.COMMITTER_NAME_MAGIC);
+    removeBucketOverrides(getTestBucketName(conf), conf,
+        MAGIC_COMMITTER_ENABLED,
+        S3A_COMMITTER_FACTORY_KEY,
+        FS_S3A_COMMITTER_NAME,
+        MULTIPART_UPLOADS_ENABLED);
     return conf;
   }
 

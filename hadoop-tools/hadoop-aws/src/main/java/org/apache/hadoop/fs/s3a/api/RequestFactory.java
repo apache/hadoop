@@ -197,6 +197,7 @@ public interface RequestFactory {
    * @param destKey destination object key
    * @param options options for the request
    * @return the request.
+   * @throws IOException if the multipart uploads are disabled
    */
   InitiateMultipartUploadRequest newMultipartUploadRequest(
       String destKey,

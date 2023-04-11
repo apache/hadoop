@@ -373,7 +373,7 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   @Retries.RetryTranslated
   private void initMultipartUpload() throws IOException {
-    Preconditions.checkState(!isMultipartUploadEnabled,
+    Preconditions.checkState(isMultipartUploadEnabled,
         "multipart upload is disabled");
     if (multiPartUpload == null) {
       LOG.debug("Initiating Multipart upload");

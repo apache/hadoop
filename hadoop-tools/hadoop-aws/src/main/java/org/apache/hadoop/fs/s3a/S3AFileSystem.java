@@ -415,7 +415,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private ArnResource accessPoint;
 
   /**
-   * Is this S3A FS instance has multipart uploads enabled?
+   * Is this S3A FS instance has multipart upload enabled?
    */
   private boolean isMultipartUploadEnabled;
 
@@ -540,7 +540,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           intOption(conf, PREFETCH_BLOCK_COUNT_KEY, PREFETCH_BLOCK_DEFAULT_COUNT, 1);
       this.isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
           MULTIPART_UPLOAD_ENABLED_DEFAULT);
-
       initThreadPools(conf);
 
       int listVersion = conf.getInt(LIST_VERSION, DEFAULT_LIST_VERSION);
@@ -1864,7 +1863,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withPutOptions(putOptions)
         .withIOStatisticsAggregator(
             IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator())
-            .withMultipartEnabled(isMultipartUploadEnabled);
+        .withMultipartEnabled(isMultipartUploadEnabled);
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);
