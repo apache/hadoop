@@ -624,6 +624,19 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
+  /**
+   * Append operation for blob endpoint which takes block id as a param.
+   * @param blockId The blockId of the block to be appended.
+   * @param path The path at which the block is to be appended.
+   * @param buffer The buffer which has the data to be appended.
+   * @param reqParams The request params.
+   * @param cachedSasToken The cachedSasToken if available.
+   * @param tracingContext Tracing context of the operation.
+   * @param eTag Etag of the blob to prevent parallel writer situations.
+   * @param map The map to update the status of the blob.
+   * @return AbfsRestOperation op.
+   * @throws AzureBlobFileSystemException
+   */
   public AbfsRestOperation append(final String blockId, final String path, final byte[] buffer,
                                   AppendRequestParameters reqParams, final String cachedSasToken,
                                   TracingContext tracingContext, String eTag,
@@ -672,6 +685,18 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
+  /**
+   * The flush operation to commit the blocks.
+   * @param buffer This has the xml in byte format with the blockIds to be flushed.
+   * @param path The path to flush the data to.
+   * @param isClose True when the stream is closed.
+   * @param cachedSasToken The cachedSasToken if available.
+   * @param leaseId The leaseId of the blob if available.
+   * @param eTag The etag of the blob.
+   * @param tracingContext Tracing context for the operation.
+   * @return AbfsRestOperation op.
+   * @throws IOException
+   */
   public AbfsRestOperation flush(byte[] buffer, final String path, boolean isClose,
                                  final String cachedSasToken, final String leaseId, String eTag,
                                  TracingContext tracingContext) throws IOException {
@@ -825,6 +850,13 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
+  /**
+   * GetBlockList call to the backend to get the list of committed blockId's.
+   * @param path The path to get the list of blockId's.
+   * @param tracingContext The tracing context for the operation.
+   * @return AbfsRestOperation op.
+   * @throws AzureBlobFileSystemException
+   */
   public AbfsRestOperation getBlockList(final String path, TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 

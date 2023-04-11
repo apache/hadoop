@@ -200,6 +200,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.blockSize = bufferSize;
     this.prefixMode = client.getAbfsConfiguration().getPrefixMode();
     if (prefixMode == PrefixMode.BLOB) {
+      // Get the list of all the committed blocks for the given path.
       this.committedBlockEntries = getBlockList(path, tracingContext);
     }
     // create that first block. This guarantees that an open + close sequence
@@ -425,17 +426,20 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
              */
             AppendRequestParameters reqParams = new AppendRequestParameters(
                 offset, 0, bytesLength, mode, false, leaseId);
-            AbfsRestOperation op = null;
+            AbfsRestOperation op;
             if (prefixMode == PrefixMode.DFS) {
               op = client.append(path, blockUploadData.toByteArray(), reqParams,
                       cachedSasToken.get(), new TracingContext(tracingContext));
             } else {
+              // Generate blockId based on offset.
               String blockId = generateBlockId(offset);
+              // Put entry in map with status as UNCOMMITTED which is changed to SUCCESS when successfully appended.
               map.put(new BlockWithId(blockId, offset), BlockStatus.UNCOMMITTED);
               try {
                 op = client.append(blockId, path, blockUploadData.toByteArray(), reqParams,
                         cachedSasToken.get(), new TracingContext(tracingContext), getETag(), map);
               } catch (AbfsRestOperationException ex) {
+                // The mechanism to fall back to DFS endpoint if blob operation is not supported.
                 if (ex.getStatusCode() == HTTP_CONFLICT && ex.getMessage().contains(BLOB_OPERATION_NOT_SUPPORTED)) {
                   prefixMode = PrefixMode.DFS;
                   op = client.append(path, blockUploadData.toByteArray(), reqParams,
@@ -761,16 +765,16 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
         op = client.flush(path, offset, retainUncommitedData, isClose,
                 cachedSasToken.get(), leaseId, new TracingContext(tracingContext));
       } else {
+        // Small write optimization and appendBlob is not supported for blob endpoint.
         if (enableSmallWriteOptimization || isAppendBlob) {
           return;
         }
+        // Adds all the committed blocks if available to the list of blocks to be added in putBlockList.
         blockIdList.addAll(committedBlockEntries);
         boolean successValue = true;
         String failedBlockId = "";
         BlockStatus success = BlockStatus.SUCCESS;
-        if (getMap().size() == 0) {
-          return;
-        }
+        // If any of the entry in the map doesn't have the status of SUCCESS, fail the flush.
         for (Map.Entry<BlockWithId, BlockStatus> entry : getMap().entrySet()) {
           if (!success.equals(entry.getValue())) {
             successValue = false;
@@ -786,6 +790,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
             blockIdList.add(obj.getBlockId());
           }
         }
+        // If there are no entries in map, then we have nothing to flush.
+        if (blockIdList.size() == committedBlockEntries.size()) {
+          return;
+        }
+        // Generate the xml with the list of blockId's to generate putBlockList call.
         String blockListXml = generateBlockListXml(blockIdList);
         op = client.flush(blockListXml.getBytes(), path,
                 isClose, cachedSasToken.get(), leaseId, getETag(), new TracingContext(tracingContext));
@@ -814,6 +823,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     return op == null;
   }
 
+  /**
+   * Helper method to generate the xml with list of blockId's.
+   * @param blockIds The set of blockId's to be pushed to the backend.
+   * @return xml in string format.
+   */
   private static String generateBlockListXml(Set<String> blockIds) {
     StringBuilder stringBuilder = new StringBuilder();
     stringBuilder.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
