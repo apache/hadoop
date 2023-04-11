@@ -414,6 +414,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private ArnResource accessPoint;
 
   /**
+   * Does this S3A FS instance have multipart upload enabled?
+   */
+  private boolean isMultipartUploadEnabled = DEFAULT_MULTIPART_UPLOAD_ENABLED;
+
+  /**
    * A cache of files that should be deleted when the FileSystem is closed
    * or the JVM is exited.
    */
@@ -534,6 +539,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       longBytesOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
       enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
 
+      this.isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
+          DEFAULT_MULTIPART_UPLOAD_ENABLED);
       this.prefetchEnabled = conf.getBoolean(PREFETCH_ENABLED_KEY, PREFETCH_ENABLED_DEFAULT);
       long prefetchBlockSizeLong =
           longBytesOption(conf, PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE,
@@ -606,7 +613,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       blockOutputBuffer = conf.getTrimmed(FAST_UPLOAD_BUFFER,
           DEFAULT_FAST_UPLOAD_BUFFER);
-      partSize = ensureOutputParameterInRange(MULTIPART_SIZE, partSize);
       blockFactory = S3ADataBlocks.createFactory(this, blockOutputBuffer);
       blockOutputActiveBlocks = intOption(conf,
           FAST_UPLOAD_ACTIVE_BLOCKS, DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS, 1);
@@ -615,8 +621,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         blockOutputActiveBlocks = 1;
       }
       LOG.debug("Using S3ABlockOutputStream with buffer = {}; block={};" +
-              " queue limit={}",
-          blockOutputBuffer, partSize, blockOutputActiveBlocks);
+              " queue limit={}; multipart={}",
+          blockOutputBuffer, partSize, blockOutputActiveBlocks, isMultipartUploadEnabled);
       // verify there's no S3Guard in the store config.
       checkNoS3Guard(this.getUri(), getConf());
 
@@ -778,13 +784,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS, 1);
     long keepAliveTime = longOption(conf, KEEPALIVE_TIME,
         DEFAULT_KEEPALIVE_TIME, 0);
-    int numPrefetchThreads = this.prefetchEnabled ? this.prefetchBlockCount : 0;
-
-    int activeTasksForBoundedThreadPool = maxThreads;
-    int waitingTasksForBoundedThreadPool = maxThreads + totalTasks + numPrefetchThreads;
     boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
-        activeTasksForBoundedThreadPool,
-        waitingTasksForBoundedThreadPool,
+        maxThreads,
+        maxThreads + totalTasks,
         keepAliveTime, TimeUnit.SECONDS,
         name + "-bounded");
     unboundedThreadPool = new ThreadPoolExecutor(
