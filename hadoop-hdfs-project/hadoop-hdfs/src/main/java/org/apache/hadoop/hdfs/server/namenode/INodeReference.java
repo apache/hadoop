@@ -323,31 +323,6 @@ public abstract class INodeReference extends INode {
     }
   }
 
-  /**
-   * When lastSnapshotId >= snapshotToBeDeleted,
-   * this reference cannot in snapshotToBeDeleted
-   * and this reference should not be destroyed.
-   *
-   * @param context to {@link ReclaimContext#getSnapshotIdToBeDeleted()}
-   * @param lastSnapshotId the last snapshot when creating this reference.
-   * @return
-   */
-  boolean shouldDestroy(ReclaimContext context, int lastSnapshotId) {
-    final int snapshotToBeDeleted = context.getSnapshotIdToBeDeleted();
-    if (lastSnapshotId < snapshotToBeDeleted) {
-      return true;
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("{}, lastSnapshotId = {} >= snapshotToBeDeleted = {}, {}",
-          getReferenceDetails(), lastSnapshotId, snapshotToBeDeleted,
-          getFullPathAndObjectString());
-      final INode r = getReferredINode().asReference().getReferredINode();
-      LOG.debug("isInCurrentState? {}, {}",
-          r.isInCurrentState(), r.getFullPathAndObjectString());
-    }
-    return false;
-  }
-
   @Override
   public ContentSummaryComputationContext computeContentSummary(int snapshotId,
       ContentSummaryComputationContext summary) throws AccessControlException {
@@ -580,7 +555,9 @@ public abstract class INodeReference extends INode {
 
     /**
      * The id of the last snapshot in the src tree when this WithName node was 
-     * generated. When calculating the quota usage of the referred node, only 
+     * generated, i.e. this reference is in that snapshot.
+     *
+     * When calculating the quota usage of the referred node, only
      * the files/dirs existing when this snapshot was taken will be counted for 
      * this WithName node and propagated along its ancestor path.
      */
@@ -711,11 +688,34 @@ public abstract class INodeReference extends INode {
         reclaimContext.quotaDelta().setCounts(old);
       }
     }
-    
+
+    /**
+     * When lastSnapshotId > snapshotToBeDeleted,
+     * this reference cannot in snapshotToBeDeleted.
+     * This reference should not be destroyed.
+     *
+     * @param context to {@link ReclaimContext#getSnapshotIdToBeDeleted()}
+     */
+    boolean shouldDestroyWithName(ReclaimContext context) {
+      final int snapshotToBeDeleted = context.getSnapshotIdToBeDeleted();
+      if (lastSnapshotId <= snapshotToBeDeleted) {
+        return true;
+      }
+      if (LOG.isInfoEnabled()) {
+        LOG.info("{}, lastSnapshotId = {} > snapshotToBeDeleted = {}, {}",
+            getReferenceDetails(), lastSnapshotId, snapshotToBeDeleted,
+            getFullPathAndObjectString());
+        final INode r = getReferredINode().asReference().getReferredINode();
+        LOG.info("isInCurrentState? {}, {}",
+            r.isInCurrentState(), r.getFullPathAndObjectString());
+      }
+      return false;
+    }
+
     @Override
     public void destroyAndCollectBlocks(ReclaimContext reclaimContext) {
       int snapshot = getSelfSnapshot();
-      if (!shouldDestroy(reclaimContext, lastSnapshotId)) {
+      if (!shouldDestroyWithName(reclaimContext)) {
         return;
       }
 
@@ -769,7 +769,8 @@ public abstract class INodeReference extends INode {
   
   public static class DstReference extends INodeReference {
     /**
-     * Record the latest snapshot of the dst subtree before the rename. For
+     * Record the latest snapshot of the dst subtree before the rename,
+     * i.e. this reference is NOT in that snapshot.  For
      * later operations on the moved/renamed files/directories, if the latest
      * snapshot is after this dstSnapshot, changes will be recorded to the
      * latest snapshot. Otherwise changes will be recorded to the snapshot
@@ -843,7 +844,30 @@ public abstract class INodeReference extends INode {
         getReferredINode().cleanSubtree(reclaimContext, snapshot, prior);
       }
     }
-    
+
+    /**
+     * When dstSnapshotId >= snapshotToBeDeleted,
+     * this reference is not in snapshotToBeDeleted.
+     * This reference should not be destroyed.
+     *
+     * @param context to {@link ReclaimContext#getSnapshotIdToBeDeleted()}
+     */
+    boolean shouldDestroyDstRef(ReclaimContext context) {
+      final int snapshotToBeDeleted = context.getSnapshotIdToBeDeleted();
+      if (dstSnapshotId < snapshotToBeDeleted) {
+        return true;
+      }
+      if (LOG.isInfoEnabled()) {
+        LOG.info("{}, dstSnapshotId = {} >= snapshotToBeDeleted = {}, {}",
+            getReferenceDetails(), dstSnapshotId, snapshotToBeDeleted,
+            getFullPathAndObjectString());
+        final INode r = getReferredINode().asReference().getReferredINode();
+        LOG.info("isInCurrentState? {}, {}",
+            r.isInCurrentState(), r.getFullPathAndObjectString());
+      }
+      return false;
+    }
+
     /**
      * {@inheritDoc}
      * <br>
@@ -875,7 +899,7 @@ public abstract class INodeReference extends INode {
         Preconditions.checkState(prior != Snapshot.NO_SNAPSHOT_ID);
         // identify the snapshot created after prior
         int snapshot = getSelfSnapshot(prior);
-        if (!shouldDestroy(reclaimContext, dstSnapshotId)) {
+        if (!shouldDestroyDstRef(reclaimContext)) {
           return;
         }
 

@@ -892,8 +892,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
   @VisibleForTesting
   public final void dumpTreeRecursively(PrintStream out) {
-    dumpTreeRecursively(new PrintWriter(out, true), new StringBuilder(),
-        Snapshot.CURRENT_STATE_ID);
+    out.println(dumpTreeRecursively().toString());
   }
 
   /**
