@@ -1087,8 +1087,11 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
      * removedUCFiles but a new quotaDelta.
      */
     public ReclaimContext getCopy() {
-      return new ReclaimContext(bsps, collectedBlocks, removedINodes,
+      final ReclaimContext that = new ReclaimContext(
+          bsps, collectedBlocks, removedINodes,
           removedUCFiles);
+      that.snapshotToBeDeleted = this.snapshotToBeDeleted;
+      return that;
     }
   }
 
