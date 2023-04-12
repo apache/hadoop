@@ -575,8 +575,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * in loop with the NextMarker received in previous iteration of backend call for
    * the same request.
    *
-   * @param sourceDirBlobPath path from where the list of blob is requried.
-   * @param prefix
+   * @param sourceDirBlobPath path from where the list of blob is required.
+   * @param prefix Optional value to be provided. If provided, API call would have
+   * prefix = given value. If not provided, the API call would have prefix =
+   * sourceDirBlobPath.
    * @param tracingContext object of {@link TracingContext}
    * @param maxPerServerCallResult define how many blobs can client handle in server response.
    * In case maxResult <= 5000, server sends number of blobs equal to the value. In

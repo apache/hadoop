@@ -1040,7 +1040,8 @@ public class AbfsClient implements Closeable {
    * case maxResult > 5000, server sends maximum 5000 blobs.
    * @param tracingContext object of {@link TracingContext}
    *
-   * @return abfsRestOperation which contain list of {@link BlobProperty}
+   * @return abfsRestOperation which contain list of {@link org.apache.hadoop.fs.azurebfs.BlobProperty}
+   * via {@link AbfsRestOperation#getResult()}.{@link AbfsHttpOperation#getBlobList()}
    *
    * @throws AzureBlobFileSystemException thrown from server-call / xml-parsing
    */
