@@ -49,6 +49,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.
@@ -239,11 +240,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     }
     final INode child = parentDir.getChild(getLocalNameBytes(),
             Snapshot.CURRENT_STATE_ID);
-    if (this == child) {
-      return true;
-    }
-    return child != null && child.isReference() &&
-        this.equals(child.asReference().getReferredINode());
+    // equals(..) compares IDs, will work for references
+    return this.equals(child);
   }
 
   /** Is this inode in the latest snapshot? */
@@ -265,11 +263,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
       return false;
     }
     final INode child = parentDir.getChild(getLocalNameBytes(), latestSnapshotId);
-    if (this == child) {
-      return true;
-    }
-    return child != null && child.isReference() &&
-        this == child.asReference().getReferredINode();
+    // equals(..) compares IDs, will work for references
+    return this.equals(child);
   }
   
   /** @return true if the given inode is an ancestor directory of this inode. */
@@ -871,7 +866,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     long id = getId();
     return (int)(id^(id>>>32));  
   }
-  
+
+  @VisibleForTesting
+  public final StringBuilder dumpParentINodes() {
+    final StringBuilder b = parent == null? new StringBuilder()
+        : parent.dumpParentINodes().append("\n  ");
+    return b.append(toDetailString());
+  }
+
   /**
    * Dump the subtree starting from this inode.
    * @return a text representation of the tree.
@@ -896,10 +898,17 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   @VisibleForTesting
   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
       int snapshotId) {
+    dumpINode(out, prefix, snapshotId);
+  }
+
+  public void dumpINode(PrintWriter out, StringBuilder prefix,
+    int snapshotId) {
     out.print(prefix);
     out.print(" ");
     final String name = getLocalName();
-    out.print(name.isEmpty()? "/": name);
+    out.print(name != null && name.isEmpty()? "/": name);
+    out.print(", isInCurrentState? ");
+    out.print(isInCurrentState());
     out.print("   (");
     out.print(getObjectString());
     out.print("), ");

@@ -243,6 +243,6 @@ public class FileWithSnapshotFeature implements INode.Feature {
 
   @Override
   public String toString() {
-    return "" + diffs;
+    return "isCurrentFileDeleted? " + isCurrentFileDeleted + ", " + diffs;
   }
 }
