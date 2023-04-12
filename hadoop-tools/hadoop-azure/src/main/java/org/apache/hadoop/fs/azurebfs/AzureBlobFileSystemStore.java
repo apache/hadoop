@@ -665,28 +665,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return opResult.getResponseHeader(X_MS_COPY_STATUS);
   }
 
-  public void setPathProperties(final Path path,
-      final Hashtable<String, String> properties, TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    try (AbfsPerfInfo perfInfo = startTracking("setPathProperties", "setPathProperties")){
-      LOG.debug("setFilesystemProperties for filesystem: {} path: {} with properties: {}",
-              client.getFileSystem(),
-              path,
-              properties);
-
-      final String commaSeparatedProperties;
-      try {
-        commaSeparatedProperties = convertXmsPropertiesToCommaSeparatedString(properties);
-      } catch (CharacterCodingException ex) {
-        throw new InvalidAbfsRestOperationException(ex);
-      }
-      final AbfsRestOperation op = client
-          .setPathProperties(getRelativePath(path), commaSeparatedProperties,
-              tracingContext);
-      perfInfo.registerResult(op.getResult()).registerSuccess(true);
-    }
-  }
-
   /**
    * Call server API for ListBlob on the blob endpoint. This API returns a limited
    * number of blobs and provide a field called as NextMarker which is reference to
@@ -733,6 +711,28 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
     } while (nextMarker != null);
     return blobProperties;
+  }
+
+  public void setPathProperties(final Path path,
+      final Hashtable<String, String> properties, TracingContext tracingContext)
+      throws AzureBlobFileSystemException {
+    try (AbfsPerfInfo perfInfo = startTracking("setPathProperties", "setPathProperties")){
+      LOG.debug("setFilesystemProperties for filesystem: {} path: {} with properties: {}",
+          client.getFileSystem(),
+          path,
+          properties);
+
+      final String commaSeparatedProperties;
+      try {
+        commaSeparatedProperties = convertXmsPropertiesToCommaSeparatedString(properties);
+      } catch (CharacterCodingException ex) {
+        throw new InvalidAbfsRestOperationException(ex);
+      }
+      final AbfsRestOperation op = client
+          .setPathProperties(getRelativePath(path), commaSeparatedProperties,
+              tracingContext);
+      perfInfo.registerResult(op.getResult()).registerSuccess(true);
+    }
   }
 
   public void createFilesystem(TracingContext tracingContext)

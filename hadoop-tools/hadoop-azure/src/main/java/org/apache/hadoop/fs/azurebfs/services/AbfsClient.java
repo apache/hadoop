@@ -1007,7 +1007,6 @@ public class AbfsClient implements Closeable {
   }
 
   /**
-<<<<<<< HEAD
    * Caller of <a href = "https://learn.microsoft.com/en-us/rest/api/storageservices/copy-blob">
    * copyBlob API</a>. This is an asynchronous API, it returns copyId and expects client
    * to poll the server on the destination and check the copy-progress.
@@ -1061,8 +1060,6 @@ public class AbfsClient implements Closeable {
   }
 
   /**
-=======
->>>>>>> ABFS_3.3.2_dev_list
    * @return the properties returned from server.
    * @throws AzureBlobFileSystemException in case it is not a 404 error or some other exception
    * which was not able to be retried.
