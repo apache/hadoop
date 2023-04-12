@@ -342,9 +342,8 @@ public class ContainerManagerImpl extends CompositeService implements
     dispatcher = new AsyncDispatcher("NM ContainerManager dispatcher");
 
     if (!nmDispatherMetricEnabled) {
-        return dispatcher;
+      return dispatcher;
     }
-
 
     GenericEventTypeMetrics<ContainerEventType> containerEventTypeMetrics =
         GenericEventTypeMetricsManager.create(dispatcher.getName(), ContainerEventType.class);
