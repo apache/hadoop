@@ -37,9 +37,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.Path;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
@@ -1048,7 +1048,7 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  @org.apache.hadoop.classification.VisibleForTesting
+  @VisibleForTesting
   AbfsRestOperation getCopyBlobOperation(final URL url,
       final List<AbfsHttpHeader> requestHeaders) {
     return new AbfsRestOperation(
@@ -1134,14 +1134,24 @@ public class AbfsClient implements Closeable {
 
   private String removeInitialSlash(final String prefix) {
     int len = prefix.length();
+    char slash = FORWARD_SLASH.charAt(0);
     for (int i = 0; i < len; i++) {
-      if (prefix.charAt(i) != '/') {
+      if (prefix.charAt(i) != slash) {
         return prefix.substring(i);
       }
     }
     return null;
   }
 
+  /**
+   * Deletes the blob for which the path is given.
+   *
+   * @param blobPath path on which blob has to be deleted.
+   * @param tracingContext tracingContext object for tracing the server calls.
+   *
+   * @throws AzureBlobFileSystemException exception thrown from server or due to
+   * network issue.
+   */
   public void deleteBlobPath(final Path blobPath,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();

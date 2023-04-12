@@ -465,6 +465,12 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     }
   }
 
+  /**
+   * Parse the stream from the response and set {@link #blobList} field of this
+   * class.
+   *
+   * @param stream inputStream from the server-response.
+   */
   private void parseListBlobResponse(final InputStream stream) {
     try {
       final SAXParser saxParser = saxParserThreadLocal.get();

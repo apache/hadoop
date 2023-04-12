@@ -46,6 +46,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
+
 /**
  * For a directory enabled for atomic-rename, before rename starts, a
  * file with -RenamePending.json suffix is created. In this file, the states required
@@ -159,7 +161,7 @@ public class RenameAtomicityUtils {
         newFolderName.textValue())) {
       RenamePendingFileInfo renamePendingFileInfo = new RenamePendingFileInfo();
       renamePendingFileInfo.destination = new Path(newFolderName.textValue());
-      String srcDir = oldFolderName.textValue() + "/";
+      String srcDir = oldFolderName.textValue() + FORWARD_SLASH;
       List<Path> srcPaths = new ArrayList<>();
       List<String> destinationSuffix = new ArrayList<>();
       JsonNode fileList = json.get("FileList");
@@ -283,7 +285,7 @@ public class RenameAtomicityUtils {
           .equals(srcPath.toUri().getPath())) {
         noPrefix = StringUtils.removeStart(
             blobPropertyList.get(i).getPath().toUri().getPath(),
-            srcPath.toUri().getPath() + "/");
+            srcPath.toUri().getPath() + FORWARD_SLASH);
       } else {
         noPrefix = "";
       }

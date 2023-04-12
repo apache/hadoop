@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DIRECTORY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HDI_ISFOLDER;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.INVALID_XML;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 
 /**
  * Parses the response inputSteam and populates an object of {@link BlobList}. Parsing
@@ -138,8 +139,8 @@ public class BlobListXmlParser extends DefaultHandler {
     if (parentNode.equals(AbfsHttpConstants.BLOB)) {
       if (currentNode.equals(AbfsHttpConstants.NAME)) {
         currentBlobProperty.setName(value);
-        currentBlobProperty.setPath(new Path("/" + value));
-        currentBlobProperty.setUrl(url + "/" + value);
+        currentBlobProperty.setPath(new Path(ROOT_PATH + value));
+        currentBlobProperty.setUrl(url + ROOT_PATH + value);
       }
     }
     /*

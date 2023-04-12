@@ -43,9 +43,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -426,7 +426,6 @@ public class AzureBlobFileSystem extends FileSystem
       LOG.debug("Check if the destination is subDirectory");
       while (nestedDstParent != null) {
         if (makeQualified(nestedDstParent).equals(qualifiedSrcPath)) {
-          //testRenameChildDirForbidden.
           LOG.info("Rename src: {} dst: {} failed as dst is subDir of src",
               qualifiedSrcPath, qualifiedDstPath);
           return false;
@@ -1694,7 +1693,7 @@ public class AzureBlobFileSystem extends FileSystem
     return clientCorrelationId;
   }
 
-  @org.apache.hadoop.classification.VisibleForTesting
+  @VisibleForTesting
   void setAbfsStore(final AzureBlobFileSystemStore abfsStore) {
     this.abfsStore = abfsStore;
   }

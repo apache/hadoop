@@ -144,6 +144,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UND
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_ABORTED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_FAILED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_SUCCESS;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HDI_ISFOLDER;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
@@ -534,7 +535,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             tracingContext);
         try {
           if (dstBlobProperty.getCopySourceUrl() != null &&
-              ("/" + client.getFileSystem() + srcPath.toUri().getPath()).equals(
+              (ROOT_PATH + client.getFileSystem() + srcPath.toUri().getPath()).equals(
                   new URL(dstBlobProperty.getCopySourceUrl()).toURI()
                       .getPath())) {
             return;
@@ -546,11 +547,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       throw ex;
     }
     final String progress = getCopyBlobProgress(copyOp);
-    if (COPY_STATUS_SUCCESS.equals(progress)) {
+    if (COPY_STATUS_SUCCESS.equalsIgnoreCase(progress)) {
       return;
     }
     final String copyId = copyOp.getResult().getResponseHeader(X_MS_COPY_ID);
-    while (true) {//TODO: better condition.
+    while (true) {
       if (handleCopyInProgress(dstPath, tracingContext, copyId)) {
         return;
       }
@@ -582,16 +583,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     BlobProperty blobProperty = getBlobProperty(dstPath,
         tracingContext);
     if (blobProperty != null && copyId.equals(blobProperty.getCopyId())) {
-      if (COPY_STATUS_SUCCESS.equals(blobProperty.getCopyStatus())) {
+      if (COPY_STATUS_SUCCESS.equalsIgnoreCase(blobProperty.getCopyStatus())) {
         return true;
       }
-      if (COPY_STATUS_FAILED.equals(blobProperty.getCopyStatus())) {
+      if (COPY_STATUS_FAILED.equalsIgnoreCase(blobProperty.getCopyStatus())) {
         throw new AbfsRestOperationException(
             COPY_BLOB_FAILED.getStatusCode(), COPY_BLOB_FAILED.getErrorCode(),
             null,
             new Exception(COPY_BLOB_FAILED.getErrorCode()));
       }
-      if (COPY_STATUS_ABORTED.equals(blobProperty.getCopyStatus())) {
+      if (COPY_STATUS_ABORTED.equalsIgnoreCase(blobProperty.getCopyStatus())) {
         throw new AbfsRestOperationException(
             COPY_BLOB_ABORTED.getStatusCode(), COPY_BLOB_ABORTED.getErrorCode(),
             null,
@@ -697,8 +698,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     String nextMarker = null;
     if (prefix == null) {
       prefix = sourceDirBlobPath.toUri().getPath() + (absoluteDirSearch
-          ? "/"
-          : "");
+          ? ROOT_PATH
+          : EMPTY_STRING);
     }
     do {
       AbfsRestOperation op = client.getListBlobs(
@@ -1264,7 +1265,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     if (sourcePathStr.equals(srcBlobPropertyPathStr)) {
       return destinationDir;
     }
-    return new Path(destinationPathStr + "/" + srcBlobPropertyPathStr.substring(
+    return new Path(destinationPathStr + ROOT_PATH + srcBlobPropertyPathStr.substring(
         sourcePathStr.length()));
   }
 
@@ -1919,6 +1920,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
               continue;
             }
+            throw ex;
           }
         }
       }
