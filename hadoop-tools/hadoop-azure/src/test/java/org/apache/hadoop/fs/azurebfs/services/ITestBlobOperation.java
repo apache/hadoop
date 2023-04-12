@@ -71,7 +71,7 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
     public ITestBlobOperation() throws Exception {
         super.setup();
         fs = getFileSystem();
-        PrefixMode prefixMode = fs.getPrefixMode();
+        PrefixMode prefixMode = getPrefixMode(fs);
         Assume.assumeTrue(prefixMode == PrefixMode.BLOB);
     }
 

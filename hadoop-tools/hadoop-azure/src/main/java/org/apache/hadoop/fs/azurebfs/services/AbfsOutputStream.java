@@ -27,18 +27,22 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.UUID;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.hadoop.fs.azurebfs.Abfs;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.utils.InsertionOrderConcurrentHashMap;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
+import org.checkerframework.checker.units.qual.K;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -125,16 +129,13 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   private final DataBlocks.BlockFactory blockFactory;
 
   /** Current data block. Null means none currently active. */
-  private DataBlocks.DataBlock activeBlock;
+  private AbfsBlock activeBlock;
 
   /** Count of blocks uploaded. */
   private long blockCount = 0;
 
   /** The size of a single block. */
   private final int blockSize;
-
-  /** The blockId of each block should be of the same length. */
-  private static final int BLOCK_ID_LENGTH = 60;
 
   private final InsertionOrderConcurrentHashMap<BlockWithId, BlockStatus> map =
           new InsertionOrderConcurrentHashMap<>();
@@ -205,7 +206,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     }
     // create that first block. This guarantees that an open + close sequence
     // writes a 0-byte entry.
-    createBlockIfNeeded();
+    if (prefixMode == PrefixMode.DFS) {
+      createBlockIfNeeded(position);
+    }
   }
 
   public synchronized InsertionOrderConcurrentHashMap<BlockWithId, BlockStatus> getMap() {
@@ -234,6 +237,18 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     }
   }
 
+  public DataBlocks.BlockFactory getBlockFactory() {
+    return blockFactory;
+  }
+
+  public long getBlockCount() {
+    return blockCount;
+  }
+
+  public int getBlockSize() {
+    return blockSize;
+  }
+
   /**
    * Returns block id's which are committed for the blob.
    * @param path The blob path.
@@ -246,18 +261,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     final AbfsRestOperation op = client.getBlockList(path, tracingContext);
     committedBlockIdList = op.getResult().getBlockIdList();
     return committedBlockIdList;
-  }
-
-  /**
-   * Helper method that generates blockId.
-   * @param position The offset needed to generate blockId.
-   * @return String representing the block ID generated.
-   */
-  private String generateBlockId(long position) {
-    String blockId = String.format("%d", position);
-    byte[] blockIdByteArray = new byte[BLOCK_ID_LENGTH];
-    System.arraycopy(blockId.getBytes(), 0, blockIdByteArray, 0, Math.min(BLOCK_ID_LENGTH, blockId.length()));
-    return new String(Base64.encodeBase64(blockIdByteArray), StandardCharsets.UTF_8);
   }
 
   private String createOutputStreamId() {
@@ -319,9 +322,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
 
-    DataBlocks.DataBlock block = createBlockIfNeeded();
-    int written = block.write(data, off, length);
-    int remainingCapacity = block.remainingCapacity();
+    AbfsBlock block = createBlockIfNeeded(off);
+    // Put entry in map with status as NEW which is changed to SUCCESS when successfully appended.
+    getMap().put(new BlockWithId(block.getBlockId(), off), BlockStatus.NEW);
+    int written = block.getActiveBlock().write(data, off, length);
+    int remainingCapacity = block.getActiveBlock().remainingCapacity();
 
     if (written < length) {
       // Number of bytes to write is more than the data block capacity,
@@ -346,12 +351,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    * @return the active block; null if there isn't one.
    * @throws IOException on any failure to create
    */
-  private synchronized DataBlocks.DataBlock createBlockIfNeeded()
+  private synchronized AbfsBlock createBlockIfNeeded(long offset)
       throws IOException {
     if (activeBlock == null) {
       blockCount++;
-      activeBlock = blockFactory
-          .create(blockCount, this.blockSize, outputStreamStatistics);
+      activeBlock = new AbfsBlock(this, offset);
     }
     return activeBlock;
   }
@@ -380,17 +384,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    * @param blockToUpload    block to upload.
    * @throws IOException     upload failure
    */
-  private void uploadBlockAsync(DataBlocks.DataBlock blockToUpload,
+  private void uploadBlockAsync(AbfsBlock blockToUpload,
                                 boolean isFlush, boolean isClose)
           throws IOException {
     if (this.isAppendBlob) {
-      if (prefixMode == PrefixMode.BLOB) {
-        return;
-      }
       writeAppendBlobCurrentBufferToService();
-      return;
-    }
-    if (enableSmallWriteOptimization && prefixMode == PrefixMode.BLOB) {
       return;
     }
     if (!blockToUpload.hasData()) {
@@ -431,13 +429,15 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
               op = client.append(path, blockUploadData.toByteArray(), reqParams,
                       cachedSasToken.get(), new TracingContext(tracingContext));
             } else {
-              // Generate blockId based on offset.
-              String blockId = generateBlockId(offset);
-              // Put entry in map with status as UNCOMMITTED which is changed to SUCCESS when successfully appended.
-              map.put(new BlockWithId(blockId, offset), BlockStatus.UNCOMMITTED);
               try {
-                op = client.append(blockId, path, blockUploadData.toByteArray(), reqParams,
-                        cachedSasToken.get(), new TracingContext(tracingContext), getETag(), map);
+                op = client.append(blockToUpload.getBlockId(), path, blockUploadData.toByteArray(), reqParams,
+                        cachedSasToken.get(), new TracingContext(tracingContext), getETag());
+                BlockWithId key = new BlockWithId(blockToUpload.getBlockId(), position);
+                if (!getMap().containsKey(key)) {
+                  throw new Exception("Block is missing with blockId " + blockToUpload.getBlockId());
+                } else {
+                  getMap().put(key, BlockStatus.SUCCESS);
+                }
               } catch (AbfsRestOperationException ex) {
                 // The mechanism to fall back to DFS endpoint if blob operation is not supported.
                 if (ex.getStatusCode() == HTTP_CONFLICT && ex.getMessage().contains(BLOB_OPERATION_NOT_SUPPORTED)) {
@@ -489,7 +489,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    *
    * @return the active block; null if there isn't one.
    */
-  private synchronized DataBlocks.DataBlock getActiveBlock() {
+  private synchronized AbfsBlock getActiveBlock() {
     return activeBlock;
   }
 
@@ -681,7 +681,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    *                     the dataBlock or while closing the BlockUploadData.
    */
   private void writeAppendBlobCurrentBufferToService() throws IOException {
-    DataBlocks.DataBlock activeBlock = getActiveBlock();
+    AbfsBlock activeBlock = getActiveBlock();
     // No data, return.
     if (!hasActiveBlockDataToUpload()) {
       return;
@@ -765,45 +765,41 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
         op = client.flush(path, offset, retainUncommitedData, isClose,
                 cachedSasToken.get(), leaseId, new TracingContext(tracingContext));
       } else {
-        // Small write optimization and appendBlob is not supported for blob endpoint.
-        if (enableSmallWriteOptimization || isAppendBlob) {
-          return;
-        }
         // Adds all the committed blocks if available to the list of blocks to be added in putBlockList.
         blockIdList.addAll(committedBlockEntries);
         boolean successValue = true;
         String failedBlockId = "";
         BlockStatus success = BlockStatus.SUCCESS;
+
+        // If there are no entries in map, then we have nothing to flush.
+        if (getMap().size() == 0) {
+          return;
+        }
+
+        List<BlockWithId> dequeList = new ArrayList<>(getMap().getQueue());
+        int mapEntry = 0;
         // If any of the entry in the map doesn't have the status of SUCCESS, fail the flush.
         for (Map.Entry<BlockWithId, BlockStatus> entry : getMap().entrySet()) {
           if (!success.equals(entry.getValue())) {
             successValue = false;
             failedBlockId = entry.getKey().getBlockId();
             break;
+          } else {
+            if (!entry.getKey().equals(dequeList.get(mapEntry))) {
+              throw new IOException("Map entry " + entry.getKey() + "is not at correct position");
+            }
+            blockIdList.add(entry.getKey().getBlockId());
           }
         }
         if (!successValue) {
           throw new IOException("Append failed for blockId " + failedBlockId);
-        }
-        for (BlockWithId obj : getMap().getQueue()) {
-          if (obj != null) {
-            blockIdList.add(obj.getBlockId());
-          }
-        }
-        // If there are no entries in map, then we have nothing to flush.
-        if (blockIdList.size() == committedBlockEntries.size()) {
-          return;
         }
         // Generate the xml with the list of blockId's to generate putBlockList call.
         String blockListXml = generateBlockListXml(blockIdList);
         op = client.flush(blockListXml.getBytes(), path,
                 isClose, cachedSasToken.get(), leaseId, getETag(), new TracingContext(tracingContext));
         setETag(op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG));
-        map.clear();
-      }
-      if (checkIsNull(op)) {
-        map.clear();
-        throw new IOException("Flush failed for given path " + path);
+        getMap().clear();
       }
       cachedSasToken.update(op.getSasToken());
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
@@ -817,10 +813,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       throw lastError;
     }
     this.lastFlushOffset = offset;
-  }
-
-  protected boolean checkIsNull(AbfsRestOperation op) {
-    return op == null;
   }
 
   /**

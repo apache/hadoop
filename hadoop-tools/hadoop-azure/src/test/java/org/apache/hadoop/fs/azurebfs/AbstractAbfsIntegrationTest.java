@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -426,6 +427,10 @@ public abstract class AbstractAbfsIntegrationTest extends
 
   public AzureBlobFileSystemStore getAbfsStore(final AzureBlobFileSystem fs) {
     return fs.getAbfsStore();
+  }
+
+  public PrefixMode getPrefixMode(final AzureBlobFileSystem fs) {
+    return fs.getAbfsStore().getAbfsConfiguration().getPrefixMode();
   }
 
   public AbfsClient getClient(final AzureBlobFileSystem fs) {

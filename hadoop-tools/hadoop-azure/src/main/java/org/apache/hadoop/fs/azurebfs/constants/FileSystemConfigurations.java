@@ -133,5 +133,8 @@ public final class FileSystemConfigurations {
   public static final String DATA_BLOCKS_BUFFER_DEFAULT =
       DATA_BLOCKS_BUFFER_DISK;
 
+  /** The blockId of each block should be of the same length. */
+  public static final int BLOCK_ID_LENGTH = 60;
+
   private FileSystemConfigurations() {}
 }

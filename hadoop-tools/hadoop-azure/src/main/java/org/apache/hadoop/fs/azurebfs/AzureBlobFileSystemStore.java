@@ -54,6 +54,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -576,6 +577,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       AbfsLease lease = maybeCreateLease(relativePath, tracingContext);
       String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      if (getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
+        if (isAppendBlob) {
+          throw new IOException("AppendBlob is not supported for blob endpoint");
+        }
+        if (abfsConfiguration.isSmallWriteOptimizationEnabled()) {
+          throw new IOException("Small write optimization is not supported for blob endpoint");
+        }
+      }
 
       return new AbfsOutputStream(
           populateAbfsOutputStreamContext(

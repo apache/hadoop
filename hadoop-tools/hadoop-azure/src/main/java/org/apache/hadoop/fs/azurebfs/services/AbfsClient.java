@@ -636,14 +636,12 @@ public class AbfsClient implements Closeable {
    * @param cachedSasToken The cachedSasToken if available.
    * @param tracingContext Tracing context of the operation.
    * @param eTag Etag of the blob to prevent parallel writer situations.
-   * @param map The map to update the status of the blob.
    * @return AbfsRestOperation op.
    * @throws AzureBlobFileSystemException
    */
   public AbfsRestOperation append(final String blockId, final String path, final byte[] buffer,
                                   AppendRequestParameters reqParams, final String cachedSasToken,
-                                  TracingContext tracingContext, String eTag,
-                                  InsertionOrderConcurrentHashMap<BlockWithId, BlockStatus> map)
+                                  TracingContext tracingContext, String eTag)
           throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     if (reqParams.getLeaseId() != null) {
@@ -671,20 +669,7 @@ public class AbfsClient implements Closeable {
             reqParams.getoffset(),
             reqParams.getLength(),
             sasTokenForReuse);
-    BlockWithId block = new BlockWithId(blockId, reqParams.getPosition());
-    try {
-      op.execute(tracingContext);
-      if (map.containsKey(block)) {
-        map.put(block, BlockStatus.SUCCESS);
-      }
-    } catch (AzureBlobFileSystemException e) {
-      map.clear();
-      // If we have no HTTP response, throw the original exception.
-      if (!op.hasResult()) {
-        throw e;
-      }
-      throw e;
-    }
+    op.execute(tracingContext);
     return op;
   }
 

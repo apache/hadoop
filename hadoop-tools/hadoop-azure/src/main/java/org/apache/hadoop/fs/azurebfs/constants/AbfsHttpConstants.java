@@ -49,9 +49,10 @@ public final class AbfsHttpConstants {
   public static final String TOKEN_VERSION = "2";
   public static final String BLOCK = "block";
   public static final String BLOCKLIST = "blocklist";
-  public static final String COMP_BLOCKLIST = "comp=blocklist";
   public static final String COMMITTED = "committed";
-  public static final String UNCOMMITTED = "uncommitted";
+  public static final String COMMITTED_BLOCKS = "CommittedBlocks";
+  public static final String BLOCK_NAME = "Block";
+  public static final String NAME = "Name";
 
   public static final String JAVA_VENDOR = "java.vendor";
   public static final String JAVA_VERSION = "java.version";

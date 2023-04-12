@@ -1500,7 +1500,7 @@ public class AzureBlobFileSystem extends FileSystem
     return abfsStore.getClient();
   }
 
-  public PrefixMode getPrefixMode() {
+  PrefixMode getPrefixMode() {
     return prefixMode;
   }
 

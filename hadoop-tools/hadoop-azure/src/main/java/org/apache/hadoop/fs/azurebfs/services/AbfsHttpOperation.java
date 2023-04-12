@@ -30,6 +30,11 @@ import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
@@ -45,8 +50,16 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COMP_BLOCKLIST;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCKLIST;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCK_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COMMITTED_BLOCKS;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_COMP;
 
 /**
  * Represents an HTTP operation.
@@ -398,7 +411,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         // this is a list operation and need to retrieve the data
         // need a better solution
         if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method) && buffer == null) {
-          if (url.toString().contains(COMP_BLOCKLIST)) {
+          if (url.toString().contains(QUERY_PARAM_COMP + "=" + BLOCKLIST)) {
             parseBlockListResponse(stream);
           } else {
             parseListFilesResponse(stream);
@@ -426,6 +439,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       } catch (IOException ex) {
         LOG.error("UnexpectedError: ", ex);
         throw ex;
+      } catch (ParserConfigurationException e) {
+        throw new RuntimeException("Check parser configuration", e);
+      } catch (SAXException e) {
+        throw new RuntimeException("SAX parser exception", e);
       } finally {
         if (this.isTraceEnabled) {
           this.recvResponseTimeMs += elapsedTimeMs(startTime);
@@ -452,9 +469,9 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * Parses the get block list response and returns list of committed blocks.
    *
    * @param stream InputStream contains the list results.
-   * @throws IOException
+   * @throws IOException, ParserConfigurationException, SAXException
    */
-  private void parseBlockListResponse(final InputStream stream) throws IOException {
+  private void parseBlockListResponse(final InputStream stream) throws IOException, ParserConfigurationException, SAXException {
     if (stream == null) {
       return;
     }
@@ -464,30 +481,27 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       return;
     }
 
-    BufferedReader in = new BufferedReader(new InputStreamReader(stream));
-    String inputLine;
-    StringBuilder response = new StringBuilder();
-    while ((inputLine = in.readLine()) != null) {
-      response.append(inputLine);
-    }
-    in.close();
+    // Convert the input stream to a Document object
+    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+    Document doc = factory.newDocumentBuilder().parse(stream);
 
-    // Extract the list of block IDs from the response
-    String xmlResponse = response.toString();
-    int startIndex = xmlResponse.indexOf("<CommittedBlocks>");
-    int endIndex = xmlResponse.indexOf("</CommittedBlocks>");
-    if (startIndex > 0 && endIndex > 0) {
-      String committedBlocksXml = xmlResponse.substring(startIndex, endIndex);
-      startIndex = committedBlocksXml.indexOf("<Block>");
-      while (startIndex >= 0) {
-        endIndex = committedBlocksXml.indexOf("</Block>", startIndex);
-        String blockXml = committedBlocksXml.substring(startIndex, endIndex);
-        startIndex = committedBlocksXml.indexOf("<Block>", endIndex);
-
-        int idStartIndex = blockXml.indexOf("<Name>");
-        int idEndIndex = blockXml.indexOf("</Name>", idStartIndex);
-        String blockId = blockXml.substring(idStartIndex + 6, idEndIndex);
-        blockIdList.add(blockId);
+// Find the CommittedBlocks element and extract the list of block IDs
+    NodeList committedBlocksList = doc.getElementsByTagName(COMMITTED_BLOCKS);
+    if (committedBlocksList.getLength() > 0) {
+      Node committedBlocks = committedBlocksList.item(0);
+      NodeList blockList = committedBlocks.getChildNodes();
+      for (int i = 0; i < blockList.getLength(); i++) {
+        Node block = blockList.item(i);
+        if (block.getNodeName().equals(BLOCK_NAME)) {
+          NodeList nameList = block.getChildNodes();
+          for (int j = 0; j < nameList.getLength(); j++) {
+            Node name = nameList.item(j);
+            if (name.getNodeName().equals(NAME)) {
+              String blockId = name.getTextContent();
+              blockIdList.add(blockId);
+            }
+          }
+        }
       }
     }
   }
