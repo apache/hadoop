@@ -200,6 +200,11 @@ public class MockS3AFileSystem extends S3AFileSystem {
     return true;
   }
 
+  @Override
+  public boolean isMultipartUploadEnabled() {
+    return true;
+  }
+
   /**
    * Make operation to set the s3 client public.
    * @param client client.

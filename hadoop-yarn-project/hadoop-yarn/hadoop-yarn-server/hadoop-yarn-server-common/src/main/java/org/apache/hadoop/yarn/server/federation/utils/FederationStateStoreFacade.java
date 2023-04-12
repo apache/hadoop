@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.Random;
+import java.util.Collection;
 
 import javax.cache.Cache;
 import javax.cache.CacheManager;
@@ -93,6 +94,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterResponse;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1210,5 +1212,24 @@ public final class FederationStateStoreFacade {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Get active subclusters.
+   *
+   * @return We will return a list of active subclusters as a Collection.
+   */
+  public Collection<SubClusterInfo> getActiveSubClusters()
+      throws NotFoundException {
+    try {
+      Map<SubClusterId, SubClusterInfo> subClusterMap = getSubClusters(true);
+      if (MapUtils.isEmpty(subClusterMap)) {
+        throw new NotFoundException("Not Found SubClusters.");
+      }
+      return subClusterMap.values();
+    } catch (Exception e) {
+      LOG.error("getActiveSubClusters failed.", e);
+      return null;
+    }
   }
 }
