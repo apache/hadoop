@@ -82,11 +82,11 @@ public abstract class DefaultAuditLogger extends HdfsAuditLogger {
   public abstract void logAuditMessage(String message);
 
   public abstract void logAuditEvent(boolean succeeded, String userName,
-      InetAddress addr, String cmd, String src, String dst, FileStatus status,
+      InetAddress addr, int port, String cmd, String src, String dst, FileStatus status,
       UserGroupInformation ugi, DelegationTokenSecretManager dtSecretManager);
 
   public abstract void logAuditEvent(boolean succeeded, String userName,
-      InetAddress addr, String cmd, String src, String dst, FileStatus status,
+      InetAddress addr, int port, String cmd, String src, String dst, FileStatus status,
       CallerContext callerContext, UserGroupInformation ugi,
       DelegationTokenSecretManager dtSecretManager);
 

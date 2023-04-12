@@ -66,7 +66,7 @@ public class TopAuditLogger implements AuditLogger {
 
   @Override
   public void logAuditEvent(boolean succeeded, String userName,
-      InetAddress addr, String cmd, String src, String dst, FileStatus status) {
+      InetAddress addr, int port, String cmd, String src, String dst, FileStatus status) {
     try {
       topMetrics.report(succeeded, userName, addr, cmd, src, dst, status);
     } catch (Throwable t) {
@@ -79,6 +79,7 @@ public class TopAuditLogger implements AuditLogger {
       sb.append("allowed=").append(succeeded).append("\t");
       sb.append("ugi=").append(userName).append("\t");
       sb.append("ip=").append(addr).append("\t");
+      sb.append("port=").append(port).append("\t");
       sb.append("cmd=").append(cmd).append("\t");
       sb.append("src=").append(src).append("\t");
       sb.append("dst=").append(dst).append("\t");

@@ -86,6 +86,7 @@ public class TestAuditLogs {
       "allowed=.*?\\s" +
       "ugi=.*?\\s" +
       "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
+      "port=.*?\\s" +
       "cmd=.*?\\ssrc=.*?\\sdst=null\\s" +
       "perm=.*?");
   private static final Pattern SUCCESS_PATTERN = Pattern.compile(

@@ -320,7 +320,7 @@ public class TestFSNamesystem {
 
     @Override
     public void logAuditEvent(boolean succeeded, String userName,
-        InetAddress addr, String cmd, String src, String dst, FileStatus stat) {
+        InetAddress addr, int port, String cmd, String src, String dst, FileStatus stat) {
     }
   }
 }

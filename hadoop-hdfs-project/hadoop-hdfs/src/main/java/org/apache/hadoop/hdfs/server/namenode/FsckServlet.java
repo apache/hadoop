@@ -50,6 +50,7 @@ public class FsckServlet extends DfsServlet {
     final PrintWriter out = response.getWriter();
     final InetAddress remoteAddress =
       InetAddress.getByName(request.getRemoteAddr());
+    final int remotePort = request.getRemotePort();
     final ServletContext context = getServletContext();
     final Configuration conf = NameNodeHttpServer.getConfFromContext(context);
 
@@ -71,7 +72,7 @@ public class FsckServlet extends DfsServlet {
           fsck.fsck();
           success = true;
         } finally {
-          namesystem.logFsckEvent(success, auditSource, remoteAddress);
+          namesystem.logFsckEvent(success, auditSource, remoteAddress, remotePort);
         }
         return null;
       });
