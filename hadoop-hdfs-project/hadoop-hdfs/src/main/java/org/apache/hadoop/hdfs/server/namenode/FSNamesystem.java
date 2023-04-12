@@ -43,6 +43,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_PATHNAME_FORBIDDEN_CHARACTERS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_DEFAULT;
@@ -676,6 +677,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final MessageDigest digest;
 
   /**
+   * Includes all forbidden characters in pathname when
+   * create/createSymlink/mkdirs/rename method works.
+   */
+  private volatile String[] pathnameForbiddenCharacters = null;
+
+  /**
    * Notify that loading of this FSDirectory is complete, and
    * it is imageLoaded for use
    */
@@ -1055,6 +1062,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.isGetBlocksCheckOperationEnabled = conf.getBoolean(
           DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY,
           DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_DEFAULT);
+      this.pathnameForbiddenCharacters = conf.getStrings(
+          DFS_PATHNAME_FORBIDDEN_CHARACTERS);
+      DFSUtil.formatPathnameForbiddenCharacters(pathnameForbiddenCharacters);
 
     } catch(IOException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
@@ -1950,6 +1960,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } finally {
       readUnlock("getBlocks");
     }
+  }
+
+  public void reloadPathnameForbiddenCharacters(Configuration conf) {
+    this.pathnameForbiddenCharacters = conf.getStrings(
+        DFS_PATHNAME_FORBIDDEN_CHARACTERS);
+    DFSUtil.formatPathnameForbiddenCharacters(pathnameForbiddenCharacters);
+    LOG.info("Pathname forbids characters: "
+        + Arrays.toString(this.pathnameForbiddenCharacters));
+  }
+
+  public String[] getPathnameForbiddenCharacters() {
+    return pathnameForbiddenCharacters;
   }
 
   /**

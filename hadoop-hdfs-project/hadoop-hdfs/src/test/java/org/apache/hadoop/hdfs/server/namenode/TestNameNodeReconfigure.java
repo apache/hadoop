@@ -30,6 +30,7 @@ import org.junit.After;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_PATHNAME_FORBIDDEN_CHARACTERS;
 import static org.junit.Assert.*;
 
 import org.slf4j.Logger;
@@ -650,6 +651,31 @@ public class TestNameNodeReconfigure {
           DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK, "10000");
       assertEquals(datanodeManager.getDatanodeAdminManager().getBlocksPerLock(), 10000);
     }
+  }
+
+  @Test
+  public void testReconfigurePathnameForbiddenCharacters()
+      throws ReconfigurationException, IOException {
+    // shutdown cluster
+    cluster.shutdown();
+    Configuration conf = new HdfsConfiguration();
+    cluster = new MiniDFSCluster.Builder(conf).build();
+    cluster.waitActive();
+    NameNode nameNode = cluster.getNameNode();
+
+    // verify default pathnameForbiddenCharacters.
+    assertArrayEquals(DFS_PATHNAME_FORBIDDEN_CHARACTERS + " has wrong value",
+        null, nameNode.namesystem.getPathnameForbiddenCharacters());
+
+    // verify reconfiguration.
+    nameNode.reconfigureProperty(DFS_PATHNAME_FORBIDDEN_CHARACTERS, "!,@,#,$,%,^, ,*,|,&");
+    assertArrayEquals(DFS_PATHNAME_FORBIDDEN_CHARACTERS + " has wrong value",
+        new String[]{"!", "@", "#", "$", "%", "^", " ", "*", "|", "&"}, nameNode.namesystem.getPathnameForbiddenCharacters());
+
+    // revert to null
+    nameNode.reconfigureProperty(DFS_PATHNAME_FORBIDDEN_CHARACTERS, null);
+    assertArrayEquals(DFS_PATHNAME_FORBIDDEN_CHARACTERS + " has wrong value",
+        null, nameNode.namesystem.getPathnameForbiddenCharacters());
   }
 
   @After

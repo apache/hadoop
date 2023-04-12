@@ -30,6 +30,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSUtil.checkForbiddenCharacters;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.MAX_PATH_DEPTH;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.MAX_PATH_LENGTH;
 import static org.apache.hadoop.util.Time.now;
@@ -810,6 +811,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       String storagePolicy)
       throws IOException {
     checkNNStartup();
+    if (checkForbiddenCharacters(src, namesystem.getPathnameForbiddenCharacters())) {
+      throw new InvalidPathException(src + ", including forbidden characters: " +
+          Arrays.toString(namesystem.getPathnameForbiddenCharacters()));
+    }
     String clientMachine = getClientMachine();
     stateChangeLog.debug("*DIR* NameNode.create: file {} for {} at {}.",
         src, clientName, clientMachine);
@@ -1046,6 +1051,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public boolean rename(String src, String dst) throws IOException {
     checkNNStartup();
+    if (checkForbiddenCharacters(dst, namesystem.getPathnameForbiddenCharacters())) {
+      throw new InvalidPathException(dst + ", including forbidden characters: " +
+          Arrays.toString(namesystem.getPathnameForbiddenCharacters()));
+    }
     stateChangeLog.debug("*DIR* NameNode.rename: {} to {}.", src, dst);
     if (!checkPathLength(dst)) {
       throw new IOException("rename: Pathname too long.  Limit "
@@ -1095,6 +1104,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void rename2(String src, String dst, Options.Rename... options)
       throws IOException {
     checkNNStartup();
+    if (checkForbiddenCharacters(dst, namesystem.getPathnameForbiddenCharacters())) {
+      throw new InvalidPathException(dst + ", including forbidden characters: " +
+          Arrays.toString(namesystem.getPathnameForbiddenCharacters()));
+    }
     stateChangeLog.debug("*DIR* NameNode.rename: {} to {}.", src, dst);
     if (!checkPathLength(dst)) {
       throw new IOException("rename: Pathname too long.  Limit "
@@ -1165,6 +1178,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public boolean mkdirs(String src, FsPermission masked, boolean createParent)
       throws IOException {
     checkNNStartup();
+    if (checkForbiddenCharacters(src, namesystem.getPathnameForbiddenCharacters())) {
+      throw new InvalidPathException(src + ", including forbidden characters: " +
+          Arrays.toString(namesystem.getPathnameForbiddenCharacters()));
+    }
     stateChangeLog.debug("*DIR* NameNode.mkdirs: {}.", src);
     if (!checkPathLength(src)) {
       throw new IOException("mkdirs: Pathname too long.  Limit " 
@@ -1551,6 +1568,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void createSymlink(String target, String link, FsPermission dirPerms,
       boolean createParent) throws IOException {
     checkNNStartup();
+    if (checkForbiddenCharacters(link, namesystem.getPathnameForbiddenCharacters())) {
+      throw new InvalidPathException(link + ", including forbidden characters: " +
+          Arrays.toString(namesystem.getPathnameForbiddenCharacters()));
+    }
     namesystem.checkOperation(OperationCategory.WRITE);
     CacheEntry cacheEntry = getCacheEntry();
     if (cacheEntry != null && cacheEntry.isSuccess()) {

@@ -873,6 +873,26 @@ public class TestDFSUtil {
     assertFalse(DFSUtil.isValidName("/foo/:/bar"));
     assertFalse(DFSUtil.isValidName("/foo:bar"));
   }
+
+  @Test
+  public void testCheckForbiddenCharacters() {
+    String[] forbiddenCharacters = {"&", "|", "*", " "};
+    String[] nullForbiddenCharactersArray = null;
+    String[] illegalPathname = {"/fo o", "/fo*o", "/fo|o", "/fo&o"};
+    String[] legalPathname = {"/fo!o", "/fo@o", "/fo#o", "/fo$o"};
+    for (String pathname : illegalPathname) {
+      assertTrue(DFSUtil.checkForbiddenCharacters(pathname, forbiddenCharacters));
+    }
+    for (String pathname : illegalPathname) {
+      assertFalse(DFSUtil.checkForbiddenCharacters(pathname, nullForbiddenCharactersArray));
+    }
+    for (String pathname : legalPathname) {
+      assertFalse(DFSUtil.checkForbiddenCharacters(pathname, forbiddenCharacters));
+    }
+    for (String pathname : legalPathname) {
+      assertFalse(DFSUtil.checkForbiddenCharacters(pathname, nullForbiddenCharactersArray));
+    }
+  }
   
   @Test(timeout=5000)
   public void testGetSpnegoKeytabKey() {

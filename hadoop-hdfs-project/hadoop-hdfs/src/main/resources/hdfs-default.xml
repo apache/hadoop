@@ -2889,6 +2889,18 @@
 </property>
 
 <property>
+  <name>dfs.pathname.forbidden.characters</name>
+  <value></value>
+  <description>
+    A comma separated list of characters that are not allowed to be used in pathname
+    when new file or directory is created. This option may be configured both on the
+    server and the client, while config on the client side will be checked first.
+    Recommend to add the character that may lead to ambiguity such as ' ', '*', '|',
+    '&amp;', etc.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.caching.enabled</name>
   <value>true</value>
   <description>

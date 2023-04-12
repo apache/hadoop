@@ -236,6 +236,14 @@ public class DFSUtil {
     return DFSUtilClient.isValidName(src);
   }
 
+  public static boolean checkForbiddenCharacters(String pathname, String[] pathnameForbiddenCharacters) {
+    return DFSUtilClient.checkForbiddenCharacters(pathname, pathnameForbiddenCharacters);
+  }
+
+  public static void formatPathnameForbiddenCharacters(String[] pathnameForbiddenCharacters) {
+    DFSUtilClient.formatPathnameForbiddenCharacters(pathnameForbiddenCharacters);
+  }
+
   /**
    * Checks if a string is a valid path component. For instance, components
    * cannot contain a ":" or "/", and cannot be equal to a reserved component

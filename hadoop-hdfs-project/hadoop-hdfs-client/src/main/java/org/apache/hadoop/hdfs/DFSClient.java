@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.DFSUtilClient.checkForbiddenCharacters;
+import static org.apache.hadoop.hdfs.DFSUtilClient.formatPathnameForbiddenCharacters;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CACHE_DROP_BEHIND_READS;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CACHE_DROP_BEHIND_WRITES;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CACHE_READAHEAD;
@@ -46,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadLocalRandom;
@@ -255,6 +258,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private static volatile boolean disabledStopDeadNodeDetectorThreadForTest =
       false;
 
+  /**
+   * Includes all forbidden characters in pathname when
+   * create/createSymlink/mkdirs/rename method works.
+   */
+  private String[] pathnameForbiddenCharacters = null;
+
   @VisibleForTesting
   public static void setDisabledStopDeadNodeDetectorThreadForTest(
       boolean disabledStopDeadNodeDetectorThreadForTest) {
@@ -413,6 +422,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.saslClient = new SaslDataTransferClient(
         conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
         TrustedChannelResolver.getInstance(conf), nnFallbackToSimpleAuth);
+    this.pathnameForbiddenCharacters = conf.getStrings(
+        HdfsClientConfigKeys.DFS_PATHNAME_FORBIDDEN_CHARACTERS);
+    formatPathnameForbiddenCharacters(pathnameForbiddenCharacters);
   }
 
   /**
@@ -1298,6 +1310,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       String ecPolicyName, String storagePolicy)
       throws IOException {
     checkOpen();
+    if (checkForbiddenCharacters(src, pathnameForbiddenCharacters)) {
+      throw new InvalidPathException(src + ", including forbidden characters: " +
+          Arrays.toString(pathnameForbiddenCharacters));
+    }
     final FsPermission masked = applyUMask(permission);
     LOG.debug("{}: masked={}", src, masked);
     final DFSOutputStream result = DFSOutputStream.newStreamForCreate(this,
@@ -1351,6 +1367,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       long blockSize, Progressable progress, int buffersize,
       ChecksumOpt checksumOpt) throws IOException {
     checkOpen();
+    if (checkForbiddenCharacters(src, pathnameForbiddenCharacters)) {
+      throw new InvalidPathException(src + ", including forbidden characters: " +
+          Arrays.toString(pathnameForbiddenCharacters));
+    }
     CreateFlag.validate(flag);
     DFSOutputStream result = primitiveAppend(src, flag, progress);
     if (result == null) {
@@ -1371,6 +1391,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public void createSymlink(String target, String link, boolean createParent)
       throws IOException {
     checkOpen();
+    if (checkForbiddenCharacters(link, pathnameForbiddenCharacters)) {
+      throw new InvalidPathException(link + ", including forbidden characters: " +
+          Arrays.toString(pathnameForbiddenCharacters));
+    }
     try (TraceScope ignored = newPathTraceScope("createSymlink", target)) {
       final FsPermission dirPerm = applyUMask(null);
       namenode.createSymlink(target, link, dirPerm, createParent);
@@ -1603,6 +1627,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   @Deprecated
   public boolean rename(String src, String dst) throws IOException {
     checkOpen();
+    if (checkForbiddenCharacters(dst, pathnameForbiddenCharacters)) {
+      throw new InvalidPathException(dst + ", including forbidden characters: " +
+          Arrays.toString(pathnameForbiddenCharacters));
+    }
     try (TraceScope ignored = newSrcDstTraceScope("rename", src, dst)) {
       return namenode.rename(src, dst);
     } catch (RemoteException re) {
@@ -1638,6 +1666,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public void rename(String src, String dst, Options.Rename... options)
       throws IOException {
     checkOpen();
+    if (checkForbiddenCharacters(dst, pathnameForbiddenCharacters)) {
+      throw new InvalidPathException(dst + ", including forbidden characters: " +
+          Arrays.toString(pathnameForbiddenCharacters));
+    }
     try (TraceScope ignored = newSrcDstTraceScope("rename2", src, dst)) {
       namenode.rename2(src, dst, options);
     } catch (RemoteException re) {
@@ -2550,6 +2582,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public boolean primitiveMkdir(String src, FsPermission absPermission,
       boolean createParent) throws IOException {
     checkOpen();
+    if (checkForbiddenCharacters(src, pathnameForbiddenCharacters)) {
+      throw new InvalidPathException(src + ", including forbidden characters: " +
+          Arrays.toString(pathnameForbiddenCharacters));
+    }
     if (absPermission == null) {
       absPermission = applyUMaskDir(null);
     }

@@ -181,6 +181,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHEC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.FS_PROTECTED_DIRECTORIES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_PATHNAME_FORBIDDEN_CHARACTERS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY;
@@ -357,7 +358,8 @@ public class NameNode extends ReconfigurableBase implements
           DFS_DATANODE_MAX_NODES_TO_REPORT_KEY,
           DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY,
           DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT,
-          DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK));
+          DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK,
+          DFS_PATHNAME_FORBIDDEN_CHARACTERS));
 
   private static final String USAGE = "Usage: hdfs namenode ["
       + StartupOption.BACKUP.getName() + "] | \n\t["
@@ -2329,6 +2331,8 @@ public class NameNode extends ReconfigurableBase implements
         (property.equals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK))) {
       return reconfigureDecommissionBackoffMonitorParameters(datanodeManager, property,
           newVal);
+    } else if (property.equals(DFS_PATHNAME_FORBIDDEN_CHARACTERS)) {
+      return reconfigurePathnameForbiddenCharacters(newVal);
     } else {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property));
@@ -2636,6 +2640,15 @@ public class NameNode extends ReconfigurableBase implements
     } catch (IllegalArgumentException e) {
       throw new ReconfigurationException(property, newVal, getConf().get(property), e);
     }
+  }
+
+  private String reconfigurePathnameForbiddenCharacters(String newVal) {
+    if (newVal == null) {
+      newVal = "";
+    }
+    getConf().set(DFS_PATHNAME_FORBIDDEN_CHARACTERS, newVal);
+    namesystem.reloadPathnameForbiddenCharacters(getConf());
+    return newVal;
   }
 
   @Override  // ReconfigurableBase

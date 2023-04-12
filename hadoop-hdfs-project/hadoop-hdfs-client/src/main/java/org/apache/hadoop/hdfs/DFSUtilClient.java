@@ -684,6 +684,28 @@ public class DFSUtilClient {
     return true;
   }
 
+  public static boolean checkForbiddenCharacters(String pathname, String[] pathnameForbiddenCharacters) {
+    if (pathnameForbiddenCharacters == null) {
+      return false;
+    }
+    for (int i = 0; i < pathnameForbiddenCharacters.length; i++) {
+      if (pathname.contains(pathnameForbiddenCharacters[i])) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public static void formatPathnameForbiddenCharacters(String[] pathnameForbiddenCharacters) {
+    if (pathnameForbiddenCharacters == null) {
+      return;
+    }
+    for (int i = 0; i < pathnameForbiddenCharacters.length; i++) {
+      String element = pathnameForbiddenCharacters[i].trim();
+      pathnameForbiddenCharacters[i] = element.length() == 0 ? " " : element;
+    }
+  }
+
   /**
    * Converts a time duration in milliseconds into DDD:HH:MM:SS format.
    */
