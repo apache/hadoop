@@ -454,11 +454,12 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   /** Used by FSImage. */
-  public void loadSnapshotFeature(FileDiffList diffs) {
+  public INodeFile loadSnapshotFeature(FileDiffList diffs) {
     final FileWithSnapshotFeature sf = addSnapshotFeature(diffs);
     if (!isInCurrentState()) {
       sf.deleteCurrentFile();
     }
+    return this;
   }
 
   /**
@@ -1098,7 +1099,7 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   public void dumpINodeFile(PrintWriter out, StringBuilder prefix,
-    final int snapshotId) {
+      final int snapshotId) {
     dumpINode(out, prefix, snapshotId);
     out.print(", fileSize=" + computeFileSize(snapshotId));
     // only compare the first block

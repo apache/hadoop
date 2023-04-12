@@ -798,10 +798,7 @@ public class FSImageFormat {
       if (underConstruction) {
         file.toUnderConstruction(clientName, clientMachine);
       }
-      if (fileDiffs != null) {
-        file.loadSnapshotFeature(fileDiffs);
-      }
-      return file;
+      return fileDiffs == null ? file : file.loadSnapshotFeature(fileDiffs);
     } else if (numBlocks == -1) {
       //directory
       
