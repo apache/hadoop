@@ -29,7 +29,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords
     .RemoveFromClusterNodeLabelsRequest;
 
 /**
- * Proto class to handlde RemoveFromClusterNodeLabels request.
+ * Proto class to handle RemoveFromClusterNodeLabels request.
  */
 public class RemoveFromClusterNodeLabelsRequestPBImpl
     extends RemoveFromClusterNodeLabelsRequest {

@@ -62,7 +62,7 @@ public class FSStoreOpHandler {
     registerLog(NODE_LABEL_STORE, RemoveClusterLabelOp.OPCODE,
         RemoveClusterLabelOp.class);
 
-    //NodeAttibute operation
+    //NodeAttribute operation
     registerLog(NODE_ATTRIBUTE, AddNodeToAttributeLogOp.OPCODE,
         AddNodeToAttributeLogOp.class);
     registerLog(NODE_ATTRIBUTE, RemoveNodeToAttributeLogOp.OPCODE,
