@@ -35,6 +35,11 @@ public final class ConfigurationKeys {
    * path to determine HNS status.
    */
   public static final String FS_AZURE_ACCOUNT_IS_HNS_ENABLED = "fs.azure.account.hns.enabled";
+  /**
+   * Enable or disable expect hundred continue header.
+   * Value: {@value}.
+   */
+  public static final String FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED = "fs.azure.account.expect.header.enabled";
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME = "fs.azure.account.key";
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX = "fs\\.azure\\.account\\.key\\.(.*)";
   public static final String FS_AZURE_SECURE_MODE = "fs.azure.secure.mode";
@@ -232,6 +237,9 @@ public final class ConfigurationKeys {
 
   /** Key for rate limit capacity, as used by IO operations which try to throttle themselves. */
   public static final String FS_AZURE_ABFS_IO_RATE_LIMIT = "fs.azure.io.rate.limit";
+
+  /** Add extra resilience to rename failures, at the expense of performance. */
+  public static final String FS_AZURE_ABFS_RENAME_RESILIENCE = "fs.azure.enable.rename.resilience";
 
   public static String accountProperty(String property, String account) {
     return property + "." + account;

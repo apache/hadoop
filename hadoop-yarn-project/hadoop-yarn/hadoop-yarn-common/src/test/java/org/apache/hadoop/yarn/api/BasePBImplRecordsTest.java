@@ -150,7 +150,7 @@ public class BasePBImplRecordsTest {
   }
 
   /**
-   * this method generate record instance by calling newIntance
+   * this method generate record instance by calling newInstance
    * using reflection, add register the generated value to typeValueCache
    */
   @SuppressWarnings("rawtypes")
