@@ -49,7 +49,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.
