@@ -35,32 +35,39 @@ import org.apache.hadoop.hdfs.server.namenode.visitor.NamespaceVisitor;
 import org.apache.hadoop.security.AccessControlException;
 
 /**
- * An anonymous reference to an inode.
- *
+ * A reference to an inode.
+ * <p>
  * This class and its subclasses are used to support multiple access paths.
  * A file/directory may have multiple access paths when it is stored in some
- * snapshots and it is renamed/moved to other locations.
- * 
+ * snapshots, and it is renamed/moved to other locations.
+ * <p>
  * For example,
- * (1) Suppose we have /abc/foo, say the inode of foo is inode(id=1000,name=foo)
- * (2) create snapshot s0 for /abc
+ * (1) Suppose we have /abc/foo and the inode is inode(id=1000,name=foo).
+ *     Suppose foo is created after snapshot s0 (i.e. foo is not in s0 and
+ *     foo is in the create-list of /abc for the s0 diff entry.)
+ * (2) Create snapshot s1, s2 for /abc, i.e. foo is in s1 and s2.
+ *     Suppose sDst is the last snapshot /xyz.
  * (3) mv /abc/foo /xyz/bar, i.e. inode(id=1000,name=...) is renamed from "foo"
  *     to "bar" and its parent becomes /xyz.
- * 
- * Then, /xyz/bar and /abc/.snapshot/s0/foo are two different access paths to
- * the same inode, inode(id=1000,name=bar).
- *
+ * <p>
+ * Then, /xyz/bar, /abc/.snapshot/s1/foo and /abc/.snapshot/s2/foo
+ * are different access paths to the same inode, inode(id=1000,name=bar).
+ * <p>
  * With references, we have the following
- * - /abc has a child ref(id=1001,name=foo).
- * - /xyz has a child ref(id=1002) 
- * - Both ref(id=1001,name=foo) and ref(id=1002) point to another reference,
- *   ref(id=1003,count=2).
- * - Finally, ref(id=1003,count=2) points to inode(id=1000,name=bar).
- * 
- * Note 1: For a reference without name, e.g. ref(id=1002), it uses the name
- *         of the referred inode.
+ * - /abc has a child WithName(name=foo,lastSnapshot=s2) and
+ *   the WithName is in the create-list of /abc for the s0 diff entry.
+ *   The WithName is in s1 and s2, but not in s0 (the same as before).
+ * - /xyz has a child DstReference(dstSnapshot=sDst)
+ *   the DstReference is in the create-list of /xyz for the sDst diff entry.
+ *   The DstReference is not in sDst.
+ * - Both WithName and DstReference point to another reference WithCount(count=2).
+ * - Finally, WithCount(count=2) points to inode(id=1000,name=bar).
+ * <p>
+ * Note 1: References other than WithName use the name of the referred inode.
  * Note 2: getParent() always returns the parent in the current state, e.g.
  *         inode(id=1000,name=bar).getParent() returns /xyz but not /abc.
+ * Note 3: {@link INodeReference#getId()} returns the id the referred inode,
+ *         e.g. all WithName, DstReference and WithCount above return id=1000.
  */
 public abstract class INodeReference extends INode {
   /** Assert the relationship this node and the references. */
@@ -72,8 +79,6 @@ public abstract class INodeReference extends INode {
         : referred.getFullPathAndObjectString();
     return super.toDetailString() + ", ->" + s;
   }
-
-  public abstract String getReferenceDetails();
 
   /**
    * Try to remove the given reference and then return the reference count.
@@ -411,9 +416,9 @@ public abstract class INodeReference extends INode {
       final StringBuilder b = new StringBuilder("[");
       if (!withNameList.isEmpty()) {
         final Iterator<WithName> i = withNameList.iterator();
-        b.append(i.next().getReferenceDetails());
+        b.append(i.next().getNameDetails());
         for(; i.hasNext();) {
-          b.append(", ").append(i.next().getReferenceDetails());
+          b.append(", ").append(i.next().getNameDetails());
         }
       }
       b.append("]");
@@ -423,11 +428,6 @@ public abstract class INodeReference extends INode {
     @Override
     public String toDetailString() {
       return super.toDetailString() + getCountDetails();
-    }
-
-    @Override
-    public String getReferenceDetails() {
-      return getCountDetails();
     }
 
     private void assertDstReference(INodeReference parentRef) {
@@ -556,7 +556,7 @@ public abstract class INodeReference extends INode {
     /**
      * The id of the last snapshot in the src tree when this WithName node was 
      * generated, i.e. this reference is in that snapshot.
-     *
+     * <p>
      * When calculating the quota usage of the referred node, only
      * the files/dirs existing when this snapshot was taken will be counted for 
      * this WithName node and propagated along its ancestor path.
@@ -573,8 +573,7 @@ public abstract class INodeReference extends INode {
       INodeReferenceValidation.add(this, WithName.class);
     }
 
-    @Override
-    public String getReferenceDetails() {
+    String getNameDetails() {
       return getClass().getSimpleName() + "[" + getLocalName()
           + ", lastSnapshot=" + lastSnapshotId + "]";
     }
@@ -689,36 +688,9 @@ public abstract class INodeReference extends INode {
       }
     }
 
-    /**
-     * When lastSnapshotId > snapshotToBeDeleted,
-     * this reference cannot in snapshotToBeDeleted.
-     * This reference should not be destroyed.
-     *
-     * @param context to {@link ReclaimContext#getSnapshotIdToBeDeleted()}
-     */
-    boolean shouldDestroyWithName(ReclaimContext context) {
-      final int snapshotToBeDeleted = context.getSnapshotIdToBeDeleted();
-      if (lastSnapshotId <= snapshotToBeDeleted) {
-        return true;
-      }
-      if (LOG.isInfoEnabled()) {
-        LOG.info("{}, lastSnapshotId = {} > snapshotToBeDeleted = {}, {}",
-            getReferenceDetails(), lastSnapshotId, snapshotToBeDeleted,
-            getFullPathAndObjectString());
-        final INode r = getReferredINode().asReference().getReferredINode();
-        LOG.info("isInCurrentState? {}, {}",
-            r.isInCurrentState(), r.getFullPathAndObjectString());
-      }
-      return false;
-    }
-
     @Override
     public void destroyAndCollectBlocks(ReclaimContext reclaimContext) {
       int snapshot = getSelfSnapshot();
-      if (!shouldDestroyWithName(reclaimContext)) {
-        return;
-      }
-
       reclaimContext.quotaDelta().add(computeQuotaUsage(reclaimContext.bsps));
       if (removeReference(this) <= 0) {
         getReferredINode().destroyAndCollectBlocks(reclaimContext.getCopy());
@@ -795,9 +767,7 @@ public abstract class INodeReference extends INode {
       INodeReferenceValidation.add(this, DstReference.class);
     }
 
-
-    @Override
-    public String getReferenceDetails() {
+    String getDstDetails() {
       return getClass().getSimpleName() + "[" + getLocalName()
           + ", dstSnapshot=" + dstSnapshotId + "]";
     }
@@ -852,14 +822,14 @@ public abstract class INodeReference extends INode {
      *
      * @param context to {@link ReclaimContext#getSnapshotIdToBeDeleted()}
      */
-    boolean shouldDestroyDstRef(ReclaimContext context) {
+    private boolean shouldDestroy(ReclaimContext context) {
       final int snapshotToBeDeleted = context.getSnapshotIdToBeDeleted();
       if (dstSnapshotId < snapshotToBeDeleted) {
         return true;
       }
       if (LOG.isInfoEnabled()) {
         LOG.info("{}, dstSnapshotId = {} >= snapshotToBeDeleted = {}, {}",
-            getReferenceDetails(), dstSnapshotId, snapshotToBeDeleted,
+            getDstDetails(), dstSnapshotId, snapshotToBeDeleted,
             getFullPathAndObjectString());
         final INode r = getReferredINode().asReference().getReferredINode();
         LOG.info("isInCurrentState? {}, {}",
@@ -881,6 +851,10 @@ public abstract class INodeReference extends INode {
      */
     @Override
     public void destroyAndCollectBlocks(ReclaimContext reclaimContext) {
+      if (!shouldDestroy(reclaimContext)) {
+        return;
+      }
+
       // since we count everything of the subtree for the quota usage of a
       // dst reference node, here we should just simply do a quota computation.
       // then to avoid double counting, we pass a different QuotaDelta to other
@@ -899,9 +873,6 @@ public abstract class INodeReference extends INode {
         Preconditions.checkState(prior != Snapshot.NO_SNAPSHOT_ID);
         // identify the snapshot created after prior
         int snapshot = getSelfSnapshot(prior);
-        if (!shouldDestroyDstRef(reclaimContext)) {
-          return;
-        }
 
         INode referred = getReferredINode().asReference().getReferredINode();
         if (referred.isFile()) {
@@ -909,6 +880,8 @@ public abstract class INodeReference extends INode {
           // recordModification before the rename
           INodeFile file = referred.asFile();
           Preconditions.checkState(file.isWithSnapshot());
+          // make sure we mark the file as deleted
+          file.getFileWithSnapshotFeature().deleteCurrentFile();
           // when calling cleanSubtree of the referred node, since we
           // compute quota usage updates before calling this destroy
           // function, we use true for countDiffChange

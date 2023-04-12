@@ -240,8 +240,11 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     }
     final INode child = parentDir.getChild(getLocalNameBytes(),
             Snapshot.CURRENT_STATE_ID);
-    // equals(..) compares IDs, will work for references
-    return this.equals(child);
+    if (this == child) {
+      return true;
+    }
+    return child != null && child.isReference() &&
+        this.equals(child.asReference().getReferredINode());
   }
 
   /** Is this inode in the latest snapshot? */
@@ -263,8 +266,11 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
       return false;
     }
     final INode child = parentDir.getChild(getLocalNameBytes(), latestSnapshotId);
-    // equals(..) compares IDs, will work for references
-    return this.equals(child);
+    if (this == child) {
+      return true;
+    }
+    return child != null && child.isReference() &&
+        this == child.asReference().getReferredINode();
   }
   
   /** @return true if the given inode is an ancestor directory of this inode. */
@@ -297,11 +303,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     }
     INodeReference withCount = getParentReference();
     if (withCount != null) {
-      final INodeReference dstRef = getParentReference();
-      if (dstRef == null) {
-        return false;
-      }
-      final int dstSnapshotId = dstRef.getDstSnapshotId();
+      int dstSnapshotId = withCount.getParentReference().getDstSnapshotId();
       if (dstSnapshotId != Snapshot.CURRENT_STATE_ID
           && dstSnapshotId >= latestInDst) {
         return true;
