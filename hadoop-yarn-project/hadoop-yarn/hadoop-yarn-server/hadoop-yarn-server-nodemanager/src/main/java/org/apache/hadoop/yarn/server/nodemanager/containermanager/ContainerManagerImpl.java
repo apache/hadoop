@@ -221,7 +221,7 @@ public class ContainerManagerImpl extends CompositeService implements
   protected final NodeStatusUpdater nodeStatusUpdater;
 
   protected LocalDirsHandlerService dirsHandler;
-  protected AsyncDispatcher dispatcher;
+  private AsyncDispatcher dispatcher;
 
   private final DeletionService deletionService;
   private LogHandler logHandler;
@@ -342,7 +342,7 @@ public class ContainerManagerImpl extends CompositeService implements
     dispatcher = new AsyncDispatcher("NM ContainerManager dispatcher");
 
     if (!nmDispatherMetricEnabled) {
-       return dispatcher;
+        return dispatcher;
     }
 
 
@@ -2096,5 +2096,9 @@ public class ContainerManagerImpl extends CompositeService implements
 
   public ResourceLocalizationService getResourceLocalizationService() {
     return rsrcLocalizationSrvc;
+  }
+
+  public AsyncDispatcher getDispatcher() {
+    return dispatcher;
   }
 }
