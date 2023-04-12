@@ -1441,9 +1441,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     final IOStatisticsStore sourceIOStatistics = source.getIOStatistics();
     this.getIOStatistics().aggregate(sourceIOStatistics);
 
-    // propagate any extra values into the FS-level stats.
-    incrementMutableCounter(OBJECT_PUT_REQUESTS.getSymbol(),
-        sourceIOStatistics.counters().get(OBJECT_PUT_REQUESTS.getSymbol()));
+    // propagate any extra values into the FS-level stats;
     incrementMutableCounter(
         COMMITTER_MAGIC_MARKER_PUT.getSymbol(),
         sourceIOStatistics.counters().get(COMMITTER_MAGIC_MARKER_PUT.getSymbol()));
@@ -1773,7 +1771,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               COMMITTER_COMMIT_JOB.getSymbol(),
               COMMITTER_LOAD_SINGLE_PENDING_FILE.getSymbol(),
               COMMITTER_MATERIALIZE_FILE.getSymbol(),
-              COMMITTER_STAGE_FILE_UPLOAD.getSymbol())
+              COMMITTER_STAGE_FILE_UPLOAD.getSymbol(),
+              OBJECT_PUT_REQUESTS.getSymbol())
           .build();
       setIOStatistics(st);
     }

@@ -34,6 +34,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_INSTANTIATED;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_PART_PUT;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_PART_PUT_BYTES;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_STARTED;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_REQUESTS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 /**
@@ -75,6 +76,7 @@ public final class S3AMultipartUploaderStatisticsImpl
             MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED.getSymbol(),
             MULTIPART_UPLOAD_COMPLETED.getSymbol(),
             MULTIPART_UPLOAD_STARTED.getSymbol())
+        .withDurationTracking(OBJECT_PUT_REQUESTS.getSymbol())
         .build();
     setIOStatistics(st);
   }

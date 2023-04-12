@@ -50,6 +50,8 @@ public class ITestS3AHugeFileUploadSinglePut extends S3AScaleTestBase {
   public static final Logger LOG = LoggerFactory.getLogger(
       ITestS3AHugeFileUploadSinglePut.class);
 
+  public static final String SINGLE_PUT_REQUEST_TIMEOUT = "1h";
+
   private long fileSize;
 
   @Override
@@ -69,7 +71,7 @@ public class ITestS3AHugeFileUploadSinglePut extends S3AScaleTestBase {
     conf.setLong(MULTIPART_SIZE, 10_000);
     conf.set(FAST_UPLOAD_BUFFER, FAST_UPLOAD_BUFFER_DISK);
     conf.setInt(IO_CHUNK_BUFFER_SIZE, 655360);
-    conf.set(REQUEST_TIMEOUT, "1h");
+    conf.set(REQUEST_TIMEOUT, SINGLE_PUT_REQUEST_TIMEOUT);
     return conf;
   }
 

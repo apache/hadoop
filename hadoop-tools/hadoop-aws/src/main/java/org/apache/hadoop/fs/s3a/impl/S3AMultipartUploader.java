@@ -152,7 +152,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
           UploadPartRequest request = writeOperations.newUploadPartRequest(key,
               uploadIdString, partNumber, (int) lengthInBytes, inputStream,
               null, 0L);
-          UploadPartResult result = writeOperations.uploadPart(request);
+          UploadPartResult result = writeOperations.uploadPart(request, statistics);
           statistics.partPut(lengthInBytes);
           String eTag = result.getETag();
           return BBPartHandle.from(

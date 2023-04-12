@@ -60,8 +60,8 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticGaugeValue;
-import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 
 /**
  * Scale test which creates a huge file.
@@ -119,6 +119,14 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         DEFAULT_HUGE_PARTITION_SIZE);
     assertTrue("Partition size too small: " + partitionSize,
         partitionSize >= MULTIPART_MIN_SIZE);
+    removeBaseAndBucketOverrides(conf,
+        SOCKET_SEND_BUFFER,
+        SOCKET_RECV_BUFFER,
+        MIN_MULTIPART_THRESHOLD,
+        MULTIPART_SIZE,
+        USER_AGENT_PREFIX,
+        FAST_UPLOAD_BUFFER);
+
     conf.setLong(SOCKET_SEND_BUFFER, _1MB);
     conf.setLong(SOCKET_RECV_BUFFER, _1MB);
     conf.setLong(MIN_MULTIPART_THRESHOLD, partitionSize);
@@ -184,6 +192,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     Statistic putRequestsActive = Statistic.OBJECT_PUT_REQUESTS_ACTIVE;
     Statistic putBytesPending = Statistic.OBJECT_PUT_BYTES_PENDING;
 
+
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     BlockOutputStreamStatistics streamStatistics;
     long blocksPer10MB = blocksPerMB * 10;
@@ -192,13 +201,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         true,
         uploadBlockSize,
         progress)) {
-      try {
-        streamStatistics = getOutputStreamStatistics(out);
-      } catch (ClassCastException e) {
-        LOG.info("Wrapped output stream is not block stream: {}",
-            out.getWrappedStream());
-        streamStatistics = null;
-      }
+      streamStatistics = getOutputStreamStatistics(out);
 
       for (long block = 1; block <= blocks; block++) {
         out.write(data);
@@ -235,19 +238,22 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         filesizeMB, uploadBlockSize);
     logFSState();
     bandwidth(timer, filesize);
-    LOG.info("Statistics after stream closed: {}", streamStatistics);
 
-    LOG.info("IOStatistics after upload: {}",
-        demandStringifyIOStatistics(iostats));
-    long putRequestCount = lookupCounterStatistic(iostats, putRequests);
+    final IOStatistics streamIOstats = streamStatistics.getIOStatistics();
+    LOG.info("Stream IOStatistics after stream closed: {}",
+        ioStatisticsToPrettyString(streamIOstats));
+
+    LOG.info("FileSystem IOStatistics after upload: {}",
+        ioStatisticsToPrettyString(iostats));
+    long putRequestCount = lookupCounterStatistic(streamIOstats, putRequests);
     long putByteCount = lookupCounterStatistic(iostats, putBytes);
     Assertions.assertThat(putRequestCount)
-        .describedAs("Put request count from filesystem stats %s",
-            iostats)
+        .describedAs("Put request count from stream stats %s",
+            streamStatistics)
         .isGreaterThan(0);
     Assertions.assertThat(putByteCount)
-        .describedAs("%s count from filesystem stats %s",
-            putBytes, iostats)
+        .describedAs("%s count from stream stats %s",
+            putBytes, streamStatistics)
         .isGreaterThan(0);
     LOG.info("PUT {} bytes in {} operations; {} MB/operation",
         putByteCount, putRequestCount,
@@ -259,10 +265,9 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol(), 0);
     progress.verifyNoFailures(
         "Put file " + fileToCreate + " of size " + filesize);
-    if (streamStatistics != null) {
-      assertEquals("actively allocated blocks in " + streamStatistics,
-          0, streamStatistics.getBlocksActivelyAllocated());
-    }
+    assertEquals("actively allocated blocks in " + streamStatistics,
+        0, streamStatistics.getBlocksActivelyAllocated());
+
   }
 
   /**

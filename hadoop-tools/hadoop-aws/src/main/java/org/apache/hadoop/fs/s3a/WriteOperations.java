@@ -42,6 +42,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
@@ -299,11 +300,13 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
   /**
    * Upload part of a multi-partition file.
    * @param request request
+   * @param durationTrackerFactory
    * @return the result of the operation.
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  UploadPartResult uploadPart(UploadPartRequest request)
+  UploadPartResult uploadPart(UploadPartRequest request,
+      DurationTrackerFactory durationTrackerFactory)
       throws IOException;
 
   /**

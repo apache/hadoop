@@ -52,6 +52,7 @@ import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.select.SelectBinding;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.util.DurationInfo;
@@ -650,18 +651,20 @@ public class WriteOperationHelper implements WriteOperations {
   /**
    * Upload part of a multi-partition file.
    * @param request request
+   * @param durationTrackerFactory duration tracker factory for operation
    * @return the result of the operation.
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  public UploadPartResult uploadPart(UploadPartRequest request)
+  public UploadPartResult uploadPart(UploadPartRequest request,
+      final DurationTrackerFactory durationTrackerFactory)
       throws IOException {
     return retry("upload part #" + request.getPartNumber()
             + " upload ID " + request.getUploadId(),
         request.getKey(),
         true,
         withinAuditSpan(getAuditSpan(),
-            () -> owner.uploadPart(request)));
+            () -> owner.uploadPart(request, durationTrackerFactory)));
   }
 
   /**
