@@ -56,8 +56,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
@@ -151,6 +151,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FS_AZURE_ATOMIC_RENAME_DIRECTORIES;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_SOURCE;
@@ -248,7 +249,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureAtomicRenameDirs().split(AbfsHttpConstants.COMMA)));
-    this.azureAtomicRenameDirSet.add("/hbase");
+    this.azureAtomicRenameDirSet.add(DEFAULT_FS_AZURE_ATOMIC_RENAME_DIRECTORIES);
     updateInfiniteLeaseDirs();
     this.authType = abfsConfiguration.getAuthType(accountName);
     boolean usingOauth = (authType == AuthType.OAuth);
@@ -519,7 +520,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws AzureBlobFileSystemException exception thrown from the server calls,
    * or if it is discovered that the copying is failed or aborted.
    */
-  @org.apache.hadoop.classification.VisibleForTesting
+  @VisibleForTesting
   void copyBlob(Path srcPath,
       Path dstPath,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
@@ -574,7 +575,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * for GetBlobProperties on the path. It can be thrown if the copyStatus is failure
    * or is aborted.
    */
-  @org.apache.hadoop.classification.VisibleForTesting
+  @VisibleForTesting
   boolean handleCopyInProgress(final Path dstPath,
       final TracingContext tracingContext,
       final String copyId) throws AzureBlobFileSystemException {
@@ -600,7 +601,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return false;
   }
 
-  @org.apache.hadoop.classification.VisibleForTesting
+  @VisibleForTesting
   String getCopyBlobProgress(final AbfsRestOperation copyOp) {
     return getCopyStatus(copyOp.getResult());
   }
@@ -660,7 +661,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return blobProperty;
   }
 
-  @org.apache.hadoop.classification.VisibleForTesting
+  @VisibleForTesting
   String getCopyStatus(final AbfsHttpOperation opResult) {
     return opResult.getResponseHeader(X_MS_COPY_STATUS);
   }
