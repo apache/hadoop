@@ -3942,7 +3942,7 @@ public abstract class FileSystem extends Configured
       private volatile long bytesReadDistanceOfThreeOrFour;
       private volatile long bytesReadDistanceOfFiveOrLarger;
       private volatile long bytesReadErasureCoded;
-      private volatile long remoteBytesReadTimeMS;
+      private volatile long remoteReadTimeMS;
 
       /**
        * Add another StatisticsData object to this one.
@@ -3960,7 +3960,7 @@ public abstract class FileSystem extends Configured
         this.bytesReadDistanceOfFiveOrLarger +=
             other.bytesReadDistanceOfFiveOrLarger;
         this.bytesReadErasureCoded += other.bytesReadErasureCoded;
-        this.remoteBytesReadTimeMS += other.remoteBytesReadTimeMS;
+        this.remoteReadTimeMS += other.remoteReadTimeMS;
       }
 
       /**
@@ -3979,7 +3979,7 @@ public abstract class FileSystem extends Configured
         this.bytesReadDistanceOfFiveOrLarger =
             -this.bytesReadDistanceOfFiveOrLarger;
         this.bytesReadErasureCoded = -this.bytesReadErasureCoded;
-        this.remoteBytesReadTimeMS = -this.remoteBytesReadTimeMS;
+        this.remoteReadTimeMS = -this.remoteReadTimeMS;
       }
 
       @Override
@@ -4029,8 +4029,8 @@ public abstract class FileSystem extends Configured
         return bytesReadErasureCoded;
       }
 
-      public long getRemoteBytesReadTimeMS() {
-        return remoteBytesReadTimeMS;
+      public long getRemoteReadTimeMS() {
+        return remoteReadTimeMS;
       }
     }
 
@@ -4261,10 +4261,10 @@ public abstract class FileSystem extends Configured
 
     /**
      * Increment the time taken to read bytes from remote in the statistics.
-     * @param duration time taken in ms to read bytes from remote
+     * @param durationMS time taken in ms to read bytes from remote
      */
-    public void increaseRemoteBytesReadTime(long duration) {
-      getThreadStatistics().remoteBytesReadTimeMS += duration;
+    public void increaseRemoteReadTime(final long durationMS) {
+      getThreadStatistics().remoteReadTimeMS += durationMS;
     }
 
     /**
@@ -4418,17 +4418,17 @@ public abstract class FileSystem extends Configured
      * Get total time taken in ms for bytes read from remote.
      * @return time taken in ms for remote bytes read.
      */
-    public long getRemoteBytesReadTime() {
+    public long getRemoteReadTime() {
       return visitAll(new StatisticsAggregator<Long>() {
-        private long remoteBytesReadTimeMS = 0;
+        private long remoteReadTimeMS = 0;
 
         @Override
         public void accept(StatisticsData data) {
-          remoteBytesReadTimeMS += data.remoteBytesReadTimeMS;
+          remoteReadTimeMS += data.remoteReadTimeMS;
         }
 
         public Long aggregate() {
-          return remoteBytesReadTimeMS;
+          return remoteReadTimeMS;
         }
       });
     }
