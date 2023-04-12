@@ -15,9 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.resourcemanager;
+package org.apache.hadoop.yarn.server.nodemanager;
 
-import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
 
@@ -26,17 +25,17 @@ import static org.apache.hadoop.metrics2.lib.Interns.info;
 public final class GenericEventTypeMetricsManager {
 
   private GenericEventTypeMetricsManager() {
-    // nothing to do
+      // nothing to do
   }
 
   // Construct a GenericEventTypeMetrics for dispatcher
+  @SuppressWarnings("unchecked")
   public static <T extends Enum<T>> GenericEventTypeMetrics
       create(String dispatcherName, Class<T> eventTypeClass) {
-    MetricsInfo metricsInfo = info("GenericEventTypeMetrics for " + eventTypeClass.getName(),
-        "Metrics for " + dispatcherName);
     return new GenericEventTypeMetrics.EventTypeMetricsBuilder<T>()
         .setMs(DefaultMetricsSystem.instance())
-        .setInfo(metricsInfo)
+        .setInfo(info("GenericEventTypeMetrics for " + eventTypeClass.getName(),
+            "Metrics for " + dispatcherName))
         .setEnumClass(eventTypeClass)
         .setEnums(eventTypeClass.getEnumConstants())
         .build().registerMetrics();

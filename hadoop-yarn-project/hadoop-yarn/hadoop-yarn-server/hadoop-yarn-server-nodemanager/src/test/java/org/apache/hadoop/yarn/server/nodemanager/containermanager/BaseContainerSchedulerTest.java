@@ -135,7 +135,7 @@ public class BaseContainerSchedulerTest extends BaseContainerManagerTest {
       @Override
       protected ContainersMonitor createContainersMonitor(
           ContainerExecutor exec) {
-        return new ContainersMonitorImpl(exec, dispatcher, this.context) {
+        return new ContainersMonitorImpl(exec, getDispatcher(), this.context) {
           // Define resources available for containers to be executed.
           @Override
           public long getPmemAllocatedForContainers() {
