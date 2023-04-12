@@ -38,7 +38,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.BlobProperty;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -1008,6 +1007,7 @@ public class AbfsClient implements Closeable {
   }
 
   /**
+<<<<<<< HEAD
    * Caller of <a href = "https://learn.microsoft.com/en-us/rest/api/storageservices/copy-blob">
    * copyBlob API</a>. This is an asynchronous API, it returns copyId and expects client
    * to poll the server on the destination and check the copy-progress.
@@ -1061,6 +1061,8 @@ public class AbfsClient implements Closeable {
   }
 
   /**
+=======
+>>>>>>> ABFS_3.3.2_dev_list
    * @return the properties returned from server.
    * @throws AzureBlobFileSystemException in case it is not a 404 error or some other exception
    * which was not able to be retried.
@@ -1087,34 +1089,29 @@ public class AbfsClient implements Closeable {
   /**
    * Call server API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/list-blobs">BlobList</a>.
    *
-   * @param sourceDirBlobPath path from where the list of blob is requried.
-   * @param tracingContext object of {@link TracingContext}
    * @param marker optional value. To be sent in case this method call in a non-first
    * iteration to the blobList API. Value has to be equal to the field NextMarker in the response
    * of previous iteration for the same operation.
    * @param maxResult define how many blobs can client handle in server response.
    * In case maxResult <= 5000, server sends number of blobs equal to the value. In
    * case maxResult > 5000, server sends maximum 5000 blobs.
-   * @param absoluteDirSearch
+   * @param tracingContext object of {@link TracingContext}
    *
-   * @return list of {@link BlobProperty}
+   * @return abfsRestOperation which contain list of {@link org.apache.hadoop.fs.azurebfs.BlobProperty}
+   * via {@link AbfsRestOperation#getResult()}.{@link AbfsHttpOperation#getBlobList()}
    *
    * @throws AzureBlobFileSystemException thrown from server-call / xml-parsing
    */
-  public AbfsRestOperation getListBlobs(Path sourceDirBlobPath,
-      TracingContext tracingContext,
-      String marker,
+  public AbfsRestOperation getListBlobs(String marker,
       String prefix,
-      Integer maxResult, final Boolean absoluteDirSearch)
+      Integer maxResult,
+      TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESTYPE, CONTAINER);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, QUERY_PARAM_COMP_VALUE_LIST);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_INCLUDE,
         QUERY_PARAM_INCLUDE_VALUE_METADATA);
-    if (prefix == null) {
-      prefix = sourceDirBlobPath.toUri().getPath() + (absoluteDirSearch ?"/" : "");
-    }
     prefix = removeInitialSlash(prefix);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_PREFIX, prefix);
     if (marker != null) {
@@ -1123,8 +1120,8 @@ public class AbfsClient implements Closeable {
     if (maxResult != null) {
       abfsUriQueryBuilder.addQuery(QUERY_PARAM_MAXRESULT, maxResult + "");
     }
-    appendSASTokenToQuery(sourceDirBlobPath.toUri().getPath(),
-        SASTokenProvider.LIST_BLOB_OPERATION, abfsUriQueryBuilder);
+    appendSASTokenToQuery(null, SASTokenProvider.LIST_BLOB_OPERATION,
+        abfsUriQueryBuilder);
     URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     final AbfsRestOperation op = new AbfsRestOperation(

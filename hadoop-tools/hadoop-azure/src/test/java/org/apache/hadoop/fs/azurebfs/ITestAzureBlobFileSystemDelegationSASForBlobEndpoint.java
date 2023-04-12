@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.util.List;
+
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -130,5 +133,30 @@ public class ITestAzureBlobFileSystemDelegationSASForBlobEndpoint
     Mockito.verify(store, Mockito.times(1))
         .handleCopyInProgress(Mockito.any(Path.class), Mockito.any(
             TracingContext.class), Mockito.any(String.class));
+  }
+
+  @Test
+  public void testListBlob() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    int i = 0;
+    while (i < 10) {
+      fs.create(new Path("/dir/" + i));
+      i++;
+    }
+    List<BlobProperty> blobProperties = fs.getAbfsStore()
+        .getListBlobs(new Path("dir"), null,
+            Mockito.mock(TracingContext.class), null, null, false);
+    Assertions.assertThat(blobProperties)
+        .describedAs(
+            "BlobList should match the number of files created in tests + the directory itself")
+        .hasSize(11);
+
+    blobProperties = fs.getAbfsStore()
+        .getListBlobs(new Path("dir"), null,
+            Mockito.mock(TracingContext.class), null, null, true);
+    Assertions.assertThat(blobProperties)
+        .describedAs(
+            "BlobList should match the number of files created in tests")
+        .hasSize(10);
   }
 }
