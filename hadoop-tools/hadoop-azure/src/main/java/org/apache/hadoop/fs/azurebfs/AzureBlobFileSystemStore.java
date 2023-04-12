@@ -142,6 +142,12 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_ID;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_SOURCE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_STATUS;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_STATUS_DESCRIPTION;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_META_HDI_ISFOLDER;
 
 /**
  * Provides the bridging logic between Hadoop's abstract filesystem and Azure Storage.
@@ -501,6 +507,113 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
+
+  /**
+   * Wrapper on {@link #getBlobProperty(Path, TracingContext)} with the handling
+   * for the httpStatusCode = 404 on the server response.
+   *
+   * @param blobPath path for which the property information is required
+   * @param tracingContext object of TracingContext required for the tracing of
+   * server calls
+   * @return instance of BlobProperty if the blob is present on the given path.
+   * <code>null</code> if there is no blob on the given path.
+   * @throws AzureBlobFileSystemException exception other than
+   * {@link AbfsRestOperationException} for httpStatusCode = 404 on the server
+   * response.
+   */
+  BlobProperty getBlobPropertyWithNotFoundHandling(Path blobPath,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
+    try {
+      return getBlobProperty(blobPath, tracingContext);
+    } catch (AbfsRestOperationException ex) {
+      if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+        return null;
+      }
+      throw ex;
+    }
+  }
+
+  /**
+   * Calls {@link AbfsClient#getBlobProperty(Path, TracingContext)} on the given
+   * path. Extract the headers from the server-response and converts it to an object
+   * of {@link BlobProperty}.
+   *
+   * @param blobPath blobPath for which property information is requried
+   * @param tracingContext object of TracingContext required for tracing server calls.
+   * @return BlobProperty for the given path
+   * @throws AzureBlobFileSystemException exception thrown from
+   * {@link AbfsClient#getBlobProperty(Path, TracingContext)} call
+   */
+  private BlobProperty getBlobProperty(Path blobPath,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
+    AbfsRestOperation op = client.getBlobProperty(blobPath, tracingContext);
+    BlobProperty blobProperty = new BlobProperty();
+    final AbfsHttpOperation opResult = op.getResult();
+    blobProperty.setIsDirectory(opResult
+        .getResponseHeader(X_MS_META_HDI_ISFOLDER) != null);
+    blobProperty.setUrl(op.getUrl().toString());
+    blobProperty.setCopyId(opResult.getResponseHeader(X_MS_COPY_ID));
+    blobProperty.setPath(blobPath);
+    blobProperty.setCopySourceUrl(opResult.getResponseHeader(X_MS_COPY_SOURCE));
+    blobProperty.setStatusDescription(
+        opResult.getResponseHeader(X_MS_COPY_STATUS_DESCRIPTION));
+    blobProperty.setCopyStatus(getCopyStatus(opResult));
+    blobProperty.setContentLength(
+        Long.parseLong(opResult.getResponseHeader(CONTENT_LENGTH)));
+    return blobProperty;
+  }
+
+  @org.apache.hadoop.classification.VisibleForTesting
+  String getCopyStatus(final AbfsHttpOperation opResult) {
+    return opResult.getResponseHeader(X_MS_COPY_STATUS);
+  }
+
+  /**
+   * Call server API for ListBlob on the blob endpoint. This API returns a limited
+   * number of blobs and provide a field called as NextMarker which is reference to
+   * next list of blobs for the query. Server expects that the client calls this API
+   * in loop with the NextMarker received in previous iteration of backend call for
+   * the same request.
+   *
+   * @param sourceDirBlobPath path from where the list of blob is requried.
+   * @param prefix
+   * @param tracingContext object of {@link TracingContext}
+   * @param maxPerServerCallResult define how many blobs can client handle in server response.
+   * In case maxResult <= 5000, server sends number of blobs equal to the value. In
+   * case maxResult > 5000, server sends maximum 5000 blobs.
+   * @param maxResult defines maximum blobs the method should process
+   * @param absoluteDirSearch defines if (true) it is blobList search on a
+   * definitive directory, if (false) it is blobList search on a prefix.
+   *
+   * @return List of blobProperties
+   *
+   * @throws AbfsRestOperationException exception from server-calls / xml-parsing
+   */
+  public List<BlobProperty> getListBlobs(Path sourceDirBlobPath,
+      String prefix, TracingContext tracingContext, Integer maxPerServerCallResult,
+      final Integer maxResult, final Boolean absoluteDirSearch)
+      throws AzureBlobFileSystemException {
+    List<BlobProperty> blobProperties = new ArrayList<>();
+    String nextMarker = null;
+    if (prefix == null) {
+      prefix = sourceDirBlobPath.toUri().getPath() + (absoluteDirSearch
+          ? "/"
+          : "");
+    }
+    do {
+      AbfsRestOperation op = client.getListBlobs(
+          nextMarker, prefix, maxPerServerCallResult, tracingContext
+      );
+      BlobList blobList = op.getResult().getBlobList();
+      nextMarker = blobList.getNextMarker();
+      blobProperties.addAll(blobList.getBlobPropertyList());
+      if (maxResult != null && blobProperties.size() >= maxResult) {
+        break;
+      }
+    } while (nextMarker != null);
+    return blobProperties;
+  }
+
   public void createFilesystem(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("createFilesystem", "createFilesystem")){
@@ -752,7 +865,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       perfInfo.registerResult(op.getResult());
 
       final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-      final long contentLength = Long.parseLong(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
+      final long contentLength = Long.parseLong(op.getResult().getResponseHeader(
+          CONTENT_LENGTH));
       final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
 
       if (parseIsDirectory(resourceType)) {
@@ -809,7 +923,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       perfInfo.registerResult(op.getResult());
 
       final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-      final Long contentLength = Long.valueOf(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
+      final Long contentLength = Long.valueOf(op.getResult().getResponseHeader(
+          CONTENT_LENGTH));
 
       if (parseIsDirectory(resourceType)) {
         throw new AbfsRestOperationException(
@@ -964,7 +1079,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         contentLength = 0;
         resourceIsDir = true;
       } else {
-        contentLength = parseContentLength(result.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
+        contentLength = parseContentLength(result.getResponseHeader(
+            CONTENT_LENGTH));
         resourceIsDir = parseIsDirectory(result.getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE));
       }
 
