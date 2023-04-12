@@ -627,8 +627,11 @@ public abstract class Server {
         details.get(Timing.PROCESSING, rpcMetrics.getMetricsTimeUnit());
     long waitTime =
         details.get(Timing.LOCKWAIT, rpcMetrics.getMetricsTimeUnit());
+    long responseTime =
+        details.get(Timing.RESPONSE, rpcMetrics.getMetricsTimeUnit());
     rpcMetrics.addRpcLockWaitTime(waitTime);
     rpcMetrics.addRpcProcessingTime(processingTime);
+    rpcMetrics.addRpcResponseTime(responseTime);
     // don't include lock wait for detailed metrics.
     processingTime -= waitTime;
     String name = call.getDetailedMetricsName();
