@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ipc;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -30,7 +31,7 @@ public interface Schedulable {
   public UserGroupInformation getUserGroupInformation();
 
   default CallerContext getCallerContext() {
-    return null;
+    throw new NotImplementedException("Code is not implemented");
   }
 
   int getPriorityLevel();

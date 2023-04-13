@@ -20,9 +20,12 @@ package org.apache.hadoop.ipc;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+
+import org.apache.commons.lang3.NotImplementedException;
 
 import org.junit.Test;
+import org.junit.Rule;
+import org.junit.rules.ExpectedException;
 
 import java.util.List;
 import java.io.IOException;
@@ -51,6 +54,9 @@ public class TestIdentityProviders {
     }
   }
 
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
+
   @Test
   public void testPluggableIdentityProvider() {
     Configuration conf = new Configuration();
@@ -74,14 +80,16 @@ public class TestIdentityProviders {
     FakeSchedulable fakeSchedulable = new FakeSchedulable();
     String identity = uip.makeIdentity(fakeSchedulable);
 
-    // FakeSchedulable doesn't override getCallerContext()
-    // and therefore it should return null
-    assertNull(fakeSchedulable.getCallerContext());
-
     // Get our username
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String username = ugi.getUserName();
 
     assertEquals(username, identity);
+
+    // FakeSchedulable doesn't override getCallerContext()
+    // and therefore it should throw a NotImplementedException
+    exception.expect(NotImplementedException.class);
+    exception.expectMessage("Code is not implemented");
+    fakeSchedulable.getCallerContext();
   }
 }
