@@ -481,6 +481,14 @@ public class RouterAdmin extends Configured implements Tool {
     return exitCode;
   }
 
+  /**
+   * Add all mount point entries provided in the request.
+   *
+   * @param parameters Parameters for the mount points.
+   * @param i Current index on the parameters array.
+   * @return True if adding all mount points was successful, False otherwise.
+   * @throws IOException If the RPC call to add the mount points fail.
+   */
   private boolean addAllMount(String[] parameters, int i) throws IOException {
     List<AddMountAttributes> addMountAttributesList = new ArrayList<>();
     while (i < parameters.length) {
@@ -504,6 +512,16 @@ public class RouterAdmin extends Configured implements Tool {
     return added;
   }
 
+  /**
+   * From the given params, form and retrieve AddMountAttributes object. This object is meant
+   * to be used while adding single or multiple mount points with their own specific attributes.
+   *
+   * @param parameters Parameters for the mount point.
+   * @param i Current index on the parameters array.
+   * @param isMultipleAdd True if multiple mount points are to be added, False if single mount
+   * point is to be added.
+   * @return AddMountAttributes object.
+   */
   private AddMountAttributes getAddMountAttributes(String[] parameters, int i,
       boolean isMultipleAdd) {
     // Mandatory parameters
@@ -576,6 +594,14 @@ public class RouterAdmin extends Configured implements Tool {
     return addMountAttributes;
   }
 
+  /**
+   * Prepare and return the list of mount table objects from the given list of
+   * AddMountAttributes objects.
+   *
+   * @param addMountAttributesList The list of AddMountAttributes objects.
+   * @return The list of MountTable objects.
+   * @throws IOException If the creation of the mount table objects fail.
+   */
   private List<MountTable> getMountTablesFromAddAllAttributes(
       List<AddMountAttributes> addMountAttributesList) throws IOException {
     List<MountTable> mountTables = new ArrayList<>();
