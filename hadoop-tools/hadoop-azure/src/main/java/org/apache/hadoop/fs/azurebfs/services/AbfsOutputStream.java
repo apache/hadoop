@@ -211,10 +211,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     }
   }
 
-  public synchronized InsertionOrderConcurrentHashMap<BlockWithId, BlockStatus> getMap() {
-    return map;
-  }
-
   private final Object lock = new Object();
 
   /**
@@ -324,7 +320,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
 
     AbfsBlock block = createBlockIfNeeded(off);
     // Put entry in map with status as NEW which is changed to SUCCESS when successfully appended.
-    getMap().put(new BlockWithId(block.getBlockId(), off), BlockStatus.NEW);
+    map.put(new BlockWithId(block.getBlockId(), off), BlockStatus.NEW);
     int written = block.getActiveBlock().write(data, off, length);
     int remainingCapacity = block.getActiveBlock().remainingCapacity();
 
@@ -433,10 +429,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
                 op = client.append(blockToUpload.getBlockId(), path, blockUploadData.toByteArray(), reqParams,
                         cachedSasToken.get(), new TracingContext(tracingContext), getETag());
                 BlockWithId key = new BlockWithId(blockToUpload.getBlockId(), position);
-                if (!getMap().containsKey(key)) {
+                if (!map.containsKey(key)) {
                   throw new Exception("Block is missing with blockId " + blockToUpload.getBlockId());
                 } else {
-                  getMap().put(key, BlockStatus.SUCCESS);
+                  map.put(key, BlockStatus.SUCCESS);
                 }
               } catch (AbfsRestOperationException ex) {
                 // The mechanism to fall back to DFS endpoint if blob operation is not supported.
@@ -772,23 +768,18 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
         BlockStatus success = BlockStatus.SUCCESS;
 
         // If there are no entries in map, then we have nothing to flush.
-        if (getMap().size() == 0) {
+        if (map.size() == 0) {
           return;
         }
 
-        List<BlockWithId> dequeList = new ArrayList<>(getMap().getQueue());
-        int mapEntry = 0;
         // If any of the entry in the map doesn't have the status of SUCCESS, fail the flush.
-        for (Map.Entry<BlockWithId, BlockStatus> entry : getMap().entrySet()) {
-          if (!success.equals(entry.getValue())) {
+        for (BlockWithId blockWithId : map.getQueue()) {
+          if (!success.equals(map.get(blockWithId))) {
             successValue = false;
-            failedBlockId = entry.getKey().getBlockId();
+            failedBlockId = blockWithId.getBlockId();
             break;
           } else {
-            if (!entry.getKey().equals(dequeList.get(mapEntry))) {
-              throw new IOException("Map entry " + entry.getKey() + "is not at correct position");
-            }
-            blockIdList.add(entry.getKey().getBlockId());
+            blockIdList.add(blockWithId.getBlockId());
           }
         }
         if (!successValue) {
@@ -799,7 +790,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
         op = client.flush(blockListXml.getBytes(), path,
                 isClose, cachedSasToken.get(), leaseId, getETag(), new TracingContext(tracingContext));
         setETag(op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG));
-        getMap().clear();
+        map.clear();
       }
       cachedSasToken.update(op.getSasToken());
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
