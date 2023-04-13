@@ -70,6 +70,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Collection;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -78,6 +79,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class FederationRMAdminInterceptor extends AbstractRMAdminRequestInterceptor {
 
@@ -623,15 +625,44 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
   @Override
   public CheckForDecommissioningNodesResponse checkForDecommissioningNodes(
-      CheckForDecommissioningNodesRequest checkForDecommissioningNodesRequest)
-      throws YarnException, IOException {
-    throw new NotImplementedException();
+      CheckForDecommissioningNodesRequest request) throws YarnException, IOException {
+    if (request == null) {
+      RouterServerUtil.logAndThrowException("Missing checkForDecommissioningNodes request.", null);
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      RouterServerUtil.logAndThrowException(
+          "Missing checkForDecommissioningNodes SubClusterId.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{CheckForDecommissioningNodesRequest.class}, new Object[]{request});
+
+      Collection<CheckForDecommissioningNodesResponse> responses =
+          remoteMethod.invokeConcurrent(this, CheckForDecommissioningNodesResponse.class,
+          subClusterId);
+
+      if (CollectionUtils.isNotEmpty(responses)) {
+        long stopTime = clock.getTime();
+        List<CheckForDecommissioningNodesResponse> collects =
+            responses.stream().collect(Collectors.toList());
+        CheckForDecommissioningNodesResponse response = collects.get(0);
+        return CheckForDecommissioningNodesResponse.newInstance(response.getDecommissioningNodes());
+      }
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to checkForDecommissioningNodes due to exception. " + e.getMessage());
+    }
+
+    throw new YarnException("Unable to checkForDecommissioningNodes.");
   }
 
   @Override
   public RefreshClusterMaxPriorityResponse refreshClusterMaxPriority(
-      RefreshClusterMaxPriorityRequest request)
-      throws YarnException, IOException {
+      RefreshClusterMaxPriorityRequest request) throws YarnException, IOException {
     throw new NotImplementedException();
   }
 

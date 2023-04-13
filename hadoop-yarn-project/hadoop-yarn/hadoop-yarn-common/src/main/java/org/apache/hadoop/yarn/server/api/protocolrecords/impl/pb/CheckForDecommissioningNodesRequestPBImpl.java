@@ -70,4 +70,14 @@ public class CheckForDecommissioningNodesRequestPBImpl extends
   public String toString() {
     return TextFormat.shortDebugString(getProto());
   }
+
+  @Override
+  public String getSubClusterId() {
+    return null;
+  }
+
+  @Override
+  public void setSubClusterId(String subClusterId) {
+
+  }
 }
