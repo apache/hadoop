@@ -101,6 +101,10 @@ public class ITestAzureBlobFileSystemAppend extends
     FSDataOutputStream outputStream = fs.append(TEST_FILE_PATH);
     outputStream.write(10);
     outputStream.hsync();
+    outputStream.write(20);
+    outputStream.hsync();
+    outputStream.write(30);
+    outputStream.hsync();
   }
 
   /**

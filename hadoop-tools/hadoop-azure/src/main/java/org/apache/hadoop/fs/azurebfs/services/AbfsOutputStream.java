@@ -440,8 +440,13 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
                 offset, 0, bytesLength, mode, false, leaseId);
             AbfsRestOperation op;
             if (prefixMode == PrefixMode.DFS) {
+              TracingContext tracingContextAppend = new TracingContext(tracingContext);
+              if (retryAppendDFS > 0) {
+                retryAppendDFS++;
+                tracingContextAppend.setRetryAppendDFS(retryAppendDFS);
+              }
               op = client.append(path, blockUploadData.toByteArray(), reqParams,
-                      cachedSasToken.get(), new TracingContext(tracingContext));
+                      cachedSasToken.get(), tracingContextAppend);
             } else {
               try {
                 op = client.append(blockToUpload.getBlockId(), path, blockUploadData.toByteArray(), reqParams,
