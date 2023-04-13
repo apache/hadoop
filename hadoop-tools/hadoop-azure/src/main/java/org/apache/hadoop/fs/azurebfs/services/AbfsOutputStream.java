@@ -155,7 +155,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   private final ListeningExecutorService executorService;
 
   /** List to validate order. */
-  private final ArrayList<String> orderedBlockList = new ArrayList<>();
+  private final UniqueArrayList<String> orderedBlockList = new UniqueArrayList<>();
 
   /** Retry fallback for append on DFS */
   private int retryAppendDFS = 0;
@@ -254,6 +254,16 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
 
   public int getBlockSize() {
     return blockSize;
+  }
+
+  public class UniqueArrayList<T> extends ArrayList<T> {
+    @Override
+    public boolean add(T element) {
+      if (!super.contains(element)) {
+        return super.add(element);
+      }
+      return false;
+    }
   }
 
   /**
