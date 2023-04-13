@@ -511,7 +511,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
 
   /**
-   * Calls the GetBlobProperty API on the given path. Handles the case where there
+   * Gets the blob property over Blob Endpoint. Handles the case where there
    * is no blob present at the path, and server returns httpStatusCode = 404.<br>
    * Reason for not handling this in {@link #getBlobProperty(Path, TracingContext)}
    * is to keep it in sync with the {@link #getFileStatus(Path, TracingContext)}
@@ -542,9 +542,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   /**
-   * Calls {@link AbfsClient#getBlobProperty(Path, TracingContext)} on the given
-   * path. Extract the headers from the server-response and converts it to an object
-   * of {@link BlobProperty}.
+   * Gets the property for the blob over Blob Endpoint.
    *
    * @param blobPath blobPath for which property information is required
    * @param tracingContext object of TracingContext required for tracing server calls.
@@ -565,23 +563,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     blobProperty.setCopySourceUrl(opResult.getResponseHeader(X_MS_COPY_SOURCE));
     blobProperty.setStatusDescription(
         opResult.getResponseHeader(X_MS_COPY_STATUS_DESCRIPTION));
-    blobProperty.setCopyStatus(getCopyStatusFromHttpOperationResponse(opResult));
+    blobProperty.setCopyStatus(opResult.getResponseHeader(X_MS_COPY_STATUS));
     blobProperty.setContentLength(
         Long.parseLong(opResult.getResponseHeader(CONTENT_LENGTH)));
     return blobProperty;
   }
 
-  @org.apache.hadoop.classification.VisibleForTesting
-  String getCopyStatusFromHttpOperationResponse(final AbfsHttpOperation opResult) {
-    return opResult.getResponseHeader(X_MS_COPY_STATUS);
-  }
-
   /**
-   * Call server API for ListBlob on the blob endpoint. This API returns a limited
-   * number of blobs and provide a field called as NextMarker which is reference to
-   * next list of blobs for the query. Server expects that the client calls this API
-   * in loop with the NextMarker received in previous iteration of backend call for
-   * the same request.
+   * Get the list of a blob on a give path, or blob starting with the given prefix.
    *
    * @param sourceDirBlobPath path from where the list of blob is required.
    * @param prefix Optional value to be provided. If provided, API call would have
