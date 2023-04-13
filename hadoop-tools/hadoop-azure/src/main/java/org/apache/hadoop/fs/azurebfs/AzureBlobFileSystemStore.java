@@ -691,7 +691,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     List<BlobProperty> blobProperties = new ArrayList<>();
     String nextMarker = null;
     if (prefix == null) {
-      prefix = sourceDirBlobPath.toUri().getPath() + (isDefinitiveDirSearch
+      prefix = (!sourceDirBlobPath.isRoot()
+          ? sourceDirBlobPath.toUri().getPath()
+          : EMPTY_STRING) + (isDefinitiveDirSearch
           ? ROOT_PATH
           : EMPTY_STRING);
     }
