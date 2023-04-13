@@ -31,8 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.hadoop.hdfs.server.federation.store.protocol.AddAllMountTableEntryRequest;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.AddAllMountTableEntryResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesResponse;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
@@ -361,7 +361,7 @@ public class RouterAdminServer extends AbstractService
   }
 
   @Override
-  public AddAllMountTableEntryResponse addAllMountTableEntry(AddAllMountTableEntryRequest request)
+  public AddMountTableEntriesResponse addMountTableEntries(AddMountTableEntriesRequest request)
       throws IOException {
     List<MountTable> mountTables = request.getEntries();
     for (MountTable mountTable : mountTables) {
@@ -376,7 +376,7 @@ public class RouterAdminServer extends AbstractService
         }
       }
     }
-    return getMountTableStore().addAllMountTableEntry(request);
+    return getMountTableStore().addMountTableEntries(request);
   }
 
   @Override

@@ -162,11 +162,11 @@ message AddMountTableEntryResponseProto {
   optional bool status = 1;
 }
 
-message AddAllMountTableEntryRequestProto {
+message AddMountTableEntriesRequestProto {
   repeated MountTableRecordProto entry = 1;
 }
 
-message AddAllMountTableEntryResponseProto {
+message AddMountTableEntriesResponseProto {
   optional bool status = 1;
 }
 

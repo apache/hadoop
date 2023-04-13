@@ -21,32 +21,32 @@ import java.io.IOException;
 
 import org.apache.hadoop.thirdparty.protobuf.Message;
 
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddAllMountTableEntryResponseProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddAllMountTableEntryResponseProtoOrBuilder;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.AddAllMountTableEntryResponse;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddMountTableEntriesResponseProto;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddMountTableEntriesResponseProtoOrBuilder;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.impl.pb.PBRecord;
 
 /**
- * Protobuf implementation of the state store API object AddAllMountTableEntryResponse.
+ * Protobuf implementation of the state store API object addMountTableEntriesResponse.
  */
-public class AddAllMountTableEntryResponsePBImpl
-    extends AddAllMountTableEntryResponse implements PBRecord {
+public class AddMountTableEntriesResponsePBImpl
+    extends AddMountTableEntriesResponse implements PBRecord {
 
-  private final FederationProtocolPBTranslator<AddAllMountTableEntryResponseProto,
-      AddAllMountTableEntryResponseProto.Builder,
-      AddAllMountTableEntryResponseProtoOrBuilder> translator =
-      new FederationProtocolPBTranslator<>(AddAllMountTableEntryResponseProto.class);
+  private final FederationProtocolPBTranslator<AddMountTableEntriesResponseProto,
+      AddMountTableEntriesResponseProto.Builder,
+      AddMountTableEntriesResponseProtoOrBuilder> translator =
+      new FederationProtocolPBTranslator<>(AddMountTableEntriesResponseProto.class);
 
-  public AddAllMountTableEntryResponsePBImpl() {
+  public AddMountTableEntriesResponsePBImpl() {
   }
 
-  public AddAllMountTableEntryResponsePBImpl(
-      AddAllMountTableEntryResponseProto proto) {
+  public AddMountTableEntriesResponsePBImpl(
+      AddMountTableEntriesResponseProto proto) {
     this.translator.setProto(proto);
   }
 
   @Override
-  public AddAllMountTableEntryResponseProto getProto() {
+  public AddMountTableEntriesResponseProto getProto() {
     return this.translator.build();
   }
 

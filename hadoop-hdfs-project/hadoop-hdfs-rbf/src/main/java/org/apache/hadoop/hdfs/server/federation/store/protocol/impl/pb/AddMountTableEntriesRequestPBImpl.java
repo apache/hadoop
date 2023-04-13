@@ -23,34 +23,34 @@ import java.util.List;
 
 import org.apache.hadoop.thirdparty.protobuf.Message;
 
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddAllMountTableEntryRequestProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddAllMountTableEntryRequestProtoOrBuilder;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddMountTableEntriesRequestProto;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddMountTableEntriesRequestProtoOrBuilder;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.MountTableRecordProto;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.AddAllMountTableEntryRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.impl.pb.MountTablePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.records.impl.pb.PBRecord;
 
 /**
- * Protobuf implementation of the state store API object AddAllMountTableEntryRequest.
+ * Protobuf implementation of the state store API object addMountTableEntriesRequest.
  */
-public class AddAllMountTableEntryRequestPBImpl
-    extends AddAllMountTableEntryRequest implements PBRecord {
+public class AddMountTableEntriesRequestPBImpl
+    extends AddMountTableEntriesRequest implements PBRecord {
 
-  private final FederationProtocolPBTranslator<AddAllMountTableEntryRequestProto,
-      AddAllMountTableEntryRequestProto.Builder,
-      AddAllMountTableEntryRequestProtoOrBuilder> translator =
-      new FederationProtocolPBTranslator<>(AddAllMountTableEntryRequestProto.class);
+  private final FederationProtocolPBTranslator<AddMountTableEntriesRequestProto,
+      AddMountTableEntriesRequestProto.Builder,
+      AddMountTableEntriesRequestProtoOrBuilder> translator =
+      new FederationProtocolPBTranslator<>(AddMountTableEntriesRequestProto.class);
 
-  public AddAllMountTableEntryRequestPBImpl() {
+  public AddMountTableEntriesRequestPBImpl() {
   }
 
-  public AddAllMountTableEntryRequestPBImpl(AddAllMountTableEntryRequestProto proto) {
+  public AddMountTableEntriesRequestPBImpl(AddMountTableEntriesRequestProto proto) {
     this.translator.setProto(proto);
   }
 
   @Override
-  public AddAllMountTableEntryRequestProto getProto() {
+  public AddMountTableEntriesRequestProto getProto() {
     return this.translator.build();
   }
 

@@ -33,8 +33,8 @@ import org.apache.hadoop.hdfs.server.federation.router.RouterPermissionChecker;
 import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaUsage;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.AddAllMountTableEntryRequest;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.AddAllMountTableEntryResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationRequest;
@@ -132,11 +132,11 @@ public class MountTableStoreImpl extends MountTableStore {
   }
 
   @Override
-  public AddAllMountTableEntryResponse addAllMountTableEntry(AddAllMountTableEntryRequest request)
+  public AddMountTableEntriesResponse addMountTableEntries(AddMountTableEntriesRequest request)
       throws IOException {
     List<MountTable> mountTables = request.getEntries();
     if (mountTables == null || mountTables.size() == 0) {
-      AddAllMountTableEntryResponse response = AddAllMountTableEntryResponse.newInstance();
+      AddMountTableEntriesResponse response = AddMountTableEntriesResponse.newInstance();
       response.setStatus(false);
       return response;
     }
@@ -146,7 +146,7 @@ public class MountTableStoreImpl extends MountTableStore {
       checkMountTablePermission(src);
     }
     boolean status = getDriver().putAll(mountTables, false, true);
-    AddAllMountTableEntryResponse response = AddAllMountTableEntryResponse.newInstance();
+    AddMountTableEntriesResponse response = AddMountTableEntriesResponse.newInstance();
     response.setStatus(status);
     if (status) {
       updateCacheAllRouters();

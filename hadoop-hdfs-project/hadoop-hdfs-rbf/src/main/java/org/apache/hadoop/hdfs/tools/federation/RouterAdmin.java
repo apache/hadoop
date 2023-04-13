@@ -53,8 +53,8 @@ import org.apache.hadoop.hdfs.server.federation.store.CachedRecordStore;
 import org.apache.hadoop.hdfs.server.federation.store.RecordStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.AddAllMountTableEntryRequest;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.AddAllMountTableEntryResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.DisableNameserviceRequest;
@@ -484,70 +484,96 @@ public class RouterAdmin extends Configured implements Tool {
   private boolean addAllMount(String[] parameters, int i) throws IOException {
     List<AddMountAttributes> addMountAttributesList = new ArrayList<>();
     while (i < parameters.length) {
-      // Mandatory parameters
-      String mount = parameters[i++];
-      String[] nss = parameters[i++].split(",");
-      String dest = parameters[i++];
+      AddMountAttributes addMountAttributes = getAddMountAttributes(parameters, i, true);
+      if (addMountAttributes == null) {
+        return false;
+      }
+      i = addMountAttributes.getParamIndex();
+      addMountAttributesList.add(addMountAttributes);
+    }
+    List<MountTable> addEntries = getMountTablesFromAddAllAttributes(addMountAttributesList);
+    AddMountTableEntriesRequest request =
+        AddMountTableEntriesRequest.newInstance(addEntries);
+    MountTableManager mountTable = client.getMountTableManager();
+    AddMountTableEntriesResponse addResponse =
+        mountTable.addMountTableEntries(request);
+    boolean added = addResponse.getStatus();
+    if (!added) {
+      System.err.println("Cannot add some or all mount points");
+    }
+    return added;
+  }
 
-      // Optional parameters
-      boolean readOnly = false;
-      boolean faultTolerant = false;
-      String owner = null;
-      String group = null;
-      FsPermission mode = null;
-      DestinationOrder order = DestinationOrder.HASH;
-      while (i < parameters.length && !",".equals(parameters[i])) {
-        if (parameters[i].equals("-readonly")) {
+  private AddMountAttributes getAddMountAttributes(String[] parameters, int i,
+      boolean isMultipleAdd) {
+    // Mandatory parameters
+    String mount = parameters[i++];
+    String[] nss = parameters[i++].split(",");
+    String dest = parameters[i++];
+
+    // Optional parameters
+    boolean readOnly = false;
+    boolean faultTolerant = false;
+    String owner = null;
+    String group = null;
+    FsPermission mode = null;
+    DestinationOrder order = DestinationOrder.HASH;
+    while (i < parameters.length) {
+      if (isMultipleAdd && ",".equals(parameters[i])) {
+        i++;
+        break;
+      }
+      switch (parameters[i]) {
+        case "-readonly": {
           readOnly = true;
-        } else if (parameters[i].equals("-faulttolerant")) {
+          break;
+        }
+        case "-faulttolerant": {
           faultTolerant = true;
-        } else if (parameters[i].equals("-order")) {
+          break;
+        }
+        case "-order": {
           i++;
           try {
             order = DestinationOrder.valueOf(parameters[i]);
           } catch (Exception e) {
             System.err.println("Cannot parse order: " + parameters[i]);
           }
-        } else if (parameters[i].equals("-owner")) {
+          break;
+        }
+        case "-owner": {
           i++;
           owner = parameters[i];
-        } else if (parameters[i].equals("-group")) {
+          break;
+        }
+        case "-group": {
           i++;
           group = parameters[i];
-        } else if (parameters[i].equals("-mode")) {
+          break;
+        }
+        case "-mode": {
           i++;
           short modeValue = Short.parseShort(parameters[i], 8);
           mode = new FsPermission(modeValue);
-        } else {
-          printUsage("-addall");
-          return false;
+          break;
         }
-        i++;
+        default: {
+          printUsage(isMultipleAdd ? "-addall" : "-add");
+          return null;
+        }
       }
-      if (i < parameters.length && ",".equals(parameters[i])) {
-        i++;
-      }
-      AddMountAttributes addMountAttributes = new AddMountAttributes();
-      addMountAttributes.setMount(mount);
-      addMountAttributes.setNss(nss);
-      addMountAttributes.setDest(dest);
-      addMountAttributes.setReadonly(readOnly);
-      addMountAttributes.setFaultTolerant(faultTolerant);
-      addMountAttributes.setOrder(order);
-      addMountAttributes.setAclInfo(new ACLEntity(owner, group, mode));
-      addMountAttributesList.add(addMountAttributes);
+      i++;
     }
-    List<MountTable> addEntries = getMountTablesFromAddAllAttributes(addMountAttributesList);
-    AddAllMountTableEntryRequest request =
-        AddAllMountTableEntryRequest.newInstance(addEntries);
-    MountTableManager mountTable = client.getMountTableManager();
-    AddAllMountTableEntryResponse addResponse =
-        mountTable.addAllMountTableEntry(request);
-    boolean added = addResponse.getStatus();
-    if (!added) {
-      System.err.println("Cannot add some or all mount points");
-    }
-    return added;
+    AddMountAttributes addMountAttributes = new AddMountAttributes();
+    addMountAttributes.setMount(mount);
+    addMountAttributes.setNss(nss);
+    addMountAttributes.setDest(dest);
+    addMountAttributes.setReadonly(readOnly);
+    addMountAttributes.setFaultTolerant(faultTolerant);
+    addMountAttributes.setOrder(order);
+    addMountAttributes.setAclInfo(new ACLEntity(owner, group, mode));
+    addMountAttributes.setParamIndex(i);
+    return addMountAttributes;
   }
 
   private List<MountTable> getMountTablesFromAddAllAttributes(
@@ -635,69 +661,23 @@ public class RouterAdmin extends Configured implements Tool {
    * @throws IOException If it cannot add the mount point.
    */
   public boolean addMount(String[] parameters, int i) throws IOException {
-    // Mandatory parameters
-    String mount = parameters[i++];
-    String[] nss = parameters[i++].split(",");
-    String dest = parameters[i++];
-
-    // Optional parameters
-    boolean readOnly = false;
-    boolean faultTolerant = false;
-    String owner = null;
-    String group = null;
-    FsPermission mode = null;
-    DestinationOrder order = DestinationOrder.HASH;
-    while (i < parameters.length) {
-      if (parameters[i].equals("-readonly")) {
-        readOnly = true;
-      } else if (parameters[i].equals("-faulttolerant")) {
-        faultTolerant = true;
-      } else if (parameters[i].equals("-order")) {
-        i++;
-        try {
-          order = DestinationOrder.valueOf(parameters[i]);
-        } catch(Exception e) {
-          System.err.println("Cannot parse order: " + parameters[i]);
-        }
-      } else if (parameters[i].equals("-owner")) {
-        i++;
-        owner = parameters[i];
-      } else if (parameters[i].equals("-group")) {
-        i++;
-        group = parameters[i];
-      } else if (parameters[i].equals("-mode")) {
-        i++;
-        short modeValue = Short.parseShort(parameters[i], 8);
-        mode = new FsPermission(modeValue);
-      } else {
-        printUsage("-add");
-        return false;
-      }
-
-      i++;
+    AddMountAttributes addMountAttributes = getAddMountAttributes(parameters, i, false);
+    if (addMountAttributes == null) {
+      return false;
     }
-
-    return addMount(mount, nss, dest, readOnly, faultTolerant, order,
-        new ACLEntity(owner, group, mode));
+    return addMount(addMountAttributes);
   }
 
   /**
    * Add a mount table entry or update if it exists.
    *
-   * @param mount Mount point.
-   * @param nss Namespaces where this is mounted to.
-   * @param dest Destination path.
-   * @param readonly If the mount point is read only.
-   * @param order Order of the destination locations.
-   * @param aclInfo the ACL info for mount point.
+   * @param addMountAttributes attributes associated with add mount point request.
    * @return If the mount point was added.
    * @throws IOException Error adding the mount point.
    */
-  public boolean addMount(String mount, String[] nss, String dest,
-      boolean readonly, boolean faultTolerant, DestinationOrder order,
-      ACLEntity aclInfo)
+  public boolean addMount(AddMountAttributes addMountAttributes)
       throws IOException {
-    mount = normalizeFileSystemPath(mount);
+    String mount = normalizeFileSystemPath(addMountAttributes.getMount());
     // Get the existing entry
     MountTableManager mountTable = client.getMountTableManager();
     MountTable existingEntry = getMountEntry(mount, mountTable);
@@ -705,20 +685,21 @@ public class RouterAdmin extends Configured implements Tool {
     if (existingEntry == null) {
       // Create and add the entry if it doesn't exist
       Map<String, String> destMap = new LinkedHashMap<>();
-      for (String ns : nss) {
-        destMap.put(ns, dest);
+      for (String ns : addMountAttributes.getNss()) {
+        destMap.put(ns, addMountAttributes.getDest());
       }
       MountTable newEntry = MountTable.newInstance(mount, destMap);
-      if (readonly) {
+      if (addMountAttributes.isReadonly()) {
         newEntry.setReadOnly(true);
       }
-      if (faultTolerant) {
+      if (addMountAttributes.isFaultTolerant()) {
         newEntry.setFaultTolerant(true);
       }
-      if (order != null) {
-        newEntry.setDestOrder(order);
+      if (addMountAttributes.getOrder() != null) {
+        newEntry.setDestOrder(addMountAttributes.getOrder());
       }
 
+      ACLEntity aclInfo = addMountAttributes.getAclInfo();
       // Set ACL info for mount table entry
       if (aclInfo.getOwner() != null) {
         newEntry.setOwnerName(aclInfo.getOwner());
@@ -745,22 +726,24 @@ public class RouterAdmin extends Configured implements Tool {
       return added;
     } else {
       // Update the existing entry if it exists
-      for (String nsId : nss) {
-        if (!existingEntry.addDestination(nsId, dest)) {
-          System.err.println("Cannot add destination at " + nsId + " " + dest);
+      for (String nsId : addMountAttributes.getNss()) {
+        if (!existingEntry.addDestination(nsId, addMountAttributes.getDest())) {
+          System.err.println(
+              "Cannot add destination at " + nsId + " " + addMountAttributes.getDest());
           return false;
         }
       }
-      if (readonly) {
+      if (addMountAttributes.isReadonly()) {
         existingEntry.setReadOnly(true);
       }
-      if (faultTolerant) {
+      if (addMountAttributes.isFaultTolerant()) {
         existingEntry.setFaultTolerant(true);
       }
-      if (order != null) {
-        existingEntry.setDestOrder(order);
+      if (addMountAttributes.getOrder() != null) {
+        existingEntry.setDestOrder(addMountAttributes.getOrder());
       }
 
+      ACLEntity aclInfo = addMountAttributes.getAclInfo();
       // Update ACL info of mount table entry
       if (aclInfo.getOwner() != null) {
         existingEntry.setOwnerName(aclInfo.getOwner());

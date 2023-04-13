@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.server.federation.resolver;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.server.federation.store.protocol.AddAllMountTableEntryRequest;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.AddAllMountTableEntryResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationRequest;
@@ -58,8 +58,8 @@ public interface MountTableManager {
    * data store.
    * @throws IOException Throws exception if the data store is not initialized.
    */
-  AddAllMountTableEntryResponse addAllMountTableEntry(
-      AddAllMountTableEntryRequest request) throws IOException;
+  AddMountTableEntriesResponse addMountTableEntries(
+      AddMountTableEntriesRequest request) throws IOException;
 
   /**
    * Updates an existing entry in the mount table.

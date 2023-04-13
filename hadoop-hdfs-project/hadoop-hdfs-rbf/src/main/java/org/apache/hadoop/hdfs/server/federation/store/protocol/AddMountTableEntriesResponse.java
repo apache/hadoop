@@ -26,10 +26,10 @@ import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreSerialize
 /**
  * API response for adding multiple mount table entries to the state store.
  */
-public abstract class AddAllMountTableEntryResponse {
+public abstract class AddMountTableEntriesResponse {
 
-  public static AddAllMountTableEntryResponse newInstance() throws IOException {
-    return StateStoreSerializer.newRecord(AddAllMountTableEntryResponse.class);
+  public static AddMountTableEntriesResponse newInstance() throws IOException {
+    return StateStoreSerializer.newRecord(AddMountTableEntriesResponse.class);
   }
 
   @Public

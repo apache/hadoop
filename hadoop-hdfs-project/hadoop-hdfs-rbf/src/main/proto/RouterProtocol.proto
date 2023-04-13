@@ -43,7 +43,7 @@ service RouterAdminProtocolService {
   /**
    * Add all mount table entries that are present in the request.
    */
-  rpc addAllMountTableEntry(AddAllMountTableEntryRequestProto) returns(AddAllMountTableEntryResponseProto);
+  rpc addMountTableEntries(AddMountTableEntriesRequestProto) returns(AddMountTableEntriesResponseProto);
 
   /**
    * Get matching mount entries

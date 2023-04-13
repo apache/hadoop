@@ -28,14 +28,14 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 /**
  * API request for adding all mount table entries to the state store.
  */
-public abstract class AddAllMountTableEntryRequest {
+public abstract class AddMountTableEntriesRequest {
 
-  public static AddAllMountTableEntryRequest newInstance() {
-    return StateStoreSerializer.newRecord(AddAllMountTableEntryRequest.class);
+  public static AddMountTableEntriesRequest newInstance() {
+    return StateStoreSerializer.newRecord(AddMountTableEntriesRequest.class);
   }
 
-  public static AddAllMountTableEntryRequest newInstance(List<MountTable> newEntry) {
-    AddAllMountTableEntryRequest request = newInstance();
+  public static AddMountTableEntriesRequest newInstance(List<MountTable> newEntry) {
+    AddMountTableEntriesRequest request = newInstance();
     request.setEntries(newEntry);
     return request;
   }

@@ -32,6 +32,7 @@ public class AddMountAttributes {
   private boolean faultTolerant;
   private DestinationOrder order;
   private RouterAdmin.ACLEntity aclInfo;
+  private int paramIndex;
 
   public String getMount() {
     return mount;
@@ -87,5 +88,13 @@ public class AddMountAttributes {
 
   public void setAclInfo(RouterAdmin.ACLEntity aclInfo) {
     this.aclInfo = aclInfo;
+  }
+
+  public int getParamIndex() {
+    return paramIndex;
+  }
+
+  public void setParamIndex(int paramIndex) {
+    this.paramIndex = paramIndex;
   }
 }
