@@ -820,6 +820,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
                 isClose, cachedSasToken.get(), leaseId, getETag(), new TracingContext(tracingContext));
         setETag(op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG));
         getMap().clear();
+        orderedBlockList.clear();
       }
       cachedSasToken.update(op.getSasToken());
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
