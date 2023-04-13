@@ -239,6 +239,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.checkNoS3Guard;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatisticsStore;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.pairedTrackerFactory;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
@@ -2604,6 +2605,25 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * Given a possibly null duration tracker factory, return a non-null
+   * one for use in tracking durations.
+   *
+   * @param factory factory.
+   * @return a non-null factory.
+   */
+  protected DurationTrackerFactory nonNullDurationTrackerFactory(
+      DurationTrackerFactory factory) {
+    DurationTrackerFactory f = factory;
+    if (f == null) {
+      f = getDurationTrackerFactory();
+      if (f == null) {
+        f = emptyStatisticsStore();
+      }
+    }
+    return f;
+  }
+
+  /**
    * Request object metadata; increments counters in the process.
    * Retry policy: retry untranslated.
    * This method is used in some external applications and so
@@ -2961,20 +2981,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * <i>Important: this call will close any input stream in the request.</i>
    * @param putObjectRequest the request
    * @param putOptions put object options
+   * @param durationTrackerFactory factory for duration tracking
    * @return the upload initiated
    * @throws AmazonClientException on problems
    */
   @VisibleForTesting
   @Retries.OnceRaw("For PUT; post-PUT actions are RetryExceptionsSwallowed")
   PutObjectResult putObjectDirect(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
+      PutObjectOptions putOptions,
+      DurationTrackerFactory durationTrackerFactory)
       throws AmazonClientException {
     long len = getPutRequestLength(putObjectRequest);
     LOG.debug("PUT {} bytes to {}", len, putObjectRequest.getKey());
     incrementPutStartStatistics(len);
     try {
       PutObjectResult result = trackDurationOfSupplier(
-          getDurationTrackerFactory(),
+          nonNullDurationTrackerFactory(durationTrackerFactory),
           OBJECT_PUT_REQUESTS.getSymbol(), () ->
               s3.putObject(putObjectRequest));
       incrementPutCompletedStatistics(true, len);
@@ -3025,9 +3047,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     incrementPutStartStatistics(len);
     try {
       UploadPartResult uploadPartResult = trackDurationOfSupplier(
-          durationTrackerFactory != null
-              ? durationTrackerFactory
-              : getDurationTrackerFactory(),
+          nonNullDurationTrackerFactory(durationTrackerFactory),
           OBJECT_PUT_REQUESTS.getSymbol(), () ->
               s3.uploadPart(request));
       incrementPutCompletedStatistics(true, len);
@@ -4442,8 +4462,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws IOException {
     invoker.retry("PUT 0-byte object ", objectName,
          true, () ->
-            putObjectDirect(getRequestFactory()
-                .newDirectoryMarkerRequest(objectName), putOptions));
+            putObjectDirect(getRequestFactory().newDirectoryMarkerRequest(objectName),
+                putOptions,
+                getDurationTrackerFactory()));
     incrementPutProgressStatistics(objectName, 0);
     instrumentation.directoryCreated();
   }

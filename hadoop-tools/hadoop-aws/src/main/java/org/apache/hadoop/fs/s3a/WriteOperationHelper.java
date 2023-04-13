@@ -565,21 +565,23 @@ public class WriteOperationHelper implements WriteOperations {
    * file, from the content length of the header.
    * @param putObjectRequest the request
    * @param putOptions put object options
+   * @param durationTrackerFactory factory for duration tracking
    * @return the upload initiated
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
   public PutObjectResult putObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
+      PutObjectOptions putOptions,
+      DurationTrackerFactory durationTrackerFactory)
       throws IOException {
     return retry("Writing Object",
         putObjectRequest.getKey(), true,
         withinAuditSpan(getAuditSpan(), () ->
-            owner.putObjectDirect(putObjectRequest, putOptions)));
+            owner.putObjectDirect(putObjectRequest, putOptions, durationTrackerFactory)));
   }
 
   /**
-   * PUT an object.
+   * PUT an object, possibly via the transfer manager.
    *
    * @param putObjectRequest the request
    * @param putOptions put object options
@@ -591,10 +593,9 @@ public class WriteOperationHelper implements WriteOperations {
       PutObjectOptions putOptions)
       throws IOException {
 
-    retry("Writing Object",
-        putObjectRequest.getKey(), true,
-        withinAuditSpan(getAuditSpan(), () ->
-            owner.putObjectDirect(putObjectRequest, putOptions)));
+    // the transfer manager is not involved; instead it is directly
+    // PUT.
+    putObject(putObjectRequest, putOptions, null);
   }
 
   /**

@@ -32,7 +32,6 @@ import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_UPLOADS_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.s3a.scale.ITestS3AHugeFileUploadSinglePut.SINGLE_PUT_REQUEST_TIMEOUT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -44,12 +43,14 @@ public class ITestS3AHugeFilesNoMultipart extends AbstractSTestS3AHugeFiles {
   /**
    * Threshold for MPUs.
    */
-  public static final String _5M = "5M";
+  public static final String S_5M = "5M";
 
   /**
    * Size to ensure MPUs don't happen in transfer manager.
    */
-  public static final String _1T = "1T";
+  public static final String S_1T = "1T";
+
+  public static final String SINGLE_PUT_REQUEST_TIMEOUT = "1h";
 
   /**
    * Always use disk storage.
@@ -75,8 +76,8 @@ public class ITestS3AHugeFilesNoMultipart extends AbstractSTestS3AHugeFiles {
         MULTIPART_SIZE,
         REQUEST_TIMEOUT);
     conf.setInt(IO_CHUNK_BUFFER_SIZE, 655360);
-    conf.set(MIN_MULTIPART_THRESHOLD, _1T);
-    conf.set(MULTIPART_SIZE, _1T);
+    conf.set(MIN_MULTIPART_THRESHOLD, S_1T);
+    conf.set(MULTIPART_SIZE, S_1T);
     conf.setBoolean(MULTIPART_UPLOADS_ENABLED, false);
     conf.set(REQUEST_TIMEOUT, SINGLE_PUT_REQUEST_TIMEOUT);
     return conf;
@@ -97,8 +98,8 @@ public class ITestS3AHugeFilesNoMultipart extends AbstractSTestS3AHugeFiles {
     fs.delete(hugefileRenamed, false);
     // create a new fs with a small multipart threshold; expect rename failure.
     final Configuration conf = new Configuration(fs.getConf());
-    conf.set(MIN_MULTIPART_THRESHOLD, _5M);
-    conf.set(MULTIPART_SIZE, _5M);
+    conf.set(MIN_MULTIPART_THRESHOLD, S_5M);
+    conf.set(MULTIPART_SIZE, S_5M);
     S3ATestUtils.disableFilesystemCaching(conf);
 
     try (FileSystem fs2 = FileSystem.get(fs.getUri(), conf)) {

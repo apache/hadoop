@@ -245,16 +245,18 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * file, from the content length of the header.
    * @param putObjectRequest the request
    * @param putOptions put object options
+   * @param durationTrackerFactory factory for duration tracking
    * @return the upload initiated
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
   PutObjectResult putObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
+      PutObjectOptions putOptions,
+      DurationTrackerFactory durationTrackerFactory)
       throws IOException;
 
   /**
-   * PUT an object via the transfer manager.
+   * PUT an object, possibly via the transfer manager.
    *
    * @param putObjectRequest the request
    * @param putOptions put object options
@@ -300,7 +302,7 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
   /**
    * Upload part of a multi-partition file.
    * @param request request
-   * @param durationTrackerFactory
+   * @param durationTrackerFactory factory for duration tracking
    * @return the result of the operation.
    * @throws IOException on problems
    */

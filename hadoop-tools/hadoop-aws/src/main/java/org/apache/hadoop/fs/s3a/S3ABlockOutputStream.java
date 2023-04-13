@@ -614,10 +614,10 @@ class S3ABlockOutputStream extends OutputStream implements
           try {
             // the putObject call automatically closes the input
             // stream afterwards.
-            return trackDuration(
-                statistics,
-                OBJECT_PUT_REQUESTS.getSymbol(), () ->
-                    writeOperationHelper.putObject(putObjectRequest, builder.putOptions));
+            return writeOperationHelper.putObject(
+                putObjectRequest,
+                builder.putOptions,
+                statistics);
           } finally {
             cleanupWithLogger(LOG, uploadData, block);
           }
