@@ -43,8 +43,9 @@ import org.apache.hadoop.security.AccessControlException;
  * <p>
  * For example,
  * (1) Suppose we have /abc/foo and the inode is inode(id=1000,name=foo).
- *     Suppose foo is created after snapshot s0 (i.e. foo is not in s0 and
- *     foo is in the create-list of /abc for the s0 diff entry.)
+ *     Suppose foo is created after snapshot s0,
+ *     i.e. foo is not in s0 and inode(id=1000,name=foo)
+ *     is in the create-list of /abc for the s0 diff entry.
  * (2) Create snapshot s1, s2 for /abc, i.e. foo is in s1 and s2.
  *     Suppose sDst is the last snapshot /xyz.
  * (3) mv /abc/foo /xyz/bar, i.e. inode(id=1000,name=...) is renamed from "foo"
@@ -54,16 +55,21 @@ import org.apache.hadoop.security.AccessControlException;
  * are different access paths to the same inode, inode(id=1000,name=bar).
  * <p>
  * With references, we have the following
- * - /abc has a child WithName(name=foo,lastSnapshot=s2) and
- *   the WithName is in the create-list of /abc for the s0 diff entry.
- *   The WithName is in s1 and s2, but not in s0 (the same as before).
- * - /xyz has a child DstReference(dstSnapshot=sDst)
- *   the DstReference is in the create-list of /xyz for the sDst diff entry.
- *   The DstReference is not in sDst.
+ * - The source /abc/foo inode(id=1000,name=foo) is replaced with
+ *   a WithName(name=foo,lastSnapshot=s2) and then it is moved
+ *   to the delete-list of /abc for the s2 diff entry.
+ *   The replacement also replaces inode(id=1000,name=foo)
+ *   in the create-list of /abc for the s0 diff entry with the WithName.
+ *   The same as before, /abc/foo is in s1 and s2, but not in s0.
+ * - The destination /xyz adds a child DstReference(dstSnapshot=sDst).
+ *   DstReference is added to the create-list of /xyz for the sDst diff entry.
+ *   /abc/bar is not in sDst.
  * - Both WithName and DstReference point to another reference WithCount(count=2).
- * - Finally, WithCount(count=2) points to inode(id=1000,name=bar).
+ * - Finally, WithCount(count=2) points to inode(id=1000,name=bar)
+ *   Note that the inode name is changed to "bar".
  * <p>
- * Note 1: References other than WithName use the name of the referred inode.
+ * Note 1: References other than WithName use the name of the referred inode,
+ *         i.e. WithCount and DstReference do not have their own name.
  * Note 2: getParent() always returns the parent in the current state, e.g.
  *         inode(id=1000,name=bar).getParent() returns /xyz but not /abc.
  * Note 3: {@link INodeReference#getId()} returns the id the referred inode,

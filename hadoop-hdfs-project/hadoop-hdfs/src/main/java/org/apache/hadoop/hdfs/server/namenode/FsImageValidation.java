@@ -77,6 +77,12 @@ public class FsImageValidation {
 
   static final String FS_IMAGE = "FS_IMAGE";
 
+  static String getEnv(String property) {
+    final String value = System.getenv().get(property);
+    LOG.info("ENV: {} = {}", property, value);
+    return value;
+  }
+
   static FsImageValidation newInstance(String... args) {
     final String f = Cli.parse(args);
     if (f == null) {
@@ -302,10 +308,7 @@ public class FsImageValidation {
     static String parse(String... args) {
       final String f;
       if (args == null || args.length == 0) {
-        f = System.getenv().get(FS_IMAGE);
-        if (f != null) {
-          println("Environment variable %s = %s", FS_IMAGE, f);
-        }
+        f = getEnv(FS_IMAGE);
       } else if (args.length == 1) {
         f = args[0];
       } else {
