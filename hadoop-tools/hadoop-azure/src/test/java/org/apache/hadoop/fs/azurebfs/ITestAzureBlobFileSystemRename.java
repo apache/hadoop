@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
@@ -187,6 +188,14 @@ public class ITestAzureBlobFileSystemRename extends
     assertTrue(fs.exists(new Path("testDir2/test4")));
     assertTrue(fs.exists(new Path("testDir2/test4/test3")));
     assertFalse(fs.exists(new Path("testDir2/test1/test2/test3")));
+  }
+
+  @Test
+  public void testRenameToRoot() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    fs.mkdirs(new Path("/src1/src2"));
+    Assert.assertTrue(fs.rename(new Path("/src1/src2"), new Path("/")));
+    Assert.assertTrue(fs.exists(new Path("/src2")));
   }
 
   /**
@@ -1289,8 +1298,19 @@ public class ITestAzureBlobFileSystemRename extends
     assumeNonHnsAccountBlobEndpoint(fileSystem);
     AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
     fileSystem.setAbfsStore(store);
-    Mockito.doReturn(COPY_STATUS_PENDING).when(store)
-        .getCopyBlobProgress(Mockito.any(AbfsRestOperation.class));
+    AbfsClient client = store.getClient();
+    AbfsClient spiedClient = Mockito.spy(client);
+    store.setClient(spiedClient);
+
+    Mockito.doAnswer(answer -> {
+      AbfsRestOperation op = Mockito.spy((AbfsRestOperation) answer.callRealMethod());
+      AbfsHttpOperation httpOp = Mockito.spy(op.getResult());
+      Mockito.doReturn(COPY_STATUS_PENDING).when(httpOp).getResponseHeader(
+          HttpHeaderConfigurations.X_MS_COPY_STATUS);
+      Mockito.doReturn(httpOp).when(op).getResult();
+      return op;
+    }).when(spiedClient).copyBlob(Mockito.any(Path.class), Mockito.any(Path.class),
+        Mockito.any(TracingContext.class));
     fileSystem.create(new Path("/test1/file"));
     fileSystem.rename(new Path("/test1/file"), new Path("/test1/file2"));
     Assert.assertTrue(fileSystem.exists(new Path("/test1/file2")));
@@ -1305,10 +1325,28 @@ public class ITestAzureBlobFileSystemRename extends
     assumeNonHnsAccountBlobEndpoint(fileSystem);
     AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
     fileSystem.setAbfsStore(store);
-    Mockito.doReturn(COPY_STATUS_PENDING).when(store)
-        .getCopyBlobProgress(Mockito.any(AbfsRestOperation.class));
-    Mockito.doReturn(COPY_STATUS_FAILED).when(store).getCopyStatus(Mockito.any(
-        AbfsHttpOperation.class));
+    AbfsClient client = store.getClient();
+    AbfsClient spiedClient = Mockito.spy(client);
+    store.setClient(spiedClient);
+
+    Mockito.doAnswer(answer -> {
+      AbfsRestOperation op = Mockito.spy((AbfsRestOperation) answer.callRealMethod());
+      AbfsHttpOperation httpOp = Mockito.spy(op.getResult());
+      Mockito.doReturn(COPY_STATUS_PENDING).when(httpOp).getResponseHeader(
+          HttpHeaderConfigurations.X_MS_COPY_STATUS);
+      Mockito.doReturn(httpOp).when(op).getResult();
+      return op;
+    }).when(spiedClient).copyBlob(Mockito.any(Path.class), Mockito.any(Path.class),
+        Mockito.any(TracingContext.class));
+    Mockito.doAnswer(answer -> {
+      AbfsRestOperation op = Mockito.spy((AbfsRestOperation) answer.callRealMethod());
+      AbfsHttpOperation httpOp = Mockito.spy(op.getResult());
+      Mockito.doReturn(COPY_STATUS_FAILED).when(httpOp).getResponseHeader(
+          HttpHeaderConfigurations.X_MS_COPY_STATUS);
+      Mockito.doReturn(httpOp).when(op).getResult();
+      return op;
+    }).when(spiedClient).getBlobProperty(Mockito.any(Path.class), Mockito.any(TracingContext.class));
+
     fileSystem.create(new Path("/test1/file"));
     Boolean copyBlobFailureCaught = false;
     try {
@@ -1331,10 +1369,28 @@ public class ITestAzureBlobFileSystemRename extends
     assumeNonHnsAccountBlobEndpoint(fileSystem);
     AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
     fileSystem.setAbfsStore(store);
-    Mockito.doReturn(COPY_STATUS_PENDING).when(store)
-        .getCopyBlobProgress(Mockito.any(AbfsRestOperation.class));
-    Mockito.doReturn(COPY_STATUS_ABORTED).when(store).getCopyStatus(Mockito.any(
-        AbfsHttpOperation.class));
+    AbfsClient client = store.getClient();
+    AbfsClient spiedClient = Mockito.spy(client);
+    store.setClient(spiedClient);
+
+    Mockito.doAnswer(answer -> {
+      AbfsRestOperation op = Mockito.spy((AbfsRestOperation) answer.callRealMethod());
+      AbfsHttpOperation httpOp = Mockito.spy(op.getResult());
+      Mockito.doReturn(COPY_STATUS_PENDING).when(httpOp).getResponseHeader(
+          HttpHeaderConfigurations.X_MS_COPY_STATUS);
+      Mockito.doReturn(httpOp).when(op).getResult();
+      return op;
+    }).when(spiedClient).copyBlob(Mockito.any(Path.class), Mockito.any(Path.class),
+        Mockito.any(TracingContext.class));
+    Mockito.doAnswer(answer -> {
+      AbfsRestOperation op = Mockito.spy((AbfsRestOperation) answer.callRealMethod());
+      AbfsHttpOperation httpOp = Mockito.spy(op.getResult());
+      Mockito.doReturn(COPY_STATUS_ABORTED).when(httpOp).getResponseHeader(
+          HttpHeaderConfigurations.X_MS_COPY_STATUS);
+      Mockito.doReturn(httpOp).when(op).getResult();
+      return op;
+    }).when(spiedClient).getBlobProperty(Mockito.any(Path.class), Mockito.any(TracingContext.class));
+
     fileSystem.create(new Path("/test1/file"));
     Boolean copyBlobFailureCaught = false;
     try {
@@ -1359,11 +1415,21 @@ public class ITestAzureBlobFileSystemRename extends
     String srcFile = "/test1/file";
     String dstFile = "/test1/file2";
     fileSystem.setAbfsStore(store);
+    AbfsClient client = store.getClient();
+    AbfsClient spiedClient = Mockito.spy(client);
+    store.setClient(spiedClient);
+
     Mockito.doAnswer(answer -> {
-          fileSystem.delete(new Path(dstFile), false);
-          return COPY_STATUS_PENDING;
-        }).when(store)
-        .getCopyBlobProgress(Mockito.any(AbfsRestOperation.class));
+      AbfsRestOperation op = Mockito.spy((AbfsRestOperation) answer.callRealMethod());
+      fileSystem.delete(new Path(dstFile), false);
+      AbfsHttpOperation httpOp = Mockito.spy(op.getResult());
+      Mockito.doReturn(COPY_STATUS_PENDING).when(httpOp).getResponseHeader(
+          HttpHeaderConfigurations.X_MS_COPY_STATUS);
+      Mockito.doReturn(httpOp).when(op).getResult();
+      return op;
+    }).when(spiedClient).copyBlob(Mockito.any(Path.class), Mockito.any(Path.class),
+        Mockito.any(TracingContext.class));
+
     fileSystem.create(new Path(srcFile));
 
 

@@ -44,6 +44,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.services.BlobProperty;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -567,7 +568,7 @@ public class AzureBlobFileSystem extends FileSystem
     if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
         == PrefixMode.BLOB) {
       List<BlobProperty> blobProperties = getAbfsStore()
-          .getListBlobs(path, null, tracingContext, 2, 2, true);
+          .getListBlobs(path, null, tracingContext, 2, 2, !path.isRoot());
       if (blobProperties.size() > 0) {
         isPathExists.set(true);
         isPathDirectory.set(true);

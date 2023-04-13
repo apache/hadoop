@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs;
+package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.Stack;
 

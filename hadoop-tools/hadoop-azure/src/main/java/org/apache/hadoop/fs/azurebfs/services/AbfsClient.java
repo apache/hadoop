@@ -1094,7 +1094,7 @@ public class AbfsClient implements Closeable {
    * case maxResult > 5000, server sends maximum 5000 blobs.
    * @param tracingContext object of {@link TracingContext}
    *
-   * @return abfsRestOperation which contain list of {@link org.apache.hadoop.fs.azurebfs.BlobProperty}
+   * @return abfsRestOperation which contain list of {@link BlobProperty}
    * via {@link AbfsRestOperation#getResult()}.{@link AbfsHttpOperation#getBlobList()}
    *
    * @throws AzureBlobFileSystemException thrown from server-call / xml-parsing
@@ -1109,13 +1109,13 @@ public class AbfsClient implements Closeable {
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, QUERY_PARAM_COMP_VALUE_LIST);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_INCLUDE,
         QUERY_PARAM_INCLUDE_VALUE_METADATA);
-    prefix = removeInitialSlash(prefix);
+    prefix = getDirectoryQueryParameter(prefix);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_PREFIX, prefix);
     if (marker != null) {
       abfsUriQueryBuilder.addQuery(QUERY_PARAM_MARKER, marker);
     }
     if (maxResult != null) {
-      abfsUriQueryBuilder.addQuery(QUERY_PARAM_MAXRESULT, maxResult + "");
+      abfsUriQueryBuilder.addQuery(QUERY_PARAM_MAXRESULT, maxResult.toString());
     }
     appendSASTokenToQuery(null, SASTokenProvider.LIST_BLOB_OPERATION,
         abfsUriQueryBuilder);
@@ -1130,17 +1130,6 @@ public class AbfsClient implements Closeable {
     );
     op.execute(tracingContext);
     return op;
-  }
-
-  private String removeInitialSlash(final String prefix) {
-    int len = prefix.length();
-    char slash = FORWARD_SLASH.charAt(0);
-    for (int i = 0; i < len; i++) {
-      if (prefix.charAt(i) != slash) {
-        return prefix.substring(i);
-      }
-    }
-    return null;
   }
 
   /**

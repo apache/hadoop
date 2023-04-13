@@ -28,10 +28,14 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+import org.apache.hadoop.fs.azurebfs.services.BlobProperty;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
@@ -125,14 +129,25 @@ public class ITestAzureBlobFileSystemDelegationSASForBlobEndpoint
     AzureBlobFileSystem fileSystem = getFileSystem();
     AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
     fileSystem.setAbfsStore(store);
-    Mockito.doReturn(COPY_STATUS_PENDING).when(store)
-        .getCopyBlobProgress(Mockito.any(AbfsRestOperation.class));
+    AbfsClient client = store.getClient();
+    AbfsClient spiedClient = Mockito.spy(client);
+    store.setClient(spiedClient);
+
+    Mockito.doAnswer(answer -> {
+      AbfsRestOperation op = Mockito.spy((AbfsRestOperation) answer.callRealMethod());
+      AbfsHttpOperation httpOp = Mockito.spy(op.getResult());
+      Mockito.doReturn(COPY_STATUS_PENDING).when(httpOp).getResponseHeader(
+          HttpHeaderConfigurations.X_MS_COPY_STATUS);
+      Mockito.doReturn(httpOp).when(op).getResult();
+      return op;
+    }).when(spiedClient).copyBlob(Mockito.any(Path.class), Mockito.any(Path.class),
+        Mockito.any(TracingContext.class));
     fileSystem.create(new Path("/test1/file"));
     fileSystem.rename(new Path("/test1/file"), new Path("/test1/file2"));
     Assert.assertTrue(fileSystem.exists(new Path("/test1/file2")));
     Mockito.verify(store, Mockito.times(1))
-        .handleCopyInProgress(Mockito.any(Path.class), Mockito.any(
-            TracingContext.class), Mockito.any(String.class));
+        .handleCopyInProgress(Mockito.any(Path.class),
+            Mockito.any(TracingContext.class), Mockito.any(String.class));
   }
 
   @Test
