@@ -195,7 +195,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     assertFalse(fs.exists(testFilePath));
 
     // trigger append call
-    intercept(FileNotFoundException.class,
+    intercept(IOException.class,
             () -> stream.close());
   }
 

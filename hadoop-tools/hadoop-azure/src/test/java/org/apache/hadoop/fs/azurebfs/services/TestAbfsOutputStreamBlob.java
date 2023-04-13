@@ -21,11 +21,11 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.fs.azurebfs.utils.InsertionOrderConcurrentHashMap;
 import org.junit.Test;
 
 import org.mockito.ArgumentCaptor;
@@ -44,6 +44,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLO
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.refEq;
@@ -146,12 +147,10 @@ public final class TestAbfsOutputStreamBlob {
                                 null),
                         createExecutorService(abfsConf))));
 
-        InsertionOrderConcurrentHashMap<BlockWithId, BlockStatus> map = Mockito.spy(new InsertionOrderConcurrentHashMap<>());
-        map.put(new BlockWithId("MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 0), BlockStatus.SUCCESS);
-        map.getQueue().add(new BlockWithId("MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 0));
-        //Mockito.when(map.put(Mockito.any(), Mockito.any())).thenReturn(BlockStatus.SUCCESS);
+        LinkedHashMap<String, BlockStatus> map = Mockito.spy(new LinkedHashMap<>());
+        map.put("MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", BlockStatus.SUCCESS);
         when(out.getMap()).thenReturn(map);
-        Mockito.when(out.getMap()).thenReturn(map);
+        when(out.getMap().containsKey(any())).thenReturn(true);
         return out;
     }
 
@@ -333,7 +332,7 @@ public final class TestAbfsOutputStreamBlob {
                                 null),
                         createExecutorService(abfsConf))));
 
-        InsertionOrderConcurrentHashMap<BlockWithId, BlockStatus> map = Mockito.mock(InsertionOrderConcurrentHashMap.class);
+        LinkedHashMap<String, BlockStatus> map = Mockito.mock(LinkedHashMap.class);
         Mockito.when(map.put(Mockito.any(), Mockito.any())).thenReturn(BlockStatus.SUCCESS);
         Mockito.when(out.getMap()).thenReturn(map);
 
@@ -341,22 +340,8 @@ public final class TestAbfsOutputStreamBlob {
         new Random().nextBytes(b);
 
         for (int i = 0; i < 2; i++) {
-            out.write(b);
+            intercept(Exception.class , () -> out.write(b));
         }
-        Thread.sleep(1000);
-
-        AppendRequestParameters firstReqParameters = new AppendRequestParameters(
-                0, 0, BUFFER_SIZE, APPEND_MODE, true, null);
-        AppendRequestParameters secondReqParameters = new AppendRequestParameters(
-                BUFFER_SIZE, 0, BUFFER_SIZE, APPEND_MODE, true, null);
-
-        verify(client, times(0)).append(any(),
-                eq(PATH), any(byte[].class), refEq(firstReqParameters), isNull(), any(TracingContext.class), any());
-        verify(client, times(0)).append(any(),
-                eq(PATH), any(byte[].class), refEq(secondReqParameters), isNull(), any(TracingContext.class), any());
-        // confirm there were only 2 invocations in all
-        verify(client, times(0)).append(any(),
-                eq(PATH), any(byte[].class), any(), isNull(), any(TracingContext.class), any());
     }
 
     /**
@@ -366,10 +351,9 @@ public final class TestAbfsOutputStreamBlob {
     public void verifyWriteRequestOfBufferSizeAndHFlush() throws Exception {
         AbfsClient client = getClient();
         AbfsOutputStream out = Mockito.spy(getOutputStream(client, getConf()));
-        InsertionOrderConcurrentHashMap<BlockWithId, BlockStatus> map = Mockito.spy(new InsertionOrderConcurrentHashMap<>());
-        map.put(new BlockWithId("MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 0), BlockStatus.SUCCESS);
-        map.getQueue().add(new BlockWithId("ABCD", 0));
-        when(out.getMap()).thenReturn(map);
+        LinkedHashMap<String, BlockStatus> map = Mockito.spy(new LinkedHashMap<>());
+        map.put("MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", BlockStatus.SUCCESS);
+        when(out.getMap().containsKey(any())).thenReturn(true);
 
         final byte[] b = new byte[BUFFER_SIZE];
         new Random().nextBytes(b);

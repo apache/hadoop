@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,7 +51,11 @@ import java.util.concurrent.Future;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCKLIST;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCK_LIST_END_TAG;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCK_LIST_START_TAG;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.LATEST_BLOCK_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_TYPE;
@@ -75,16 +80,19 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
         Assume.assumeTrue(prefixMode == PrefixMode.BLOB);
     }
 
-    /** Generates the blockList xml. */
+    /**
+     * Helper method to generate the xml with list of blockId's.
+     * @param blockIds The set of blockId's to be pushed to the backend.
+     * @return xml in string format.
+     */
     private static String generateBlockListXml(List<String> blockIds) {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-        stringBuilder.append("<BlockList>\n");
+        stringBuilder.append(XML_VERSION);
+        stringBuilder.append(BLOCK_LIST_START_TAG);
         for (String blockId : blockIds) {
-            String blockId1 = Base64.getEncoder().encodeToString(blockId.getBytes());
-            stringBuilder.append(String.format("<Latest>%s</Latest>\n", blockId1));
+            stringBuilder.append(String.format(LATEST_BLOCK_FORMAT, blockId));
         }
-        stringBuilder.append("</BlockList>\n");
+        stringBuilder.append(BLOCK_LIST_END_TAG);
         return stringBuilder.toString();
     }
 

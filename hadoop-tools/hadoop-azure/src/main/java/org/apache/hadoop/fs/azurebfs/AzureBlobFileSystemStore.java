@@ -577,14 +577,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       AbfsLease lease = maybeCreateLease(relativePath, tracingContext);
       String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
-      if (getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
-        if (isAppendBlob) {
-          throw new IOException("AppendBlob is not supported for blob endpoint");
-        }
-        if (abfsConfiguration.isSmallWriteOptimizationEnabled()) {
-          throw new IOException("Small write optimization is not supported for blob endpoint");
-        }
-      }
+      checkAppendSmallWrite(isAppendBlob);
 
       return new AbfsOutputStream(
           populateAbfsOutputStreamContext(
@@ -843,6 +836,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       AbfsLease lease = maybeCreateLease(relativePath, tracingContext);
       final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      checkAppendSmallWrite(isAppendBlob);
 
       return new AbfsOutputStream(
           populateAbfsOutputStreamContext(
@@ -854,6 +848,17 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               offset,
               eTag,
               tracingContext));
+    }
+  }
+
+  public void checkAppendSmallWrite(boolean isAppendBlob) throws IOException {
+    if (getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
+      if (isAppendBlob) {
+        throw new IOException("AppendBlob is not supported for blob endpoint.");
+      }
+      if (abfsConfiguration.isSmallWriteOptimizationEnabled()) {
+        throw new IOException("Small write optimization is not supported for blob endpoint.");
+      }
     }
   }
 

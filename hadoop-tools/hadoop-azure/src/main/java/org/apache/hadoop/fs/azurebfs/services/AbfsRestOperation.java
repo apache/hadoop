@@ -36,9 +36,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperati
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
-import org.xml.sax.SAXException;
 
-import javax.xml.parsers.ParserConfigurationException;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.PUT_BLOCK_LIST;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -287,6 +286,9 @@ public class AbfsRestOperation {
         // HttpUrlConnection requires
         httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
         incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
+        if (!(operationType.name().equals(PUT_BLOCK_LIST))) {
+          incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
+        }
         incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
       }
 

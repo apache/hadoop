@@ -61,6 +61,7 @@ public class TracingContext {
   private final TracingHeaderFormat format;  // header ID display options
   private Listener listener = null;  // null except when testing
   //final concatenated ID list set into x-ms-client-request-id header
+  private int retryAppendDFS;
   private String header = EMPTY_STRING;
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
@@ -85,6 +86,7 @@ public class TracingContext {
     this.clientCorrelationID = clientCorrelationID;
     streamID = EMPTY_STRING;
     retryCount = 0;
+    retryAppendDFS = 0;
     primaryRequestId = EMPTY_STRING;
     format = tracingHeaderFormat;
     this.listener = listener;
@@ -107,6 +109,7 @@ public class TracingContext {
     this.clientCorrelationID = originalTracingContext.clientCorrelationID;
     this.opType = originalTracingContext.opType;
     this.retryCount = 0;
+    this.retryAppendDFS = 0;
     this.primaryRequestId = originalTracingContext.primaryRequestId;
     this.format = originalTracingContext.format;
     if (originalTracingContext.listener != null) {
@@ -147,6 +150,10 @@ public class TracingContext {
     this.listener = listener;
   }
 
+  public void setRetryAppendDFS(int retryAppendDFS) {
+    this.retryAppendDFS = retryAppendDFS;
+  }
+
   /**
    * Concatenate all identifiers separated by (:) into a string and set into
    * X_MS_CLIENT_REQUEST_ID header of the http operation
@@ -160,7 +167,7 @@ public class TracingContext {
       header =
           clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID + ":"
               + primaryRequestId + ":" + streamID + ":" + opType + ":"
-              + retryCount;
+              + retryCount + ":" + retryAppendDFS;
       break;
     case TWO_ID_FORMAT:
       header = clientCorrelationID + ":" + clientRequestId;
