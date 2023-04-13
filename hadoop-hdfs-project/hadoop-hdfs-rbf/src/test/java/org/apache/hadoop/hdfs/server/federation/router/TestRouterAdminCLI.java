@@ -853,6 +853,12 @@ public class TestRouterAdminCLI {
         + "[-readonly] [-faulttolerant] "
         + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
         + "-owner <owner> -group <group> -mode <mode>]\n"
+        + "\t[-addall <source1> <nameservice1,nameservice2,...> <destination1> "
+        + "[-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+        + "-owner <owner1> -group <group1> -mode <mode1>"
+        + " , <source2> <nameservice1,nameservice2,...> <destination2> "
+        + "[-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+        + "-owner <owner2> -group <group2> -mode <mode2> , ...]\n"
         + "\t[-update <source> [<nameservice1, nameservice2, ...> "
         + "<destination>] [-readonly true|false]"
         + " [-faulttolerant true|false] "
@@ -1838,6 +1844,46 @@ public class TestRouterAdminCLI {
     // Replace the time values with XXX
     assertEquals(expected,
         buffer.toString().trim().replaceAll("[0-9]{4,}+", "XXX"));
+  }
+
+  @Test
+  public void testAddMultipleMountPoints() throws Exception {
+    String[] argv =
+        new String[] {"-addall", "/testAddMultipleMountPoints-01", "ns01", "/dest01", ",",
+            "/testAddMultipleMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant", ",", "/testAddMultipleMountPoints-03", "ns03", "/dest03"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest request = GetMountTableEntriesRequest
+        .newInstance("/testAddMultipleMountPoints-01");
+    GetMountTableEntriesResponse response = client.getMountTableManager()
+        .getMountTableEntries(request);
+    assertEquals(1, response.getEntries().size());
+    List<RemoteLocation> destinations = response.getEntries().get(0).getDestinations();
+    assertEquals(1, destinations.size());
+    assertEquals("/testAddMultipleMountPoints-01", destinations.get(0).getSrc());
+    assertEquals("/dest01", destinations.get(0).getDest());
+    assertEquals("ns01", destinations.get(0).getNameserviceId());
+
+    request = GetMountTableEntriesRequest.newInstance("/testAddMultipleMountPoints-02");
+    response = client.getMountTableManager().getMountTableEntries(request);
+    destinations = response.getEntries().get(0).getDestinations();
+    assertEquals(2, destinations.size());
+    assertEquals("/testAddMultipleMountPoints-02", destinations.get(0).getSrc());
+    assertEquals("/dest02", destinations.get(0).getDest());
+    assertEquals("ns02", destinations.get(0).getNameserviceId());
+    assertEquals("/testAddMultipleMountPoints-02", destinations.get(1).getSrc());
+    assertEquals("/dest02", destinations.get(1).getDest());
+    assertEquals("ns03", destinations.get(1).getNameserviceId());
+
+    request = GetMountTableEntriesRequest.newInstance("/testAddMultipleMountPoints-03");
+    response = client.getMountTableManager().getMountTableEntries(request);
+    destinations = response.getEntries().get(0).getDestinations();
+    assertEquals(1, destinations.size());
+    assertEquals("/testAddMultipleMountPoints-03", destinations.get(0).getSrc());
+    assertEquals("/dest03", destinations.get(0).getDest());
+    assertEquals("ns03", destinations.get(0).getNameserviceId());
   }
 
   private void addMountTable(String src, String nsId, String dst)

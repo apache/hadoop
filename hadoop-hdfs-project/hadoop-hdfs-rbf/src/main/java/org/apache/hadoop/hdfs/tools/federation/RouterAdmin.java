@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.tools.federation;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -52,6 +53,8 @@ import org.apache.hadoop.hdfs.server.federation.store.CachedRecordStore;
 import org.apache.hadoop.hdfs.server.federation.store.RecordStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddAllMountTableEntryRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddAllMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.DisableNameserviceRequest;
@@ -140,7 +143,7 @@ public class RouterAdmin extends Configured implements Tool {
   private String getUsage(String cmd) {
     if (cmd == null) {
       String[] commands =
-          {"-add", "-update", "-rm", "-ls", "-getDestination", "-setQuota",
+          {"-add", "-addall", "-update", "-rm", "-ls", "-getDestination", "-setQuota",
               "-setStorageTypeQuota", "-clrQuota", "-clrStorageTypeQuota",
               DUMP_COMMAND, "-safemode", "-nameservice", "-getDisabledNameservices",
               "-refresh", "-refreshRouterArgs",
@@ -160,6 +163,16 @@ public class RouterAdmin extends Configured implements Tool {
           + "[-readonly] [-faulttolerant] "
           + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
           + "-owner <owner> -group <group> -mode <mode>]";
+    } else if (cmd.equals("-addall")) {
+      return "\t[-addall "
+          + "<source1> <nameservice1,nameservice2,...> <destination1> "
+          + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+          + "-owner <owner1> -group <group1> -mode <mode1>"
+          + " , "
+          + "<source2> <nameservice1,nameservice2,...> <destination2> "
+          + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+          + "-owner <owner2> -group <group2> -mode <mode2>"
+          + " , ...]";
     } else if (cmd.equals("-update")) {
       return "\t[-update <source>"
           + " [<nameservice1, nameservice2, ...> <destination>] "
@@ -423,6 +436,12 @@ public class RouterAdmin extends Configured implements Tool {
         exitCode = refreshSuperUserGroupsConfiguration();
       } else if ("-refreshCallQueue".equals(cmd)) {
         exitCode = refreshCallQueue();
+      } else if ("-addall".equals(cmd)) {
+        if (addAllMount(argv, i)) {
+          System.out.println("Successfully added all mount points ");
+        } else {
+          exitCode = -1;
+        }
       } else {
         throw new IllegalArgumentException("Unknown Command: " + cmd);
       }
@@ -460,6 +479,111 @@ public class RouterAdmin extends Configured implements Tool {
       LOG.debug("Exception encountered", debugException);
     }
     return exitCode;
+  }
+
+  private boolean addAllMount(String[] parameters, int i) throws IOException {
+    List<AddMountAttributes> addMountAttributesList = new ArrayList<>();
+    while (i < parameters.length) {
+      // Mandatory parameters
+      String mount = parameters[i++];
+      String[] nss = parameters[i++].split(",");
+      String dest = parameters[i++];
+
+      // Optional parameters
+      boolean readOnly = false;
+      boolean faultTolerant = false;
+      String owner = null;
+      String group = null;
+      FsPermission mode = null;
+      DestinationOrder order = DestinationOrder.HASH;
+      while (i < parameters.length && !",".equals(parameters[i])) {
+        if (parameters[i].equals("-readonly")) {
+          readOnly = true;
+        } else if (parameters[i].equals("-faulttolerant")) {
+          faultTolerant = true;
+        } else if (parameters[i].equals("-order")) {
+          i++;
+          try {
+            order = DestinationOrder.valueOf(parameters[i]);
+          } catch (Exception e) {
+            System.err.println("Cannot parse order: " + parameters[i]);
+          }
+        } else if (parameters[i].equals("-owner")) {
+          i++;
+          owner = parameters[i];
+        } else if (parameters[i].equals("-group")) {
+          i++;
+          group = parameters[i];
+        } else if (parameters[i].equals("-mode")) {
+          i++;
+          short modeValue = Short.parseShort(parameters[i], 8);
+          mode = new FsPermission(modeValue);
+        } else {
+          printUsage("-addall");
+          return false;
+        }
+        i++;
+      }
+      if (i < parameters.length && ",".equals(parameters[i])) {
+        i++;
+      }
+      AddMountAttributes addMountAttributes = new AddMountAttributes();
+      addMountAttributes.setMount(mount);
+      addMountAttributes.setNss(nss);
+      addMountAttributes.setDest(dest);
+      addMountAttributes.setReadonly(readOnly);
+      addMountAttributes.setFaultTolerant(faultTolerant);
+      addMountAttributes.setOrder(order);
+      addMountAttributes.setAclInfo(new ACLEntity(owner, group, mode));
+      addMountAttributesList.add(addMountAttributes);
+    }
+    List<MountTable> addEntries = getMountTablesFromAddAllAttributes(addMountAttributesList);
+    AddAllMountTableEntryRequest request =
+        AddAllMountTableEntryRequest.newInstance(addEntries);
+    MountTableManager mountTable = client.getMountTableManager();
+    AddAllMountTableEntryResponse addResponse =
+        mountTable.addAllMountTableEntry(request);
+    boolean added = addResponse.getStatus();
+    if (!added) {
+      System.err.println("Cannot add some or all mount points");
+    }
+    return added;
+  }
+
+  private List<MountTable> getMountTablesFromAddAllAttributes(
+      List<AddMountAttributes> addMountAttributesList) throws IOException {
+    List<MountTable> mountTables = new ArrayList<>();
+    for (AddMountAttributes addMountAttributes : addMountAttributesList) {
+      String mount = normalizeFileSystemPath(addMountAttributes.getMount());
+      Map<String, String> destMap = new LinkedHashMap<>();
+      for (String ns : addMountAttributes.getNss()) {
+        destMap.put(ns, addMountAttributes.getDest());
+      }
+      MountTable newEntry = MountTable.newInstance(mount, destMap);
+      if (addMountAttributes.isReadonly()) {
+        newEntry.setReadOnly(true);
+      }
+      if (addMountAttributes.isFaultTolerant()) {
+        newEntry.setFaultTolerant(true);
+      }
+      if (addMountAttributes.getOrder() != null) {
+        newEntry.setDestOrder(addMountAttributes.getOrder());
+      }
+      ACLEntity aclInfo = addMountAttributes.getAclInfo();
+      // Set ACL info for mount table entry
+      if (aclInfo.getOwner() != null) {
+        newEntry.setOwnerName(aclInfo.getOwner());
+      }
+      if (aclInfo.getGroup() != null) {
+        newEntry.setGroupName(aclInfo.getGroup());
+      }
+      if (aclInfo.getMode() != null) {
+        newEntry.setMode(aclInfo.getMode());
+      }
+      newEntry.validate();
+      mountTables.add(newEntry);
+    }
+    return mountTables;
   }
 
   /**

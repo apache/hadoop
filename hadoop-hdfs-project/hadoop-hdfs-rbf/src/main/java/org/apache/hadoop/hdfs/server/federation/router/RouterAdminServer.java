@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddAllMountTableEntryRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddAllMountTableEntryResponse;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
@@ -356,6 +358,25 @@ public class RouterAdminServer extends AbstractService
       }
     }
     return getMountTableStore().addMountTableEntry(request);
+  }
+
+  @Override
+  public AddAllMountTableEntryResponse addAllMountTableEntry(AddAllMountTableEntryRequest request)
+      throws IOException {
+    List<MountTable> mountTables = request.getEntries();
+    for (MountTable mountTable : mountTables) {
+      verifyMaxComponentLength(mountTable);
+    }
+    if (this.mountTableCheckDestination) {
+      for (MountTable mountTable : mountTables) {
+        List<String> nsIds = verifyFileInDestinations(mountTable);
+        if (!nsIds.isEmpty()) {
+          throw new IllegalArgumentException(
+              "File not found in downstream " + "nameservices: " + StringUtils.join(",", nsIds));
+        }
+      }
+    }
+    return getMountTableStore().addAllMountTableEntry(request);
   }
 
   @Override
