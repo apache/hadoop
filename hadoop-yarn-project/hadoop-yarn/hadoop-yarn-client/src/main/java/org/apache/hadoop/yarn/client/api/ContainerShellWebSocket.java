@@ -69,17 +69,16 @@ public class ContainerShellWebSocket {
   @OnWebSocketConnect
   public void onConnect(Session s) {
     initTerminal(s);
-    LOG.info(s.getRemoteAddress().getHostString() + " connected!");
+    LOG.info("{} connected!", s.getRemoteAddress().getHostString());
   }
 
   @OnWebSocketClose
   public void onClose(Session session, int status, String reason) {
     if (status==1000) {
-      LOG.info(session.getRemoteAddress().getHostString() +
-          " closed, status: " + status);
+      LOG.info("{} closed, status: {}", session.getRemoteAddress().getHostString(), status);
     } else {
-      LOG.warn(session.getRemoteAddress().getHostString() +
-          " closed, status: " + status + " Reason: " + reason);
+      LOG.warn("{} closed, status:" +
+              " {} Reason: {}.", session.getRemoteAddress().getHostString(), status, reason);
     }
   }
 
