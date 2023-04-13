@@ -577,9 +577,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * prefix = given value. If not provided, the API call would have prefix =
    * sourceDirBlobPath.
    * @param tracingContext object of {@link TracingContext}
-   * @param maxPerServerCallResult define how many blobs can client handle in server response.
-   * In case maxPerServerCallResult <= 5000, server sends number of blobs equal to the value. In
-   * case maxPerServerCallResult > 5000, server sends maximum 5000 blobs.
    * @param maxResult defines maximum blobs the method should process
    * @param isDefinitiveDirSearch defines if (true) it is blobList search on a
    * definitive directory, if (false) it is blobList search on a prefix.
@@ -589,7 +586,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws AbfsRestOperationException exception from server-calls / xml-parsing
    */
   public List<BlobProperty> getListBlobs(Path sourceDirBlobPath,
-      String prefix, TracingContext tracingContext, Integer maxPerServerCallResult,
+      String prefix, TracingContext tracingContext,
       final Integer maxResult, final Boolean isDefinitiveDirSearch)
       throws AzureBlobFileSystemException {
     List<BlobProperty> blobProperties = new ArrayList<>();
@@ -601,7 +598,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
     do {
       AbfsRestOperation op = client.getListBlobs(
-          nextMarker, prefix, maxPerServerCallResult, tracingContext
+          nextMarker, prefix, maxResult, tracingContext
       );
       BlobList blobList = op.getResult().getBlobList();
       nextMarker = blobList.getNextMarker();
