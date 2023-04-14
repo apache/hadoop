@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 
+import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_DEFAULT_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
@@ -64,7 +65,7 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
 
     testFile = new Path(testFileUri);
     prefetchBlockSize = conf.getInt(PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE);
-    fs = new S3AFileSystem();
+    fs = getFileSystem();
     fs.initialize(new URI(testFileUri), getConfiguration());
   }
 
@@ -102,6 +103,8 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
   @Test
   public void testCacheFileExistence() throws Throwable {
     describe("Verify that FS cache files exist on local FS");
+    // This internally calls S3ATestUtils#prepareTestConfiguration
+    Configuration conf = createConfiguration();
 
     try (FSDataInputStream in = fs.open(testFile)) {
       byte[] buffer = new byte[prefetchBlockSize];
@@ -110,7 +113,7 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
       in.seek(prefetchBlockSize * 2);
       in.read(buffer, 0, prefetchBlockSize);
 
-      File tmpFileDir = new File("target/build/test");
+      File tmpFileDir = new File(conf.get(BUFFER_DIR));
       assertTrue("The dir to keep cache files must exist", tmpFileDir.exists());
       File[] tmpFiles = tmpFileDir
           .listFiles((dir, name) -> name.endsWith(".bin") && name.contains("fs-cache-"));

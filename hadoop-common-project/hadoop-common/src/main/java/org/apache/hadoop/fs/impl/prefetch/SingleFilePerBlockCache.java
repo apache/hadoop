@@ -70,7 +70,9 @@ public class SingleFilePerBlockCache implements BlockCache {
 
   private final PrefetchingStatistics prefetchingStatistics;
 
-  // File attributes attached to any intermediate temporary file created during index creation.
+  /**
+   * File attributes attached to any intermediate temporary file created during index creation.
+   */
   private static final Set<PosixFilePermission> TEMP_FILE_ATTRS =
       ImmutableSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
 
@@ -234,6 +236,15 @@ public class SingleFilePerBlockCache implements BlockCache {
     writeChannel.close();
   }
 
+  /**
+   * Return temporary file created based on the file path retrieved from local dir allocator.
+   *
+   * @param conf The configuration object.
+   * @param localDirAllocator Local dir allocator instance.
+   * @return Path of the temporary file created.
+   * @throws IOException if IO error occurs while local dir allocator tries to retrieve path
+   * from local FS or file creation fails or permission set fails.
+   */
   protected Path getCacheFilePath(final Configuration conf,
       final LocalDirAllocator localDirAllocator)
       throws IOException {
@@ -338,6 +349,15 @@ public class SingleFilePerBlockCache implements BlockCache {
 
   private static final String CACHE_FILE_PREFIX = "fs-cache-";
 
+  /**
+   * Determine if the cache space is available on the local FS.
+   *
+   * @param fileSize The size of the file.
+   * @param conf The configuration.
+   * @param localDirAllocator Local dir allocator instance.
+   * @return True if the given file size is less than the available free space on local FS,
+   * False otherwise.
+   */
   public static boolean isCacheSpaceAvailable(long fileSize, Configuration conf,
       LocalDirAllocator localDirAllocator) {
     try {
@@ -362,7 +382,7 @@ public class SingleFilePerBlockCache implements BlockCache {
    *
    * @param conf the configuration.
    * @param localDirAllocator the local dir allocator instance.
-   * @return patch of the file created.
+   * @return path of the file created.
    * @throws IOException if IO error occurs while local dir allocator tries to retrieve path
    * from local FS or file creation fails or permission set fails.
    */

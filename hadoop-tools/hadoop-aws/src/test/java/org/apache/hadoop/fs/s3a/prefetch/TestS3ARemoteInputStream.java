@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.impl.prefetch.ExceptionAsserts;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
@@ -64,7 +65,7 @@ public class TestS3ARemoteInputStream extends AbstractHadoopTestBase {
     S3AInputStreamStatistics stats =
         readContext.getS3AStatisticsContext().newInputStreamStatistics();
 
-    Configuration conf = new Configuration();
+    Configuration conf = S3ATestUtils.prepareTestConfiguration(new Configuration());
     // Should not throw.
     new S3ACachingInputStream(readContext, attrs, client, stats, conf, null);
 

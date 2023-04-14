@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.impl.prefetch.BlockData;
 import org.apache.hadoop.fs.impl.prefetch.BufferData;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
@@ -130,7 +131,8 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
   private static final class BlockManagerForTesting
       extends S3ACachingBlockManager {
 
-    private static final Configuration CONF = new Configuration();
+    private static final Configuration CONF =
+        S3ATestUtils.prepareTestConfiguration(new Configuration());
 
     BlockManagerForTesting(
         ExecutorServiceFuturePool futurePool,
@@ -139,7 +141,7 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
         int bufferPoolSize,
         S3AInputStreamStatistics streamStatistics) {
       super(futurePool, reader, blockData, bufferPoolSize, streamStatistics, CONF,
-          new LocalDirAllocator(CONF.get(BUFFER_DIR) != null ? BUFFER_DIR : HADOOP_TMP_DIR));
+          new LocalDirAllocator(HADOOP_TMP_DIR));
     }
 
     // If true, forces the next read operation to fail.

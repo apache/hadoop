@@ -41,9 +41,6 @@ import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
-import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
-import static org.apache.hadoop.fs.s3a.Constants.HADOOP_TMP_DIR;
-
 /**
  * Enhanced {@code InputStream} for reading from S3.
  *
@@ -85,7 +82,7 @@ public class S3APrefetchingInputStream
    * @param client callbacks used for interacting with the underlying S3 client.
    * @param streamStatistics statistics for this stream.
    * @param conf the configuration.
-   *
+   * @param localDirAllocator the local dir allocator instance retrieved from S3A FS.
    * @throws IllegalArgumentException if context is null.
    * @throws IllegalArgumentException if s3Attributes is null.
    * @throws IllegalArgumentException if client is null.
@@ -95,7 +92,8 @@ public class S3APrefetchingInputStream
       S3ObjectAttributes s3Attributes,
       S3AInputStream.InputStreamCallbacks client,
       S3AInputStreamStatistics streamStatistics,
-      Configuration conf) {
+      Configuration conf,
+      LocalDirAllocator localDirAllocator) {
 
     Validate.checkNotNull(context, "context");
     Validate.checkNotNull(s3Attributes, "s3Attributes");
@@ -117,10 +115,6 @@ public class S3APrefetchingInputStream
           streamStatistics);
     } else {
       LOG.debug("Creating in caching input stream for {}", context.getPath());
-      final String bufferDir =
-          conf.get(BUFFER_DIR) != null ? BUFFER_DIR : HADOOP_TMP_DIR;
-      final LocalDirAllocator localDirAllocator =
-          new LocalDirAllocator(bufferDir);
       this.inputStream = new S3ACachingInputStream(
           context,
           s3Attributes,
