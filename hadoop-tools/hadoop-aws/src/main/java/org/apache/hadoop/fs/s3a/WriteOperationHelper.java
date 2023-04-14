@@ -581,24 +581,6 @@ public class WriteOperationHelper implements WriteOperations {
   }
 
   /**
-   * PUT an object, possibly via the transfer manager.
-   *
-   * @param putObjectRequest the request
-   * @param putOptions put object options
-   *
-   * @throws IOException on problems
-   */
-  @Retries.RetryTranslated
-  public void uploadObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
-      throws IOException {
-
-    // the transfer manager is not involved; instead it is directly
-    // PUT.
-    putObject(putObjectRequest, putOptions, null);
-  }
-
-  /**
    * Revert a commit by deleting the file.
    * Relies on retry code in filesystem.
    * Does not attempt to recreate the parent directory

@@ -216,6 +216,7 @@ public class AWSRequestAnalyzer {
         || request instanceof CompleteMultipartUploadRequest
         || request instanceof GetBucketLocationRequest;
   }
+
   /**
    * Predicate which returns true if the request is part of the
    * multipart upload API -and which therefore must be rejected
@@ -226,7 +227,8 @@ public class AWSRequestAnalyzer {
   public static boolean isRequestMultipartIO(final Object request) {
     return request instanceof CopyPartRequest
         || request instanceof CompleteMultipartUploadRequest
-        || request instanceof InitiateMultipartUploadRequest;
+        || request instanceof InitiateMultipartUploadRequest
+        || request instanceof UploadPartRequest;
   }
 
   /**

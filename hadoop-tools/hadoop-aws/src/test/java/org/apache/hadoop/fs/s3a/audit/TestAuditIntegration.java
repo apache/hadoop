@@ -81,7 +81,7 @@ public class TestAuditIntegration extends AbstractHadoopTestBase {
           new AuditOperationRejectedException("not supported"));
     });
     final S3ARetryPolicy retryPolicy = new S3ARetryPolicy(new Configuration(false));
-    final RetryPolicy.RetryAction action = retryPolicy.shouldRetry(ex, 1, 1, true);
+    final RetryPolicy.RetryAction action = retryPolicy.shouldRetry(ex, 0, 0, true);
     Assertions.assertThat(action.action)
         .describedAs("retry policy %s for %s", action, ex)
         .isEqualTo(RetryPolicy.RetryAction.RetryDecision.FAIL);

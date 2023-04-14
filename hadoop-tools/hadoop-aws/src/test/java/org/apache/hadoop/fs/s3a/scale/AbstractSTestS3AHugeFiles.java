@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.util.Progressable;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -201,7 +202,8 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         true,
         uploadBlockSize,
         progress)) {
-      streamStatistics = getOutputStreamStatistics(out);
+      streamStatistics = requireNonNull(getOutputStreamStatistics(out),
+          () -> "No iostatistics in " + out);
 
       for (long block = 1; block <= blocks; block++) {
         out.write(data);

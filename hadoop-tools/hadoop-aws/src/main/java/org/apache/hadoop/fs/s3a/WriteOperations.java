@@ -256,19 +256,6 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
       throws IOException;
 
   /**
-   * PUT an object, possibly via the transfer manager.
-   *
-   * @param putObjectRequest the request
-   * @param putOptions put object options
-   *
-   * @throws IOException on problems
-   */
-  @Retries.RetryTranslated
-  void uploadObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
-      throws IOException;
-
-  /**
    * Revert a commit by deleting the file.
    * No attempt is made to probe for/recreate a parent dir marker
    * Relies on retry code in filesystem.

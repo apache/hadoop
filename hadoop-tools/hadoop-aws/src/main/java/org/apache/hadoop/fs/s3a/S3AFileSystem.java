@@ -2606,21 +2606,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Given a possibly null duration tracker factory, return a non-null
-   * one for use in tracking durations.
+   * one for use in tracking durations -either that or the FS tracker
+   * itself.
    *
    * @param factory factory.
    * @return a non-null factory.
    */
   protected DurationTrackerFactory nonNullDurationTrackerFactory(
       DurationTrackerFactory factory) {
-    DurationTrackerFactory f = factory;
-    if (f == null) {
-      f = getDurationTrackerFactory();
-      if (f == null) {
-        f = emptyStatisticsStore();
-      }
-    }
-    return f;
+    return factory != null
+        ? factory
+        : getDurationTrackerFactory();
   }
 
   /**
