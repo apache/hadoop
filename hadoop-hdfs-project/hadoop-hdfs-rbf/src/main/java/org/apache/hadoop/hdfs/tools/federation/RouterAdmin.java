@@ -542,43 +542,43 @@ public class RouterAdmin extends Configured implements Tool {
         break;
       }
       switch (parameters[i]) {
-        case "-readonly": {
-          readOnly = true;
-          break;
+      case "-readonly": {
+        readOnly = true;
+        break;
+      }
+      case "-faulttolerant": {
+        faultTolerant = true;
+        break;
+      }
+      case "-order": {
+        i++;
+        try {
+          order = DestinationOrder.valueOf(parameters[i]);
+        } catch (Exception e) {
+          System.err.println("Cannot parse order: " + parameters[i]);
         }
-        case "-faulttolerant": {
-          faultTolerant = true;
-          break;
-        }
-        case "-order": {
-          i++;
-          try {
-            order = DestinationOrder.valueOf(parameters[i]);
-          } catch (Exception e) {
-            System.err.println("Cannot parse order: " + parameters[i]);
-          }
-          break;
-        }
-        case "-owner": {
-          i++;
-          owner = parameters[i];
-          break;
-        }
-        case "-group": {
-          i++;
-          group = parameters[i];
-          break;
-        }
-        case "-mode": {
-          i++;
-          short modeValue = Short.parseShort(parameters[i], 8);
-          mode = new FsPermission(modeValue);
-          break;
-        }
-        default: {
-          printUsage(isMultipleAdd ? "-addall" : "-add");
-          return null;
-        }
+        break;
+      }
+      case "-owner": {
+        i++;
+        owner = parameters[i];
+        break;
+      }
+      case "-group": {
+        i++;
+        group = parameters[i];
+        break;
+      }
+      case "-mode": {
+        i++;
+        short modeValue = Short.parseShort(parameters[i], 8);
+        mode = new FsPermission(modeValue);
+        break;
+      }
+      default: {
+        printUsage(isMultipleAdd ? "-addall" : "-add");
+        return null;
+      }
       }
       i++;
     }
