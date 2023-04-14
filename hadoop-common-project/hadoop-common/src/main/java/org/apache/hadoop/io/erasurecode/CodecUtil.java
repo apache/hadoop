@@ -179,7 +179,7 @@ public final class CodecUtil {
     String[] rawCoderNames = getRawCoderNames(conf, codecName);
     for (String rawCoderName : rawCoderNames) {
       if (!ISALEnabled && rawCoderName.contains("native")) {
-        LOG.info("Disable the encoder with ISA-L.");
+        LOG.debug("Disable the encoder with ISA-L.");
         continue;
       }
       try {
@@ -207,7 +207,7 @@ public final class CodecUtil {
     String[] coders = getRawCoderNames(conf, codecName);
     for (String rawCoderName : coders) {
       if (!ISALEnabled && rawCoderName.contains("native")) {
-        LOG.info("Disable the decoder with ISA-L.");
+        LOG.debug("Disable the decoder with ISA-L.");
         continue;
       }
       try {
