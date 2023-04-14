@@ -98,11 +98,14 @@ public class MutableQuantiles extends MutableMetric {
         "Number of %s for %s with %ds interval", lsName, desc, interval)));
     scheduledTask = scheduler.scheduleWithFixedDelay(new RolloverSample(this),
         interval, interval, TimeUnit.SECONDS);
+    // Construct the MetricsInfos for the quantiles, converting to percentiles
+    setQuantileInfos(getQuantiles().length);
     setQuantiles(ucName, uvName, desc, lvName, decimalFormat);
+    setEstimator(new SampleQuantiles(getQuantiles()));
   }
 
   /**
-   * Sets quantileInfo and estimator.
+   * Sets quantileInfo.
    *
    * @param ucName capitalized name of the metric
    * @param uvName capitalized type of the values
@@ -111,8 +114,6 @@ public class MutableQuantiles extends MutableMetric {
    * @param pDecimalFormat Number formatter for percentile value
    */
   void setQuantiles(String ucName, String uvName, String desc, String lvName, DecimalFormat pDecimalFormat) {
-    // Construct the MetricsInfos for the quantiles, converting to percentiles
-    setQuantileInfos(quantiles.length);
     for (int i = 0; i < quantiles.length; i++) {
       double percentile = 100 * quantiles[i].quantile;
       String nameTemplate = ucName + pDecimalFormat.format(percentile) + "thPercentile" + uvName;
@@ -120,8 +121,6 @@ public class MutableQuantiles extends MutableMetric {
           + " with " + getInterval() + " second interval for " + desc;
       addQuantileInfo(i, info(nameTemplate, descTemplate));
     }
-
-    setEstimator(new SampleQuantiles(quantiles));
   }
 
   public MutableQuantiles() {}
@@ -130,11 +129,11 @@ public class MutableQuantiles extends MutableMetric {
   public synchronized void snapshot(MetricsRecordBuilder builder, boolean all) {
     if (all || changed()) {
       builder.addGauge(numInfo, previousCount);
-      for (int i = 0; i < quantiles.length; i++) {
+      for (int i = 0; i < getQuantiles().length; i++) {
         long newValue = 0;
         // If snapshot is null, we failed to update since the window was empty
         if (previousSnapshot != null) {
-          newValue = previousSnapshot.get(quantiles[i]);
+          newValue = previousSnapshot.get(getQuantiles()[i]);
         }
         builder.addGauge(quantileInfos[i], newValue);
       }
@@ -146,6 +145,15 @@ public class MutableQuantiles extends MutableMetric {
 
   public synchronized void add(long value) {
     estimator.insert(value);
+  }
+
+  /**
+   * Returns the array of Quantiles declared in MutableQuantiles.
+   *
+   * @return array of Quantiles
+   */
+  public synchronized Quantile[] getQuantiles() {
+    return quantiles;
   }
 
   /**

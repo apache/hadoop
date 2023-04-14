@@ -21,7 +21,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.metrics2.util.Quantile;
-import org.apache.hadoop.metrics2.util.SampleQuantiles;
 import java.text.DecimalFormat;
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 
@@ -65,7 +64,7 @@ public class MutableInverseQuantiles extends MutableQuantiles{
   }
 
   /**
-   * Sets quantileInfo and estimator.
+   * Sets quantileInfo.
    *
    * @param ucName capitalized name of the metric
    * @param uvName capitalized type of the values
@@ -74,8 +73,6 @@ public class MutableInverseQuantiles extends MutableQuantiles{
    * @param df Number formatter for inverse percentile value
    */
   void setQuantiles(String ucName, String uvName, String desc, String lvName, DecimalFormat df) {
-    // Construct the MetricsInfos for inverse quantiles, converting to inverse percentiles
-    setQuantileInfos(INVERSE_QUANTILES.length);
     for (int i = 0; i < INVERSE_QUANTILES.length; i++) {
       double inversePercentile = 100 * (1 - INVERSE_QUANTILES[i].quantile);
       String nameTemplate = ucName + df.format(inversePercentile) + "thInversePercentile" + uvName;
@@ -83,7 +80,14 @@ public class MutableInverseQuantiles extends MutableQuantiles{
           + " with " + getInterval() + " second interval for " + desc;
       addQuantileInfo(i, info(nameTemplate, descTemplate));
     }
+  }
 
-    setEstimator(new SampleQuantiles(INVERSE_QUANTILES));
+  /**
+   * Returns the array of Inverse Quantiles declared in MutableInverseQuantiles.
+   *
+   * @return array of Inverse Quantiles
+   */
+  public synchronized Quantile[] getQuantiles() {
+    return INVERSE_QUANTILES;
   }
 }
