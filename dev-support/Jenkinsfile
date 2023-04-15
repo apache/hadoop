@@ -24,10 +24,10 @@ def getGithubCreds() {
 // Publish JUnit results only if there are XML files under surefire-reports
 def publishJUnitResults() {
     def findCmdExitCode = 0
-    if (IS_WINDOWS == 1) {
-        findCmdExitCode = bat script: '''C:\\PROGRA~1\\Git\\bin\\bash.exe -c "find ${SOURCEDIR} -wholename */target/surefire-reports/*.xml | egrep ."''', returnStatus: true
-    } else {
+    if (isUnix() {
         findCmdExitCode = sh script: "find ${SOURCEDIR} -wholename */target/surefire-reports/*.xml | egrep .", returnStatus: true
+    } else {
+        findCmdExitCode = bat script: '''C:\\PROGRA~1\\Git\\bin\\bash.exe -c "find ${SOURCEDIR} -wholename */target/surefire-reports/*.xml | egrep ."''', returnStatus: true
     }
 
     boolean surefireReportsExist = findCmdExitCode == 0
@@ -271,7 +271,6 @@ pipeline {
 
             steps {
                 withCredentials(getGithubCreds()) {
-                    bat 'whoami /groups'
                     bat 'if not exist %WORKSPACE%\\out mkdir %WORKSPACE%\\out'
                     bat 'if not exist F:\\maven\\repository mkdir F:\\maven\\repository'
                     bat '''docker build --label org.apache.yetus=""^
@@ -285,9 +284,10 @@ pipeline {
                             -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus^
                             -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out^
                             -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER%^
+                            -e BUILD_URL=%BUILD_URL% -e BRANCH_NAME=%BRANCH_NAME%^
+                            -e JOB_NAME=%JOB_NAME% -e JENKINS_URL=%JENKINS_URL%^
                             hadoop-windows-10-builder "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "/q" "C:\\src" "C:\\hadoop"^
-                                "&&" "C:\\Git\\bin\\bash.exe" "-c" \'"/c/src/dev-support/jenkins.sh" "run_ci"\'^
-                                "&&" "icacls" "C:\\out" "/q" "/c" "/t" "/grant" "Users:F"
+                                "&&" "C:\\Git\\bin\\bash.exe" "-c" \'"/c/src/dev-support/jenkins.sh" "run_ci"\'
                         '''
                 }
             }
@@ -305,6 +305,11 @@ pipeline {
                             C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${SOURCEDIR}/dev-support/jenkins.sh github_status_recovery"
                             '''
                         }
+
+                        bat '''docker run --rm -v %WORKSPACE%\\out:C:\\out^
+                            hadoop-windows-10-builder "/c" "icacls" "C:\\out" "/c" "/t" "/grant" "Users:F"
+                        '''
+
 
                         // YETUS output
                         archiveArtifacts "out/**"
