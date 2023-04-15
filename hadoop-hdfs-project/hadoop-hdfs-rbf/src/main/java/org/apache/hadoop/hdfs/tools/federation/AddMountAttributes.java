@@ -18,7 +18,12 @@
 
 package org.apache.hadoop.hdfs.tools.federation;
 
+import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
+import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 
 /**
  * Add mount entry attributes to be used by Router admin.
@@ -97,4 +102,89 @@ public class AddMountAttributes {
   public void setParamIndex(int paramIndex) {
     this.paramIndex = paramIndex;
   }
+
+  /**
+   * Retrieve mount table object with all attributes derived from this object.
+   *
+   * @return Mount table object with updated attributes.
+   * @throws IOException If mount table instantiation fails.
+   */
+  public MountTable getMountTableEntryWithAttributes() throws IOException {
+    String mount = RouterAdmin.normalizeFileSystemPath(this.getMount());
+    return getMountTableForAddRequest(mount);
+  }
+
+  /**
+   * Retrieve mount table object with all attributes derived from this object.
+   * The returned mount table could be either new or existing one with updated attributes.
+   *
+   * @param existingEntry Existing mount table entry. If null, new mount table object is created,
+   * otherwise the existing mount table object is updated.
+   * @return Mount table object with updated attributes.
+   * @throws IOException If mount table instantiation fails.
+   */
+  public MountTable getNewOrUpdatedMountTableEntryWithAttributes(MountTable existingEntry)
+      throws IOException {
+    if (existingEntry == null) {
+      return getMountTableForAddRequest(this.mount);
+    } else {
+      // Update the existing entry if it exists
+      for (String nsId : this.getNss()) {
+        if (!existingEntry.addDestination(nsId, this.getDest())) {
+          System.err.println("Cannot add destination at " + nsId + " " + this.getDest());
+          return null;
+        }
+      }
+      updateCommonAttributes(existingEntry);
+      return existingEntry;
+    }
+  }
+
+  /**
+   * Create a new mount table object from the given mount point and update its attributes.
+   *
+   * @param mount mount point.
+   * @return Mount table object with updated attributes.
+   * @throws IOException If mount table instantiation fails.
+   */
+  private MountTable getMountTableForAddRequest(String mount) throws IOException {
+    Map<String, String> destMap = new LinkedHashMap<>();
+    for (String ns : this.getNss()) {
+      destMap.put(ns, this.getDest());
+    }
+    MountTable newEntry = MountTable.newInstance(mount, destMap);
+    updateCommonAttributes(newEntry);
+    return newEntry;
+  }
+
+  /**
+   * Common attributes like read-only, fault-tolerant, dest order, owner, group, mode etc are
+   * updated for the given mount table object.
+   *
+   * @param existingEntry Mount table object.
+   */
+  private void updateCommonAttributes(MountTable existingEntry) {
+    if (this.isReadonly()) {
+      existingEntry.setReadOnly(true);
+    }
+    if (this.isFaultTolerant()) {
+      existingEntry.setFaultTolerant(true);
+    }
+    if (this.getOrder() != null) {
+      existingEntry.setDestOrder(this.getOrder());
+    }
+    RouterAdmin.ACLEntity aclInfo = this.getAclInfo();
+    // Update ACL info of mount table entry
+    if (aclInfo.getOwner() != null) {
+      existingEntry.setOwnerName(aclInfo.getOwner());
+    }
+    if (aclInfo.getGroup() != null) {
+      existingEntry.setGroupName(aclInfo.getGroup());
+    }
+    if (aclInfo.getMode() != null) {
+      existingEntry.setMode(aclInfo.getMode());
+    }
+    existingEntry.validate();
+  }
+
 }

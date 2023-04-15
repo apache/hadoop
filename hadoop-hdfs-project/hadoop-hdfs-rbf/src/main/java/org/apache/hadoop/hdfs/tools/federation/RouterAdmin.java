@@ -606,34 +606,7 @@ public class RouterAdmin extends Configured implements Tool {
       List<AddMountAttributes> addMountAttributesList) throws IOException {
     List<MountTable> mountTables = new ArrayList<>();
     for (AddMountAttributes addMountAttributes : addMountAttributesList) {
-      String mount = normalizeFileSystemPath(addMountAttributes.getMount());
-      Map<String, String> destMap = new LinkedHashMap<>();
-      for (String ns : addMountAttributes.getNss()) {
-        destMap.put(ns, addMountAttributes.getDest());
-      }
-      MountTable newEntry = MountTable.newInstance(mount, destMap);
-      if (addMountAttributes.isReadonly()) {
-        newEntry.setReadOnly(true);
-      }
-      if (addMountAttributes.isFaultTolerant()) {
-        newEntry.setFaultTolerant(true);
-      }
-      if (addMountAttributes.getOrder() != null) {
-        newEntry.setDestOrder(addMountAttributes.getOrder());
-      }
-      ACLEntity aclInfo = addMountAttributes.getAclInfo();
-      // Set ACL info for mount table entry
-      if (aclInfo.getOwner() != null) {
-        newEntry.setOwnerName(aclInfo.getOwner());
-      }
-      if (aclInfo.getGroup() != null) {
-        newEntry.setGroupName(aclInfo.getGroup());
-      }
-      if (aclInfo.getMode() != null) {
-        newEntry.setMode(aclInfo.getMode());
-      }
-      newEntry.validate();
-      mountTables.add(newEntry);
+      mountTables.add(addMountAttributes.getMountTableEntryWithAttributes());
     }
     return mountTables;
   }
@@ -707,86 +680,24 @@ public class RouterAdmin extends Configured implements Tool {
     // Get the existing entry
     MountTableManager mountTable = client.getMountTableManager();
     MountTable existingEntry = getMountEntry(mount, mountTable);
+    MountTable existingOrNewEntry =
+        addMountAttributes.getNewOrUpdatedMountTableEntryWithAttributes(existingEntry);
+    if (existingOrNewEntry == null) {
+      return false;
+    }
 
     if (existingEntry == null) {
-      // Create and add the entry if it doesn't exist
-      Map<String, String> destMap = new LinkedHashMap<>();
-      for (String ns : addMountAttributes.getNss()) {
-        destMap.put(ns, addMountAttributes.getDest());
-      }
-      MountTable newEntry = MountTable.newInstance(mount, destMap);
-      if (addMountAttributes.isReadonly()) {
-        newEntry.setReadOnly(true);
-      }
-      if (addMountAttributes.isFaultTolerant()) {
-        newEntry.setFaultTolerant(true);
-      }
-      if (addMountAttributes.getOrder() != null) {
-        newEntry.setDestOrder(addMountAttributes.getOrder());
-      }
-
-      ACLEntity aclInfo = addMountAttributes.getAclInfo();
-      // Set ACL info for mount table entry
-      if (aclInfo.getOwner() != null) {
-        newEntry.setOwnerName(aclInfo.getOwner());
-      }
-
-      if (aclInfo.getGroup() != null) {
-        newEntry.setGroupName(aclInfo.getGroup());
-      }
-
-      if (aclInfo.getMode() != null) {
-        newEntry.setMode(aclInfo.getMode());
-      }
-
-      newEntry.validate();
-
-      AddMountTableEntryRequest request =
-          AddMountTableEntryRequest.newInstance(newEntry);
-      AddMountTableEntryResponse addResponse =
-          mountTable.addMountTableEntry(request);
+      AddMountTableEntryRequest request = AddMountTableEntryRequest
+          .newInstance(existingOrNewEntry);
+      AddMountTableEntryResponse addResponse = mountTable.addMountTableEntry(request);
       boolean added = addResponse.getStatus();
       if (!added) {
         System.err.println("Cannot add mount point " + mount);
       }
       return added;
     } else {
-      // Update the existing entry if it exists
-      for (String nsId : addMountAttributes.getNss()) {
-        if (!existingEntry.addDestination(nsId, addMountAttributes.getDest())) {
-          System.err.println(
-              "Cannot add destination at " + nsId + " " + addMountAttributes.getDest());
-          return false;
-        }
-      }
-      if (addMountAttributes.isReadonly()) {
-        existingEntry.setReadOnly(true);
-      }
-      if (addMountAttributes.isFaultTolerant()) {
-        existingEntry.setFaultTolerant(true);
-      }
-      if (addMountAttributes.getOrder() != null) {
-        existingEntry.setDestOrder(addMountAttributes.getOrder());
-      }
-
-      ACLEntity aclInfo = addMountAttributes.getAclInfo();
-      // Update ACL info of mount table entry
-      if (aclInfo.getOwner() != null) {
-        existingEntry.setOwnerName(aclInfo.getOwner());
-      }
-
-      if (aclInfo.getGroup() != null) {
-        existingEntry.setGroupName(aclInfo.getGroup());
-      }
-
-      if (aclInfo.getMode() != null) {
-        existingEntry.setMode(aclInfo.getMode());
-      }
-
-      existingEntry.validate();
-
       UpdateMountTableEntryRequest updateRequest =
-          UpdateMountTableEntryRequest.newInstance(existingEntry);
+          UpdateMountTableEntryRequest.newInstance(existingOrNewEntry);
       UpdateMountTableEntryResponse updateResponse =
           mountTable.updateMountTableEntry(updateRequest);
       boolean updated = updateResponse.getStatus();
