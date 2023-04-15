@@ -20,10 +20,9 @@ package org.apache.hadoop.ipc;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import org.apache.commons.lang3.NotImplementedException;
-
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 
 import java.util.List;
@@ -63,7 +62,9 @@ public class TestIdentityProviders {
       CommonConfigurationKeys.IPC_IDENTITY_PROVIDER_KEY,
       IdentityProvider.class);
 
-    assertEquals(1, providers.size());
+    assertThat(providers)
+        .describedAs("provider list")
+        .hasSize(1);
 
     IdentityProvider ip = providers.get(0);
     assertNotNull(ip);
@@ -71,7 +72,7 @@ public class TestIdentityProviders {
   }
 
   @Test
-  public void testUserIdentityProvider() throws IOException {
+  public void testUserIdentityProvider() throws Exception {
     UserIdentityProvider uip = new UserIdentityProvider();
     FakeSchedulable fakeSchedulable = new FakeSchedulable();
     String identity = uip.makeIdentity(fakeSchedulable);
@@ -83,10 +84,8 @@ public class TestIdentityProviders {
     assertEquals(username, identity);
 
     // FakeSchedulable doesn't override getCallerContext()
-    // accessing it should throw a NotImplementedException
-    NotImplementedException nie = assertThrows(
-        NotImplementedException.class,
-        fakeSchedulable::getCallerContext);
-    assertEquals("Code is not implemented", nie.getMessage());
+    // accessing it should throw an UnsupportedOperationException
+    LambdaTestUtils.intercept(UnsupportedOperationException.class,
+        "Invalid operation.", fakeSchedulable::getCallerContext);
   }
 }
