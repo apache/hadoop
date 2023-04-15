@@ -24,7 +24,7 @@ def getGithubCreds() {
 // Publish JUnit results only if there are XML files under surefire-reports
 def publishJUnitResults() {
     def findCmdExitCode = 0
-    if (isUnix() {
+    if (isUnix()) {
         findCmdExitCode = sh script: "find ${SOURCEDIR} -wholename */target/surefire-reports/*.xml | egrep .", returnStatus: true
     } else {
         findCmdExitCode = bat script: '''C:\\PROGRA~1\\Git\\bin\\bash.exe -c "find ${SOURCEDIR} -wholename */target/surefire-reports/*.xml | egrep ."''', returnStatus: true
