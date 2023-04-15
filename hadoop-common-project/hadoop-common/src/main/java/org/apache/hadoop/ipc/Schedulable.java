@@ -35,6 +35,9 @@ public interface Schedulable {
    * about the user in cases where UGI proves insufficient.
    * Any other classes that might try to use this method,
    * will get an UnsupportedOperationException.
+   *
+   * @return an instance of CallerContext if method
+   * is overridden else get an UnsupportedOperationException
    */
   default CallerContext getCallerContext() {
     throw new UnsupportedOperationException("Invalid operation.");
