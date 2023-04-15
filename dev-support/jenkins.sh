@@ -115,22 +115,24 @@ function run_ci() {
   TESTPATCHBIN="${WORKSPACE}/${YETUS}/precommit/src/main/shell/test-patch.sh"
 
   # this must be clean for every run
-  # if [[ -d "${PATCHDIR}" ]]; then
-  #   rm -rf "${PATCHDIR:?}"
-  # fi
-  # mkdir -p "${PATCHDIR}"
+  #TODO: This check needs to be disabled for nightly builds.
+  if [[ -d "${PATCHDIR}" ]]; then
+    rm -rf "${PATCHDIR:?}"
+  fi
+  mkdir -p "${PATCHDIR}"
 
   # if given a JIRA issue, process it. If CHANGE_URL is set
   # (e.g., Github Branch Source plugin), process it.
   # otherwise exit, because we don't want Hadoop to do a
   # full build.  We wouldn't normally do this check for smaller
   # projects. :)
-  #  if [[ -n "${JIRA_ISSUE_KEY}" ]]; then
-  #    YETUS_ARGS+=("${JIRA_ISSUE_KEY}")
-  #  elif [[ -z "${CHANGE_URL}" ]]; then
-  #    echo "Full build skipped" >"${PATCHDIR}/report.html"
-  #    exit 0
-  #  fi
+  #TODO: This check needs to be disabled for nightly builds.
+  if [[ -n "${JIRA_ISSUE_KEY}" ]]; then
+    YETUS_ARGS+=("${JIRA_ISSUE_KEY}")
+  elif [[ -z "${CHANGE_URL}" ]]; then
+    echo "Full build skipped" >"${PATCHDIR}/report.html"
+    exit 0
+  fi
 
   YETUS_ARGS+=("--patch-dir=${PATCHDIR}")
 
@@ -186,8 +188,10 @@ function run_ci() {
   # write Yetus report as GitHub comment (YETUS-1102)
   YETUS_ARGS+=("--github-write-comment")
   YETUS_ARGS+=("--github-use-emoji-vote")
-  YETUS_ARGS+=("--empty-patch")
-  YETUS_ARGS+=("--branch=win-yetus")
+
+  #TODO: This needs to be enabled only for nightly builds
+  #  YETUS_ARGS+=("--empty-patch")
+  #  YETUS_ARGS+=("--branch=win-yetus")
 
   "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
 }
