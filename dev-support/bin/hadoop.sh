@@ -276,10 +276,10 @@ function hadoop_native_flags
       echo \
         "${args[@]}" \
         -Drequire.snappy -Drequire.openssl -Pnative-win -Dhttps.protocols=TLSv1.2 -Pdist -Dtar \
-        -Drequire.openssl -Drequire.test.libhadoop -Dshell-executable=/c/Git/bin/bash.exe \
-        -Dopenssl.prefix=/c/vcpkg/installed/x64-windows \
-        -Dcmake.prefix.path=/c/vcpkg/installed/x64-windows \
-        -Dwindows.cmake.toolchain.file=/c/vcpkg/scripts/buildsystems/vcpkg.cmake \
+        -Drequire.openssl -Drequire.test.libhadoop -Dshell-executable="${BASH_EXECUTABLE}" \
+        -Dopenssl.prefix="${VCPKG_INSTALLED_PACKAGES}" \
+        -Dcmake.prefix.path="${VCPKG_INSTALLED_PACKAGES}" \
+        -Dwindows.cmake.toolchain.file="${CMAKE_TOOLCHAIN_FILE}" \
         -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off \
         -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142
     ;;
@@ -424,12 +424,15 @@ function personality_modules
     extra="${extra} ${flags}"
   fi
 
-  extra="-Ptest-patch -Dhttps.protocols=TLSv1.2 -Pnative-win,dist -Dtar -Drequire.openssl
-  -Drequire.test.libhadoop -Dshell-executable=/c/Git/bin/bash.exe
-  -Dopenssl.prefix=/c/vcpkg/installed/x64-windows -Dcmake.prefix.path=/c/vcpkg/installed/x64-windows
-  -Dwindows.cmake.toolchain.file=/c/vcpkg/scripts/buildsystems/vcpkg.cmake
-  -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off
-  -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142 ${extra}"
+  if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
+    extra="-Ptest-patch -Dhttps.protocols=TLSv1.2 -Pnative-win,dist -Dtar -Drequire.openssl
+      -Drequire.test.libhadoop -Dshell-executable=${BASH_EXECUTABLE}
+      -Dopenssl.prefix=${VCPKG_INSTALLED_PACKAGES} -Dcmake.prefix.path=${VCPKG_INSTALLED_PACKAGES}
+      -Dwindows.cmake.toolchain.file=${CMAKE_TOOLCHAIN_FILE}
+      -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off
+      -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142 ${extra}"
+  fi
+
   for module in $(hadoop_order ${ordering}); do
     # shellcheck disable=SC2086
     personality_enqueue_module ${module} ${extra}
@@ -572,22 +575,26 @@ function shadedclient_rebuild
 
   big_console_header "Checking client artifacts on ${repostatus} with shaded clients"
 
-  if load_hadoop_version; then
-    export HADOOP_HOME="${SOURCEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-SNAPSHOT"
-  else
-    yetus_error "[WARNING] Unable to extract the Hadoop version and thus HADOOP_HOME is not set. Some tests may fail."
+  if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
+    if load_hadoop_version; then
+      export HADOOP_HOME="${SOURCEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-SNAPSHOT"
+    else
+      yetus_error "[WARNING] Unable to extract the Hadoop version and thus HADOOP_HOME is not set. Some tests may fail."
+    fi
+
+    extra="-Dhttps.protocols=TLSv1.2 -Pnative-win -Drequire.openssl -Drequire.test.libhadoop
+                 -Dshell-executable=${BASH_EXECUTABLE} -Dopenssl.prefix=${VCPKG_INSTALLED_PACKAGES}
+                 -Dcmake.prefix.path=${VCPKG_INSTALLED_PACKAGES}
+                 -Dwindows.cmake.toolchain.file=${CMAKE_TOOLCHAIN_FILE}
+                 -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off
+                 -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142"
   fi
 
   echo_and_redirect "${logfile}" \
     "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am \
       "${modules[@]}" \
       -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true \
-      -Dhttps.protocols=TLSv1.2 -Pnative-win -Drequire.openssl -Drequire.test.libhadoop \
-      -Dshell-executable=/c/Git/bin/bash.exe -Dopenssl.prefix=/c/vcpkg/installed/x64-windows \
-      -Dcmake.prefix.path=/c/vcpkg/installed/x64-windows \
-      -Dwindows.cmake.toolchain.file=/c/vcpkg/scripts/buildsystems/vcpkg.cmake \
-      -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off \
-      -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142
+      "${extra}"
 
   big_console_header "Checking client artifacts on ${repostatus} with non-shaded clients"
 
@@ -595,13 +602,7 @@ function shadedclient_rebuild
     "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am \
       "${modules[@]}" \
       -DskipShade -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true \
-      -Dspotbugs.skip=true -Dhttps.protocols=TLSv1.2 -Pnative-win -Drequire.openssl \
-      -Drequire.test.libhadoop -Dshell-executable=/c/Git/bin/bash.exe \
-      -Dopenssl.prefix=/c/vcpkg/installed/x64-windows \
-      -Dcmake.prefix.path=/c/vcpkg/installed/x64-windows \
-      -Dwindows.cmake.toolchain.file=/c/vcpkg/scripts/buildsystems/vcpkg.cmake \
-      -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off \
-      -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142
+      -Dspotbugs.skip=true "${extra}"
 
   count=$("${GREP}" -c '\[ERROR\]' "${logfile}")
   if [[ ${count} -gt 0 ]]; then
