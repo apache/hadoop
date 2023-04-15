@@ -110,8 +110,8 @@ public class AddMountAttributes {
    * @throws IOException If mount table instantiation fails.
    */
   public MountTable getMountTableEntryWithAttributes() throws IOException {
-    String mount = RouterAdmin.normalizeFileSystemPath(this.getMount());
-    return getMountTableForAddRequest(mount);
+    String normalizedMount = RouterAdmin.normalizeFileSystemPath(this.getMount());
+    return getMountTableForAddRequest(normalizedMount);
   }
 
   /**
@@ -143,16 +143,16 @@ public class AddMountAttributes {
   /**
    * Create a new mount table object from the given mount point and update its attributes.
    *
-   * @param mount mount point.
+   * @param mountSrc mount point src.
    * @return Mount table object with updated attributes.
    * @throws IOException If mount table instantiation fails.
    */
-  private MountTable getMountTableForAddRequest(String mount) throws IOException {
+  private MountTable getMountTableForAddRequest(String mountSrc) throws IOException {
     Map<String, String> destMap = new LinkedHashMap<>();
     for (String ns : this.getNss()) {
       destMap.put(ns, this.getDest());
     }
-    MountTable newEntry = MountTable.newInstance(mount, destMap);
+    MountTable newEntry = MountTable.newInstance(mountSrc, destMap);
     updateCommonAttributes(newEntry);
     return newEntry;
   }
@@ -173,16 +173,16 @@ public class AddMountAttributes {
     if (this.getOrder() != null) {
       existingEntry.setDestOrder(this.getOrder());
     }
-    RouterAdmin.ACLEntity aclInfo = this.getAclInfo();
+    RouterAdmin.ACLEntity mountAclInfo = this.getAclInfo();
     // Update ACL info of mount table entry
-    if (aclInfo.getOwner() != null) {
-      existingEntry.setOwnerName(aclInfo.getOwner());
+    if (mountAclInfo.getOwner() != null) {
+      existingEntry.setOwnerName(mountAclInfo.getOwner());
     }
-    if (aclInfo.getGroup() != null) {
-      existingEntry.setGroupName(aclInfo.getGroup());
+    if (mountAclInfo.getGroup() != null) {
+      existingEntry.setGroupName(mountAclInfo.getGroup());
     }
-    if (aclInfo.getMode() != null) {
-      existingEntry.setMode(aclInfo.getMode());
+    if (mountAclInfo.getMode() != null) {
+      existingEntry.setMode(mountAclInfo.getMode());
     }
     existingEntry.validate();
   }
