@@ -87,17 +87,30 @@ function hadoop_order
   echo "${hadoopm}"
 }
 
+## @description  Retrieves the Hadoop project version defined in the root pom.xml
+## @audience     private
+## @stability    evolving
+## @returns      0 on success, 1 on failure
+function load_hadoop_version
+{
+  if [[ -f "${BASEDIR}/pom.xml" ]]; then
+      HADOOP_VERSION=$(grep '<version>' "${BASEDIR}/pom.xml" \
+          | head -1 \
+          | "${SED}"  -e 's|^ *<version>||' -e 's|</version>.*$||' \
+          | cut -f1 -d- )
+      return 0
+    else
+      return 1
+    fi
+}
+
 ## @description  Determine if it is safe to run parallel tests
 ## @audience     private
 ## @stability    evolving
 ## @param        ordering
 function hadoop_test_parallel
 {
-  if [[ -f "${BASEDIR}/pom.xml" ]]; then
-    HADOOP_VERSION=$(grep '<version>' "${BASEDIR}/pom.xml" \
-        | head -1 \
-        | "${SED}"  -e 's|^ *<version>||' -e 's|</version>.*$||' \
-        | cut -f1 -d- )
+  if load_hadoop_version; then
     export HADOOP_VERSION
   else
     return 1
@@ -559,7 +572,12 @@ function shadedclient_rebuild
 
   big_console_header "Checking client artifacts on ${repostatus} with shaded clients"
 
-  export HADOOP_HOME="${SOURCEDIR}/hadoop-dist/target/hadoop-3.4.0-SNAPSHOT"
+  if load_hadoop_version; then
+    export HADOOP_HOME="${SOURCEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-SNAPSHOT"
+  else
+    yetus_error "[WARNING] Unable to extract the Hadoop version and thus HADOOP_HOME is not set. Some tests may fail."
+  fi
+
   echo_and_redirect "${logfile}" \
     "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am \
       "${modules[@]}" \
