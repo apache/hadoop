@@ -52,8 +52,8 @@ public class TestMutableMetrics {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestMutableMetrics.class);
   private static final double EPSILON = 1e-42;
-  public static int SLEEP_TIME = 6000;
-  public static int SAMPLE_COUNT = 1000;
+  private static final int SLEEP_TIME = 6000;
+  private static final int SAMPLE_COUNT = 1000;
 
   /**
    * Test the snapshot method
