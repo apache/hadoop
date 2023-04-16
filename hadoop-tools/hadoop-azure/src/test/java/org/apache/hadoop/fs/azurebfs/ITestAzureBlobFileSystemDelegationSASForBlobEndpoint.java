@@ -160,7 +160,7 @@ public class ITestAzureBlobFileSystemDelegationSASForBlobEndpoint
     }
     List<BlobProperty> blobProperties = fs.getAbfsStore()
         .getListBlobs(new Path("dir"), null,
-            Mockito.mock(TracingContext.class), null, null, false);
+            Mockito.mock(TracingContext.class), null, false);
     Assertions.assertThat(blobProperties)
         .describedAs(
             "BlobList should match the number of files created in tests + the directory itself")
@@ -168,7 +168,7 @@ public class ITestAzureBlobFileSystemDelegationSASForBlobEndpoint
 
     blobProperties = fs.getAbfsStore()
         .getListBlobs(new Path("dir"), null,
-            Mockito.mock(TracingContext.class), null, null, true);
+            Mockito.mock(TracingContext.class), null, true);
     Assertions.assertThat(blobProperties)
         .describedAs(
             "BlobList should match the number of files created in tests")
