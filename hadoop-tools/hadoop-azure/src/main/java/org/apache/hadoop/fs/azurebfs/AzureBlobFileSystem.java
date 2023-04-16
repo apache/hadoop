@@ -408,6 +408,12 @@ public class AzureBlobFileSystem extends FileSystem
 
     trailingPeriodCheck(dst);
 
+    if (getAbfsStore().getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB
+        && containsColon(dst)) {
+      throw new IOException("Cannot rename to file " + dst
+          + " that has colons in the name through blob endpoint");
+    }
+
     Path parentFolder = src.getParent();
     if (parentFolder == null) {
       return false;
@@ -1603,6 +1609,10 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     return result;
+  }
+
+  private boolean containsColon(Path p) {
+    return p.toUri().getPath().contains(":");
   }
 
   /**

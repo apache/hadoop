@@ -198,6 +198,14 @@ public class ITestAzureBlobFileSystemRename extends
     Assert.assertTrue(fs.exists(new Path("/src2")));
   }
 
+  @Test(expected = IOException.class)
+  public void testRenameBlobToDstWithColonInPath() throws Exception{
+    AzureBlobFileSystem fs = getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
+    fs.create(new Path("/src"));
+    fs.rename(new Path("/src"), new Path("/dst:file"));
+  }
+
   /**
    * <pre>
    * Test to check behaviour of rename API if the destination directory is already
