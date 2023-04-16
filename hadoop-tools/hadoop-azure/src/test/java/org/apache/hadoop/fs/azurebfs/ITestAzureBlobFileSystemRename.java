@@ -1287,9 +1287,9 @@ public class ITestAzureBlobFileSystemRename extends
             Mockito.mock(TracingContext.class)));
     fs.mkdirs(new Path("/test2"));
     fs.rename(new Path("/test1"), new Path("/test2"));
-    Assert.assertNotNull(fs.getAbfsStore()
+    Assert.assertTrue(fs.getAbfsStore()
         .getBlobPropertyWithNotFoundHandling(new Path("/test2/test1"),
-            Mockito.mock(TracingContext.class)));
+            Mockito.mock(TracingContext.class)).getIsDirectory());
   }
 
   @Test

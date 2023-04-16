@@ -1117,10 +1117,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           */
           //create marker file; add in srcBlobProperties;
           LOG.debug("Source {} is a directory but there is no marker-blob", source);
-          azureBlobFileSystem.create(source);
-          Hashtable<String, String> props = new Hashtable<>();
-          props.put(HDI_ISFOLDER, "true");
-          setPathProperties(source, props, tracingContext);
+          azureBlobFileSystem.mkdirs(source);
           blobPropOnSrc = new BlobProperty();
           blobPropOnSrc.setIsDirectory(true);
           blobPropOnSrc.setPath(source);
