@@ -80,7 +80,7 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
   @Override
   public synchronized void teardown() throws Exception {
     super.teardown();
-    File tmpFileDir = new File("target/build/test");
+    File tmpFileDir = new File(BUFFER_DIR);
     File[] tmpFiles = tmpFileDir.listFiles();
     if (tmpFiles != null) {
       for (File filePath : tmpFiles) {
