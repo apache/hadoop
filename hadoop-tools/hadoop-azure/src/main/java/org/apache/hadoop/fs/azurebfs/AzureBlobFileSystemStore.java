@@ -1081,7 +1081,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   public void rename(final Path source, final Path destination,
-      final AzureBlobFileSystem azureBlobFileSystem, TracingContext tracingContext) throws
+      final RenameAtomicityUtils renameAtomicityUtils, TracingContext tracingContext) throws
           IOException {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
@@ -1113,7 +1113,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           */
           //create marker file; add in srcBlobProperties;
           LOG.debug("Source {} is a directory but there is no marker-blob", source);
-          azureBlobFileSystem.mkdirs(source);
+          createDirectory(source, FsPermission.getDirDefault(), FsPermission.getUMask(getAbfsConfiguration().getRawConfiguration()), tracingContext);
           blobPropOnSrc = new BlobProperty();
           blobPropOnSrc.setIsDirectory(true);
           blobPropOnSrc.setPath(source);
@@ -1153,14 +1153,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         * individually copied and then deleted at the source.
         */
         LOG.debug("source {} is a directory", source);
-        final RenameAtomicityUtils renameAtomicityUtils;
         if (isAtomicRenameKey(source.toUri().getPath())) {
           LOG.debug("source dir {} is an atomicRenameKey", source.toUri().getPath());
-          renameAtomicityUtils = new RenameAtomicityUtils(azureBlobFileSystem,
-              source, destination, tracingContext, srcBlobProperties);
+          renameAtomicityUtils.preRename(srcBlobProperties);
         } else {
           LOG.debug("source dir {} is not an atomicRenameKey", source.toUri().getPath());
-          renameAtomicityUtils = null;
         }
         List<Future> futures = new ArrayList<>();
         for (BlobProperty blobProperty : srcBlobProperties) {

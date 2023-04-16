@@ -523,8 +523,17 @@ public class AzureBlobFileSystem extends FileSystem
           }
         }
       }
-
-      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, this,
+      final RenameAtomicityUtils renameAtomicityUtils;
+      if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
+          == PrefixMode.BLOB &&
+          abfsStore.isAtomicRenameKey(qualifiedSrcPath.toUri().getPath())) {
+        renameAtomicityUtils = new RenameAtomicityUtils(this,
+            qualifiedSrcPath, qualifiedDstPath, tracingContext);
+      } else {
+        renameAtomicityUtils = new RenameNonAtomicUtils(this,
+            qualifiedSrcPath, qualifiedDstPath, tracingContext);
+      }
+      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, renameAtomicityUtils,
           tracingContext);
       return true;
     } catch (AzureBlobFileSystemException ex) {

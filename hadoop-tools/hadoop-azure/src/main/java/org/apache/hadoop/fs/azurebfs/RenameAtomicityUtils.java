@@ -68,7 +68,6 @@ public class RenameAtomicityUtils {
   private Path srcPath;
   private Path dstPath;
   private TracingContext tracingContext;
-  private List<BlobProperty> blobPropertyList;
 
   private static final int MAX_RENAME_PENDING_FILE_SIZE = 10000000;
   private static final int FORMATTING_BUFFER = 10000;
@@ -82,15 +81,11 @@ public class RenameAtomicityUtils {
   RenameAtomicityUtils(final AzureBlobFileSystem azureBlobFileSystem,
       final Path srcPath,
       final Path dstPath,
-      final TracingContext tracingContext,
-      List<BlobProperty> blobPropertyList) throws IOException {
+      final TracingContext tracingContext) throws IOException {
     this.azureBlobFileSystem = azureBlobFileSystem;
     this.srcPath = srcPath;
     this.dstPath = dstPath;
     this.tracingContext = tracingContext;
-    this.blobPropertyList = blobPropertyList;
-
-    writeFile();
   }
 
   RenameAtomicityUtils(final AzureBlobFileSystem azureBlobFileSystem,
@@ -219,12 +214,12 @@ public class RenameAtomicityUtils {
    * } }</pre>
    * @throws IOException Thrown when fail to write file.
    */
-  private void writeFile() throws IOException {
+  public void preRename(List<BlobProperty> blobPropertyList) throws IOException {
     Path path = getRenamePendingFilePath();
     LOG.debug("Preparing to write atomic rename state to {}", path.toString());
     OutputStream output = null;
 
-    String contents = makeRenamePendingFileContents();
+    String contents = makeRenamePendingFileContents(blobPropertyList);
 
     // Write file.
     try {
@@ -260,7 +255,7 @@ public class RenameAtomicityUtils {
    *
    * @return JSON string which represents the operation.
    */
-  private String makeRenamePendingFileContents() {
+  private String makeRenamePendingFileContents(List<BlobProperty> blobPropertyList) {
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
     sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
     String time = sdf.format(new Date());
