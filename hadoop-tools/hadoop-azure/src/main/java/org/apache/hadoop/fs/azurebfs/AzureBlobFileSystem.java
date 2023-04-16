@@ -425,13 +425,12 @@ public class AzureBlobFileSystem extends FileSystem
        * is not a sub-directory of source.
        */
       LOG.debug("Check if the destination is subDirectory");
-      while (nestedDstParent != null) {
-        if (makeQualified(nestedDstParent).equals(qualifiedSrcPath)) {
-          LOG.info("Rename src: {} dst: {} failed as dst is subDir of src",
-              qualifiedSrcPath, qualifiedDstPath);
-          return false;
-        }
-        nestedDstParent = nestedDstParent.getParent();
+      if (makeQualified(nestedDstParent).toUri()
+          .getPath()
+          .indexOf(qualifiedSrcPath.toUri().getPath()) == 0) {
+        LOG.info("Rename src: {} dst: {} failed as dst is subDir of src",
+            qualifiedSrcPath, qualifiedDstPath);
+        return false;
       }
     }
 
