@@ -52,6 +52,7 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
   private Path testFile;
   private FileSystem fs;
   private int prefetchBlockSize;
+  private Configuration conf;
 
   public ITestS3APrefetchingCacheFiles() {
     super(true);
@@ -60,13 +61,14 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
   @Before
   public void setUp() throws Exception {
     super.setup();
-    Configuration conf = getConfiguration();
+    // Sets BUFFER_DIR by calling S3ATestUtils#prepareTestConfiguration
+    conf = createConfiguration();
     String testFileUri = S3ATestUtils.getCSVTestFile(conf);
 
     testFile = new Path(testFileUri);
     prefetchBlockSize = conf.getInt(PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE);
     fs = getFileSystem();
-    fs.initialize(new URI(testFileUri), getConfiguration());
+    fs.initialize(new URI(testFileUri), conf);
   }
 
   @Override
@@ -80,7 +82,7 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
   @Override
   public synchronized void teardown() throws Exception {
     super.teardown();
-    File tmpFileDir = new File(BUFFER_DIR);
+    File tmpFileDir = new File(conf.get(BUFFER_DIR));
     File[] tmpFiles = tmpFileDir.listFiles();
     if (tmpFiles != null) {
       for (File filePath : tmpFiles) {
@@ -103,8 +105,6 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
   @Test
   public void testCacheFileExistence() throws Throwable {
     describe("Verify that FS cache files exist on local FS");
-    // This internally calls S3ATestUtils#prepareTestConfiguration
-    Configuration conf = createConfiguration();
 
     try (FSDataInputStream in = fs.open(testFile)) {
       byte[] buffer = new byte[prefetchBlockSize];
@@ -125,7 +125,7 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
 
       for (File tmpFile : tmpFiles) {
         Path path = new Path(tmpFile.getAbsolutePath());
-        try (FileSystem localFs = FileSystem.getLocal(getConfiguration())) {
+        try (FileSystem localFs = FileSystem.getLocal(conf)) {
           FileStatus stat = localFs.getFileStatus(path);
           ContractTestUtils.assertIsFile(path, stat);
           assertEquals("File length not matching with prefetchBlockSize", prefetchBlockSize,
