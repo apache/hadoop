@@ -402,10 +402,8 @@ public class AzureBlobFileSystem extends FileSystem
   }
 
   public boolean rename(final Path src, final Path dst) throws IOException {
-    LOG.debug("AzureBlobFileSystem.rename src: {} dst: {}", src, dst);
-    LOG.debug("Rename via Blob-endpoint for non-HNS account: {}",
-        getAbfsStore().getAbfsConfiguration().getPrefixMode()
-            == PrefixMode.BLOB);
+    LOG.debug("AzureBlobFileSystem.rename src: {} dst: {} via {} endpoint", src, dst,
+        getAbfsStore().getAbfsConfiguration().getPrefixMode());
     statIncrement(CALL_RENAME);
 
     trailingPeriodCheck(dst);
@@ -421,11 +419,12 @@ public class AzureBlobFileSystem extends FileSystem
     if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
         == PrefixMode.BLOB) {
       /*
+       * Special case 1:
        * For blob endpoint with non-HNS account, client has to ensure that destination
        * is not a sub-directory of source.
        */
       LOG.debug("Check if the destination is subDirectory");
-      if (makeQualified(nestedDstParent).toUri()
+      if (nestedDstParent != null && makeQualified(nestedDstParent).toUri()
           .getPath()
           .indexOf(qualifiedSrcPath.toUri().getPath()) == 0) {
         LOG.info("Rename src: {} dst: {} failed as dst is subDir of src",
@@ -438,6 +437,7 @@ public class AzureBlobFileSystem extends FileSystem
     TracingContext tracingContext = new TracingContext(clientCorrelationId,
         fileSystemId, FSOperationType.RENAME, true, tracingHeaderFormat,
         listener);
+    // special case 2:
     // rename under same folder;
     if (makeQualified(parentFolder).equals(qualifiedDstPath)) {
       return tryGetFileStatus(qualifiedSrcPath, tracingContext) != null;
@@ -446,6 +446,7 @@ public class AzureBlobFileSystem extends FileSystem
     final AtomicBoolean isDstDirectory = new AtomicBoolean();
     final AtomicBoolean isDstExists = new AtomicBoolean();
 
+    //special case 3:
     if (qualifiedSrcPath.equals(qualifiedDstPath)) {
       // rename to itself
       // - if it doesn't exist, return false
@@ -460,6 +461,7 @@ public class AzureBlobFileSystem extends FileSystem
       return isDstDirectory.get() ? false : true;
     }
 
+    // special case 4:
     // Non-HNS account need to check dst status on driver side.
     if (!abfsStore.getIsNamespaceEnabled(tracingContext)) {
       getPathInformation(qualifiedDstPath, tracingContext, isDstDirectory,
@@ -504,7 +506,8 @@ public class AzureBlobFileSystem extends FileSystem
          * If the destination doesn't exist, check if parent of destination exists.
          */
         Path parent = qualifiedDstPath.getParent();
-        if (parent == null || !parent.isRoot()) {
+        if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
+            == PrefixMode.BLOB && (parent == null || !parent.isRoot())) {
           isDstDirectory.set(false);
           isDstExists.set(false);
           getPathInformation(parent, tracingContext, isDstDirectory,

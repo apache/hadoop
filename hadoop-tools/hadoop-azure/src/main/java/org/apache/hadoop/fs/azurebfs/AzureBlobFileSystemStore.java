@@ -58,6 +58,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
+import org.apache.hadoop.fs.azurebfs.enums.BlobCopyProgress;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.fs.azurebfs.services.BlobList;
 import org.apache.hadoop.fs.azurebfs.services.BlobProperty;
@@ -193,8 +194,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private final AbfsPerfTracker abfsPerfTracker;
   private final AbfsCounters abfsCounters;
 
-  private final Boolean useSecureHttp;
-
   private final ExecutorService renameBlobExecutorService;
 
   /**
@@ -258,7 +257,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     this.authType = abfsConfiguration.getAuthType(accountName);
     boolean usingOauth = (authType == AuthType.OAuth);
     boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : abfsStoreBuilder.isSecureScheme;
-    useSecureHttp = useHttps;
     this.abfsPerfTracker = new AbfsPerfTracker(fileSystemName, accountName, this.abfsConfiguration);
     this.abfsCounters = abfsStoreBuilder.abfsCounters;
     initializeClient(uri, fileSystemName, accountName, useHttps);
@@ -554,10 +552,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       return;
     }
     final String copyId = copyOp.getResult().getResponseHeader(X_MS_COPY_ID);
-    while (true) {
-      if (handleCopyInProgress(dstPath, tracingContext, copyId)) {
-        return;
-      }
+    while (handleCopyInProgress(dstPath, tracingContext, copyId) == BlobCopyProgress.PENDING) {
       try {
         Thread.sleep(1000l); //Taken sleep time from AzureNativeFileSystemStore.
       } catch (Exception e) {
@@ -568,6 +563,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   /**
    * Verifies if the blob copy is success or a failure or still in progress.
+   *
    * @param dstPath path of the destination for the copying
    * @param tracingContext object of tracingContext used for the tracing of the
    * server calls.
@@ -575,19 +571,20 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * attached to blob and is returned by GetBlobProperties API on the destination.
    *
    * @return true if copying is success, false if it is still in progress.
+   *
    * @throws AzureBlobFileSystemException exception returned in making server call
    * for GetBlobProperties on the path. It can be thrown if the copyStatus is failure
    * or is aborted.
    */
   @VisibleForTesting
-  boolean handleCopyInProgress(final Path dstPath,
+  BlobCopyProgress handleCopyInProgress(final Path dstPath,
       final TracingContext tracingContext,
       final String copyId) throws AzureBlobFileSystemException {
     BlobProperty blobProperty = getBlobProperty(dstPath,
         tracingContext);
     if (blobProperty != null && copyId.equals(blobProperty.getCopyId())) {
       if (COPY_STATUS_SUCCESS.equalsIgnoreCase(blobProperty.getCopyStatus())) {
-        return true;
+        return BlobCopyProgress.SUCCESS;
       }
       if (COPY_STATUS_FAILED.equalsIgnoreCase(blobProperty.getCopyStatus())) {
         throw new AbfsRestOperationException(
@@ -602,7 +599,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             new Exception(COPY_BLOB_ABORTED.getErrorCode()));
       }
     }
-    return false;
+    return BlobCopyProgress.PENDING;
   }
 
   /**
