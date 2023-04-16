@@ -149,7 +149,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STA
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_FAILED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_SUCCESS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HDI_ISFOLDER;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VERSION;
@@ -1270,7 +1269,18 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final TracingContext tracingContext,
       final Path sourcePath) throws AzureBlobFileSystemException {
     copyBlob(sourcePath, destination, tracingContext);
-    client.deleteBlobPath(sourcePath, tracingContext);
+    deleteBlob(sourcePath, tracingContext);
+  }
+
+  private void deleteBlob(final Path sourcePath,
+      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+    try {
+      client.deleteBlobPath(sourcePath, tracingContext);
+    } catch (AbfsRestOperationException ex) {
+      if (ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+        throw ex;
+      }
+    }
   }
 
   public void delete(final Path path, final boolean recursive,

@@ -1138,10 +1138,12 @@ public class AbfsClient implements Closeable {
    * @param blobPath path on which blob has to be deleted.
    * @param tracingContext tracingContext object for tracing the server calls.
    *
+   * @return abfsRestOpertion
+   *
    * @throws AzureBlobFileSystemException exception thrown from server or due to
    * network issue.
    */
-  public void deleteBlobPath(final Path blobPath,
+  public AbfsRestOperation deleteBlobPath(final Path blobPath,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     String blobRelativePath = blobPath.toUri().getPath();
@@ -1156,18 +1158,8 @@ public class AbfsClient implements Closeable {
         HTTP_METHOD_DELETE,
         url,
         requestHeaders);
-    try {
-      op.execute(tracingContext);
-      return;
-    } catch (AzureBlobFileSystemException ex) {
-      if (!op.hasResult()) {
-        throw ex;
-      }
-      if (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
-        return;
-      }
-      throw ex;
-    }
+    op.execute(tracingContext);
+    return op;
   }
 
   /**
