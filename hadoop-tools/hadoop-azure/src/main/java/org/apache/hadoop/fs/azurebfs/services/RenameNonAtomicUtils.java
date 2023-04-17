@@ -16,18 +16,18 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs;
+package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.services.BlobProperty;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 public class RenameNonAtomicUtils extends RenameAtomicityUtils {
 
-  RenameNonAtomicUtils(final AzureBlobFileSystem azureBlobFileSystem,
+  public RenameNonAtomicUtils(final AzureBlobFileSystem azureBlobFileSystem,
       final Path srcPath,
       final Path dstPath,
       final TracingContext tracingContext) throws IOException {

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs;
+package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -43,8 +43,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.fs.azurebfs.services.BlobProperty;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
@@ -78,7 +78,7 @@ public class RenameAtomicityUtils {
       .configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true)
       .readerFor(JsonNode.class);
 
-  RenameAtomicityUtils(final AzureBlobFileSystem azureBlobFileSystem,
+  public RenameAtomicityUtils(final AzureBlobFileSystem azureBlobFileSystem,
       final Path srcPath,
       final Path dstPath,
       final TracingContext tracingContext) throws IOException {
@@ -88,7 +88,7 @@ public class RenameAtomicityUtils {
     this.tracingContext = tracingContext;
   }
 
-  RenameAtomicityUtils(final AzureBlobFileSystem azureBlobFileSystem,
+  public RenameAtomicityUtils(final AzureBlobFileSystem azureBlobFileSystem,
       final Path path, final RedoRenameInvocation redoRenameInvocation)
       throws IOException {
     this.azureBlobFileSystem = azureBlobFileSystem;
@@ -411,7 +411,7 @@ public class RenameAtomicityUtils {
     public List<String> destinationSuffix;
   }
 
-  static interface RedoRenameInvocation {
+  public static interface RedoRenameInvocation {
     void redo(Path destination, List<Path> sourcePaths,
         final List<String> destinationSuffix) throws
         AzureBlobFileSystemException;

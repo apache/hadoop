@@ -63,6 +63,7 @@ import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.fs.azurebfs.services.BlobList;
 import org.apache.hadoop.fs.azurebfs.services.BlobProperty;
 
+import org.apache.hadoop.fs.azurebfs.services.RenameAtomicityUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
@@ -139,7 +140,7 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.http.client.utils.URIBuilder;
 
-import static org.apache.hadoop.fs.azurebfs.RenameAtomicityUtils.SUFFIX;
+import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicityUtils.SUFFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYPHEN;
@@ -156,7 +157,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FS_AZURE_ATOMIC_RENAME_DIRECTORIES;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HBASE_ROOT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_ID;
@@ -559,7 +559,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             tracingContext);
         try {
           if (dstBlobProperty.getCopySourceUrl() != null &&
-              (ROOT_PATH + client.getFileSystem() + srcPath.toUri().getPath()).equals(
+              (ROOT_PATH + client.getFileSystem() + srcPath.toUri()
+                  .getPath()).equals(
                   new URL(dstBlobProperty.getCopySourceUrl()).toURI()
                       .getPath())) {
             return;
@@ -570,13 +571,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
       throw ex;
     }
-    final String progress = copyOp.getResult().getResponseHeader(X_MS_COPY_STATUS);
+    final String progress = copyOp.getResult()
+        .getResponseHeader(X_MS_COPY_STATUS);
     if (COPY_STATUS_SUCCESS.equalsIgnoreCase(progress)) {
       return;
     }
     final String copyId = copyOp.getResult().getResponseHeader(X_MS_COPY_ID);
     final long pollWait = abfsConfiguration.getBlobCopyProgressPollWaitMillis();
-    while (handleCopyInProgress(dstPath, tracingContext, copyId) == BlobCopyProgress.PENDING) {
+    while (handleCopyInProgress(dstPath, tracingContext, copyId)
+        == BlobCopyProgress.PENDING) {
       try {
         Thread.sleep(pollWait);
       } catch (Exception e) {
@@ -1890,7 +1893,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   /**
    * Provides a standard implementation of
-   * {@link org.apache.hadoop.fs.azurebfs.RenameAtomicityUtils.RedoRenameInvocation}.
+   * {@link RenameAtomicityUtils.RedoRenameInvocation}.
    */
   RenameAtomicityUtils.RedoRenameInvocation getRedoRenameInvocation(final TracingContext tracingContext) {
     return new RenameAtomicityUtils.RedoRenameInvocation() {
