@@ -131,18 +131,21 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.http.client.utils.URIBuilder;
 
+import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYPHEN;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_PLUS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_STAR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UNDERSCORE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.PATH_EXISTS;
 
 /**
  * Provides the bridging logic between Hadoop's abstract filesystem and Azure Storage.
@@ -532,7 +535,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
-  public OutputStream createFile(final Path path,
+  public OutputStream createFile(final Path path, final boolean isFile,
       final FileSystem.Statistics statistics, final boolean overwrite,
       final FsPermission permission, final FsPermission umask,
       TracingContext tracingContext, HashMap<String, String> metadata) throws IOException {
@@ -561,6 +564,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         triggerConditionalCreateOverwrite = true;
       }
 
+      if (prefixMode == PrefixMode.BLOB && isFile) {
+        List<BlobProperty> blobList = getListBlobs(path, tracingContext, 2, path.toUri().getPath() + FORWARD_SLASH);
+        if (blobList.size() > 0 || checkIsDirectory(path, tracingContext)) {
+          throw new AbfsRestOperationException(HTTP_CONFLICT,
+                  AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
+                  PATH_EXISTS,
+                  null);
+        }
+      }
+
       AbfsRestOperation op;
       if (triggerConditionalCreateOverwrite) {
         op = conditionalCreateOverwriteFile(relativePath,
@@ -574,13 +587,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       } else {
         if (getPrefixMode() == PrefixMode.BLOB) {
-          op = client.createPathBlob(relativePath, true,
+          op = client.createPathBlob(relativePath, isFile,
                   overwrite,
                   metadata,
                   null,
                   tracingContext);
         } else {
-          op = client.createPath(relativePath, true,
+          op = client.createPath(relativePath, isFile,
                   overwrite,
                   isNamespaceEnabled ? getOctalNotation(permission) : null,
                   isNamespaceEnabled ? getOctalNotation(umask) : null,
@@ -603,6 +616,31 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               0,
               tracingContext));
     }
+  }
+
+  /**
+   * Returns true if the path is a directory.
+   * @param path path to check for file or directory.
+   * @param tracingContext tracingContext.
+   * @return true or false.
+   * @throws IOException
+   */
+  private boolean checkIsDirectory(Path path, TracingContext tracingContext) throws IOException {
+    AbfsRestOperation op;
+    try {
+      op = client.getBlobProperty(path, tracingContext);
+    } catch (AzureBlobFileSystemException ex) {
+      if (ex instanceof AbfsRestOperationException) {
+        if (((AbfsRestOperationException) ex).getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+          throw ex;
+        }
+      }
+    }
+    if (op != null && op.hasResult()) {
+      String isFolder = op.getResult().getResponseHeader(X_MS_META_HDI_ISFOLDER);
+      return isFolder != null && isFolder.equalsIgnoreCase(TRUE);
+    }
+    return false;
   }
 
   /**
@@ -638,7 +676,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
 
     } catch (AbfsRestOperationException e) {
-      if (e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+      if (e.getStatusCode() == HTTP_CONFLICT) {
         // File pre-exists, fetch eTag
         try {
           op = client.getPathStatus(relativePath, false, tracingContext);

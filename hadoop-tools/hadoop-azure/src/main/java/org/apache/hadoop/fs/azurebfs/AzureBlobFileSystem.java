@@ -337,7 +337,7 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     try {
-      OutputStream outputStream = abfsStore.createFile(qualifiedPath, statistics, fileOverwrite,
+      OutputStream outputStream = abfsStore.createFile(qualifiedPath, true, statistics, fileOverwrite,
           permission == null ? FsPermission.getFileDefault() : permission,
           FsPermission.getUMask(getConf()), tracingContext, null);
       statIncrement(FILES_CREATED);
