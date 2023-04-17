@@ -1065,8 +1065,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final Boolean isSrcExist;
       final Boolean isSrcDir;
       /*
-      * Fetch the list of blobs in the given sourcePath.
-      */
+       * Fetch the list of blobs in the given sourcePath.
+       */
       List<BlobProperty> srcBlobProperties = getListBlobs(source, null,
           tracingContext, null, true);
       BlobProperty blobPropOnSrc;
@@ -1075,30 +1075,35 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         isSrcExist = true;
         isSrcDir = true;
         /*
-        * Fetch if there is a marker-blob for the source blob.
-        */
+         * Fetch if there is a marker-blob for the source blob.
+         */
         BlobProperty blobPropOnSrcNullable;
         try {
           blobPropOnSrcNullable = getBlobProperty(source, tracingContext);
         } catch (AbfsRestOperationException ex) {
-          if(ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+          if (ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
             throw ex;
           }
           blobPropOnSrcNullable = null;
         }
-        if(blobPropOnSrcNullable == null) {
+        if (blobPropOnSrcNullable == null) {
           /*
-          * There is no marker-blob, the client has to create marker blob before
-          * starting the rename.
-          */
+           * There is no marker-blob, the client has to create marker blob before
+           * starting the rename.
+           */
           //create marker file; add in srcBlobProperties;
-          LOG.debug("Source {} is a directory but there is no marker-blob", source);
-          createDirectory(source, FsPermission.getDirDefault(), FsPermission.getUMask(getAbfsConfiguration().getRawConfiguration()), tracingContext);
+          LOG.debug("Source {} is a directory but there is no marker-blob",
+              source);
+          createDirectory(source, FsPermission.getDirDefault(),
+              FsPermission.getUMask(
+                  getAbfsConfiguration().getRawConfiguration()),
+              tracingContext);
           blobPropOnSrc = new BlobProperty();
           blobPropOnSrc.setIsDirectory(true);
           blobPropOnSrc.setPath(source);
         } else {
-          LOG.debug("Source {} is a directory but there is a marker-blob", source);
+          LOG.debug("Source {} is a directory but there is a marker-blob",
+              source);
           blobPropOnSrc = blobPropOnSrcNullable;
         }
       } else {
@@ -1107,15 +1112,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         try {
           blobPropOnSrc = getBlobProperty(source, tracingContext);
         } catch (AbfsRestOperationException ex) {
-          if(ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+          if (ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
             throw ex;
           }
           blobPropOnSrc = null;
         }
 
-        if(blobPropOnSrc != null) {
+        if (blobPropOnSrc != null) {
           isSrcExist = true;
-          if(blobPropOnSrc.getIsDirectory()) {
+          if (blobPropOnSrc.getIsDirectory()) {
             LOG.debug("source {} is a marker blob", source);
             isSrcDir = true;
           } else {
@@ -1133,26 +1138,30 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       if (!isSrcExist) {
         LOG.info("source {} doesn't exists", source);
         throw new AbfsRestOperationException(HttpURLConnection.HTTP_NOT_FOUND,
-            AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND.getErrorCode(), null, null);
+            AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND.getErrorCode(), null,
+            null);
       }
       if (isSrcDir) {
         /*
-        * If source is a directory, all the blobs in the directory have to be
-        * individually copied and then deleted at the source.
-        */
+         * If source is a directory, all the blobs in the directory have to be
+         * individually copied and then deleted at the source.
+         */
         LOG.debug("source {} is a directory", source);
         if (isAtomicRenameKey(source.toUri().getPath())) {
-          LOG.debug("source dir {} is an atomicRenameKey", source.toUri().getPath());
+          LOG.debug("source dir {} is an atomicRenameKey",
+              source.toUri().getPath());
           renameAtomicityUtils.preRename(srcBlobProperties);
         } else {
-          LOG.debug("source dir {} is not an atomicRenameKey", source.toUri().getPath());
+          LOG.debug("source dir {} is not an atomicRenameKey",
+              source.toUri().getPath());
         }
         List<Future> futures = new ArrayList<>();
         for (BlobProperty blobProperty : srcBlobProperties) {
           futures.add(renameBlobExecutorService.submit(() -> {
             try {
               renameBlob(
-                  createDestinationPathForBlobPartOfRenameSrcDir(destination, blobProperty, source),
+                  createDestinationPathForBlobPartOfRenameSrcDir(destination,
+                      blobProperty, source),
                   tracingContext, blobProperty.getPath());
             } catch (AzureBlobFileSystemException e) {
               LOG.error(String.format("rename from %s to %s for blob %s failed",
@@ -1165,10 +1174,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           try {
             future.get();
           } catch (InterruptedException e) {
-            LOG.error(String.format("rename from %s to %s failed", source, destination), e);
+            LOG.error(String.format("rename from %s to %s failed", source,
+                destination), e);
             throw new RuntimeException(e);
           } catch (ExecutionException e) {
-            LOG.error(String.format("rename from %s to %s failed", source, destination), e);
+            LOG.error(String.format("rename from %s to %s failed", source,
+                destination), e);
             throw new RuntimeException(e);
           }
         }
@@ -1180,7 +1191,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         renameBlob(destination, tracingContext,
             srcBlobProperties.get(0).getPath());
       }
-      LOG.info("Rename from source {} to destination {} done", source, destination);
+      LOG.info("Rename from source {} to destination {} done", source,
+          destination);
       return;
     }
 
