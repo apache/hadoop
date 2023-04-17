@@ -108,7 +108,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
 
     //request should not fail for invalid clientCorrelationID
     AbfsRestOperation op;
-    if (fs.getPrefixMode() == PrefixMode.DFS) {
+    if (getPrefixMode(fs) == PrefixMode.DFS) {
       op = fs.getAbfsClient()
               .createPath(path, false, true, permission, umask, false, null,
                       tracingContext);

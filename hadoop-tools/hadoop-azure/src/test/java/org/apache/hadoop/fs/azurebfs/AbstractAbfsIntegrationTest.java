@@ -429,16 +429,16 @@ public abstract class AbstractAbfsIntegrationTest extends
     return fs.getAbfsStore();
   }
 
+  public PrefixMode getPrefixMode(final AzureBlobFileSystem fs) {
+    return fs.getAbfsStore().getAbfsConfiguration().getPrefixMode();
+  }
+
   public AbfsClient getClient(final AzureBlobFileSystem fs) {
     return fs.getAbfsStore().getClient();
   }
 
-  public boolean isNamespaceEnabled(final AzureBlobFileSystem fs) {
-    return fs.isNamespaceEnabled();
-  }
-
-  public PrefixMode getPrefixMode(final AzureBlobFileSystem fs) {
-    return fs.getPrefixMode();
+  public boolean isNamespaceEnabled(final AzureBlobFileSystem fs) throws AzureBlobFileSystemException {
+    return fs.getAbfsStore().getIsNamespaceEnabled(getTestTracingContext(fs, true));
   }
 
   public Path makeQualified(Path path) throws java.io.IOException {
