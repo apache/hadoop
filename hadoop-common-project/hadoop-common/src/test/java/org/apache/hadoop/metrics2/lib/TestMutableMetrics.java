@@ -52,7 +52,7 @@ public class TestMutableMetrics {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestMutableMetrics.class);
   private static final double EPSILON = 1e-42;
-  private static final int SLEEP_TIME = 6000;
+  private static final int SLEEP_TIME_MS = 6 * 1000; // 6 seconds.
   private static final int SAMPLE_COUNT = 1000;
 
   /**
@@ -404,7 +404,7 @@ public class TestMutableMetrics {
     }
     long endTimeMS = System.currentTimeMillis();
 
-    Thread.sleep(SLEEP_TIME - (endTimeMS - startTimeMS));
+    Thread.sleep(SLEEP_TIME_MS - (endTimeMS - startTimeMS));
 
     registry.snapshot(mb, false);
 
@@ -450,7 +450,7 @@ public class TestMutableMetrics {
     }
     long endTimeMS = System.currentTimeMillis();
 
-    Thread.sleep(SLEEP_TIME - (endTimeMS - startTimeMS));
+    Thread.sleep(SLEEP_TIME_MS - (endTimeMS - startTimeMS));
 
     registry.snapshot(mb, false);
 
@@ -584,7 +584,7 @@ public class TestMutableMetrics {
     quantiles.snapshot(mb, true);
     verify(mb).addGauge(
         info("FooNumOps", "Number of ops for stat with 5s interval"), 0L);
-    Thread.sleep(SLEEP_TIME);
+    Thread.sleep(SLEEP_TIME_MS);
     quantiles.snapshot(mb, false);
     verify(mb, times(2)).addGauge(
         info("FooNumOps", "Number of ops for stat with 5s interval"), 0L);
@@ -606,7 +606,7 @@ public class TestMutableMetrics {
     inverseQuantiles.snapshot(mb, true);
     verify(mb).addGauge(
         info("FooNumOps", "Number of ops for stat with 5s interval"), 0L);
-    Thread.sleep(SLEEP_TIME);
+    Thread.sleep(SLEEP_TIME_MS);
     inverseQuantiles.snapshot(mb, false);
     verify(mb, times(2)).addGauge(
         info("FooNumOps", "Number of ops for stat with 5s interval"), 0L);
