@@ -37,10 +37,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.BlobProperty;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
@@ -1049,7 +1048,7 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  @org.apache.hadoop.classification.VisibleForTesting
+  @VisibleForTesting
   AbfsRestOperation getCopyBlobOperation(final URL url,
       final List<AbfsHttpHeader> requestHeaders) {
     return new AbfsRestOperation(
@@ -1087,44 +1086,39 @@ public class AbfsClient implements Closeable {
   /**
    * Call server API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/list-blobs">BlobList</a>.
    *
-   * @param sourceDirBlobPath path from where the list of blob is requried.
-   * @param tracingContext object of {@link TracingContext}
    * @param marker optional value. To be sent in case this method call in a non-first
    * iteration to the blobList API. Value has to be equal to the field NextMarker in the response
    * of previous iteration for the same operation.
    * @param maxResult define how many blobs can client handle in server response.
    * In case maxResult <= 5000, server sends number of blobs equal to the value. In
    * case maxResult > 5000, server sends maximum 5000 blobs.
-   * @param absoluteDirSearch
+   * @param tracingContext object of {@link TracingContext}
    *
-   * @return list of {@link BlobProperty}
+   * @return abfsRestOperation which contain list of {@link BlobProperty}
+   * via {@link AbfsRestOperation#getResult()}.{@link AbfsHttpOperation#getBlobList()}
    *
    * @throws AzureBlobFileSystemException thrown from server-call / xml-parsing
    */
-  public AbfsRestOperation getListBlobs(Path sourceDirBlobPath,
-      TracingContext tracingContext,
-      String marker,
+  public AbfsRestOperation getListBlobs(String marker,
       String prefix,
-      Integer maxResult, final Boolean absoluteDirSearch)
+      Integer maxResult,
+      TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESTYPE, CONTAINER);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, QUERY_PARAM_COMP_VALUE_LIST);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_INCLUDE,
         QUERY_PARAM_INCLUDE_VALUE_METADATA);
-    if (prefix == null) {
-      prefix = sourceDirBlobPath.toUri().getPath() + (absoluteDirSearch ?"/" : "");
-    }
-    prefix = removeInitialSlash(prefix);
+    prefix = getDirectoryQueryParameter(prefix);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_PREFIX, prefix);
     if (marker != null) {
       abfsUriQueryBuilder.addQuery(QUERY_PARAM_MARKER, marker);
     }
     if (maxResult != null) {
-      abfsUriQueryBuilder.addQuery(QUERY_PARAM_MAXRESULT, maxResult + "");
+      abfsUriQueryBuilder.addQuery(QUERY_PARAM_MAXRESULT, maxResult.toString());
     }
-    appendSASTokenToQuery(sourceDirBlobPath.toUri().getPath(),
-        SASTokenProvider.LIST_BLOB_OPERATION, abfsUriQueryBuilder);
+    appendSASTokenToQuery(null, SASTokenProvider.LIST_BLOB_OPERATION,
+        abfsUriQueryBuilder);
     URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -1138,17 +1132,18 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  private String removeInitialSlash(final String prefix) {
-    int len = prefix.length();
-    for (int i = 0; i < len; i++) {
-      if (prefix.charAt(i) != '/') {
-        return prefix.substring(i);
-      }
-    }
-    return null;
-  }
-
-  public void deleteBlobPath(final Path blobPath,
+  /**
+   * Deletes the blob for which the path is given.
+   *
+   * @param blobPath path on which blob has to be deleted.
+   * @param tracingContext tracingContext object for tracing the server calls.
+   *
+   * @return abfsRestOpertion
+   *
+   * @throws AzureBlobFileSystemException exception thrown from server or due to
+   * network issue.
+   */
+  public AbfsRestOperation deleteBlobPath(final Path blobPath,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     String blobRelativePath = blobPath.toUri().getPath();
@@ -1163,18 +1158,8 @@ public class AbfsClient implements Closeable {
         HTTP_METHOD_DELETE,
         url,
         requestHeaders);
-    try {
-      op.execute(tracingContext);
-      return;
-    } catch (AzureBlobFileSystemException ex) {
-      if (!op.hasResult()) {
-        throw ex;
-      }
-      if (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
-        return;
-      }
-      throw ex;
-    }
+    op.execute(tracingContext);
+    return op;
   }
 
   /**

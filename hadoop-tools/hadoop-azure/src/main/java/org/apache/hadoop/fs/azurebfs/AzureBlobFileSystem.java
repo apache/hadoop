@@ -41,11 +41,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.services.BlobProperty;
+import org.apache.hadoop.fs.azurebfs.services.PathInformation;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -401,13 +402,17 @@ public class AzureBlobFileSystem extends FileSystem
   }
 
   public boolean rename(final Path src, final Path dst) throws IOException {
-    LOG.debug("AzureBlobFileSystem.rename src: {} dst: {}", src, dst);
-    LOG.debug("Rename via Blob-endpoint for non-HNS account: {}",
-        getAbfsStore().getAbfsConfiguration().getPrefixMode()
-            == PrefixMode.BLOB);
+    LOG.debug("AzureBlobFileSystem.rename src: {} dst: {} via {} endpoint", src, dst,
+        getAbfsStore().getAbfsConfiguration().getPrefixMode());
     statIncrement(CALL_RENAME);
 
     trailingPeriodCheck(dst);
+
+    if (getAbfsStore().getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB
+        && containsColon(dst)) {
+      throw new IOException("Cannot rename to file " + dst
+          + " that has colons in the name through blob endpoint");
+    }
 
     Path parentFolder = src.getParent();
     if (parentFolder == null) {
@@ -420,18 +425,17 @@ public class AzureBlobFileSystem extends FileSystem
     if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
         == PrefixMode.BLOB) {
       /*
+       * Special case 1:
        * For blob endpoint with non-HNS account, client has to ensure that destination
        * is not a sub-directory of source.
        */
       LOG.debug("Check if the destination is subDirectory");
-      while (nestedDstParent != null) {
-        if (makeQualified(nestedDstParent).equals(qualifiedSrcPath)) {
-          //testRenameChildDirForbidden.
-          LOG.info("Rename src: {} dst: {} failed as dst is subDir of src",
-              qualifiedSrcPath, qualifiedDstPath);
-          return false;
-        }
-        nestedDstParent = nestedDstParent.getParent();
+      if (nestedDstParent != null && makeQualified(nestedDstParent).toUri()
+          .getPath()
+          .indexOf(qualifiedSrcPath.toUri().getPath()) == 0) {
+        LOG.info("Rename src: {} dst: {} failed as dst is subDir of src",
+            qualifiedSrcPath, qualifiedDstPath);
+        return false;
       }
     }
 
@@ -439,42 +443,54 @@ public class AzureBlobFileSystem extends FileSystem
     TracingContext tracingContext = new TracingContext(clientCorrelationId,
         fileSystemId, FSOperationType.RENAME, true, tracingHeaderFormat,
         listener);
+    // special case 2:
     // rename under same folder;
     if (makeQualified(parentFolder).equals(qualifiedDstPath)) {
-      return tryGetFileStatus(qualifiedSrcPath, tracingContext) != null;
+      PathInformation pathInformation = getPathInformation(qualifiedDstPath,
+          tracingContext);
+      return pathInformation.getPathExists();
     }
 
+    //special case 3:
     if (qualifiedSrcPath.equals(qualifiedDstPath)) {
       // rename to itself
       // - if it doesn't exist, return false
       // - if it is file, return true
       // - if it is dir, return false.
-      final AtomicBoolean isDstDirectory = new AtomicBoolean();
-      final AtomicBoolean isDstExists = new AtomicBoolean();
 
-      getPathInformation(qualifiedDstPath, tracingContext, isDstDirectory,
-          isDstExists);
-      if (!isDstExists.get()) {
+      final PathInformation pathInformation = getPathInformation(
+          qualifiedDstPath, tracingContext
+      );
+      final Boolean isDstExists = pathInformation.getPathExists();
+      final Boolean isDstDirectory = pathInformation.getIsDirectory();
+      if (!isDstExists) {
         return false;
       }
-      return isDstDirectory.get() ? false : true;
+      return isDstDirectory ? false : true;
     }
 
-    final AtomicBoolean isDstDirectory = new AtomicBoolean();
-    final AtomicBoolean isDstExists = new AtomicBoolean();
-
+    // special case 4:
     // Non-HNS account need to check dst status on driver side.
+    PathInformation fnsPathInformation = null;
     if (!abfsStore.getIsNamespaceEnabled(tracingContext)) {
-      getPathInformation(qualifiedDstPath, tracingContext, isDstDirectory,
-          isDstExists);
+      fnsPathInformation = getPathInformation(qualifiedDstPath, tracingContext
+      );
     }
 
     try {
+      final Boolean isFnsDstExists, isFnsDstDirectory;
+      if (fnsPathInformation != null) {
+        isFnsDstDirectory = fnsPathInformation.getIsDirectory();
+        isFnsDstExists = fnsPathInformation.getPathExists();
+      } else {
+        isFnsDstExists = false;
+        isFnsDstDirectory = false;
+      }
       String sourceFileName = src.getName();
       Path adjustedDst = dst;
 
-      if (isDstExists.get()) {
-        if (!isDstDirectory.get()) {
+      if (isFnsDstExists) {
+        if (!isFnsDstDirectory) {
           return qualifiedSrcPath.equals(qualifiedDstPath);
         }
         adjustedDst = new Path(dst, sourceFileName);
@@ -486,13 +502,15 @@ public class AzureBlobFileSystem extends FileSystem
          */
         if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
             == PrefixMode.BLOB) {
-          isDstDirectory.set(false);
-          isDstExists.set(false);
-          getPathInformation(qualifiedDstPath, tracingContext, isDstDirectory,
-              isDstExists);
-          if (isDstExists.get()) {
+          final PathInformation qualifiedDstPathInformation
+              = getPathInformation(qualifiedDstPath, tracingContext
+          );
+          final Boolean isQualifiedDstExists
+              = qualifiedDstPathInformation.getPathExists();
+          if (isQualifiedDstExists) {
             //destination already there. Rename should not be overwriting.
-            LOG.info("Rename src: {} dst: {} failed as qualifiedDst already exists",
+            LOG.info(
+                "Rename src: {} dst: {} failed as qualifiedDst already exists",
                 qualifiedSrcPath, qualifiedDstPath);
             throw new AbfsRestOperationException(
                 HttpURLConnection.HTTP_CONFLICT,
@@ -501,18 +519,23 @@ public class AzureBlobFileSystem extends FileSystem
           }
         }
       } else {
-        LOG.debug("dst {} doesn't exists. Check if the parent exists.", adjustedDst);
+        LOG.debug("dst {} doesn't exists. Check if the parent exists.",
+            adjustedDst);
         qualifiedDstPath = makeQualified(adjustedDst);
         /*
          * If the destination doesn't exist, check if parent of destination exists.
          */
         Path parent = qualifiedDstPath.getParent();
-        if (parent == null || !parent.isRoot()) {
-          isDstDirectory.set(false);
-          isDstExists.set(false);
-          getPathInformation(parent, tracingContext, isDstDirectory,
-              isDstExists);
-          if (!isDstExists.get() || !isDstDirectory.get()) {
+        if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
+            == PrefixMode.BLOB && (parent != null && !parent.isRoot())) {
+          PathInformation dstParentPathInformation = getPathInformation(parent,
+              tracingContext
+          );
+          final Boolean dstParentPathExists
+              = dstParentPathInformation.getPathExists();
+          final Boolean isDstParentPathDirectory
+              = dstParentPathInformation.getIsDirectory();
+          if (!dstParentPathExists || !isDstParentPathDirectory) {
             LOG.info("parent of {} is {} doesn't exists. Failing rename",
                 adjustedDst, parent);
             throw new AbfsRestOperationException(
@@ -523,21 +546,30 @@ public class AzureBlobFileSystem extends FileSystem
           }
         }
       }
-
-      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, this,
+      final RenameAtomicityUtils renameAtomicityUtils;
+      if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
+          == PrefixMode.BLOB &&
+          abfsStore.isAtomicRenameKey(qualifiedSrcPath.toUri().getPath())) {
+        renameAtomicityUtils = new RenameAtomicityUtils(this,
+            qualifiedSrcPath, qualifiedDstPath, tracingContext);
+      } else {
+        renameAtomicityUtils = new RenameNonAtomicUtils(this,
+            qualifiedSrcPath, qualifiedDstPath, tracingContext);
+      }
+      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, renameAtomicityUtils,
           tracingContext);
       return true;
     } catch (AzureBlobFileSystemException ex) {
       LOG.debug("Rename operation failed. ", ex);
       checkException(
-          src,
-          ex,
-          AzureServiceErrorCode.PATH_ALREADY_EXISTS,
-          AzureServiceErrorCode.INVALID_RENAME_SOURCE_PATH,
-          AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND,
-          AzureServiceErrorCode.INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE,
-          AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND,
-          AzureServiceErrorCode.INTERNAL_OPERATION_ABORT);
+            src,
+            ex,
+            AzureServiceErrorCode.PATH_ALREADY_EXISTS,
+            AzureServiceErrorCode.INVALID_RENAME_SOURCE_PATH,
+            AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND,
+            AzureServiceErrorCode.INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE,
+            AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND,
+            AzureServiceErrorCode.INTERNAL_OPERATION_ABORT);
       return false;
     }
   }
@@ -555,44 +587,43 @@ public class AzureBlobFileSystem extends FileSystem
    * shall be called. If the response returned an object, the path can be defined
    * as existing. If the response's metadata contains it is directory, the path
    * can be defined as a directory.
+   *
    * @param path path for which information is requried.
    * @param tracingContext tracingContext for the operations.
-   * @param isPathDirectory atomicBoolean object which will be set in the method
-   * if the given path is directory.
-   * @param isPathExists atomicBoolean object which will be set in the method if
-   * the given path exists.
+   *
+   * @return pathInformation containing if path exists and is a directory.
+   *
    * @throws AzureBlobFileSystemException exceptions caught from the server calls.
    */
-  private void getPathInformation(final Path path,
-      final TracingContext tracingContext,
-      final AtomicBoolean isPathDirectory,
-      final AtomicBoolean isPathExists) throws AzureBlobFileSystemException {
+  private PathInformation getPathInformation(final Path path,
+      final TracingContext tracingContext) throws AzureBlobFileSystemException {
     if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
         == PrefixMode.BLOB) {
       List<BlobProperty> blobProperties = getAbfsStore()
-          .getListBlobs(path, tracingContext, 2, 2, true);
+          .getListBlobs(path, null, tracingContext, 2, true);
       if (blobProperties.size() > 0) {
-        isPathExists.set(true);
-        isPathDirectory.set(true);
-        return;
+        return new PathInformation(true, true);
       }
-      BlobProperty blobProperty
-          = getAbfsStore().getBlobPropertyWithNotFoundHandling(path,
-          tracingContext);
-      if (blobProperty != null) {
-        isPathExists.set(true);
-        if (blobProperty.getIsDirectory()) {
-          isPathDirectory.set(true);
+      BlobProperty blobProperty;
+      try {
+        blobProperty = getAbfsStore().getBlobProperty(path, tracingContext);
+      } catch (AbfsRestOperationException ex) {
+        if (ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+          throw ex;
         }
+        blobProperty = null;
+      }
+      if (blobProperty != null) {
+        return new PathInformation(true, blobProperty.getIsDirectory());
       }
     } else {
       final FileStatus fileStatus = tryGetFileStatus(path,
           tracingContext);
       if (fileStatus != null) {
-        isPathExists.set(true);
-        isPathDirectory.set(fileStatus.isDirectory());
+        return new PathInformation(true, fileStatus.isDirectory());
       }
     }
+    return new PathInformation(false, false);
   }
 
   @Override
@@ -1596,6 +1627,10 @@ public class AzureBlobFileSystem extends FileSystem
     return result;
   }
 
+  private boolean containsColon(Path p) {
+    return p.toUri().getPath().contains(":");
+  }
+
   /**
    * Get a delegation token from remote service endpoint if
    * 'fs.azure.enable.kerberos.support' is set to 'true', and
@@ -1696,7 +1731,7 @@ public class AzureBlobFileSystem extends FileSystem
     return clientCorrelationId;
   }
 
-  @org.apache.hadoop.classification.VisibleForTesting
+  @VisibleForTesting
   void setAbfsStore(final AzureBlobFileSystemStore abfsStore) {
     this.abfsStore = abfsStore;
   }
