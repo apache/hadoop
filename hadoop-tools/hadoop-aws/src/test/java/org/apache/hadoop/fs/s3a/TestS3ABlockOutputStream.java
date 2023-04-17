@@ -38,7 +38,10 @@ import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditor;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -156,6 +159,7 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
     stream = spy(new S3ABlockOutputStream(builder));
     intercept(UnsupportedOperationException.class, () -> stream.hflush());
     intercept(UnsupportedOperationException.class, () -> stream.hsync());
+    verify(stream, never()).flush();
   }
 
   /**
@@ -169,8 +173,11 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
     builder.withDowngradeSyncableExceptions(true);
     stream = spy(new S3ABlockOutputStream(builder));
 
+    verify(stream, never()).flush();
     stream.hflush();
+    verify(stream, times(1)).flush();
     stream.hsync();
+    verify(stream, times(2)).flush();
   }
 
 }
