@@ -509,26 +509,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
-
-  /**
-   * Gets the blob property over Blob Endpoint. Handles the case where there
-   * is no blob present at the path, and server returns httpStatusCode = 404.<br>
-   * Reason for not handling this in {@link #getBlobProperty(Path, TracingContext)}
-   * is to keep it in sync with the {@link #getFileStatus(Path, TracingContext)}
-   * behaviour. The {@link #getFileStatus(Path, TracingContext)} throws the
-   * exception it receives to the caller. Hence, it is expected that
-   * {@link #getBlobProperty(Path, TracingContext)} also throw all kind of exception
-   * to the caller.
-   *
-   * @param blobPath path for which the property information is required
-   * @param tracingContext object of TracingContext required for the tracing of
-   * server calls
-   * @return instance of BlobProperty if the blob is present on the given path.
-   * <code>null</code> if there is no blob on the given path.
-   * @throws AzureBlobFileSystemException exception other than
-   * {@link AbfsRestOperationException} for httpStatusCode = 404 on the server
-   * response.
-   */
   BlobProperty getBlobPropertyWithNotFoundHandling(Path blobPath,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     try {
