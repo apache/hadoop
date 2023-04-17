@@ -27,6 +27,13 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public final class HttpQueryParams {
   public static final String QUERY_PARAM_RESOURCE = "resource";
+  public static final String QUERY_PARAM_RESTYPE = "restype";
+  public static final String QUERY_PARAM_COMP = "comp";
+  public static final String QUERY_PARAM_COMP_VALUE_LIST = "list";
+  public static final String QUERY_PARAM_PREFIX = "prefix";
+  public static final String QUERY_PARAM_MARKER = "marker";
+  public static final String QUERY_PARAM_MAXRESULT = "maxresults";
+  public static final String QUERY_PARAM_BLOCKLISTTYPE = "blocklisttype";
   public static final String QUERY_PARAM_DIRECTORY = "directory";
   public static final String QUERY_PARAM_CONTINUATION = "continuation";
   public static final String QUERY_PARAM_RECURSIVE = "recursive";
@@ -41,14 +48,15 @@ public final class HttpQueryParams {
   public static final String QUERY_PARAM_UPN = "upn";
   public static final String QUERY_PARAM_BLOBTYPE = "blobtype";
   public static final String QUERY_PARAM_BLOCKID = "blockid";
-  public static final String QUERY_PARAM_COMP = "comp";
-  public static final String QUERY_PARAM_BLOCKLISTTYPE = "blocklisttype";
 
   //query params for SAS
   public static final String QUERY_PARAM_SAOID = "saoid";
   public static final String QUERY_PARAM_SKOID = "skoid";
   public static final String QUERY_PARAM_SUOID = "suoid";
   public static final String QUERY_PARAM_SIGNATURE = "sig";
+  public static final String QUERY_PARAM_INCLUDE = "include";
+  public static final String QUERY_PARAM_INCLUDE_VALUE_METADATA = "metadata";
+  public static final String CONTAINER = "container";
 
   private HttpQueryParams() {}
 }

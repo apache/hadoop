@@ -159,7 +159,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   private final UniqueArrayList<String> orderedBlockList = new UniqueArrayList<>();
 
   /** Retry fallback for append on DFS */
-  private int retryAppendDFS = 0;
+  private static boolean fallbackDFSAppend = false;
 
   public AbfsOutputStream(AbfsOutputStreamContext abfsOutputStreamContext)
       throws IOException {
@@ -201,7 +201,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.outputStreamId = createOutputStreamId();
     this.tracingContext = new TracingContext(abfsOutputStreamContext.getTracingContext());
     this.prefixMode = client.getAbfsConfiguration().getPrefixMode();
-    if (prefixMode == PrefixMode.BLOB) {
+    if (prefixMode == PrefixMode.BLOB && abfsOutputStreamContext.getPosition() > 0) {
       // Get the list of all the committed blocks for the given path.
       this.committedBlockEntries = getBlockList(path, tracingContext);
     } else {
@@ -459,9 +459,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
             AbfsRestOperation op;
             if (prefixMode == PrefixMode.DFS) {
               TracingContext tracingContextAppend = new TracingContext(tracingContext);
-              if (retryAppendDFS > 0) {
-                retryAppendDFS++;
-                tracingContextAppend.setRetryAppendDFS(retryAppendDFS);
+              if (fallbackDFSAppend) {
+                tracingContextAppend.setFallbackDFSAppend("D");
               }
               op = client.append(path, blockUploadData.toByteArray(), reqParams,
                       cachedSasToken.get(), tracingContextAppend);
@@ -484,10 +483,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
                 // The mechanism to fall back to DFS endpoint if blob operation is not supported.
                 if (ex.getStatusCode() == HTTP_CONFLICT && ex.getMessage().contains(BLOB_OPERATION_NOT_SUPPORTED)) {
                   prefixMode = PrefixMode.DFS;
-                  retryAppendDFS++;
                   LOG.debug("Retrying append due to fallback for path {} ", path);
                   TracingContext tracingContextAppend = new TracingContext(tracingContext);
-                  tracingContextAppend.setRetryAppendDFS(retryAppendDFS);
+                  tracingContextAppend.setFallbackDFSAppend("D");
+                  fallbackDFSAppend = true;
                   op = client.append(path, blockUploadData.toByteArray(), reqParams,
                           cachedSasToken.get(), tracingContextAppend);
                 } else {
