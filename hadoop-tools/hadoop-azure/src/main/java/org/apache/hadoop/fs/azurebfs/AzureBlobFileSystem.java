@@ -446,7 +446,8 @@ public class AzureBlobFileSystem extends FileSystem
     // special case 2:
     // rename under same folder;
     if (makeQualified(parentFolder).equals(qualifiedDstPath)) {
-      PathInformation pathInformation = getPathInformation(qualifiedDstPath, tracingContext);
+      PathInformation pathInformation = getPathInformation(qualifiedDstPath,
+          tracingContext);
       return pathInformation.getPathExists();
     }
 
@@ -457,7 +458,8 @@ public class AzureBlobFileSystem extends FileSystem
       // - if it is file, return true
       // - if it is dir, return false.
 
-      final PathInformation pathInformation = getPathInformation(qualifiedDstPath, tracingContext
+      final PathInformation pathInformation = getPathInformation(
+          qualifiedDstPath, tracingContext
       );
       final Boolean isDstExists = pathInformation.getPathExists();
       final Boolean isDstDirectory = pathInformation.getIsDirectory();
@@ -477,7 +479,7 @@ public class AzureBlobFileSystem extends FileSystem
 
     try {
       final Boolean isFnsDstExists, isFnsDstDirectory;
-      if(fnsPathInformation != null) {
+      if (fnsPathInformation != null) {
         isFnsDstDirectory = fnsPathInformation.getIsDirectory();
         isFnsDstExists = fnsPathInformation.getPathExists();
       } else {
@@ -500,12 +502,15 @@ public class AzureBlobFileSystem extends FileSystem
          */
         if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
             == PrefixMode.BLOB) {
-          final PathInformation qualifiedDstPathInformation =getPathInformation(qualifiedDstPath, tracingContext
+          final PathInformation qualifiedDstPathInformation
+              = getPathInformation(qualifiedDstPath, tracingContext
           );
-          final Boolean isQualifiedDstExists = qualifiedDstPathInformation.getPathExists();
+          final Boolean isQualifiedDstExists
+              = qualifiedDstPathInformation.getPathExists();
           if (isQualifiedDstExists) {
             //destination already there. Rename should not be overwriting.
-            LOG.info("Rename src: {} dst: {} failed as qualifiedDst already exists",
+            LOG.info(
+                "Rename src: {} dst: {} failed as qualifiedDst already exists",
                 qualifiedSrcPath, qualifiedDstPath);
             throw new AbfsRestOperationException(
                 HttpURLConnection.HTTP_CONFLICT,
@@ -514,7 +519,8 @@ public class AzureBlobFileSystem extends FileSystem
           }
         }
       } else {
-        LOG.debug("dst {} doesn't exists. Check if the parent exists.", adjustedDst);
+        LOG.debug("dst {} doesn't exists. Check if the parent exists.",
+            adjustedDst);
         qualifiedDstPath = makeQualified(adjustedDst);
         /*
          * If the destination doesn't exist, check if parent of destination exists.
@@ -522,10 +528,13 @@ public class AzureBlobFileSystem extends FileSystem
         Path parent = qualifiedDstPath.getParent();
         if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
             == PrefixMode.BLOB && (parent != null && !parent.isRoot())) {
-          PathInformation dstParentPathInformation = getPathInformation(parent, tracingContext
+          PathInformation dstParentPathInformation = getPathInformation(parent,
+              tracingContext
           );
-          final Boolean dstParentPathExists = dstParentPathInformation.getPathExists();
-          final Boolean isDstParentPathDirectory = dstParentPathInformation.getIsDirectory();
+          final Boolean dstParentPathExists
+              = dstParentPathInformation.getPathExists();
+          final Boolean isDstParentPathDirectory
+              = dstParentPathInformation.getIsDirectory();
           if (!dstParentPathExists || !isDstParentPathDirectory) {
             LOG.info("parent of {} is {} doesn't exists. Failing rename",
                 adjustedDst, parent);
@@ -599,7 +608,7 @@ public class AzureBlobFileSystem extends FileSystem
       try {
         blobProperty = getAbfsStore().getBlobProperty(path, tracingContext);
       } catch (AbfsRestOperationException ex) {
-        if(ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+        if (ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
           throw ex;
         }
         blobProperty = null;

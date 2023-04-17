@@ -157,6 +157,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_AB
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FS_AZURE_ATOMIC_RENAME_DIRECTORIES;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HBASE_ROOT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_SOURCE;
@@ -252,7 +253,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureAtomicRenameDirs().split(AbfsHttpConstants.COMMA)));
-    this.azureAtomicRenameDirSet.add(DEFAULT_FS_AZURE_ATOMIC_RENAME_DIRECTORIES);
+    this.azureAtomicRenameDirSet.add(HBASE_ROOT);
     updateInfiniteLeaseDirs();
     this.authType = abfsConfiguration.getAuthType(accountName);
     boolean usingOauth = (authType == AuthType.OAuth);
@@ -590,13 +591,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       if (COPY_STATUS_FAILED.equalsIgnoreCase(blobProperty.getCopyStatus())) {
         throw new AbfsRestOperationException(
             COPY_BLOB_FAILED.getStatusCode(), COPY_BLOB_FAILED.getErrorCode(),
-            null,
+            String.format("copy to path %s failed due to: %s",
+                dstPath.toUri().getPath(), blobProperty.getStatusDescription()),
             new Exception(COPY_BLOB_FAILED.getErrorCode()));
       }
       if (COPY_STATUS_ABORTED.equalsIgnoreCase(blobProperty.getCopyStatus())) {
         throw new AbfsRestOperationException(
             COPY_BLOB_ABORTED.getStatusCode(), COPY_BLOB_ABORTED.getErrorCode(),
-            null,
+            String.format("copy to path %s aborted", dstPath.toUri().getPath()),
             new Exception(COPY_BLOB_ABORTED.getErrorCode()));
       }
     }
