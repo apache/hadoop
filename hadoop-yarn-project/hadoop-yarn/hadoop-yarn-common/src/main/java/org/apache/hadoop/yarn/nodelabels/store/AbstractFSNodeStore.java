@@ -66,9 +66,10 @@ public abstract class AbstractFSNodeStore<M> {
     this.manager = mgr;
     initFileSystem(conf);
     // mkdir of root dir path with retry logic
-    int maxRetries = 3;
+    int maxRetries = conf.getInt(YarnConfiguration.NODE_STORE_ROOT_DIR_NUM_RETRIES,
+        YarnConfiguration.NODE_STORE_ROOT_DIR_NUM_DEFAULT_RETRIES);
     int retryCount = 0;
-    boolean success = false;
+    boolean success = fs.mkdirs(fsWorkingPath);
 
     while (!success && retryCount < maxRetries) {
       try {
@@ -83,7 +84,8 @@ public abstract class AbstractFSNodeStore<M> {
           throw e;
         }
         try {
-          Thread.sleep(1000 * retryCount);
+          Thread.sleep(conf.getInt(YarnConfiguration.NODE_STORE_ROOT_DIR_RETRY_INTERVAL,
+              YarnConfiguration.NODE_STORE_ROOT_DIR_RETRY_DEFAULT_INTERVAL));
         } catch (InterruptedException ie) {
           throw new RuntimeException(ie);
         }

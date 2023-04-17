@@ -137,6 +137,16 @@ public class YarnConfiguration extends Configuration {
   // Resource types configs
   ////////////////////////////
 
+  public static final String NODE_STORE_ROOT_DIR_NUM_RETRIES =
+      YARN_PREFIX + "nodestore-rootdir.num-retries";
+
+  public static final int NODE_STORE_ROOT_DIR_NUM_DEFAULT_RETRIES = 3;
+
+  public static final String NODE_STORE_ROOT_DIR_RETRY_INTERVAL =
+      YARN_PREFIX + "nodestore-rootdir.retry-interval-ms";
+
+  public static final int NODE_STORE_ROOT_DIR_RETRY_DEFAULT_INTERVAL = 1000;
+
   public static final String RESOURCE_TYPES =
       YarnConfiguration.YARN_PREFIX + "resource-types";
 
