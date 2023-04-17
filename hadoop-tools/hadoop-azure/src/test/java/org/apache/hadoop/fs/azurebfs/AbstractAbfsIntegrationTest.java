@@ -481,7 +481,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     AzureBlobFileSystemStore abfss = fs.getAbfsStore();
     abfss.getAbfsConfiguration().setDisableOutputStreamFlush(false);
 
-    return (AbfsOutputStream) abfss.createFile(path, fs.getFsStatistics(),
+    return (AbfsOutputStream) abfss.createFile(path, true, fs.getFsStatistics(),
         true, FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()),
         getTestTracingContext(fs, false), null);
   }

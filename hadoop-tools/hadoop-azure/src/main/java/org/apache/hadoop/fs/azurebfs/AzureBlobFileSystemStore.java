@@ -55,6 +55,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
+import org.apache.hadoop.fs.azurebfs.services.BlobList;
+import org.apache.hadoop.fs.azurebfs.services.BlobProperty;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -142,10 +144,17 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VERSION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.PATH_EXISTS;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_ID;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_SOURCE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_STATUS;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_STATUS_DESCRIPTION;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_META_HDI_ISFOLDER;
 
 /**
  * Provides the bridging logic between Hadoop's abstract filesystem and Azure Storage.
@@ -513,6 +522,75 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
+  /**
+   * Gets the property for the blob over Blob Endpoint.
+   *
+   * @param blobPath blobPath for which property information is required
+   * @param tracingContext object of TracingContext required for tracing server calls.
+   * @return BlobProperty for the given path
+   * @throws AzureBlobFileSystemException exception thrown from
+   * {@link AbfsClient#getBlobProperty(Path, TracingContext)} call
+   */
+  private BlobProperty getBlobProperty(Path blobPath,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
+    AbfsRestOperation op = client.getBlobProperty(blobPath, tracingContext);
+    BlobProperty blobProperty = new BlobProperty();
+    final AbfsHttpOperation opResult = op.getResult();
+    blobProperty.setIsDirectory(opResult
+        .getResponseHeader(X_MS_META_HDI_ISFOLDER) != null);
+    blobProperty.setUrl(op.getUrl().toString());
+    blobProperty.setCopyId(opResult.getResponseHeader(X_MS_COPY_ID));
+    blobProperty.setPath(blobPath);
+    blobProperty.setCopySourceUrl(opResult.getResponseHeader(X_MS_COPY_SOURCE));
+    blobProperty.setStatusDescription(
+        opResult.getResponseHeader(X_MS_COPY_STATUS_DESCRIPTION));
+    blobProperty.setCopyStatus(opResult.getResponseHeader(X_MS_COPY_STATUS));
+    blobProperty.setContentLength(
+        Long.parseLong(opResult.getResponseHeader(CONTENT_LENGTH)));
+    return blobProperty;
+  }
+
+  /**
+   * Get the list of a blob on a give path, or blob starting with the given prefix.
+   *
+   * @param sourceDirBlobPath path from where the list of blob is required.
+   * @param prefix Optional value to be provided. If provided, API call would have
+   * prefix = given value. If not provided, the API call would have prefix =
+   * sourceDirBlobPath.
+   * @param tracingContext object of {@link TracingContext}
+   * @param maxResult defines maximum blobs the method should process
+   * @param isDefinitiveDirSearch defines if (true) it is blobList search on a
+   * definitive directory, if (false) it is blobList search on a prefix.
+   *
+   * @return List of blobProperties
+   *
+   * @throws AbfsRestOperationException exception from server-calls / xml-parsing
+   */
+  public List<BlobProperty> getListBlobs(Path sourceDirBlobPath,
+      String prefix, TracingContext tracingContext,
+      final Integer maxResult, final Boolean isDefinitiveDirSearch)
+      throws AzureBlobFileSystemException {
+    List<BlobProperty> blobProperties = new ArrayList<>();
+    String nextMarker = null;
+    if (prefix == null) {
+      prefix = sourceDirBlobPath.toUri().getPath() + (isDefinitiveDirSearch
+          ? "/"
+          : "");
+    }
+    do {
+      AbfsRestOperation op = client.getListBlobs(
+          nextMarker, prefix, maxResult, tracingContext
+      );
+      BlobList blobList = op.getResult().getBlobList();
+      nextMarker = blobList.getNextMarker();
+      blobProperties.addAll(blobList.getBlobPropertyList());
+      if (maxResult != null && blobProperties.size() >= maxResult) {
+        break;
+      }
+    } while (nextMarker != null);
+    return blobProperties;
+  }
+
   public void createFilesystem(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("createFilesystem", "createFilesystem")){
@@ -564,8 +642,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         triggerConditionalCreateOverwrite = true;
       }
 
+      // This handling makes sure that if request to create file for an existing directory comes that should fail.
       if (prefixMode == PrefixMode.BLOB && isFile) {
-        List<BlobProperty> blobList = getListBlobs(path, tracingContext, 2, path.toUri().getPath() + FORWARD_SLASH);
+        List<BlobProperty> blobList = getListBlobs(path, path.toUri().getPath() + FORWARD_SLASH,
+                tracingContext, 2, false);
         if (blobList.size() > 0 || checkIsDirectory(path, tracingContext)) {
           throw new AbfsRestOperationException(HTTP_CONFLICT,
                   AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
@@ -626,7 +706,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws IOException
    */
   private boolean checkIsDirectory(Path path, TracingContext tracingContext) throws IOException {
-    AbfsRestOperation op;
+    AbfsRestOperation op = null;
     try {
       op = client.getBlobProperty(path, tracingContext);
     } catch (AzureBlobFileSystemException ex) {

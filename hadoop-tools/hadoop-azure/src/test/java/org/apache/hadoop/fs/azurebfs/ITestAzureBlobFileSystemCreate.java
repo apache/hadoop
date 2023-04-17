@@ -134,6 +134,10 @@ public class ITestAzureBlobFileSystemCreate extends
     intercept(IOException.class, () -> fs.create(new Path("a/b/c"), false));
   }
 
+  /**
+   * Creation of already existing subpath should fail.
+   * @throws Exception
+   */
   @Test
   public void testCreateSubPath() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -141,6 +145,10 @@ public class ITestAzureBlobFileSystemCreate extends
     intercept(IOException.class, () -> fs.create(new Path("a/b")));
   }
 
+  /**
+   * Creating directory on existing file path should fail.
+   * @throws Exception
+   */
   @Test
   public void testCreateMkdirs() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -148,6 +156,10 @@ public class ITestAzureBlobFileSystemCreate extends
     intercept(IOException.class, () -> fs.mkdirs(new Path("a/b/c/d")));
   }
 
+  /**
+   * Test mkdirs.
+   * @throws Exception
+   */
   @Test
   public void testMkdirs() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -156,6 +168,10 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(new Path("a/b/c/e"));
   }
 
+  /**
+   * Creating subpath of directory path should fail.
+   * @throws Exception
+   */
   @Test
   public void testMkdirsCreateSubPath() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -163,6 +179,10 @@ public class ITestAzureBlobFileSystemCreate extends
     intercept(IOException.class, () -> fs.create(new Path("a/b")));
   }
 
+  /**
+   * Test creation of directory by level.
+   * @throws Exception
+   */
   @Test
   public void testMkdirsByLevel() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -171,6 +191,10 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(new Path("a/b/c/d/e"));
   }
 
+  /**
+   * Creation of same directory without overwrite flag should pass.
+   * @throws Exception
+   */
   @Test
   public void testCreateSameDirectory() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -178,6 +202,10 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(new Path("a/b/c"));
   }
 
+  /**
+   * Creation of directory with overwrite set to false should not fail according to DFS code.
+   * @throws Exception
+   */
   @Test
   public void testCreateSameDirectoryOverwriteFalse() throws Exception {
     Configuration configuration = getRawConfiguration();

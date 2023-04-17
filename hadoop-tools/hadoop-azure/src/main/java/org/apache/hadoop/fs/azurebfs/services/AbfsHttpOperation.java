@@ -27,9 +27,13 @@ import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
+
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
@@ -37,11 +41,14 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xml.sax.SAXException;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COMP_LIST;
 
 /**
  * Represents an HTTP operation.
@@ -81,6 +88,23 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private long sendRequestTimeMs;
   private long recvResponseTimeMs;
   private boolean shouldMask = false;
+  private BlobList blobList;
+
+  private static final ThreadLocal<SAXParser> saxParserThreadLocal
+      = new ThreadLocal<SAXParser>() {
+    @Override
+    public SAXParser initialValue() {
+      SAXParserFactory factory = SAXParserFactory.newInstance();
+      factory.setNamespaceAware(true);
+      try {
+        return factory.newSAXParser();
+      } catch (SAXException e) {
+        throw new RuntimeException("Unable to create SAXParser", e);
+      } catch (ParserConfigurationException e) {
+        throw new RuntimeException("Check parser configuration", e);
+      }
+    }
+  };
 
   public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
       final URL url,
@@ -165,6 +189,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public String getResponseHeader(String httpHeader) {
     return connection.getHeaderField(httpHeader);
+  }
+
+  public BlobList getBlobList() {
+    return blobList;
   }
 
   // Returns a trace message for the request
@@ -387,8 +415,13 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
         // this is a list operation and need to retrieve the data
         // need a better solution
-        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method) && buffer == null) {
-          parseListFilesResponse(stream);
+        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method)
+            && buffer == null) {
+          if (url.toString().contains(COMP_LIST)) {
+            parseListBlobResponse(stream);
+          } else {
+            parseListFilesResponse(stream);
+          }
         } else {
           if (buffer != null) {
             while (totalBytesRead < length) {
@@ -419,6 +452,28 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         this.bytesReceived = totalBytesRead;
       }
     }
+  }
+
+
+  private void parseListBlobResponse(final InputStream stream) {
+    try {
+      final SAXParser saxParser = saxParserThreadLocal.get();
+      saxParser.reset();
+      BlobList blobList = new BlobList();
+      saxParser.parse(stream, new BlobListXmlParser(blobList, getBaseUrl()));
+      this.blobList = blobList;
+    } catch (SAXException | IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private String getBaseUrl() {
+    String urlStr = url.toString();
+    int queryParamStart = urlStr.indexOf("?");
+    if (queryParamStart == -1) {
+      return urlStr;
+    }
+    return urlStr.substring(0, queryParamStart);
   }
 
   public void setRequestProperty(String key, String value) {
