@@ -509,18 +509,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
-  BlobProperty getBlobPropertyWithNotFoundHandling(Path blobPath,
-      TracingContext tracingContext) throws AzureBlobFileSystemException {
-    try {
-      return getBlobProperty(blobPath, tracingContext);
-    } catch (AbfsRestOperationException ex) {
-      if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
-        return null;
-      }
-      throw ex;
-    }
-  }
-
   /**
    * Gets the property for the blob over Blob Endpoint.
    *
