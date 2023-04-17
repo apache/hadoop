@@ -53,6 +53,9 @@ import org.apache.hadoop.security.AccessControlException;
  * <p>
  * Then, /xyz/bar, /abc/.snapshot/s1/foo and /abc/.snapshot/s2/foo
  * are different access paths to the same inode, inode(id=1000,name=bar).
+ * Inside the inode tree, /abc/.snapshot/s1/foo and /abc/.snapshot/s2/foo
+ * indeed have the same resolved path,
+ * but /xyz/bar has a different resolved path.
  * <p>
  * With references, we have the following
  * - The source /abc/foo inode(id=1000,name=foo) is replaced with
@@ -63,7 +66,7 @@ import org.apache.hadoop.security.AccessControlException;
  *   The same as before, /abc/foo is in s1 and s2, but not in s0.
  * - The destination /xyz adds a child DstReference(dstSnapshot=sDst).
  *   DstReference is added to the create-list of /xyz for the sDst diff entry.
- *   /abc/bar is not in sDst.
+ *   /xyz/bar is not in sDst.
  * - Both WithName and DstReference point to another reference WithCount(count=2).
  * - Finally, WithCount(count=2) points to inode(id=1000,name=bar)
  *   Note that the inode name is changed to "bar".
@@ -833,14 +836,11 @@ public abstract class INodeReference extends INode {
       if (dstSnapshotId < snapshotToBeDeleted) {
         return true;
       }
-      if (LOG.isInfoEnabled()) {
-        LOG.info("{}, dstSnapshotId = {} >= snapshotToBeDeleted = {}, {}",
-            getDstDetails(), dstSnapshotId, snapshotToBeDeleted,
-            getFullPathAndObjectString());
-        final INode r = getReferredINode().asReference().getReferredINode();
-        LOG.info("isInCurrentState? {}, {}",
-            r.isInCurrentState(), r.getFullPathAndObjectString());
-      }
+      LOG.warn("Try to destroy a DstReference with dstSnapshotId = {}"
+          + " >= snapshotToBeDeleted = {}", dstSnapshotId, snapshotToBeDeleted);
+      LOG.warn("    dstRef: {}", toDetailString());
+      final INode r = getReferredINode().asReference().getReferredINode();
+      LOG.warn("  referred: {}", r.toDetailString());
       return false;
     }
 
@@ -879,7 +879,7 @@ public abstract class INodeReference extends INode {
         Preconditions.checkState(prior != Snapshot.NO_SNAPSHOT_ID);
         // identify the snapshot created after prior
         int snapshot = getSelfSnapshot(prior);
-
+        
         INode referred = getReferredINode().asReference().getReferredINode();
         if (referred.isFile()) {
           // if referred is a file, it must be a file with snapshot since we did

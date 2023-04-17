@@ -1063,9 +1063,9 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     public int getSnapshotIdToBeDeleted(int snapshotId, INode inode) {
       final int snapshotIdToBeDeleted = getSnapshotIdToBeDeleted();
       if (snapshotId != snapshotIdToBeDeleted) {
-        LOG.warn("Snapshot changed: current = {}, original = {}",
-            Snapshot.getSnapshotString(snapshotId), snapshotToBeDeleted);
-        inode.dumpParentINodes();
+        LOG.warn("Snapshot changed: current = {}, original = {}, inode: {}",
+            Snapshot.getSnapshotString(snapshotId), snapshotToBeDeleted,
+            inode.toDetailString());
       }
       return snapshotIdToBeDeleted;
     }
