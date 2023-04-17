@@ -617,24 +617,31 @@ public class AzureBlobFileSystem extends FileSystem
    * @throws IOException
    */
   private void checkParentChainForFile(Path path, TracingContext tracingContext) throws IOException {
-    if (abfsStore.getListBlobs(path, path.toUri().getPath() + FORWARD_SLASH,
-            tracingContext, 2, false).size() > 0) {
-      return;
-    }
-    if (checkPathIsDirectory(path, tracingContext)) {
+    if (directoryExists(path, tracingContext)) {
       return;
     }
     for (Path current = path.getParent(), parent = current.getParent();
          parent != null; // Stop when you get to the root
          current = parent, parent = current.getParent()) {
-      if (abfsStore.getListBlobs(current, current.toUri().getPath() + FORWARD_SLASH,
-              tracingContext, 2, false).size() > 0) {
-        break;
-      }
-      if (checkPathIsDirectory(current, tracingContext)) {
+      if (directoryExists(current, tracingContext)) {
         break;
       }
     }
+  }
+
+  /**
+   * Returns true if path is directory.
+   * @param path path to verify.
+   * @param tracingContext the tracingContext.
+   * @return true or false.
+   * @throws IOException
+   */
+  private boolean directoryExists(Path path, TracingContext tracingContext) throws IOException {
+    if (abfsStore.getListBlobs(path, path.toUri().getPath() + FORWARD_SLASH,
+            tracingContext, 2, false).size() > 0) {
+      return true;
+    }
+    return checkPathIsDirectory(path, tracingContext);
   }
 
   /**
