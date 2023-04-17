@@ -200,21 +200,20 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
         abfsOutputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.outputStreamId = createOutputStreamId();
     this.tracingContext = new TracingContext(abfsOutputStreamContext.getTracingContext());
+    this.prefixMode = client.getAbfsConfiguration().getPrefixMode();
     if (prefixMode == PrefixMode.BLOB) {
       // Get the list of all the committed blocks for the given path.
       this.committedBlockEntries = getBlockList(path, tracingContext);
+    } else {
+      // create that first block. This guarantees that an open + close sequence
+      // writes a 0-byte entry.
+      createBlockIfNeeded(position);
     }
     this.tracingContext.setStreamID(outputStreamId);
     this.tracingContext.setOperation(FSOperationType.WRITE);
     this.ioStatistics = outputStreamStatistics.getIOStatistics();
     this.blockFactory = abfsOutputStreamContext.getBlockFactory();
     this.blockSize = bufferSize;
-    this.prefixMode = client.getAbfsConfiguration().getPrefixMode();
-    // create that first block. This guarantees that an open + close sequence
-    // writes a 0-byte entry.
-    if (prefixMode == PrefixMode.DFS) {
-      createBlockIfNeeded(position);
-    }
   }
 
   private final Lock lock = new ReentrantLock();
