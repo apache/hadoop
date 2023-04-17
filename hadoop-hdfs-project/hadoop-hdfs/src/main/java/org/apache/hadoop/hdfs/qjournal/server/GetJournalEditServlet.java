@@ -30,8 +30,10 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.re2j.Pattern;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.hdfs.server.namenode.DfsServlet;
+import org.apache.hadoop.fs.GlobPattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -53,6 +55,8 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.StringUtils;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
 
 /**
  * This servlet is used in two cases:
@@ -103,6 +107,17 @@ public class GetJournalEditServlet extends DfsServlet {
         conf.get(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
           DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_DEFAULT));
       LOG.warn(msg);
+    }
+
+    String clientPattern = conf.get(DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY + ".pattern");
+    if (clientPattern != null && !clientPattern.isEmpty()) {
+      String remotePrincipal = request.getUserPrincipal().getName();
+      Pattern pattern = GlobPattern.compile(clientPattern);
+      LOG.debug("isValidRequestor is comparing to valid NameNode principal pattern: " + clientPattern);
+      if (pattern.matcher(remotePrincipal).matches()) {
+        LOG.debug("isValidRequestor is allowing: " + remotePrincipal);
+        return true;
+      }
     }
 
     // Check the full principal name of all the configured valid requestors.
