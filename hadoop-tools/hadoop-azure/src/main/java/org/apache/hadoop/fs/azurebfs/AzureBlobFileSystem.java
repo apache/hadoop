@@ -536,7 +536,7 @@ public class AzureBlobFileSystem extends FileSystem
           final Boolean isDstParentPathDirectory
               = dstParentPathInformation.getIsDirectory();
           if (!dstParentPathExists || !isDstParentPathDirectory) {
-            LOG.info("parent of {} is {} doesn't exists. Failing rename",
+            LOG.info("parent of {} is {} is not directory. Failing rename",
                 adjustedDst, parent);
             throw new AbfsRestOperationException(
                 HttpURLConnection.HTTP_NOT_FOUND,
