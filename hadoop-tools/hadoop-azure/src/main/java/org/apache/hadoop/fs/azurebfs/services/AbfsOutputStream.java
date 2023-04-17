@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Future;
 import java.util.UUID;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
@@ -149,7 +150,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   private PrefixMode prefixMode;
 
   /** The etag of the blob. */
-  private volatile String eTag;
+  private String eTag;
 
   /** Executor service to carry out the parallel upload requests. */
   private final ListeningExecutorService executorService;
@@ -216,7 +217,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     }
   }
 
-  private final Object lock = new Object();
+  private final Lock lock = new ReentrantLock();
 
   private final ReentrantLock mapLock = new ReentrantLock();
 
@@ -226,21 +227,29 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
 
   /**
    * Set the eTag of the blob.
+   *
    * @param eTag eTag.
    */
-  void setETag(String eTag) {
-    synchronized (lock) {
+  public void setETag(String eTag) {
+    lock.lock();
+    try {
       this.eTag = eTag;
+    } finally {
+      lock.unlock();
     }
   }
 
   /**
    * Get eTag value of blob.
+   *
    * @return eTag.
    */
   String getETag() {
-    synchronized (lock) {
-      return this.eTag;
+    lock.lock();
+    try {
+      return eTag;
+    } finally {
+      lock.unlock();
     }
   }
 
