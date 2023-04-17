@@ -149,7 +149,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   private PrefixMode prefixMode;
 
   /** The etag of the blob. */
-  private String eTag;
+  private volatile String eTag;
 
   /** Executor service to carry out the parallel upload requests. */
   private final ListeningExecutorService executorService;
