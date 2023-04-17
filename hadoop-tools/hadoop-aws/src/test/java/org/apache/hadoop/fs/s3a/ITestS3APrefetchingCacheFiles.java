@@ -73,10 +73,10 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
 
   @Override
   public Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
-    conf.setBoolean(PREFETCH_ENABLED_KEY, true);
-    return conf;
+    Configuration configuration = super.createConfiguration();
+    S3ATestUtils.removeBaseAndBucketOverrides(configuration, PREFETCH_ENABLED_KEY);
+    configuration.setBoolean(PREFETCH_ENABLED_KEY, true);
+    return configuration;
   }
 
   @Override
