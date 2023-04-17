@@ -514,6 +514,28 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
+  public void setPathProperties(final Path path,
+      final Hashtable<String, String> properties, TracingContext tracingContext)
+      throws AzureBlobFileSystemException {
+    try (AbfsPerfInfo perfInfo = startTracking("setPathProperties", "setPathProperties")){
+      LOG.debug("setFilesystemProperties for filesystem: {} path: {} with properties: {}",
+          client.getFileSystem(),
+          path,
+          properties);
+
+      final String commaSeparatedProperties;
+      try {
+        commaSeparatedProperties = convertXmsPropertiesToCommaSeparatedString(properties);
+      } catch (CharacterCodingException ex) {
+        throw new InvalidAbfsRestOperationException(ex);
+      }
+      final AbfsRestOperation op = client
+          .setPathProperties(getRelativePath(path), commaSeparatedProperties,
+              tracingContext);
+      perfInfo.registerResult(op.getResult()).registerSuccess(true);
+    }
+  }
+
   /**
    * Orchestrates the copying of blob from given source to a given destination.
    * @param srcPath source path
@@ -674,28 +696,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
     } while (nextMarker != null);
     return blobProperties;
-  }
-
-  public void setPathProperties(final Path path,
-      final Hashtable<String, String> properties, TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    try (AbfsPerfInfo perfInfo = startTracking("setPathProperties", "setPathProperties")){
-      LOG.debug("setFilesystemProperties for filesystem: {} path: {} with properties: {}",
-          client.getFileSystem(),
-          path,
-          properties);
-
-      final String commaSeparatedProperties;
-      try {
-        commaSeparatedProperties = convertXmsPropertiesToCommaSeparatedString(properties);
-      } catch (CharacterCodingException ex) {
-        throw new InvalidAbfsRestOperationException(ex);
-      }
-      final AbfsRestOperation op = client
-          .setPathProperties(getRelativePath(path), commaSeparatedProperties,
-              tracingContext);
-      perfInfo.registerResult(op.getResult()).registerSuccess(true);
-    }
   }
 
   public void createFilesystem(TracingContext tracingContext)
