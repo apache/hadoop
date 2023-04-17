@@ -47,9 +47,9 @@ public class ITestListBlob extends
     createBlob(fs, "/dir/");
     List<BlobProperty> blobProperties;
     /*
-    * Call getListBlob for a path with isDefinitiveDirSearch = false. Should give
-    * results including the directory blob(hdi_isfolder=true).
-    */
+     * Call getListBlob for a path with isDefinitiveDirSearch = false. Should give
+     * results including the directory blob(hdi_isfolder=true).
+     */
     blobProperties = fs.getAbfsStore()
         .getListBlobs(new Path("dir"), null,
             Mockito.mock(TracingContext.class), null, false);
@@ -107,11 +107,11 @@ public class ITestListBlob extends
     fs.getAbfsStore().setClient(spiedClient);
 
     /*
-    * Server can give lesser number of results. In this case, server will give
-    * nextMarker.
-    * In this case, server will return one object, expectation is that the client
-    * uses nextMarker to make calls for the remaining blobs.
-    */
+     * Server can give lesser number of results. In this case, server will give
+     * nextMarker.
+     * In this case, server will return one object, expectation is that the client
+     * uses nextMarker to make calls for the remaining blobs.
+     */
     int count[] = new int[1];
     count[0] = 0;
     Mockito.doAnswer(answer -> {
@@ -121,7 +121,8 @@ public class ITestListBlob extends
       count[0]++;
       return client.getListBlobs(marker, prefix, 1, tracingContext);
     }).when(spiedClient).getListBlobs(Mockito.nullable(String.class),
-        Mockito.anyString(), Mockito.nullable(Integer.class), Mockito.any(TracingContext.class));
+        Mockito.anyString(), Mockito.nullable(Integer.class),
+        Mockito.any(TracingContext.class));
 
     List<BlobProperty> blobProperties = fs.getAbfsStore()
         .getListBlobs(new Path("dir"), null,
@@ -131,7 +132,8 @@ public class ITestListBlob extends
             "BlobList should match the number of maxResult given")
         .hasSize(5);
     Assertions.assertThat(count[0])
-        .describedAs("Number of calls to backend should be equal to maxResult given")
+        .describedAs(
+            "Number of calls to backend should be equal to maxResult given")
         .isEqualTo(5);
   }
 
@@ -140,7 +142,9 @@ public class ITestListBlob extends
         fs.getAbfsStore().getAbfsConfiguration().getPrefixMode()
             == PrefixMode.BLOB);
   }
-  private void createBlob(final AzureBlobFileSystem fs, final String pathString) throws IOException {
+
+  private void createBlob(final AzureBlobFileSystem fs, final String pathString)
+      throws IOException {
     int i = 0;
     while (i < 10) {
       fs.create(new Path(pathString + i));

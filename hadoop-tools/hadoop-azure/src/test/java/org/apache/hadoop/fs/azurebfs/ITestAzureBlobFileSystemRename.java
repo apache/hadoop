@@ -1299,13 +1299,14 @@ public class ITestAzureBlobFileSystemRename extends
     fs.getAbfsStore()
         .getClient()
         .deleteBlobPath(new Path("/test1"), Mockito.mock(TracingContext.class));
-    Assert.assertNull(fs.getAbfsStore()
-        .getBlobPropertyWithNotFoundHandling(new Path("/test1"),
-            Mockito.mock(TracingContext.class)));
+    LambdaTestUtils.intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(new Path("/test1"),
+              Mockito.mock(TracingContext.class));
+    });
     fs.mkdirs(new Path("/test2"));
     fs.rename(new Path("/test1"), new Path("/test2"));
     Assert.assertTrue(fs.getAbfsStore()
-        .getBlobPropertyWithNotFoundHandling(new Path("/test2/test1"),
+        .getBlobProperty(new Path("/test2/test1"),
             Mockito.mock(TracingContext.class)).getIsDirectory());
   }
 

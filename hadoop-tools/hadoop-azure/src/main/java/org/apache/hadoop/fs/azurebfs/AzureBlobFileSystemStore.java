@@ -604,37 +604,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   /**
-   * Gets the blob property over Blob Endpoint. Handles the case where there
-   * is no blob present at the path, and server returns httpStatusCode = 404.<br>
-   * Reason for not handling this in {@link #getBlobProperty(Path, TracingContext)}
-   * is to keep it in sync with the {@link #getFileStatus(Path, TracingContext)}
-   * behaviour. The {@link #getFileStatus(Path, TracingContext)} throws the
-   * exception it receives to the caller. Hence, it is expected that
-   * {@link #getBlobProperty(Path, TracingContext)} also throw all kind of exception
-   * to the caller.
-   *
-   * @param blobPath path for which the property information is required
-   * @param tracingContext object of TracingContext required for the tracing of
-   * server calls
-   * @return instance of BlobProperty if the blob is present on the given path.
-   * <code>null</code> if there is no blob on the given path.
-   * @throws AzureBlobFileSystemException exception other than
-   * {@link AbfsRestOperationException} for httpStatusCode = 404 on the server
-   * response.
-   */
-  BlobProperty getBlobPropertyWithNotFoundHandling(Path blobPath,
-      TracingContext tracingContext) throws AzureBlobFileSystemException {
-    try {
-      return getBlobProperty(blobPath, tracingContext);
-    } catch (AbfsRestOperationException ex) {
-      if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
-        return null;
-      }
-      throw ex;
-    }
-  }
-
-  /**
    * Gets the property for the blob over Blob Endpoint.
    *
    * @param blobPath blobPath for which property information is required
@@ -643,7 +612,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws AzureBlobFileSystemException exception thrown from
    * {@link AbfsClient#getBlobProperty(Path, TracingContext)} call
    */
-  private BlobProperty getBlobProperty(Path blobPath,
+  BlobProperty getBlobProperty(Path blobPath,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsRestOperation op = client.getBlobProperty(blobPath, tracingContext);
     BlobProperty blobProperty = new BlobProperty();
@@ -1098,7 +1067,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       */
       List<BlobProperty> srcBlobProperties = getListBlobs(source, null,
           tracingContext, null, true);
-      final BlobProperty blobPropOnSrc;
+      BlobProperty blobPropOnSrc;
       if (srcBlobProperties.size() > 0) {
         LOG.debug("src {} exists and is a directory", source);
         isSrcExist = true;
@@ -1106,7 +1075,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         /*
         * Fetch if there is a marker-blob for the source blob.
         */
-        BlobProperty blobPropOnSrcNullable = getBlobPropertyWithNotFoundHandling(source, tracingContext);
+        BlobProperty blobPropOnSrcNullable;
+        try {
+          blobPropOnSrcNullable = getBlobProperty(source, tracingContext);
+        } catch (AbfsRestOperationException ex) {
+          if(ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+            throw ex;
+          }
+          blobPropOnSrcNullable = null;
+        }
         if(blobPropOnSrcNullable == null) {
           /*
           * There is no marker-blob, the client has to create marker blob before
@@ -1125,7 +1102,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       } else {
         LOG.debug("source {} doesn't have any blob in its hierarchy. Checking"
             + "if there is marker blob for it.", source);
-        blobPropOnSrc = getBlobPropertyWithNotFoundHandling(source, tracingContext);
+        try {
+          blobPropOnSrc = getBlobProperty(source, tracingContext);
+        } catch (AbfsRestOperationException ex) {
+          if(ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+            throw ex;
+          }
+          blobPropOnSrc = null;
+        }
+
         if(blobPropOnSrc != null) {
           isSrcExist = true;
           if(blobPropOnSrc.getIsDirectory()) {

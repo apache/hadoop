@@ -595,9 +595,15 @@ public class AzureBlobFileSystem extends FileSystem
       if (blobProperties.size() > 0) {
         return new PathInformation(true, true);
       }
-      BlobProperty blobProperty
-          = getAbfsStore().getBlobPropertyWithNotFoundHandling(path,
-          tracingContext);
+      BlobProperty blobProperty;
+      try {
+        blobProperty = getAbfsStore().getBlobProperty(path, tracingContext);
+      } catch (AbfsRestOperationException ex) {
+        if(ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+          throw ex;
+        }
+        blobProperty = null;
+      }
       if (blobProperty != null) {
         return new PathInformation(true, blobProperty.getIsDirectory());
       }
