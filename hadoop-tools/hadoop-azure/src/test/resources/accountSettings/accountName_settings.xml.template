@@ -3,19 +3,24 @@
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
   You may obtain a copy of the License at
+
   http://www.apache.org/licenses/LICENSE-2.0
+
   Unless required by applicable law or agreed to in writing, software
   distributed under the License is distributed on an "AS IS" BASIS,
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   See the License for the specific language governing permissions and
   limitations under the License.
+
   NOTE:
   Each config file will hold configs for one storage account.
   ABFS Driver tests run with different Auth settings, OAuth and SharedKey, on same test account.
   Below template collects information needed for both Auth settings on the account.
+
   OAuth test mode works with token provider type - ClientCredsTokenProvider
   For specific details on test config or pre-requisite, refer to
   https://github.com/apache/hadoop/blob/trunk/hadoop-tools/hadoop-azure/src/site/markdown/testing_azure.md
+
   Pre-requisite before configuring:
   1. An ABFS account
   2. A container within account
@@ -23,6 +28,7 @@
   4. A Service principal with no RBAC roles assigned on account. This is needed for checkaccess tests (noRBACUser)
   5. A Service principal with Storage Blob Data Contributor RBAC roles assigned on account. This is needed for RBAC tests (contributorRBACUser)
   6. A Service principal with Storage Blob Data Reader RBAC roles assigned on account. This is needed for RBAC tests (readerRBACUser)
+
   Replace below strings with actual value:
   ## ACCOUNT SETTINGS ##
     1. ACCOUNTNAME -> to account name without domain
@@ -33,11 +39,14 @@
     5. SUPERUSER_TENANT_ID -> AAD tenant ID of Superuser Service principal
     6. SUPERUSER_CLIENT_ID -> SuperUser Service principal's client ID
     7. SUPERUSER_CLIENT_SECRET -> SuperUser Service principal's client secret
+
     8. NO_RBAC_USER_CLIENT_ID -> noRBACUser Service principal's client ID
     9. NO_RBAC_USER_CLIENT_SECRET -> noRBACUser Service principal's client secret
     10. NO_RBAC_USER_OID -> noRBACUser Service principal's OID
+
     11. CONTRIBUTOR_RBAC_USER_CLIENT_ID -> contributorRBACUser Service principal's client ID
     12. CONTRIBUTOR_RBAC_USER_CLIENT_SECRET -> contributorRBACUser Service principal's client secret
+
     13. READER_RBAC_USER_CLIENT_ID -> readerRBACUser Service principal's client ID
     14. READER_RBAC_USER_CLIENT_SECRET -> readerRBACUser Service principal's client secret
 -->
