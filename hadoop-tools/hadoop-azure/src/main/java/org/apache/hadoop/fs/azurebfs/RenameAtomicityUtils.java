@@ -44,7 +44,10 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.services.BlobProperty;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 
 /**
  * For a directory enabled for atomic-rename, before rename starts, a
@@ -52,7 +55,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
  * for the rename are given. This file is created by {@link #writeFile()} method.
  * This is important in case the JVM process crashes during rename, the atomicity
  * will be maintained, when the job calls {@link AzureBlobFileSystem#listStatus(Path)}
- * ot {@link AzureBlobFileSystem#getFileStatus(Path)}. On these API calls to filesystem,
+ * or {@link AzureBlobFileSystem#getFileStatus(Path)}. On these API calls to filesystem,
  * it will be checked if there is any RenamePending JSON file. If yes, the rename
  * would be resumed as per the file.
  */
@@ -65,7 +68,6 @@ public class RenameAtomicityUtils {
   private Path srcPath;
   private Path dstPath;
   private TracingContext tracingContext;
-  private List<BlobProperty> blobPropertyList;
 
   private static final int MAX_RENAME_PENDING_FILE_SIZE = 10000000;
   private static final int FORMATTING_BUFFER = 10000;
@@ -79,15 +81,11 @@ public class RenameAtomicityUtils {
   RenameAtomicityUtils(final AzureBlobFileSystem azureBlobFileSystem,
       final Path srcPath,
       final Path dstPath,
-      final TracingContext tracingContext,
-      List<BlobProperty> blobPropertyList) throws IOException {
+      final TracingContext tracingContext) throws IOException {
     this.azureBlobFileSystem = azureBlobFileSystem;
     this.srcPath = srcPath;
     this.dstPath = dstPath;
     this.tracingContext = tracingContext;
-    this.blobPropertyList = blobPropertyList;
-
-    writeFile();
   }
 
   RenameAtomicityUtils(final AzureBlobFileSystem azureBlobFileSystem,
@@ -159,7 +157,7 @@ public class RenameAtomicityUtils {
         newFolderName.textValue())) {
       RenamePendingFileInfo renamePendingFileInfo = new RenamePendingFileInfo();
       renamePendingFileInfo.destination = new Path(newFolderName.textValue());
-      String srcDir = oldFolderName.textValue() + "/";
+      String srcDir = oldFolderName.textValue() + FORWARD_SLASH;
       List<Path> srcPaths = new ArrayList<>();
       List<String> destinationSuffix = new ArrayList<>();
       JsonNode fileList = json.get("FileList");
@@ -216,12 +214,12 @@ public class RenameAtomicityUtils {
    * } }</pre>
    * @throws IOException Thrown when fail to write file.
    */
-  private void writeFile() throws IOException {
+  public void preRename(List<BlobProperty> blobPropertyList) throws IOException {
     Path path = getRenamePendingFilePath();
     LOG.debug("Preparing to write atomic rename state to {}", path.toString());
     OutputStream output = null;
 
-    String contents = makeRenamePendingFileContents();
+    String contents = makeRenamePendingFileContents(blobPropertyList);
 
     // Write file.
     try {
@@ -257,7 +255,7 @@ public class RenameAtomicityUtils {
    *
    * @return JSON string which represents the operation.
    */
-  private String makeRenamePendingFileContents() {
+  private String makeRenamePendingFileContents(List<BlobProperty> blobPropertyList) {
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
     sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
     String time = sdf.format(new Date());
@@ -283,7 +281,7 @@ public class RenameAtomicityUtils {
           .equals(srcPath.toUri().getPath())) {
         noPrefix = StringUtils.removeStart(
             blobPropertyList.get(i).getPath().toUri().getPath(),
-            srcPath.toUri().getPath() + "/");
+            srcPath.toUri().getPath() + FORWARD_SLASH);
       } else {
         noPrefix = "";
       }

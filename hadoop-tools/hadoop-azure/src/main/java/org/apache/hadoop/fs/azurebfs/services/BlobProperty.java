@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs;
+package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -41,51 +41,51 @@ public class BlobProperty {
   private String blobPrefix;
   private AzureBlobFileSystemException ex;
 
-  BlobProperty() {
+  public BlobProperty() {
 
   }
 
-  void setName(String name) {
+  public void setName(String name) {
     this.name = name;
   }
 
-  void setUrl(String url) {
+  public void setUrl(String url) {
     this.url = url;
   }
 
-  void setBlobPrefix(String blobPrefix) {
+  public void setBlobPrefix(String blobPrefix) {
     this.blobPrefix = blobPrefix;
   }
 
-  void addMetadata(String key, String value) {
+  public void addMetadata(String key, String value) {
     metadata.put(key, value);
   }
 
-  void setIsDirectory(Boolean isDirectory) {
+  public void setIsDirectory(Boolean isDirectory) {
     this.isDirectory = isDirectory;
   }
 
-  void setCopyId(String copyId) {
+  public void setCopyId(String copyId) {
     this.copyId = copyId;
   }
 
-  void setCopySourceUrl(String copySourceUrl) {
+  public void setCopySourceUrl(String copySourceUrl) {
     this.copySourceUrl = copySourceUrl;
   }
 
-  void setPath(Path path) {
+  public void setPath(Path path) {
     this.path = path;
   }
 
-  void setCopyStatus(String copyStatus) {
+  public void setCopyStatus(String copyStatus) {
     this.copyStatus = copyStatus;
   }
 
-  void setStatusDescription(String statusDescription) {
+  public void setStatusDescription(String statusDescription) {
     this.statusDescription = statusDescription;
   }
 
-  void setContentLength(Long length) {
+  public void setContentLength(Long length) {
     this.contentLength = length;
   }
 
