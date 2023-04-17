@@ -36,9 +36,9 @@ testing of code changes. Why the declaration of region? Two reasons
 
 1. It helps us identify regressions which only surface against specific endpoints.
 1. It forces the submitters to be more honest about their testing. It's easy
-to lie, "yes, I tested this". To say "yes, I tested this against Azure US-west"
-is a more specific lie and harder to make. And, if you get caught out: you
-lose all credibility with the project.
+   to lie, "yes, I tested this". To say "yes, I tested this against Azure US-west"
+   is a more specific lie and harder to make. And, if you get caught out: you
+   lose all credibility with the project.
 
 You don't need to test from a VM within the Azure infrastructure, all you need
 are credentials.
@@ -206,16 +206,16 @@ mvn -T 1C clean verify -Dtest=none -Dit.test=ITest*
 Note
 
 1. When running a specific subset of tests, the patterns passed in `test`
-and `it.test` override the configuration of which tests need to run in isolation
-in a separate serial phase (mentioned above).  This can cause unpredictable
-results, so the recommendation is to avoid passing `parallel-tests` in
-combination with `test` or `it.test`.  If you know that you are specifying only
-tests that can run safely in parallel, then it will work.  For wide patterns,
-like `ITest*` shown above, it may cause unpredictable test failures.
+   and `it.test` override the configuration of which tests need to run in isolation
+   in a separate serial phase (mentioned above).  This can cause unpredictable
+   results, so the recommendation is to avoid passing `parallel-tests` in
+   combination with `test` or `it.test`.  If you know that you are specifying only
+   tests that can run safely in parallel, then it will work.  For wide patterns,
+   like `ITest*` shown above, it may cause unpredictable test failures.
 
 2. The command line shell may try to expand the "*" and sometimes the "#" symbols
-in test patterns. In such situations, escape the character it with a "\\" prefix.
-Example:
+   in test patterns. In such situations, escape the character it with a "\\" prefix.
+   Example:
 
           mvn -T 1C clean verify -Dtest=none -Dit.test=ITest\*
 
@@ -280,12 +280,12 @@ mvn -T 1C verify -Dparallel-tests -Dscale -DtestsThreadCount=8 -Dfs.azure.scale.
 The algorithm is
 
 1. The value is queried from the configuration file, using a default value if
-it is not set.
+   it is not set.
 1. The value is queried from the JVM System Properties, where it is passed
-down by maven.
+   down by maven.
 1. If the system property is null, an empty string, or it has the value `unset`,
-then the configuration value is used. The `unset` option is used to
-[work round a quirk in maven property propagation](http://stackoverflow.com/questions/7773134/null-versus-empty-arguments-in-maven).
+   then the configuration value is used. The `unset` option is used to
+   [work round a quirk in maven property propagation](http://stackoverflow.com/questions/7773134/null-versus-empty-arguments-in-maven).
 
 Only a few properties can be set this way; more will be added.
 
@@ -466,10 +466,10 @@ The base class for tests which use `AzureBlobStorageTestAccount` to create
 mock or live Azure clients; in test teardown it tries to clean up store state.
 
 1. This class requires subclasses to implement `createTestAccount()` to create
-a mock or real test account.
+   a mock or real test account.
 
 1. The configuration used to create a test account *should* be that from
-`createConfiguration()`; this can be extended in subclasses to tune the settings.
+   `createConfiguration()`; this can be extended in subclasses to tune the settings.
 
 
 ##### `org.apache.hadoop.fs.azure.integration.AbstractAzureScaleTest`
@@ -515,9 +515,9 @@ Equally importantly: support proxies, as some testers need them.
 
 1. Create logs, log things.
 1. you can use `AbstractWasbTestBase.describe(format-string, args)` here; it
-adds some newlines so as to be easier to spot.
+   adds some newlines so as to be easier to spot.
 1. Use `ContractTestUtils.NanoTimer` to measure the duration of operations,
-and log the output.
+   and log the output.
 
 #### Fails Meaningfully
 
@@ -536,10 +536,10 @@ including error messages*.
 Keeps costs down.
 
 1. Do not only cleanup if a test case completes successfully; test suite
-teardown must do it.
+   teardown must do it.
 1. That teardown code must check for the filesystem and other fields being
-null before the cleanup. Why? If test setup fails, the teardown methods still
-get called.
+   null before the cleanup. Why? If test setup fails, the teardown methods still
+   get called.
 
 ### Works Reliably
 
@@ -602,26 +602,76 @@ various test combinations, it will:
 2. Run tests for all combinations
 3. Summarize results across all the test combination runs.
 
-As a pre-requisite step, fill config values for test accounts and credentials
-needed for authentication in `src/test/resources/azure-auth-keys.xml.template`
-and rename as `src/test/resources/azure-auth-keys.xml`.
+Below are the pre-requiste steps to follow:
+1. Copy
 
-**To add a new test combination:** Templates for mandatory test combinations
-for PR validation are present in `dev-support/testrun-scripts/runtests.sh`.
-If a new one needs to be added, add a combination set within
-`dev-support/testrun-scripts/runtests.sh` similar to the ones already defined
-and
-1. Provide a new combination name
-2. Update properties and values array which need to be effective for the test
-combination
-3. Call generateconfigs
+        ./src/test/resources/azure-auth-keys.xml.template
+        TO
+        ./src/test/resources/azure-auth-keys.xml
+Update account names that should be used in the test run for HNS and non-HNS
+combinations in the 2 properties present in the xml (account name should be
+without domain part), namely
+
+    fs.azure.hnsTestAccountName
+    fs.azure.nonHnsTestAccountName
+azure-auth-keys.xml is listed in .gitignore, so any accidental account name leak is prevented.
+
+```
+XInclude is supported, so for extra security secrets may be
+kept out of the source tree then referenced through an an XInclude element:
+
+      <include xmlns="http://www.w3.org/2001/XInclude"
+        href="/users/self/.secrets/auth-keys.xml" />
+```
+
+2. Create account config files (one config file per account) in folder:
+
+        ./src/test/resources/accountSettings/
+   Follow the instruction in the start of the template file
+
+        accountName_settings.xml.template
+   within accountSettings folder while creating account config file.
+   New files created in folder accountSettings is listed in .gitignore to
+   prevent accidental cred leaks.
 
 **To run PR validation:** Running command
-* `dev-support/testrun-scripts/runtests.sh` will generate configurations for
-each of the combinations defined and run tests for all the combinations.
-* `dev-support/testrun-scripts/runtests.sh -c {combinationname}` Specific
-combinations can be provided with -c option. If combinations are provided
-with -c option, tests for only those combinations will be run.
+* `dev-support/testrun-scripts/runtests.sh` will prompt as below:
+```bash
+Choose action:
+[Note - SET_ACTIVE_TEST_CONFIG will help activate the config for IDE/single test class runs]
+1) SET_ACTIVE_TEST_CONFIG               4) SET_OR_CHANGE_TEST_ACCOUNT
+2) RUN_TEST                             5) PRINT_LOG4J_LOG_PATHS_FROM_LAST_RUN
+3) CLEAN_UP_OLD_TEST_CONTAINERS
+#? 2
+```
+Enter 1: for setting active combination for IDE test run/single mvn test class runs.
+
+Enter 2: for choosing the combination to choose for mvn full test suite.
+
+Enter 3: For clean-up of any abruptly ending test leaving auto generated test
+container on the account.
+
+Enter 4: To create/modify the config file that decides the account to use for specific test combination.
+
+Enter 5: To print the log4j paths the last test runs.
+
+On next prompt, current list of combinations to choose are provided.
+Sample for Run_TEST action:
+```bash
+Enter parallel test run process count [default - 8]: 4
+Set the active test combination to run the action:
+1) HNS-OAuth               3) nonHNS-SharedKey        5) AllCombinationsTestRun
+2) HNS-SharedKey           4) AppendBlob-HNS-OAuth    6) Quit
+#? 1
+
+Combination specific property setting: [ key=fs.azure.account.auth.type , value=OAuth ]
+
+Activated [src/test/resources/abfs-combination-test-configs.xml] - for account: snvijayacontracttest for combination HNS-OAuth
+Running test for combination HNS-OAuth on account snvijayacontracttest [ProcessCount=4]
+Test run report can be seen in dev-support/testlogs/2022-10-07_05-23-22/Test-Logs-HNS-OAuth.txt
+````
+
+Provide the option for the action chosen first.
 
 **Test logs:** Test runs will create a folder within dev-support/testlogs to
 save the test logs. Folder name will be the test start timestamp. The mvn verify
@@ -632,25 +682,18 @@ consolidated results of all the combination runs will be saved into a file as
 Test-Results.log in the same folder. When run for PR validation, the
 consolidated test results needs to be pasted into the PR comment section.
 
-**To generate config for use in IDE:** Running command with -a (activate) option
-`dev-support/testrun-scripts/runtests.sh -a {combination name}` will update
-the effective config relevant for the specific test combination. Hence the same
-config files used by the mvn test runs can be used for IDE without any manual
-updates needed within config file.
+**To add a new test combination:** Templates for mandatory test combinations
+for PR validation are present in `dev-support/testrun-scripts/runtests.sh`.
+If a new one needs to be added, add a combination to
+`dev-support/testrun-scripts/runtests.sh`.
+(Refer to current active combinations within
+`SECTION: COMBINATION DEFINITIONS AND TRIGGER` and
+`SECTION: TEST COMBINATION METHODS` in the script).
 
-**Other command line options:**
-* -a <COMBINATION_NAME> Specify the combination name which needs to be
-activated. This is to be used to generate config for use in IDE.
-* -c <COMBINATION_NAME> Specify the combination name for test runs. If this
-config is specified, tests for only the specified combinations will run. All
-combinations of tests will be running if this config is not specified.
-* -t <THREAD_COUNT> ABFS mvn tests are run in parallel mode. Tests by default
-are run with 8 thread count. It can be changed by providing -t <THREAD_COUNT>
+**Test Configuration Details:**
 
-In order to test ABFS, please add the following configuration to your
-`src/test/resources/azure-auth-keys.xml` file. Note that the ABFS tests include
-compatibility tests which require WASB credentials, in addition to the ABFS
-credentials.
+Note that the ABFS tests include compatibility tests which require WASB
+credentials, in addition to the ABFS credentials.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -702,12 +745,12 @@ hierarchical namespace enabled, and set the following configuration settings:
   <name>fs.azure.account.auth.type.{YOUR_ABFS_ACCOUNT_NAME}</name>
   <value>{AUTH TYPE}</value>
   <description>The authorization type can be SharedKey, OAuth, Custom or SAS. The
-  default is SharedKey.</description>
+    default is SharedKey.</description>
 </property>
 
-<!--=============================   FOR OAUTH   ===========================-->
-<!--IF AUTH TYPE IS SET AS OAUTH, FOLLOW THE STEPS BELOW-->
-<!--NOTICE: AAD client and tenant related properties can be obtained through Azure Portal-->
+  <!--=============================   FOR OAUTH   ===========================-->
+  <!--IF AUTH TYPE IS SET AS OAUTH, FOLLOW THE STEPS BELOW-->
+  <!--NOTICE: AAD client and tenant related properties can be obtained through Azure Portal-->
 
   <!--1. UNCOMMENT BELOW AND CHOOSE YOUR OAUTH PROVIDER TYPE -->
 
@@ -890,35 +933,35 @@ hierarchical namespace enabled and set the following configuration settings:
     4) Set the following configuration values:
 -->
 
-  <property>
-    <name>fs.azure.sas.token.provider.type</name>
-    <value>org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider</value>
-    <description>The fully qualified class name of the SAS token provider implementation.</description>
-  </property>
+<property>
+  <name>fs.azure.sas.token.provider.type</name>
+  <value>org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider</value>
+  <description>The fully qualified class name of the SAS token provider implementation.</description>
+</property>
 
-  <property>
-    <name>fs.azure.test.app.service.principal.tenant.id</name>
-    <value>{TID}</value>
-    <description>Tenant ID for the application's service principal.</description>
-  </property>
+<property>
+<name>fs.azure.test.app.service.principal.tenant.id</name>
+<value>{TID}</value>
+<description>Tenant ID for the application's service principal.</description>
+</property>
 
-  <property>
-    <name>fs.azure.test.app.service.principal.object.id</name>
-    <value>{OID}</value>
-    <description>Object ID for the application's service principal.</description>
-  </property>
+<property>
+<name>fs.azure.test.app.service.principal.object.id</name>
+<value>{OID}</value>
+<description>Object ID for the application's service principal.</description>
+</property>
 
-  <property>
-    <name>fs.azure.test.app.id</name>
-    <value>{app id}</value>
-    <description>The application's ID, also known as the client id.</description>
-  </property>
+<property>
+<name>fs.azure.test.app.id</name>
+<value>{app id}</value>
+<description>The application's ID, also known as the client id.</description>
+</property>
 
-   <property>
-     <name>fs.azure.test.app.secret</name>
-     <value>{client secret}</value>
-     <description>The application's secret, also known as the client secret.</description>
-   </property>
+<property>
+<name>fs.azure.test.app.secret</name>
+<value>{client secret}</value>
+<description>The application's secret, also known as the client secret.</description>
+</property>
 
 
 ```
@@ -942,41 +985,41 @@ created app. Please follow the below steps to fetch the guid.
     3) Set the following configurations:
 -->
 
-  <property>
-    <name>fs.azure.enable.check.access</name>
-    <value>true</value>
-    <description>By default the check access will be on. Checkaccess can
+<property>
+  <name>fs.azure.enable.check.access</name>
+  <value>true</value>
+  <description>By default the check access will be on. Checkaccess can
     be turned off by changing this flag to false.</description>
-  </property>
-  <property>
-    <name>fs.azure.account.test.oauth2.client.id</name>
-    <value>{client id}</value>
-    <description>The client id(app id) for the app created on step 1
-    </description>
-  </property>
-  <property>
-    <name>fs.azure.account.test.oauth2.client.secret</name>
-    <value>{client secret}</value>
-    <description>
-The client secret(application's secret) for the app created on step 1
-    </description>
-  </property>
-  <property>
-    <name>fs.azure.check.access.testuser.guid</name>
-    <value>{guid}</value>
-    <description>The guid fetched on step 2</description>
-  </property>
-  <property>
-    <name>fs.azure.account.oauth2.client.endpoint.{account name}.dfs.core
-.windows.net</name>
-    <value>https://login.microsoftonline.com/{TENANTID}/oauth2/token</value>
-    <description>
-Token end point. This can be found through Azure portal. As part of CheckAccess
-test cases. The access will be tested for an FS instance created with the
-above mentioned client credentials. So this configuration is necessary to
-create the test FS instance.
-    </description>
-  </property>
+</property>
+<property>
+<name>fs.azure.account.test.oauth2.client.id</name>
+<value>{client id}</value>
+<description>The client id(app id) for the app created on step 1
+</description>
+</property>
+<property>
+<name>fs.azure.account.test.oauth2.client.secret</name>
+<value>{client secret}</value>
+<description>
+  The client secret(application's secret) for the app created on step 1
+</description>
+</property>
+<property>
+<name>fs.azure.check.access.testuser.guid</name>
+<value>{guid}</value>
+<description>The guid fetched on step 2</description>
+</property>
+<property>
+<name>fs.azure.account.oauth2.client.endpoint.{account name}.dfs.core
+  .windows.net</name>
+<value>https://login.microsoftonline.com/{TENANTID}/oauth2/token</value>
+<description>
+  Token end point. This can be found through Azure portal. As part of CheckAccess
+  test cases. The access will be tested for an FS instance created with the
+  above mentioned client credentials. So this configuration is necessary to
+  create the test FS instance.
+</description>
+</property>
 
 ```
 
