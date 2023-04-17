@@ -196,6 +196,11 @@ public class AzureBlobFileSystem extends FileSystem
 
     final AbfsConfiguration abfsConfiguration = abfsStore
         .getAbfsConfiguration();
+
+    // Ensures that configuration excludes incompatible credential providers
+    configuration = abfsConfiguration.getRawConfiguration();
+    setConf(configuration);
+
     clientCorrelationId = TracingContext.validateClientCorrelationID(
         abfsConfiguration.getClientCorrelationId());
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
