@@ -206,6 +206,15 @@ public class ITestAzureBlobFileSystemRename extends
     fs.rename(new Path("/src"), new Path("/dst:file"));
   }
 
+  @Test
+  public void testRenameBlobInSameDirectoryWithNoMarker() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
+    fs.create(new Path("/srcDir/dir/file"));
+    fs.getAbfsStore().getClient().deleteBlobPath(new Path("/srcDir/dir"), Mockito.mock(TracingContext.class));
+    Assert.assertTrue(fs.rename(new Path("/srcDir/dir"), new Path("/srcDir")));
+  }
+
   /**
    * <pre>
    * Test to check behaviour of rename API if the destination directory is already

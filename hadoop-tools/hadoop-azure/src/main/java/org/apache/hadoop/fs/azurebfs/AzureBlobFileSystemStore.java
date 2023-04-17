@@ -552,9 +552,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       return;
     }
     final String copyId = copyOp.getResult().getResponseHeader(X_MS_COPY_ID);
+    final long pollWait = abfsConfiguration.getBlobCopyProgressPollWaitMillis();
     while (handleCopyInProgress(dstPath, tracingContext, copyId) == BlobCopyProgress.PENDING) {
       try {
-        Thread.sleep(1000l); //Taken sleep time from AzureNativeFileSystemStore.
+        Thread.sleep(pollWait);
       } catch (Exception e) {
 
       }

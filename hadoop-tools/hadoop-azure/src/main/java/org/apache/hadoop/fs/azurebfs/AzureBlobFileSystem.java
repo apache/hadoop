@@ -446,7 +446,8 @@ public class AzureBlobFileSystem extends FileSystem
     // special case 2:
     // rename under same folder;
     if (makeQualified(parentFolder).equals(qualifiedDstPath)) {
-      return tryGetFileStatus(qualifiedSrcPath, tracingContext) != null;
+      PathInformation pathInformation = getPathInformation(qualifiedDstPath, tracingContext);
+      return pathInformation.getPathExists();
     }
 
     //special case 3:
@@ -520,7 +521,7 @@ public class AzureBlobFileSystem extends FileSystem
          */
         Path parent = qualifiedDstPath.getParent();
         if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
-            == PrefixMode.BLOB && (parent == null || !parent.isRoot())) {
+            == PrefixMode.BLOB && (parent != null && !parent.isRoot())) {
           PathInformation dstParentPathInformation = getPathInformation(parent, tracingContext
           );
           final Boolean dstParentPathExists = dstParentPathInformation.getPathExists();
