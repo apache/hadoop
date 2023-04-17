@@ -823,7 +823,6 @@ public class TestFileOutputCommitter {
       // needed to avoid this test contaminating others in the same JVM
       FileSystem.closeAll();
       conf.set(fileImpl, fileImplClassname);
-      conf.set(fileImpl, fileImplClassname);
     }
   }
 

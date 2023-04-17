@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +29,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
@@ -45,8 +43,15 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Man
 
 /**
  * This stage renames all the files.
- * Input: the manifests and the set of directories created, as returned by
- * {@link CreateOutputDirectoriesStage}.
+ * Input:
+ * <ol>
+ *   <li>{@link LoadedManifestData} from the {@link LoadManifestsStage}</li>
+ *   <li>the set of directories created, as returned by
+ *     {@link CreateOutputDirectoriesStage}.</li>
+ * </ol>
+ * The files to rename are determined by reading the entry file referenced
+ * in the {@link LoadedManifestData}; these are read and renamed incrementally.
+ *
  * If the job is configured to delete target files, if the parent dir
  * had to be created, the delete() call can be skipped.
  * It returns a manifest success data file summarizing the
@@ -108,8 +113,6 @@ public class RenameFilesStage extends
     final LoadedManifestData manifestData = args.getLeft();
     createdDirectories = args.getRight();
     final EntryFileIO entryFileIO = new EntryFileIO(getStageConfig().getConf());
-    final SequenceFile.Reader reader =
-        entryFileIO.createReader(manifestData.getEntrySequenceData());
 
 
     final ManifestSuccessData success = createManifestOutcome(getStageConfig(),
@@ -118,19 +121,14 @@ public class RenameFilesStage extends
     LOG.info("{}: Executing Manifest Job Commit with {} files",
         getName(), manifestData.getFileCount());
 
-    // iterate over the
+    // iterate over the entries in the file.
+    try (SequenceFile.Reader reader = entryFileIO.createReader(
+        manifestData.getEntrySequenceData())) {
 
-    final RemoteIterator<FileEntry> entries = entryFileIO.iterateOver(reader);
-    try {
-      TaskPool.foreach(entries)
+      TaskPool.foreach(entryFileIO.iterateOver(reader))
           .executeWith(getIOProcessors())
           .stopOnFailure()
           .run(this::commitOneFile);
-    } finally {
-      // close the input. Automatic on a successful scan, but
-      // a rename failure will abort the operation.
-      ((Closeable)entries).close();
-
     }
 
     // synchronized block to keep spotbugs happy.

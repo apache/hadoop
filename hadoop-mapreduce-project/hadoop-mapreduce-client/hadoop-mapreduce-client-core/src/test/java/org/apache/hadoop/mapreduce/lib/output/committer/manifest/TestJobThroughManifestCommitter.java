@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
+import org.assertj.core.api.Assumptions;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -37,7 +38,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.LoadedManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.OutputValidationException;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbortTaskStage;
@@ -55,6 +56,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.rm;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyPathExists;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.DEFAULT_WRITER_QUEUE_CAPACITY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.JOB_ID_SOURCE_MAPREDUCE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_CLASSNAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_BYTES_COMMITTED_COUNT;
@@ -65,7 +67,6 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.validateGeneratedFiles;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.PRINCIPAL;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.STAGE;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.ENTRY_WRITER_QUEUE_CAPACITY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.manifestPathForTask;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage.DISABLED;
 import static org.apache.hadoop.security.UserGroupInformation.getCurrentUser;
@@ -143,6 +144,9 @@ public class TestJobThroughManifestCommitter
    * Stage config for TA11.
    */
   private StageConfig ta11Config;
+
+  private LoadedManifestData
+      loadedManifestData;
 
   @Override
   public void setup() throws Exception {
@@ -447,9 +451,12 @@ public class TestJobThroughManifestCommitter
     describe("Load all manifests; committed must be TA01 and TA10");
     File entryFile = File.createTempFile("entry", ".seq");
     LoadManifestsStage.Arguments args = new LoadManifestsStage.Arguments(
-        entryFile, true, InternalConstants.ENTRY_WRITER_QUEUE_CAPACITY);
+        entryFile, true, DEFAULT_WRITER_QUEUE_CAPACITY);
     LoadManifestsStage.Result result
         = new LoadManifestsStage(getJobStageConfig()).apply(args);
+
+    loadedManifestData = result.getLoadedManifestData();
+
     String summary = result.getSummary().toString();
     LOG.info("Manifest summary {}", summary);
     List<TaskManifest> manifests = result.getManifests();
@@ -479,6 +486,9 @@ public class TestJobThroughManifestCommitter
   public void test_0420_validateJob() throws Throwable {
     describe("Validate the output of the job through the validation"
         + " stage");
+    Assumptions.assumeThat(loadedManifestData)
+        .describedAs("Loaded Manifest Data from earlier stage")
+        .isNotNull();
 
 
     // load in the success data.
@@ -486,16 +496,12 @@ public class TestJobThroughManifestCommitter
         getFileSystem(),
         getJobStageConfig().getJobSuccessMarkerPath());
 
-    // load manifests stage will load all the task manifests again
-    List<TaskManifest> manifests = new LoadManifestsStage(getJobStageConfig())
-        .apply(new LoadManifestsStage.Arguments(
-            File.createTempFile("manifest", ".list"),
-            true,
-            ENTRY_WRITER_QUEUE_CAPACITY))
-        .getManifests();
+
     // Now verify their files exist, returning the list of renamed files.
-    List<String> committedFiles = new ValidateRenamedFilesStage(getJobStageConfig())
-        .apply(manifests)
+    final List<FileEntry> validatedEntries = new ValidateRenamedFilesStage(getJobStageConfig())
+        .apply(loadedManifestData.getEntrySequenceData());
+
+    List<String> committedFiles = validatedEntries
         .stream().map(FileEntry::getDest)
         .collect(Collectors.toList());
 
@@ -507,24 +513,11 @@ public class TestJobThroughManifestCommitter
     Assertions.assertThat(committedFiles)
         .containsAll(successData.getFilenames());
 
-    // now patch one of the manifest files by editing an entry
-    FileEntry entry = manifests.get(0).getFilesToCommit().get(0);
-    // no longer exists.
-    String oldName = entry.getDest();
-    String newName = oldName + ".missing";
-    entry.setDest(newName);
-
-    // validation will now fail
-    intercept(OutputValidationException.class, ".missing", () ->
-        new ValidateRenamedFilesStage(getJobStageConfig())
-            .apply(manifests));
-
-    // restore the name, but change the size
-    entry.setDest(oldName);
-    entry.setSize(128_000_000);
+    // delete an entry, repeat
+    getFileSystem().delete(validatedEntries.get(0).getDestPath());
     intercept(OutputValidationException.class, () ->
         new ValidateRenamedFilesStage(getJobStageConfig())
-            .apply(manifests));
+            .apply(loadedManifestData.getEntrySequenceData()));
   }
 
   @Test

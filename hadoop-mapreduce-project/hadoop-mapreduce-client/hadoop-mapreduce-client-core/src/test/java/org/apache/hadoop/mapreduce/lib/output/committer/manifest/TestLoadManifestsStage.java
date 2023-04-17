@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestPrinter;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CreateOutputDirectoriesStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.LoadManifestsStage;
@@ -39,6 +38,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupJob
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.DEFAULT_WRITER_QUEUE_CAPACITY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_SUMMARY_REPORT_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_COMMIT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.addHeapInformation;
@@ -132,9 +132,10 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
         stageConfig);
     entryFile = File.createTempFile("entry", ".seq");
     LoadManifestsStage.Arguments args = new LoadManifestsStage.Arguments(
-        entryFile, false, InternalConstants.ENTRY_WRITER_QUEUE_CAPACITY);
-    LoadManifestsStage.Result result = stage.apply(args);
-    LoadManifestsStage.SummaryInfo summary = result.getSummary();
+        entryFile, false, DEFAULT_WRITER_QUEUE_CAPACITY);
+
+    LoadManifestsStage.Result loadManifestsResult = stage.apply(args);
+    LoadManifestsStage.SummaryInfo summary = loadManifestsResult.getSummary();
 
     LOG.info("\nJob statistics after loading {}",
         ioStatisticsToPrettyString(getStageStatistics()));
@@ -162,7 +163,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     // now let's see about aggregating a large set of directories
     Set<Path> createdDirectories = new CreateOutputDirectoriesStage(
         stageConfig)
-        .apply(result.getLoadedManifestData().getDirectories())
+        .apply(loadManifestsResult.getLoadedManifestData().getDirectories())
         .getCreatedDirectories();
     addHeapInformation(heapInfo, "create.directories");
 

@@ -739,11 +739,17 @@ public final class RemoteIterators {
   private static final class HaltableRemoteIterator<S>
       extends WrappingRemoteIterator<S, S> {
 
+    /**
+     * Probe as to whether work should continue.
+     */
     private final CallableRaisingIOE<Boolean> continueWork;
-
 
     /**
      * Wrap an iterator with one which adds a continuation probe.
+     * The probe will be called in the {@link #hasNext()} method, before
+     * the source iterator is itself checked and in {@link #next()}
+     * before retrieval.
+     * That is: it may be called multiple times per iteration.
      * @param source source iterator.
      * @param continueWork predicate which will trigger a fast halt if it returns false.
      */

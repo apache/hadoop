@@ -74,6 +74,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStat
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.SUCCESSFUL_JOB_OUTPUT_DIR_MARKER;
 import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.COMMITTER_FACTORY_CLASS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConfig.createCloseableTaskSubmitter;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.DEFAULT_WRITER_QUEUE_CAPACITY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.JOB_ID_SOURCE_MAPREDUCE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_FACTORY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_DIAGNOSTICS_MANIFEST_DIR;
@@ -796,7 +797,8 @@ public abstract class AbstractManifestCommitterTest
         .withJobDirectories(attemptDirs)
         .withName(String.format(NAME_FORMAT_JOB_ATTEMPT, jobId))
         .withOperations(getStoreOperations())
-        .withProgressable(getProgressCounter());
+        .withProgressable(getProgressCounter())
+        .withWriterQueueCapacity(DEFAULT_WRITER_QUEUE_CAPACITY);
 
     // if there's a task attempt ID set, set up its details
     if (taskIndex >= 0) {

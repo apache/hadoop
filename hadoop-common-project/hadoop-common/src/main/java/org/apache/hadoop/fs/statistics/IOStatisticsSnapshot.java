@@ -63,7 +63,7 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.snapshotM
 @InterfaceStability.Evolving
 public final class IOStatisticsSnapshot
     implements IOStatistics, Serializable, IOStatisticsAggregator,
-    IOStatisticsSetters{
+    IOStatisticsSetters {
 
   private static final long serialVersionUID = -1762522703841538084L;
 
@@ -247,7 +247,7 @@ public final class IOStatisticsSnapshot
 
   @Override
   public void setMeanStatistic(final String key, final MeanStatistic value) {
-
+    meanStatistics().put(key, value);
   }
 
   @Override

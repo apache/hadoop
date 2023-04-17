@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,11 +46,11 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
-import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.functional.FutureIO;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.util.Preconditions.checkState;
 
 /**
  * Read or write entry file.
@@ -67,7 +68,7 @@ public class EntryFileIO {
   private final Configuration conf;
 
   /**
-   * ctor.
+   * Constructor.
    * @param conf Configuration used to load filesystems
    */
   public EntryFileIO(final Configuration conf) {
@@ -78,12 +79,18 @@ public class EntryFileIO {
    * Create a writer to a local file.
    * @param file file
    * @return the writer
-   * @throws IOException fail to open the file
+   * @throws IOException failure to create the file
    */
   public SequenceFile.Writer createWriter(File file) throws IOException {
     return createWriter(toPath(file));
   }
 
+  /**
+   * Create a writer to a file on any FS.
+   * @param path path to write to.
+   * @return the writer
+   * @throws IOException failure to create the file
+   */
   public SequenceFile.Writer createWriter(Path path) throws IOException {
     return SequenceFile.createWriter(conf,
         SequenceFile.Writer.file(path),
@@ -170,10 +177,13 @@ public class EntryFileIO {
     return new Path(file.toURI());
   }
 
-
   /**
-   * Writer takes a list of entries at a time; queues for writing.
-   * A special
+   * A Writer thread takes reads from a queue containing
+   * list of entries to save; these are serialized via the writer to
+   * the output stream.
+   * Other threads can queue the file entry lists from loaded manifests
+   * for them to be written.
+   * The these threads will be blocked when the queue capacity is reached.
    */
   public final class EntryWriter implements Closeable {
 
@@ -205,9 +215,11 @@ public class EntryFileIO {
     private final AtomicInteger count = new AtomicInteger();
 
     /**
-     * any failure.
+     * Any failure caught on the writer thread; this should be
+     * raised within the task/job thread as it implies that the
+     * entire write has failed.
      */
-    private volatile IOException failure;
+    private final AtomicReference<IOException> failure = new AtomicReference<>();
 
     /**
      * Create.
@@ -215,7 +227,8 @@ public class EntryFileIO {
      * @param capacity capacity.
      */
     private EntryWriter(SequenceFile.Writer writer, int capacity) {
-      this.writer = writer;
+      checkState(capacity > 0, "invalid queue capacity %s", capacity);
+      this.writer = requireNonNull(writer);
       this.queue = new ArrayBlockingQueue<>(capacity);
     }
 
@@ -240,14 +253,14 @@ public class EntryFileIO {
      * @return any IOException caught when writing the output
      */
     public IOException getFailure() {
-      return failure;
+      return failure.get();
     }
 
     /**
      * Start the thread.
      */
     private void start() {
-      Preconditions.checkState(executor == null, "already started");
+      checkState(executor == null, "already started");
       active.set(true);
       executor = HadoopExecutors.newSingleThreadExecutor();
       future = executor.submit(this::processor);
@@ -322,7 +335,7 @@ public class EntryFileIO {
         LOG.trace("Added entry #{}: {}", c, entry);
       } catch (IOException e) {
         LOG.debug("Write failure", e);
-        failure = e;
+        failure.set(e);
         throw new UncheckedIOException(e);
       }
     }
@@ -369,8 +382,9 @@ public class EntryFileIO {
      * @throws IOException if one was caught and saved.
      */
     public void maybeRaiseWriteException() throws IOException {
-      if (failure != null) {
-        throw failure;
+      final IOException f = failure.get();
+      if (f != null) {
+        throw f;
       }
     }
 
@@ -392,7 +406,7 @@ public class EntryFileIO {
    * No thread safety.
    */
   @VisibleForTesting
-  final class EntryIterator implements RemoteIterator<FileEntry>, Closeable {
+  static final class EntryIterator implements RemoteIterator<FileEntry>, Closeable {
 
     private final SequenceFile.Reader reader;
 
@@ -402,6 +416,10 @@ public class EntryFileIO {
 
     private int count;
 
+    /**
+     * Create an iterator.
+     * @param reader the file to read from.
+     */
     private EntryIterator(final SequenceFile.Reader reader) {
       this.reader = requireNonNull(reader);
     }
@@ -428,6 +446,13 @@ public class EntryFileIO {
       return fetched != null || fetchNext();
     }
 
+    /**
+     * Fetch the next entry.
+     * If there is none, then the reader is closed before `false`
+     * is returned.
+     * @return true if a record was retrieved.
+     * @throws IOException IO failure.
+     */
     private boolean fetchNext() throws IOException {
       FileEntry readBack = new FileEntry();
       if (reader.next(NullWritable.get(), readBack)) {

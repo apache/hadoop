@@ -75,9 +75,6 @@ public class LoadManifestsStage extends
    */
   private final SummaryInfo summaryInfo = new SummaryInfo();
 
-
-
-
   /**
    * List of loaded manifests.
    */
@@ -121,28 +118,35 @@ public class LoadManifestsStage extends
         manifestDir);
     cacheManifests = arguments.cacheManifests;
 
-    final Path entrySequenceFile = arguments.getEntrySequenceFile();
+    final Path entrySequenceData = arguments.getEntrySequenceData();
 
     // the entry writer for queuing data.
     entryWriter = entryFileIO.launchEntryWriter(
-            entryFileIO.createWriter(entrySequenceFile),
+            entryFileIO.createWriter(entrySequenceData),
             arguments.queueCapacity);
+    // manifest list is only built up when caching is enabled.
+    // as this is memory hungry, it is warned about
     List<TaskManifest> manifestList;
+    if (arguments.cacheManifests) {
+      LOG.info("Loaded manifests are cached; this is memory hungry");
+    }
     try {
 
-      // sync fs before the listj
+      // sync fs before the list
       msync(manifestDir);
 
       // build a list of all task manifests successfully committed,
       // which will break out if the writing is stopped (due to any failure)
       final RemoteIterator<FileStatus> manifestFiles =
-          haltableRemoteIterator(listManifests(), () -> entryWriter.isActive());
+          haltableRemoteIterator(listManifests(),
+              () -> entryWriter.isActive());
 
       manifestList = loadAllManifests(manifestFiles);
+      maybeAddIOStatistics(getIOStatistics(), manifestFiles);
 
       LOG.info("{}: Summary of {} manifests loaded in {}: {}",
           getName(),
-          manifestList.size(),
+          summaryInfo.manifestCount,
           manifestDir,
           summaryInfo);
 
@@ -153,13 +157,12 @@ public class LoadManifestsStage extends
       entryWriter.maybeRaiseWriteException();
 
       // collect any stats
-      maybeAddIOStatistics(getIOStatistics(), manifestFiles);
     } finally {
       entryWriter.close();
     }
     final LoadedManifestData loadedManifestData = new LoadedManifestData(
         new ArrayList<>(directories.values()),  // new array to free up the map
-        entrySequenceFile,
+        entrySequenceData,
         entryWriter.getCount());
 
     return new LoadManifestsStage.Result(summaryInfo, loadedManifestData, manifestList);
@@ -196,30 +199,35 @@ public class LoadManifestsStage extends
 
     // update the directories
     final int created = coalesceDirectories(manifest);
+    final String taskID = manifest.getTaskID();
     LOG.debug("{}: task {} added {} directories",
-        getName(), manifest.getTaskID(), created);
+        getName(), taskID, created);
+
+    // add to the summary.
+    summaryInfo.add(manifest);
+
+    // clear the manifest extra data so if
+    // blocked waiting for queue capacity,
+    // memory use is reduced.
+    manifest.setIOStatistics(null);
+    manifest.getExtraData().clear();
+
+    // if manifests are cached add to the list
+    if (cacheManifests) {
+      // update the manifest list in a synchronized block.
+      synchronized (manifests) {
+        manifests.add(manifest);
+      }
+    }
 
     // queue those files.
     final boolean enqueued = entryWriter.enqueue(manifest.getFilesToCommit());
     if (!enqueued) {
       LOG.warn("{}: Failed to write manifest for task {}",
           getName(),
-          manifest.getTaskID());
+          taskID);
     }
 
-    // add to the summary.
-    summaryInfo.add(manifest);
-
-    // if manifests are cached, clear extra data
-    // and then save.
-    if (cacheManifests) {
-      manifest.setIOStatistics(null);
-      manifest.getExtraData().clear();
-      // update the manifest list in a synchronized block.
-      synchronized (manifests) {
-        manifests.add(manifest);
-      }
-    }
   }
 
   /**
@@ -250,7 +258,6 @@ public class LoadManifestsStage extends
       }
     }
     return toCreate.size();
-
   }
 
   /**
@@ -311,7 +318,7 @@ public class LoadManifestsStage extends
       this.queueCapacity = queueCapacity;
     }
 
-    private Path getEntrySequenceFile() {
+    private Path getEntrySequenceData() {
       return new Path(entrySequenceFile.toURI());
 
     }

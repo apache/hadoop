@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 
 import javax.annotation.Nullable;
 
@@ -32,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.LoadedManifestData;
 
 import static java.util.Objects.requireNonNull;
@@ -45,7 +43,6 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_LOAD_MANIFESTS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_RENAME_FILES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.MANIFESTS;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.ENTRY_WRITER_QUEUE_CAPACITY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.addHeapInformation;
 
 /**
@@ -75,108 +72,118 @@ public class CommitJobStage extends
         getJobId(),
         storeSupportsResilientCommit());
 
-    boolean createMarker = arguments.isCreateMarker();
-    IOStatisticsSnapshot heapInfo = new IOStatisticsSnapshot();
-    addHeapInformation(heapInfo, "setup");
-    // load the manifests
-    final StageConfig stageConfig = getStageConfig();
-    LoadManifestsStage.Result result = new LoadManifestsStage(stageConfig).apply(
-        new LoadManifestsStage.Arguments(
-            File.createTempFile("manifest", ".list"),
-            false,
-            ENTRY_WRITER_QUEUE_CAPACITY));
-    LoadManifestsStage.SummaryInfo summary = result.getSummary();
-    final LoadedManifestData manifestData = result.getLoadedManifestData();
+    // once the manifest has been loaded, a temp file needs to be
+    // deleted; so track teh value.
+    LoadedManifestData loadedManifestData = null;
 
-    LOG.debug("{}: Job Summary {}", getName(), summary);
-    LOG.info("{}: Committing job with file count: {}; total size {} bytes",
-        getName(),
-        summary.getFileCount(),
-        byteCountToDisplaySize(summary.getTotalFileSize()));
-    addHeapInformation(heapInfo, OP_STAGE_JOB_LOAD_MANIFESTS);
+    try {
+      boolean createMarker = arguments.isCreateMarker();
+      IOStatisticsSnapshot heapInfo = new IOStatisticsSnapshot();
+      addHeapInformation(heapInfo, "setup");
+      // load the manifests
+      final StageConfig stageConfig = getStageConfig();
+      LoadManifestsStage.Result result = new LoadManifestsStage(stageConfig).apply(
+          new LoadManifestsStage.Arguments(
+              File.createTempFile("manifest", ".list"),
+              false,  /* do not cache manifests */
+              stageConfig.getWriterQueueCapacity()));
+      LoadManifestsStage.SummaryInfo summary = result.getSummary();
+      loadedManifestData = result.getLoadedManifestData();
 
-
-    // add in the manifest statistics to our local IOStatistics for
-    // reporting.
-    IOStatisticsStore iostats = getIOStatistics();
-    iostats.aggregate(summary.getIOStatistics());
-
-    // prepare destination directories.
-    final CreateOutputDirectoriesStage.Result dirStageResults =
-        new CreateOutputDirectoriesStage(stageConfig)
-            .apply(manifestData.getDirectories());
-    addHeapInformation(heapInfo, OP_STAGE_JOB_CREATE_TARGET_DIRS);
-
-    // commit all the tasks.
-    // The success data includes a snapshot of the IO Statistics
-    // and hence all aggregate stats from the tasks.
-    ManifestSuccessData successData;
-    successData = new RenameFilesStage(stageConfig).apply(
-        Pair.of(manifestData, dirStageResults.getCreatedDirectories()));
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("{}: _SUCCESS file summary {}", getName(), successData.toJson());
-    }
-    addHeapInformation(heapInfo, OP_STAGE_JOB_RENAME_FILES);
-
-    // update the counter of bytes committed and files.
-    // use setCounter so as to ignore any values accumulated when
-    // aggregating tasks.
-    iostats.setCounter(
-        COMMITTER_FILES_COMMITTED_COUNT,
-        summary.getFileCount());
-    iostats.setCounter(
-        COMMITTER_BYTES_COMMITTED_COUNT,
-        summary.getTotalFileSize());
-    successData.snapshotIOStatistics(iostats);
-    successData.getIOStatistics().aggregate(heapInfo);
+      LOG.debug("{}: Job Summary {}", getName(), summary);
+      LOG.info("{}: Committing job with file count: {}; total size {} bytes",
+          getName(),
+          summary.getFileCount(),
+          byteCountToDisplaySize(summary.getTotalFileSize()));
+      addHeapInformation(heapInfo, OP_STAGE_JOB_LOAD_MANIFESTS);
 
 
+      // add in the manifest statistics to our local IOStatistics for
+      // reporting.
+      IOStatisticsStore iostats = getIOStatistics();
+      iostats.aggregate(summary.getIOStatistics());
 
-    // rename manifests. Only warn on failure here.
-    final String manifestRenameDir = arguments.getManifestRenameDir();
-    if (isNotBlank(manifestRenameDir)) {
-      Path manifestRenamePath = new Path(
-          new Path(manifestRenameDir),
-          getJobId());
-      LOG.info("{}: Renaming manifests to {}", getName(), manifestRenamePath);
-      try {
-        renameDir(getTaskManifestDir(), manifestRenamePath);
+      // prepare destination directories.
+      final CreateOutputDirectoriesStage.Result dirStageResults =
+          new CreateOutputDirectoriesStage(stageConfig)
+              .apply(loadedManifestData.getDirectories());
+      addHeapInformation(heapInfo, OP_STAGE_JOB_CREATE_TARGET_DIRS);
 
-        // save this path in the summary diagnostics
-        successData.getDiagnostics().put(MANIFESTS, manifestRenamePath.toUri().toString());
-      } catch (IOException | IllegalArgumentException e) {
-        // rename failure, including path for wrong filesystem
-        LOG.warn("{}: Failed to rename manifests to {}", getName(), manifestRenamePath, e);
+      // commit all the tasks.
+      // The success data includes a snapshot of the IO Statistics
+      // and hence all aggregate stats from the tasks.
+      ManifestSuccessData successData;
+      successData = new RenameFilesStage(stageConfig).apply(
+          Pair.of(loadedManifestData, dirStageResults.getCreatedDirectories()));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("{}: _SUCCESS file summary {}", getName(), successData.toJson());
       }
+      addHeapInformation(heapInfo, OP_STAGE_JOB_RENAME_FILES);
+
+      // update the counter of bytes committed and files.
+      // use setCounter so as to ignore any values accumulated when
+      // aggregating tasks.
+      iostats.setCounter(
+          COMMITTER_FILES_COMMITTED_COUNT,
+          summary.getFileCount());
+      iostats.setCounter(
+          COMMITTER_BYTES_COMMITTED_COUNT,
+          summary.getTotalFileSize());
+      successData.snapshotIOStatistics(iostats);
+      successData.getIOStatistics().aggregate(heapInfo);
+
+      // rename manifests. Only warn on failure here.
+      final String manifestRenameDir = arguments.getManifestRenameDir();
+      if (isNotBlank(manifestRenameDir)) {
+        Path manifestRenamePath = new Path(
+            new Path(manifestRenameDir),
+            getJobId());
+        LOG.info("{}: Renaming manifests to {}", getName(), manifestRenamePath);
+        try {
+          renameDir(getTaskManifestDir(), manifestRenamePath);
+
+          // save this path in the summary diagnostics
+          successData.getDiagnostics().put(MANIFESTS, manifestRenamePath.toUri().toString());
+        } catch (IOException | IllegalArgumentException e) {
+          // rename failure, including path for wrong filesystem
+          LOG.warn("{}: Failed to rename manifests to {}", getName(), manifestRenamePath, e);
+        }
+      }
+
+      // save the _SUCCESS if the option is enabled.
+      Path successPath = null;
+      if (createMarker) {
+        // save a snapshot of the IO Statistics
+
+        successPath = new SaveSuccessFileStage(stageConfig)
+            .apply(successData);
+        LOG.debug("{}: Saving _SUCCESS file to {}", getName(), successPath);
+      }
+
+      // optional cleanup
+      new CleanupJobStage(stageConfig).apply(arguments.getCleanupArguments());
+
+      // and then, after everything else: optionally validate.
+      if (arguments.isValidateOutput()) {
+        // cache and restore the active stage field
+        LOG.info("{}: Validating output.", getName());
+        new ValidateRenamedFilesStage(stageConfig)
+            .apply(loadedManifestData.getEntrySequenceData());
+      }
+
+      // restore the active stage so that when the report is saved
+      // it is declared as job commit, not cleanup or validate.
+      stageConfig.enterStage(getStageName(arguments));
+
+      // the result
+      return new Result(successPath, successData);
+    } finally {
+      // cleanup
+      if (loadedManifestData != null) {
+        loadedManifestData.deleteEntrySequenceFile();
+      }
+
     }
-
-    // save the _SUCCESS if the option is enabled.
-    Path successPath = null;
-    if (createMarker) {
-      // save a snapshot of the IO Statistics
-
-      successPath = new SaveSuccessFileStage(stageConfig)
-          .apply(successData);
-      LOG.debug("{}: Saving _SUCCESS file to {}", getName(), successPath);
-    }
-
-    // optional cleanup
-    new CleanupJobStage(stageConfig).apply(arguments.getCleanupArguments());
-
-    // and then, after everything else: optionally validate.
-    if (arguments.isValidateOutput()) {
-      // cache and restore the active stage field
-      LOG.info("{}: Validating output.", getName());
-      new ValidateRenamedFilesStage(stageConfig)
-          .apply(result.getManifests());
-    }
-
-    // restore the active stage so that when the report is saved
-    // it is declared as job commit, not cleanup or validate.
-    stageConfig.enterStage(getStageName(arguments));
-
-    // the result
-    return new CommitJobStage.Result(successPath, successData);
   }
 
   /**

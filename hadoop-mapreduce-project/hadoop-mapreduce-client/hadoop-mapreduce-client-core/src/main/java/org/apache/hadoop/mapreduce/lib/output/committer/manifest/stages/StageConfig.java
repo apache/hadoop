@@ -29,6 +29,7 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.functional.TaskPool;
 
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.DEFAULT_WRITER_QUEUE_CAPACITY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER;
 
 /**
@@ -156,9 +157,14 @@ public class StageConfig {
   /**
    * Configuration used where needed.
    * Default value is a configuration with the normal constructor;
-   * jobs should override this with what was passed down.j
+   * jobs should override this with what was passed down.
    */
   private Configuration conf = new Configuration();
+
+  /**
+   * Entry writer queue capacity.
+   */
+  private int writerQueueCapacity = DEFAULT_WRITER_QUEUE_CAPACITY;
 
   public StageConfig() {
   }
@@ -429,6 +435,24 @@ public class StageConfig {
    */
   public Configuration getConf() {
     return conf;
+  }
+
+  /**
+   * Get writer queue capacity.
+   * @return the queue capacity
+   */
+  public int getWriterQueueCapacity() {
+    return writerQueueCapacity;
+  }
+
+  /**
+   * Set writer queue capacity.
+   * @param value new value
+   * @return the builder
+   */
+  public StageConfig withWriterQueueCapacity(final int value) {
+    writerQueueCapacity = value;
+    return this;
   }
 
   /**

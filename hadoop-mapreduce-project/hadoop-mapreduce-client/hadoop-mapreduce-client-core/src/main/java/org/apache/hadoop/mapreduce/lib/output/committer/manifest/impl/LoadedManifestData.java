@@ -25,6 +25,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.LoadManifestsStage;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Information about the loaded manifest data;
  * Returned from {@link LoadManifestsStage} and then
@@ -49,13 +51,19 @@ public final class LoadedManifestData {
    */
   private final int fileCount;
 
+  /**
+   * Data about the loaded manifests
+   * @param directories directories
+   * @param entrySequenceData Path in local fs to the entry sequence data.
+   * @param fileCount number of files.
+   */
   public LoadedManifestData(
       final Collection<DirEntry> directories,
-      final Path entrySequenceFile,
+      final Path entrySequenceData,
       final int fileCount) {
-    this.directories = directories;
+    this.directories = requireNonNull(directories);
     this.fileCount = fileCount;
-    this.entrySequenceData = entrySequenceFile;
+    this.entrySequenceData = requireNonNull(entrySequenceData);
   }
 
   public Collection<DirEntry> getDirectories() {
@@ -66,11 +74,25 @@ public final class LoadedManifestData {
     return fileCount;
   }
 
+  /**
+   * Get the path to the entry sequence data file.
+   * @return the path
+   */
   public Path getEntrySequenceData() {
     return entrySequenceData;
   }
 
+  /**
+   * Get the entry sequence data as a file;
+   */
   public File getEntrySequenceFile() {
     return new File(entrySequenceData.toUri());
+  }
+
+  /**
+   * Delete the entry sequence file.
+   */
+  public void deleteEntrySequenceFile() {
+    getEntrySequenceFile().delete();
   }
 }

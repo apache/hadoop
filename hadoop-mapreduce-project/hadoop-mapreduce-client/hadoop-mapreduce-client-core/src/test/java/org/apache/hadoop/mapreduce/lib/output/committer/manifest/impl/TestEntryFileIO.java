@@ -36,6 +36,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
 
 /**
@@ -88,7 +89,8 @@ public class TestEntryFileIO extends AbstractHadoopTestBase {
 
 
   /**
-   * Create a file with one entry
+   * Create a file with one entry, then read it back
+   * via all the mechanisms available.
    */
   @Test
   public void testCreateWriteReadFileOneEntry() throws Throwable {
@@ -115,6 +117,7 @@ public class TestEntryFileIO extends AbstractHadoopTestBase {
     List<FileEntry> files = new ArrayList<>();
     foreach(it, files::add);
     Assertions.assertThat(files)
+        .describedAs("iteration over the entry file")
         .hasSize(1)
         .element(0)
         .isEqualTo(source);
@@ -126,14 +129,29 @@ public class TestEntryFileIO extends AbstractHadoopTestBase {
         .isEqualTo(1);
   }
 
+  /**
+   * Create a writer.
+   * @return a writer
+   * @throws IOException failure to create the file.
+   */
   private SequenceFile.Writer createWriter() throws IOException {
     return entryFileIO.createWriter(getEntryFile());
   }
 
+  /**
+   * Create an iterator over the records in the (non empty) entry file.
+   * @return an iterator over entries.
+   * @throws IOException failure to open the file
+   */
   private RemoteIterator<FileEntry> iterateOverEntryFile() throws IOException {
     return entryFileIO.iterateOver(readEntryFile());
   }
 
+  /**
+   * Create a reader for the (non empty) entry file.
+   * @return a reader.
+   * @throws IOException failure to open the file
+   */
   private SequenceFile.Reader readEntryFile() throws IOException {
     assertEntryFileNonEmpty();
 
@@ -163,7 +181,7 @@ public class TestEntryFileIO extends AbstractHadoopTestBase {
   }
 
   /**
-   * Generate lots of data and write.
+   * Generate lots of data and write it.
    */
   @Test
   public void testLargeStreamingWrite() throws Throwable {
@@ -199,6 +217,8 @@ public class TestEntryFileIO extends AbstractHadoopTestBase {
           .describedAs("total elements written")
           .isEqualTo(total);
     }
+
+    // now read it back
     AtomicInteger count = new AtomicInteger();
     foreach(iterateOverEntryFile(), e -> {
       final int elt = count.getAndIncrement();
@@ -210,8 +230,17 @@ public class TestEntryFileIO extends AbstractHadoopTestBase {
     Assertions.assertThat(count.get())
         .describedAs("total elements read")
         .isEqualTo(total);
+  }
 
-
+  @Test
+  public void testCreateInvalidWriter() throws Throwable {
+    intercept(NullPointerException.class, () ->
+        entryFileIO.launchEntryWriter(null, 1));
+  }
+  @Test
+  public void testCreateInvalidWriterCapacity() throws Throwable {
+    intercept(IllegalStateException.class, () ->
+        entryFileIO.launchEntryWriter(null, 0));
   }
 
 }

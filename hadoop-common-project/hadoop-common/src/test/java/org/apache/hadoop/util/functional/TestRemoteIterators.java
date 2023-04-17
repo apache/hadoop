@@ -22,8 +22,11 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.util.Preconditions;
+
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +40,7 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.RemoteIterators.*;
+import static org.apache.hadoop.util.functional.RemoteIterators.haltableRemoteIterator;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -285,6 +289,39 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
     // verify the iterator was self closed in next()
     countdown.assertCloseCount(1);
 
+  }
+
+  @Test
+  public void testHaltableIterator() throws Throwable {
+    final int limit = 4;
+    AtomicInteger count = new AtomicInteger(limit);
+
+    // a countdown of 10, but the halting predicate will fail earlier
+    // if the value of "count" has dropped to zero
+    final RemoteIterator<Integer> it =
+        haltableRemoteIterator(
+            new CountdownRemoteIterator(10),
+            () -> count.get() > 0);
+
+    Assertions.assertThat(foreach(it,
+            (v) -> count.decrementAndGet()))
+        .describedAs("Count of iterations")
+        .isEqualTo(limit);
+  }
+  @Test
+  public void testHaltableIteratorNoHalt() throws Throwable {
+
+    // a countdown of 10, but the halting predicate will fail earlier
+    // if the value of "count" has dropped to zero
+    final RemoteIterator<Integer> it =
+        haltableRemoteIterator(
+            new CountdownRemoteIterator(10),
+            () -> true);
+
+    Assertions.assertThat(foreach(it,
+            (v) -> {}))
+        .describedAs("Count of iterations")
+        .isEqualTo(10);
   }
 
   /**
