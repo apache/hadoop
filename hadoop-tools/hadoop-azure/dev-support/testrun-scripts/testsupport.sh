@@ -50,6 +50,7 @@ triggerRun()
   rm -rf $combtestfile
   cat > $combtestfile << ENDOFFILE
 <configuration>
+
 </configuration>
 ENDOFFILE
   propertiessize=${#PROPERTIES[@]}
