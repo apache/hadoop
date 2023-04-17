@@ -201,6 +201,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.outputStreamId = createOutputStreamId();
     this.tracingContext = new TracingContext(abfsOutputStreamContext.getTracingContext());
     this.prefixMode = client.getAbfsConfiguration().getPrefixMode();
+    this.blockFactory = abfsOutputStreamContext.getBlockFactory();
+    this.blockSize = bufferSize;
     if (prefixMode == PrefixMode.BLOB && abfsOutputStreamContext.getPosition() > 0) {
       // Get the list of all the committed blocks for the given path.
       this.committedBlockEntries = getBlockList(path, tracingContext);
@@ -212,8 +214,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.tracingContext.setStreamID(outputStreamId);
     this.tracingContext.setOperation(FSOperationType.WRITE);
     this.ioStatistics = outputStreamStatistics.getIOStatistics();
-    this.blockFactory = abfsOutputStreamContext.getBlockFactory();
-    this.blockSize = bufferSize;
   }
 
   private final Lock lock = new ReentrantLock();
@@ -800,8 +800,12 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
             "flushWrittenBytesToServiceInternal", "flush")) {
       AbfsRestOperation op;
       if (prefixMode == PrefixMode.DFS) {
+        TracingContext tracingContextFlush = new TracingContext(tracingContext);
+        if (fallbackDFSAppend) {
+          tracingContextFlush.setFallbackDFSAppend("D");
+        }
         op = client.flush(path, offset, retainUncommitedData, isClose,
-                cachedSasToken.get(), leaseId, new TracingContext(tracingContext));
+                cachedSasToken.get(), leaseId, tracingContextFlush);
       } else {
         // Adds all the committed blocks if available to the list of blocks to be added in putBlockList.
         blockIdList.addAll(committedBlockEntries);
