@@ -264,7 +264,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     return blockSize;
   }
 
-  public class UniqueArrayList<T> extends ArrayList<T> {
+  public static class UniqueArrayList<T> extends ArrayList<T> {
     @Override
     public boolean add(T element) {
       if (!super.contains(element)) {
