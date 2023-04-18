@@ -29,7 +29,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords
     .RemoveFromClusterNodeLabelsRequest;
 
 /**
- * Proto class to handlde RemoveFromClusterNodeLabels request.
+ * Proto class to handle RemoveFromClusterNodeLabels request.
  */
 public class RemoveFromClusterNodeLabelsRequestPBImpl
     extends RemoveFromClusterNodeLabelsRequest {
@@ -104,9 +104,24 @@ public class RemoveFromClusterNodeLabelsRequestPBImpl
   }
 
   @Override
+  public String getSubClusterId() {
+    RemoveFromClusterNodeLabelsRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasSubClusterId()) ? p.getSubClusterId() : null;
+  }
+
+  @Override
+  public void setSubClusterId(String subClusterId) {
+    maybeInitBuilder();
+    if (subClusterId == null) {
+      builder.clearSubClusterId();
+      return;
+    }
+    builder.setSubClusterId(subClusterId);
+  }
+
+  @Override
   public int hashCode() {
-    assert false : "hashCode not designed";
-    return 0;
+    return getProto().hashCode();
   }
 
   @Override

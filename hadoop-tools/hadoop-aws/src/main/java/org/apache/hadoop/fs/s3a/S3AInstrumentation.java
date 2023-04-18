@@ -1547,7 +1547,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      * of block uploads pending (1) and the bytes pending (blockSize).
      */
     @Override
-    public void blockUploadQueued(int blockSize) {
+    public void blockUploadQueued(long blockSize) {
       incCounter(StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS);
       incAllGauges(STREAM_WRITE_BLOCK_UPLOADS_PENDING, 1);
       incAllGauges(STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING, blockSize);
@@ -1560,7 +1560,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      * {@code STREAM_WRITE_BLOCK_UPLOADS_ACTIVE}.
      */
     @Override
-    public void blockUploadStarted(Duration timeInQueue, int blockSize) {
+    public void blockUploadStarted(Duration timeInQueue, long blockSize) {
       // the local counter is used in toString reporting.
       queueDuration.addAndGet(timeInQueue.toMillis());
       // update the duration fields in the IOStatistics.
@@ -1588,7 +1588,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void blockUploadCompleted(
         Duration timeSinceUploadStarted,
-        int blockSize) {
+        long blockSize) {
       transferDuration.addAndGet(timeSinceUploadStarted.toMillis());
       incAllGauges(STREAM_WRITE_BLOCK_UPLOADS_ACTIVE, -1);
       blockUploadsCompleted.incrementAndGet();
@@ -1602,7 +1602,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void blockUploadFailed(
         Duration timeSinceUploadStarted,
-        int blockSize) {
+        long blockSize) {
       incCounter(StreamStatisticNames.STREAM_WRITE_EXCEPTIONS);
     }
 
