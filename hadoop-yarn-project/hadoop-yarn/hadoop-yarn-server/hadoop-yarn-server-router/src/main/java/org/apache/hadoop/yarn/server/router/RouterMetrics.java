@@ -612,6 +612,9 @@ public final class RouterMetrics {
 
     checkForDecommissioningNodesLatency = registry.newQuantiles("checkForDecommissioningNodesLatency",
         "latency of check for decommissioningnodes timeouts", "ops", "latency", 10);
+
+    refreshClusterMaxPriorityLatency = registry.newQuantiles("refreshClusterMaxPriorityLatency",
+        "latency of refresh cluster max priority timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
