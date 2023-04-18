@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.CheckForDecommissioningNodesRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.CheckForDecommissioningNodesRequestProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
 
@@ -51,6 +52,13 @@ public class CheckForDecommissioningNodesRequestPBImpl extends
     return proto;
   }
 
+  private void maybeInitBuilder() {
+    if (viaProto || builder == null) {
+      builder = CheckForDecommissioningNodesRequestProto.newBuilder(proto);
+    }
+    viaProto = false;
+  }
+
   @Override
   public int hashCode() {
     return getProto().hashCode();
@@ -73,11 +81,17 @@ public class CheckForDecommissioningNodesRequestPBImpl extends
 
   @Override
   public String getSubClusterId() {
-    return null;
+    CheckForDecommissioningNodesRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasSubClusterId()) ? p.getSubClusterId() : null;
   }
 
   @Override
   public void setSubClusterId(String subClusterId) {
-
+    maybeInitBuilder();
+    if (subClusterId == null) {
+      builder.clearSubClusterId();
+      return;
+    }
+    builder.setSubClusterId(subClusterId);
   }
 }

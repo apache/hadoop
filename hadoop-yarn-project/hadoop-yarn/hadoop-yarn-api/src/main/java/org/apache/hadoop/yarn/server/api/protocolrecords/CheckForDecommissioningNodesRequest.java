@@ -35,6 +35,15 @@ public abstract class CheckForDecommissioningNodesRequest {
     return request;
   }
 
+  @Private
+  @Unstable
+  public static CheckForDecommissioningNodesRequest newInstance(String subClusterId) {
+    CheckForDecommissioningNodesRequest request = Records
+        .newRecord(CheckForDecommissioningNodesRequest.class);
+    request.setSubClusterId(subClusterId);
+    return request;
+  }
+
   /**
    * Get the subClusterId.
    *

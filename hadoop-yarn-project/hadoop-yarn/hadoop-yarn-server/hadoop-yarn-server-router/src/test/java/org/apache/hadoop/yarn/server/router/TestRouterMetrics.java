@@ -598,6 +598,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed refreshNodesResources call");
       metrics.incrRefreshNodesResourcesFailedRetrieved();
     }
+
+    public void getCheckForDecommissioningNodesFailed() {
+      LOG.info("Mocked: failed checkForDecommissioningNodes call");
+      metrics.incrCheckForDecommissioningNodesFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -2041,5 +2046,12 @@ public class TestRouterMetrics {
         metrics.getNumSucceededRefreshNodesResourcesRetrieved());
     Assert.assertEquals(225,
         metrics.getLatencySucceededRefreshNodesResourcesRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testCheckForDecommissioningNodesFailedRetrieved() {
+    long totalBadBefore = metrics.getCheckForDecommissioningNodesFailedRetrieved();
+    badSubCluster.getCheckForDecommissioningNodesFailed();
+    Assert.assertEquals(totalBadBefore + 1, metrics.getCheckForDecommissioningNodesFailedRetrieved());
   }
 }

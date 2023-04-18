@@ -171,6 +171,10 @@ public final class RouterMetrics {
   private MutableGaugeInt numUpdateNodeResourceFailedRetrieved;
   @Metric("# of refreshNodesResources failed to be retrieved")
   private MutableGaugeInt numRefreshNodesResourcesFailedRetrieved;
+  @Metric("# of checkForDecommissioningNodes failed to be retrieved")
+  private MutableGaugeInt numCheckForDecommissioningNodesFailedRetrieved;
+  @Metric("# of refreshClusterMaxPriority failed to be retrieved")
+  private MutableGaugeInt numRefreshClusterMaxPriorityFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -303,6 +307,10 @@ public final class RouterMetrics {
   private MutableRate totalSucceededUpdateNodeResourceRetrieved;
   @Metric("Total number of successful Retrieved RefreshNodesResources and latency(ms)")
   private MutableRate totalSucceededRefreshNodesResourcesRetrieved;
+  @Metric("Total number of successful Retrieved CheckForDecommissioningNodes and latency(ms)")
+  private MutableRate totalSucceededCheckForDecommissioningNodesRetrieved;
+  @Metric("Total number of successful Retrieved RefreshClusterMaxPriority and latency(ms)")
+  private MutableRate totalSucceededRefreshClusterMaxPriorityRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -372,6 +380,8 @@ public final class RouterMetrics {
   private MutableQuantiles getClusterUserInfoLatency;
   private MutableQuantiles updateNodeResourceLatency;
   private MutableQuantiles refreshNodesResourcesLatency;
+  private MutableQuantiles checkForDecommissioningNodesLatency;
+  private MutableQuantiles refreshClusterMaxPriorityLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
@@ -599,6 +609,9 @@ public final class RouterMetrics {
 
     refreshNodesResourcesLatency = registry.newQuantiles("refreshNodesResourcesLatency",
         "latency of refresh nodes resources timeouts", "ops", "latency", 10);
+
+    checkForDecommissioningNodesLatency = registry.newQuantiles("checkForDecommissioningNodesLatency",
+        "latency of check for decommissioningnodes timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -926,6 +939,16 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededCheckForDecommissioningNodesRetrieved() {
+    return totalSucceededCheckForDecommissioningNodesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededRefreshClusterMaxPriorityRetrieved() {
+    return totalSucceededRefreshClusterMaxPriorityRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public long getNumSucceededRefreshSuperUserGroupsConfigurationRetrieved() {
     return totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.lastStat().numSamples();
   }
@@ -1246,6 +1269,16 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededCheckForDecommissioningNodesRetrieved() {
+    return totalSucceededCheckForDecommissioningNodesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededRefreshClusterMaxPriorityRetrieved() {
+    return totalSucceededRefreshClusterMaxPriorityRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededRefreshSuperUserGroupsConfigurationRetrieved() {
     return totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.lastStat().mean();
   }
@@ -1512,6 +1545,14 @@ public final class RouterMetrics {
 
   public int getRefreshNodesResourcesFailedRetrieved() {
     return numRefreshNodesResourcesFailedRetrieved.value();
+  }
+
+  public int getCheckForDecommissioningNodesFailedRetrieved() {
+    return numCheckForDecommissioningNodesFailedRetrieved.value();
+  }
+
+  public int getRefreshClusterMaxPriorityFailedRetrieved() {
+    return numRefreshClusterMaxPriorityFailedRetrieved.value();
   }
 
   public int getDelegationTokenFailedRetrieved() {
@@ -1847,6 +1888,16 @@ public final class RouterMetrics {
     refreshNodesResourcesLatency.add(duration);
   }
 
+  public void succeededCheckForDecommissioningNodesRetrieved(long duration) {
+    totalSucceededCheckForDecommissioningNodesRetrieved.add(duration);
+    checkForDecommissioningNodesLatency.add(duration);
+  }
+
+  public void succeededRefreshClusterMaxPriorityRetrieved(long duration) {
+    totalSucceededRefreshClusterMaxPriorityRetrieved.add(duration);
+    refreshClusterMaxPriorityLatency.add(duration);
+  }
+
   public void succeededRefreshSuperUserGroupsConfRetrieved(long duration) {
     totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.add(duration);
     refreshSuperUserGroupsConfLatency.add(duration);
@@ -2089,6 +2140,14 @@ public final class RouterMetrics {
 
   public void incrRefreshNodesResourcesFailedRetrieved() {
     numRefreshNodesResourcesFailedRetrieved.incr();
+  }
+
+  public void incrCheckForDecommissioningNodesFailedRetrieved() {
+    numCheckForDecommissioningNodesFailedRetrieved.incr();
+  }
+
+  public void incrRefreshClusterMaxPriorityFailedRetrieved() {
+    numRefreshClusterMaxPriorityFailedRetrieved.incr();
   }
 
   public void incrGetDelegationTokenFailedRetrieved() {
