@@ -707,21 +707,18 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws IOException
    */
   boolean checkIsDirectory(Path path, TracingContext tracingContext) throws IOException {
-    AbfsRestOperation op = null;
+   BlobProperty blobProperty;
     try {
-      op = client.getBlobProperty(path, tracingContext);
+      blobProperty = getBlobProperty(path, tracingContext);
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
         if (((AbfsRestOperationException) ex).getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
           throw ex;
         }
       }
+      return false;
     }
-    if (op != null && op.hasResult()) {
-      String isFolder = op.getResult().getResponseHeader(X_MS_META_HDI_ISFOLDER);
-      return isFolder != null && isFolder.equalsIgnoreCase(TRUE);
-    }
-    return false;
+    return blobProperty.getIsDirectory();
   }
 
   /**
