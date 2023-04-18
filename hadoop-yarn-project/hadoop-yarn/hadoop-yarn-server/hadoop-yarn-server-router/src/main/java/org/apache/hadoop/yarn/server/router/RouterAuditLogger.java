@@ -30,7 +30,7 @@ import java.net.InetAddress;
  * Manages Router audit logs.
  * Audit log format is written as key=value pairs. Tab separated.
  */
-public class RouterAuditLogger {
+public final class RouterAuditLogger {
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterAuditLogger.class);
 
@@ -51,6 +51,43 @@ public class RouterAuditLogger {
     public static final String GET_APP_REPORT = "Get Application Report";
     public static final String TARGET_CLIENT_RM_SERVICE = "RouterClientRMService";
     public static final String UNKNOWN = "UNKNOWN";
+    public static final String GET_APPLICATIONS = "Get Applications";
+    public static final String GET_CLUSTERMETRICS = "Get ClusterMetrics";
+    public static final String GET_CLUSTERNODES = "Get ClusterNodes";
+    public static final String GET_QUEUEINFO = "Get QueueInfo";
+    public static final String GET_QUEUE_USER_ACLS = "Get QueueUserAcls";
+    public static final String MOVE_APPLICATION_ACROSS_QUEUES = "Move ApplicationAcrossQueues";
+    public static final String GET_NEW_RESERVATION = "Get NewReservation";
+    public static final String SUBMIT_RESERVATION = "Submit Reservation";
+    public static final String LIST_RESERVATIONS = "List Reservations";
+    public static final String UPDATE_RESERVATION = "Update Reservation";
+    public static final String DELETE_RESERVATION = "Delete Reservation";
+    public static final String GET_NODETOLABELS = "Get NodeToLabels";
+    public static final String GET_LABELSTONODES = "Get LabelsToNodes";
+    public static final String GET_CLUSTERNODELABELS = "Get ClusterNodeLabels";
+    public static final String GET_APPLICATION_ATTEMPT_REPORT = "Get ApplicationAttemptReport";
+    public static final String GET_APPLICATION_ATTEMPTS = "Get ApplicationAttempts";
+    public static final String GET_CONTAINERREPORT = "Get ContainerReport";
+    public static final String GET_CONTAINERS = "Get Containers";
+    public static final String GET_DELEGATIONTOKEN = "Get DelegationToken";
+    public static final String RENEW_DELEGATIONTOKEN = "Renew DelegationToken";
+    public static final String CANCEL_DELEGATIONTOKEN = "Cancel DelegationToken";
+    public static final String FAIL_APPLICATIONATTEMPT = "Fail ApplicationAttempt";
+    public static final String UPDATE_APPLICATIONPRIORITY = "Update ApplicationPriority";
+    public static final String SIGNAL_TOCONTAINER = "Signal ToContainer";
+    public static final String UPDATE_APPLICATIONTIMEOUTS = "Update ApplicationTimeouts";
+    public static final String GET_RESOURCEPROFILES = "Get ResourceProfiles";
+    public static final String GET_RESOURCEPROFILE = "Get ResourceProfile";
+    public static final String GET_RESOURCETYPEINFO = "Get ResourceTypeInfo";
+    public static final String GET_ATTRIBUTESTONODES = "Get AttributesToNodes";
+    public static final String GET_CLUSTERNODEATTRIBUTES = "Get ClusterNodeAttributes";
+    public static final String GET_NODESTOATTRIBUTES = "Get NodesToAttributes";
+  }
+
+  public static void logSuccess(String user, String operation, String target) {
+    if (LOG.isInfoEnabled()) {
+      LOG.info(createSuccessLog(user, operation, target, null, null));
+    }
   }
 
   /**
@@ -143,6 +180,28 @@ public class RouterAuditLogger {
       LOG.info(
           createFailureLog(user, operation, perm, target, description, null,
               null));
+    }
+  }
+
+  /**
+   * Create a readable and parseable audit log string for a failed event.
+   *
+   * @param user User who made the service request.
+   * @param operation Operation requested by the user.
+   * @param perm Target permissions.
+   * @param target The target on which the operation is being performed.
+   * @param descriptionFormat the description message format string.
+   * @param args format parameter.
+   *
+   * <br><br>
+   * Note that the {@link RouterAuditLogger} uses tabs ('\t') as a key-val
+   * delimiter and hence the value fields should not contains tabs ('\t').
+   */
+  public static void logFailure(String user, String operation, String perm,
+      String target, String descriptionFormat, Object... args) {
+    if (LOG.isInfoEnabled()) {
+      String description = String.format(descriptionFormat, args);
+      LOG.info(createFailureLog(user, operation, perm, target, description, null, null));
     }
   }
 

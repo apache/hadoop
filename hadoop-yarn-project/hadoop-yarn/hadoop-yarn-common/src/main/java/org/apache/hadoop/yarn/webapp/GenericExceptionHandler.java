@@ -53,7 +53,7 @@ public class GenericExceptionHandler implements ExceptionMapper<Exception> {
   @Override
   public Response toResponse(Exception e) {
     if (LOG.isTraceEnabled()) {
-      LOG.trace("GOT EXCEPITION", e);
+      LOG.trace("GOT EXCEPTION", e);
     }
     // Don't catch this as filter forward on 404
     // (ServletContainer.FEATURE_FILTER_FORWARD_ON_404)

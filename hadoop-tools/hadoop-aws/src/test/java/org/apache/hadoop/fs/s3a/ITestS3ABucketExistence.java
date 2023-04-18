@@ -34,6 +34,7 @@ import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESSPOINT_REQUIRED;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
 import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
@@ -47,7 +48,7 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
   private FileSystem fs;
 
   private final String randomBucket =
-          "random-bucket-" + UUID.randomUUID().toString();
+          "random-bucket-" + UUID.randomUUID();
 
   private final URI uri = URI.create(FS_S3A + "://" + randomBucket + "/");
 
@@ -163,7 +164,7 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
   @Test
   public void testAccessPointProbingV2() throws Exception {
     describe("Test V2 bucket probing using an AccessPoint ARN");
-    Configuration configuration = createConfigurationWithProbe(2);
+    Configuration configuration = createArnConfiguration();
     String accessPointArn = "arn:aws:s3:eu-west-1:123456789012:accesspoint/" + randomBucket;
     configuration.set(String.format(InternalConstants.ARN_BUCKET_OPTION, randomBucket),
         accessPointArn);
@@ -175,7 +176,7 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
   @Test
   public void testAccessPointRequired() throws Exception {
     describe("Test V2 bucket probing with 'fs.s3a.accesspoint.required' property.");
-    Configuration configuration = createConfigurationWithProbe(2);
+    Configuration configuration = createArnConfiguration();
     configuration.set(AWS_S3_ACCESSPOINT_REQUIRED, "true");
     intercept(PathIOException.class,
         InternalConstants.AP_REQUIRED_EXCEPTION,
@@ -187,6 +188,17 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
         accessPointArn);
     expectUnknownStore(
         () -> FileSystem.get(uri, configuration));
+  }
+
+  /**
+   * Create a configuration which has bucket probe 2 and the endpoint.region
+   * option set to "eu-west-1" to match that of the ARNs generated.
+   * @return a configuration for tests which are expected to fail in specific ways.
+   */
+  private Configuration createArnConfiguration() {
+    Configuration configuration = createConfigurationWithProbe(2);
+    configuration.set(AWS_REGION, "eu-west-1");
+    return configuration;
   }
 
   @Override

@@ -189,6 +189,7 @@ public class TestRMFailoverProxyProvider {
    * and {@link AutoRefreshRMFailoverProxyProvider#performFailover(Object)}
    * gets called.
    */
+  @SuppressWarnings("unchecked")
   @Test
   public void testAutoRefreshFailoverChange() throws Exception {
     conf.setClass(YarnConfiguration.CLIENT_FAILOVER_NO_HA_PROXY_PROVIDER,

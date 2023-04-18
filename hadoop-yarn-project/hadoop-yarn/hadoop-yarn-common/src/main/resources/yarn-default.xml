@@ -5066,6 +5066,16 @@
   </property>
 
   <property>
+    <name>yarn.nodemanager.dispatcher.metric.enable</name>
+    <value>false</value>
+    <description>
+      Yarn NodeManager enables Dispatcher Metric.
+      if true, will enable dispatcher metric; if false, will not enable dispatcher metric;
+      Default is false.
+    </description>
+  </property>
+
+  <property>
     <name>yarn.router.interceptor.user-thread-pool.minimum-pool-size</name>
     <value>5</value>
     <description>
