@@ -33,6 +33,8 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 
 import static java.util.Objects.requireNonNull;
@@ -95,6 +97,10 @@ public abstract class CachingBlockManager extends BlockManager {
 
   private final PrefetchingStatistics prefetchingStatistics;
 
+  private final Configuration conf;
+
+  private final LocalDirAllocator localDirAllocator;
+
   /**
    * Constructs an instance of a {@code CachingBlockManager}.
    *
@@ -102,14 +108,17 @@ public abstract class CachingBlockManager extends BlockManager {
    * @param blockData information about each block of the underlying file.
    * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
    * @param prefetchingStatistics statistics for this stream.
-   *
+   * @param conf the configuration.
+   * @param localDirAllocator the local dir allocator instance.
    * @throws IllegalArgumentException if bufferPoolSize is zero or negative.
    */
   public CachingBlockManager(
       ExecutorServiceFuturePool futurePool,
       BlockData blockData,
       int bufferPoolSize,
-      PrefetchingStatistics prefetchingStatistics) {
+      PrefetchingStatistics prefetchingStatistics,
+      Configuration conf,
+      LocalDirAllocator localDirAllocator) {
     super(blockData);
 
     Validate.checkPositiveInteger(bufferPoolSize, "bufferPoolSize");
@@ -129,6 +138,8 @@ public abstract class CachingBlockManager extends BlockManager {
 
     this.ops = new BlockOperations();
     this.ops.setDebug(false);
+    this.conf = requireNonNull(conf);
+    this.localDirAllocator = localDirAllocator;
   }
 
   /**
@@ -468,7 +479,8 @@ public abstract class CachingBlockManager extends BlockManager {
         blockFuture = cf;
       }
 
-      CachePutTask task = new CachePutTask(data, blockFuture, this, Instant.now());
+      CachePutTask task =
+          new CachePutTask(data, blockFuture, this, Instant.now());
       Future<Void> actionFuture = futurePool.executeFunction(task);
       data.setCaching(actionFuture);
       ops.end(op);
@@ -554,7 +566,7 @@ public abstract class CachingBlockManager extends BlockManager {
       return;
     }
 
-    cache.put(blockNumber, buffer);
+    cache.put(blockNumber, buffer, conf, localDirAllocator);
   }
 
   private static class CachePutTask implements Supplier<Void> {
