@@ -331,7 +331,7 @@ public class ITestAzureBlobFileSystemCreate extends
     final AzureBlobFileSystem fs = getFileSystem();
     Path testPath = new Path(TEST_FOLDER_PATH, TEST_CHILD_FILE);
     FSDataOutputStream out = fs.create(testPath);
-    intercept(FileNotFoundException.class,
+    intercept(IOException.class,
         () -> {
           try (FilterOutputStream fos = new FilterOutputStream(out)) {
             fos.write('a');
@@ -339,7 +339,7 @@ public class ITestAzureBlobFileSystemCreate extends
             out.hsync();
             fs.delete(testPath, false);
             // trigger the first failure
-            throw intercept(FileNotFoundException.class,
+            throw intercept(IOException.class,
                 () -> {
               fos.write('b');
               out.hsync();
