@@ -465,8 +465,7 @@ public class AzureBlobFileSystem extends FileSystem
       Path adjustedDst = dst;
       qualifiedDstPath = makeQualified(adjustedDst);
       Path parent = qualifiedDstPath.getParent();
-      if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
-          == PrefixMode.BLOB && (parent != null && !parent.isRoot())) {
+      if (parent != null && !parent.isRoot()) {
         PathInformation dstParentPathInformation = getPathInformation(parent,
             tracingContext
         );
@@ -557,13 +556,10 @@ public class AzureBlobFileSystem extends FileSystem
           return qualifiedSrcPath.equals(qualifiedDstPath);
         }
         adjustedDst = new Path(dst, sourceFileName);
-        qualifiedDstPath = makeQualified(adjustedDst);
-        LOG.debug("Qualified dst path: {}", qualifiedDstPath);
-      } else {
-        LOG.debug("dst {} doesn't exists. Check if the parent exists.",
-            adjustedDst);
-        qualifiedDstPath = makeQualified(adjustedDst);
       }
+      qualifiedDstPath = makeQualified(adjustedDst);
+      LOG.debug("Qualified dst path: {}", qualifiedDstPath);
+
       final RenameAtomicityUtils renameAtomicityUtils;
       if (getAbfsStore().getAbfsConfiguration().getPrefixMode()
           == PrefixMode.BLOB &&
