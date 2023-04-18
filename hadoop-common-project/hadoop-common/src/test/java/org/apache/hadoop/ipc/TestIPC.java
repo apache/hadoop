@@ -1728,6 +1728,55 @@ public class TestIPC {
     checkUserBinding(true);
   }
 
+  @Test(timeout=60000)
+  public void testUpdateAddressEnsureResolved() throws Exception {
+    // start server
+    Server server = new TestServer(5, false);
+    server.start();
+
+    SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
+    doThrow(new ConnectTimeoutException("fake")).when(mockFactory).createSocket();
+    Client client = new Client(LongWritable.class, conf, mockFactory);
+    InetSocketAddress address = new InetSocketAddress("localhost", 9090);
+    ConnectionId remoteId = getConnectionId(address, 100, conf);
+    try {
+      LambdaTestUtils.intercept(IOException.class,
+          new Callable<Void>() {
+            @Override
+            public Void call() throws IOException {
+              client.call(RpcKind.RPC_BUILTIN,
+                  new LongWritable(RANDOM.nextLong()), remoteId,
+                  RPC.RPC_SERVICE_CLASS_DEFAULT, null);
+              return null;
+            }
+          });
+
+      assertFalse(address.isUnresolved());
+      assertFalse(remoteId.getAddress().isUnresolved());
+      assertEquals(System.identityHashCode(remoteId.getAddress()),
+          System.identityHashCode(address));
+
+      NetUtils.addStaticResolution("localhost", "host.invalid");
+      LambdaTestUtils.intercept(IOException.class,
+          new Callable<Void>() {
+            @Override
+            public Void call() throws IOException {
+              client.call(RpcKind.RPC_BUILTIN,
+                  new LongWritable(RANDOM.nextLong()), remoteId,
+                  RPC.RPC_SERVICE_CLASS_DEFAULT, null);
+              return null;
+            }
+          });
+
+      assertFalse(remoteId.getAddress().isUnresolved());
+      assertEquals(System.identityHashCode(remoteId.getAddress()),
+          System.identityHashCode(address));
+    } finally {
+      client.stop();
+      server.stop();
+    }
+  }
+
   private void checkUserBinding(boolean asProxy) throws Exception {
     Socket s;
     // don't attempt bind with no service host.
