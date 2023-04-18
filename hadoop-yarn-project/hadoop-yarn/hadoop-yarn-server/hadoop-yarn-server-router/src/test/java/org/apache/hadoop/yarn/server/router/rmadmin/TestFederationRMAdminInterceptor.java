@@ -49,6 +49,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLa
 import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
@@ -65,6 +67,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 /**
@@ -520,5 +523,28 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     LambdaTestUtils.intercept(YarnException.class,
         "subClusterId = SC-NON is not an active subCluster.",
         () -> interceptor.replaceLabelsOnNode(request2));
+  }
+
+  @Test
+  public void testCheckForDecommissioningNodesRequest() throws Exception {
+    // null request1.
+    LambdaTestUtils.intercept(YarnException.class, "Missing checkForDecommissioningNodes request.",
+        () -> interceptor.checkForDecommissioningNodes(null));
+
+    // null request2.
+    CheckForDecommissioningNodesRequest request = CheckForDecommissioningNodesRequest.newInstance(null);
+    LambdaTestUtils.intercept(YarnException.class, "Missing checkForDecommissioningNodes SubClusterId.",
+        () -> interceptor.checkForDecommissioningNodes(request));
+  }
+
+  @Test
+  public void testCheckForDecommissioningNodesNormalRequest() throws Exception {
+    CheckForDecommissioningNodesRequest request =
+        CheckForDecommissioningNodesRequest.newInstance("SC-1");
+    CheckForDecommissioningNodesResponse response = interceptor.checkForDecommissioningNodes(request);
+    assertNotNull(response);
+    Set<NodeId> nodeIds = response.getDecommissioningNodes();
+    assertNotNull(nodeIds);
+    assertEquals(0, nodeIds.size());
   }
 }
