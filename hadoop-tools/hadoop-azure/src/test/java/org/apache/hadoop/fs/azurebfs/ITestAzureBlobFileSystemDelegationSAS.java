@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
