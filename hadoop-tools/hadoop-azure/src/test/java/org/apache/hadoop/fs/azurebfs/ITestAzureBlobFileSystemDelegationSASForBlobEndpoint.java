@@ -126,9 +126,9 @@ public class ITestAzureBlobFileSystemDelegationSASForBlobEndpoint
 
   @Test
   public void testCopyBlobTakeTime() throws Exception {
-    AzureBlobFileSystem fileSystem = getFileSystem();
+    AzureBlobFileSystem fileSystem = Mockito.spy(getFileSystem());
     AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
-    fileSystem.setAbfsStore(store);
+    Mockito.doReturn(store).when(fileSystem).getAbfsStore();
     AbfsClient client = store.getClient();
     AbfsClient spiedClient = Mockito.spy(client);
     store.setClient(spiedClient);

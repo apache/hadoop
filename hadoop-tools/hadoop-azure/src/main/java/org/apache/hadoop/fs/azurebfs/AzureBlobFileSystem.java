@@ -578,7 +578,7 @@ public class AzureBlobFileSystem extends FileSystem
           return false;
         }
       }
-      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, renameAtomicityUtils,
+      getAbfsStore().rename(qualifiedSrcPath, qualifiedDstPath, renameAtomicityUtils,
           tracingContext);
       return true;
     } catch (AzureBlobFileSystemException ex) {
@@ -1751,11 +1751,6 @@ public class AzureBlobFileSystem extends FileSystem
   @VisibleForTesting
   String getClientCorrelationId() {
     return clientCorrelationId;
-  }
-
-  @VisibleForTesting
-  void setAbfsStore(final AzureBlobFileSystemStore abfsStore) {
-    this.abfsStore = abfsStore;
   }
 
   @Override

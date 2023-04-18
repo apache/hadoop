@@ -343,16 +343,13 @@ public class ITestAzureBlobFileSystemRename extends
     fs.mkdirs(new Path("hbase/test4/"));
     fs.create(new Path("hbase/test4/file1"));
     final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
-    final AzureBlobFileSystemStore azureBlobFileSystemStore = Mockito.spy(
+    final AzureBlobFileSystemStore spiedAbfsStore = Mockito.spy(
         spiedFs.getAbfsStore());
-    spiedFs.setAbfsStore(azureBlobFileSystemStore);
+    Mockito.doReturn(spiedAbfsStore).when(spiedFs).getAbfsStore();
     final Integer[] correctDeletePathCount = new Integer[1];
     correctDeletePathCount[0] = 0;
 
     //fail copy of /hbase/test1/test2/test3/file1.
-    AzureBlobFileSystemStore spiedAbfsStore = Mockito.spy(
-        spiedFs.getAbfsStore());
-    spiedFs.setAbfsStore(spiedAbfsStore);
     Mockito.doAnswer(answer -> {
           final Path srcPath = answer.getArgument(0);
           final Path dstPath = answer.getArgument(1);
@@ -455,16 +452,13 @@ public class ITestAzureBlobFileSystemRename extends
     fs.mkdirs(new Path("hbase/test4/"));
     fs.create(new Path("hbase/test4/file1"));
     final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
-    final AzureBlobFileSystemStore azureBlobFileSystemStore = Mockito.spy(
+    final AzureBlobFileSystemStore spiedAbfsStore = Mockito.spy(
         spiedFs.getAbfsStore());
-    spiedFs.setAbfsStore(azureBlobFileSystemStore);
+    Mockito.doReturn(spiedAbfsStore).when(spiedFs).getAbfsStore();
     final Integer[] correctDeletePathCount = new Integer[1];
     correctDeletePathCount[0] = 0;
 
     //fail copy of /hbase/test1/test2/test3/file1.
-    AzureBlobFileSystemStore spiedAbfsStore = Mockito.spy(
-        spiedFs.getAbfsStore());
-    spiedFs.setAbfsStore(spiedAbfsStore);
     Mockito.doAnswer(answer -> {
           final Path srcPath = answer.getArgument(0);
           final Path dstPath = answer.getArgument(1);
@@ -573,16 +567,13 @@ public class ITestAzureBlobFileSystemRename extends
     fs.mkdirs(new Path("hbase/test4/"));
     fs.create(new Path("hbase/test4/file1"));
     final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
-    final AzureBlobFileSystemStore azureBlobFileSystemStore = Mockito.spy(
+    final AzureBlobFileSystemStore spiedAbfsStore = Mockito.spy(
         spiedFs.getAbfsStore());
-    spiedFs.setAbfsStore(azureBlobFileSystemStore);
+    Mockito.doReturn(spiedAbfsStore).when(spiedFs).getAbfsStore();
     final Integer[] correctDeletePathCount = new Integer[1];
     correctDeletePathCount[0] = 0;
 
     //fail copy of /hbase/test1/test2/test3/file1.
-    AzureBlobFileSystemStore spiedAbfsStore = Mockito.spy(
-        spiedFs.getAbfsStore());
-    spiedFs.setAbfsStore(spiedAbfsStore);
     Mockito.doAnswer(answer -> {
           final Path srcPath = answer.getArgument(0);
           final Path dstPath = answer.getArgument(1);
@@ -701,15 +692,11 @@ public class ITestAzureBlobFileSystemRename extends
     fs.mkdirs(new Path("hbase/test4/"));
     fs.create(new Path("hbase/test4/file1"));
     final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
-    final AzureBlobFileSystemStore azureBlobFileSystemStore = Mockito.spy(
+    final AzureBlobFileSystemStore spiedAbfsStore = Mockito.spy(
         spiedFs.getAbfsStore());
-    spiedFs.setAbfsStore(azureBlobFileSystemStore);
+    Mockito.doReturn(spiedAbfsStore).when(spiedFs).getAbfsStore();
     final Integer[] correctDeletePathCount = new Integer[1];
     correctDeletePathCount[0] = 0;
-
-    AzureBlobFileSystemStore spiedAbfsStore = Mockito.spy(
-        spiedFs.getAbfsStore());
-    spiedFs.setAbfsStore(spiedAbfsStore);
 
     Boolean[] renamePendingJsonCreated = new Boolean[1];
     renamePendingJsonCreated[0] = false;
@@ -770,15 +757,12 @@ public class ITestAzureBlobFileSystemRename extends
     fs.mkdirs(new Path("hbase/test4/"));
     fs.create(new Path("hbase/test4/file1"));
     final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
-    final AzureBlobFileSystemStore azureBlobFileSystemStore = Mockito.spy(
+    final AzureBlobFileSystemStore spiedStore = Mockito.spy(
         spiedFs.getAbfsStore());
-    spiedFs.setAbfsStore(azureBlobFileSystemStore);
+    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
     final Integer[] correctDeletePathCount = new Integer[1];
     correctDeletePathCount[0] = 0;
 
-    AzureBlobFileSystemStore spiedAbfsStore = Mockito.spy(
-        spiedFs.getAbfsStore());
-    spiedFs.setAbfsStore(spiedAbfsStore);
     AzureBlobFileSystem listFileFs = Mockito.spy(fs);
 
 
@@ -889,7 +873,7 @@ public class ITestAzureBlobFileSystemRename extends
 
     AzureBlobFileSystemStore spiedAbfsStore = Mockito.spy(
         spiedFs.getAbfsStore());
-    spiedFs.setAbfsStore(spiedAbfsStore);
+    Mockito.doReturn(spiedAbfsStore).when(spiedFs).getAbfsStore();
     Mockito.doAnswer(answer -> {
           final Path srcPath = answer.getArgument(0);
           final Path dstPath = answer.getArgument(1);
@@ -999,7 +983,7 @@ public class ITestAzureBlobFileSystemRename extends
 
     final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
     final AzureBlobFileSystemStore spiedStore = Mockito.spy(fs.getAbfsStore());
-    spiedFs.setAbfsStore(spiedStore);
+    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
     final AbfsClient spiedClient = Mockito.spy(fs.getAbfsClient());
     spiedStore.setClient(spiedClient);
 
@@ -1081,7 +1065,7 @@ public class ITestAzureBlobFileSystemRename extends
 
     final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
     final AzureBlobFileSystemStore spiedStore = Mockito.spy(fs.getAbfsStore());
-    spiedFs.setAbfsStore(spiedStore);
+    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
     final AbfsClient spiedClient = Mockito.spy(fs.getAbfsClient());
     spiedStore.setClient(spiedClient);
 
@@ -1169,7 +1153,7 @@ public class ITestAzureBlobFileSystemRename extends
 
     final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
     final AzureBlobFileSystemStore spiedStore = Mockito.spy(fs.getAbfsStore());
-    spiedFs.setAbfsStore(spiedStore);
+    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
     final AbfsClient spiedClient = Mockito.spy(fs.getAbfsClient());
     spiedStore.setClient(spiedClient);
 
@@ -1315,10 +1299,10 @@ public class ITestAzureBlobFileSystemRename extends
 
   @Test
   public void testCopyBlobTakeTime() throws Exception {
-    AzureBlobFileSystem fileSystem = getFileSystem();
+    AzureBlobFileSystem fileSystem = Mockito.spy(getFileSystem());
     assumeNonHnsAccountBlobEndpoint(fileSystem);
     AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
-    fileSystem.setAbfsStore(store);
+    Mockito.doReturn(store).when(fileSystem).getAbfsStore();
     AbfsClient client = store.getClient();
     AbfsClient spiedClient = Mockito.spy(client);
     store.setClient(spiedClient);
@@ -1342,10 +1326,10 @@ public class ITestAzureBlobFileSystemRename extends
 
   @Test
   public void testCopyBlobTakeTimeAndEventuallyFail() throws Exception {
-    AzureBlobFileSystem fileSystem = getFileSystem();
+    AzureBlobFileSystem fileSystem = Mockito.spy(getFileSystem());
     assumeNonHnsAccountBlobEndpoint(fileSystem);
     AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
-    fileSystem.setAbfsStore(store);
+    Mockito.doReturn(store).when(fileSystem).getAbfsStore();
     AbfsClient client = store.getClient();
     AbfsClient spiedClient = Mockito.spy(client);
     store.setClient(spiedClient);
@@ -1386,10 +1370,10 @@ public class ITestAzureBlobFileSystemRename extends
 
   @Test
   public void testCopyBlobTakeTimeAndEventuallyAborted() throws Exception {
-    AzureBlobFileSystem fileSystem = getFileSystem();
+    AzureBlobFileSystem fileSystem = Mockito.spy(getFileSystem());
     assumeNonHnsAccountBlobEndpoint(fileSystem);
     AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
-    fileSystem.setAbfsStore(store);
+    Mockito.doReturn(store).when(fileSystem).getAbfsStore();
     AbfsClient client = store.getClient();
     AbfsClient spiedClient = Mockito.spy(client);
     store.setClient(spiedClient);
@@ -1430,12 +1414,12 @@ public class ITestAzureBlobFileSystemRename extends
 
   @Test
   public void testCopyBlobTakeTimeAndBlobIsDeleted() throws Exception {
-    AzureBlobFileSystem fileSystem = getFileSystem();
+    AzureBlobFileSystem fileSystem = Mockito.spy(getFileSystem());
     assumeNonHnsAccountBlobEndpoint(fileSystem);
     AzureBlobFileSystemStore store = Mockito.spy(fileSystem.getAbfsStore());
     String srcFile = "/test1/file";
     String dstFile = "/test1/file2";
-    fileSystem.setAbfsStore(store);
+    Mockito.doReturn(store).when(fileSystem).getAbfsStore();
     AbfsClient client = store.getClient();
     AbfsClient spiedClient = Mockito.spy(client);
     store.setClient(spiedClient);
