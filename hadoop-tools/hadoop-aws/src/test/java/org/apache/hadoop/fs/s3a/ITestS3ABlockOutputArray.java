@@ -136,7 +136,7 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
         new S3AInstrumentation(new URI("s3a://example"));
     BlockOutputStreamStatistics outstats
         = instrumentation.newOutputStreamStatistics(null);
-    S3ADataBlocks.DataBlock block = factory.create("object/key", 1, BLOCK_SIZE, outstats);
+    S3ADataBlocks.DataBlock block = factory.create("spanId", "object/key", 1, BLOCK_SIZE, outstats);
     block.write(dataset, 0, dataset.length);
     S3ADataBlocks.BlockUploadData uploadData = block.startUpload();
     InputStream stream = uploadData.getUploadStream();
