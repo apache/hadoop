@@ -42,6 +42,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
@@ -312,6 +313,12 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @return the configuration.
    */
   Configuration getConf();
+
+  /**
+   * Get the audit span this object was created with.
+   * @return the audit span
+   */
+  AuditSpan getAuditSpan();
 
   /**
    * Create a S3 Select request for the destination path.

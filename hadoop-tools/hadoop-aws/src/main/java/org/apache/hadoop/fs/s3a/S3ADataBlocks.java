@@ -175,13 +175,14 @@ final class S3ADataBlocks {
     /**
      * Create a block.
      *
-     * @param key of s3 object being written to
+     * @param spanId id of the audit span
+     * @param key key of s3 object being written to
      * @param index index of block
      * @param limit limit of the block.
      * @param statistics stats to work with
      * @return a new block.
      */
-    abstract DataBlock create(String key, long index, long limit,
+    abstract DataBlock create(String spanId, String key, long index, long limit,
         BlockOutputStreamStatistics statistics)
         throws IOException;
 
@@ -392,7 +393,7 @@ final class S3ADataBlocks {
     }
 
     @Override
-    DataBlock create(String key, long index, long limit,
+    DataBlock create(String spanId, String key, long index, long limit,
         BlockOutputStreamStatistics statistics)
         throws IOException {
       Preconditions.checkArgument(limit > 0,
@@ -517,7 +518,7 @@ final class S3ADataBlocks {
     }
 
     @Override
-    ByteBufferBlock create(String key, long index, long limit,
+    ByteBufferBlock create(String spanId, String key, long index, long limit,
         BlockOutputStreamStatistics statistics)
         throws IOException {
       Preconditions.checkArgument(limit > 0,
@@ -809,6 +810,7 @@ final class S3ADataBlocks {
     /**
      * Create a temp file and a {@link DiskBlock} instance to manage it.
      *
+     * @param spanId id of the audit span
      * @param key of the s3 object being written
      * @param index block index
      * @param limit limit of the block. -1 means "no limit"
@@ -817,14 +819,14 @@ final class S3ADataBlocks {
      * @throws IOException IO problems
      */
     @Override
-    DataBlock create(String key, long index,
+    DataBlock create(String spanId, String key, long index,
         long limit,
         BlockOutputStreamStatistics statistics)
         throws IOException {
       Preconditions.checkArgument(limit != 0,
           "Invalid block size: %d [%s]", limit, key);
       File destFile = getOwner()
-          .createTmpFileForWrite(String.format("s3ablock-%04d-%s-", index, escapeS3Key(key)),
+          .createTmpFileForWrite(String.format("s3ablock-%04d-%s-%s-", index, spanId, escapeS3Key(key)),
               limit, getOwner().getConf());
       return new DiskBlock(destFile, limit, index, statistics);
     }
