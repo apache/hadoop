@@ -220,7 +220,11 @@ public class NodesListManager extends CompositeService implements
 
   public void refreshNodes(Configuration yarnConf)
       throws IOException, YarnException {
-    refreshNodes(yarnConf, false);
+    try {
+      refreshNodes(yarnConf, false);
+    } catch (YarnException | IOException ex) {
+      disableHostsFileReader(ex);
+    }
   }
 
   public void refreshNodes(Configuration yarnConf, boolean graceful)
