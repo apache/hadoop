@@ -725,6 +725,11 @@ class S3ABlockOutputStream extends OutputStream implements
 
   /**
    * Shared processing of Syncable operation reporting/downgrade.
+   *
+   * Syncable API is not supported, so calls to hsync/hflush will throw an UnsupportedOperationException unless the
+   * stream was constructed with {@link #downgradeSyncableExceptions} set to true, in which case the stream is flushed.
+   * @throws IOException IO Problem
+   * @throws UnsupportedOperationException if downgrade syncable exceptions is set to false
    */
   private void handleSyncableInvocation() throws IOException {
     final UnsupportedOperationException ex
