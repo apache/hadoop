@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.test.MinimalWriteOperationHelperCallbacks;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.util.Progressable;
 import org.junit.Before;
 import org.junit.Test;
@@ -62,6 +63,9 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
         mock(S3ADataBlocks.BlockFactory.class);
     long blockSize = Constants.DEFAULT_MULTIPART_SIZE;
     WriteOperationHelper oHelper = mock(WriteOperationHelper.class);
+    AuditSpan auditSpan = mock(AuditSpan.class);
+    when(auditSpan.getSpanId()).thenReturn("spanId");
+    when(oHelper.getAuditSpan()).thenReturn(auditSpan);
     PutTracker putTracker = mock(PutTracker.class);
     final S3ABlockOutputStream.BlockOutputStreamBuilder builder =
         S3ABlockOutputStream.builder()
