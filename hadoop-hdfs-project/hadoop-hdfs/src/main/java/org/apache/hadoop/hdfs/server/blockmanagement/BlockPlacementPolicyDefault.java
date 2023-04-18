@@ -82,6 +82,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     NOT_IN_SERVICE("the node is not in service"),
     NODE_STALE("the node is stale"),
     NODE_TOO_BUSY("the node is too busy"),
+    NODE_TOO_BUSY_BY_VOLUME("the node is too busy based on volume load"),
     TOO_MANY_NODES_ON_RACK("the rack has too many chosen nodes"),
     NOT_ENOUGH_STORAGE_SPACE("not enough storage space to place the block"),
     NO_REQUIRED_STORAGE_TYPE("required storage types are unavailable"),
@@ -101,6 +102,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   protected boolean considerLoad;
   private boolean considerLoadByStorageType;
   protected double considerLoadFactor;
+  private boolean considerLoadByVolume = false;
   private boolean preferLocalNode;
   private boolean dataNodePeerStatsEnabled;
   private volatile boolean excludeSlowNodesEnabled;
@@ -131,6 +133,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     this.considerLoadFactor = conf.getDouble(
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_FACTOR,
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_FACTOR_DEFAULT);
+    this.considerLoadByVolume = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYVOLUME_KEY,
+        DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYVOLUME_DEFAULT
+    );
     this.stats = stats;
     this.clusterMap = clusterMap;
     this.host2datanodeMap = host2datanodeMap;
@@ -1006,6 +1012,16 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       logNodeIsNotChosen(node, NodeNotChosenReason.NODE_TOO_BUSY,
           "(load: " + nodeLoad + " > " + maxLoad + ")");
       return true;
+    }
+    if (considerLoadByVolume) {
+      final int numVolumesAvailable = node.getNumVolumesAvailable();
+      final double maxLoadForVolumes = considerLoadFactor * numVolumesAvailable *
+          stats.getInServiceXceiverAverageForVolume();
+      if (maxLoadForVolumes > 0.0 && nodeLoad > maxLoadForVolumes) {
+        logNodeIsNotChosen(node, NodeNotChosenReason.NODE_TOO_BUSY_BY_VOLUME,
+            "(load: " + nodeLoad + " > " + maxLoadForVolumes + ") ");
+        return true;
+      }
     }
     return false;
   }

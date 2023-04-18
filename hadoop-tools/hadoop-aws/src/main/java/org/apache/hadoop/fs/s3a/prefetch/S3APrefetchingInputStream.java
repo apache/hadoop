@@ -27,9 +27,11 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
@@ -79,7 +81,8 @@ public class S3APrefetchingInputStream
    * @param s3Attributes attributes of the S3 object being read.
    * @param client callbacks used for interacting with the underlying S3 client.
    * @param streamStatistics statistics for this stream.
-   *
+   * @param conf the configuration.
+   * @param localDirAllocator the local dir allocator instance retrieved from S3A FS.
    * @throws IllegalArgumentException if context is null.
    * @throws IllegalArgumentException if s3Attributes is null.
    * @throws IllegalArgumentException if client is null.
@@ -88,7 +91,9 @@ public class S3APrefetchingInputStream
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
       S3AInputStream.InputStreamCallbacks client,
-      S3AInputStreamStatistics streamStatistics) {
+      S3AInputStreamStatistics streamStatistics,
+      Configuration conf,
+      LocalDirAllocator localDirAllocator) {
 
     Validate.checkNotNull(context, "context");
     Validate.checkNotNull(s3Attributes, "s3Attributes");
@@ -114,7 +119,9 @@ public class S3APrefetchingInputStream
           context,
           s3Attributes,
           client,
-          streamStatistics);
+          streamStatistics,
+          conf,
+          localDirAllocator);
     }
   }
 
