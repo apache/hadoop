@@ -195,6 +195,12 @@ public class ITestAzureBlobFileSystemRename extends
     Assert.assertTrue(fs.exists(new Path("/src2")));
   }
 
+  @Test
+  public void testRenameNotFoundBlobToEmptyRoot() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    Assert.assertFalse(fs.rename(new Path("/file"), new Path("/")));
+  }
+
   @Test(expected = IOException.class)
   public void testRenameBlobToDstWithColonInPath() throws Exception{
     AzureBlobFileSystem fs = getFileSystem();

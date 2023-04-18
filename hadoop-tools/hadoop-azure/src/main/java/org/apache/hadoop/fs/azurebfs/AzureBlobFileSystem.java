@@ -448,7 +448,7 @@ public class AzureBlobFileSystem extends FileSystem
     // special case 2:
     // rename under same folder;
     if (makeQualified(parentFolder).equals(qualifiedDstPath)) {
-      PathInformation pathInformation = getPathInformation(qualifiedDstPath,
+      PathInformation pathInformation = getPathInformation(qualifiedSrcPath,
           tracingContext);
       return pathInformation.getPathExists();
     }
