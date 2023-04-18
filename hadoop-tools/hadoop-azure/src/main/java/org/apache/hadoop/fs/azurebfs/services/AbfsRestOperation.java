@@ -289,7 +289,6 @@ public class AbfsRestOperation {
         if (!(operationType.name().equals(PUT_BLOCK_LIST))) {
           incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
         }
-        incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
       }
 
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
