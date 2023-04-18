@@ -643,7 +643,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
 
       // This handling makes sure that if request to create file for an existing directory comes that should fail.
-      if (prefixMode == PrefixMode.BLOB && isFile) {
+      if (getPrefixMode() == PrefixMode.BLOB && isFile) {
         List<BlobProperty> blobList = getListBlobs(path, path.toUri().getPath() + FORWARD_SLASH,
                 tracingContext, 2, false);
         if (blobList.size() > 0 || checkIsDirectory(path, tracingContext)) {
