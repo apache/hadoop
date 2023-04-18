@@ -135,12 +135,12 @@ public class RouterAdmin extends Configured implements Tool {
     System.out.println(usage);
   }
 
-  private void printUsage(String cmd) {
+  private static void printUsage(String cmd) {
     String usage = getUsage(cmd);
     System.out.println(usage);
   }
 
-  private String getUsage(String cmd) {
+  private static String getUsage(String cmd) {
     if (cmd == null) {
       String[] commands =
           {"-add", "-addall", "-update", "-rm", "-ls", "-getDestination", "-setQuota",
@@ -522,7 +522,7 @@ public class RouterAdmin extends Configured implements Tool {
    * point is to be added.
    * @return AddMountAttributes object.
    */
-  private AddMountAttributes getAddMountAttributes(String[] parameters, int i,
+  private static AddMountAttributes getAddMountAttributes(String[] parameters, int i,
       boolean isMultipleAdd) {
     // Mandatory parameters
     String mount = parameters[i++];
