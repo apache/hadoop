@@ -325,7 +325,7 @@ public class AzureBlobFileSystem extends FileSystem
     try {
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.CREATE, overwrite, tracingHeaderFormat, listener);
-      OutputStream outputStream = abfsStore.createFile(qualifiedPath, true, statistics, overwrite,
+      OutputStream outputStream = abfsStore.createFile(qualifiedPath, statistics, overwrite,
           permission == null ? FsPermission.getFileDefault() : permission,
           FsPermission.getUMask(getConf()), tracingContext, null);
       statIncrement(FILES_CREATED);
@@ -584,23 +584,11 @@ public class AzureBlobFileSystem extends FileSystem
 
     try {
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
-          fileSystemId, FSOperationType.MKDIR, false, tracingHeaderFormat,
-          listener);
-      if (prefixMode == PrefixMode.BLOB) {
-        checkParentChainForFile(qualifiedPath, tracingContext);
-
-        HashMap<String, String> metadata = new HashMap<>();
-        metadata.put(X_MS_META_HDI_ISFOLDER, TRUE);
-        abfsStore.createFile(
-                qualifiedPath, false, statistics, true,
-                permission == null ? FsPermission.getFileDefault() : permission,
-                FsPermission.getUMask(getConf()), tracingContext, metadata);
-      } else {
-        abfsStore.createDirectory(
-                qualifiedPath,
-                permission == null ? FsPermission.getDirDefault() : permission,
-                FsPermission.getUMask(getConf()), tracingContext);
-      }
+              fileSystemId, FSOperationType.MKDIR, false, tracingHeaderFormat,
+              listener);
+      abfsStore.createDirectory(qualifiedPath, statistics,
+              permission == null ? FsPermission.getDirDefault() : permission,
+              FsPermission.getUMask(getConf()), tracingContext);
       statIncrement(DIRECTORIES_CREATED);
       return true;
     } catch (AzureBlobFileSystemException ex) {
@@ -609,74 +597,6 @@ public class AzureBlobFileSystem extends FileSystem
     }
   }
 
-  /**
-   * Checks for the entire parent hierarchy and returns if any directory exists and
-   * throws an exception if any file exists.
-   * @param path path to check the hierarchy for.
-   * @param tracingContext the tracingcontext.
-   * @throws IOException
-   */
-  private void checkParentChainForFile(Path path, TracingContext tracingContext) throws IOException {
-    if (directoryExists(path, tracingContext)) {
-      return;
-    }
-    for (Path current = path.getParent(), parent = current.getParent();
-         parent != null; // Stop when you get to the root
-         current = parent, parent = current.getParent()) {
-      if (directoryExists(current, tracingContext)) {
-        break;
-      }
-    }
-  }
-
-  /**
-   * Returns true if path is directory.
-   * @param path path to verify.
-   * @param tracingContext the tracingContext.
-   * @return true or false.
-   * @throws IOException
-   */
-  private boolean directoryExists(Path path, TracingContext tracingContext) throws IOException {
-    if (abfsStore.getListBlobs(path, path.toUri().getPath() + FORWARD_SLASH,
-            tracingContext, 2, false).size() > 0) {
-      return true;
-    }
-    return checkPathIsDirectory(path, tracingContext);
-  }
-
-  /**
-   * Checks if the path is directory and throws exception if it exists as a file.
-   * @param path path to check for file or directory.
-   * @param tracingContext the tracingcontext.
-   * @return true or false.
-   * @throws IOException
-   */
-  private boolean checkPathIsDirectory(Path path, TracingContext tracingContext) throws IOException {
-    AbfsRestOperation op;
-    try {
-      op = getAbfsClient().getBlobProperty(path, tracingContext);
-    } catch (AzureBlobFileSystemException ex) {
-      if (ex instanceof AbfsRestOperationException) {
-        if (((AbfsRestOperationException) ex).getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
-          throw ex;
-        }
-      }
-      return false; // return false if the path does not exist
-    }
-    if (op.hasResult()) {
-      String isFolder = op.getResult().getResponseHeader(X_MS_META_HDI_ISFOLDER);
-      boolean isDir = isFolder != null && isFolder.equalsIgnoreCase(TRUE);
-      // If the path is not a directory shows a file exists in the parent hierarchy.
-      if (!isDir) {
-        throw new AbfsRestOperationException(HTTP_CONFLICT,
-                AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
-                PATH_EXISTS,
-                null);
-      }
-      return true;
-    }
-    return false; // return false if the operation has no result
-  }
 
   @Override
   public synchronized void close() throws IOException {
@@ -1484,7 +1404,7 @@ public class AzureBlobFileSystem extends FileSystem
       case HttpURLConnection.HTTP_NOT_FOUND:
         throw (IOException) new FileNotFoundException(message)
             .initCause(exception);
-      case HTTP_CONFLICT:
+      case HttpURLConnection.HTTP_CONFLICT:
         throw (IOException) new FileAlreadyExistsException(message)
             .initCause(exception);
       case HttpURLConnection.HTTP_FORBIDDEN:
