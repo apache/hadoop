@@ -582,14 +582,14 @@ public class AzureBlobFileSystem extends FileSystem
     } catch (AzureBlobFileSystemException ex) {
       LOG.debug("Rename operation failed. ", ex);
       checkException(
-            src,
-            ex,
-            AzureServiceErrorCode.PATH_ALREADY_EXISTS,
-            AzureServiceErrorCode.INVALID_RENAME_SOURCE_PATH,
-            AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND,
-            AzureServiceErrorCode.INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE,
-            AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND,
-            AzureServiceErrorCode.INTERNAL_OPERATION_ABORT);
+              src,
+              ex,
+              AzureServiceErrorCode.PATH_ALREADY_EXISTS,
+              AzureServiceErrorCode.INVALID_RENAME_SOURCE_PATH,
+              AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND,
+              AzureServiceErrorCode.INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE,
+              AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND,
+              AzureServiceErrorCode.INTERNAL_OPERATION_ABORT);
       return false;
     }
   }
