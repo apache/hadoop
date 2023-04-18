@@ -704,7 +704,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param path path to check for file or directory.
    * @param tracingContext tracingContext.
    * @return true or false.
-   * @throws IOException
    */
   boolean checkIsDirectory(Path path, TracingContext tracingContext) throws IOException {
    BlobProperty blobProperty;
