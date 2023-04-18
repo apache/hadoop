@@ -22,19 +22,27 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.AbstractManifestCommitterTest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
-import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.apache.hadoop.util.functional.TaskPool;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
@@ -42,8 +50,14 @@ import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
 /**
  * Test {@link EntryFileIO}.
  */
-public class TestEntryFileIO extends AbstractHadoopTestBase {
+public class TestEntryFileIO extends AbstractManifestCommitterTest {
 
+  private static final Logger LOG = LoggerFactory.getLogger(
+      TestEntryFileIO.class);
+
+  /**
+   * Entry to save.
+   */
   public static final FileEntry ENTRY = new FileEntry("source", "dest", 100, "etag");
 
   /**
@@ -51,8 +65,14 @@ public class TestEntryFileIO extends AbstractHadoopTestBase {
    */
   private EntryFileIO entryFileIO;
 
+  /**
+   * Path to a test entry file.
+   */
   private File entryFile;
 
+  /**
+   * Create an entry file during setup.
+   */
   @Before
   public void setup() throws Exception {
     entryFileIO = new EntryFileIO(new Configuration());
@@ -60,7 +80,7 @@ public class TestEntryFileIO extends AbstractHadoopTestBase {
   }
 
   /**
-   * Teardown.
+   * Teardown deletes any entry file.
    * @throws Exception on any failure
    */
   @After
@@ -71,7 +91,10 @@ public class TestEntryFileIO extends AbstractHadoopTestBase {
     }
   }
 
-
+  /**
+   * Create a temp entry file and set the entryFile field to it.
+   * @throws IOException creation failure
+   */
   private void createEntryFile() throws IOException {
     setEntryFile(File.createTempFile("entry", ".seq"));
   }
@@ -86,7 +109,6 @@ public class TestEntryFileIO extends AbstractHadoopTestBase {
   private void setEntryFile(File entryFile) {
     this.entryFile = entryFile;
   }
-
 
   /**
    * Create a file with one entry, then read it back
@@ -159,7 +181,7 @@ public class TestEntryFileIO extends AbstractHadoopTestBase {
   }
 
   /**
-   * Create a file with one entry
+   * Create a file with one entry.
    */
   @Test
   public void testCreateEmptyFile() throws Throwable {
@@ -180,6 +202,19 @@ public class TestEntryFileIO extends AbstractHadoopTestBase {
         .isGreaterThan(0);
   }
 
+  @Test
+  public void testCreateInvalidWriter() throws Throwable {
+    intercept(NullPointerException.class, () ->
+        entryFileIO.launchEntryWriter(null, 1));
+  }
+
+  @Test
+  public void testCreateInvalidWriterCapacity() throws Throwable {
+    intercept(IllegalStateException.class, () ->
+        entryFileIO.launchEntryWriter(null, 0));
+  }
+
+
   /**
    * Generate lots of data and write it.
    */
@@ -190,12 +225,8 @@ public class TestEntryFileIO extends AbstractHadoopTestBase {
     int listSize = 100;
     // and the number of block writes
     int writes = 100;
-    List<FileEntry> list = new ArrayList<>(listSize);
-    for (int i = 0; i < listSize; i++) {
-      list.add(new FileEntry("source" + i, "dest" + i, i, "etag-" + i));
-    }
-    // just for debugging/regression testing
-    Assertions.assertThat(list).hasSize(listSize);
+    List<FileEntry> list = buildEntryList(listSize);
+
     int total = listSize * writes;
 
     try (EntryFileIO.EntryWriter out = entryFileIO.launchEntryWriter(createWriter(), 2)) {
@@ -232,15 +263,154 @@ public class TestEntryFileIO extends AbstractHadoopTestBase {
         .isEqualTo(total);
   }
 
-  @Test
-  public void testCreateInvalidWriter() throws Throwable {
-    intercept(NullPointerException.class, () ->
-        entryFileIO.launchEntryWriter(null, 1));
-  }
-  @Test
-  public void testCreateInvalidWriterCapacity() throws Throwable {
-    intercept(IllegalStateException.class, () ->
-        entryFileIO.launchEntryWriter(null, 0));
+  /**
+   * Build an entry list.
+   * @param listSize size of the list
+   * @return a list of entries
+   */
+  private static List<FileEntry> buildEntryList(final int listSize) {
+    List<FileEntry> list = new ArrayList<>(listSize);
+    for (int i = 0; i < listSize; i++) {
+      list.add(new FileEntry("source" + i, "dest" + i, i, "etag-" + i));
+    }
+    // just for debugging/regression testing
+    Assertions.assertThat(list).hasSize(listSize);
+    return list;
   }
 
+  /**
+   * Write lists to the output, but the stream is going to fail after a
+   * configured number of records have been written.
+   * Verify that the (blocked) submitter is woken up
+   * and that the exception was preserved for rethrowing.
+   */
+  @Test
+  public void testFailurePropagation() throws Throwable {
+
+    final int count = 4;
+    final SequenceFile.Writer writer = spyWithFailingAppend(
+        entryFileIO.createWriter(getEntryFile()), count);
+    // list of 100 entries at a time
+    // and the number of block writes
+    List<FileEntry> list = buildEntryList(1);
+
+    // small queue ensures the posting thread is blocked
+    try (EntryFileIO.EntryWriter out = entryFileIO.launchEntryWriter(writer, 2)) {
+      boolean valid = true;
+      for (int i = 0; valid && i < count * 2; i++) {
+        valid = out.enqueue(list);
+      }
+      LOG.info("queue to {} finished valid={}", out, valid);
+      out.close();
+
+      // verify the exception is as expected
+      intercept(IOException.class, "mocked", () ->
+          out.maybeRaiseWriteException());
+
+      // and verify the count of invocations.
+      Assertions.assertThat(out.getCount())
+          .describedAs("process count of %s", count)
+          .isEqualTo(count);
+    }
+  }
+
+  /**
+   * Spy on a writer with the append operation to fail after the given count of calls
+   * is reached.
+   * @param writer write.
+   * @param count number of allowed append calls.
+   * @return spied writer.
+   * @throws IOException from the signature of the append() call mocked.
+   */
+  private static SequenceFile.Writer spyWithFailingAppend(final SequenceFile.Writer writer,
+      final int count)
+      throws IOException {
+    AtomicLong limit = new AtomicLong(count);
+
+    final SequenceFile.Writer spied = Mockito.spy(writer);
+    Mockito.doAnswer((InvocationOnMock invocation) -> {
+      final Writable k = invocation.getArgument(0);
+      final Writable v = invocation.getArgument(1);
+      if (limit.getAndDecrement() > 0) {
+        writer.append(k, v);
+      } else {
+        throw new IOException("mocked");
+      }
+      return null;
+    }).when(spied).append(Mockito.any(Writable.class), Mockito.any(Writable.class));
+    return spied;
+  }
+
+
+  /**
+   * Multithreaded writing.
+   */
+  @Test
+  public void testParallelWrite() throws Throwable {
+
+    // list of 100 entries at a time
+    int listSize = 100;
+    // and the number of block writes
+    int attempts = 100;
+    List<FileEntry> list = buildEntryList(listSize);
+
+    int total = listSize * attempts;
+
+
+    try (EntryFileIO.EntryWriter out = entryFileIO.launchEntryWriter(createWriter(), 20)) {
+
+
+      TaskPool.foreach(new LongIterator(0, attempts))
+          .executeWith(getSubmitter())
+          .stopOnFailure()
+          .run(l -> {out.enqueue(list);});
+      out.close();
+      out.maybeRaiseWriteException();
+
+
+      Assertions.assertThat(out.getCount())
+          .describedAs("total elements written")
+          .isEqualTo(total);
+    }
+
+    // now read it back
+    AtomicInteger count = new AtomicInteger();
+    foreach(iterateOverEntryFile(), e -> {
+      final int elt = count.getAndIncrement();
+    });
+    Assertions.assertThat(count.get())
+        .describedAs("total elements read")
+        .isEqualTo(total);
+  }
+
+
+  /**
+   * To allow us to use TaskPool.
+   */
+  private static final class LongIterator implements RemoteIterator<Long> {
+
+    private long start;
+
+    private final long finish;
+
+    private LongIterator(final long start, final long finish) {
+      this.start = start;
+      this.finish = finish;
+    }
+
+    @Override
+    public boolean hasNext() throws IOException {
+      return start < finish;
+    }
+
+    @Override
+    public Long next() throws IOException {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      final long s = start;
+      start++;
+      return s;
+    }
+  }
 }

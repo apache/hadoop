@@ -22,7 +22,6 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -177,6 +176,35 @@ public class EntryFileIO {
     return new Path(file.toURI());
   }
 
+
+  /**
+   * Actions in the queue.
+   */
+  private enum Actions {
+    write,
+    stop
+  }
+
+
+  /**
+   * What gets queued: an action and a list of entries
+   */
+  private static final class QueueEntry {
+
+    final Actions action;
+
+    final List<FileEntry> entries;
+
+    private QueueEntry(final Actions action, List<FileEntry> entries) {
+      this.action = action;
+      this.entries = entries;
+    }
+
+    private QueueEntry(final Actions action) {
+      this(action, null);
+    }
+  }
+
   /**
    * A Writer thread takes reads from a queue containing
    * list of entries to save; these are serialized via the writer to
@@ -185,17 +213,20 @@ public class EntryFileIO {
    * for them to be written.
    * The these threads will be blocked when the queue capacity is reached.
    */
-  public final class EntryWriter implements Closeable {
+  public static final class EntryWriter implements Closeable {
 
     private final SequenceFile.Writer writer;
 
-    private final BlockingQueue<List<FileEntry>> queue;
+    private final BlockingQueue<QueueEntry> queue;
 
     /**
      * stop flag.
      */
     private final AtomicBoolean stop = new AtomicBoolean(false);
 
+    /**
+     * Is the processor thread active.
+     */
     private final AtomicBoolean active = new AtomicBoolean(false);
 
     /**
@@ -280,7 +311,7 @@ public class EntryFileIO {
       }
       if (active.get()) {
         try {
-          queue.put(entries);
+          queue.put(new QueueEntry(Actions.write, entries));
           LOG.debug("Queued {}", entries.size());
           return true;
         } catch (InterruptedException e) {
@@ -299,25 +330,36 @@ public class EntryFileIO {
      * @throws UncheckedIOException on write failure
      */
     private int processor() {
+      Thread.currentThread().setName("EntryIOWriter");
       try {
         while (!stop.get()) {
-          final List<FileEntry> entries = queue.take();
-          if (entries.isEmpty()) {
-            // exit list reached.
+          final QueueEntry queueEntry = queue.take();
+          switch (queueEntry.action) {
+          case stop:
             LOG.debug("List termination initiated");
             stop.set(true);
-          } else {
+            break;
+          case write:
+            final List<FileEntry> entries = queueEntry.entries;
             LOG.debug("Adding block of {} entries", entries.size());
             for (FileEntry entry : entries) {
               append(entry);
             }
+            break;
           }
         }
+      } catch (IOException e) {
+        LOG.debug("Write failure", e);
+        failure.set(e);
+        throw new UncheckedIOException(e);
       } catch (InterruptedException e) {
-        // assume we are stopped here
+        // being stopped implicitly
         LOG.debug("interrupted", e);
-        active.set(false);
+      } finally {
         stop.set(true);
+        active.set(false);
+        // clear the queue, so wake up on any failure mode.
+        queue.clear();
       }
       return count.get();
     }
@@ -325,27 +367,20 @@ public class EntryFileIO {
     /**
      * write one entry.
      * @param entry entry to write
-     * @throws UncheckedIOException on write failure
+     * @throws IOException on write failure
      */
-    private void append(FileEntry entry) {
-      try {
-        writer.append(NullWritable.get(), entry);
+    private void append(FileEntry entry) throws IOException {
+      writer.append(NullWritable.get(), entry);
 
-        final int c = count.incrementAndGet();
-        LOG.trace("Added entry #{}: {}", c, entry);
-      } catch (IOException e) {
-        LOG.debug("Write failure", e);
-        failure.set(e);
-        throw new UncheckedIOException(e);
-      }
+      final int c = count.incrementAndGet();
+      LOG.trace("Added entry #{}: {}", c, entry);
     }
 
     /**
-     * Close: stop accepting new writes, wait for queued writes to complete
+     * Close: stop accepting new writes, wait for queued writes to complete.
      * @throws IOException failure closing that writer, or somehow the future
      * raises an IOE which isn't caught for later.
      */
-
     @Override
     public void close() throws IOException {
 
@@ -357,18 +392,21 @@ public class EntryFileIO {
         return;
       }
       LOG.debug("Shutting down writer");
-      // signal queue closure by queue an empty list
+      // signal queue closure by queuing a stop option.
+      // this is added at the end of the list of queued blocks,
+      // of which are written.
       try {
-        queue.put(new ArrayList<>());
+        queue.put(new QueueEntry(Actions.stop));
       } catch (InterruptedException e) {
         Thread.interrupted();
       }
       try {
         // wait for the op to finish.
-        int total = FutureIO.awaitFuture(future, 1, TimeUnit.MINUTES);
+        int total = FutureIO.awaitFuture(future, 30, TimeUnit.SECONDS);
         LOG.debug("Processed {} files", total);
         executor.shutdown();
       } catch (TimeoutException e) {
+        LOG.warn("Timeout waiting for write thread to finish");
         // trouble. force close
         executor.shutdownNow();
         // close the stream
@@ -399,6 +437,7 @@ public class EntryFileIO {
           '}';
     }
   }
+
 
   /**
    * Iterator to retrieve file entries from the sequence file.

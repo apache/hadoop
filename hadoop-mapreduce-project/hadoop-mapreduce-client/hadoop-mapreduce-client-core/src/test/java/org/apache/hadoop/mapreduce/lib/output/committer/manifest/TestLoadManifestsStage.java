@@ -123,7 +123,8 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     executeTaskAttempts(taskAttemptCount, filesPerTaskAttempt);
 
     IOStatisticsSnapshot heapInfo = new IOStatisticsSnapshot();
-    addHeapInformation(heapInfo, "initial");
+
+    heapinfo(heapInfo, "initial");
 
     LOG.info("Loading in the manifests");
 
@@ -140,7 +141,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     LOG.info("\nJob statistics after loading {}",
         ioStatisticsToPrettyString(getStageStatistics()));
     LOG.info("Heap size = {}", heapSize());
-    addHeapInformation(heapInfo, "load.manifests");
+    heapinfo(heapInfo, "load.manifests");
 
 
     Assertions.assertThat(summary.getManifestCount())
@@ -165,7 +166,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
         stageConfig)
         .apply(loadManifestsResult.getLoadedManifestData().getDirectories())
         .getCreatedDirectories();
-    addHeapInformation(heapInfo, "create.directories");
+    heapinfo(heapInfo, "create.directories");
 
     // but after the merge process, only one per generated file output
     // dir exists
@@ -177,7 +178,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     // go straight to cleanup
     new CleanupJobStage(stageConfig).apply(
         new CleanupJobStage.Arguments("", true, true, false));
-    addHeapInformation(heapInfo, "cleanup");
+    heapinfo(heapInfo, "cleanup");
 
     ManifestSuccessData success = createManifestOutcome(stageConfig, OP_STAGE_JOB_COMMIT);
     success.snapshotIOStatistics(getStageStatistics());
@@ -195,6 +196,16 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     ManifestPrinter showManifest = new ManifestPrinter();
     ManifestSuccessData manifestSuccessData =
         showManifest.loadAndPrintManifest(summaryFS, path);
+  }
+
+  /**
+   * Force a GC then add heap info.
+   * @param stats stats to update
+   * @param stage stage name
+   */
+  private static void heapinfo(final IOStatisticsSnapshot stats, final String stage) {
+    System.gc();
+    addHeapInformation(stats, stage);
   }
 
 }

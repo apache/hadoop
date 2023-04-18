@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
-import java.util.Map;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -55,8 +54,6 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.JOB_TASK_MANIFEST_SUBDIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_CLASSNAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_SUFFIX;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_PROCESSORS;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_PROCESSORS_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_STORE_OPERATIONS_CLASS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SPARK_WRITE_UUID;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUMMARY_FILENAME_FORMAT;
@@ -235,12 +232,10 @@ public final class ManifestCommitterSupport {
    */
   public static void addHeapInformation(IOStatisticsSetters ioStatisticsSetters,
       String stage) {
-    // force a gc. bit of bad form but it makes for better numbers
-    System.gc();
     final long totalMemory = Runtime.getRuntime().totalMemory();
+    final long freeMemory = Runtime.getRuntime().freeMemory();
     final String prefix = "stage.";
     ioStatisticsSetters.setGauge(prefix + stage + "." + TOTAL_MEMORY, totalMemory);
-    final long freeMemory = Runtime.getRuntime().freeMemory();
     ioStatisticsSetters.setGauge(prefix + stage + "." + FREE_MEMORY, freeMemory);
     ioStatisticsSetters.setGauge(prefix + stage + "." + HEAP_MEMORY, totalMemory - freeMemory);
   }
