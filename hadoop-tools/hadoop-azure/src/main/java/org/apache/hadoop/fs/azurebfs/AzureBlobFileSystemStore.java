@@ -140,7 +140,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYP
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_PLUS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_STAR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UNDERSCORE;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VERSION;
@@ -148,7 +147,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.PATH_EXISTS;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_SOURCE;
@@ -613,8 +611,31 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
-  public OutputStream createFile(final Path path, final boolean isFile,
-      final FileSystem.Statistics statistics, final boolean overwrite,
+  /**
+   * Checks if we are creating a normal blob or markerFile.
+   * @param metadata takes metadata as param.
+   * @return true or false.
+   */
+  private boolean checkIsBlobOrMarker(HashMap<String, String> metadata) {
+    return metadata != null && metadata.containsKey(X_MS_META_HDI_ISFOLDER) &&
+            metadata.get(X_MS_META_HDI_ISFOLDER).equalsIgnoreCase(TRUE);
+  }
+
+  private AbfsRestOperation createPath(final String path, final boolean isFile, final boolean overwrite,
+                                      final String permission, final String umask,
+                                      final boolean isAppendBlob, final String eTag,
+                                      TracingContext tracingContext) throws AzureBlobFileSystemException {
+    return client.createPath(path, isFile, overwrite, permission, umask, isAppendBlob, eTag, tracingContext);
+  }
+
+  public AbfsRestOperation createPathBlob(final String path, final boolean isFile, final boolean overwrite,
+                                          final HashMap<String, String> metadata,
+                                          final String eTag,
+                                          TracingContext tracingContext) throws AzureBlobFileSystemException {
+    return client.createPathBlob(path, isFile, overwrite, metadata, eTag, tracingContext);
+  }
+
+  public OutputStream createFile(final Path path, final FileSystem.Statistics statistics, final boolean overwrite,
       final FsPermission permission, final FsPermission umask,
       TracingContext tracingContext, HashMap<String, String> metadata) throws IOException {
     try (AbfsPerfInfo perfInfo = startTracking("createFile", "createPath")) {
@@ -642,18 +663,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         triggerConditionalCreateOverwrite = true;
       }
 
-      // This handling makes sure that if request to create file for an existing directory comes that should fail.
-      if (getPrefixMode() == PrefixMode.BLOB && isFile) {
-        List<BlobProperty> blobList = getListBlobs(path, path.toUri().getPath() + FORWARD_SLASH,
-                tracingContext, 2, false);
-        if (blobList.size() > 0 || checkIsDirectory(path, tracingContext)) {
-          throw new AbfsRestOperationException(HTTP_CONFLICT,
-                  AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
-                  PATH_EXISTS,
-                  null);
-        }
-      }
-
       AbfsRestOperation op;
       if (triggerConditionalCreateOverwrite) {
         op = conditionalCreateOverwriteFile(relativePath,
@@ -667,19 +676,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       } else {
         if (getPrefixMode() == PrefixMode.BLOB) {
-          op = client.createPathBlob(relativePath, isFile,
-                  overwrite,
-                  metadata,
-                  null,
-                  tracingContext);
+          boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
+          op = createPathBlob(relativePath, isNormalBlob, overwrite, metadata, null, tracingContext);
         } else {
-          op = client.createPath(relativePath, isFile,
-                  overwrite,
-                  isNamespaceEnabled ? getOctalNotation(permission) : null,
-                  isNamespaceEnabled ? getOctalNotation(umask) : null,
-                  isAppendBlob,
-                  null,
-                  tracingContext);
+          op = createPath(relativePath, true, overwrite, isNamespaceEnabled ? getOctalNotation(permission) : null,
+                  isNamespaceEnabled ? getOctalNotation(umask) : null, isAppendBlob, null, tracingContext);
         }
       }
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
@@ -705,7 +706,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @return true or false.
    * @throws IOException
    */
-  private boolean checkIsDirectory(Path path, TracingContext tracingContext) throws IOException {
+  boolean checkIsDirectory(Path path, TracingContext tracingContext) throws IOException {
     AbfsRestOperation op = null;
     try {
       op = client.getBlobProperty(path, tracingContext);
@@ -748,11 +749,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // avoided for cases when no pre-existing file is present (major portion
       // of create file traffic falls into the case of no pre-existing file).
       if (getPrefixMode() == PrefixMode.BLOB) {
-        op = client.createPathBlob(relativePath, true, false, metadata,
-                null, tracingContext);
+        boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
+        op = createPathBlob(relativePath, isNormalBlob, false, metadata, null, tracingContext);
       } else {
-        op = client.createPath(relativePath, true, false, permission, umask,
-                isAppendBlob, null, tracingContext);
+        op = createPath(relativePath, true, false, permission, umask, isAppendBlob, null, tracingContext);
       }
 
     } catch (AbfsRestOperationException e) {
@@ -778,11 +778,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         try {
           // overwrite only if eTag matches with the file properties fetched before.
           if (getPrefixMode() == PrefixMode.BLOB) {
-            op = client.createPathBlob(relativePath, true, true, metadata,
-                    eTag, tracingContext);
+            boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
+            op = createPathBlob(relativePath, isNormalBlob, true, metadata, eTag, tracingContext);
           } else {
-            op = client.createPath(relativePath, true, true, permission, umask,
-                    isAppendBlob, eTag, tracingContext);
+            op = createPath(relativePath, true, true, permission, umask, isAppendBlob, eTag, tracingContext);
           }
         } catch (AbfsRestOperationException ex) {
           if (ex.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {

@@ -627,7 +627,7 @@ public class ITestAzureBlobFileSystemCreate extends
     Path testPath = new Path("testFile");
     intercept(
         exceptionClass,
-        () -> abfsStore.createFile(testPath, true, null, true, permission, umask,
+        () -> abfsStore.createFile(testPath, null, true, permission, umask,
             getTestTracingContext(getFileSystem(), true), null));
   }
 

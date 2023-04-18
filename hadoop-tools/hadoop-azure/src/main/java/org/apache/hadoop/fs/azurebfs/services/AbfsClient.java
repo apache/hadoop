@@ -456,7 +456,7 @@ public class AbfsClient implements Closeable {
         requestHeaders.add(new AbfsHttpHeader(entry.getKey(), entry.getValue()));
       }
     }
-    requestHeaders.add(new AbfsHttpHeader(CONTENT_LENGTH, "0"));
+    requestHeaders.add(new AbfsHttpHeader(CONTENT_LENGTH, ZERO));
     requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_TYPE, BLOCK_BLOB_TYPE));
     final AbfsRestOperation op = new AbfsRestOperation(
             AbfsRestOperationType.PutBlob,

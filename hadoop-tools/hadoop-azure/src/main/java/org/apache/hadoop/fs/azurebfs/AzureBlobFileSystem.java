@@ -42,6 +42,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.azurebfs.services.BlobProperty;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -103,14 +104,17 @@ import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
+import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.PATH_EXISTS;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
@@ -300,6 +304,19 @@ public class AzureBlobFileSystem extends FileSystem
             open(path, Optional.of(parameters.getOptions())));
   }
 
+  // This handling makes sure that if request to create file for an existing directory or subpath
+  // comes that should fail.
+  private void validatePathOrSubPathDoesNotExist(final Path path, TracingContext tracingContext) throws IOException {
+    List<BlobProperty> blobList = abfsStore.getListBlobs(path, null,
+            tracingContext, 2, true);
+    if (blobList.size() > 0 || abfsStore.checkIsDirectory(path, tracingContext)) {
+      throw new AbfsRestOperationException(HTTP_CONFLICT,
+              AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
+              PATH_EXISTS,
+              null);
+    }
+  }
+
   @Override
   public FSDataOutputStream create(final Path f, final FsPermission permission, final boolean overwrite, final int bufferSize,
       final short replication, final long blockSize, final Progressable progress) throws IOException {
@@ -326,8 +343,12 @@ public class AzureBlobFileSystem extends FileSystem
       fileOverwrite = true;
     }
 
+    if (prefixMode == PrefixMode.BLOB) {
+      validatePathOrSubPathDoesNotExist(qualifiedPath, tracingContext);
+    }
+
     try {
-      OutputStream outputStream = abfsStore.createFile(qualifiedPath, true, statistics, fileOverwrite,
+      OutputStream outputStream = abfsStore.createFile(qualifiedPath,statistics, fileOverwrite,
           permission == null ? FsPermission.getFileDefault() : permission,
           FsPermission.getUMask(getConf()), tracingContext, null);
       statIncrement(FILES_CREATED);
