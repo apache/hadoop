@@ -1368,6 +1368,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   File createTmpFileForWrite(String pathStr, long size,
       Configuration conf) throws IOException {
+    initLocalDirAllocatorIfNotInitialized(conf);
+    Path path = directoryAllocator.getLocalPathForWrite(pathStr,
+        size, conf);
+    File dir = new File(path.getParent().toUri().getPath());
+    String prefix = path.getName();
+    // create a temp file on this directory
+    return File.createTempFile(prefix, null, dir);
+  }
+
+  /**
+   * Initialize dir allocator if not already initialized.
+   *
+   * @param conf The Configuration object.
+   */
+  private void initLocalDirAllocatorIfNotInitialized(Configuration conf) {
     if (directoryAllocator == null) {
       synchronized (this) {
         String bufferDir = conf.get(BUFFER_DIR) != null
@@ -1375,12 +1390,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         directoryAllocator = new LocalDirAllocator(bufferDir);
       }
     }
-    Path path = directoryAllocator.getLocalPathForWrite(pathStr,
-        size, conf);
-    File dir = new File(path.getParent().toUri().getPath());
-    String prefix = path.getName();
-    // create a temp file on this directory
-    return File.createTempFile(prefix, null, dir);
   }
 
   /**
@@ -1573,12 +1582,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("Opening '{}'", readContext);
 
     if (this.prefetchEnabled) {
+      Configuration configuration = getConf();
+      initLocalDirAllocatorIfNotInitialized(configuration);
       return new FSDataInputStream(
           new S3APrefetchingInputStream(
               readContext.build(),
               createObjectAttributes(path, fileStatus),
               createInputStreamCallbacks(auditSpan),
-              inputStreamStats));
+              inputStreamStats,
+              configuration,
+              directoryAllocator));
     } else {
       return new FSDataInputStream(
           new S3AInputStream(
