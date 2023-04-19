@@ -111,6 +111,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
+import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
@@ -245,6 +246,7 @@ public class AzureBlobFileSystem extends FileSystem
     sb.append("uri=").append(uri);
     sb.append(", user='").append(abfsStore.getUser()).append('\'');
     sb.append(", primaryUserGroup='").append(abfsStore.getPrimaryGroup()).append('\'');
+    sb.append("[" + CAPABILITY_SAFE_READAHEAD + "]");
     sb.append('}');
     return sb.toString();
   }
@@ -319,7 +321,7 @@ public class AzureBlobFileSystem extends FileSystem
           fileSystemId, FSOperationType.CREATE, overwrite, tracingHeaderFormat, listener);
       OutputStream outputStream = abfsStore.createFile(qualifiedPath, statistics, overwrite,
           permission == null ? FsPermission.getFileDefault() : permission,
-          FsPermission.getUMask(getConf()), tracingContext);
+          FsPermission.getUMask(getConf()), tracingContext, null);
       statIncrement(FILES_CREATED);
       return new FSDataOutputStream(outputStream, statistics);
     } catch(AzureBlobFileSystemException ex) {
@@ -576,11 +578,11 @@ public class AzureBlobFileSystem extends FileSystem
 
     try {
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
-          fileSystemId, FSOperationType.MKDIR, false, tracingHeaderFormat,
-          listener);
-      abfsStore.createDirectory(qualifiedPath,
-          permission == null ? FsPermission.getDirDefault() : permission,
-          FsPermission.getUMask(getConf()), tracingContext);
+              fileSystemId, FSOperationType.MKDIR, false, tracingHeaderFormat,
+              listener);
+      abfsStore.createDirectory(qualifiedPath, statistics,
+              permission == null ? FsPermission.getDirDefault() : permission,
+              FsPermission.getUMask(getConf()), tracingContext);
       statIncrement(DIRECTORIES_CREATED);
       return true;
     } catch (AzureBlobFileSystemException ex) {
@@ -588,6 +590,7 @@ public class AzureBlobFileSystem extends FileSystem
       return true;
     }
   }
+
 
   @Override
   public synchronized void close() throws IOException {
@@ -1552,6 +1555,11 @@ public class AzureBlobFileSystem extends FileSystem
           new TracingContext(clientCorrelationId, fileSystemId,
               FSOperationType.HAS_PATH_CAPABILITY, tracingHeaderFormat,
               listener));
+
+      // probe for presence of the HADOOP-18546 readahead fix.
+    case CAPABILITY_SAFE_READAHEAD:
+      return true;
+
     default:
       return super.hasPathCapability(p, capability);
     }

@@ -57,6 +57,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.fs.azurebfs.services.BlobList;
 import org.apache.hadoop.fs.azurebfs.services.BlobProperty;
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -133,15 +134,18 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.http.client.utils.URIBuilder;
 
+import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYPHEN;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_PLUS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_STAR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UNDERSCORE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VERSION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
@@ -151,6 +155,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_STATUS;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_STATUS_DESCRIPTION;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_META_HDI_ISFOLDER;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.PATH_EXISTS;
 
 /**
  * Provides the bridging logic between Hadoop's abstract filesystem and Azure Storage.
@@ -601,10 +606,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
-  public OutputStream createFile(final Path path,
-      final FileSystem.Statistics statistics, final boolean overwrite,
+  public OutputStream createFile(final Path path, final FileSystem.Statistics statistics, final boolean overwrite,
       final FsPermission permission, final FsPermission umask,
-      TracingContext tracingContext) throws IOException {
+      TracingContext tracingContext, HashMap<String, String> metadata) throws IOException {
     try (AbfsPerfInfo perfInfo = startTracking("createFile", "createPath")) {
       boolean isNamespaceEnabled = getIsNamespaceEnabled(tracingContext);
       LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} isNamespaceEnabled: {}",
@@ -696,7 +700,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           isAppendBlob, null, tracingContext);
 
     } catch (AbfsRestOperationException e) {
-      if (e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+      if (e.getStatusCode() == HTTP_CONFLICT) {
         // File pre-exists, fetch eTag
         try {
           op = client.getPathStatus(relativePath, false, tracingContext);
@@ -790,10 +794,19 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .build();
   }
 
-  public void createDirectory(final Path path, final FsPermission permission,
+  public void createDirectory(final Path path, final FileSystem.Statistics statistics, final FsPermission permission,
       final FsPermission umask, TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
+          throws IOException {
     try (AbfsPerfInfo perfInfo = startTracking("createDirectory", "createPath")) {
+      if (getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
+        checkParentChainForFile(path, tracingContext);
+
+        HashMap<String, String> metadata = new HashMap<>();
+        metadata.put(X_MS_META_HDI_ISFOLDER, TRUE);
+        createFile(path, statistics, true,
+                permission, umask, tracingContext, metadata);
+        return;
+      }
       boolean isNamespaceEnabled = getIsNamespaceEnabled(tracingContext);
       LOG.debug("createDirectory filesystem: {} path: {} permission: {} umask: {} isNamespaceEnabled: {}",
               client.getFileSystem(),
@@ -803,15 +816,82 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               isNamespaceEnabled);
 
       boolean overwrite =
-          !isNamespaceEnabled || abfsConfiguration.isEnabledMkdirOverwrite();
+              !isNamespaceEnabled || abfsConfiguration.isEnabledMkdirOverwrite();
       final AbfsRestOperation op = client.createPath(getRelativePath(path),
-          false, overwrite,
+              false, overwrite,
               isNamespaceEnabled ? getOctalNotation(permission) : null,
               isNamespaceEnabled ? getOctalNotation(umask) : null, false, null,
               tracingContext);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }
+
+  /**
+   * Checks for the entire parent hierarchy and returns if any directory exists and
+   * throws an exception if any file exists.
+   * @param path path to check the hierarchy for.
+   * @param tracingContext the tracingcontext.
+   */
+  private void checkParentChainForFile(Path path, TracingContext tracingContext) throws IOException {
+    if (directoryExists(path, tracingContext)) {
+      return;
+    }
+    Path current = path.getParent();
+    Path parent = current.getParent();
+
+    while (parent != null) {
+      if (directoryExists(current, tracingContext)) {
+        break;
+      }
+      current = parent;
+      parent = current.getParent();
+    }
+  }
+
+  /**
+   * Returns true if path is directory.
+   * @param path path to verify.
+   * @param tracingContext the tracingContext.
+   * @return true or false.
+   * @throws IOException
+   */
+  private boolean directoryExists(Path path, TracingContext tracingContext) throws IOException {
+    if (getListBlobs(path, null, tracingContext, 2, true).size() > 0) {
+      return true;
+    }
+    return checkPathIsDirectory(path, tracingContext);
+  }
+
+  /**
+   * Checks if the path is directory and throws exception if it exists as a file.
+   * @param path path to check for file or directory.
+   * @param tracingContext the tracingcontext.
+   * @return true or false.
+   * @throws IOException
+   */
+  private boolean checkPathIsDirectory(Path path, TracingContext tracingContext) throws IOException {
+    BlobProperty blobProperty = null;
+    try {
+      blobProperty = getBlobProperty(path, tracingContext);
+    } catch (AbfsRestOperationException ex) {
+      if (ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+        throw ex;
+      }
+    }
+
+    if (blobProperty != null) {
+      boolean isDir = blobProperty.getIsDirectory();
+      if (!isDir) {
+        throw new AbfsRestOperationException(HTTP_CONFLICT,
+                AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
+                PATH_EXISTS,
+                null);
+      }
+      return true;
+    }
+    return false;
+  }
+
 
   public AbfsInputStream openFileForRead(final Path path,
       final FileSystem.Statistics statistics, TracingContext tracingContext)
@@ -865,6 +945,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withReadBufferSize(abfsConfiguration.getReadBufferSize())
             .withReadAheadQueueDepth(abfsConfiguration.getReadAheadQueueDepth())
             .withTolerateOobAppends(abfsConfiguration.getTolerateOobAppends())
+            .isReadAheadEnabled(abfsConfiguration.isReadAheadEnabled())
             .withReadSmallFilesCompletely(abfsConfiguration.readSmallFilesCompletely())
             .withOptimizeFooterRead(abfsConfiguration.optimizeFooterRead())
             .withReadAheadRange(abfsConfiguration.getReadAheadRange())

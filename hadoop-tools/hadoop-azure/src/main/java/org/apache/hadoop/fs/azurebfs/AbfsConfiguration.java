@@ -299,6 +299,11 @@ public class AbfsConfiguration{
           DefaultValue = DEFAULT_ABFS_LATENCY_TRACK)
   private boolean trackLatency;
 
+  @BooleanConfigurationValidatorAnnotation(
+      ConfigurationKey = FS_AZURE_ENABLE_READAHEAD,
+      DefaultValue = DEFAULT_ENABLE_READAHEAD)
+  private boolean enabledReadAhead;
+
   @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS,
       MinValue = 0,
       DefaultValue = DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS)
@@ -914,6 +919,15 @@ public class AbfsConfiguration{
     } catch (Exception e) {
       throw new TokenAccessProviderException("Unable to load SAS token provider class: " + e, e);
     }
+  }
+
+  public boolean isReadAheadEnabled() {
+    return this.enabledReadAhead;
+  }
+
+  @VisibleForTesting
+  void setReadAheadEnabled(final boolean enabledReadAhead) {
+    this.enabledReadAhead = enabledReadAhead;
   }
 
   public int getReadAheadRange() {
