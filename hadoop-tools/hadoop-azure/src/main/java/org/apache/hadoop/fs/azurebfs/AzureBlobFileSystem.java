@@ -612,11 +612,11 @@ public class AzureBlobFileSystem extends FileSystem
 
     try {
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
-          fileSystemId, FSOperationType.MKDIR, false, tracingHeaderFormat,
-          listener);
-      abfsStore.createDirectory(qualifiedPath,
-          permission == null ? FsPermission.getDirDefault() : permission,
-          FsPermission.getUMask(getConf()), tracingContext);
+              fileSystemId, FSOperationType.MKDIR, false, tracingHeaderFormat,
+              listener);
+      abfsStore.createDirectory(qualifiedPath, statistics,
+              permission == null ? FsPermission.getDirDefault() : permission,
+              FsPermission.getUMask(getConf()), tracingContext);
       statIncrement(DIRECTORIES_CREATED);
       return true;
     } catch (AzureBlobFileSystemException ex) {
@@ -624,6 +624,7 @@ public class AzureBlobFileSystem extends FileSystem
       return true;
     }
   }
+
 
   @Override
   public synchronized void close() throws IOException {
