@@ -23,14 +23,17 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
+
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
@@ -48,7 +51,9 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COMP_BLOCKLIST;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COMP_LIST;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_TYPE;
 
 /**
  * Represents an HTTP operation.
@@ -89,6 +94,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private long recvResponseTimeMs;
   private boolean shouldMask = false;
   private BlobList blobList;
+  private List<String> blockIdList = new ArrayList<>();
 
   private static final ThreadLocal<SAXParser> saxParserThreadLocal
       = new ThreadLocal<SAXParser>() {
@@ -163,6 +169,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
   }
 
+  public String getRequestHeaderValue(String requestHeader) {
+    return connection.getRequestProperty(requestHeader);
+  }
+
   public String getExpectedAppendPos() {
     return expectedAppendPos;
   }
@@ -187,12 +197,11 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return listResultSchema;
   }
 
-  public String getResponseHeader(String httpHeader) {
-    return connection.getHeaderField(httpHeader);
-  }
-
   public BlobList getBlobList() {
     return blobList;
+  }
+  public String getResponseHeader(String httpHeader) {
+    return connection.getHeaderField(httpHeader);
   }
 
   // Returns a trace message for the request
@@ -454,7 +463,12 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     }
   }
 
-
+  /**
+   * Parse the stream from the response and set {@link #blobList} field of this
+   * class.
+   *
+   * @param stream inputStream from the server-response.
+   */
   private void parseListBlobResponse(final InputStream stream) {
     try {
       final SAXParser saxParser = saxParserThreadLocal.get();
@@ -478,6 +492,11 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public void setRequestProperty(String key, String value) {
     this.connection.setRequestProperty(key, value);
+  }
+
+  @VisibleForTesting
+  void setConnection(HttpURLConnection connection) {
+    this.connection = connection;
   }
 
   /**

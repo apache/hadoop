@@ -36,6 +36,7 @@ public interface SASTokenProvider {
   String CREATE_DIRECTORY_OPERATION = "create-directory";
   String CREATE_FILE_OPERATION = "create-file";
   String DELETE_OPERATION = "delete";
+  String DELETE_BLOB_OPERATION = "delete-blob";
   String DELETE_RECURSIVE_OPERATION = "delete-recursive";
   String GET_ACL_OPERATION = "get-acl";
   String GET_STATUS_OPERATION = "get-status";
@@ -43,6 +44,8 @@ public interface SASTokenProvider {
   String GET_BLOB_PROPERTIES_OPERATION = "get-blob-properties";
   String LIST_OPERATION = "list";
   String LIST_BLOB_OPERATION = "list-blob";
+  String COPY_BLOB_DESTINATION = "copy-blob-dst";
+  String COPY_BLOB_SOURCE = "copy-blob-src";
   String READ_OPERATION = "read";
   String RENAME_SOURCE_OPERATION = "rename-source";
   String RENAME_DESTINATION_OPERATION = "rename-destination";
