@@ -1,21 +1,3 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.apache.hadoop.fs.azurebfs;
 
 import org.junit.Test;
@@ -25,6 +7,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 public class ITestAzcopyHelper {
+
     public void createFileUsingAzcopy(String pathFromContainerRoot) throws IOException, InterruptedException {
         // Find the hadoop-azure directory from the current working directory
         File currentDir = new File(System.getProperty("user.dir"));
@@ -34,19 +17,33 @@ public class ITestAzcopyHelper {
             if (hadoopAzureDir == null) {
                 throw new FileNotFoundException("hadoop-azure directory not found");
             }
+        } else {
+            hadoopAzureDir = currentDir;
         }
 
-        // Check if azcopy is present in the hadoop-azure directory
-        String azcopyPath = hadoopAzureDir.getAbsolutePath() + "/azcopy/azcopy";
+        // Check if azcopy directory is present in the hadoop-azure directory, create it if it doesn't exist
+        String azcopyDirPath = hadoopAzureDir.getAbsolutePath() + "/azcopy";
+        File azcopyDir = new File(azcopyDirPath);
+        if (!azcopyDir.exists()) {
+            azcopyDir.mkdir();
+        }
+
+        // Check if azcopy is present in the azcopy directory
+        String azcopyPath = azcopyDirPath + "/azcopy";
         File azcopyFile = new File(azcopyPath);
         if (!azcopyFile.exists()) {
-            // If azcopy is not present, download it
+            // If azcopy is not present, download and extract it
             String downloadUrl = "https://aka.ms/downloadazcopy-v10-linux";
-            String downloadCmd = "wget " + downloadUrl + " -O azcopy.tar.gz && tar -xf azcopy.tar.gz && rm azcopy.tar.gz";
-            String[] downloadCmdArr = { "bash", "-c", downloadCmd };
+            String downloadCmd = "wget " + downloadUrl + " -O azcopy.tar.gz && tar -xf azcopy.tar.gz -C " + azcopyDirPath + " && rm azcopy.tar.gz";
+            String[] downloadCmdArr = {"bash", "-c", downloadCmd};
             Process downloadProcess = Runtime.getRuntime().exec(downloadCmdArr);
             downloadProcess.waitFor();
-            azcopyPath = "./azcopy";
+
+            // Set the execute permission on the azcopy executable
+            String chmodCmd = "chmod +x " + azcopyPath;
+            String[] chmodCmdArr = {"bash", "-c", chmodCmd};
+            Process chmodProcess = Runtime.getRuntime().exec(chmodCmdArr);
+            chmodProcess.waitFor();
         }
 
         // Change working directory to the hadoop-azure directory
@@ -79,4 +76,3 @@ public class ITestAzcopyHelper {
         createFileUsingAzcopy("abcd");
     }
 }
-
