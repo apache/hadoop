@@ -258,7 +258,7 @@ public final class ManifestCommitterConstants {
    * Default value of {@link #OPT_WRITER_QUEUE_CAPACITY}.
    * Value {@value}.
    */
-  public static final int DEFAULT_WRITER_QUEUE_CAPACITY = 32;
+  public static final int DEFAULT_WRITER_QUEUE_CAPACITY = OPT_IO_PROCESSORS_DEFAULT;
 
   private ManifestCommitterConstants() {
   }
