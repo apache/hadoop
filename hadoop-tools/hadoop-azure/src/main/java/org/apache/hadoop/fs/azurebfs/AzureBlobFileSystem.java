@@ -46,6 +46,7 @@ import java.util.concurrent.Future;
 import javax.annotation.Nullable;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -157,6 +158,8 @@ public class AzureBlobFileSystem extends FileSystem
   @Override
   public void initialize(URI uri, Configuration configuration)
       throws IOException {
+    configuration = ProviderUtils.excludeIncompatibleCredentialProviders(
+        configuration, AzureBlobFileSystem.class);
     uri = ensureAuthority(uri, configuration);
     super.initialize(uri, configuration);
     setConf(configuration);
@@ -196,10 +199,6 @@ public class AzureBlobFileSystem extends FileSystem
 
     final AbfsConfiguration abfsConfiguration = abfsStore
         .getAbfsConfiguration();
-
-    // Ensures that configuration excludes incompatible credential providers
-    configuration = abfsConfiguration.getRawConfiguration();
-    setConf(configuration);
 
     clientCorrelationId = TracingContext.validateClientCorrelationID(
         abfsConfiguration.getClientCorrelationId());
