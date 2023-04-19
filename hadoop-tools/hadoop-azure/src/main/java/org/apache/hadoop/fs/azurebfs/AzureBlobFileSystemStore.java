@@ -617,8 +617,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @return true or false.
    */
   private boolean checkIsBlobOrMarker(HashMap<String, String> metadata) {
-    return metadata != null && metadata.containsKey(X_MS_META_HDI_ISFOLDER) &&
-            metadata.get(X_MS_META_HDI_ISFOLDER).equalsIgnoreCase(TRUE);
+    return metadata != null && TRUE.equalsIgnoreCase(metadata.get(X_MS_META_HDI_ISFOLDER));
   }
 
   private AbfsRestOperation createPath(final String path, final boolean isFile, final boolean overwrite,
@@ -709,11 +708,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    BlobProperty blobProperty;
     try {
       blobProperty = getBlobProperty(path, tracingContext);
-    } catch (AzureBlobFileSystemException ex) {
-      if (ex instanceof AbfsRestOperationException) {
-        if (((AbfsRestOperationException) ex).getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
-          throw ex;
-        }
+    } catch (AbfsRestOperationException ex) {
+      if (ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+        throw ex;
       }
       return false;
     }
@@ -923,6 +920,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withReadBufferSize(abfsConfiguration.getReadBufferSize())
             .withReadAheadQueueDepth(abfsConfiguration.getReadAheadQueueDepth())
             .withTolerateOobAppends(abfsConfiguration.getTolerateOobAppends())
+            .isReadAheadEnabled(abfsConfiguration.isReadAheadEnabled())
             .withReadSmallFilesCompletely(abfsConfiguration.readSmallFilesCompletely())
             .withOptimizeFooterRead(abfsConfiguration.optimizeFooterRead())
             .withReadAheadRange(abfsConfiguration.getReadAheadRange())

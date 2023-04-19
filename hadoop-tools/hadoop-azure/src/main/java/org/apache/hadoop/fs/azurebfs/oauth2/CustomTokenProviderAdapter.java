@@ -72,6 +72,10 @@ public final class CustomTokenProviderAdapter extends AccessTokenProvider
       ex = null;
       try {
         accessToken = adaptee.getAccessToken();
+        if (accessToken == null || accessToken.length() == 0) {
+          LOG.debug("CustomTokenProvider Access token value obtained is empty");
+          throw new IOException("The CustomTokenProvider Access token is empty");
+        }
         LOG.trace("CustomTokenProvider Access token fetch was successful with retry count {}",
             (fetchTokenRetryCount - retryCount));
       } catch (Exception e) {
