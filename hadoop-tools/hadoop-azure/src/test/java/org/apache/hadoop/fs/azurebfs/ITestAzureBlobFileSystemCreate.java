@@ -479,7 +479,7 @@ public class ITestAzureBlobFileSystemCreate extends
     intercept(
         exceptionClass,
         () -> abfsStore.createFile(testPath, null, true, permission, umask,
-            getTestTracingContext(getFileSystem(), true)));
+            getTestTracingContext(getFileSystem(), true), null));
   }
 
   private AbfsRestOperationException getMockAbfsRestOperationException(int status) {
