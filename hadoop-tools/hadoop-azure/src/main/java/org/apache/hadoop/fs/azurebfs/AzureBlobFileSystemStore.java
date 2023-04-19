@@ -830,12 +830,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     if (directoryExists(path, tracingContext)) {
       return;
     }
-    for (Path current = path.getParent(), parent = current.getParent();
-         parent != null; // Stop when you get to the root
-         current = parent, parent = current.getParent()) {
+    Path current = path.getParent();
+    Path parent = current.getParent();
+
+    while (parent != null) {
       if (directoryExists(current, tracingContext)) {
         break;
       }
+      current = parent;
+      parent = current.getParent();
     }
   }
 
