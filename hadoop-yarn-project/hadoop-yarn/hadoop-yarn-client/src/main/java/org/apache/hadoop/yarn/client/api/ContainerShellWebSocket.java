@@ -75,10 +75,10 @@ public class ContainerShellWebSocket {
   @OnWebSocketClose
   public void onClose(Session session, int status, String reason) {
     if (status==1000) {
-      LOG.info("{} closed, status: {}", session.getRemoteAddress().getHostString(), status);
+      LOG.info("{} closed, status: {}.", session.getRemoteAddress().getHostString(), status);
     } else {
       LOG.warn("{} closed, status:" +
-              " {} Reason: {}.", session.getRemoteAddress().getHostString(), status, reason);
+          " {} Reason: {}.", session.getRemoteAddress().getHostString(), status, reason);
     }
   }
 

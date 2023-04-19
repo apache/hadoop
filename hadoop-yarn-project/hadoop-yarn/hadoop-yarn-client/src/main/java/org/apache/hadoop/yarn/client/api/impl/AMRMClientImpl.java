@@ -479,11 +479,11 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("RM has confirmed changed resource allocation for container {}. " +
-                "Current resource allocation:{}. " +
-                "Remove pending change request:{}",
-                containerId,
-                changedContainer.getContainer().getResource(),
-                pendingChange.get(containerId).getValue());
+            "Current resource allocation:{}. " +
+            "Remove pending change request:{}",
+            containerId,
+            changedContainer.getContainer().getResource(),
+            pendingChange.get(containerId).getValue());
       }
       pendingChange.remove(containerId);
     }
@@ -636,11 +636,11 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     Preconditions.checkNotNull(updateContainerRequest,
         "UpdateContainerRequest cannot be null!!");
     LOG.info("Requesting Container update : container={}, updateType={}," +
-                    " targetCapability={}, targetExecType={}",
-            container,
-            updateContainerRequest.getContainerUpdateType(),
-            updateContainerRequest.getCapability(),
-            updateContainerRequest.getExecutionType());
+        " targetCapability={}, targetExecType={}",
+        container,
+        updateContainerRequest.getContainerUpdateType(),
+        updateContainerRequest.getCapability(),
+        updateContainerRequest.getExecutionType());
     if (updateContainerRequest.getCapability() != null &&
         updateContainerRequest.getExecutionType() == null) {
       validateContainerResourceChangeRequest(
@@ -942,12 +942,13 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Adding request to ask {}", resourceRequestInfo.remoteRequest);
-      LOG.debug("addResourceRequest: applicationId= priority={}" +
-                      " resourceName={} numContainers={} #asks={}",
-              priority.getPriority(),
-              resourceName,
-              resourceRequestInfo.remoteRequest.getNumContainers(),
-              ask.size());
+      LOG.debug("addResourceRequest: allocationRequestId={} priority={}" +
+          " resourceName={} numContainers={} #asks={}.",
+          resourceRequestInfo.remoteRequest.getAllocationRequestId(),
+          priority.getPriority(),
+          resourceName,
+          resourceRequestInfo.remoteRequest.getNumContainers(),
+          ask.size());
     }
   }
 
@@ -974,15 +975,15 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
 
         if (LOG.isDebugEnabled()) {
           LOG.debug("AFTER decResourceRequest: allocationRequestId={} " +
-                          "priority={} resourceName={} numContainers={} #asks={}",
-                  req.getAllocationRequestId(), priority.getPriority(),
-                  resourceName,
-                  resourceRequestInfo.remoteRequest.getNumContainers(), ask.size());
+              "priority={} resourceName={} numContainers={} #asks={}.",
+              req.getAllocationRequestId(), priority.getPriority(),
+              resourceName,
+              resourceRequestInfo.remoteRequest.getNumContainers(), ask.size());
         }
       }
     } else {
-      LOG.info("No remoteRequestTable found with allocationRequestId={}",
-              req.getAllocationRequestId());
+      LOG.info("No remoteRequestTable found with allocationRequestId={}.",
+          req.getAllocationRequestId());
     }
   }
 

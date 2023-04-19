@@ -260,7 +260,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
   public void increaseContainerResourceAsync(Container container) {
     if (!(callbackHandler instanceof AbstractCallbackHandler)) {
       LOG.error("Callback handler does not implement container resource "
-              + "increase callback methods");
+          + "increase callback methods");
       return;
     }
     AbstractCallbackHandler handler = (AbstractCallbackHandler) callbackHandler;
@@ -275,7 +275,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
       events.put(new UpdateContainerResourceEvent(container, true));
     } catch (InterruptedException e) {
       LOG.warn("Exception when scheduling the event of increasing " +
-              "resource of Container {}", container.getId());
+          "resource of Container {}", container.getId());
       handler.onIncreaseContainerResourceError(container.getId(), e);
     }
   }
@@ -299,7 +299,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
       events.put(new UpdateContainerResourceEvent(container, false));
     } catch (InterruptedException e) {
       LOG.warn("Exception when scheduling the event of " +
-              "increasing resource of Container {}.", container.getId());
+          "increasing resource of Container {}.", container.getId());
       handler.onUpdateContainerResourceError(container.getId(), e);
     }
   }
@@ -324,7 +324,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
           containerLaunchContex, autoCommit));
     } catch (InterruptedException e) {
       LOG.warn("Exception when scheduling the event of " +
-              "re-initializing of Container {}", containerId);
+          "re-initializing of Container {}", containerId);
       handler.onContainerReInitializeError(containerId, e);
     }
   }
@@ -371,7 +371,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
           null, ContainerEventType.ROLLBACK_LAST_REINIT));
     } catch (InterruptedException e) {
       LOG.warn("Exception when scheduling the event Rollback " +
-              "re-initialization of Container {}", containerId);
+          "re-initialization of Container {}", containerId);
       handler.onRollbackLastReInitializationError(containerId, e);
     }
   }
@@ -395,7 +395,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
           null, ContainerEventType.COMMIT_LAST_REINT));
     } catch (InterruptedException e) {
       LOG.warn("Exception when scheduling the event " +
-              "Commit re-initialization of Container {}", containerId);
+          "Commit re-initialization of Container {}", containerId);
       handler.onCommitLastReInitializationError(containerId, e);
     }
   }
@@ -421,7 +421,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
           ContainerEventType.QUERY_CONTAINER));
     } catch (InterruptedException e) {
       LOG.warn("Exception when scheduling the event of querying " +
-              "the status of Container {}", containerId);
+          "the status of Container {}", containerId);
       callbackHandler.onGetContainerStatusError(containerId, e);
     }
   }
