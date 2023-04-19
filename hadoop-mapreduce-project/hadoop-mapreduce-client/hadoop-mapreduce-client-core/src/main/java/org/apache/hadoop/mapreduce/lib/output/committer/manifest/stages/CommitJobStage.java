@@ -34,7 +34,6 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestS
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.LoadedManifestData;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.commons.io.FileUtils.byteCountToDisplaySize;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_BYTES_COMMITTED_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_FILES_COMMITTED_COUNT;
@@ -94,7 +93,7 @@ public class CommitJobStage extends
       LOG.info("{}: Committing job with file count: {}; total size {} bytes",
           getName(),
           summary.getFileCount(),
-          byteCountToDisplaySize(summary.getTotalFileSize()));
+          String.format("%,d", summary.getTotalFileSize()));
       addHeapInformation(heapInfo, OP_STAGE_JOB_LOAD_MANIFESTS);
 
 
@@ -178,7 +177,7 @@ public class CommitJobStage extends
       // the result
       return new Result(successPath, successData);
     } finally {
-      // cleanup
+      // cleanup; return code is ignored.
       if (loadedManifestData != null) {
         loadedManifestData.deleteEntrySequenceFile();
       }

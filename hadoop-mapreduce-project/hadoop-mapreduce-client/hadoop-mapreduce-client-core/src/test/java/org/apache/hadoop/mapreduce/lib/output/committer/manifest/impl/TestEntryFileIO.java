@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -46,6 +45,7 @@ import org.apache.hadoop.util.functional.TaskPool;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
+import static org.apache.hadoop.util.functional.RemoteIterators.rangeExcludingIterator;
 
 /**
  * Test {@link EntryFileIO}.
@@ -358,15 +358,14 @@ public class TestEntryFileIO extends AbstractManifestCommitterTest {
 
 
     try (EntryFileIO.EntryWriter out = entryFileIO.launchEntryWriter(createWriter(), 20)) {
-
-
-      TaskPool.foreach(new LongIterator(0, attempts))
+      TaskPool.foreach(rangeExcludingIterator(0, attempts))
           .executeWith(getSubmitter())
           .stopOnFailure()
-          .run(l -> {out.enqueue(list);});
+          .run(l -> {
+            out.enqueue(list);
+          });
       out.close();
       out.maybeRaiseWriteException();
-
 
       Assertions.assertThat(out.getCount())
           .describedAs("total elements written")
@@ -374,43 +373,9 @@ public class TestEntryFileIO extends AbstractManifestCommitterTest {
     }
 
     // now read it back
-    AtomicInteger count = new AtomicInteger();
-    foreach(iterateOverEntryFile(), e -> {
-      final int elt = count.getAndIncrement();
-    });
-    Assertions.assertThat(count.get())
+    Assertions.assertThat(foreach(iterateOverEntryFile(), e -> { }))
         .describedAs("total elements read")
         .isEqualTo(total);
   }
 
-
-  /**
-   * To allow us to use TaskPool.
-   */
-  private static final class LongIterator implements RemoteIterator<Long> {
-
-    private long start;
-
-    private final long finish;
-
-    private LongIterator(final long start, final long finish) {
-      this.start = start;
-      this.finish = finish;
-    }
-
-    @Override
-    public boolean hasNext() throws IOException {
-      return start < finish;
-    }
-
-    @Override
-    public Long next() throws IOException {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
-      final long s = start;
-      start++;
-      return s;
-    }
-  }
 }

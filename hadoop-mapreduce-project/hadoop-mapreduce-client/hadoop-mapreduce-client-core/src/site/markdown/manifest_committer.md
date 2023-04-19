@@ -243,7 +243,7 @@ Caveats
 
 This is a secondary scale option.
 It controls the size of the queue for storing lists of files to rename from
-the manifests loaded from the target filesystem, manifests loaded 
+the manifests loaded from the target filesystem, manifests loaded
 from a pool of worker threads, and the single thread which saves
 the entries from each manifest to an intermediate file in the local filesystem.
 

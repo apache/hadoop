@@ -514,7 +514,7 @@ public class TestJobThroughManifestCommitter
         .containsAll(successData.getFilenames());
 
     // delete an entry, repeat
-    getFileSystem().delete(validatedEntries.get(0).getDestPath());
+    getFileSystem().delete(validatedEntries.get(0).getDestPath(), false);
     intercept(OutputValidationException.class, () ->
         new ValidateRenamedFilesStage(getJobStageConfig())
             .apply(loadedManifestData.getEntrySequenceData()));

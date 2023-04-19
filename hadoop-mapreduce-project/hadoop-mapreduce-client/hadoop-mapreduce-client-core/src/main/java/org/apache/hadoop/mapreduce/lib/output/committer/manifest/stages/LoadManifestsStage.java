@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -363,6 +364,8 @@ public class LoadManifestsStage extends
 
   /**
    * Summary information.
+   * Implementation note: atomic counters are used here to keep spotbugs quiet,
+   * not because of any concurrency risks.
    */
   public static final class SummaryInfo implements IOStatisticsSource {
 
@@ -379,12 +382,12 @@ public class LoadManifestsStage extends
     /**
      * How many manifests were loaded.
      */
-    private long manifestCount;
+    private AtomicLong manifestCount = new AtomicLong();
 
     /**
      * Total number of files to rename.
      */
-    private long fileCount;
+    private AtomicLong fileCount = new AtomicLong();
 
     /**
      * Total number of directories which may need
@@ -392,12 +395,12 @@ public class LoadManifestsStage extends
      * As there is no dedup, this is likely to be
      * a (major) overestimate.
      */
-    private long directoryCount;
+    private AtomicLong directoryCount = new AtomicLong();
 
     /**
      * Total amount of data to be committed.
      */
-    private long totalFileSize;
+    private AtomicLong totalFileSize = new AtomicLong();
 
     /**
      * Get the IOStatistics.
@@ -409,19 +412,19 @@ public class LoadManifestsStage extends
     }
 
     public long getFileCount() {
-      return fileCount;
+      return fileCount.get();
     }
 
     public long getDirectoryCount() {
-      return directoryCount;
+      return directoryCount.get();
     }
 
     public long getTotalFileSize() {
-      return totalFileSize;
+      return totalFileSize.get();
     }
 
     public long getManifestCount() {
-      return manifestCount;
+      return manifestCount.get();
     }
 
     public List<String> getTaskIDs() {
@@ -433,11 +436,11 @@ public class LoadManifestsStage extends
      * @param manifest manifest to add.
      */
     public synchronized void add(TaskManifest manifest) {
-      manifestCount++;
+      manifestCount.incrementAndGet();
       iostatistics.aggregate(manifest.getIOStatistics());
-      fileCount += manifest.getFilesToCommit().size();
-      directoryCount += manifest.getDestDirectories().size();
-      totalFileSize += manifest.getTotalFileSize();
+      fileCount.addAndGet(manifest.getFilesToCommit().size());
+      directoryCount.addAndGet(manifest.getDestDirectories().size());
+      totalFileSize.addAndGet(manifest.getTotalFileSize());
       taskIDs.add(manifest.getTaskID());
     }
 
@@ -449,11 +452,11 @@ public class LoadManifestsStage extends
     public String toString() {
       final StringBuilder sb = new StringBuilder(
           "SummaryInfo{");
-      sb.append("manifestCount=").append(manifestCount);
-      sb.append(", fileCount=").append(fileCount);
-      sb.append(", directoryCount=").append(directoryCount);
+      sb.append("manifestCount=").append(getManifestCount());
+      sb.append(", fileCount=").append(getFileCount());
+      sb.append(", directoryCount=").append(getDirectoryCount());
       sb.append(", totalFileSize=").append(
-          byteCountToDisplaySize(totalFileSize));
+          byteCountToDisplaySize(getTotalFileSize()));
       sb.append('}');
       return sb.toString();
     }

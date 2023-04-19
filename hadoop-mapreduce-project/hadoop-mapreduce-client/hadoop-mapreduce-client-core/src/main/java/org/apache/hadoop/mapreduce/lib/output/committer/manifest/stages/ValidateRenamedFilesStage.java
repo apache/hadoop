@@ -139,7 +139,8 @@ public class ValidateRenamedFilesStage extends
 
       // etags, if the source had one.
       final String sourceEtag = entry.getEtag();
-      if (isNotBlank(sourceEtag)) {
+      if (getOperations().storePreservesEtagsThroughRenames(destStatus.getPath())
+          && isNotBlank(sourceEtag)) {
         final String destEtag = ManifestCommitterSupport.getEtag(destStatus);
         if (!sourceEtag.equals(destEtag)) {
           LOG.warn("Etag of dest file {}: {} does not match that of manifest entry {}",

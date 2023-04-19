@@ -26,7 +26,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.util.Preconditions;
 
-import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -298,30 +297,35 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
 
     // a countdown of 10, but the halting predicate will fail earlier
     // if the value of "count" has dropped to zero
-    final RemoteIterator<Integer> it =
+    final RemoteIterator<Long> it =
         haltableRemoteIterator(
-            new CountdownRemoteIterator(10),
+            rangeExcludingIterator(0,10),
             () -> count.get() > 0);
 
-    Assertions.assertThat(foreach(it,
-            (v) -> count.decrementAndGet()))
-        .describedAs("Count of iterations")
-        .isEqualTo(limit);
+    verifyInvoked(it, limit, (v) -> count.decrementAndGet());
   }
+
   @Test
   public void testHaltableIteratorNoHalt() throws Throwable {
 
     // a countdown of 10, but the halting predicate will fail earlier
     // if the value of "count" has dropped to zero
-    final RemoteIterator<Integer> it =
+    final int finish = 10;
+    final RemoteIterator<Long> it =
         haltableRemoteIterator(
-            new CountdownRemoteIterator(10),
+            rangeExcludingIterator(0, finish),
             () -> true);
 
-    Assertions.assertThat(foreach(it,
-            (v) -> {}))
-        .describedAs("Count of iterations")
-        .isEqualTo(10);
+    verifyInvoked(it, finish);
+  }
+
+  @Test
+  public void testRangeExcludingIterator() throws Throwable {
+    verifyInvoked(rangeExcludingIterator(0, 0), 0);
+    verifyInvoked(rangeExcludingIterator(0, -1), 0);
+    verifyInvoked(rangeExcludingIterator(0, 100), 100);
+    intercept(NoSuchElementException.class, () ->
+        rangeExcludingIterator(0, 0).next());
   }
 
   /**
@@ -364,6 +368,19 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
         .isEqualTo(length);
   }
 
+  /**
+   * Verify that the iteration completes with a given invocation count.
+   * @param it iterator
+   * @param <T> type.
+   * @param length expected size
+   */
+  protected <T> void verifyInvoked(
+      final RemoteIterator<T> it,
+      final int length)
+        throws IOException {
+    verifyInvoked(it, length, (t) -> { });
+
+  }
   /**
    * Close an iterator if it is iterable.
    * @param it iterator

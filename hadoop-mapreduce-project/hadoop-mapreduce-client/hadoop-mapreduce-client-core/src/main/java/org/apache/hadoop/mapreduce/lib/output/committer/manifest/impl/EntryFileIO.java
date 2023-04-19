@@ -181,19 +181,20 @@ public class EntryFileIO {
    * Actions in the queue.
    */
   private enum Actions {
+    /** Write the supplied list of entries. */
     write,
+    /** Stop the processor thread. */
     stop
   }
 
-
   /**
-   * What gets queued: an action and a list of entries
+   * What gets queued: an action and a list of entries.
    */
   private static final class QueueEntry {
 
-    final Actions action;
+    private final Actions action;
 
-    final List<FileEntry> entries;
+    private final List<FileEntry> entries;
 
     private QueueEntry(final Actions action, List<FileEntry> entries) {
       this.action = action;
@@ -212,11 +213,21 @@ public class EntryFileIO {
    * Other threads can queue the file entry lists from loaded manifests
    * for them to be written.
    * The these threads will be blocked when the queue capacity is reached.
+   * This is quite a complex process, with the main troublespots in the code
+   * being:
+   * - managing the shutdown
+   * - failing safely on write failures, restarting all blocked writers in the process
    */
   public static final class EntryWriter implements Closeable {
 
+    /**
+     * The destination of the output.
+     */
     private final SequenceFile.Writer writer;
 
+    /**
+     * Blocking queue of actions.
+     */
     private final BlockingQueue<QueueEntry> queue;
 
     /**
@@ -329,6 +340,7 @@ public class EntryFileIO {
      * @return count of entries written.
      * @throws UncheckedIOException on write failure
      */
+    @SuppressWarnings("SwitchStatementWithoutDefaultBranch")
     private int processor() {
       Thread.currentThread().setName("EntryIOWriter");
       try {

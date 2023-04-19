@@ -206,6 +206,16 @@ public final class RemoteIterators {
   }
 
   /**
+   * A remote iterator which simply counts up, stopping once the
+   * value is greater than the finish.
+   * This is primarily for tests or when submitting work into a TaskPool.
+   */
+  public static RemoteIterator<Long> rangeExcludingIterator(
+      final long start, final long finish) {
+    return new RangeExcludingLongIterator(start, finish);
+  }
+
+  /**
    * Build a list from a RemoteIterator.
    * @param source source iterator
    * @param <T> type
@@ -773,6 +783,49 @@ public final class RemoteIterators {
     @Override
     protected boolean sourceHasNext() throws IOException {
       return continueWork.apply() && super.sourceHasNext();
+    }
+  }
+
+  /**
+   * A remote iterator which simply counts up, stopping once the
+   * value is greater than the finish.
+   * This is primarily for tests or when submitting work into a TaskPool.
+   */
+  private static final class RangeExcludingLongIterator implements RemoteIterator<Long> {
+
+    /**
+     * Current value.
+     */
+    private long current;
+
+    /**
+     * End value.
+     */
+    private final long finish;
+
+    /**
+     * Construct.
+     * @param start start value.
+     * @param finish halt the iterator once the current value is equal to or greater than this.
+     */
+    private RangeExcludingLongIterator(final long start, final long finish) {
+      this.current = start;
+      this.finish = finish;
+    }
+
+    @Override
+    public boolean hasNext() throws IOException {
+      return current < finish;
+    }
+
+    @Override
+    public Long next() throws IOException {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      final long s = current;
+      current++;
+      return s;
     }
   }
 

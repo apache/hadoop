@@ -161,7 +161,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
       getRequiredTaskAttemptId();
       getRequiredTaskAttemptDir();
       stageName = String.format("[Task-Attempt %s]", getRequiredTaskAttemptId());
-    } else  {
+    } else {
       stageName = String.format("[Job-Attempt %s/%02d]",
           stageConfig.getJobId(),
           stageConfig.getJobAttemptNumber());
@@ -310,6 +310,15 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
           statistic,
           wait.toMillis());
     }
+  }
+
+
+  /**
+   * Get the operations callbacks.
+   * @return the operations invocable against the destination.
+   */
+  public ManifestStoreOperations getOperations() {
+    return operations;
   }
 
   @Override

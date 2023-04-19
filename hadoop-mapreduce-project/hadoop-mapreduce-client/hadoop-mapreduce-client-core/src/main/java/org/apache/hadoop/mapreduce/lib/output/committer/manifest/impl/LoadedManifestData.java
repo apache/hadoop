@@ -52,7 +52,7 @@ public final class LoadedManifestData {
   private final int fileCount;
 
   /**
-   * Data about the loaded manifests
+   * Data about the loaded manifests.
    * @param directories directories
    * @param entrySequenceData Path in local fs to the entry sequence data.
    * @param fileCount number of files.
@@ -83,7 +83,7 @@ public final class LoadedManifestData {
   }
 
   /**
-   * Get the entry sequence data as a file;
+   * Get the entry sequence data as a file.
    */
   public File getEntrySequenceFile() {
     return new File(entrySequenceData.toUri());
@@ -91,8 +91,9 @@ public final class LoadedManifestData {
 
   /**
    * Delete the entry sequence file.
+   * @return whether or not the delete was successful.
    */
-  public void deleteEntrySequenceFile() {
-    getEntrySequenceFile().delete();
+  public boolean deleteEntrySequenceFile() {
+    return getEntrySequenceFile().delete();
   }
 }
