@@ -813,11 +813,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
         String failedBlockId = "";
         BlockStatus success = BlockStatus.SUCCESS;
 
-        // If there are no entries in map, then we have nothing to flush.
-        if (getMap().size() == 0) {
-          return;
-        }
-
         int mapEntry = 0;
         // If any of the entry in the map doesn't have the status of SUCCESS, fail the flush.
         for (Map.Entry<String, BlockStatus> entry: getMap().entrySet()) {
