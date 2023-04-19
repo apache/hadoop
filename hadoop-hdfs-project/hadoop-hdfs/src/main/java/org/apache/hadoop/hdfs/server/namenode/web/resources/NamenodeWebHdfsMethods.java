@@ -1388,6 +1388,14 @@ public class NamenodeWebHdfsMethods {
       final String js = JsonUtil.toJsonString("Path", target);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
+    case GETFILELINKSTATUS: {
+      HdfsFileStatus status = cp.getFileLinkInfo(fullpath);
+      final String js = JsonUtil.toJsonString(status, true);
+      if (status == null) {
+        throw new FileNotFoundException("File does not exist: " + fullpath);
+      }
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }

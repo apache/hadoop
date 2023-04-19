@@ -59,6 +59,7 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`GETECPOLICY`](#Get_EC_Policy) (see [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).getErasureCodingPolicy)
     * [`GETSERVERDEFAULTS`](#Get_Server_Defaults) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getServerDefaults)
     * [`GETLINKTARGET`](#Get_Link_Target) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTarget)
+    * [`GETFILELINKSTATUS`](#Get_File_Link_Status) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileLinkStatus)
 *   HTTP PUT
     * [`CREATE`](#Create_and_Write_to_a_File) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).create)
     * [`MKDIRS`](#Make_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).mkdirs)
@@ -1155,6 +1156,39 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getServer
         {"Path": "/user/username/targetFile"}
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTarget
+
+### Get File Link Status
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETFILELINKSTATUS"
+
+  The client receives a response with a [`FileStatus` JSON object](#FileStatuses_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {
+            "FileStatus": {
+                "accessTime": 0,
+                "blockSize": 0,
+                "childrenNum":0,
+                "fileId": 16388,
+                "group": "supergroup",
+                "length": 0,
+                "modificationTime": 1681916788427,
+                "owner": "hadoop",
+                "pathSuffix": "",
+                "permission": "777",
+                "replication": 0,
+                "storagePolicy": 0,
+                "symlink": "/webHdfsTest/file",
+                "type": "SYMLINK"
+            }
+        }
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileLinkInfo
 
 Storage Policy Operations
 -------------------------
