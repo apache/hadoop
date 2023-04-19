@@ -95,9 +95,9 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
                 configuration.get(FS_AZURE_ABFS_ACCOUNT_NAME));
 
         // Gets the client.
-        AbfsClient testClient = Mockito.spy(TestAbfsClient.createTestClientFromCurrentContext(
+        AbfsClient testClient = TestAbfsClient.createTestClientFromCurrentContext(
                 abfsClient,
-                abfsConfiguration));
+                abfsConfiguration);
 
         byte[] buffer = getRandomBytesArray(5);
 
