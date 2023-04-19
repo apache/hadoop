@@ -435,9 +435,6 @@ public class AbfsClient implements Closeable {
                                           TracingContext tracingContext)
           throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    if (isFile) {
-      addCustomerProvidedKeyHeaders(requestHeaders);
-    }
     if (!overwrite) {
       requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, AbfsHttpConstants.STAR));
     }
