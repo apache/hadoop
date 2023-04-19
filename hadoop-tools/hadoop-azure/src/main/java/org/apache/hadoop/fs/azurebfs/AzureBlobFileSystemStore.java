@@ -52,16 +52,23 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.classification.VisibleForTesting;
+
+import org.apache.hadoop.fs.azurebfs.enums.BlobCopyProgress;
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.fs.azurebfs.services.BlobList;
 import org.apache.hadoop.fs.azurebfs.services.BlobProperty;
-import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+
+import org.apache.hadoop.fs.azurebfs.services.RenameAtomicityUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -133,6 +140,7 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.http.client.utils.URIBuilder;
 
+import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicityUtils.SUFFIX;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_FORWARD_SLASH;
@@ -140,7 +148,10 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYP
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_PLUS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_STAR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UNDERSCORE;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_ABORTED;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_FAILED;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_SUCCESS;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VERSION;
@@ -148,12 +159,15 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HBASE_ROOT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_SOURCE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_STATUS;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_STATUS_DESCRIPTION;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_META_HDI_ISFOLDER;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.COPY_BLOB_ABORTED;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.COPY_BLOB_FAILED;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.PATH_EXISTS;
 
 /**
@@ -183,6 +197,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private final IdentityTransformerInterface identityTransformer;
   private final AbfsPerfTracker abfsPerfTracker;
   private final AbfsCounters abfsCounters;
+
+  private final ExecutorService renameBlobExecutorService;
 
   /**
    * The set of directories where we should store files as append blobs.
@@ -240,6 +256,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureAtomicRenameDirs().split(AbfsHttpConstants.COMMA)));
+    this.azureAtomicRenameDirSet.add(HBASE_ROOT);
     updateInfiniteLeaseDirs();
     this.authType = abfsConfiguration.getAuthType(accountName);
     boolean usingOauth = (authType == AuthType.OAuth);
@@ -273,6 +290,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         abfsConfiguration.getMaxWriteRequestsToQueue(),
         10L, TimeUnit.SECONDS,
         "abfs-bounded");
+    if (abfsConfiguration.getBlobDirRenameMaxThread() == 0) {
+      renameBlobExecutorService = Executors.newFixedThreadPool(
+          Runtime.getRuntime()
+              .availableProcessors());
+    } else {
+      renameBlobExecutorService = Executors.newFixedThreadPool(
+          abfsConfiguration.getBlobDirRenameMaxThread());
+    }
   }
 
   /**
@@ -497,9 +522,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("setPathProperties", "setPathProperties")){
       LOG.debug("setFilesystemProperties for filesystem: {} path: {} with properties: {}",
-              client.getFileSystem(),
-              path,
-              properties);
+          client.getFileSystem(),
+          path,
+          properties);
 
       final String commaSeparatedProperties;
       try {
@@ -515,6 +540,100 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   /**
+   * Orchestrates the copying of blob from given source to a given destination.
+   * @param srcPath source path
+   * @param dstPath destination path
+   * @param tracingContext object of TracingContext used for the tracing of the
+   * server calls.
+   * @throws AzureBlobFileSystemException exception thrown from the server calls,
+   * or if it is discovered that the copying is failed or aborted.
+   */
+  @VisibleForTesting
+  void copyBlob(Path srcPath,
+      Path dstPath,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
+    AbfsRestOperation copyOp = null;
+    try {
+      copyOp = client.copyBlob(srcPath, dstPath,
+          tracingContext);
+    } catch (AbfsRestOperationException ex) {
+      if (ex.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+        final BlobProperty dstBlobProperty = getBlobProperty(dstPath,
+            tracingContext);
+        try {
+          if (dstBlobProperty.getCopySourceUrl() != null &&
+              (ROOT_PATH + client.getFileSystem() + srcPath.toUri()
+                  .getPath()).equals(
+                  new URL(dstBlobProperty.getCopySourceUrl()).toURI()
+                      .getPath())) {
+            return;
+          }
+        } catch (URISyntaxException | MalformedURLException e) {
+          throw new RuntimeException(e);
+        }
+      }
+      throw ex;
+    }
+    final String progress = copyOp.getResult()
+        .getResponseHeader(X_MS_COPY_STATUS);
+    if (COPY_STATUS_SUCCESS.equalsIgnoreCase(progress)) {
+      return;
+    }
+    final String copyId = copyOp.getResult().getResponseHeader(X_MS_COPY_ID);
+    final long pollWait = abfsConfiguration.getBlobCopyProgressPollWaitMillis();
+    while (handleCopyInProgress(dstPath, tracingContext, copyId)
+        == BlobCopyProgress.PENDING) {
+      try {
+        Thread.sleep(pollWait);
+      } catch (Exception e) {
+
+      }
+    }
+  }
+
+  /**
+   * Verifies if the blob copy is success or a failure or still in progress.
+   *
+   * @param dstPath path of the destination for the copying
+   * @param tracingContext object of tracingContext used for the tracing of the
+   * server calls.
+   * @param copyId id returned by server on the copy server-call. This id gets
+   * attached to blob and is returned by GetBlobProperties API on the destination.
+   *
+   * @return true if copying is success, false if it is still in progress.
+   *
+   * @throws AzureBlobFileSystemException exception returned in making server call
+   * for GetBlobProperties on the path. It can be thrown if the copyStatus is failure
+   * or is aborted.
+   */
+  @VisibleForTesting
+  BlobCopyProgress handleCopyInProgress(final Path dstPath,
+      final TracingContext tracingContext,
+      final String copyId) throws AzureBlobFileSystemException {
+    BlobProperty blobProperty = getBlobProperty(dstPath,
+        tracingContext);
+    if (blobProperty != null && copyId.equals(blobProperty.getCopyId())) {
+      if (COPY_STATUS_SUCCESS.equalsIgnoreCase(blobProperty.getCopyStatus())) {
+        return BlobCopyProgress.SUCCESS;
+      }
+      if (COPY_STATUS_FAILED.equalsIgnoreCase(blobProperty.getCopyStatus())) {
+        throw new AbfsRestOperationException(
+            COPY_BLOB_FAILED.getStatusCode(), COPY_BLOB_FAILED.getErrorCode(),
+            String.format("copy to path %s failed due to: %s",
+                dstPath.toUri().getPath(), blobProperty.getStatusDescription()),
+            new Exception(COPY_BLOB_FAILED.getErrorCode()));
+      }
+      if (COPY_STATUS_ABORTED.equalsIgnoreCase(blobProperty.getCopyStatus())) {
+        throw new AbfsRestOperationException(
+            COPY_BLOB_ABORTED.getStatusCode(), COPY_BLOB_ABORTED.getErrorCode(),
+            String.format("copy to path %s aborted", dstPath.toUri().getPath()),
+            new Exception(COPY_BLOB_ABORTED.getErrorCode()));
+      }
+    }
+    return BlobCopyProgress.PENDING;
+  }
+
+  /**
    * Gets the property for the blob over Blob Endpoint.
    *
    * @param blobPath blobPath for which property information is required
@@ -523,7 +642,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws AzureBlobFileSystemException exception thrown from
    * {@link AbfsClient#getBlobProperty(Path, TracingContext)} call
    */
-  private BlobProperty getBlobProperty(Path blobPath,
+  BlobProperty getBlobProperty(Path blobPath,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsRestOperation op = client.getBlobProperty(blobPath, tracingContext);
     BlobProperty blobProperty = new BlobProperty();
@@ -565,9 +684,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     List<BlobProperty> blobProperties = new ArrayList<>();
     String nextMarker = null;
     if (prefix == null) {
-      prefix = sourceDirBlobPath.toUri().getPath() + (isDefinitiveDirSearch
-          ? "/"
-          : "");
+      prefix = (!sourceDirBlobPath.isRoot()
+          ? sourceDirBlobPath.toUri().getPath()
+          : EMPTY_STRING) + (isDefinitiveDirSearch
+          ? ROOT_PATH
+          : EMPTY_STRING);
     }
     do {
       AbfsRestOperation op = client.getListBlobs(
@@ -1013,11 +1134,149 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     client.breakLease(getRelativePath(path), tracingContext);
   }
 
-  public void rename(final Path source, final Path destination, TracingContext tracingContext) throws
-          AzureBlobFileSystemException {
+  public void rename(final Path source, final Path destination,
+      final RenameAtomicityUtils renameAtomicityUtils, TracingContext tracingContext) throws
+          IOException {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
     boolean shouldContinue;
+
+    if (getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
+      LOG.debug("Rename for src: {} dst: {} for non-HNS blob-endpoint",
+          source, destination);
+      final Boolean isSrcExist;
+      final Boolean isSrcDir;
+      /*
+       * Fetch the list of blobs in the given sourcePath.
+       */
+      List<BlobProperty> srcBlobProperties = getListBlobs(source, null,
+          tracingContext, null, true);
+      BlobProperty blobPropOnSrc;
+      if (srcBlobProperties.size() > 0) {
+        LOG.debug("src {} exists and is a directory", source);
+        isSrcExist = true;
+        isSrcDir = true;
+        /*
+         * Fetch if there is a marker-blob for the source blob.
+         */
+        BlobProperty blobPropOnSrcNullable;
+        try {
+          blobPropOnSrcNullable = getBlobProperty(source, tracingContext);
+        } catch (AbfsRestOperationException ex) {
+          if (ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+            throw ex;
+          }
+          blobPropOnSrcNullable = null;
+        }
+        if (blobPropOnSrcNullable == null) {
+          /*
+           * There is no marker-blob, the client has to create marker blob before
+           * starting the rename.
+           */
+          //create marker file; add in srcBlobProperties;
+          LOG.debug("Source {} is a directory but there is no marker-blob",
+              source);
+          createDirectory(source, null, FsPermission.getDirDefault(),
+              FsPermission.getUMask(
+                  getAbfsConfiguration().getRawConfiguration()),
+              tracingContext);
+          blobPropOnSrc = new BlobProperty();
+          blobPropOnSrc.setIsDirectory(true);
+          blobPropOnSrc.setPath(source);
+        } else {
+          LOG.debug("Source {} is a directory but there is a marker-blob",
+              source);
+          blobPropOnSrc = blobPropOnSrcNullable;
+        }
+      } else {
+        LOG.debug("source {} doesn't have any blob in its hierarchy. Checking"
+            + "if there is marker blob for it.", source);
+        try {
+          blobPropOnSrc = getBlobProperty(source, tracingContext);
+        } catch (AbfsRestOperationException ex) {
+          if (ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+            throw ex;
+          }
+          blobPropOnSrc = null;
+        }
+
+        if (blobPropOnSrc != null) {
+          isSrcExist = true;
+          if (blobPropOnSrc.getIsDirectory()) {
+            LOG.debug("source {} is a marker blob", source);
+            isSrcDir = true;
+          } else {
+            LOG.debug("source {} exists but is not a marker blob", source);
+            isSrcDir = false;
+          }
+        } else {
+          LOG.debug("source {} doesn't exist", source);
+          isSrcExist = false;
+          isSrcDir = false;
+        }
+      }
+      srcBlobProperties.add(blobPropOnSrc);
+
+      if (!isSrcExist) {
+        LOG.info("source {} doesn't exists", source);
+        throw new AbfsRestOperationException(HttpURLConnection.HTTP_NOT_FOUND,
+            AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND.getErrorCode(), null,
+            null);
+      }
+      if (isSrcDir) {
+        /*
+         * If source is a directory, all the blobs in the directory have to be
+         * individually copied and then deleted at the source.
+         */
+        LOG.debug("source {} is a directory", source);
+        if (isAtomicRenameKey(source.toUri().getPath())) {
+          LOG.debug("source dir {} is an atomicRenameKey",
+              source.toUri().getPath());
+          renameAtomicityUtils.preRename(srcBlobProperties);
+        } else {
+          LOG.debug("source dir {} is not an atomicRenameKey",
+              source.toUri().getPath());
+        }
+        List<Future> futures = new ArrayList<>();
+        for (BlobProperty blobProperty : srcBlobProperties) {
+          futures.add(renameBlobExecutorService.submit(() -> {
+            try {
+              renameBlob(
+                  createDestinationPathForBlobPartOfRenameSrcDir(destination,
+                      blobProperty, source),
+                  tracingContext, blobProperty.getPath());
+            } catch (AzureBlobFileSystemException e) {
+              LOG.error(String.format("rename from %s to %s for blob %s failed",
+                  source, destination, blobProperty.getPath()), e);
+              throw new RuntimeException(e);
+            }
+          }));
+        }
+        for (Future future : futures) {
+          try {
+            future.get();
+          } catch (InterruptedException e) {
+            LOG.error(String.format("rename from %s to %s failed", source,
+                destination), e);
+            throw new RuntimeException(e);
+          } catch (ExecutionException e) {
+            LOG.error(String.format("rename from %s to %s failed", source,
+                destination), e);
+            throw new RuntimeException(e);
+          }
+        }
+        if (renameAtomicityUtils != null) {
+          renameAtomicityUtils.cleanup();
+        }
+      } else {
+        LOG.debug("source {} is not directory", source);
+        renameBlob(destination, tracingContext,
+            srcBlobProperties.get(0).getPath());
+      }
+      LOG.info("Rename from source {} to destination {} done", source,
+          destination);
+      return;
+    }
 
     if (isAtomicRenameKey(source.getName())) {
       LOG.warn("The atomic rename feature is not supported by the ABFS scheme; however rename,"
@@ -1050,6 +1309,54 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         }
       }
     } while (shouldContinue);
+  }
+
+  /**
+   * Translates the destination path for a blob part of a source directory getting
+   * renamed.
+   * @param destinationDir destination directory for the rename operation
+   * @param srcBlobProperty blob part of the source directory getting renamed
+   * @param sourceDir source directory for the rename operation
+   * @return translated path for the blob
+   */
+  private Path createDestinationPathForBlobPartOfRenameSrcDir(final Path destinationDir,
+      final BlobProperty srcBlobProperty,
+      final Path sourceDir) {
+    String destinationPathStr = destinationDir.toUri().getPath();
+    String sourcePathStr = sourceDir.toUri().getPath();
+    String srcBlobPropertyPathStr = srcBlobProperty.getPath().toUri().getPath();
+    if (sourcePathStr.equals(srcBlobPropertyPathStr)) {
+      return destinationDir;
+    }
+    return new Path(destinationPathStr + ROOT_PATH + srcBlobPropertyPathStr.substring(
+        sourcePathStr.length()));
+  }
+
+  /**
+   * Renames blob.
+   * It copies the source blob to the destination. After copy is succesful, it
+   * deletes the source blob
+   * @param destination destination path to which the source has to be moved
+   * @param sourcePath source path which gets copied to the destination
+   * @param tracingContext tracingContext for tracing the API calls
+   * @throws AzureBlobFileSystemException exception in making server calls
+   */
+  private void renameBlob(final Path destination,
+      final TracingContext tracingContext,
+      final Path sourcePath) throws AzureBlobFileSystemException {
+    copyBlob(sourcePath, destination, tracingContext);
+    deleteBlob(sourcePath, tracingContext);
+  }
+
+  private void deleteBlob(final Path sourcePath,
+      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+    try {
+      client.deleteBlobPath(sourcePath, tracingContext);
+    } catch (AbfsRestOperationException ex) {
+      if (ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+        throw ex;
+      }
+    }
   }
 
   public void delete(final Path path, final boolean recursive,
@@ -1663,6 +1970,36 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return isKeyForDirectorySet(key, azureAtomicRenameDirSet);
   }
 
+  /**
+   * Provides a standard implementation of
+   * {@link RenameAtomicityUtils.RedoRenameInvocation}.
+   */
+  RenameAtomicityUtils.RedoRenameInvocation getRedoRenameInvocation(final TracingContext tracingContext) {
+    return new RenameAtomicityUtils.RedoRenameInvocation() {
+      @Override
+      public void redo(final Path destination, final List<Path> sourcePaths,
+          final List<String> destinationSuffix)
+          throws AzureBlobFileSystemException {
+        for (int i = 0; i < sourcePaths.size(); i++) {
+          try {
+            final Path destinationPath;
+            if (destinationSuffix.get(i).isEmpty()) {
+              destinationPath = destination;
+            } else {
+              destinationPath = new Path(destination, destinationSuffix.get(i));
+            }
+            renameBlob(destinationPath, tracingContext, sourcePaths.get(i));
+          } catch (AbfsRestOperationException ex) {
+            if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+              continue;
+            }
+            throw ex;
+          }
+        }
+      }
+    };
+  }
+
   public boolean isInfiniteLeaseKey(String key) {
     if (azureInfiniteLeaseDirSet.isEmpty()) {
       return false;
@@ -1688,9 +2025,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       return;
     }
 
-    final URIBuilder uriBuilder = getURIBuilder(accountName, isSecure);
-
-    final String url = uriBuilder.toString() + AbfsHttpConstants.FORWARD_SLASH + fileSystemName;
+    final String url = getBaseUrlString(fileSystemName, accountName, isSecure);
 
     URL baseUrl;
     try {
@@ -1737,6 +2072,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           populateAbfsClientContext());
     }
     LOG.trace("AbfsClient init complete");
+  }
+
+  private String getBaseUrlString(final String fileSystemName,
+      final String accountName,
+      final boolean isSecure) {
+    final URIBuilder uriBuilder = getURIBuilder(accountName, isSecure);
+
+    final String url = uriBuilder.toString() + AbfsHttpConstants.FORWARD_SLASH
+        + fileSystemName;
+    return url;
   }
 
   /**
@@ -1867,6 +2212,46 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   private AbfsPerfInfo startTracking(String callerName, String calleeName) {
     return new AbfsPerfInfo(abfsPerfTracker, callerName, calleeName);
+  }
+
+  /**
+   * Search for a FileStatus corresponding to a RenamePending JSON file.
+   * @param fileStatuses array of fileStatus from which JSON file has to be searched.
+   * @return filestatus corresponding to RenamePending JSON file.
+   */
+  public FileStatus getRenamePendingFileStatus(final FileStatus[] fileStatuses) {
+    for (FileStatus fileStatus : fileStatuses) {
+      if (fileStatus.getPath().toUri().getPath().endsWith(SUFFIX)) {
+        return fileStatus;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * For a given directory, returns back the fileStatus information for the
+   * RenamePending JSON file for the directory.
+   *
+   * @param fileStatus FileStatus object of the directory for which JSON file has
+   * to be searched.
+   * @param tracingContext TracingContext object for tracing the backend server calls
+   * for the operation.
+   * @throws IOException exception thrown from the call to {@link #getPathStatus(Path, TracingContext)}
+   * method.
+   */
+  public boolean getRenamePendingFileStatusInDirectory(final FileStatus fileStatus,
+      final TracingContext tracingContext) throws IOException {
+    try {
+      getFileStatus(
+          new Path(fileStatus.getPath().toUri().getPath() + SUFFIX),
+          tracingContext);
+      return true;
+    } catch (AbfsRestOperationException ex) {
+      if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+        return false;
+      }
+      throw ex;
+    }
   }
 
   /**

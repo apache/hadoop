@@ -18,36 +18,30 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-/**
- * The REST operation type (Read, Append, Other ).
- */
-public enum AbfsRestOperationType {
-    CreateFileSystem,
-    GetFileSystemProperties,
-    SetFileSystemProperties,
-    ListPaths,
-    DeleteFileSystem,
-    CreatePath,
-    RenamePath,
-    GetAcl,
-    GetPathProperties,
-    GetPathStatus,
-    SetAcl,
-    SetOwner,
-    SetPathProperties,
-    SetPermissions,
-    Append,
-    Flush,
-    ReadFile,
-    DeletePath,
-    CheckAccess,
-    LeasePath,
-    PutBlock,
-    PutBlockList,
-    PutBlob,
-    GetBlockList,
-    GetBlobProperties,
-    DeleteBlob,
-    GetListBlobProperties,
-    CopyBlob
+import java.io.IOException;
+import java.util.List;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+
+public class RenameNonAtomicUtils extends RenameAtomicityUtils {
+
+  public RenameNonAtomicUtils(final AzureBlobFileSystem azureBlobFileSystem,
+      final Path srcPath,
+      final Path dstPath,
+      final TracingContext tracingContext) throws IOException {
+    super(azureBlobFileSystem, srcPath, dstPath, tracingContext);
+  }
+
+  @Override
+  public void preRename(final List<BlobProperty> blobPropertyList)
+      throws IOException {
+
+  }
+
+  @Override
+  public void cleanup() throws IOException {
+
+  }
 }
