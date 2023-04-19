@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -73,6 +74,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Collection;
+import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.BlockingQueue;
@@ -657,7 +659,8 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
           CheckForDecommissioningNodesResponse response = collects.get(0);
           long stopTime = clock.getTime();
           routerMetrics.succeededCheckForDecommissioningNodesRetrieved((stopTime - startTime));
-          return CheckForDecommissioningNodesResponse.newInstance(response.getDecommissioningNodes());
+          Set<NodeId> nodes = response.getDecommissioningNodes();
+          return CheckForDecommissioningNodesResponse.newInstance(nodes);
         }
       }
     } catch (YarnException e) {
@@ -692,7 +695,8 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
           new Class[]{RefreshClusterMaxPriorityRequest.class}, new Object[]{request});
       Collection<RefreshClusterMaxPriorityResponse> refreshClusterMaxPriorityResps =
-          remoteMethod.invokeConcurrent(this, RefreshClusterMaxPriorityResponse.class, subClusterId);
+          remoteMethod.invokeConcurrent(this, RefreshClusterMaxPriorityResponse.class,
+          subClusterId);
       if (CollectionUtils.isNotEmpty(refreshClusterMaxPriorityResps)) {
         long stopTime = clock.getTime();
         routerMetrics.succeededRefreshClusterMaxPriorityRetrieved(stopTime - startTime);

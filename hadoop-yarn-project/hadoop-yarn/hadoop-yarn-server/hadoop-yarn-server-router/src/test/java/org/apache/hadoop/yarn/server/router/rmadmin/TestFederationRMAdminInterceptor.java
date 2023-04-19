@@ -532,8 +532,10 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
         () -> interceptor.checkForDecommissioningNodes(null));
 
     // null request2.
-    CheckForDecommissioningNodesRequest request = CheckForDecommissioningNodesRequest.newInstance(null);
-    LambdaTestUtils.intercept(YarnException.class, "Missing checkForDecommissioningNodes SubClusterId.",
+    CheckForDecommissioningNodesRequest request =
+        CheckForDecommissioningNodesRequest.newInstance(null);
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing checkForDecommissioningNodes SubClusterId.",
         () -> interceptor.checkForDecommissioningNodes(request));
   }
 

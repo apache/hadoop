@@ -2069,7 +2069,8 @@ public class TestRouterMetrics {
   public void testCheckForDecommissioningNodesFailedRetrieved() {
     long totalBadBefore = metrics.getCheckForDecommissioningNodesFailedRetrieved();
     badSubCluster.getCheckForDecommissioningNodesFailed();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getCheckForDecommissioningNodesFailedRetrieved());
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getCheckForDecommissioningNodesFailedRetrieved());
   }
 
   @Test
