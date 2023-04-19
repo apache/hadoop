@@ -117,14 +117,14 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
         URL url = testClient.createRequestUrl(finalTestPath, abfsUriQueryBuilder.toString());
 
         // Create a mock of the AbfsRestOperation to set the urlConnection in the corresponding httpOperation.
-        AbfsRestOperation op = Mockito.spy(new AbfsRestOperation(
+        AbfsRestOperation op = new AbfsRestOperation(
                 AbfsRestOperationType.PutBlob,
                 testClient,
                 HTTP_METHOD_PUT,
                 url,
                 requestHeaders, buffer,
                 BUFFER_OFFSET,
-                BUFFER_LENGTH, null));
+                BUFFER_LENGTH, null);
 
         TracingContext tracingContext = new TracingContext("abcd",
                 "abcde", FSOperationType.CREATE,
