@@ -748,7 +748,7 @@ public class TestRMHA {
 
   @Test
   public void testTransitionedToActiveWithExcludeFileNotExist() throws Exception {
-    final String ERR_UNFORCED_REQUEST = "User request succeeded even when " +
+    final String errUnforcedRequest = "User request succeeded even when " +
         "automatic failover is enabled";
 
     Configuration conf = new YarnConfiguration(configuration);
@@ -758,9 +758,17 @@ public class TestRMHA {
     DataOutputStream output = null;
     final File confFile =
         new File("target/test-classes/"+YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+    final File backupConfFile = new File(
+        "target/test-classes/" + YarnConfiguration.YARN_SITE_CONFIGURATION_FILE
+            + ".backup." + UUID.randomUUID());
+    boolean hasRenamed = false;
     try {
       if (confFile.exists()) {
-        confFile.delete();
+        hasRenamed = confFile.renameTo(backupConfFile);
+        if (!hasRenamed) {
+          Assert.fail("Can not rename " + confFile.getAbsolutePath() + " to "
+              + backupConfFile.getAbsolutePath());
+        }
       }
       if (!confFile.createNewFile()) {
         Assert.fail(
@@ -778,12 +786,13 @@ public class TestRMHA {
       rm = new MockRM(conf);
       rm.init(conf);
       rm.start();
-      StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(HAServiceProtocol.RequestSource.REQUEST_BY_USER);
+      StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
+          HAServiceProtocol.RequestSource.REQUEST_BY_USER);
 
       // Transition to standby
       try {
         rm.adminService.transitionToStandby(requestInfo);
-        fail(ERR_UNFORCED_REQUEST);
+        fail(errUnforcedRequest);
       } catch (AccessControlException e) {
         // expected
       }
@@ -793,22 +802,23 @@ public class TestRMHA {
       // Transition to active
       try {
         rm.adminService.transitionToActive(requestInfo);
-        fail(ERR_UNFORCED_REQUEST);
+        fail(errUnforcedRequest);
       } catch (AccessControlException e) {
         // expected
       }
       checkMonitorHealth();
       checkStandbyRMFunctionality();
 
-      final String ERR_FORCED_REQUEST =
+      final String errForcedRequest =
           "Forced request by user should work " + "even if automatic failover is enabled";
-      requestInfo = new StateChangeRequestInfo(HAServiceProtocol.RequestSource.REQUEST_BY_USER_FORCED);
+      requestInfo = new StateChangeRequestInfo(
+          HAServiceProtocol.RequestSource.REQUEST_BY_USER_FORCED);
 
       // Transition to standby
       try {
         rm.adminService.transitionToStandby(requestInfo);
       } catch (AccessControlException e) {
-        fail(ERR_FORCED_REQUEST);
+        fail(errForcedRequest);
       }
       checkMonitorHealth();
       checkStandbyRMFunctionality();
@@ -817,13 +827,17 @@ public class TestRMHA {
       try {
         rm.adminService.transitionToActive(requestInfo);
       } catch (AccessControlException e) {
-        fail(ERR_FORCED_REQUEST);
+        fail(errForcedRequest);
       }
       checkMonitorHealth();
       checkActiveRMFunctionality();
     } finally {
       if (confFile.exists()) {
-        confFile.delete();
+        if (!hasRenamed) {
+          confFile.delete();
+        } else {
+          backupConfFile.renameTo(confFile);
+        }
       }
     }
   }
