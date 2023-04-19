@@ -1179,8 +1179,7 @@ file using configured SSE-C keyB into that structure.
 ### Instruction file not found for S3 object
 
 Reading an unencrypted file would fail when read through CSE enabled client.
-
-```txt
+```
 java.lang.SecurityException: Instruction file not found for S3 object with bucket name: ap-south-cse, key: unencryptedData.txt
     at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleAE.decipher(S3CryptoModuleAE.java:190)
     at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleAE.getObjectSecurely(S3CryptoModuleAE.java:136)
@@ -1217,7 +1216,6 @@ java.lang.SecurityException: Instruction file not found for S3 object with bucke
     at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:95)
     at org.apache.hadoop.fs.FsShell.main(FsShell.java:390)
 ```
-
 CSE enabled client should read encrypted data only.
 
 ### CSE-KMS method requires KMS key ID
@@ -1225,7 +1223,7 @@ CSE enabled client should read encrypted data only.
 KMS key ID is required for CSE-KMS to encrypt data, not providing one leads
  to failure.
 
-```txt
+```
 2021-07-07 11:33:04,550 WARN fs.FileSystem: Failed to initialize filesystem
 s3a://ap-south-cse/: java.lang.IllegalArgumentException: CSE-KMS
 method requires KMS key ID. Use fs.s3a.encryption.key property to set it.
