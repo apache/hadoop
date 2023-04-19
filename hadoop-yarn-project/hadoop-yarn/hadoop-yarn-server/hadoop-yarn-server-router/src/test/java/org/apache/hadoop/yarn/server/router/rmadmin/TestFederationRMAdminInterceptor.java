@@ -543,7 +543,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
   public void testCheckForDecommissioningNodesNormalRequest() throws Exception {
     CheckForDecommissioningNodesRequest request =
         CheckForDecommissioningNodesRequest.newInstance("SC-1");
-    CheckForDecommissioningNodesResponse response = interceptor.checkForDecommissioningNodes(request);
+    CheckForDecommissioningNodesResponse response =
+        interceptor.checkForDecommissioningNodes(request);
     assertNotNull(response);
     Set<NodeId> nodeIds = response.getDecommissioningNodes();
     assertNotNull(nodeIds);
