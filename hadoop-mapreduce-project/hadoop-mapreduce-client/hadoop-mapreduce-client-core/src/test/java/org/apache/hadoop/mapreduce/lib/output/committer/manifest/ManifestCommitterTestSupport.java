@@ -83,6 +83,13 @@ public final class ManifestCommitterTestSupport {
    */
   public static final int NUMBER_OF_TASK_ATTEMPTS = 2000;
 
+  /**
+   * Smaller number of task attempts for some tests against object
+   * stores where IO overhead is higher.
+   * Value: {@value}.
+   */
+  public static final int NUMBER_OF_TASK_ATTEMPTS_SMALL = 200;
+
   private ManifestCommitterTestSupport() {
   }
 

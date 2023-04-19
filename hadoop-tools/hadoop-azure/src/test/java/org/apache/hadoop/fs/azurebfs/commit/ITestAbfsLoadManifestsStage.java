@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestLoadManifestsStage;
 
 /**
@@ -58,4 +59,11 @@ public class ITestAbfsLoadManifestsStage extends TestLoadManifestsStage {
     return AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS;
   }
 
+  /**
+   * @return a smaller number of TAs than the base test suite does.
+   */
+  @Override
+  protected int numberOfTaskAttempts() {
+    return ManifestCommitterTestSupport.NUMBER_OF_TASK_ATTEMPTS_SMALL;
+  }
 }
