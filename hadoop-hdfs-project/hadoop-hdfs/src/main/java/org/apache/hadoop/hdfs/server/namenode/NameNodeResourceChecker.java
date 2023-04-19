@@ -174,6 +174,19 @@ public class NameNodeResourceChecker {
    *         otherwise.
    */
   public boolean hasAvailableDiskSpace() {
+    try {
+      if (minimumRedundantVolumes > volumes.size()){
+        throw new IllegalArgumentException("The value of "
+        + DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_MINIMUM_KEY
+        + " is " + minimumRedundantVolumes
+        + " which is greater than the total number of existing storage volumes "
+        + volumes.size() + " .");
+      }
+    } catch (IllegalArgumentException e){
+      LOG.warn("The value of " + DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_MINIMUM_KEY
+        + " is greater than the total number of existing storage volumes"
+        + " and will result in adding resources and still not being able to turn off safe mode.", e);
+    }
     return NameNodeResourcePolicy.areResourcesAvailable(volumes.values(),
         minimumRedundantVolumes);
   }
