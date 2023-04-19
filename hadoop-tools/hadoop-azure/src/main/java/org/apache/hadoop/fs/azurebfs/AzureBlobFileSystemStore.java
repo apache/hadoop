@@ -793,30 +793,30 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           throws IOException {
     try (AbfsPerfInfo perfInfo = startTracking("createDirectory", "createPath")) {
       if (getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
-          checkParentChainForFile(path, tracingContext);
+        checkParentChainForFile(path, tracingContext);
 
-          HashMap<String, String> metadata = new HashMap<>();
-          metadata.put(X_MS_META_HDI_ISFOLDER, TRUE);
-          createFile(path, statistics, true,
-                 permission, umask, tracingContext, metadata);
-      } else {
-        boolean isNamespaceEnabled = getIsNamespaceEnabled(tracingContext);
-        LOG.debug("createDirectory filesystem: {} path: {} permission: {} umask: {} isNamespaceEnabled: {}",
-                client.getFileSystem(),
-                path,
-                permission,
-                umask,
-                isNamespaceEnabled);
-
-        boolean overwrite =
-                !isNamespaceEnabled || abfsConfiguration.isEnabledMkdirOverwrite();
-        final AbfsRestOperation op = client.createPath(getRelativePath(path),
-                false, overwrite,
-                isNamespaceEnabled ? getOctalNotation(permission) : null,
-                isNamespaceEnabled ? getOctalNotation(umask) : null, false, null,
-                tracingContext);
-        perfInfo.registerResult(op.getResult()).registerSuccess(true);
+        HashMap<String, String> metadata = new HashMap<>();
+        metadata.put(X_MS_META_HDI_ISFOLDER, TRUE);
+        createFile(path, statistics, true,
+                permission, umask, tracingContext, metadata);
+        return;
       }
+      boolean isNamespaceEnabled = getIsNamespaceEnabled(tracingContext);
+      LOG.debug("createDirectory filesystem: {} path: {} permission: {} umask: {} isNamespaceEnabled: {}",
+              client.getFileSystem(),
+              path,
+              permission,
+              umask,
+              isNamespaceEnabled);
+
+      boolean overwrite =
+              !isNamespaceEnabled || abfsConfiguration.isEnabledMkdirOverwrite();
+      final AbfsRestOperation op = client.createPath(getRelativePath(path),
+              false, overwrite,
+              isNamespaceEnabled ? getOctalNotation(permission) : null,
+              isNamespaceEnabled ? getOctalNotation(umask) : null, false, null,
+              tracingContext);
+      perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }
 
@@ -864,9 +864,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     BlobProperty blobProperty = null;
     try {
       blobProperty = getBlobProperty(path, tracingContext);
-    } catch (AzureBlobFileSystemException ex) {
-      if (ex instanceof AbfsRestOperationException &&
-              ((AbfsRestOperationException) ex).getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+    } catch (AbfsRestOperationException ex) {
+      if (ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
         throw ex;
       }
     }
