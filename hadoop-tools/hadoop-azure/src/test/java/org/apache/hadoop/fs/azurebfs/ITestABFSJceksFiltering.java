@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.junit.Test;
 
+import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
-public class ITestAzureBlobFileSystemConfiguration extends AbstractAbfsIntegrationTest {
+public class ITestABFSJceksFiltering extends AbstractAbfsIntegrationTest {
 
-  public ITestAzureBlobFileSystemConfiguration() throws Exception {
+  public ITestABFSJceksFiltering() throws Exception {
   }
 
   @Test
@@ -34,9 +34,10 @@ public class ITestAzureBlobFileSystemConfiguration extends AbstractAbfsIntegrati
     Configuration rawConfig = getRawConfiguration();
     rawConfig.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
         "jceks://abfs@a@b.c.d/tmp/a.jceks,jceks://file/tmp/secret.jceks");
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.get(rawConfig);
-    assertNotNull("filesystem", fs);
-    String providers = fs.getConf().get(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH);
-    assertEquals("jceks://file/tmp/secret.jceks", providers);
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.get(rawConfig)) {
+      assertNotNull("filesystem", fs);
+      String providers = fs.getConf().get(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH);
+      assertEquals("jceks://file/tmp/secret.jceks", providers);
+    }
   }
 }
