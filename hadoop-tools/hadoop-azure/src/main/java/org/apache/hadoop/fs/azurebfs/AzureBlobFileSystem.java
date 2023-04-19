@@ -405,10 +405,23 @@ public class AzureBlobFileSystem extends FileSystem
     }
   }
 
+  /**
+   * Checks if the paths are allowable for executing rename steps over Blob endpoint.
+   *
+   * @param src source which has to be renamed
+   * @param dst destination which will contain the renamed blobs.
+   * @param fnsDstPathInformation pathInformation for the given dst
+   * @param tracingContext tracingContext for tracing the server calls
+   *
+   * @return true if all checks pass.
+   * @throws IOException exceptions received in the server calls. Or the exceptions
+   * thrown from the client which are equal to the exceptions that would be thrown
+   * from the DFS endpoint server for certain scenarios.
+   */
   private Boolean applyBlobRenameChecks(final Path src,
       final Path dst,
       final PathInformation fnsDstPathInformation,
-      TracingContext tracingContext)
+      final TracingContext tracingContext)
       throws IOException {
     if (containsColon(dst)) {
       throw new IOException("Cannot rename to file " + dst
