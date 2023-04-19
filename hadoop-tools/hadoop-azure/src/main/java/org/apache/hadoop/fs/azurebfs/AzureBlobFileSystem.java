@@ -155,25 +155,23 @@ public class AzureBlobFileSystem extends FileSystem
   private RateLimiting rateLimiting;
 
   @Override
-  public void initialize(URI uri, Configuration configuration)
+  public void initialize(URI uriParam, Configuration originalConf)
       throws IOException {
-    uri = ensureAuthority(uri, configuration);
-    super.initialize(uri, configuration);
-    setConf(configuration);
+    uriParam = ensureAuthority(uriParam, originalConf);
 
-    LOG.debug("Initializing AzureBlobFileSystem for {}", uri);
+    LOG.debug("Initializing AzureBlobFileSystem for {}", uriParam);
 
-    this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
+    this.uri = URI.create(uriParam.getScheme() + "://" + uriParam.getAuthority());
     abfsCounters = new AbfsCountersImpl(uri);
     // name of the blockFactory to be used.
-    this.blockOutputBuffer = configuration.getTrimmed(DATA_BLOCKS_BUFFER,
+    this.blockOutputBuffer = originalConf.getTrimmed(DATA_BLOCKS_BUFFER,
         DATA_BLOCKS_BUFFER_DEFAULT);
     // blockFactory used for this FS instance.
     this.blockFactory =
         DataBlocks.createFactory(FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR,
-            configuration, blockOutputBuffer);
+            originalConf, blockOutputBuffer);
     this.blockOutputActiveBlocks =
-        configuration.getInt(FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS,
+        originalConf.getInt(FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS,
             BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT);
     if (blockOutputActiveBlocks < 1) {
       blockOutputActiveBlocks = 1;
@@ -185,7 +183,7 @@ public class AzureBlobFileSystem extends FileSystem
         new AzureBlobFileSystemStore.AzureBlobFileSystemStoreBuilder()
             .withUri(uri)
             .withSecureScheme(this.isSecureScheme())
-            .withConfiguration(configuration)
+            .withConfiguration(originalConf)
             .withAbfsCounters(abfsCounters)
             .withBlockFactory(blockFactory)
             .withBlockOutputActiveBlocks(blockOutputActiveBlocks)
@@ -197,9 +195,9 @@ public class AzureBlobFileSystem extends FileSystem
     final AbfsConfiguration abfsConfiguration = abfsStore
         .getAbfsConfiguration();
 
-    // Ensures that configuration excludes incompatible credential providers
-    configuration = abfsConfiguration.getRawConfiguration();
-    setConf(configuration);
+    Configuration conf = abfsConfiguration.getRawConfiguration();
+    super.initialize(uri, conf);
+    setConf(conf);
 
     clientCorrelationId = TracingContext.validateClientCorrelationID(
         abfsConfiguration.getClientCorrelationId());
@@ -225,7 +223,7 @@ public class AzureBlobFileSystem extends FileSystem
       if (this.delegationTokenEnabled) {
         LOG.debug("Initializing DelegationTokenManager for {}", uri);
         this.delegationTokenManager = abfsConfiguration.getDelegationTokenManager();
-        delegationTokenManager.bind(getUri(), configuration);
+        delegationTokenManager.bind(getUri(), conf);
         LOG.debug("Created DelegationTokenManager {}", delegationTokenManager);
       }
     }
