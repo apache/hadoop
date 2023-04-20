@@ -1505,6 +1505,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               COMMITTER_MAGIC_MARKER_PUT.getSymbol(),
               INVOCATION_ABORT.getSymbol(),
               MULTIPART_UPLOAD_COMPLETED.getSymbol(),
+              MULTIPART_UPLOAD_PART_PUT.getSymbol(),
               OBJECT_MULTIPART_UPLOAD_ABORTED.getSymbol(),
               OBJECT_MULTIPART_UPLOAD_INITIATED.getSymbol(),
               OBJECT_PUT_REQUESTS.getSymbol())

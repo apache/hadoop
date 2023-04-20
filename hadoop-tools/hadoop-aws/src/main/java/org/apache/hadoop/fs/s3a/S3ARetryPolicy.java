@@ -44,16 +44,9 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.util.Preconditions;
 
-import static org.apache.hadoop.fs.s3a.Constants.RETRY_INTERVAL;
-import static org.apache.hadoop.fs.s3a.Constants.RETRY_INTERVAL_DEFAULT;
-import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
-import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT_DEFAULT;
-import static org.apache.hadoop.fs.s3a.Constants.RETRY_THROTTLE_INTERVAL;
-import static org.apache.hadoop.fs.s3a.Constants.RETRY_THROTTLE_INTERVAL_DEFAULT;
-import static org.apache.hadoop.fs.s3a.Constants.RETRY_THROTTLE_LIMIT;
-import static org.apache.hadoop.fs.s3a.Constants.RETRY_THROTTLE_LIMIT_DEFAULT;
-import static org.apache.hadoop.io.retry.RetryPolicies.exponentialBackoffRetry;
-import static org.apache.hadoop.io.retry.RetryPolicies.retryByException;
+import static org.apache.hadoop.io.retry.RetryPolicies.*;
+
+import static org.apache.hadoop.fs.s3a.Constants.*;
 
 /**
  * The S3A request retry policy.
@@ -101,15 +94,12 @@ public class S3ARetryPolicy implements RetryPolicy {
   /** Exponential policy for the base of normal failures. */
   protected final RetryPolicy baseExponentialRetry;
 
-  /**
-   * Idempotent calls which raise IOEs are retried.
-   */
+  /** Idempotent calls which raise IOEs are retried.
+   *  */
   protected final RetryPolicy retryIdempotentCalls;
 
-  /**
-   * Policy for throttle requests, which are considered repeatable, even for
-   * non-idempotent calls, as the service rejected the call entirely.
-   */
+  /** Policy for throttle requests, which are considered repeatable, even for
+   * non-idempotent calls, as the service rejected the call entirely. */
   protected final RetryPolicy throttlePolicy;
 
   /** No retry on network and tangible API issues. */
@@ -239,7 +229,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(AWSS3IOException.class, retryIdempotentCalls);
     policyMap.put(SocketTimeoutException.class, retryIdempotentCalls);
 
-    // Unsupported operations do not work, however many times you try
+    // Unsupported requests do not work, however many times you try
     policyMap.put(UnsupportedRequestException.class, fail);
 
     return policyMap;

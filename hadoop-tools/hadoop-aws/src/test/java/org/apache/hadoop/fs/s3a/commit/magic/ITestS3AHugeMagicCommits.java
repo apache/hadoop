@@ -85,6 +85,11 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   }
 
   @Override
+  protected boolean expectImmediateFileVisibility() {
+    return false;
+  }
+
+  @Override
   public void setup() throws Exception {
     super.setup();
     CommitUtils.verifyIsMagicCommitFS(getFileSystem());

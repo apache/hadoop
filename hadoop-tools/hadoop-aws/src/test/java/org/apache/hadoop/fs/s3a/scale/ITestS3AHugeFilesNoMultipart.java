@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.s3a.api.UnsupportedRequestException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.IO_CHUNK_BUFFER_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
+import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_UPLOADS_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
@@ -39,11 +40,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * that the transfer manager will fail fast unless the multipart threshold is huge.
  */
 public class ITestS3AHugeFilesNoMultipart extends AbstractSTestS3AHugeFiles {
-
-  /**
-   * Threshold for MPUs.
-   */
-  public static final String S_5M = "5M";
 
   /**
    * Size to ensure MPUs don't happen in transfer manager.
@@ -58,6 +54,11 @@ public class ITestS3AHugeFilesNoMultipart extends AbstractSTestS3AHugeFiles {
    */
   protected String getBlockOutputBufferName() {
     return Constants.FAST_UPLOAD_BUFFER_DISK;
+  }
+
+  @Override
+  protected boolean expectMultipartUpload() {
+    return false;
   }
 
   /**
@@ -98,8 +99,8 @@ public class ITestS3AHugeFilesNoMultipart extends AbstractSTestS3AHugeFiles {
     fs.delete(hugefileRenamed, false);
     // create a new fs with a small multipart threshold; expect rename failure.
     final Configuration conf = new Configuration(fs.getConf());
-    conf.set(MIN_MULTIPART_THRESHOLD, S_5M);
-    conf.set(MULTIPART_SIZE, S_5M);
+    conf.setInt(MIN_MULTIPART_THRESHOLD, MULTIPART_MIN_SIZE);
+    conf.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
     S3ATestUtils.disableFilesystemCaching(conf);
 
     try (FileSystem fs2 = FileSystem.get(fs.getUri(), conf)) {

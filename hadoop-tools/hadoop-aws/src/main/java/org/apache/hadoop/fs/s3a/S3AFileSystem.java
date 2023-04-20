@@ -3043,7 +3043,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     try {
       UploadPartResult uploadPartResult = trackDurationOfSupplier(
           nonNullDurationTrackerFactory(durationTrackerFactory),
-          OBJECT_PUT_REQUESTS.getSymbol(), () ->
+          MULTIPART_UPLOAD_PART_PUT.getSymbol(), () ->
               s3.uploadPart(request));
       incrementPutCompletedStatistics(true, len);
       return uploadPartResult;
