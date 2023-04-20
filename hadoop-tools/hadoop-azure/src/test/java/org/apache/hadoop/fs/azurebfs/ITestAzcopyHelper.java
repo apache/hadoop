@@ -10,6 +10,10 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_PATH_TO_COPY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_FIXED_TOKEN;
+
 public class ITestAzcopyHelper extends ITestAzureBlobFileSystemAuthorization  {
 
     public ITestAzcopyHelper() throws Exception {
@@ -98,20 +102,44 @@ public class ITestAzcopyHelper extends ITestAzureBlobFileSystemAuthorization  {
         return null;
     }
 
-    private String getSAS(String accountName, String containerName, String path, String operation) throws IOException {
-        MockSASTokenProvider mockSASTokenProvider = (MockSASTokenProvider) getFileSystem().getAbfsStore().getClient().getSasTokenProvider();
-        return mockSASTokenProvider.getSASToken(accountName, containerName, path, operation);
+    public void testAzcopyDownload(String pathFromContainerRoot) throws Exception {
+        downloadAzcopyExecutableIfNotPresent();
+        String url = "https://" + this.getAccountName() + FORWARD_SLASH + this.getFileSystemName() + FORWARD_SLASH +
+                pathFromContainerRoot;
+        // Add the SAS token in config file (should be Account SAS or Container SAS").
+        String configuredFixedToken = getRawConfiguration().get(FS_AZURE_SAS_FIXED_TOKEN, null);
+        if (configuredFixedToken != null) {
+            createFileCreationScript(azcopyDirPath, "createFile.sh", azcopyDirPath, configuredFixedToken, url);
+        } else {
+            throw new Exception("The SAS token provided is null");
+        }
+        String filePath = azcopyDirPath + "/createFile.sh";
+        try {
+            ProcessBuilder pb = new ProcessBuilder(filePath);
+            Process p = pb.start();
+            // wait for the process to finish
+            int exitCode = p.waitFor();
+        } catch (IOException e) {
+            throw new IOException(e.getMessage());
+        } catch (InterruptedException e) {
+            throw new InterruptedException(e.getMessage());
+        }
+        String cleanupCmd = "rm -rf " + filePath;
+        String[] cleanupCmdArr = {"bash", "-c", cleanupCmd};
+        Process cleanupProcess = Runtime.getRuntime().exec(cleanupCmdArr);
+        cleanupProcess.waitFor();
     }
 
     @Test
-    public void testAzcopyDownload() throws IOException, InterruptedException {
-        downloadAzcopyExecutableIfNotPresent();
-        String SAS = getSAS(this.getAccountName(), this.getFileSystemName(), this.getTestUrl(), SASTokenProvider.WRITE_OPERATION);
-        String url = makeQualified(new Path(this.getFileSystemName())).toUri().toString();
-        createScript(azcopyDirPath, "createFile.sh", azcopyDirPath, SAS, url);
+    public void testAzcopy() throws Exception {
+        // Add the path you want to copy to as config.
+        String pathFromContainerRoot = getRawConfiguration().get(FS_AZURE_PATH_TO_COPY, null);
+        if (pathFromContainerRoot != null) {
+            testAzcopyDownload(pathFromContainerRoot);
+        }
     }
 
-    public static void createScript(String folderPath, String scriptName, String azcopyPath, String sasToken, String containerName) {
+    public static void createFileCreationScript(String folderPath, String scriptName, String azcopyPath, String sasToken, String containerName) {
         String blobPath = containerName + "?" + sasToken; // construct the blob path
         String scriptContent = "blobPath=\"" + blobPath + "\"\n"
                 + "echo $blobPath\n"

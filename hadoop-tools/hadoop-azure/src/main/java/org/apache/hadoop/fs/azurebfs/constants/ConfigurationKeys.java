@@ -236,6 +236,9 @@ public final class ConfigurationKeys {
 
   /** Key for SAS token provider **/
   public static final String FS_AZURE_SAS_TOKEN_PROVIDER_TYPE = "fs.azure.sas.token.provider.type";
+  /** Key for fixed SAS token **/
+  public static final String FS_AZURE_SAS_FIXED_TOKEN = "fs.azure.sas.fixed.token";
+  public static final String FS_AZURE_PATH_TO_COPY = "fs.azure.path.to.copy";
 
   /** For performance, AbfsInputStream/AbfsOutputStream re-use SAS tokens until the expiry is within this number of seconds. **/
   public static final String FS_AZURE_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS = "fs.azure.sas.token.renew.period.for.streams";
