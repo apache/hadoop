@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.Map;
 import java.io.IOException;
 
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.runners.Parameterized;
@@ -305,13 +306,16 @@ public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
     // Tests with Optimization should only run if service has the feature on by
     // default. Default settings will be turned on when server support is
     // available on all store prod regions.
-    if (enableSmallWriteOptimization) {
-      Assume.assumeTrue(serviceDefaultOptmSettings);
-    }
 
     final AzureBlobFileSystem currentfs = this.getFileSystem();
     Configuration config = currentfs.getConf();
     boolean isAppendBlobTestSettingEnabled = (config.get(FS_AZURE_TEST_APPENDBLOB_ENABLED) == "true");
+
+    if (enableSmallWriteOptimization) {
+        Assume.assumeTrue(serviceDefaultOptmSettings);
+        PrefixMode prefixMode = currentfs.getAbfsStore().getAbfsConfiguration().getPrefixMode();
+        Assume.assumeTrue(prefixMode == PrefixMode.DFS);
+    }
 
     // This optimization doesnt take effect when append blob is on.
     Assume.assumeFalse(isAppendBlobTestSettingEnabled);

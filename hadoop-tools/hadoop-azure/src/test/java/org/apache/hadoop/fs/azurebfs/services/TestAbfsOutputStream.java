@@ -103,6 +103,15 @@ public final class TestAbfsOutputStream {
             .build();
   }
 
+  private AbfsConfiguration getConf() throws IOException, IllegalAccessException {
+    AbfsConfiguration abfsConf;
+    final Configuration conf = new Configuration();
+    conf.set(accountKey1, accountValue1);
+    abfsConf = new AbfsConfiguration(conf, accountName1);
+    abfsConf.setPrefixMode(PrefixMode.DFS);
+    return abfsConf;
+  }
+
   /**
    * The test verifies OutputStream shortwrite case(2000bytes write followed by flush, hflush, hsync) is making correct HTTP calls to the server
    */
@@ -111,11 +120,10 @@ public final class TestAbfsOutputStream {
 
     AbfsClient client = mock(AbfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
-    AbfsConfiguration abfsConf;
-    final Configuration conf = new Configuration();
-    conf.set(accountKey1, accountValue1);
-    abfsConf = new AbfsConfiguration(conf, accountName1);
+    AbfsConfiguration abfsConf = getConf();
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
+
+    when(client.getAbfsConfiguration()).thenReturn(abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), any(byte[].class),
         any(AppendRequestParameters.class), any(), any(TracingContext.class)))
@@ -171,15 +179,13 @@ public final class TestAbfsOutputStream {
 
     AbfsClient client = mock(AbfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
-    AbfsConfiguration abfsConf;
-    final Configuration conf = new Configuration();
-    conf.set(accountKey1, accountValue1);
-    abfsConf = new AbfsConfiguration(conf, accountName1);
+    AbfsConfiguration abfsConf = getConf();
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     TracingContext tracingContext = new TracingContext("test-corr-id",
         "test-fs-id", FSOperationType.WRITE,
         TracingHeaderFormat.ALL_ID_FORMAT, null);
 
+    when(client.getAbfsConfiguration()).thenReturn(abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), any(byte[].class), any(AppendRequestParameters.class), any(), any(TracingContext.class))).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull(), any(TracingContext.class))).thenReturn(op);
@@ -243,15 +249,14 @@ public final class TestAbfsOutputStream {
     AbfsClient client = mock(AbfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     AbfsHttpOperation httpOp = mock(AbfsHttpOperation.class);
-    AbfsConfiguration abfsConf;
-    final Configuration conf = new Configuration();
-    conf.set(accountKey1, accountValue1);
-    abfsConf = new AbfsConfiguration(conf, accountName1);
+    AbfsConfiguration abfsConf = getConf();
+
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     TracingContext tracingContext = new TracingContext(
         abfsConf.getClientCorrelationId(), "test-fs-id",
         FSOperationType.WRITE, abfsConf.getTracingHeaderFormat(), null);
 
+    when(client.getAbfsConfiguration()).thenReturn(abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), any(byte[].class), any(AppendRequestParameters.class), any(), any(TracingContext.class))).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull(), any(TracingContext.class))).thenReturn(op);
@@ -314,12 +319,11 @@ public final class TestAbfsOutputStream {
     AbfsClient client = mock(AbfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     AbfsHttpOperation httpOp = mock(AbfsHttpOperation.class);
-    AbfsConfiguration abfsConf;
-    final Configuration conf = new Configuration();
-    conf.set(accountKey1, accountValue1);
-    abfsConf = new AbfsConfiguration(conf, accountName1);
+    AbfsConfiguration abfsConf = getConf();
+
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
 
+    when(client.getAbfsConfiguration()).thenReturn(abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), any(byte[].class),
         any(AppendRequestParameters.class), any(), any(TracingContext.class)))
@@ -371,12 +375,10 @@ public final class TestAbfsOutputStream {
 
     AbfsClient client = mock(AbfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
-    AbfsConfiguration abfsConf;
-    final Configuration conf = new Configuration();
-    conf.set(accountKey1, accountValue1);
-    abfsConf = new AbfsConfiguration(conf, accountName1);
+    AbfsConfiguration abfsConf = getConf();
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
 
+    when(client.getAbfsConfiguration()).thenReturn(abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), any(byte[].class),
         any(AppendRequestParameters.class), any(), any(TracingContext.class)))
@@ -427,15 +429,14 @@ public final class TestAbfsOutputStream {
     AbfsClient client = mock(AbfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     when(op.getSasToken()).thenReturn("");
-    AbfsConfiguration abfsConf;
-    final Configuration conf = new Configuration();
-    conf.set(accountKey1, accountValue1);
-    abfsConf = new AbfsConfiguration(conf, accountName1);
+    AbfsConfiguration abfsConf = getConf();
+
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     TracingContext tracingContext = new TracingContext(
         abfsConf.getClientCorrelationId(), "test-fs-id",
         FSOperationType.WRITE, abfsConf.getTracingHeaderFormat(), null);
 
+    when(client.getAbfsConfiguration()).thenReturn(abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), any(byte[].class),
         any(AppendRequestParameters.class), any(), any(TracingContext.class)))
@@ -500,11 +501,10 @@ public final class TestAbfsOutputStream {
 
     AbfsClient client = mock(AbfsClient.class);
     AbfsRestOperation op = mock(AbfsRestOperation.class);
-    AbfsConfiguration abfsConf;
-    final Configuration conf = new Configuration();
-    conf.set(accountKey1, accountValue1);
-    abfsConf = new AbfsConfiguration(conf, accountName1);
+    AbfsConfiguration abfsConf = getConf();
+
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
+    when(client.getAbfsConfiguration()).thenReturn(abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), any(byte[].class),
         any(AppendRequestParameters.class), any(), any(TracingContext.class)))

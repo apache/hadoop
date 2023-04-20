@@ -20,12 +20,14 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Arrays;
 
+import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsDirectory;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
@@ -76,6 +78,8 @@ public class ITestAzureBlobFileSystemRenameUnicode extends
   @Test
   public void testRenameFileUsingUnicode() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
+    Assume.assumeTrue(fs.getAbfsStore().getAbfsConfiguration().getPrefixMode()
+        == PrefixMode.DFS || !destDir.contains(":"));
     Path folderPath1 = new Path(srcDir);
     assertMkdirs(fs, folderPath1);
     assertIsDirectory(fs, folderPath1);
