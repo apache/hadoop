@@ -1390,10 +1390,10 @@ public class NamenodeWebHdfsMethods {
     }
     case GETFILELINKSTATUS: {
       HdfsFileStatus status = cp.getFileLinkInfo(fullpath);
-      final String js = JsonUtil.toJsonString(status, true);
       if (status == null) {
         throw new FileNotFoundException("File does not exist: " + fullpath);
       }
+      final String js = JsonUtil.toJsonString(status, true);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     default:
