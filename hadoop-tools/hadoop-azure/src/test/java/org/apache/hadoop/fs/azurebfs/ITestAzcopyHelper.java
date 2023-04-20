@@ -1,17 +1,14 @@
 package org.apache.hadoop.fs.azurebfs;
 
-import org.junit.Test;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_PATH_TO_COPY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_FIXED_TOKEN;
 
-public class ITestAzcopyHelper extends AbstractAbfsIntegrationTest{
+public class ITestAzcopyHelper extends AbstractAbfsIntegrationTest {
 
     public ITestAzcopyHelper() throws Exception {
         super.setup();
@@ -135,19 +132,15 @@ public class ITestAzcopyHelper extends AbstractAbfsIntegrationTest{
         cleanupProcess.waitFor();
     }
 
-    @Test
-    public void createFileUsingAzcopy() throws Exception {
+    public void createFileUsingAzcopy(String pathFromContainerRoot) throws Exception {
         // Add the path you want to copy to as config.
-        String pathFromContainerRoot = getRawConfiguration().get(FS_AZURE_PATH_TO_COPY, null);
         if (pathFromContainerRoot != null) {
             createFileOrFolder(pathFromContainerRoot, true);
         }
     }
 
-    @Test
-    public void createFolderUsingAzcopy() throws Exception {
+    public void createFolderUsingAzcopy(String pathFromContainerRoot) throws Exception {
         // Add the path you want to copy to as config.
-        String pathFromContainerRoot = getRawConfiguration().get(FS_AZURE_PATH_TO_COPY, null);
         if (pathFromContainerRoot != null) {
             createFileOrFolder(pathFromContainerRoot, false);
         }
@@ -174,7 +167,7 @@ public class ITestAzcopyHelper extends AbstractAbfsIntegrationTest{
         String blobPath = containerName + "?" + sasToken; // construct the blob path
         String scriptContent = "blobPath=\"" + blobPath + "\"\n"
                 + "echo $blobPath\n"
-                + azcopyPath + "/azcopy copy \"" + azcopyPath + "/azcopy\" $blobPath --recursive\n"; // construct the script content
+                + azcopyPath + "/azcopy copy \"" + azcopyPath + "\" $blobPath --recursive\n"; // construct the script content
         File scriptFile = new File(folderPath, scriptName);
         try {
             FileWriter writer = new FileWriter(scriptFile);
