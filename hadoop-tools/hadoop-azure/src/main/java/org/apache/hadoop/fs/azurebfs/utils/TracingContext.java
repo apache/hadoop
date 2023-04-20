@@ -61,6 +61,7 @@ public class TracingContext {
   private final TracingHeaderFormat format;  // header ID display options
   private Listener listener = null;  // null except when testing
   //final concatenated ID list set into x-ms-client-request-id header
+  private String fallbackDFSAppend = "B";
   private String header = EMPTY_STRING;
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
@@ -147,6 +148,10 @@ public class TracingContext {
     this.listener = listener;
   }
 
+  public void setFallbackDFSAppend(String fallbackDFSAppend) {
+    this.fallbackDFSAppend = fallbackDFSAppend;
+  }
+
   /**
    * Concatenate all identifiers separated by (:) into a string and set into
    * X_MS_CLIENT_REQUEST_ID header of the http operation
@@ -160,7 +165,7 @@ public class TracingContext {
       header =
           clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID + ":"
               + primaryRequestId + ":" + streamID + ":" + opType + ":"
-              + retryCount;
+              + retryCount + ":" + fallbackDFSAppend;
       break;
     case TWO_ID_FORMAT:
       header = clientCorrelationID + ":" + clientRequestId;

@@ -808,6 +808,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
 
       AbfsLease lease = maybeCreateLease(relativePath, tracingContext);
+      String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      checkAppendSmallWrite(isAppendBlob);
 
       return new AbfsOutputStream(
           populateAbfsOutputStreamContext(
@@ -817,6 +819,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               statistics,
               relativePath,
               0,
+              eTag,
               tracingContext));
     }
   }
@@ -941,6 +944,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       FileSystem.Statistics statistics,
       String path,
       long position,
+      String eTag,
       TracingContext tracingContext) {
     int bufferSize = abfsConfiguration.getWriteBufferSize();
     if (isAppendBlob && bufferSize > FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE) {
@@ -962,6 +966,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withPosition(position)
             .withFsStatistics(statistics)
             .withPath(path)
+            .withETag(eTag)
             .withExecutorService(new SemaphoredDelegatingExecutor(boundedThreadPool,
                 blockOutputActiveBlocks, true))
             .withTracingContext(tracingContext)
@@ -1167,6 +1172,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
 
       AbfsLease lease = maybeCreateLease(relativePath, tracingContext);
+      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      checkAppendSmallWrite(isAppendBlob);
 
       return new AbfsOutputStream(
           populateAbfsOutputStreamContext(
@@ -1176,7 +1183,19 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               statistics,
               relativePath,
               offset,
+              eTag,
               tracingContext));
+    }
+  }
+
+  public void checkAppendSmallWrite(boolean isAppendBlob) throws IOException {
+    if (getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
+      if (isAppendBlob) {
+        throw new IOException("AppendBlob is not supported for blob endpoint.");
+      }
+      if (abfsConfiguration.isSmallWriteOptimizationEnabled()) {
+        throw new IOException("Small write optimization is not supported for blob endpoint.");
+      }
     }
   }
 

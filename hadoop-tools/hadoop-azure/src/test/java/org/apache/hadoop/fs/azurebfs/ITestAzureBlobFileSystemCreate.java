@@ -634,4 +634,48 @@ public class ITestAzureBlobFileSystemCreate extends
   private AbfsRestOperationException getMockAbfsRestOperationException(int status) {
     return new AbfsRestOperationException(status, "", "", new Exception());
   }
+
+  /**
+   * Attempts to test multiple flush calls.
+   */
+  @Test
+  public void testMultipleFlush() throws Throwable {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path testPath = new Path(TEST_FOLDER_PATH, TEST_CHILD_FILE);
+    try (FSDataOutputStream out = fs.create(testPath)) {
+      out.write('1');
+      out.hsync();
+      out.write('2');
+      out.hsync();
+    }
+  }
+
+  /**
+   * Delete the blob before flush and verify that an exception should be thrown.
+   */
+  @Test
+  public void testDeleteBeforeFlush() throws Throwable {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path testPath = new Path(TEST_FOLDER_PATH, TEST_CHILD_FILE);
+    try (FSDataOutputStream out = fs.create(testPath)) {
+      out.write('1');
+      fs.delete(testPath, false);
+      out.hsync();
+      // this will cause the next write to failAll
+    } catch (IOException fnfe) {
+      //appendblob outputStream does not generate suppressed exception on close as it is
+      //single threaded code
+      if (!fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testPath).toString())) {
+        // the exception raised in close() must be in the caught exception's
+        // suppressed list
+        Throwable[] suppressed = fnfe.getSuppressed();
+        assertEquals("suppressed count", 1, suppressed.length);
+        Throwable inner = suppressed[0];
+        if (!(inner instanceof IOException)) {
+          throw inner;
+        }
+        GenericTestUtils.assertExceptionContains(fnfe.getMessage(), inner.getCause(), inner.getCause().getMessage());
+      }
+    }
+  }
 }

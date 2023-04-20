@@ -679,6 +679,96 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
+  /**
+   * Append operation for blob endpoint which takes block id as a param.
+   * @param blockId The blockId of the block to be appended.
+   * @param path The path at which the block is to be appended.
+   * @param buffer The buffer which has the data to be appended.
+   * @param reqParams The request params.
+   * @param cachedSasToken The cachedSasToken if available.
+   * @param tracingContext Tracing context of the operation.
+   * @param eTag Etag of the blob to prevent parallel writer situations.
+   * @return AbfsRestOperation op.
+   * @throws AzureBlobFileSystemException
+   */
+  public AbfsRestOperation append(final String blockId, final String path, final byte[] buffer,
+                                  AppendRequestParameters reqParams, final String cachedSasToken,
+                                  TracingContext tracingContext, String eTag)
+          throws AzureBlobFileSystemException {
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    if (reqParams.getLeaseId() != null) {
+      requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, reqParams.getLeaseId()));
+    }
+
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCK);
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_BLOCKID, blockId);
+    requestHeaders.add(new AbfsHttpHeader(CONTENT_LENGTH, String.valueOf(buffer.length)));
+    requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
+
+    // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
+    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION,
+            abfsUriQueryBuilder, cachedSasToken);
+
+    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
+    final AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.PutBlock,
+            this,
+            HTTP_METHOD_PUT,
+            url,
+            requestHeaders,
+            buffer,
+            reqParams.getoffset(),
+            reqParams.getLength(),
+            sasTokenForReuse);
+    op.execute(tracingContext);
+    return op;
+  }
+
+  /**
+   * The flush operation to commit the blocks.
+   * @param buffer This has the xml in byte format with the blockIds to be flushed.
+   * @param path The path to flush the data to.
+   * @param isClose True when the stream is closed.
+   * @param cachedSasToken The cachedSasToken if available.
+   * @param leaseId The leaseId of the blob if available.
+   * @param eTag The etag of the blob.
+   * @param tracingContext Tracing context for the operation.
+   * @return AbfsRestOperation op.
+   * @throws IOException
+   */
+  public AbfsRestOperation flush(byte[] buffer, final String path, boolean isClose,
+                                 final String cachedSasToken, final String leaseId, String eTag,
+                                 TracingContext tracingContext) throws IOException {
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    if (leaseId != null) {
+      requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
+    }
+
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCKLIST);
+    requestHeaders.add(new AbfsHttpHeader(CONTENT_LENGTH, String.valueOf(buffer.length)));
+    requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, APPLICATION_XML));
+    requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(isClose));
+    // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
+    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION,
+            abfsUriQueryBuilder, cachedSasToken);
+
+    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
+    final AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.PutBlockList,
+            this,
+            HTTP_METHOD_PUT,
+            url,
+            requestHeaders, buffer,
+            0,
+            buffer.length,
+            sasTokenForReuse);
+    op.execute(tracingContext);
+    return op;
+  }
+
   // For AppendBlob its possible that the append succeeded in the backend but the request failed.
   // However a retry would fail with an InvalidQueryParameterValue
   // (as the current offset would be unacceptable).
@@ -794,6 +884,34 @@ public class AbfsClient implements Closeable {
             AbfsRestOperationType.GetPathStatus,
             this,
             HTTP_METHOD_HEAD,
+            url,
+            requestHeaders);
+    op.execute(tracingContext);
+    return op;
+  }
+
+  /**
+   * GetBlockList call to the backend to get the list of committed blockId's.
+   * @param path The path to get the list of blockId's.
+   * @param tracingContext The tracing context for the operation.
+   * @return AbfsRestOperation op.
+   * @throws AzureBlobFileSystemException
+   */
+  public AbfsRestOperation getBlockList(final String path, TracingContext tracingContext) throws AzureBlobFileSystemException {
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+    String operation = SASTokenProvider.GET_BLOCK_LIST;
+    appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
+
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCKLIST);
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_BLOCKLISTTYPE, COMMITTED);
+    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
+
+    final AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.GetBlockList,
+            this,
+            HTTP_METHOD_GET,
             url,
             requestHeaders);
     op.execute(tracingContext);
@@ -1430,5 +1548,9 @@ public class AbfsClient implements Closeable {
 
   public <V> void addCallback(ListenableFuture<V> future, FutureCallback<V> callback) {
     Futures.addCallback(future, callback, executorService);
+  }
+
+  AbfsConfiguration getAbfsConfiguration() {
+    return abfsConfiguration;
   }
 }

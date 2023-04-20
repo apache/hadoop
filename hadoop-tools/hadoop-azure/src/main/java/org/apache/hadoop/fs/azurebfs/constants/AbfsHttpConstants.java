@@ -35,7 +35,6 @@ public final class AbfsHttpConstants {
   public static final String APPEND_ACTION = "append";
   public static final String BLOCK = "block";
   public static final String BLOCKLIST = "blocklist";
-  public static final String COMP_BLOCKLIST = "comp=blocklist";
 
   public static final String COMP_LIST = "comp=list";
   public static final String COMMITTED = "committed";
@@ -55,6 +54,9 @@ public final class AbfsHttpConstants {
   public static final String APPEND_BLOB_TYPE = "appendblob";
   public static final String BLOCK_BLOB_TYPE = "BlockBlob";
   public static final String TOKEN_VERSION = "2";
+  public static final String COMMITTED_BLOCKS = "CommittedBlocks";
+  public static final String BLOCK_NAME = "Block";
+  public static final String NAME = "Name";
 
   public static final String JAVA_VENDOR = "java.vendor";
   public static final String JAVA_VERSION = "java.version";
@@ -100,6 +102,11 @@ public final class AbfsHttpConstants {
   public static final String APPLICATION_JSON = "application/json";
   public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
   public static final String APPLICATION_XML = "application/xml";
+  public static final String PUT_BLOCK_LIST = "PutBlockList";
+  public static final String XML_VERSION = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+  public static final String BLOCK_LIST_START_TAG = "<BlockList>\n";
+  public static final String BLOCK_LIST_END_TAG = "</BlockList>\n";
+  public static final String LATEST_BLOCK_FORMAT = "<Latest>%s</Latest>\n";
 
   public static final String ROOT_PATH = "/";
   public static final String ACCESS_MASK = "mask:";
@@ -125,7 +132,6 @@ public final class AbfsHttpConstants {
   public static final String BLOB = "Blob";
   private static final String PREFIX = "Prefix";
   public static final String NEXT_MARKER = "NextMarker";
-  public static final String NAME = "Name";
   public static final String METADATA = "Metadata";
   public static final String PROPERTIES = "Properties";
   public static final String BLOB_PREFIX = "BlobPrefix";

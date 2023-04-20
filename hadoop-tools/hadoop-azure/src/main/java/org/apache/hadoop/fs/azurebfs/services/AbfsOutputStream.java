@@ -22,10 +22,19 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Future;
 import java.util.UUID;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
@@ -51,7 +60,13 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
+import static java.net.HttpURLConnection.HTTP_CONFLICT;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCK_LIST_END_TAG;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCK_LIST_START_TAG;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.LATEST_BLOCK_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.BLOB_OPERATION_NOT_SUPPORTED;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_WRITE_WITHOUT_LEASE;
 import static org.apache.hadoop.fs.impl.StoreImplementationUtils.isProbeForSyncable;
 import static org.apache.hadoop.io.IOUtils.wrapException;
@@ -114,7 +129,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   private final DataBlocks.BlockFactory blockFactory;
 
   /** Current data block. Null means none currently active. */
-  private DataBlocks.DataBlock activeBlock;
+  private AbfsBlock activeBlock;
 
   /** Count of blocks uploaded. */
   private long blockCount = 0;
@@ -122,8 +137,29 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   /** The size of a single block. */
   private final int blockSize;
 
+  /** The map to store blockId and Status **/
+  private final LinkedHashMap<String, BlockStatus> map = new LinkedHashMap<>();
+
+  /** The list of already committed blocks is stored in this list. */
+  private List<String> committedBlockEntries = new ArrayList<>();
+
+  /** The list of all blockId's for putBlockList. */
+  private final Set<String> blockIdList = new LinkedHashSet<>();
+
+  /** The prefix mode for decision on BLOB or DFS endpoint. */
+  private PrefixMode prefixMode;
+
+  /** The etag of the blob. */
+  private String eTag;
+
   /** Executor service to carry out the parallel upload requests. */
   private final ListeningExecutorService executorService;
+
+  /** List to validate order. */
+  private final UniqueArrayList<String> orderedBlockList = new UniqueArrayList<>();
+
+  /** Retry fallback for append on DFS */
+  private static boolean fallbackDFSAppend = false;
 
   public AbfsOutputStream(AbfsOutputStreamContext abfsOutputStreamContext)
       throws IOException {
@@ -145,6 +181,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.numOfAppendsToServerSinceLastFlush = 0;
     this.writeOperations = new ConcurrentLinkedDeque<>();
     this.outputStreamStatistics = abfsOutputStreamContext.getStreamStatistics();
+    this.eTag = abfsOutputStreamContext.getETag();
 
     if (this.isAppendBlob) {
       this.maxConcurrentRequestCount = 1;
@@ -163,14 +200,92 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
         abfsOutputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.outputStreamId = createOutputStreamId();
     this.tracingContext = new TracingContext(abfsOutputStreamContext.getTracingContext());
+    this.prefixMode = client.getAbfsConfiguration().getPrefixMode();
+    this.blockFactory = abfsOutputStreamContext.getBlockFactory();
+    this.blockSize = bufferSize;
+    if (prefixMode == PrefixMode.BLOB && abfsOutputStreamContext.getPosition() > 0) {
+      // Get the list of all the committed blocks for the given path.
+      this.committedBlockEntries = getBlockList(path, tracingContext);
+    } else {
+      // create that first block. This guarantees that an open + close sequence
+      // writes a 0-byte entry.
+      createBlockIfNeeded(position);
+    }
     this.tracingContext.setStreamID(outputStreamId);
     this.tracingContext.setOperation(FSOperationType.WRITE);
     this.ioStatistics = outputStreamStatistics.getIOStatistics();
-    this.blockFactory = abfsOutputStreamContext.getBlockFactory();
-    this.blockSize = bufferSize;
-    // create that first block. This guarantees that an open + close sequence
-    // writes a 0-byte entry.
-    createBlockIfNeeded();
+  }
+
+  private final Lock lock = new ReentrantLock();
+
+  private final ReentrantLock mapLock = new ReentrantLock();
+
+  public LinkedHashMap<String, BlockStatus> getMap() {
+    return map;
+  }
+
+  /**
+   * Set the eTag of the blob.
+   *
+   * @param eTag eTag.
+   */
+  public void setETag(String eTag) {
+    lock.lock();
+    try {
+      this.eTag = eTag;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  /**
+   * Get eTag value of blob.
+   *
+   * @return eTag.
+   */
+  String getETag() {
+    lock.lock();
+    try {
+      return eTag;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  public DataBlocks.BlockFactory getBlockFactory() {
+    return blockFactory;
+  }
+
+  public long getBlockCount() {
+    return blockCount;
+  }
+
+  public int getBlockSize() {
+    return blockSize;
+  }
+
+  public static class UniqueArrayList<T> extends ArrayList<T> {
+    @Override
+    public boolean add(T element) {
+      if (!super.contains(element)) {
+        return super.add(element);
+      }
+      return false;
+    }
+  }
+
+  /**
+   * Returns block id's which are committed for the blob.
+   * @param path The blob path.
+   * @param tracingContext Tracing context object.
+   * @return list of committed block id's.
+   * @throws AzureBlobFileSystemException
+   */
+  private List<String> getBlockList(final String path, TracingContext tracingContext) throws AzureBlobFileSystemException {
+    List<String> committedBlockIdList;
+    final AbfsRestOperation op = client.getBlockList(path, tracingContext);
+    committedBlockIdList = op.getResult().getBlockIdList();
+    return committedBlockIdList;
   }
 
   private String createOutputStreamId() {
@@ -216,6 +331,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   @Override
   public synchronized void write(final byte[] data, final int off, final int length)
       throws IOException {
+    if (closed) {
+      throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
+    }
     // validate if data is not null and index out of bounds.
     DataBlocks.validateWriteArgs(data, off, length);
     maybeThrowLastError();
@@ -227,7 +345,18 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     if (hasLease() && isLeaseFreed()) {
       throw new PathIOException(path, ERR_WRITE_WITHOUT_LEASE);
     }
-    DataBlocks.DataBlock block = createBlockIfNeeded();
+
+    AbfsBlock block = createBlockIfNeeded(position);
+    // Put entry in map with status as NEW which is changed to SUCCESS when successfully appended.
+    mapLock.lock();
+    try {
+      if (length > 0) {
+        map.put(block.getBlockId(), BlockStatus.NEW);
+        orderedBlockList.add(block.getBlockId());
+      }
+    } finally {
+      mapLock.unlock();
+    }
     int written = block.write(data, off, length);
     int remainingCapacity = block.remainingCapacity();
 
@@ -254,12 +383,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    * @return the active block; null if there isn't one.
    * @throws IOException on any failure to create
    */
-  private synchronized DataBlocks.DataBlock createBlockIfNeeded()
+  private synchronized AbfsBlock createBlockIfNeeded(long offset)
       throws IOException {
     if (activeBlock == null) {
       blockCount++;
-      activeBlock = blockFactory
-          .create(blockCount, this.blockSize, outputStreamStatistics);
+      activeBlock = new AbfsBlock(this, offset);
     }
     return activeBlock;
   }
@@ -288,7 +416,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    * @param blockToUpload    block to upload.
    * @throws IOException     upload failure
    */
-  private void uploadBlockAsync(DataBlocks.DataBlock blockToUpload,
+  private void uploadBlockAsync(AbfsBlock blockToUpload,
       boolean isFlush, boolean isClose)
       throws IOException {
     if (this.isAppendBlob) {
@@ -328,9 +456,44 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
              */
             AppendRequestParameters reqParams = new AppendRequestParameters(
                 offset, 0, bytesLength, mode, false, leaseId);
-            AbfsRestOperation op =
-                client.append(path, blockUploadData.toByteArray(), reqParams,
-                    cachedSasToken.get(), new TracingContext(tracingContext));
+            AbfsRestOperation op;
+            if (prefixMode == PrefixMode.DFS) {
+              TracingContext tracingContextAppend = new TracingContext(tracingContext);
+              if (fallbackDFSAppend) {
+                tracingContextAppend.setFallbackDFSAppend("D");
+              }
+              op = client.append(path, blockUploadData.toByteArray(), reqParams,
+                      cachedSasToken.get(), tracingContextAppend);
+            } else {
+              try {
+                op = client.append(blockToUpload.getBlockId(), path, blockUploadData.toByteArray(), reqParams,
+                        cachedSasToken.get(), new TracingContext(tracingContext), getETag());
+                String key = blockToUpload.getBlockId();
+                if (!getMap().containsKey(key)) {
+                  throw new Exception("Block is missing with blockId " + blockToUpload.getBlockId());
+                } else {
+                  mapLock.lock();
+                  try {
+                    map.put(blockToUpload.getBlockId(), BlockStatus.SUCCESS);
+                  } finally {
+                    mapLock.unlock();
+                  }
+                }
+              } catch (AbfsRestOperationException ex) {
+                // The mechanism to fall back to DFS endpoint if blob operation is not supported.
+                if (ex.getStatusCode() == HTTP_CONFLICT && ex.getMessage().contains(BLOB_OPERATION_NOT_SUPPORTED)) {
+                  prefixMode = PrefixMode.DFS;
+                  LOG.debug("Retrying append due to fallback for path {} ", path);
+                  TracingContext tracingContextAppend = new TracingContext(tracingContext);
+                  tracingContextAppend.setFallbackDFSAppend("D");
+                  fallbackDFSAppend = true;
+                  op = client.append(path, blockUploadData.toByteArray(), reqParams,
+                          cachedSasToken.get(), tracingContextAppend);
+                } else {
+                  throw ex;
+                }
+              }
+            }
             cachedSasToken.update(op.getSasToken());
             perfInfo.registerResult(op.getResult());
             perfInfo.registerSuccess(true);
@@ -371,7 +534,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    *
    * @return the active block; null if there isn't one.
    */
-  private synchronized DataBlocks.DataBlock getActiveBlock() {
+  private synchronized AbfsBlock getActiveBlock() {
     return activeBlock;
   }
 
@@ -556,7 +719,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    *                     the dataBlock or while closing the BlockUploadData.
    */
   private void writeAppendBlobCurrentBufferToService() throws IOException {
-    DataBlocks.DataBlock activeBlock = getActiveBlock();
+    AbfsBlock activeBlock = getActiveBlock();
     // No data, return.
     if (!hasActiveBlockDataToUpload()) {
       return;
@@ -635,8 +798,51 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
             "flushWrittenBytesToServiceInternal", "flush")) {
-      AbfsRestOperation op = client.flush(path, offset, retainUncommitedData, isClose,
-          cachedSasToken.get(), leaseId, new TracingContext(tracingContext));
+      AbfsRestOperation op;
+      if (prefixMode == PrefixMode.DFS) {
+        TracingContext tracingContextFlush = new TracingContext(tracingContext);
+        if (fallbackDFSAppend) {
+          tracingContextFlush.setFallbackDFSAppend("D");
+        }
+        op = client.flush(path, offset, retainUncommitedData, isClose,
+                cachedSasToken.get(), leaseId, tracingContextFlush);
+      } else {
+        // Adds all the committed blocks if available to the list of blocks to be added in putBlockList.
+        blockIdList.addAll(committedBlockEntries);
+        boolean successValue = true;
+        String failedBlockId = "";
+        BlockStatus success = BlockStatus.SUCCESS;
+
+        int mapEntry = 0;
+        // If any of the entry in the map doesn't have the status of SUCCESS, fail the flush.
+        for (Map.Entry<String, BlockStatus> entry: getMap().entrySet()) {
+          if (!success.equals(entry.getValue())) {
+            successValue = false;
+            failedBlockId = entry.getKey();
+            break;
+          } else {
+            if (!entry.getKey().equals(orderedBlockList.get(mapEntry))) {
+              LOG.debug("The order for the given offset {} with blockId {} " +
+                      " for the path {} was not successful", offset, entry.getKey(), path);
+              throw new IOException("The ordering in map is incorrect");
+            }
+            blockIdList.add(entry.getKey());
+            mapEntry++;
+          }
+        }
+        if (!successValue) {
+          LOG.debug("A past append for the given offset {} with blockId {} " +
+                  " for the path {} was not successful", offset, failedBlockId, path);
+          throw new IOException("A past append was not successful");
+        }
+        // Generate the xml with the list of blockId's to generate putBlockList call.
+        String blockListXml = generateBlockListXml(blockIdList);
+        op = client.flush(blockListXml.getBytes(), path,
+                isClose, cachedSasToken.get(), leaseId, getETag(), new TracingContext(tracingContext));
+        setETag(op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG));
+        getMap().clear();
+        orderedBlockList.clear();
+      }
       cachedSasToken.update(op.getSasToken());
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {
@@ -649,6 +855,22 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       throw lastError;
     }
     this.lastFlushOffset = offset;
+  }
+
+  /**
+   * Helper method to generate the xml with list of blockId's.
+   * @param blockIds The set of blockId's to be pushed to the backend.
+   * @return xml in string format.
+   */
+  private static String generateBlockListXml(Set<String> blockIds) {
+    StringBuilder stringBuilder = new StringBuilder();
+    stringBuilder.append(XML_VERSION);
+    stringBuilder.append(BLOCK_LIST_START_TAG);
+    for (String blockId : blockIds) {
+      stringBuilder.append(String.format(LATEST_BLOCK_FORMAT, blockId));
+    }
+    stringBuilder.append(BLOCK_LIST_END_TAG);
+    return stringBuilder.toString();
   }
 
   /**
