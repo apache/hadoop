@@ -128,13 +128,11 @@ public class NMClientImpl extends NMClient {
         stopContainer(startedContainer.getContainerId(),
             startedContainer.getNodeId());
       } catch (YarnException e) {
-        LOG.error("Failed to stop Container " +
-            startedContainer.getContainerId() +
-            " when stopping NMClientImpl");
+        LOG.error("Failed to stop Container {} when stopping NMClientImpl",
+                startedContainer.getContainerId());
       } catch (IOException e) {
-        LOG.error("Failed to stop Container " +
-            startedContainer.getContainerId() +
-            " when stopping NMClientImpl");
+        LOG.error("Failed to stop Container {} when stopping NMClientImpl",
+                startedContainer.getContainerId());
       }
     }
   }
