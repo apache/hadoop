@@ -736,7 +736,6 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     MountTable addEntry =
         MountTable.newInstance(srcDir, destMap);
     addEntry.setDestOrder(DestinationOrder.RANDOM);
-    addEntry.setFaultTolerant(true);
     assertTrue(addMountTable(addEntry));
 
     //create a mount point with a single destinations ns0
