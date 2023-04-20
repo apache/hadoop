@@ -813,6 +813,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
         String failedBlockId = "";
         BlockStatus success = BlockStatus.SUCCESS;
 
+        // No network calls needed for empty map.
+        if (map.isEmpty()) {
+          return;
+        }
+
         int mapEntry = 0;
         // If any of the entry in the map doesn't have the status of SUCCESS, fail the flush.
         for (Map.Entry<String, BlockStatus> entry: getMap().entrySet()) {
