@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.AddToClusterNodeLabelsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.AddToClusterNodeLabelsResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.CheckForDecommissioningNodesRequestProto;
@@ -57,6 +58,8 @@ import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocolPB
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
@@ -75,6 +78,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNod
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNodeLabelsResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.CheckForDecommissioningNodesRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.CheckForDecommissioningNodesResponsePBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DatabaseAccessRequestPBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DatabaseAccessResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodesToAttributesMappingRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodesToAttributesMappingResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RefreshAdminAclsRequestPBImpl;
@@ -107,11 +112,11 @@ import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 public class ResourceManagerAdministrationProtocolPBServiceImpl implements ResourceManagerAdministrationProtocolPB {
 
   private ResourceManagerAdministrationProtocol real;
-  
+
   public ResourceManagerAdministrationProtocolPBServiceImpl(ResourceManagerAdministrationProtocol impl) {
     this.real = impl;
   }
-  
+
   @Override
   public RefreshQueuesResponseProto refreshQueues(RpcController controller,
       RefreshQueuesRequestProto proto) throws ServiceException {
@@ -130,7 +135,7 @@ public class ResourceManagerAdministrationProtocolPBServiceImpl implements Resou
   public RefreshAdminAclsResponseProto refreshAdminAcls(
       RpcController controller, RefreshAdminAclsRequestProto proto)
       throws ServiceException {
-    RefreshAdminAclsRequestPBImpl request = 
+    RefreshAdminAclsRequestPBImpl request =
       new RefreshAdminAclsRequestPBImpl(proto);
     try {
       RefreshAdminAclsResponse response = real.refreshAdminAcls(request);
@@ -157,15 +162,15 @@ public class ResourceManagerAdministrationProtocolPBServiceImpl implements Resou
   }
 
   @Override
-  public RefreshSuperUserGroupsConfigurationResponseProto 
+  public RefreshSuperUserGroupsConfigurationResponseProto
   refreshSuperUserGroupsConfiguration(
       RpcController controller,
       RefreshSuperUserGroupsConfigurationRequestProto proto)
       throws ServiceException {
-    RefreshSuperUserGroupsConfigurationRequestPBImpl request = 
+    RefreshSuperUserGroupsConfigurationRequestPBImpl request =
       new RefreshSuperUserGroupsConfigurationRequestPBImpl(proto);
     try {
-      RefreshSuperUserGroupsConfigurationResponse response = 
+      RefreshSuperUserGroupsConfigurationResponse response =
         real.refreshSuperUserGroupsConfiguration(request);
       return ((RefreshSuperUserGroupsConfigurationResponsePBImpl)response).getProto();
     } catch (YarnException e) {
@@ -179,10 +184,10 @@ public class ResourceManagerAdministrationProtocolPBServiceImpl implements Resou
   public RefreshUserToGroupsMappingsResponseProto refreshUserToGroupsMappings(
       RpcController controller, RefreshUserToGroupsMappingsRequestProto proto)
       throws ServiceException {
-    RefreshUserToGroupsMappingsRequestPBImpl request = 
+    RefreshUserToGroupsMappingsRequestPBImpl request =
       new RefreshUserToGroupsMappingsRequestPBImpl(proto);
     try {
-      RefreshUserToGroupsMappingsResponse response = 
+      RefreshUserToGroupsMappingsResponse response =
         real.refreshUserToGroupsMappings(request);
       return ((RefreshUserToGroupsMappingsResponsePBImpl)response).getProto();
     } catch (YarnException e) {
@@ -196,10 +201,10 @@ public class ResourceManagerAdministrationProtocolPBServiceImpl implements Resou
   public RefreshServiceAclsResponseProto refreshServiceAcls(
       RpcController controller, RefreshServiceAclsRequestProto proto)
       throws ServiceException {
-    RefreshServiceAclsRequestPBImpl request = 
+    RefreshServiceAclsRequestPBImpl request =
         new RefreshServiceAclsRequestPBImpl(proto);
       try {
-        RefreshServiceAclsResponse response = 
+        RefreshServiceAclsResponse response =
           real.refreshServiceAcls(request);
         return ((RefreshServiceAclsResponsePBImpl)response).getProto();
       } catch (YarnException e) {
@@ -226,11 +231,11 @@ public class ResourceManagerAdministrationProtocolPBServiceImpl implements Resou
       throw new ServiceException(e);
     }
   }
-  
+
   @Override
   public UpdateNodeResourceResponseProto updateNodeResource(RpcController controller,
       UpdateNodeResourceRequestProto proto) throws ServiceException {
-    UpdateNodeResourceRequestPBImpl request = 
+    UpdateNodeResourceRequestPBImpl request =
         new UpdateNodeResourceRequestPBImpl(proto);
     try {
       UpdateNodeResourceResponse response = real.updateNodeResource(request);
@@ -356,6 +361,20 @@ public class ResourceManagerAdministrationProtocolPBServiceImpl implements Resou
     } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public YarnServerResourceManagerServiceProtos.DatabaseAccessResponseProto accessDatabase(
+      RpcController controller,
+      YarnServerResourceManagerServiceProtos.DatabaseAccessRequestProto proto)
+      throws ServiceException {
+    DatabaseAccessRequest request = new DatabaseAccessRequestPBImpl(proto);
+    try {
+      DatabaseAccessResponse response = real.accessDatabase(request);
+      return ((DatabaseAccessResponsePBImpl) response).getProto();
+    } catch (IOException | YarnException e) {
       throw new ServiceException(e);
     }
   }

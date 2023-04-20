@@ -59,7 +59,7 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
   public static final Logger LOG =
       LoggerFactory.getLogger(LeveldbConfigurationStore.class);
 
-  private static final String DB_NAME = "yarn-conf-store";
+  public static final String DB_NAME = "yarn-conf-store";
   private static final String LOG_KEY = "log";
   private static final String VERSION_KEY = "version";
   private static final String CONF_VERSION_NAME = "conf-version-store";
@@ -105,19 +105,8 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
     fs.delete(getStorageDir(DB_NAME), true);
   }
 
-  private void initDatabase() throws Exception {
-    Path confVersion = createStorageDir(CONF_VERSION_NAME);
-    Options confOptions = new Options();
-    confOptions.createIfMissing(false);
-    File confVersionFile = new File(confVersion.toString());
-
-    versionDb = versionDbManager.initDatabase(confVersionFile, confOptions,
-        this::initVersionDb);
-
-    Path storeRoot = createStorageDir(DB_NAME);
-    Options options = new Options();
-    options.createIfMissing(false);
-    options.comparator(new DBComparator() {
+  public static DBComparator getDBComparator() {
+    return new DBComparator() {
       @Override
       public int compare(byte[] key1, byte[] key2) {
         String key1Str = new String(key1, StandardCharsets.UTF_8);
@@ -148,7 +137,23 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
       public byte[] findShortSuccessor(byte[] key) {
         return key;
       }
-    });
+    };
+  }
+
+  private void initDatabase() throws Exception {
+    Path confVersion = createStorageDir(CONF_VERSION_NAME);
+    Options confOptions = new Options();
+    confOptions.createIfMissing(false);
+    File confVersionFile = new File(confVersion.toString());
+
+    versionDb = versionDbManager.initDatabase(confVersionFile, confOptions,
+        this::initVersionDb);
+
+    Path storeRoot = createStorageDir(DB_NAME);
+    Options options = new Options();
+    options.createIfMissing(false);
+    options.comparator(getDBComparator());
+
     LOG.info("Using conf database at {}", storeRoot);
     File dbFile = new File(storeRoot.toString());
     db = dbManager.initDatabase(dbFile, options, this::initDb);

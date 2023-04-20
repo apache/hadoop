@@ -165,3 +165,19 @@ message ActiveRMInfoProto {
   optional string clusterId = 1;
   optional string rmId = 2;
 }
+
+message DatabaseAccessRequestProto {
+  required string operation = 1;
+  required string database = 2;
+  required string key = 3;
+  optional string value = 4;
+}
+
+message DatabaseAccessResponseProto {
+  repeated DBRecordProto records = 1;
+}
+
+message DBRecordProto {
+  required string key = 1;
+  required string value = 2;
+}

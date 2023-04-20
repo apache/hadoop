@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.iq80.leveldb.Options;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -70,6 +71,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsR
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DBRecord;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
@@ -99,6 +103,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.KVStore;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.LevelDbStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -132,6 +138,9 @@ public class AdminService extends CompositeService implements
 
   @VisibleForTesting
   boolean isCentralizedNodeLabelConfiguration = true;
+
+  // Map of database name to corresponding KVStore instance
+  Map<String, KVStore> kvStoreMap = new HashMap<>();
 
   public AdminService(ResourceManager rm) {
     super(AdminService.class.getName());
@@ -222,6 +231,9 @@ public class AdminService extends CompositeService implements
   protected void stopServer() throws Exception {
     if (this.server != null) {
       this.server.stop();
+    }
+    for (KVStore store : kvStoreMap.values()) {
+      store.close();
     }
   }
 
@@ -975,6 +987,57 @@ public class AdminService extends CompositeService implements
     } catch (YarnException e) {
       throw logAndWrapException(e, user.getShortUserName(), operation, msg);
     }
+  }
+
+  @Override
+  public DatabaseAccessResponse accessDatabase(DatabaseAccessRequest request)
+      throws IOException {
+    // Do not enable access if RM is started.
+    // This is to prevent inconsistencies between in memory data structures & the database
+    // in classes like RMStateStore & MutableCSConfigurationProvider
+    if (!rm.isInState(STATE.NOTINITED)) {
+      throw new IllegalStateException("RM is started & accessing DB is prohibited in this state");
+    }
+
+    if (request.getKey() == null || request.getDatabase() == null) {
+      throw new IllegalArgumentException("Invalid Request " + request);
+    }
+
+    KVStore store;
+    if (kvStoreMap.containsKey(request.getDatabase())) {
+      store = kvStoreMap.get(request.getDatabase());
+    } else {
+      // Currently it enables access to only Level DB
+      Options options = new Options();
+      options.createIfMissing(false);
+      store = new LevelDbStore(request.getDatabase(), options);
+      store.init();
+      kvStoreMap.put(request.getDatabase(), store);
+    }
+
+    List<DBRecord> records = new ArrayList<>();
+    switch (request.getOperation()) {
+      case "get":
+        byte[] val = store.get(request.getKey().getBytes());
+        if (val != null) {
+          DBRecord record = DBRecord.newInstance(request.getKey(), new String(val));
+          records.add(record);
+        }
+        break;
+      case "set":
+        if (request.getValue() == null) {
+          throw new IllegalArgumentException("Value can't be null when inserting to database");
+        }
+        store.set(request.getKey().getBytes(), request.getValue().getBytes());
+        break;
+      case "del":
+        store.del(request.getKey().getBytes());
+        break;
+      default:
+        throw new IllegalArgumentException("Invalid Operation");
+    }
+
+    return DatabaseAccessResponse.newInstance(records);
   }
 
   private void refreshClusterMaxPriority() throws IOException, YarnException {
