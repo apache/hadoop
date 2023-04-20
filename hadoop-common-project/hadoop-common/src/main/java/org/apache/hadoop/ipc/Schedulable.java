@@ -29,5 +29,19 @@ import org.apache.hadoop.security.UserGroupInformation;
 public interface Schedulable {
   public UserGroupInformation getUserGroupInformation();
 
+  /**
+   * This is overridden only in {@link Server.Call}.
+   * The CallerContext field will be used to carry information
+   * about the user in cases where UGI proves insufficient.
+   * Any other classes that might try to use this method,
+   * will get an UnsupportedOperationException.
+   *
+   * @return an instance of CallerContext if method
+   * is overridden else get an UnsupportedOperationException
+   */
+  default CallerContext getCallerContext() {
+    throw new UnsupportedOperationException("Invalid operation.");
+  }
+
   int getPriorityLevel();
 }
