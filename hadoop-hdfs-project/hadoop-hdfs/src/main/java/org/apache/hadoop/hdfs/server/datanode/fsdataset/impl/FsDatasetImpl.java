@@ -2395,6 +2395,30 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     datanode.notifyNamenodeDeletedBlock(new ExtendedBlock(bpid, block),
         block.getStorageUuid());
   }
+  /**
+   * Invalidate a block which is not found on disk. We should remove it from
+   * memory and notify namenode, but unnecessary  to delete the actual on-disk
+   * block file again.
+   *
+   * @param bpid the block pool ID.
+   * @param block The block to be invalidated.
+   */
+  public void invalidateMissingBlock(String bpid, Block block) {
+
+    // The replica seems is on its volume map but not on disk.
+    // We can't confirm here is block file lost or disk failed.
+    // If block lost:
+    //    deleted local block file is completely unnecessary
+    // If disk failed:
+    //    deleted local block file here may lead to missing-block
+    //    when it with only 1 replication left now.
+    // So remove if from volume map notify namenode is ok.
+    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
+        bpid)) {
+      ReplicaInfo replica = volumeMap.remove(bpid, block);
+      invalidate(bpid, replica);
+    }
+  }
 
   /**
    * Remove Replica from ReplicaMap.

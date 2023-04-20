@@ -351,16 +351,8 @@ class BlockSender implements java.io.Closeable {
         } catch (FileNotFoundException e) {
           if ((e.getMessage() != null) && !(e.getMessage()
               .contains("Too many open files"))) {
-            // The replica seems is on its volume map but not on disk.
-            // We can't confirm here is block file lost or disk failed.
-            // If block lost:
-            //    deleted local block file is completely unnecessary
-            // If disk failed:
-            //    deleted local block file here may lead to missing-block
-            //    when it with only 1 replication left now.
-            // So just notify namenode is ok.
-            datanode
-                .notifyNamenodeDeletedBlock(block, replica.getStorageUuid());
+            datanode.data.invalidateMissingBlock(block.getBlockPoolId(),
+                block.getLocalBlock());
           }
           throw e;
         } finally {
