@@ -216,8 +216,12 @@ public class AzureBlobFileSystem extends FileSystem
         throw ex;
       }
     }
-    if (!isNamespaceEnabled && uri.toString().contains(FileSystemUriSchemes.WASB_DNS_PREFIX)) {
-      this.prefixMode = PrefixMode.BLOB;
+    if (!isNamespaceEnabled && abfsConfiguration.shouldFallbackToDfs()) {
+      this.prefixMode = PrefixMode.DFS;
+    } else {
+      if (!isNamespaceEnabled && uri.toString().contains(FileSystemUriSchemes.WASB_DNS_PREFIX)) {
+        this.prefixMode = PrefixMode.BLOB;
+      }
     }
     abfsConfiguration.setPrefixMode(this.prefixMode);
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {

@@ -359,6 +359,15 @@ public class AbfsConfiguration{
     this.prefixMode = prefixMode;
   }
 
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_FALLBACK_TO_DFS,
+          DefaultValue = DEFAULT_FS_AZURE_FALLBACK_TO_DFS)
+  private boolean fallbackToDfs;
+
+  public boolean shouldFallbackToDfs() {
+    return this.fallbackToDfs;
+  }
+
   /**
    * Gets the Azure Storage account name corresponding to this instance of configuration.
    * @return the Azure Storage account name
