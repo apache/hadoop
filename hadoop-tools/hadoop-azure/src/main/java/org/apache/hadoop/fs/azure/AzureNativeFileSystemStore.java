@@ -830,8 +830,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       LOG.warn("Unable to initialize HBase root as an atomic rename directory.");
     }
     LOG.debug("Atomic rename directories: {} ", setToString(atomicRenameDirs));
-    metadataKeyCaseSensitive = conf
-        .getBoolean(KEY_BLOB_METADATA_KEY_CASE_SENSITIVE, false);
+    metadataKeyCaseSensitive = false;
     if (!metadataKeyCaseSensitive) {
       LOG.info("{} configured as false. Blob metadata will be treated case insensitive.",
           KEY_BLOB_METADATA_KEY_CASE_SENSITIVE);
