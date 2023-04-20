@@ -50,7 +50,6 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationTestUtil;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicityUtils.SUFFIX;
@@ -63,6 +62,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test rename operation.
@@ -1249,32 +1249,6 @@ public class ITestAzureBlobFileSystemRename extends
   }
 
   @Test
-  public void testParallelCopy() throws Exception {
-    AzureBlobFileSystem fs = getFileSystem();
-    fs.create(new Path("/src"));
-    new Thread(() -> {
-      try {
-        fs.getAbfsStore().copyBlob(new Path("/src"),
-            new Path("/dst"), Mockito.mock(TracingContext.class));
-      } catch (
-          AzureBlobFileSystemException e) {
-        throw new RuntimeException(e);
-      }
-    }).start();
-    fs.getAbfsStore().copyBlob(new Path("/src"),
-        new Path("/dst"), Mockito.mock(TracingContext.class));
-    Thread.sleep(10000);
-  }
-
-  @Test
-  public void testCopyAfterSourceHasBeenDeleted() throws Exception {
-    AzureBlobFileSystem fs = getFileSystem();
-    fs.create(new Path("/src"));
-    fs.getAbfsStore().getClient().deleteBlobPath(new Path("/src"), Mockito.mock(TracingContext.class));
-    fs.getAbfsStore().copyBlob(new Path("/src"), new Path("/dst"), Mockito.mock(TracingContext.class));
-  }
-
-  @Test
   public void testRenameDirWhenMarkerBlobIsAbsent() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     assumeNonHnsAccountBlobEndpoint(fs);
@@ -1313,7 +1287,7 @@ public class ITestAzureBlobFileSystemRename extends
     fs.getAbfsStore()
         .getClient()
         .deleteBlobPath(new Path("/test1"), Mockito.mock(TracingContext.class));
-    LambdaTestUtils.intercept(AbfsRestOperationException.class, () -> {
+    intercept(AbfsRestOperationException.class, () -> {
       fs.getAbfsStore().getBlobProperty(new Path("/test1"),
               Mockito.mock(TracingContext.class));
     });
@@ -1465,9 +1439,80 @@ public class ITestAzureBlobFileSystemRename extends
     fileSystem.create(new Path(srcFile));
 
 
-    LambdaTestUtils.intercept(FileNotFoundException.class, () -> {
+    intercept(FileNotFoundException.class, () -> {
       fileSystem.rename(new Path(srcFile), new Path(dstFile));
     });
     Assert.assertFalse(fileSystem.exists(new Path(dstFile)));
+  }
+
+  @Test
+  public void testParallelCopy() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    fs.create(new Path("/src"));
+    new Thread(() -> {
+      try {
+        fs.getAbfsStore().copyBlob(new Path("/src"),
+            new Path("/dst"), Mockito.mock(TracingContext.class));
+      } catch (
+          AzureBlobFileSystemException e) {
+        throw new RuntimeException(e);
+      }
+    }).start();
+    fs.getAbfsStore().copyBlob(new Path("/src"),
+        new Path("/dst"), Mockito.mock(TracingContext.class));
+    Thread.sleep(10000);
+  }
+
+  @Test
+  public void testCopyAfterSourceHasBeenDeleted() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    fs.create(new Path("/src"));
+    fs.getAbfsStore().getClient().deleteBlobPath(new Path("/src"), Mockito.mock(TracingContext.class));
+    fs.getAbfsStore().copyBlob(new Path("/src"), new Path("/dst"), Mockito.mock(TracingContext.class));
+  }
+
+  void createAzCopyDirectory(Path path) throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    fs.mkdirs(path);
+    fs.getAbfsStore().getClient().deleteBlobPath(path, Mockito.mock(TracingContext.class));
+    intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(path, Mockito.mock(TracingContext.class));
+    });
+  }
+
+  void createAzCopyFile(Path path) throws Exception {
+    getFileSystem().create(path);
+  }
+
+  @Test
+  public void testRenameSrcFileInImplicitParentDirectory() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
+    createAzCopyDirectory(new Path("/src"));
+    createAzCopyFile(new Path("/src/file"));
+    intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(new Path("/src"), Mockito.mock(TracingContext.class));
+    });
+    Assert.assertNotNull(fs.getAbfsStore().getBlobProperty(new Path("/src/file"), Mockito.mock(TracingContext.class)));
+    Assert.assertTrue(fs.rename(new Path("/src/file"), new Path("/dstFile")));
+    Assert.assertNotNull(fs.getAbfsStore().getBlobProperty(new Path("/dstFile"), Mockito.mock(TracingContext.class)));
+    intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(new Path("/src/file"), Mockito.mock(TracingContext.class));
+    });
+
+    Assert.assertFalse(fs.rename(new Path("/src/file"), new Path("/dstFile2")));
+  }
+
+  @Test
+  public void testRenameFileToNonExistingDstInImplicitParent() throws  Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    createAzCopyFile(new Path("/file"));
+    createAzCopyDirectory(new Path("/dstDir"));
+    createAzCopyFile(new Path("/dstDir/file2"));
+    intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(new Path("/dstDir"), Mockito.mock(TracingContext.class));
+    });
+    Assert.assertTrue(fs.rename(new Path("/file"), new Path("/dstDir")));
+    Assert.assertTrue(fs.exists(new Path("/dstDir/file")));
   }
 }
