@@ -299,7 +299,7 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
     // if the value of "count" has dropped to zero
     final RemoteIterator<Long> it =
         haltableRemoteIterator(
-            rangeExcludingIterator(0,10),
+            rangeExcludingIterator(0, 10),
             () -> count.get() > 0);
 
     verifyInvoked(it, limit, (v) -> count.decrementAndGet());

@@ -340,18 +340,21 @@ public class EntryFileIO {
      * @return count of entries written.
      * @throws UncheckedIOException on write failure
      */
-    @SuppressWarnings("SwitchStatementWithoutDefaultBranch")
     private int processor() {
       Thread.currentThread().setName("EntryIOWriter");
       try {
         while (!stop.get()) {
           final QueueEntry queueEntry = queue.take();
           switch (queueEntry.action) {
-          case stop:
-            LOG.debug("List termination initiated");
+
+          case stop:  // stop the operation
+            LOG.debug("Stop processing");
             stop.set(true);
             break;
-          case write:
+
+          case write:  // write data
+          default:  // here to shut compiler up
+            // write
             final List<FileEntry> entries = queueEntry.entries;
             LOG.debug("Adding block of {} entries", entries.size());
             for (FileEntry entry : entries) {
