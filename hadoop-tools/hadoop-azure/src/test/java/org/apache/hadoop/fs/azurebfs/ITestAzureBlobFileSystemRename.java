@@ -1515,4 +1515,57 @@ public class ITestAzureBlobFileSystemRename extends
     Assert.assertTrue(fs.rename(new Path("/file"), new Path("/dstDir")));
     Assert.assertTrue(fs.exists(new Path("/dstDir/file")));
   }
+
+  @Test
+  public void testRenameFileAsExistingExplicitDirectoryInImplicitDirectory() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    createAzCopyFile(new Path("/file"));
+    createAzCopyDirectory(new Path("/dst"));
+    fs.mkdirs(new Path("/dst/dir"));
+    intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(new Path("/dst"), Mockito.mock(TracingContext.class));
+    });
+    Assert.assertTrue(fs.rename(new Path("/file"), new Path("/dst/dir")));
+    Assert.assertTrue(fs.exists(new Path("/dst/dir/file")));
+    intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(new Path("/file"), Mockito.mock(TracingContext.class));
+    });
+  }
+
+  @Test
+  public void testRenameFileAsExistingImplicitDirectoryInExplicitDirectory() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    createAzCopyFile(new Path("/file"));
+    fs.mkdirs(new Path("/dst"));
+    createAzCopyDirectory(new Path("/dst/dir"));
+    createAzCopyFile(new Path("/dst/dir/file2"));
+    intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(new Path("/dst/dir"), Mockito.mock(TracingContext.class));
+    });
+    Assert.assertTrue(fs.rename(new Path("/file"), new Path("/dst/dir")));
+    Assert.assertTrue(fs.exists(new Path("/dst/dir/file")));
+    intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(new Path("/file"), Mockito.mock(TracingContext.class));
+    });
+  }
+
+  @Test
+  public void testRenameFileAsExistingImplicitDirectoryInImplicitDirectory() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    createAzCopyFile(new Path("/file"));
+    createAzCopyDirectory(new Path("/dst"));
+    createAzCopyDirectory(new Path("/dst/dir"));
+    createAzCopyFile(new Path("/dst/dir/file2"));
+    intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(new Path("/dst"), Mockito.mock(TracingContext.class));
+    });
+    intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(new Path("/dst/dir"), Mockito.mock(TracingContext.class));
+    });
+    Assert.assertTrue(fs.rename(new Path("/file"), new Path("/dst/dir")));
+    Assert.assertTrue(fs.exists(new Path("/dst/dir/file")));
+    intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(new Path("/file"), Mockito.mock(TracingContext.class));
+    });
+  }
 }
