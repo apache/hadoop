@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.yarn.util.Records;
 
 @Private
@@ -49,8 +49,8 @@ public abstract class RefreshClusterMaxPriorityRequest {
    *
    * @return subClusterId.
    */
-  @InterfaceAudience.Public
-  @InterfaceStability.Evolving
+  @Public
+  @Evolving
   public abstract String getSubClusterId();
 
   /**
@@ -58,7 +58,7 @@ public abstract class RefreshClusterMaxPriorityRequest {
    *
    * @param subClusterId subCluster Id.
    */
-  @InterfaceAudience.Public
-  @InterfaceStability.Evolving
+  @Public
+  @Evolving
   public abstract void setSubClusterId(String subClusterId);
 }
