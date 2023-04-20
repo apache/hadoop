@@ -1472,16 +1472,19 @@ public class ITestAzureBlobFileSystemRename extends
   }
 
   void createAzCopyDirectory(Path path) throws Exception {
-    AzureBlobFileSystem fs = getFileSystem();
-    fs.mkdirs(path);
-    fs.getAbfsStore().getClient().deleteBlobPath(path, Mockito.mock(TracingContext.class));
-    intercept(AbfsRestOperationException.class, () -> {
-      fs.getAbfsStore().getBlobProperty(path, Mockito.mock(TracingContext.class));
-    });
+    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper();
+    azcopyHelper.fileSystemName = getFileSystemName();
+    azcopyHelper.accountName = getAccountName();
+    azcopyHelper.configuration = getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration();
+    azcopyHelper.createFolderUsingAzcopy(getFileSystem().makeQualified(path).toUri().getPath().substring(1));
   }
 
   void createAzCopyFile(Path path) throws Exception {
-    getFileSystem().create(path);
+    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper();
+    azcopyHelper.fileSystemName = getFileSystemName();
+    azcopyHelper.accountName = getAccountName();
+    azcopyHelper.configuration = getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration();
+    azcopyHelper.createFileUsingAzcopy(getFileSystem().makeQualified(path).toUri().getPath().substring(1));
   }
 
   @Test
