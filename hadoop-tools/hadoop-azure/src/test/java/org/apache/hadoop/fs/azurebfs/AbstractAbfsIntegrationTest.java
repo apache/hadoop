@@ -437,6 +437,10 @@ public abstract class AbstractAbfsIntegrationTest extends
     return fs.getAbfsStore().getClient();
   }
 
+  public boolean isNamespaceEnabled(final AzureBlobFileSystem fs) throws AzureBlobFileSystemException {
+    return fs.getAbfsStore().getIsNamespaceEnabled(getTestTracingContext(fs, true));
+  }
+
   public Path makeQualified(Path path) throws java.io.IOException {
     return getFileSystem().makeQualified(path);
   }

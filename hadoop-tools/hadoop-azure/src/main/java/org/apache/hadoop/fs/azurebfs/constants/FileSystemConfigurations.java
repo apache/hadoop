@@ -78,6 +78,7 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_AZURE_SKIP_USER_GROUP_METADATA_DURING_INITIALIZATION = false;
 
   public static final String DEFAULT_FS_AZURE_ATOMIC_RENAME_DIRECTORIES = "/hbase";
+  public static final String HBASE_ROOT = "/hbase";
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE = true;
   public static final boolean DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE = true;
   public static final String DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES = "";
@@ -90,6 +91,8 @@ public final class FileSystemConfigurations {
   public static final int MAX_LEASE_DURATION = 60;
 
   public static final int DEFAULT_READ_AHEAD_QUEUE_DEPTH = 2;
+
+  public static final String IS_FOLDER_METADATA_KEY = "hdi_isfolder";
 
   public static final boolean DEFAULT_ENABLE_FLUSH = true;
   public static final boolean DEFAULT_DISABLE_OUTPUTSTREAM_FLUSH = true;

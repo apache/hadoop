@@ -53,6 +53,7 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_MKDIR_OVERWRITE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -86,6 +87,132 @@ public class ITestAzureBlobFileSystemCreate extends
       out.close();
     }
     assertIsFile(fs, TEST_FILE_PATH);
+  }
+
+  /**
+   * Creating subdirectory on existing file path should fail.
+   * @throws Exception
+   */
+  @Test
+  public void testMkdirsFailsForSubdirectoryOfExistingFile() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.create(new Path("a/b/c"));
+    fs.mkdirs(new Path("a/b/d"));
+    intercept(IOException.class, () -> fs.mkdirs(new Path("a/b/c/d/e")));
+  }
+
+  /**
+   * Try creating file same as an existing directory.
+   * @throws Exception
+   */
+  @Test
+  public void testCreateDirectoryAndFile() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.mkdirs(new Path("a/b/c"));
+    intercept(IOException.class, () -> fs.create(new Path("a/b/c")));
+  }
+
+  /**
+   * Creating same file without specifying overwrite.
+   * @throws Exception
+   */
+  @Test
+  public void testCreateSameFile() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.create(new Path("a/b/c"));
+    fs.create(new Path("a/b/c"));
+  }
+
+  /**
+   * Creating same file with overwrite flag set to false.
+   * @throws Exception
+   */
+  @Test
+  public void testCreateSameFileWithOverwriteFalse() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.create(new Path("a/b/c"));
+    intercept(IOException.class, () -> fs.create(new Path("a/b/c"), false));
+  }
+
+  /**
+   * Creation of already existing subpath should fail.
+   * @throws Exception
+   */
+  @Test
+  public void testCreateSubPath() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.create(new Path("a/b/c"));
+    intercept(IOException.class, () -> fs.create(new Path("a/b")));
+  }
+
+  /**
+   * Creating directory on existing file path should fail.
+   * @throws Exception
+   */
+  @Test
+  public void testCreateMkdirs() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.create(new Path("a/b/c"));
+    intercept(IOException.class, () -> fs.mkdirs(new Path("a/b/c/d")));
+  }
+
+  /**
+   * Test mkdirs.
+   * @throws Exception
+   */
+  @Test
+  public void testMkdirs() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.mkdirs(new Path("a/b"));
+    fs.mkdirs(new Path("a/b/c/d"));
+    fs.mkdirs(new Path("a/b/c/e"));
+  }
+
+  /**
+   * Creating subpath of directory path should fail.
+   * @throws Exception
+   */
+  @Test
+  public void testMkdirsCreateSubPath() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.mkdirs(new Path("a/b/c"));
+    intercept(IOException.class, () -> fs.create(new Path("a/b")));
+  }
+
+  /**
+   * Test creation of directory by level.
+   * @throws Exception
+   */
+  @Test
+  public void testMkdirsByLevel() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.mkdirs(new Path("a"));
+    fs.mkdirs(new Path("a/b/c"));
+    fs.mkdirs(new Path("a/b/c/d/e"));
+  }
+
+  /**
+   * Creation of same directory without overwrite flag should pass.
+   * @throws Exception
+   */
+  @Test
+  public void testCreateSameDirectory() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.mkdirs(new Path("a/b/c"));
+    fs.mkdirs(new Path("a/b/c"));
+  }
+
+  /**
+   * Creation of directory with overwrite set to false should not fail according to DFS code.
+   * @throws Exception
+   */
+  @Test
+  public void testCreateSameDirectoryOverwriteFalse() throws Exception {
+    Configuration configuration = getRawConfiguration();
+    configuration.setBoolean(FS_AZURE_ENABLE_MKDIR_OVERWRITE, false);
+    AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+    fs1.mkdirs(new Path("a/b/c"));
+    fs1.mkdirs(new Path("a/b/c"));
   }
 
   @Test
@@ -178,7 +305,7 @@ public class ITestAzureBlobFileSystemCreate extends
       out.write('2');
       out.hsync();
       fail("Expected a failure");
-    } catch (FileNotFoundException fnfe) {
+    } catch (IOException fnfe) {
       //appendblob outputStream does not generate suppressed exception on close as it is
       //single threaded code
       if (!fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testPath).toString())) {
@@ -204,7 +331,7 @@ public class ITestAzureBlobFileSystemCreate extends
     final AzureBlobFileSystem fs = getFileSystem();
     Path testPath = new Path(TEST_FOLDER_PATH, TEST_CHILD_FILE);
     FSDataOutputStream out = fs.create(testPath);
-    intercept(FileNotFoundException.class,
+    intercept(IOException.class,
         () -> {
           try (FilterOutputStream fos = new FilterOutputStream(out)) {
             fos.write('a');
@@ -212,7 +339,7 @@ public class ITestAzureBlobFileSystemCreate extends
             out.hsync();
             fs.delete(testPath, false);
             // trigger the first failure
-            throw intercept(FileNotFoundException.class,
+            throw intercept(IOException.class,
                 () -> {
               fos.write('b');
               out.hsync();
@@ -396,6 +523,19 @@ public class ITestAzureBlobFileSystemCreate extends
             isNamespaceEnabled ? any(String.class) : eq(null),
             any(boolean.class), eq(null), any(TracingContext.class));
 
+    // mock for overwrite=false
+    doThrow(conflictResponseEx) // Scn1: GFS fails with Http404
+            .doThrow(conflictResponseEx) // Scn2: GFS fails with Http500
+            .doThrow(
+                    conflictResponseEx) // Scn3: create overwrite=true fails with Http412
+            .doThrow(
+                    conflictResponseEx) // Scn4: create overwrite=true fails with Http500
+            .doThrow(
+                    serverErrorResponseEx) // Scn5: create overwrite=false fails with Http500
+            .when(mockClient)
+            .createPathBlob(any(String.class), eq(true), eq(false),
+                    any(), eq(null), any(TracingContext.class));
+
     doThrow(fileNotFoundResponseEx) // Scn1: GFS fails with Http404
         .doThrow(serverErrorResponseEx) // Scn2: GFS fails with Http500
         .doReturn(successOp) // Scn3: create overwrite=true fails with Http412
@@ -405,14 +545,23 @@ public class ITestAzureBlobFileSystemCreate extends
 
     // mock for overwrite=true
     doThrow(
-        preConditionResponseEx) // Scn3: create overwrite=true fails with Http412
-        .doThrow(
-            serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
-        .when(mockClient)
-        .createPath(any(String.class), eq(true), eq(true),
-            isNamespaceEnabled ? any(String.class) : eq(null),
-            isNamespaceEnabled ? any(String.class) : eq(null),
-            any(boolean.class), eq(null), any(TracingContext.class));
+            preConditionResponseEx) // Scn3: create overwrite=true fails with Http412
+            .doThrow(
+                    serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
+            .when(mockClient)
+            .createPathBlob(any(String.class), eq(true), eq(true),
+                    any(), eq(null), any(TracingContext.class));
+
+    // mock for overwrite=true
+    doThrow(
+            preConditionResponseEx) // Scn3: create overwrite=true fails with Http412
+            .doThrow(
+                    serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
+            .when(mockClient)
+            .createPath(any(String.class), eq(true), eq(true),
+                    isNamespaceEnabled ? any(String.class) : eq(null),
+                    isNamespaceEnabled ? any(String.class) : eq(null),
+                    any(boolean.class), eq(null), any(TracingContext.class));
 
     // Scn1: GFS fails with Http404
     // Sequence of events expected:

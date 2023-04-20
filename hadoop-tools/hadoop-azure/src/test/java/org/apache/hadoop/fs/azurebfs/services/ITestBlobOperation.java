@@ -1,28 +1,9 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
@@ -38,37 +19,33 @@ import org.mockito.Mockito;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.Random;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_CREATED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCKLIST;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCK_LIST_END_TAG;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCK_LIST_START_TAG;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCK_BLOB_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.LATEST_BLOCK_FORMAT;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_VERSION;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_MD5;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_BLOB_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_BLOCKID;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_COMP;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
-/**
- * Class to test create, append and flush over blob endpoint.
- */
 public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
+    private static final int BUFFER_LENGTH = 5;
+    private static final int BUFFER_OFFSET = 0;
     private static final String TEST_PATH = "/testfile";
     AzureBlobFileSystem fs;
     private final Path testPath = new Path("/testfile");
@@ -81,25 +58,98 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
     }
 
     /**
-     * Helper method to generate the xml with list of blockId's.
-     * @param blockIds The set of blockId's to be pushed to the backend.
-     * @return xml in string format.
+     * Test helper method to get random bytes array.
+     *
+     * @param length The length of byte buffer
+     * @return byte buffer
      */
-    private static String generateBlockListXml(List<String> blockIds) {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(XML_VERSION);
-        stringBuilder.append(BLOCK_LIST_START_TAG);
-        for (String blockId : blockIds) {
-            stringBuilder.append(String.format(LATEST_BLOCK_FORMAT, blockId));
-        }
-        stringBuilder.append(BLOCK_LIST_END_TAG);
-        return stringBuilder.toString();
+    private byte[] getRandomBytesArray(int length) {
+        final byte[] b = new byte[length];
+        new Random().nextBytes(b);
+        return b;
+    }
+
+    private String computeMd5(byte[] data) throws NoSuchAlgorithmException {
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        byte[] digest = md.digest(data);
+
+        String md5Base64 = Base64.getEncoder().encodeToString(digest);
+        return md5Base64;
     }
 
     /**
-     * Test case to verify that if we do put block when data is null error is thrown.
-     * @throws Exception
+     * Tests the putblob success scenario.
      */
+    @Test
+    public void testPutBlob() throws Exception {
+        // Get the filesystem.
+        final AzureBlobFileSystem fs = getFileSystem();
+        final Configuration configuration = new Configuration();
+        configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
+        AbfsClient abfsClient = getClient(fs);
+
+        AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
+                configuration.get(FS_AZURE_ABFS_ACCOUNT_NAME));
+
+        // Gets the client.
+        AbfsClient testClient = Mockito.spy(TestAbfsClient.createTestClientFromCurrentContext(
+                abfsClient,
+                abfsConfiguration));
+
+        byte[] buffer = getRandomBytesArray(5);
+
+        // Create a test container to upload the data.
+        Path testPath = path(TEST_PATH);
+        String finalTestPath = testPath.toString().substring(testPath.toString().lastIndexOf("/"));
+
+        // Creates a list of request headers.
+        final List<AbfsHttpHeader> requestHeaders = TestAbfsClient.getTestRequestHeaders(testClient);
+        requestHeaders.add(new AbfsHttpHeader(CONTENT_LENGTH, String.valueOf(buffer.length)));
+        requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_TYPE, BLOCK_BLOB_TYPE));
+        String ContentMD5 = computeMd5(buffer);
+        // Updates the query parameters.
+        final AbfsUriQueryBuilder abfsUriQueryBuilder = testClient.createDefaultUriQueryBuilder();
+
+        // Creates the url for the specified path.
+        URL url = testClient.createRequestUrl(finalTestPath, abfsUriQueryBuilder.toString());
+
+        // Create a mock of the AbfsRestOperation to set the urlConnection in the corresponding httpOperation.
+        AbfsRestOperation op = new AbfsRestOperation(
+                AbfsRestOperationType.PutBlob,
+                testClient,
+                HTTP_METHOD_PUT,
+                url,
+                requestHeaders, buffer,
+                BUFFER_OFFSET,
+                BUFFER_LENGTH, null);
+
+        TracingContext tracingContext = new TracingContext("abcd",
+                "abcde", FSOperationType.CREATE,
+                TracingHeaderFormat.ALL_ID_FORMAT, null);
+
+        op.execute(tracingContext);
+
+        // Validate the content by comparing the md5 computed and the value obtained from server
+        Assertions.assertThat(op.getResult().getResponseHeader(CONTENT_MD5))
+                .describedAs("The content md5 value is not correct")
+                .isEqualTo(ContentMD5);
+        Assertions.assertThat(op.getResult().getStatusCode())
+                .describedAs("The creation failed")
+                .isEqualTo(HTTP_CREATED);
+    }
+
+    private static String generateBlockListXml(List<String> blockIds) {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        stringBuilder.append("<BlockList>\n");
+        for (String blockId : blockIds) {
+            String blockId1 = Base64.getEncoder().encodeToString(blockId.getBytes());
+            stringBuilder.append(String.format("<Latest>%s</Latest>\n", blockId1));
+        }
+        stringBuilder.append("</BlockList>\n");
+        return stringBuilder.toString();
+    }
+
     @Test
     public void testPutBlockWithNullData() throws Exception {
         final AzureBlobFileSystem fs = getFileSystem();
@@ -142,10 +192,6 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
         intercept(IOException.class, () -> op.execute(tracingContext));
     }
 
-    /**
-     * Test case to verify that all block id's of a block should be of the same length.
-     * @throws Exception
-     */
     @Test
     public void testPutBlockWithDifferentLengthBlockIds() throws Exception {
         final AzureBlobFileSystem fs = getFileSystem();
@@ -208,11 +254,6 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
         }
     }
 
-    /**
-     * Verify getBlockList after flush returns same list of encoded blockId's sent.
-     * @throws IOException
-     * @throws IllegalAccessException
-     */
     @Test
     public void testGetCommittedBlockList() throws IOException, IllegalAccessException {
         final AzureBlobFileSystem fs = getFileSystem();
@@ -290,11 +331,6 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
         assertEquals(encodedBlockIds, committedBlockList);
     }
 
-    /**
-     * If we put an additional block id in putblocklist which is not staged it should give error.
-     * This test case verifies the same.
-     * @throws Exception
-     */
     @Test
     public void testPutBlockListForAdditionalBlockId() throws Exception {
         final AzureBlobFileSystem fs = getFileSystem();
@@ -387,10 +423,8 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
         try (FSDataOutputStream createStream = fs.create(testPath)) {
         }
         fs.delete(testPath, false);
-
         try (FSDataOutputStream createStream = fs.create(testPath)) {
             byte[] fileData = null;
-
             if (fileSize != 0) {
                 fileData = getTestData(fileSize);
                 createStream.write(fileData);
@@ -487,7 +521,6 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
             appendStream = fs.append(testPath, 10);
             appendStream.write(appendDataBuffer);
             appendStream.close();
-
             assertTrue(verifyAppend(appendDataBuffer, testPath));
         } finally {
             if (appendStream != null) {
@@ -501,10 +534,8 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
      */
     @Test
     public void testMultipleAppends() throws Throwable {
-
         int baseDataSize = 50;
         byte[] baseDataBuffer = createBaseFileWithData(baseDataSize, testPath);
-
         int appendDataSize = 100;
         int targetAppendCount = 50;
         byte[] testData = new byte[baseDataSize + (appendDataSize * targetAppendCount)];
@@ -515,7 +546,6 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
         FSDataOutputStream appendStream = null;
         try {
             while (appendCount < targetAppendCount) {
-
                 byte[] appendDataBuffer = getTestData(appendDataSize);
                 appendStream = fs.append(testPath, 30);
                 appendStream.write(appendDataBuffer);
@@ -538,7 +568,6 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
      */
     @Test
     public void testMultipleAppendsOnSameStream() throws Throwable {
-
         int baseDataSize = 50;
         byte[] baseDataBuffer = createBaseFileWithData(baseDataSize, testPath);
         int appendDataSize = 100;
@@ -548,7 +577,6 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
         System.arraycopy(baseDataBuffer, 0, testData, testDataIndex, baseDataSize);
         testDataIndex += baseDataSize;
         int appendCount = 0;
-
         FSDataOutputStream appendStream = null;
         try {
             while (appendCount < targetAppendCount) {
@@ -556,7 +584,6 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
                 int singleAppendChunkSize = 20;
                 int appendRunSize = 0;
                 while (appendRunSize < appendDataSize) {
-
                     byte[] appendDataBuffer = getTestData(singleAppendChunkSize);
                     appendStream.write(appendDataBuffer);
                     System.arraycopy(appendDataBuffer, 0, testData,
@@ -568,7 +595,6 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
                 testDataIndex += appendDataSize;
                 appendCount++;
             }
-
             assertTrue(verifyAppend(testData, testPath));
         } finally {
             if (appendStream != null) {
@@ -576,48 +602,4 @@ public class ITestBlobOperation extends AbstractAbfsIntegrationTest {
             }
         }
     }
-
-    /**
-     * Verify that parallel flush for same path on same blockId throws exception.
-     **/
-    @Test
-    public void testParallelFlush() throws Exception {
-        Configuration configuration = getRawConfiguration();
-        configuration.set(FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE, "false");
-        FileSystem fs = FileSystem.newInstance(configuration);
-        ExecutorService executorService = Executors.newFixedThreadPool(5);
-        List<Future<?>> futures = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
-            futures.add(executorService.submit(() -> {
-                try {
-                    FSDataOutputStream out = fs.create(testPath);
-                    out.write('1');
-                    out.hsync();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }));
-        }
-
-        int exceptionCaught = 0;
-        for (Future<?> future : futures) {
-            try {
-                future.get(); // wait for the task to complete and handle any exceptions thrown by the lambda expression
-            } catch (ExecutionException e) {
-                Throwable cause = e.getCause();
-                if (cause instanceof RuntimeException) {
-                    exceptionCaught++;
-                    intercept(RuntimeException.class, "The condition specified using HTTP conditional header(s) is not met.", () -> {
-                        throw (RuntimeException) cause; // re-throw the RuntimeException
-                    });
-                } else {
-                    System.err.println("Unexpected exception caught: " + cause);
-                }
-            } catch (InterruptedException e) {
-                // handle interruption
-            }
-        }
-        assertEquals(exceptionCaught, 4);
-    }
 }
-

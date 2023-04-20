@@ -31,10 +31,12 @@ import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 import javax.xml.parsers.DocumentBuilderFactory;
+
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
@@ -61,7 +63,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COMMITTE
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EQUAL;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_COMP;
-
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COMP_LIST;
 
 /**
@@ -176,6 +177,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   public String getClientRequestId() {
     return this.connection
         .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
+  }
+
+  public String getRequestHeaderValue(String requestHeader) {
+    return connection.getRequestProperty(requestHeader);
   }
 
   public String getExpectedAppendPos() {
@@ -478,7 +483,12 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     }
   }
 
-
+  /**
+   * Parse the stream from the response and set {@link #blobList} field of this
+   * class.
+   *
+   * @param stream inputStream from the server-response.
+   */
   private void parseListBlobResponse(final InputStream stream) {
     try {
       final SAXParser saxParser = saxParserThreadLocal.get();
@@ -502,6 +512,11 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public void setRequestProperty(String key, String value) {
     this.connection.setRequestProperty(key, value);
+  }
+
+  @VisibleForTesting
+  void setConnection(HttpURLConnection connection) {
+    this.connection = connection;
   }
 
   /**

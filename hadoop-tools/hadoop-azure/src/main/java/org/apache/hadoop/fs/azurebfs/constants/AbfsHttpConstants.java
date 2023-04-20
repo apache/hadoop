@@ -52,6 +52,7 @@ public final class AbfsHttpConstants {
   public static final String DEFAULT_LEASE_BREAK_PERIOD = "0";
   public static final String DEFAULT_TIMEOUT = "90";
   public static final String APPEND_BLOB_TYPE = "appendblob";
+  public static final String BLOCK_BLOB_TYPE = "BlockBlob";
   public static final String TOKEN_VERSION = "2";
   public static final String COMMITTED_BLOCKS = "CommittedBlocks";
   public static final String BLOCK_NAME = "Block";
@@ -91,6 +92,7 @@ public final class AbfsHttpConstants {
   public static final String HTTP_HEADER_PREFIX = "x-ms-";
   public static final String HASH = "#";
   public static final String TRUE = "true";
+  public static final String ZERO = "0";
 
   public static final String PLUS_ENCODE = "%20";
   public static final String FORWARD_SLASH_ENCODE = "%2F";

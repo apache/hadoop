@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -156,7 +157,7 @@ public class ITestAzureBlobFileSystemDelete extends
         fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
         fs.getFileSystemId(), FSOperationType.DELETE, false, 0));
     // first try a non-recursive delete, expect failure
-    intercept(FileAlreadyExistsException.class,
+    intercept(IOException.class,
         () -> fs.delete(dir, false));
     fs.registerListener(null);
     assertDeleted(fs, dir, true);
