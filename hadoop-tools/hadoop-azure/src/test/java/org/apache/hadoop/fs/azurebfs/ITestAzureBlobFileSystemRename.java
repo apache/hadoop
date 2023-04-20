@@ -1568,4 +1568,17 @@ public class ITestAzureBlobFileSystemRename extends
       fs.getAbfsStore().getBlobProperty(new Path("/file"), Mockito.mock(TracingContext.class));
     });
   }
+
+  @Test
+  public void testRenameDirectoryContainingImplicitDirectory() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    fs.mkdirs(new Path("/src"));
+    fs.mkdirs(new Path("/dst"));
+    createAzCopyDirectory(new Path("/src/subDir"));
+    createAzCopyFile(new Path("/src/subDir/subFile"));
+    createAzCopyFile(new Path("/src/subFile"));
+    Assert.assertTrue(fs.rename(new Path("/src"), new Path("/dst/dir")));
+    Assert.assertTrue(fs.exists(new Path("/dst/dir/subFile")));
+    Assert.assertTrue(fs.exists(new Path("/dst/dir/subDir/subFile")));
+  }
 }
