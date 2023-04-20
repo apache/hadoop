@@ -963,6 +963,11 @@ public abstract class Server {
     }
 
     @Override
+    public CallerContext getCallerContext() {
+      return this.callerContext;
+    }
+
+    @Override
     public int getPriorityLevel() {
       return this.priorityLevel;
     }
