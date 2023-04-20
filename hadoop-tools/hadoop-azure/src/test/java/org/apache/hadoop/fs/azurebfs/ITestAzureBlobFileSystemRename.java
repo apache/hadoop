@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
@@ -1245,6 +1246,32 @@ public class ITestAzureBlobFileSystemRename extends
       dir += ("dir" + i + "/");
       Assert.assertTrue("" + i, fs.exists(new Path("/dst/" + dir)));
     }
+  }
+
+  @Test
+  public void testParallelCopy() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    fs.create(new Path("/src"));
+    new Thread(() -> {
+      try {
+        fs.getAbfsStore().copyBlob(new Path("/src"),
+            new Path("/dst"), Mockito.mock(TracingContext.class));
+      } catch (
+          AzureBlobFileSystemException e) {
+        throw new RuntimeException(e);
+      }
+    }).start();
+    fs.getAbfsStore().copyBlob(new Path("/src"),
+        new Path("/dst"), Mockito.mock(TracingContext.class));
+    Thread.sleep(10000);
+  }
+
+  @Test
+  public void testCopyAfterSourceHasBeenDeleted() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    fs.create(new Path("/src"));
+    fs.getAbfsStore().getClient().deleteBlobPath(new Path("/src"), Mockito.mock(TracingContext.class));
+    fs.getAbfsStore().copyBlob(new Path("/src"), new Path("/dst"), Mockito.mock(TracingContext.class));
   }
 
   @Test
