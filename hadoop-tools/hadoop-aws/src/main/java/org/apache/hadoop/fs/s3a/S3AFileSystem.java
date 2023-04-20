@@ -975,8 +975,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     S3ClientFactory clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
     s3Client = clientFactory.createS3Client(getUri(), parameters);
-    s3AsyncClient = clientFactory.createS3AsyncClient(getUri(), parameters);
+    setS3AsyncClient(clientFactory, parameters);
     transferManager =  clientFactory.createS3TransferManager(s3AsyncClient);
+  }
+
+  // set in synchronized method to suppress spotbugs error.
+  private synchronized void setS3AsyncClient(S3ClientFactory clientFactory,
+      S3ClientFactory.S3ClientCreationParameters parameters) throws IOException {
+    s3AsyncClient = clientFactory.createS3AsyncClient(getUri(), parameters);
   }
 
   /**
