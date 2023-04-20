@@ -42,11 +42,11 @@ public enum AbfsRestOperationType {
     DeletePath,
     CheckAccess,
     LeasePath,
+    PutBlob,
+    GetBlobProperties,
     PutBlock,
     PutBlockList,
-    PutBlob,
     GetBlockList,
-    GetBlobProperties,
     DeleteBlob,
     GetListBlobProperties,
     CopyBlob
