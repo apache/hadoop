@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_DEFAULT_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
@@ -202,13 +203,31 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
 
       // Expected to get block 0 (partially read), 1 (prefetch), 2 (fully read), 3 (prefetch)
       // Blocks 0, 1, 3 were not fully read, so remain in the file cache
-      verifyStatisticCounterValue(ioStats, ACTION_HTTP_GET_REQUEST, 4);
-      verifyStatisticCounterValue(ioStats, STREAM_READ_OPENED, 4);
-      verifyStatisticCounterValue(ioStats, STREAM_READ_PREFETCH_OPERATIONS, 2);
-      verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 3);
+      GenericTestUtils.waitFor(() -> {
+        try {
+          LOG.info("IO stats: {}", ioStats);
+          verifyStatisticCounterValue(ioStats, ACTION_HTTP_GET_REQUEST, 4);
+          verifyStatisticCounterValue(ioStats, STREAM_READ_OPENED, 4);
+          verifyStatisticCounterValue(ioStats, STREAM_READ_PREFETCH_OPERATIONS, 2);
+          verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 3);
+          return true;
+        } catch (AssertionError e) {
+          LOG.error("Assertion failure.", e);
+          return false;
+        }
+      }, 500, 5000, "IO stats assertion failed");
     }
-    verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 0);
-    verifyStatisticGaugeValue(ioStats, STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
+    GenericTestUtils.waitFor(() -> {
+      try {
+        LOG.info("IO stats: {}", ioStats);
+        verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 0);
+        verifyStatisticGaugeValue(ioStats, STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
+        return true;
+      } catch (AssertionError e) {
+        LOG.error("Assertion failure.", e);
+        return false;
+      }
+    }, 500, 5000, "IO stats assertion failed");
   }
 
   @Test
