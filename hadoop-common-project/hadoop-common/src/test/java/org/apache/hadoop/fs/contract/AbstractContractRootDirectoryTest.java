@@ -197,7 +197,7 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     }
     FileStatus[] rootListStatus = fs.listStatus(root);
     assertEquals("listStatus on empty root-directory returned found: "
-        + join("\n", rootListStatus),
+        + join(rootListStatus, "\n"),
         0, rootListStatus.length);
     assertNoElements("listFiles(/, false)",
         fs.listFiles(root, false));
