@@ -29,6 +29,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -77,6 +78,42 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
   @Test
   public void testRegularUpload() throws IOException {
     verifyUpload("regular", 1024);
+  }
+
+  /**
+   * Test that the DiskBlock's local file doesn't result in error when the S3 key exceeds the max
+   * char limit of the local file system. Currently
+   * {@link java.io.File#createTempFile(String, String, File)} is being relied on to handle the
+   * truncation.
+   * @throws IOException
+   */
+  @Test
+  public void testDiskBlockCreate() throws IOException {
+    S3ADataBlocks.BlockFactory diskBlockFactory =
+      new S3ADataBlocks.DiskBlockFactory(getFileSystem());
+    String s3Key = // 1024 char
+      "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
+        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
+        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
+        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
+        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
+        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
+        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
+        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
+        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
+        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
+        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
+        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
+        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
+        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
+        "very_long_s3_key";
+    S3ADataBlocks.DataBlock dataBlock = diskBlockFactory.create("spanId", s3Key, 1,
+      getFileSystem().getDefaultBlockSize(), null);
+    LOG.info(dataBlock.toString()); // block file name and location can be viewed in failsafe-report
+
+    // delete the block file
+    dataBlock.innerClose();
+    diskBlockFactory.close();
   }
 
   @Test(expected = IOException.class)
