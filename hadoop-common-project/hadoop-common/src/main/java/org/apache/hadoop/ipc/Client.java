@@ -591,8 +591,7 @@ public class Client implements AutoCloseable {
                                server.getHostName(), server.getPort());
 
       if (!currentAddr.isUnresolved() && !server.equals(currentAddr)) {
-        LOG.warn("Address change detected. Old: " + server.toString() +
-                                 " New: " + currentAddr.toString());
+        LOG.warn("Address change detected. Old: {} New: {}", server, currentAddr);
         server = currentAddr;
         // Update the remote address so that reconnections are with the updated address.
         // This avoids thrashing.

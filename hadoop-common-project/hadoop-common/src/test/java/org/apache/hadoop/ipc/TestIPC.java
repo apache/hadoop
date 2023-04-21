@@ -1731,25 +1731,22 @@ public class TestIPC {
   @Test(timeout=60000)
   public void testUpdateAddressEnsureResolved() throws Exception {
     // start server
-    Server server = new TestServer(5, false);
+    Server server = new TestServer(1, false);
     server.start();
 
     SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
-    doThrow(new ConnectTimeoutException("fake")).when(mockFactory).createSocket();
+    doThrow(new ConnectTimeoutException("fake")).when(mockFactory)
+        .createSocket();
     Client client = new Client(LongWritable.class, conf, mockFactory);
-    InetSocketAddress address = new InetSocketAddress("localhost", 9090);
+    InetSocketAddress address =
+        new InetSocketAddress("localhost", NetUtils.getFreeSocketPort());
     ConnectionId remoteId = getConnectionId(address, 100, conf);
     try {
-      LambdaTestUtils.intercept(IOException.class,
-          new Callable<Void>() {
-            @Override
-            public Void call() throws IOException {
-              client.call(RpcKind.RPC_BUILTIN,
-                  new LongWritable(RANDOM.nextLong()), remoteId,
-                  RPC.RPC_SERVICE_CLASS_DEFAULT, null);
-              return null;
-            }
-          });
+      LambdaTestUtils.intercept(IOException.class, (Callable<Void>) () -> {
+        client.call(RpcKind.RPC_BUILTIN, new LongWritable(RANDOM.nextLong()),
+            remoteId, RPC.RPC_SERVICE_CLASS_DEFAULT, null);
+        return null;
+      });
 
       assertFalse(address.isUnresolved());
       assertFalse(remoteId.getAddress().isUnresolved());
@@ -1757,16 +1754,11 @@ public class TestIPC {
           System.identityHashCode(address));
 
       NetUtils.addStaticResolution("localhost", "host.invalid");
-      LambdaTestUtils.intercept(IOException.class,
-          new Callable<Void>() {
-            @Override
-            public Void call() throws IOException {
-              client.call(RpcKind.RPC_BUILTIN,
-                  new LongWritable(RANDOM.nextLong()), remoteId,
-                  RPC.RPC_SERVICE_CLASS_DEFAULT, null);
-              return null;
-            }
-          });
+      LambdaTestUtils.intercept(IOException.class, (Callable<Void>) () -> {
+        client.call(RpcKind.RPC_BUILTIN, new LongWritable(RANDOM.nextLong()),
+            remoteId, RPC.RPC_SERVICE_CLASS_DEFAULT, null);
+        return null;
+      });
 
       assertFalse(remoteId.getAddress().isUnresolved());
       assertEquals(System.identityHashCode(remoteId.getAddress()),
