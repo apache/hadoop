@@ -825,9 +825,8 @@ final class S3ADataBlocks {
         throws IOException {
       Preconditions.checkArgument(limit != 0,
           "Invalid block size: %d [%s]", limit, key);
-      File destFile = getOwner()
-          .createTmpFileForWrite(String.format("s3ablock-%04d-%s-%s-", index, spanId, escapeS3Key(key)),
-              limit, getOwner().getConf());
+      String prefix = String.format("s3ablock-%04d-%s-%s-", index, spanId, escapeS3Key(key));
+      File destFile = getOwner().createTmpFileForWrite(prefix, limit, getOwner().getConf());
       return new DiskBlock(destFile, limit, index, statistics);
     }
 
