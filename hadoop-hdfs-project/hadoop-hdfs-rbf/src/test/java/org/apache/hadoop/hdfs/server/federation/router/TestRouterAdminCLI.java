@@ -853,7 +853,7 @@ public class TestRouterAdminCLI {
         + "[-readonly] [-faulttolerant] "
         + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
         + "-owner <owner> -group <group> -mode <mode>]\n"
-        + "\t[-addall <source1> <nameservice1,nameservice2,...> <destination1> "
+        + "\t[-addAll <source1> <nameservice1,nameservice2,...> <destination1> "
         + "[-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
         + "-owner <owner1> -group <group1> -mode <mode1>"
         + " , <source2> <nameservice1,nameservice2,...> <destination2> "
@@ -1849,7 +1849,7 @@ public class TestRouterAdminCLI {
   @Test
   public void testAddMultipleMountPoints() throws Exception {
     String[] argv =
-        new String[] {"-addall", "/testAddMultipleMountPoints-01", "ns01", "/dest01", ",",
+        new String[] {"-addAll", "/testAddMultipleMountPoints-01", "ns01", "/dest01", ",",
             "/testAddMultipleMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
             "-faulttolerant", ",", "/testAddMultipleMountPoints-03", "ns03", "/dest03"};
     assertEquals(0, ToolRunner.run(admin, argv));

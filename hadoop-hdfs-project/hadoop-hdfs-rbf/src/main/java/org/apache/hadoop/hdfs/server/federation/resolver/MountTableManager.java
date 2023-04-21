@@ -51,7 +51,7 @@ public interface MountTableManager {
       AddMountTableEntryRequest request) throws IOException;
 
   /**
-   * All multiple entries to the mount table.
+   * Add multiple entries to the mount table.
    *
    * @param request Request object with fully populated list of mount point entries.
    * @return True if all the mount table entries were successfully committed to the

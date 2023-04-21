@@ -109,6 +109,7 @@ public class RouterAdmin extends Configured implements Tool {
 
   private static final Logger LOG = LoggerFactory.getLogger(RouterAdmin.class);
   private static final String DUMP_COMMAND = "-dumpState";
+  private static final String ADD_ALL_COMMAND = "-addAll";
 
   private RouterClient client;
 
@@ -143,7 +144,7 @@ public class RouterAdmin extends Configured implements Tool {
   private static String getUsage(String cmd) {
     if (cmd == null) {
       String[] commands =
-          {"-add", "-addall", "-update", "-rm", "-ls", "-getDestination", "-setQuota",
+          {"-add", ADD_ALL_COMMAND, "-update", "-rm", "-ls", "-getDestination", "-setQuota",
               "-setStorageTypeQuota", "-clrQuota", "-clrStorageTypeQuota",
               DUMP_COMMAND, "-safemode", "-nameservice", "-getDisabledNameservices",
               "-refresh", "-refreshRouterArgs",
@@ -163,8 +164,8 @@ public class RouterAdmin extends Configured implements Tool {
           + "[-readonly] [-faulttolerant] "
           + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
           + "-owner <owner> -group <group> -mode <mode>]";
-    } else if (cmd.equals("-addall")) {
-      return "\t[-addall "
+    } else if (cmd.equals(ADD_ALL_COMMAND)) {
+      return "\t[" + ADD_ALL_COMMAND + " "
           + "<source1> <nameservice1,nameservice2,...> <destination1> "
           + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
           + "-owner <owner1> -group <group1> -mode <mode1>"
@@ -436,7 +437,7 @@ public class RouterAdmin extends Configured implements Tool {
         exitCode = refreshSuperUserGroupsConfiguration();
       } else if ("-refreshCallQueue".equals(cmd)) {
         exitCode = refreshCallQueue();
-      } else if ("-addall".equals(cmd)) {
+      } else if (ADD_ALL_COMMAND.equals(cmd)) {
         if (addAllMount(argv, i)) {
           System.out.println("Successfully added all mount points ");
         } else {
@@ -576,7 +577,7 @@ public class RouterAdmin extends Configured implements Tool {
         break;
       }
       default: {
-        printUsage(isMultipleAdd ? "-addall" : "-add");
+        printUsage(isMultipleAdd ? ADD_ALL_COMMAND : "-add");
         return null;
       }
       }
