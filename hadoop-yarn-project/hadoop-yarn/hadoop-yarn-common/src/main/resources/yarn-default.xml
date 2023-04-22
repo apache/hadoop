@@ -5177,4 +5177,20 @@
     <value>1</value>
   </property>
 
+  <property>
+    <description>
+      Number of Retries while trying to make root directory for node store.
+    </description>
+    <name>yarn.resourcemanager.nodestore-rootdir.num-retries</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+      Interval in ms between retries while trying to make root directory for node store.
+    </description>
+    <name>yarn.resourcemanager.nodestore-rootdir.retry-interval-ms</name>
+    <value>1000</value>
+  </property>
+
 </configuration>
