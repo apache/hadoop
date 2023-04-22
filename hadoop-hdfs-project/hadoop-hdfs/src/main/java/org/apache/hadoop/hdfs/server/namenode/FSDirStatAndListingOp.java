@@ -262,13 +262,22 @@ class FSDirStatAndListingOp {
             needLocation, false);
         listingCnt++;
         if (listing[i] instanceof HdfsLocatedFileStatus) {
-            // Once we  hit lsLimit locations, stop.
+            // Once we hit lsLimit locations, stop.
             // This helps to prevent excessively large response payloads.
-            // Approximate #locations with locatedBlockCount() * repl_factor
             LocatedBlocks blks =
                 ((HdfsLocatedFileStatus)listing[i]).getLocatedBlocks();
-            locationBudget -= (blks == null) ? 0 :
-               blks.locatedBlockCount() * listing[i].getReplication();
+            if (blks != null) {
+              ErasureCodingPolicy ecPolicy =
+                  listing[i].getErasureCodingPolicy();
+              if (ecPolicy != null) {
+                locationBudget -= blks.locatedBlockCount() *
+                    (ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits());
+              } else {
+                // Approximate #locations with locatedBlockCount() * repl_factor
+                locationBudget -=
+                    blks.locatedBlockCount() * listing[i].getReplication();
+              }
+            }
         }
       }
       // truncate return array if necessary

@@ -29,6 +29,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -110,6 +113,8 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeRpcServer;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.ipc.RemoteException;
@@ -671,6 +676,57 @@ public class TestDistributedFileSystem {
       checkStatistics(dfs, 0, 0, 0);
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testGetListingLimit() throws Exception {
+    final Configuration conf = getTestConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 9);
+    final MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(9).build();
+    try {
+      cluster.waitActive();
+      ErasureCodingPolicy ecPolicy = StripedFileTestUtil.getDefaultECPolicy();
+      final DistributedFileSystem fs = cluster.getFileSystem();
+      fs.dfs = spy(fs.dfs);
+      fs.enableErasureCodingPolicy(ecPolicy.getName());
+      Path dir1 = new Path("/testRep");
+      Path dir2 = new Path("/testEC");
+      fs.mkdirs(dir1);
+      fs.mkdirs(dir2);
+      fs.setErasureCodingPolicy(dir2, ecPolicy.getName());
+      for (int i = 0; i < 3; i++) {
+        DFSTestUtil.createFile(fs, new Path(dir1, String.valueOf(i)),
+            20 * 1024L, (short) 3, 1);
+        DFSTestUtil.createStripedFile(cluster, new Path(dir2,
+            String.valueOf(i)), dir2, 1, 1, false);
+      }
+
+      RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(dir1);
+      int total = 0;
+      while (iter.hasNext()) {
+        iter.next();
+        ++total;
+      }
+      assertEquals(3, total);
+      Mockito.verify(fs.dfs, Mockito.times(1)).listPaths(anyString(), any(),
+          anyBoolean());
+
+      iter = fs.listLocatedStatus(dir2);
+      total = 0;
+      while (iter.hasNext()) {
+        iter.next();
+        ++total;
+      }
+      assertEquals(3, total);
+      Mockito.verify(fs.dfs, Mockito.times(4)).listPaths(anyString(), any(),
+          anyBoolean());
+
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 
