@@ -159,6 +159,51 @@ public final class FederationPoliciesTestUtil {
         new Configuration());
   }
 
+  public static FederationPolicyInitializationContext initializePolicyContext2(
+      ConfigurableFederationPolicy policy, WeightedPolicyInfo policyInfo,
+      Map<SubClusterId, SubClusterInfo> activeSubClusters,
+      FederationStateStoreFacade facade) throws YarnException {
+    FederationPolicyInitializationContext context =
+        new FederationPolicyInitializationContext(null, initResolver(), facade,
+        SubClusterId.newInstance("homesubcluster"));
+    return initializePolicyContext2(context, policy, policyInfo, activeSubClusters);
+  }
+
+  public static FederationPolicyInitializationContext initializePolicyContext2(
+      ConfigurableFederationPolicy policy, WeightedPolicyInfo policyInfo,
+      Map<SubClusterId, SubClusterInfo> activeSubClusters)
+      throws YarnException {
+    return initializePolicyContext2(policy, policyInfo, activeSubClusters, initFacade());
+  }
+
+  public static FederationPolicyInitializationContext initializePolicyContext2(
+      FederationPolicyInitializationContext fpc,
+      ConfigurableFederationPolicy policy, WeightedPolicyInfo policyInfo,
+      Map<SubClusterId, SubClusterInfo> activeSubClusters)
+      throws YarnException {
+    ByteBuffer buf = policyInfo.toByteBuffer();
+    fpc.setSubClusterPolicyConfiguration(SubClusterPolicyConfiguration
+        .newInstance("queue1", policy.getClass().getCanonicalName(), buf));
+
+    if (fpc.getFederationStateStoreFacade() == null) {
+      FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+      FederationStateStore fss = mock(FederationStateStore.class);
+
+      if (activeSubClusters == null) {
+        activeSubClusters = new HashMap<>();
+      }
+
+      GetSubClustersInfoResponse response = GetSubClustersInfoResponse.newInstance(
+          activeSubClusters.values());
+
+      when(fss.getSubClusters(any())).thenReturn(response);
+      facade.reinitialize(fss, new Configuration());
+      fpc.setFederationStateStoreFacade(facade);
+    }
+    policy.reinitialize(fpc);
+    return fpc;
+  }
+
   /**
    * Initialize a {@link SubClusterResolver}.
    *
@@ -231,8 +276,8 @@ public final class FederationPoliciesTestUtil {
    * @throws YarnException in case the initialization is not successful.
    */
   public static FederationStateStoreFacade initFacade() throws YarnException {
-    return initFacade(new ArrayList<>(), mock(SubClusterPolicyConfiguration
-        .class));
+    SubClusterPolicyConfiguration policyConfiguration =
+        SubClusterPolicyConfiguration.newInstance(null, null, null);
+    return initFacade(new ArrayList<>(), policyConfiguration);
   }
-
 }

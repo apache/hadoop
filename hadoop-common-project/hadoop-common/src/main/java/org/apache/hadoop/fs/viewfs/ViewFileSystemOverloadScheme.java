@@ -139,6 +139,8 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
 
   /**
    * Sets whether to add fallback automatically when no mount points found.
+   *
+   * @param addAutoFallbackOnNoMounts addAutoFallbackOnNoMounts.
    */
   public void setSupportAutoAddingFallbackOnNoMounts(
       boolean addAutoFallbackOnNoMounts) {
@@ -320,7 +322,8 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
    *
    * @param path - fs uri path
    * @param conf - configuration
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
+   * @return file system.
    */
   public FileSystem getRawFileSystem(Path path, Configuration conf)
       throws IOException {
@@ -339,6 +342,11 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
   /**
    * Gets the mount path info, which contains the target file system and
    * remaining path to pass to the target file system.
+   *
+   * @param path the path.
+   * @param conf configuration.
+   * @return mount path info.
+   * @throws IOException raised on errors performing I/O.
    */
   public MountPathInfo<FileSystem> getMountPathInfo(Path path,
       Configuration conf) throws IOException {
@@ -347,12 +355,15 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
       res = fsState.resolve(getUriPath(path), true);
       FileSystem fs = res.isInternalDir() ?
           (fsState.getRootFallbackLink() != null ?
-              ((ChRootedFileSystem) fsState
-                  .getRootFallbackLink().getTargetFileSystem()).getMyFs() :
+              fsState.getRootFallbackLink().getTargetFileSystem() :
               fsGetter().get(path.toUri(), conf)) :
-          ((ChRootedFileSystem) res.targetFileSystem).getMyFs();
-      return new MountPathInfo<FileSystem>(res.remainingPath, res.resolvedPath,
-          fs);
+          res.targetFileSystem;
+      if (fs instanceof ChRootedFileSystem) {
+        ChRootedFileSystem chFs = (ChRootedFileSystem) fs;
+        return new MountPathInfo<>(chFs.fullPath(res.remainingPath),
+            chFs.getMyFs());
+      }
+      return new MountPathInfo<FileSystem>(res.remainingPath, fs);
     } catch (FileNotFoundException e) {
       // No link configured with passed path.
       throw new NotInMountpointException(path,
@@ -368,7 +379,7 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     private Path pathOnTarget;
     private T targetFs;
 
-    public MountPathInfo(Path pathOnTarget, String resolvedPath, T targetFs) {
+    public MountPathInfo(Path pathOnTarget, T targetFs) {
       this.pathOnTarget = pathOnTarget;
       this.targetFs = targetFs;
     }

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.tools.federation;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
@@ -26,6 +27,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -46,6 +48,10 @@ import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
 import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaUsage;
 import org.apache.hadoop.hdfs.server.federation.router.RouterStateManager;
+import org.apache.hadoop.hdfs.server.federation.store.CachedRecordStore;
+import org.apache.hadoop.hdfs.server.federation.store.RecordStore;
+import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
+import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.DisableNameserviceRequest;
@@ -70,13 +76,17 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
+import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.hdfs.server.federation.store.records.impl.pb.PBRecord;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RefreshResponse;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolPB;
+import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolPB;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -95,6 +105,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.Quota.andByStorage
 public class RouterAdmin extends Configured implements Tool {
 
   private static final Logger LOG = LoggerFactory.getLogger(RouterAdmin.class);
+  private static final String DUMP_COMMAND = "-dumpState";
 
   private RouterClient client;
 
@@ -131,9 +142,9 @@ public class RouterAdmin extends Configured implements Tool {
       String[] commands =
           {"-add", "-update", "-rm", "-ls", "-getDestination", "-setQuota",
               "-setStorageTypeQuota", "-clrQuota", "-clrStorageTypeQuota",
-              "-safemode", "-nameservice", "-getDisabledNameservices",
+              DUMP_COMMAND, "-safemode", "-nameservice", "-getDisabledNameservices",
               "-refresh", "-refreshRouterArgs",
-              "-refreshSuperUserGroupsConfiguration"};
+              "-refreshSuperUserGroupsConfiguration", "-refreshCallQueue"};
       StringBuilder usage = new StringBuilder();
       usage.append("Usage: hdfs dfsrouteradmin :\n");
       for (int i = 0; i < commands.length; i++) {
@@ -183,13 +194,17 @@ public class RouterAdmin extends Configured implements Tool {
       return "\t[-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]";
     } else if (cmd.equals("-refreshSuperUserGroupsConfiguration")) {
       return "\t[-refreshSuperUserGroupsConfiguration]";
+    } else if (cmd.equals("-refreshCallQueue")) {
+      return "\t[-refreshCallQueue]";
+    } else if (cmd.equals(DUMP_COMMAND)) {
+      return "\t[" + DUMP_COMMAND + "]";
     }
     return getUsage(null);
   }
 
   /**
    * Usage: validates the maximum number of arguments for a command.
-   * @param arg List of of command line parameters.
+   * @param arg List of command line parameters.
    */
   private void validateMax(String[] arg) {
     if (arg[0].equals("-ls")) {
@@ -217,6 +232,11 @@ public class RouterAdmin extends Configured implements Tool {
         throw new IllegalArgumentException("No arguments allowed");
       }
     } else if (arg[0].equals("-refreshSuperUserGroupsConfiguration")) {
+      if (arg.length > 1) {
+        throw new IllegalArgumentException("No arguments allowed");
+      }
+    } else if (arg[0].equals("-refreshCallQueue") ||
+        arg[0].equals(DUMP_COMMAND)) {
       if (arg.length > 1) {
         throw new IllegalArgumentException("No arguments allowed");
       }
@@ -278,6 +298,15 @@ public class RouterAdmin extends Configured implements Tool {
     return true;
   }
 
+  /**
+   * Does this command run in the local process?
+   * @param cmd the string of the command
+   * @return is this a local command?
+   */
+  boolean isLocalCommand(String cmd) {
+    return DUMP_COMMAND.equals(cmd);
+  }
+
   @Override
   public int run(String[] argv) throws Exception {
     if (argv.length < 1) {
@@ -295,6 +324,10 @@ public class RouterAdmin extends Configured implements Tool {
       System.err.println("Not enough parameters specificed for cmd " + cmd);
       printUsage(cmd);
       return exitCode;
+    } else if (isLocalCommand(argv[0])) {
+      if (DUMP_COMMAND.equals(argv[0])) {
+        return dumpStateStore(getConf(), System.out) ? 0 : -1;
+      }
     }
     String address = null;
     // Initialize RouterClient
@@ -388,6 +421,8 @@ public class RouterAdmin extends Configured implements Tool {
         exitCode = genericRefresh(argv, i);
       } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
         exitCode = refreshSuperUserGroupsConfiguration();
+      } else if ("-refreshCallQueue".equals(cmd)) {
+        exitCode = refreshCallQueue();
       } else {
         throw new IllegalArgumentException("Unknown Command: " + cmd);
       }
@@ -397,7 +432,7 @@ public class RouterAdmin extends Configured implements Tool {
       System.err.println(cmd.substring(1) + ": " + arge.getLocalizedMessage());
       printUsage(cmd);
     } catch (RemoteException e) {
-      // This is a error returned by the server.
+      // This is an error returned by the server.
       // Print out the first line of the error message, ignore the stack trace.
       exitCode = -1;
       debugException = e;
@@ -797,7 +832,7 @@ public class RouterAdmin extends Configured implements Tool {
     } else if (argv[i].equals("-d")) { // Check if -d parameter is specified.
       detail = true;
       if (argv.length == 2) {
-        path = "/"; // If no path is provide with -ls -d.
+        path = "/"; // If no path is provided with -ls -d.
       } else {
         path = argv[++i];
       }
@@ -1256,6 +1291,82 @@ public class RouterAdmin extends Configured implements Tool {
         return -1;
       }
     }
+  }
+
+  /**
+   * Refresh Router's call Queue.
+   *
+   * @throws IOException if the operation was not successful.
+   */
+  private int refreshCallQueue() throws IOException {
+    Configuration conf = getConf();
+    String hostport =  getConf().getTrimmed(
+        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
+        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_DEFAULT);
+
+    // Create the client
+    Class<?> xface = RefreshCallQueueProtocolPB.class;
+    InetSocketAddress address = NetUtils.createSocketAddr(hostport);
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+
+    RPC.setProtocolEngine(conf, xface, ProtobufRpcEngine2.class);
+    RefreshCallQueueProtocolPB proxy = (RefreshCallQueueProtocolPB)RPC.getProxy(
+        xface, RPC.getProtocolVersion(xface), address, ugi, conf,
+        NetUtils.getDefaultSocketFactory(conf), 0);
+
+    int returnCode = -1;
+    try (RefreshCallQueueProtocolClientSideTranslatorPB xlator =
+        new RefreshCallQueueProtocolClientSideTranslatorPB(proxy)) {
+      xlator.refreshCallQueue();
+      System.out.println("Refresh call queue successfully for " + hostport);
+      returnCode = 0;
+    } catch (IOException ioe){
+      System.out.println("Refresh call queue unsuccessfully for " + hostport);
+    }
+    return returnCode;
+  }
+
+  /**
+   * Dumps the contents of the StateStore to stdout.
+   * @return true if it was successful
+   */
+  public static boolean dumpStateStore(Configuration conf,
+                                PrintStream output) throws IOException {
+    StateStoreService service = new StateStoreService();
+    conf.setBoolean(RBFConfigKeys.DFS_ROUTER_METRICS_ENABLE, false);
+    service.init(conf);
+    service.loadDriver();
+    if (!service.isDriverReady()) {
+      System.err.println("Can't initialize driver");
+      return false;
+    }
+    // Get the stores sorted by name
+    Map<String, RecordStore<? extends BaseRecord>> stores = new TreeMap<>();
+    for(RecordStore<? extends BaseRecord> store: service.getRecordStores()) {
+      String recordName = StateStoreUtils.getRecordName(store.getRecordClass());
+      stores.put(recordName, store);
+    }
+    for (Entry<String, RecordStore<? extends BaseRecord>> pair: stores.entrySet()) {
+      String recordName = pair.getKey();
+      RecordStore<? extends BaseRecord> store = pair.getValue();
+      output.println("---- " + recordName + " ----");
+      if (store instanceof CachedRecordStore) {
+        for (Object record: ((CachedRecordStore) store).getCachedRecords()) {
+          if (record instanceof BaseRecord && record instanceof PBRecord) {
+            BaseRecord baseRecord = (BaseRecord) record;
+            // Generate the pseudo-json format of the protobuf record
+            String recordString = ((PBRecord) record).getProto().toString();
+            // Indent each line
+            recordString = "    " + recordString.replaceAll("\n", "\n    ");
+            output.println(String.format("  %s:", baseRecord.getPrimaryKey()));
+            output.println(recordString);
+          }
+        }
+        output.println();
+      }
+    }
+    service.stop();
+    return true;
   }
 
   /**

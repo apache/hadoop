@@ -18,6 +18,8 @@
 #ifndef LIB_READER_DATA_TRANSFER_H_
 #define LIB_READER_DATA_TRANSFER_H_
 
+#include "datatransfer.pb.h"
+
 #include "common/sasl_authenticator.h"
 #include "common/async_stream.h"
 #include "connection/datanodeconnection.h"

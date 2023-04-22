@@ -27,6 +27,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -103,6 +104,8 @@ public class TestPmemCacheRecovery {
 
   @BeforeClass
   public static void setUpClass() throws Exception {
+    assumeTrue("Requires PMDK", NativeIO.POSIX.isPmdkAvailable());
+
     oldInjector = DataNodeFaultInjector.get();
     DataNodeFaultInjector.set(new DataNodeFaultInjector() {
       @Override

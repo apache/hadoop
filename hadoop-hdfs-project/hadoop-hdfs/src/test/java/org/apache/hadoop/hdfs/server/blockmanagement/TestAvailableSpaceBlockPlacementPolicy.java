@@ -173,6 +173,52 @@ public class TestAvailableSpaceBlockPlacementPolicy {
     }
   }
 
+  @Test
+  public void testChooseSimilarDataNode() {
+    DatanodeDescriptor[] tolerateDataNodes;
+    DatanodeStorageInfo[] tolerateStorages;
+    int capacity  = 3;
+    Collection<Node> allTolerateNodes = new ArrayList<>(capacity);
+    String[] ownerRackOfTolerateNodes = new String[capacity];
+    for (int i = 0; i < capacity; i++) {
+      ownerRackOfTolerateNodes[i] = "rack"+i;
+    }
+    tolerateStorages = DFSTestUtil.createDatanodeStorageInfos(ownerRackOfTolerateNodes);
+    tolerateDataNodes = DFSTestUtil.toDatanodeDescriptor(tolerateStorages);
+
+    Collections.addAll(allTolerateNodes, tolerateDataNodes);
+    final BlockManager bm = namenode.getNamesystem().getBlockManager();
+    AvailableSpaceBlockPlacementPolicy toleratePlacementPolicy =
+            (AvailableSpaceBlockPlacementPolicy)bm.getBlockPlacementPolicy();
+
+    updateHeartbeatWithUsage(tolerateDataNodes[0],
+            20 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+            1 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+            HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+                    * blockSize, 0L, 0L, 0L, 0, 0);
+
+    updateHeartbeatWithUsage(tolerateDataNodes[1],
+            11 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+            1 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+            HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+                    * blockSize, 0L, 0L, 0L, 0, 0);
+
+    updateHeartbeatWithUsage(tolerateDataNodes[2],
+            10 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+            1 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+            HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+                    * blockSize, 0L, 0L, 0L, 0, 0);
+
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0],
+            tolerateDataNodes[1], false) == 0);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[1],
+            tolerateDataNodes[0], false) == 0);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0],
+            tolerateDataNodes[2], false) == -1);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[2],
+            tolerateDataNodes[0], false) == 1);
+  }
+
   @AfterClass
   public static void teardownCluster() {
     if (namenode != null) {

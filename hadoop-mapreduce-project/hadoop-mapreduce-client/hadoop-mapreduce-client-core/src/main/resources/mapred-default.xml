@@ -287,6 +287,13 @@
 </property>
 
 <property>
+  <name>mapreduce.task.ping-for-liveliness-check.enabled</name>
+  <value>false</value>
+  <description>Whether to consider ping from tasks in liveliness check.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.map.memory.mb</name>
   <value>-1</value>
   <description>The amount of memory to request from the scheduler for each
@@ -833,11 +840,8 @@
   <name>yarn.app.mapreduce.task.container.log.backups</name>
   <value>0</value>
   <description>Number of backup files for task logs when using
-    ContainerRollingLogAppender (CRLA). See
-    org.apache.log4j.RollingFileAppender.maxBackupIndex. By default,
-    ContainerLogAppender (CLA) is used, and container logs are not rolled. CRLA
-    is enabled for tasks when both mapreduce.task.userlog.limit.kb and
-    yarn.app.mapreduce.task.container.log.backups are greater than zero.
+    RollingFileAppender (RFA). See
+    org.apache.log4j.RollingFileAppender.maxBackupIndex.
   </description>
 </property>
 
@@ -845,12 +849,8 @@
   <name>yarn.app.mapreduce.am.container.log.backups</name>
   <value>0</value>
   <description>Number of backup files for the ApplicationMaster logs when using
-    ContainerRollingLogAppender (CRLA). See
-    org.apache.log4j.RollingFileAppender.maxBackupIndex. By default,
-    ContainerLogAppender (CLA) is used, and container logs are not rolled. CRLA
-    is enabled for the ApplicationMaster when both
-    yarn.app.mapreduce.am.container.log.limit.kb and
-    yarn.app.mapreduce.am.container.log.backups are greater than zero.
+    RollingFileAppender (RFA). See
+    org.apache.log4j.RollingFileAppender.maxBackupIndex.
   </description>
 </property>
 
@@ -1653,14 +1653,18 @@
   <name>yarn.app.mapreduce.client-am.ipc.max-retries</name>
   <value>3</value>
   <description>The number of client retries to the AM - before reconnecting
-    to the RM to fetch Application Status.</description>
+    to the RM to fetch Application Status.
+    In other words, it is the ipc.client.connect.max.retries to be used during
+    reconnecting to the RM and fetching Application Status.</description>
 </property>
 
 <property>
   <name>yarn.app.mapreduce.client-am.ipc.max-retries-on-timeouts</name>
   <value>3</value>
   <description>The number of client retries on socket timeouts to the AM - before
-    reconnecting to the RM to fetch Application Status.</description>
+    reconnecting to the RM to fetch Application Status.
+    In other words, it is the ipc.client.connect.max.retries.on.timeouts to be used during
+    reconnecting to the RM and fetching Application Status.</description>
 </property>
 
 <property>
@@ -1715,7 +1719,7 @@
   must specify the appropriate classpath for that archive, and the name of
   the archive must be present in the classpath.
   If mapreduce.app-submission.cross-platform is false, platform-specific
-  environment vairable expansion syntax would be used to construct the default
+  environment variable expansion syntax would be used to construct the default
   CLASSPATH entries.
   For Linux:
   $HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,
@@ -2231,4 +2235,23 @@
   </description>
 </property>
 
+<!-- not yet enabled by default.
+
+<property>
+  <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
+  <value>org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory</value>
+  <description>
+    The default committer factory for ABFS is for the manifest committer with
+    abfs-specific tuning.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.outputcommitter.factory.scheme.gs</name>
+  <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
+  <description>
+    The default committer factory for google cloud storage is for the manifest committer.
+  </description>
+</property>
+-->
 </configuration>

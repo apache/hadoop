@@ -233,4 +233,111 @@ public class TestInstrumentedReadWriteLock {
     assertEquals(2, wlogged.get());
     assertEquals(1, wsuppresed.get());
   }
+
+
+  /**
+   * Tests the warning when the write lock is held longer than threshold.
+   */
+  @Test(timeout=10000)
+  public void testWriteLockLongHoldingReportWithReentrant() {
+    String testname = name.getMethodName();
+    final AtomicLong time = new AtomicLong(0);
+    Timer mclock = new Timer() {
+      @Override
+      public long monotonicNow() {
+        return time.get();
+      }
+    };
+
+    final AtomicLong wlogged = new AtomicLong(0);
+    final AtomicLong wsuppresed = new AtomicLong(0);
+    final AtomicLong totalHeldTime = new AtomicLong(0);
+    ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock(true);
+    InstrumentedWriteLock writeLock = new InstrumentedWriteLock(testname, LOG,
+        readWriteLock, 2000, 300, mclock) {
+      @Override
+      protected void logWarning(long lockHeldTime, SuppressedSnapshot stats) {
+        totalHeldTime.addAndGet(lockHeldTime);
+        wlogged.incrementAndGet();
+        wsuppresed.set(stats.getSuppressedCount());
+      }
+    };
+
+    InstrumentedReadLock readLock = new InstrumentedReadLock(testname, LOG,
+        readWriteLock, 2000, 300, mclock) {
+      @Override
+      protected void logWarning(long lockHeldTime, SuppressedSnapshot stats) {
+        totalHeldTime.addAndGet(lockHeldTime);
+        wlogged.incrementAndGet();
+        wsuppresed.set(stats.getSuppressedCount());
+      }
+    };
+
+    writeLock.lock();   // t = 0
+    time.set(100);
+
+    writeLock.lock();   // t = 100
+    time.set(500);
+
+    writeLock.lock();   // t = 500
+    time.set(2900);
+    writeLock.unlock(); // t = 2900
+
+    readLock.lock();    // t = 2900
+    time.set(3000);
+    readLock.unlock();  // t = 3000
+
+    writeLock.unlock(); // t = 3000
+
+    writeLock.unlock(); // t = 3000
+    assertEquals(1, wlogged.get());
+    assertEquals(0, wsuppresed.get());
+    assertEquals(3000, totalHeldTime.get());
+  }
+
+  /**
+   * Tests the warning when the read lock is held longer than threshold.
+   */
+  @Test(timeout=10000)
+  public void testReadLockLongHoldingReportWithReentrant() {
+    String testname = name.getMethodName();
+    final AtomicLong time = new AtomicLong(0);
+    Timer mclock = new Timer() {
+      @Override
+      public long monotonicNow() {
+        return time.get();
+      }
+    };
+
+    final AtomicLong wlogged = new AtomicLong(0);
+    final AtomicLong wsuppresed = new AtomicLong(0);
+    final AtomicLong totalHelpTime = new AtomicLong(0);
+    ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock(true);
+    InstrumentedReadLock readLock = new InstrumentedReadLock(testname, LOG,
+        readWriteLock, 2000, 300, mclock) {
+      @Override
+      protected void logWarning(long lockHeldTime, SuppressedSnapshot stats) {
+        totalHelpTime.addAndGet(lockHeldTime);
+        wlogged.incrementAndGet();
+        wsuppresed.set(stats.getSuppressedCount());
+      }
+    };
+
+    readLock.lock();   // t = 0
+    time.set(100);
+
+    readLock.lock();   // t = 100
+    time.set(500);
+
+    readLock.lock();   // t = 500
+    time.set(3000);
+    readLock.unlock(); // t = 3000
+
+    readLock.unlock(); // t = 3000
+
+    readLock.unlock(); // t = 3000
+    assertEquals(1, wlogged.get());
+    assertEquals(0, wsuppresed.get());
+    assertEquals(3000, totalHelpTime.get());
+  }
 }

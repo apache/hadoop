@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.datanode.metrics;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.metrics2.lib.MetricsTestHelper;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
@@ -100,7 +101,7 @@ public class TestDataNodeOutlierDetectionViaMetrics {
       }
     }, 500, 100_000);
 
-    final Map<String, Double> outliers = peerMetrics.getOutliers();
+    final Map<String, OutlierMetrics> outliers = peerMetrics.getOutliers();
     LOG.info("Got back outlier nodes: {}", outliers);
     assertThat(outliers.size(), is(1));
     assertTrue(outliers.containsKey(slowNodeName));

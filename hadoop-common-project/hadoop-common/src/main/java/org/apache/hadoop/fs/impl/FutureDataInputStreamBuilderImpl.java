@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.impl;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
@@ -47,7 +48,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
  * options accordingly, for example:
  *
  * If the option is not related to the file system, the option will be ignored.
- * If the option is must, but not supported by the file system, a
+ * If the option is must, but not supported/known by the file system, an
  * {@link IllegalArgumentException} will be thrown.
  *
  */
@@ -125,6 +126,9 @@ public abstract class FutureDataInputStreamBuilderImpl
 
   /**
    * Set the size of the buffer to be used.
+   *
+   * @param bufSize buffer size.
+   * @return FutureDataInputStreamBuilder.
    */
   public FutureDataInputStreamBuilder bufferSize(int bufSize) {
     bufferSize = bufSize;
@@ -136,6 +140,8 @@ public abstract class FutureDataInputStreamBuilderImpl
    * This must be used after the constructor has been invoked to create
    * the actual builder: it allows for subclasses to do things after
    * construction.
+   *
+   * @return FutureDataInputStreamBuilder.
    */
   public FutureDataInputStreamBuilder builder() {
     return getThisBuilder();
@@ -147,8 +153,9 @@ public abstract class FutureDataInputStreamBuilderImpl
   }
 
   @Override
-  public FutureDataInputStreamBuilder withFileStatus(FileStatus st) {
-    this.status = requireNonNull(st, "status");
+  public FutureDataInputStreamBuilder withFileStatus(
+      @Nullable FileStatus st) {
+    this.status = st;
     return this;
   }
 

@@ -548,7 +548,7 @@ public class TestSnapshot {
    * paths work and the NN can load the resulting edits. This test if for
    * snapshots at the root level.
    */
-  @Test(timeout = 60000)
+  @Test(timeout = 120000)
   public void testSnapshotOpsOnRootReservedPath() throws Exception {
     Path dir = new Path("/");
     Path sub = new Path(dir, "sub");

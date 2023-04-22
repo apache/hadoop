@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -70,8 +70,8 @@ public class DiskChecker {
    * Create the directory if it doesn't exist and check that dir is readable,
    * writable and executable
    *  
-   * @param dir
-   * @throws DiskErrorException
+   * @param dir dir.
+   * @throws DiskErrorException disk problem.
    */
   public static void checkDir(File dir) throws DiskErrorException {
     checkDirInternal(dir);
@@ -82,8 +82,8 @@ public class DiskChecker {
    * readable, writable and executable. Perform some disk IO to
    * ensure that the disk is usable for writes.
    *
-   * @param dir
-   * @throws DiskErrorException
+   * @param dir dir.
+   * @throws DiskErrorException disk problem.
    */
   public static void checkDirWithDiskIo(File dir)
       throws DiskErrorException {
@@ -107,8 +107,8 @@ public class DiskChecker {
    * @param localFS local filesystem
    * @param dir directory
    * @param expected permission
-   * @throws DiskErrorException
-   * @throws IOException
+   * @throws DiskErrorException disk problem.
+   * @throws IOException raised on errors performing I/O.
    */
   public static void checkDir(LocalFileSystem localFS, Path dir,
                               FsPermission expected)
@@ -125,8 +125,8 @@ public class DiskChecker {
    * @param localFS local filesystem
    * @param dir directory
    * @param expected permission
-   * @throws DiskErrorException
-   * @throws IOException
+   * @throws DiskErrorException disk problem.
+   * @throws IOException raised on errors performing I/O.
    */  
   public static void checkDirWithDiskIo(LocalFileSystem localFS, Path dir,
                                         FsPermission expected) 

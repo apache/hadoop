@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.client.util;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
@@ -145,7 +145,7 @@ public abstract class YarnClientUtils {
 
             // Now we only support one property, which is exclusive, so check if
             // key = exclusive and value = {true/false}
-            if (key.equals("exclusive")
+            if ("exclusive".equals(key)
                 && ImmutableSet.of("true", "false").contains(value)) {
               exclusive = Boolean.parseBoolean(value);
             } else {

@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.store.CachedRecordStore;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
@@ -63,12 +63,7 @@ public class RouterHeartbeatService extends PeriodicService {
    * Trigger the update of the Router state asynchronously.
    */
   protected void updateStateAsync() {
-    Thread thread = new Thread(new Runnable() {
-      @Override
-      public void run() {
-        updateStateStore();
-      }
-    }, "Router Heartbeat Async");
+    Thread thread = new Thread(this::updateStateStore, "Router Heartbeat Async");
     thread.setDaemon(true);
     thread.start();
   }

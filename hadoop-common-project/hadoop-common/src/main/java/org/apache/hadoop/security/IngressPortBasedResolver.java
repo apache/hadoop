@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.security;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import java.net.InetAddress;
 import java.util.Collection;
 import java.util.HashMap;

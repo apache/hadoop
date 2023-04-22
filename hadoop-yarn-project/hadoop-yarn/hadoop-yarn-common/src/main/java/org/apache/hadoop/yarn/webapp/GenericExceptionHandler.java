@@ -53,7 +53,7 @@ public class GenericExceptionHandler implements ExceptionMapper<Exception> {
   @Override
   public Response toResponse(Exception e) {
     if (LOG.isTraceEnabled()) {
-      LOG.trace("GOT EXCEPITION", e);
+      LOG.trace("GOT EXCEPTION", e);
     }
     // Don't catch this as filter forward on 404
     // (ServletContainer.FEATURE_FILTER_FORWARD_ON_404)
@@ -93,8 +93,8 @@ public class GenericExceptionHandler implements ExceptionMapper<Exception> {
         && e.getCause() instanceof UnmarshalException) {
       s = Response.Status.BAD_REQUEST;
     } else {
-      LOG.warn("INTERNAL_SERVER_ERROR", e);
-      s = Response.Status.INTERNAL_SERVER_ERROR;
+      LOG.warn("SERVICE_UNAVAILABLE", e);
+      s = Response.Status.SERVICE_UNAVAILABLE;
     }
 
     // let jaxb handle marshalling data out in the same format requested

@@ -43,7 +43,7 @@ public class ConfiguredYarnAuthorizer extends YarnAuthorizationProvider {
   private final ConcurrentMap<PrivilegedEntity, Map<AccessType, AccessControlList>>
       allAcls = new ConcurrentHashMap<>();
   private volatile AccessControlList adminAcl = null;
-  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();;
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final ReentrantReadWriteLock.ReadLock readLock = lock.readLock();
   private final ReentrantReadWriteLock.WriteLock writeLock =  lock.writeLock();
 

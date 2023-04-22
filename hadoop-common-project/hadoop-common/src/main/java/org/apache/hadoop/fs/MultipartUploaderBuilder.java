@@ -25,34 +25,43 @@ import org.apache.hadoop.fs.permission.FsPermission;
 
 /**
  * Builder interface for Multipart readers.
- * @param <S>
- * @param <B>
+ * @param <S> MultipartUploader Generic Type.
+ * @param <B> MultipartUploaderBuilder Generic Type.
  */
 public interface MultipartUploaderBuilder<S extends MultipartUploader, B extends MultipartUploaderBuilder<S, B>>
     extends FSBuilder<S, B> {
 
   /**
    * Set permission for the file.
+   * @param perm permission.
+   * @return B Generics Type.
    */
   B permission(@Nonnull FsPermission perm);
 
   /**
    * Set the size of the buffer to be used.
+   * @param bufSize buffer size.
+   * @return B Generics Type.
    */
   B bufferSize(int bufSize);
 
   /**
    * Set replication factor.
+   * @param replica replica.
+   * @return B Generics Type.
    */
   B replication(short replica);
 
   /**
    * Set block size.
+   * @param blkSize blkSize.
+   * @return B Generics Type.
    */
   B blockSize(long blkSize);
 
   /**
    * Create an FSDataOutputStream at the specified path.
+   * @return B Generics Type.
    */
   B create();
 
@@ -60,16 +69,21 @@ public interface MultipartUploaderBuilder<S extends MultipartUploader, B extends
    * Set to true to overwrite the existing file.
    * Set it to false, an exception will be thrown when calling {@link #build()}
    * if the file exists.
+   * @param overwrite overwrite.
+   * @return B Generics Type.
    */
   B overwrite(boolean overwrite);
 
   /**
    * Append to an existing file (optional operation).
+   * @return B Generics Type.
    */
   B append();
 
   /**
    * Set checksum opt.
+   * @param chksumOpt chk sum opt.
+   * @return B Generics Type.
    */
   B checksumOpt(@Nonnull Options.ChecksumOpt chksumOpt);
 
@@ -78,6 +92,7 @@ public interface MultipartUploaderBuilder<S extends MultipartUploader, B extends
    *
    * @throws IllegalArgumentException if the parameters are not valid.
    * @throws IOException on errors when file system creates or appends the file.
+   * @return S Generics Type.
    */
   S build() throws IllegalArgumentException, IOException;
 }

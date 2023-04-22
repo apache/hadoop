@@ -18,36 +18,37 @@
 
 package org.apache.hadoop.yarn.server.sharedcachemanager;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.isA;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.yarn.server.api.SCMAdminProtocol;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RunSharedCacheCleanerTaskRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RunSharedCacheCleanerTaskResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RunSharedCacheCleanerTaskResponsePBImpl;
 import org.apache.hadoop.yarn.client.SCMAdmin;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.server.api.SCMAdminProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RunSharedCacheCleanerTaskRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RunSharedCacheCleanerTaskResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RunSharedCacheCleanerTaskResponsePBImpl;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.InMemorySCMStore;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Basic unit tests for the SCM Admin Protocol Service and SCMAdmin.
@@ -63,7 +64,7 @@ public class TestSCMAdminProtocolService {
   private final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
-  @Before
+  @BeforeEach
   public void startUp() {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.SCM_STORE_CLASS,
@@ -95,7 +96,7 @@ public class TestSCMAdminProtocolService {
     };
   }
 
-  @After
+  @AfterEach
   public void cleanUpTest() {
     if (service != null) {
       service.stop();
@@ -107,18 +108,18 @@ public class TestSCMAdminProtocolService {
   }
 
   @Test
-  public void testRunCleanerTask() throws Exception {
+  void testRunCleanerTask() throws Exception {
     doNothing().when(cleaner).runCleanerTask();
     RunSharedCacheCleanerTaskRequest request =
         recordFactory.newRecordInstance(RunSharedCacheCleanerTaskRequest.class);
     RunSharedCacheCleanerTaskResponse response = SCMAdminProxy.runCleanerTask(request);
-    Assert.assertTrue("cleaner task request isn't accepted", response.getAccepted());
+    assertTrue(response.getAccepted(), "cleaner task request isn't accepted");
     verify(service, times(1)).runCleanerTask(any(RunSharedCacheCleanerTaskRequest.class));
   }
 
   @Test
-  public void testRunCleanerTaskCLI() throws Exception {
-    String[] args = { "-runCleanerTask" };
+  void testRunCleanerTaskCLI() throws Exception {
+    String[] args = {"-runCleanerTask"};
     RunSharedCacheCleanerTaskResponse rp =
         new RunSharedCacheCleanerTaskResponsePBImpl();
     rp.setAccepted(true);

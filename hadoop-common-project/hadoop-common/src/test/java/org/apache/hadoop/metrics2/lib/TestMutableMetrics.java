@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.metrics2.lib;
 
+import static org.apache.hadoop.metrics2.impl.MsInfo.Context;
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 import static org.apache.hadoop.test.MetricsAsserts.*;
 import static org.mockito.AdditionalMatchers.eq;
@@ -29,6 +30,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
@@ -36,6 +39,7 @@ import java.util.concurrent.CountDownLatch;
 
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.util.Quantile;
+import org.apache.hadoop.thirdparty.com.google.common.math.Stats;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +51,9 @@ public class TestMutableMetrics {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestMutableMetrics.class);
-  private final double EPSILON = 1e-42;
+  private static final double EPSILON = 1e-42;
+  private static final int SLEEP_TIME_MS = 6 * 1000; // 6 seconds.
+  private static final int SAMPLE_COUNT = 1000;
 
   /**
    * Test the snapshot method
@@ -287,6 +293,27 @@ public class TestMutableMetrics {
     }
   }
 
+  /**
+   * MutableStat should output 0 instead of the previous state when there is no change.
+   */
+  @Test public void testMutableWithoutChanged() {
+    MetricsRecordBuilder builderWithChange = mockMetricsRecordBuilder();
+    MetricsRecordBuilder builderWithoutChange = mockMetricsRecordBuilder();
+    MetricsRegistry registry = new MetricsRegistry("test");
+    MutableStat stat = registry.newStat("Test", "Test", "Ops", "Val", true);
+    stat.add(1000, 1000);
+    stat.add(1000, 2000);
+    registry.snapshot(builderWithChange, true);
+
+    assertCounter("TestNumOps", 2000L, builderWithChange);
+    assertGauge("TestINumOps", 2000L, builderWithChange);
+    assertGauge("TestAvgVal", 1.5, builderWithChange);
+
+    registry.snapshot(builderWithoutChange, true);
+    assertGauge("TestINumOps", 0L, builderWithoutChange);
+    assertGauge("TestAvgVal", 0.0, builderWithoutChange);
+  }
+
   @Test
   public void testDuplicateMetrics() {
     MutableRatesWithAggregation rates = new MutableRatesWithAggregation();
@@ -306,19 +333,56 @@ public class TestMutableMetrics {
 
   /**
    * Tests that when using {@link MutableStat#add(long, long)}, even with a high
-   * sample count, the mean does not lose accuracy.
+   * sample count, the mean does not lose accuracy. This also validates that
+   * the std dev is correct, assuming samples of equal value.
    */
-  @Test public void testMutableStatWithBulkAdd() {
+  @Test
+  public void testMutableStatWithBulkAdd() {
+    List<Long> samples = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) {
+      samples.add(1000L);
+    }
+    for (int i = 0; i < 1000; i++) {
+      samples.add(2000L);
+    }
+    Stats stats = Stats.of(samples);
+
+    for (int bulkSize : new int[] {1, 10, 100, 1000}) {
+      MetricsRecordBuilder rb = mockMetricsRecordBuilder();
+      MetricsRegistry registry = new MetricsRegistry("test");
+      MutableStat stat = registry.newStat("Test", "Test", "Ops", "Val", true);
+
+      for (int i = 0; i < samples.size(); i += bulkSize) {
+        stat.add(bulkSize, samples
+            .subList(i, i + bulkSize)
+            .stream()
+            .mapToLong(Long::longValue)
+            .sum()
+        );
+      }
+      registry.snapshot(rb, false);
+
+      assertCounter("TestNumOps", 2000L, rb);
+      assertGauge("TestAvgVal", stats.mean(), rb);
+      assertGauge("TestStdevVal", stats.sampleStandardDeviation(), rb);
+    }
+  }
+
+  @Test
+  public void testLargeMutableStatAdd() {
     MetricsRecordBuilder rb = mockMetricsRecordBuilder();
     MetricsRegistry registry = new MetricsRegistry("test");
-    MutableStat stat = registry.newStat("Test", "Test", "Ops", "Val", false);
+    MutableStat stat = registry.newStat("Test", "Test", "Ops", "Val", true);
 
-    stat.add(1000, 1000);
-    stat.add(1000, 2000);
+    long sample = 1000000000000009L;
+    for (int i = 0; i < 100; i++) {
+      stat.add(1, sample);
+    }
     registry.snapshot(rb, false);
 
-    assertCounter("TestNumOps", 2000L, rb);
-    assertGauge("TestAvgVal", 1.5, rb);
+    assertCounter("TestNumOps", 100L, rb);
+    assertGauge("TestAvgVal", (double) sample, rb);
+    assertGauge("TestStdevVal", 0.0, rb);
   }
 
   /**
@@ -333,14 +397,14 @@ public class TestMutableMetrics {
     MutableQuantiles quantiles = registry.newQuantiles("foo", "stat", "Ops",
         "Latency", 5);
     // Push some values in and wait for it to publish
-    long start = System.nanoTime() / 1000000;
-    for (long i = 1; i <= 1000; i++) {
+    long startTimeMS = System.currentTimeMillis();
+    for (long i = 1; i <= SAMPLE_COUNT; i++) {
       quantiles.add(i);
       quantiles.add(1001 - i);
     }
-    long end = System.nanoTime() / 1000000;
+    long endTimeMS = System.currentTimeMillis();
 
-    Thread.sleep(6000 - (end - start));
+    Thread.sleep(SLEEP_TIME_MS - (endTimeMS - startTimeMS));
 
     registry.snapshot(mb, false);
 
@@ -352,10 +416,8 @@ public class TestMutableMetrics {
     }
 
     // Verify the results are within our requirements
-    verify(mb).addGauge(
-        info("FooNumOps", "Number of ops for stat with 5s interval"),
-        (long) 2000);
-    Quantile[] quants = MutableQuantiles.quantiles;
+    verify(mb).addGauge(info("FooNumOps", "Number of ops for stat with 5s interval"), 2000L);
+    Quantile[] quants = MutableQuantiles.QUANTILES;
     String name = "Foo%dthPercentileLatency";
     String desc = "%d percentile latency with 5 second interval for stat";
     for (Quantile q : quants) {
@@ -363,6 +425,46 @@ public class TestMutableMetrics {
       int error = (int) (1000 * q.error);
       String n = String.format(name, percentile);
       String d = String.format(desc, percentile);
+      long expected = (long) (q.quantile * 1000);
+      verify(mb).addGauge(eq(info(n, d)), leq(expected + error));
+      verify(mb).addGauge(eq(info(n, d)), geq(expected - error));
+    }
+  }
+
+  /**
+   * Ensure that quantile estimates from {@link MutableInverseQuantiles} are within
+   * specified error bounds.
+   */
+  @Test(timeout = 30000)
+  public void testMutableInverseQuantilesError() throws Exception {
+    MetricsRecordBuilder mb = mockMetricsRecordBuilder();
+    MetricsRegistry registry = new MetricsRegistry("test");
+    // Use a 5s rollover period
+    MutableQuantiles inverseQuantiles = registry.newInverseQuantiles("foo", "stat", "Ops",
+        "Latency", 5);
+    // Push some values in and wait for it to publish
+    long startTimeMS = System.currentTimeMillis();
+    for (long i = 1; i <= SAMPLE_COUNT; i++) {
+      inverseQuantiles.add(i);
+      inverseQuantiles.add(1001 - i);
+    }
+    long endTimeMS = System.currentTimeMillis();
+
+    Thread.sleep(SLEEP_TIME_MS - (endTimeMS - startTimeMS));
+
+    registry.snapshot(mb, false);
+
+    // Verify the results are within our requirements
+    verify(mb).addGauge(
+        info("FooNumOps", "Number of ops for stat with 5s interval"), 2000L);
+    Quantile[] inverseQuants = MutableInverseQuantiles.INVERSE_QUANTILES;
+    String name = "Foo%dthInversePercentileLatency";
+    String desc = "%d inverse percentile latency with 5 second interval for stat";
+    for (Quantile q : inverseQuants) {
+      int inversePercentile = (int) (100 * (1 - q.quantile));
+      int error = (int) (1000 * q.error);
+      String n = String.format(name, inversePercentile);
+      String d = String.format(desc, inversePercentile);
       long expected = (long) (q.quantile * 1000);
       verify(mb).addGauge(eq(info(n, d)), leq(expected + error));
       verify(mb).addGauge(eq(info(n, d)), geq(expected - error));
@@ -381,21 +483,21 @@ public class TestMutableMetrics {
     MutableQuantiles quantiles = registry.newQuantiles("foo", "stat", "Ops",
         "Latency", 5);
 
-    Quantile[] quants = MutableQuantiles.quantiles;
+    Quantile[] quants = MutableQuantiles.QUANTILES;
     String name = "Foo%dthPercentileLatency";
     String desc = "%d percentile latency with 5 second interval for stat";
 
     // Push values for three intervals
-    long start = System.nanoTime() / 1000000;
+    long startTimeMS = System.currentTimeMillis();
     for (int i = 1; i <= 3; i++) {
       // Insert the values
-      for (long j = 1; j <= 1000; j++) {
+      for (long j = 1; j <= SAMPLE_COUNT; j++) {
         quantiles.add(i);
       }
       // Sleep until 1s after the next 5s interval, to let the metrics
       // roll over
-      long sleep = (start + (5000 * i) + 1000) - (System.nanoTime() / 1000000);
-      Thread.sleep(sleep);
+      long sleepTimeMS = startTimeMS + (5000L * i) + 1000 - System.currentTimeMillis();
+      Thread.sleep(sleepTimeMS);
       // Verify that the window reset, check it has the values we pushed in
       registry.snapshot(mb, false);
       for (Quantile q : quants) {
@@ -408,8 +510,7 @@ public class TestMutableMetrics {
 
     // Verify the metrics were added the right number of times
     verify(mb, times(3)).addGauge(
-        info("FooNumOps", "Number of ops for stat with 5s interval"),
-        (long) 1000);
+        info("FooNumOps", "Number of ops for stat with 5s interval"), 1000L);
     for (Quantile q : quants) {
       int percentile = (int) (100 * q.quantile);
       String n = String.format(name, percentile);
@@ -419,7 +520,56 @@ public class TestMutableMetrics {
   }
 
   /**
-   * Test that {@link MutableQuantiles} rolls over correctly even if no items
+   * Test that {@link MutableInverseQuantiles} rolls the window over at the specified
+   * interval.
+   */
+  @Test(timeout = 30000)
+  public void testMutableInverseQuantilesRollover() throws Exception {
+    MetricsRecordBuilder mb = mockMetricsRecordBuilder();
+    MetricsRegistry registry = new MetricsRegistry("test");
+    // Use a 5s rollover period
+    MutableQuantiles inverseQuantiles = registry.newInverseQuantiles("foo", "stat", "Ops",
+        "Latency", 5);
+
+    Quantile[] quants = MutableInverseQuantiles.INVERSE_QUANTILES;
+    String name = "Foo%dthInversePercentileLatency";
+    String desc = "%d inverse percentile latency with 5 second interval for stat";
+
+    // Push values for three intervals
+    long startTimeMS = System.currentTimeMillis();
+    for (int i = 1; i <= 3; i++) {
+      // Insert the values
+      for (long j = 1; j <= SAMPLE_COUNT; j++) {
+        inverseQuantiles.add(i);
+      }
+      // Sleep until 1s after the next 5s interval, to let the metrics
+      // roll over
+      long sleepTimeMS = startTimeMS + (5000L * i) + 1000 - System.currentTimeMillis();
+      Thread.sleep(sleepTimeMS);
+      // Verify that the window reset, check it has the values we pushed in
+      registry.snapshot(mb, false);
+      for (Quantile q : quants) {
+        int inversePercentile = (int) (100 * (1 - q.quantile));
+        String n = String.format(name, inversePercentile);
+        String d = String.format(desc, inversePercentile);
+        verify(mb).addGauge(info(n, d), (long) i);
+      }
+    }
+
+    // Verify the metrics were added the right number of times
+    verify(mb, times(3)).addGauge(
+        info("FooNumOps", "Number of ops for stat with 5s interval"), 1000L);
+
+    for (Quantile q : quants) {
+      int inversePercentile = (int) (100 * (1 - q.quantile));
+      String n = String.format(name, inversePercentile);
+      String d = String.format(desc, inversePercentile);
+      verify(mb, times(3)).addGauge(eq(info(n, d)), anyLong());
+    }
+  }
+
+  /**
+   * Test that {@link MutableQuantiles} rolls over correctly even if no items.
    * have been added to the window
    */
   @Test(timeout = 30000)
@@ -433,10 +583,43 @@ public class TestMutableMetrics {
     // Check it initially
     quantiles.snapshot(mb, true);
     verify(mb).addGauge(
-        info("FooNumOps", "Number of ops for stat with 5s interval"), (long) 0);
-    Thread.sleep(6000);
+        info("FooNumOps", "Number of ops for stat with 5s interval"), 0L);
+    Thread.sleep(SLEEP_TIME_MS);
     quantiles.snapshot(mb, false);
     verify(mb, times(2)).addGauge(
-        info("FooNumOps", "Number of ops for stat with 5s interval"), (long) 0);
+        info("FooNumOps", "Number of ops for stat with 5s interval"), 0L);
+  }
+
+  /**
+   * Test that {@link MutableInverseQuantiles} rolls over correctly even if no items
+   * have been added to the window
+   */
+  @Test(timeout = 30000)
+  public void testMutableInverseQuantilesEmptyRollover() throws Exception {
+    MetricsRecordBuilder mb = mockMetricsRecordBuilder();
+    MetricsRegistry registry = new MetricsRegistry("test");
+    // Use a 5s rollover period
+    MutableQuantiles inverseQuantiles = registry.newInverseQuantiles("foo", "stat", "Ops",
+        "Latency", 5);
+
+    // Check it initially
+    inverseQuantiles.snapshot(mb, true);
+    verify(mb).addGauge(
+        info("FooNumOps", "Number of ops for stat with 5s interval"), 0L);
+    Thread.sleep(SLEEP_TIME_MS);
+    inverseQuantiles.snapshot(mb, false);
+    verify(mb, times(2)).addGauge(
+        info("FooNumOps", "Number of ops for stat with 5s interval"), 0L);
+  }
+
+  /**
+   * Test {@link MutableGaugeFloat#incr()}.
+   */
+  @Test(timeout = 30000)
+  public void testMutableGaugeFloat() {
+    MutableGaugeFloat mgf = new MutableGaugeFloat(Context, 3.2f);
+    assertEquals(3.2f, mgf.value(), 0.0);
+    mgf.incr();
+    assertEquals(4.2f, mgf.value(), 0.0);
   }
 }

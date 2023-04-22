@@ -32,7 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -51,6 +51,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
+import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
@@ -59,8 +60,6 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.util.ApplicationClassLoader;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.ContainerLogAppender;
-import org.apache.hadoop.yarn.ContainerRollingLogAppender;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -272,12 +271,12 @@ public class MRApps extends Apps {
         crossPlatformifyMREnv(conf, Environment.PWD) + Path.SEPARATOR + "*", conf);
     // a * in the classpath will only find a .jar, so we need to filter out
     // all .jars and add everything else
-    addToClasspathIfNotJar(DistributedCache.getFileClassPaths(conf),
-        DistributedCache.getCacheFiles(conf),
+    addToClasspathIfNotJar(JobContextImpl.getFileClassPaths(conf),
+        JobContextImpl.getCacheFiles(conf),
         conf,
         environment, classpathEnvVar);
-    addToClasspathIfNotJar(DistributedCache.getArchiveClassPaths(conf),
-        DistributedCache.getCacheArchives(conf),
+    addToClasspathIfNotJar(JobContextImpl.getArchiveClassPaths(conf),
+        JobContextImpl.getCacheArchives(conf),
         conf,
         environment, classpathEnvVar);
     if (userClassesTakesPrecedence) {
@@ -483,8 +482,8 @@ public class MRApps extends Apps {
 
     // Cache archives
     lrb.setType(LocalResourceType.ARCHIVE);
-    lrb.setUris(DistributedCache.getCacheArchives(conf));
-    lrb.setTimestamps(DistributedCache.getArchiveTimestamps(conf));
+    lrb.setUris(JobContextImpl.getCacheArchives(conf));
+    lrb.setTimestamps(JobContextImpl.getArchiveTimestamps(conf));
     lrb.setSizes(getFileSizes(conf, MRJobConfig.CACHE_ARCHIVES_SIZES));
     lrb.setVisibilities(DistributedCache.getArchiveVisibilities(conf));
     lrb.setSharedCacheUploadPolicies(
@@ -493,8 +492,8 @@ public class MRApps extends Apps {
     
     // Cache files
     lrb.setType(LocalResourceType.FILE);
-    lrb.setUris(DistributedCache.getCacheFiles(conf));
-    lrb.setTimestamps(DistributedCache.getFileTimestamps(conf));
+    lrb.setUris(JobContextImpl.getCacheFiles(conf));
+    lrb.setTimestamps(JobContextImpl.getFileTimestamps(conf));
     lrb.setSizes(getFileSizes(conf, MRJobConfig.CACHE_FILES_SIZES));
     lrb.setVisibilities(DistributedCache.getFileVisibilities(conf));
     lrb.setSharedCacheUploadPolicies(
@@ -504,9 +503,9 @@ public class MRApps extends Apps {
 
   /**
    * Set up the DistributedCache related configs to make
-   * {@link DistributedCache#getLocalCacheFiles(Configuration)}
+   * {@link JobContextImpl#getLocalCacheFiles(Configuration)}
    * and
-   * {@link DistributedCache#getLocalCacheArchives(Configuration)}
+   * {@link JobContextImpl#getLocalCacheArchives(Configuration)}
    * working.
    * @param conf
    * @throws java.io.IOException
@@ -518,7 +517,7 @@ public class MRApps extends Apps {
     //        ^ ^ all symlinks are created in the current work-dir
 
     // Update the configuration object with localized archives.
-    URI[] cacheArchives = DistributedCache.getCacheArchives(conf);
+    URI[] cacheArchives = JobContextImpl.getCacheArchives(conf);
     if (cacheArchives != null) {
       List<String> localArchives = new ArrayList<String>();
       for (int i = 0; i < cacheArchives.length; ++i) {
@@ -538,7 +537,7 @@ public class MRApps extends Apps {
     }
 
     // Update the configuration object with localized files.
-    URI[] cacheFiles = DistributedCache.getCacheFiles(conf);
+    URI[] cacheFiles = JobContextImpl.getCacheFiles(conf);
     if (cacheFiles != null) {
       List<String> localFiles = new ArrayList<String>();
       for (int i = 0; i < cacheFiles.length; ++i) {
@@ -587,8 +586,7 @@ public class MRApps extends Apps {
   
   /**
    * Add the JVM system properties necessary to configure
-   *  {@link ContainerLogAppender} or
-   *  {@link ContainerRollingLogAppender}.
+   * {@link org.apache.log4j.RollingFileAppender}.
    *
    * @param task for map/reduce, or null for app master
    * @param vargs the argument list to append to

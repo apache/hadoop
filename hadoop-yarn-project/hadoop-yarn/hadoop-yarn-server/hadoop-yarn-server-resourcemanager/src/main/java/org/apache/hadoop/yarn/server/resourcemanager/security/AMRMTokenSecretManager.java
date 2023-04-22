@@ -44,7 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMSta
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * AMRM-tokens are per ApplicationAttempt. If users redistribute their
@@ -76,7 +76,9 @@ public class AMRMTokenSecretManager extends
       new HashSet<ApplicationAttemptId>();
 
   /**
-   * Create an {@link AMRMTokenSecretManager}
+   * Create an {@link AMRMTokenSecretManager}.
+   * @param conf configuration.
+   * @param rmContext rm context.
    */
   public AMRMTokenSecretManager(Configuration conf, RMContext rmContext) {
     this.rmContext = rmContext;
@@ -219,6 +221,8 @@ public class AMRMTokenSecretManager extends
 
   /**
    * Populate persisted password of AMRMToken back to AMRMTokenSecretManager.
+   * @param token AMRMTokenIdentifier.
+   * @throws IOException an I/O exception has occurred.
    */
   public void addPersistedPassword(Token<AMRMTokenIdentifier> token)
       throws IOException {

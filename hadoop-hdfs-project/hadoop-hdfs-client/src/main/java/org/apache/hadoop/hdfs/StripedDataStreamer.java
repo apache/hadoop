@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.util.ByteArrayManager;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * This class extends {@link DataStreamer} to support writing striped blocks

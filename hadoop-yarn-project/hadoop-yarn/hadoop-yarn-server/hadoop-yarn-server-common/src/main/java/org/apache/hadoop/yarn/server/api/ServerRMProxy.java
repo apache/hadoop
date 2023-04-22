@@ -26,7 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.client.RMProxy;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +49,7 @@ public class ServerRMProxy<T> extends RMProxy<T> {
    * @param protocol Server protocol for which proxy is being requested.
    * @param <T> Type of proxy.
    * @return Proxy to the ResourceManager for the specified server protocol.
-   * @throws IOException
+   * @throws IOException if there are I/O errors.
    */
   public static <T> T createRMProxy(final Configuration configuration,
       final Class<T> protocol) throws IOException {

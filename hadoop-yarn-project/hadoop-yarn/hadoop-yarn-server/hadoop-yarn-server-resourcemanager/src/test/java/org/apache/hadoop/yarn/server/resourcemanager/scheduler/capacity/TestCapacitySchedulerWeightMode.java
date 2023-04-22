@@ -26,6 +26,7 @@ import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -38,6 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -73,6 +75,28 @@ public class TestCapacitySchedulerWeightMode {
     Set<E> set = Sets.newHashSet(elements);
     return set;
   }
+
+  public static CapacitySchedulerConfiguration getConfigWithInheritedAccessibleNodeLabel(
+      Configuration config) {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration(
+        config);
+
+    // Define top-level queues
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] { "a"});
+
+    conf.setCapacityByLabel(A, RMNodeLabelsManager.NO_LABEL, 100f);
+    conf.setCapacityByLabel(A, "newLabel", 100f);
+    conf.setAccessibleNodeLabels(A, toSet("newLabel"));
+    conf.setAllowZeroCapacitySum(A, true);
+
+    // Define 2nd-level queues
+    conf.setQueues(A, new String[] { "a1" });
+    conf.setCapacityByLabel(A1, RMNodeLabelsManager.NO_LABEL, 100f);
+
+    return conf;
+  }
+
 
   /*
    * Queue structure:
@@ -198,9 +222,9 @@ public class TestCapacitySchedulerWeightMode {
    *               a x(=100%), y(50%)   b y(=50%), z(=100%)
    *               ________________             ______________
    *              /                           /              \
-   *             a1 ([x,y]: w=100)    b1(no)          b2([y,z]: w=100)
+   *             a1 ([x,y]: w=1)    b1(no)          b2([y,z]: w=1)
    *
-   * Parent uses weight, child uses percentage
+   * Parent uses percentages, child uses weights
    */
   public static Configuration getCSConfWithLabelsParentUsePctChildUseWeight(
       Configuration config) {
@@ -210,9 +234,9 @@ public class TestCapacitySchedulerWeightMode {
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[] { "a", "b" });
-    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "x", 100);
-    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "y", 100);
-    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "z", 100);
+    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "y", 100);
+    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "z", 100);
 
     conf.setCapacityByLabel(A, RMNodeLabelsManager.NO_LABEL, 10);
     conf.setMaximumCapacity(A, 10);
@@ -228,23 +252,23 @@ public class TestCapacitySchedulerWeightMode {
 
     // Define 2nd-level queues
     conf.setQueues(A, new String[] { "a1" });
-    conf.setCapacityByLabel(A1, RMNodeLabelsManager.NO_LABEL, 100);
+    conf.setLabeledQueueWeight(A1, RMNodeLabelsManager.NO_LABEL, 1);
     conf.setMaximumCapacity(A1, 100);
     conf.setAccessibleNodeLabels(A1, toSet("x", "y"));
     conf.setDefaultNodeLabelExpression(A1, "x");
-    conf.setCapacityByLabel(A1, "x", 100);
-    conf.setCapacityByLabel(A1, "y", 100);
+    conf.setLabeledQueueWeight(A1, "x", 1);
+    conf.setLabeledQueueWeight(A1, "y", 1);
 
     conf.setQueues(B, new String[] { "b1", "b2" });
-    conf.setCapacityByLabel(B1, RMNodeLabelsManager.NO_LABEL, 50);
+    conf.setLabeledQueueWeight(B1, RMNodeLabelsManager.NO_LABEL, 1);
     conf.setMaximumCapacity(B1, 50);
     conf.setAccessibleNodeLabels(B1, RMNodeLabelsManager.EMPTY_STRING_SET);
 
-    conf.setCapacityByLabel(B2, RMNodeLabelsManager.NO_LABEL, 50);
+    conf.setLabeledQueueWeight(B2, RMNodeLabelsManager.NO_LABEL, 1);
     conf.setMaximumCapacity(B2, 50);
     conf.setAccessibleNodeLabels(B2, toSet("y", "z"));
-    conf.setCapacityByLabel(B2, "y", 100);
-    conf.setCapacityByLabel(B2, "z", 100);
+    conf.setLabeledQueueWeight(B2, "y", 1);
+    conf.setLabeledQueueWeight(B2, "z", 1);
 
     return conf;
   }
@@ -366,6 +390,28 @@ public class TestCapacitySchedulerWeightMode {
     Assert.assertEquals("", b1ExistingNodeLabels.iterator().next());
 
     rm.close();
+  }
+
+  /**
+   * Tests whether weight is correctly reset to -1. See YARN-11016 for further details.
+   * @throws IOException if reinitialization fails
+   */
+  @Test()
+  public void testAccessibleNodeLabelsInheritanceNoWeightMode() throws IOException {
+    CapacitySchedulerConfiguration newConf = getConfigWithInheritedAccessibleNodeLabel(conf);
+
+    MockRM rm = new MockRM(newConf);
+    CapacityScheduler cs =
+        (CapacityScheduler) rm.getRMContext().getScheduler();
+
+    Resource clusterResource = Resource.newInstance(1024, 2);
+    cs.getRootQueue().updateClusterResource(clusterResource, new ResourceLimits(clusterResource));
+
+    try {
+      cs.reinitialize(newConf, rm.getRMContext());
+    } catch (Exception e) {
+      Assert.fail("Reinitialization failed with " + e);
+    }
   }
 
   @Test

@@ -89,7 +89,7 @@ import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.tracing.Tracer;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * This class provides rudimentary checking of DFS volumes for errors and
@@ -320,6 +320,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       }
       out.println("No. of corrupted Replica: " +
           numberReplicas.corruptReplicas());
+      // for striped blocks only and number of redundant internal block replicas.
+      if (blockInfo.isStriped()) {
+        out.println("No. of redundant Replica: " + numberReplicas.redundantInternalBlocks());
+      }
       //record datanodes that have corrupted block replica
       Collection<DatanodeDescriptor> corruptionRecord = null;
       if (blockManager.getCorruptReplicas(block) != null) {

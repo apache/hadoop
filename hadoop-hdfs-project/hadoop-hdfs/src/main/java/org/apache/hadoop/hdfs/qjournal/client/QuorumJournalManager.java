@@ -59,9 +59,9 @@ import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.log.LogThrottlingHelper;
 import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
@@ -414,7 +414,7 @@ public class QuorumJournalManager implements JournalManager {
                                          String nameServiceId)
       throws IOException {
     List<AsyncLogger> ret = Lists.newArrayList();
-    List<InetSocketAddress> addrs = Util.getAddressesList(uri);
+    List<InetSocketAddress> addrs = Util.getAddressesList(uri, conf);
     if (addrs.size() % 2 == 0) {
       LOG.warn("Quorum journal URI '" + uri + "' has an even number " +
           "of Journal Nodes specified. This is not recommended!");
@@ -479,10 +479,9 @@ public class QuorumJournalManager implements JournalManager {
     LOG.info("Successfully started new epoch " + loggers.getEpoch());
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("newEpoch(" + loggers.getEpoch() + ") responses:\n" +
-        QuorumCall.mapToString(resps));
+      LOG.debug("newEpoch({}) responses:\n{}", loggers.getEpoch(), QuorumCall.mapToString(resps));
     }
-    
+
     long mostRecentSegmentTxId = Long.MIN_VALUE;
     for (NewEpochResponseProto r : resps.values()) {
       if (r.hasLastSegmentTxId()) {
@@ -518,10 +517,7 @@ public class QuorumJournalManager implements JournalManager {
     // the cache used for RPC calls is not enabled; fall back to using the
     // streaming mechanism to serve such requests
     if (inProgressOk && inProgressTailingEnabled) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Tailing edits starting from txn ID " + fromTxnId +
-            " via RPC mechanism");
-      }
+      LOG.debug("Tailing edits starting from txn ID {} via RPC mechanism", fromTxnId);
       try {
         Collection<EditLogInputStream> rpcStreams = new ArrayList<>();
         selectRpcInputStreams(rpcStreams, fromTxnId, onlyDurableTxns);
@@ -585,8 +581,8 @@ public class QuorumJournalManager implements JournalManager {
     int maxAllowedTxns = !onlyDurableTxns ? highestTxnCount :
         responseCounts.get(responseCounts.size() - loggers.getMajoritySize());
     if (maxAllowedTxns == 0) {
-      LOG.debug("No new edits available in logs; requested starting from " +
-          "ID {}", fromTxnId);
+      LOG.debug("No new edits available in logs; requested starting from ID {}",
+          fromTxnId);
       return;
     }
     LogAction logAction = selectInputStreamLogHelper.record(fromTxnId);

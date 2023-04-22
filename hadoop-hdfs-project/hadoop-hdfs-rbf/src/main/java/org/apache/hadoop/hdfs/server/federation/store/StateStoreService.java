@@ -53,7 +53,7 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * A service to initialize a
@@ -273,6 +273,15 @@ public class StateStoreService extends CompositeService {
   }
 
   /**
+   * Get the list of all RecordStores.
+   * @return a list of each RecordStore.
+   */
+  @SuppressWarnings("unchecked")
+  public <T extends RecordStore<? extends BaseRecord>> List<T> getRecordStores() {
+    return new ArrayList<>((Collection<T>) recordStores.values());
+  }
+
+  /**
    * List of records supported by this State Store.
    *
    * @return List of supported record classes.
@@ -331,7 +340,7 @@ public class StateStoreService extends CompositeService {
   }
 
   /**
-   * Fetch a unique identifier for this state store instance. Typically it is
+   * Fetch a unique identifier for this state store instance. Typically, it is
    * the address of the router.
    *
    * @return Unique identifier for this store.

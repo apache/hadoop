@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -51,7 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSet;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * <code>CSQueue</code> represents a node in the tree of 
@@ -90,6 +89,19 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    */
   public String getQueuePath();
 
+  /**
+   * Gets the queue path object.
+   * @return the object of the queue
+   */
+  QueuePath getQueuePathObject();
+
+  /**
+   * Checks whether the queue is a dynamic queue (created dynamically in the fashion of auto queue
+   * creation v2).
+   * @return true, if it is a dynamic queue, false otherwise
+   */
+  boolean isDynamicQueue();
+
   public PrivilegedEntity getPrivilegedEntity();
 
   Resource getMaximumAllocation();
@@ -109,7 +121,7 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    *         cumulative capacity in the cluster
    */
   public float getAbsoluteCapacity();
-  
+
   /**
    * Get the configured maximum-capacity of the queue. 
    * @return the configured maximum-capacity of the queue
@@ -151,7 +163,13 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return current run-state
    */
   public QueueState getState();
-  
+
+  /**
+   * Get the max-parallel-applications property of the queue
+   * @return max-parallel-applications
+   */
+  public int getMaxParallelApps();
+
   /**
    * Get child queues
    * @return child queues
@@ -172,12 +190,16 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @param applicationId the applicationId of the application being submitted
    * @param user user who submitted the application
    * @param queue queue to which the application is submitted
+   * @throws AccessControlException if any acl violation is there.
    */
   public void submitApplication(ApplicationId applicationId, String user,
       String queue) throws AccessControlException;
 
   /**
    * Submit an application attempt to the queue.
+   *
+   * @param application application whose attempt is being submitted.
+   * @param userName userName who submitted the application.
    */
   public void submitApplicationAttempt(FiCaSchedulerApp application,
       String userName);
@@ -193,13 +215,16 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
 
   /**
    * An application submitted to this queue has finished.
-   * @param applicationId
+   * @param applicationId applicationId.
    * @param user user who submitted the application
    */
   public void finishApplication(ApplicationId applicationId, String user);
 
   /**
    * An application attempt submitted to this queue has finished.
+   *
+   * @param application application attempt.
+   * @param queue queue.
    */
   public void finishApplicationAttempt(FiCaSchedulerApp application,
       String queue);
@@ -248,9 +273,13 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * Reinitialize the queue.
    * @param newlyParsedQueue new queue to re-initalize from
    * @param clusterResource resources in the cluster
+   * @throws IOException an I/O exception has occurred.
    */
   public void reinitialize(CSQueue newlyParsedQueue, Resource clusterResource)
   throws IOException;
+
+  public void refreshAfterResourceCalculation(
+      Resource clusterResource, ResourceLimits resourceLimits);
 
    /**
    * Update the cluster resource for queues as we add/remove nodes
@@ -325,6 +354,10 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   /**
    * When partition of node updated, we will update queue's resource usage if it
    * has container(s) running on that.
+   *
+   * @param nodePartition node label.
+   * @param resourceToInc resource.
+   * @param application application.
    */
   public void incUsedResource(String nodePartition, Resource resourceToInc,
       SchedulerApplicationAttempt application);
@@ -332,6 +365,10 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   /**
    * When partition of node updated, we will update queue's resource usage if it
    * has container(s) running on that.
+   *
+   * @param nodePartition node label.
+   * @param resourceToDec resource.
+   * @param application application.
    */
   public void decUsedResource(String nodePartition, Resource resourceToDec,
       SchedulerApplicationAttempt application);
@@ -371,6 +408,12 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   public ReentrantReadWriteLock.ReadLock getReadLock();
 
   /**
+   * Get writeLock associated with the Queue.
+   * @return writeLock of corresponding queue.
+   */
+  ReentrantReadWriteLock.WriteLock getWriteLock();
+
+  /**
    * Validate submitApplication api so that moveApplication do a pre-check.
    * @param applicationId Application ID
    * @param userName User Name
@@ -387,10 +430,10 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   Priority getPriority();
 
   /**
-   * Get a map of usernames and weights
-   * @return map of usernames and corresponding weight
+   * Get the UserWeights object that wraps a map of usernames and weights
+   * @return The UserWeights object.
    */
-  Map<String, Float> getUserWeights();
+  UserWeights getUserWeights();
 
   /**
    * Get QueueResourceQuotas associated with each queue.
@@ -413,6 +456,38 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return effective queue capacity
    */
   Resource getEffectiveCapacity(String label);
+
+  /**
+   * Get configured capacity vector parsed from the capacity config
+   * of the queue.
+   * @param label node label (partition)
+   * @return capacity resource vector
+   */
+  QueueCapacityVector getConfiguredCapacityVector(String label);
+
+  /**
+   * Get configured maximum capacity vector parsed from the capacity config
+   * of the queue.
+   * @param label node label (partition)
+   * @return capacity resource vector
+   */
+  QueueCapacityVector getConfiguredMaxCapacityVector(String label);
+
+  /**
+   * Sets the configured minimum capacity vector to a specific value.
+   * @param label node label (partition)
+   * @param minCapacityVector capacity vector
+   */
+  void setConfiguredMinCapacityVector(String label, QueueCapacityVector minCapacityVector);
+
+  /**
+   * Sets the configured maximum capacity vector to a specific value.
+   * @param label node label (partition)
+   * @param maxCapacityVector capacity vector
+   */
+  void setConfiguredMaxCapacityVector(String label, QueueCapacityVector maxCapacityVector);
+
+  Set<String> getConfiguredNodeLabels();
 
   /**
    * Get effective capacity of queue. If min/max resource is configured,

@@ -27,7 +27,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
@@ -104,8 +104,10 @@ public class SubClusterInfoPBImpl extends SubClusterInfo {
     maybeInitBuilder();
     if (subClusterId == null) {
       builder.clearSubClusterId();
+      return;
     }
     this.subClusterId = subClusterId;
+    builder.setSubClusterId(convertToProtoFormat(subClusterId));
   }
 
   @Override

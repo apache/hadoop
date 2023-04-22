@@ -21,8 +21,7 @@ import java.nio.ByteBuffer;
 import java.util.UUID;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * A class defining a set of static helper methods to provide conversion between
@@ -36,7 +35,7 @@ public class ClientId {
   private static final int shiftWidth = 8;
   
   /**
-   * Return clientId as byte[]
+   * @return Return clientId as byte[].
    */
   public static byte[] getClientId() {
     UUID uuid = UUID.randomUUID();
@@ -46,7 +45,10 @@ public class ClientId {
     return buf.array();
   }
   
-  /** Convert a clientId byte[] to string */
+  /**
+   * @return Convert a clientId byte[] to string.
+   * @param clientId input clientId.
+   */
   public static String toString(byte[] clientId) {
     // clientId can be null or an empty array
     if (clientId == null || clientId.length == 0) {
@@ -75,7 +77,10 @@ public class ClientId {
     return lsb;
   }
   
-  /** Convert from clientId string byte[] representation of clientId */
+  /**
+   * @return Convert from clientId string byte[] representation of clientId.
+   * @param id input id.
+   */
   public static byte[] toBytes(String id) {
     if (id == null || "".equals(id)) {
       return new byte[0];

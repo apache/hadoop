@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.metrics;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsSystem;
@@ -61,6 +61,18 @@ public class OpportunisticSchedulerMetrics {
       }
     }
     return INSTANCE;
+  }
+
+  @VisibleForTesting
+  public static void resetMetrics() {
+    synchronized (OpportunisticSchedulerMetrics.class) {
+      isInitialized.set(false);
+      INSTANCE = null;
+      MetricsSystem ms = DefaultMetricsSystem.instance();
+      if (ms != null) {
+        ms.unregisterSource("OpportunisticSchedulerMetrics");
+      }
+    }
   }
 
   private static void registerMetrics() {

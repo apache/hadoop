@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -54,6 +55,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * A Journal Sync thread runs through the lifetime of the JN. It periodically
@@ -153,6 +155,9 @@ public class JournalNodeSyncer {
         LOG.warn("Could not add proxy for Journal at addresss " + addr, e);
       }
     }
+    // Check if there are any other JournalNodes before starting the sync.  Although some proxies
+    // may be unresolved now, the act of attempting to sync will instigate resolution when the
+    // servers become available.
     if (otherJNProxies.isEmpty()) {
       LOG.error("Cannot sync as there is no other JN available for sync.");
       return false;
@@ -273,7 +278,7 @@ public class JournalNodeSyncer {
       }
 
       if (uriStr == null || uriStr.isEmpty()) {
-        HashSet<String> sharedEditsUri = Sets.newHashSet();
+        HashSet<String> sharedEditsUri = new HashSet<>();
         if (nameServiceId != null) {
           Collection<String> nnIds = DFSUtilClient.getNameNodeIds(
               conf, nameServiceId);
@@ -310,12 +315,24 @@ public class JournalNodeSyncer {
     return null;
   }
 
-  private List<InetSocketAddress> getJournalAddrList(String uriStr) throws
+  @VisibleForTesting
+  protected List<InetSocketAddress> getJournalAddrList(String uriStr) throws
       URISyntaxException,
       IOException {
     URI uri = new URI(uriStr);
-    return Util.getLoggerAddresses(uri,
-        Sets.newHashSet(jn.getBoundIpcAddress()));
+
+    InetSocketAddress boundIpcAddress = jn.getBoundIpcAddress();
+    Set<InetSocketAddress> excluded = Sets.newHashSet(boundIpcAddress);
+    List<InetSocketAddress> addrList = Util.getLoggerAddresses(uri, excluded, conf);
+
+    // Exclude the current JournalNode instance (a local address and the same port).  If the address
+    // is bound to a local address on the same port, then remove it to handle scenarios where a
+    // wildcard address (e.g. "0.0.0.0") is used.   We can't simply exclude all local addresses
+    // since we may be running multiple servers on the same host.
+    addrList.removeIf(addr -> !addr.isUnresolved() &&  addr.getAddress().isAnyLocalAddress()
+          && boundIpcAddress.getPort() == addr.getPort());
+
+    return addrList;
   }
 
   private void getMissingLogSegments(List<RemoteEditLog> thisJournalEditLogs,

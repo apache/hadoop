@@ -294,7 +294,6 @@ public class TestStorageRestore {
       restore = fsi.getStorage().getRestoreFailedStorage();
       assertTrue("After check call restore is " + restore, restore);
       String commandOutput = cmdResult.getCommandOutput();
-      commandOutput.trim();
       assertTrue(commandOutput.contains("restoreFailedStorage is set to true"));
       
 

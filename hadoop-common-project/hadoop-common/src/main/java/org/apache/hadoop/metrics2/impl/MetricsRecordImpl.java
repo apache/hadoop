@@ -20,14 +20,16 @@ package org.apache.hadoop.metrics2.impl;
 
 import java.util.List;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
+import static org.apache.hadoop.util.Preconditions.*;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsTag;
 import static org.apache.hadoop.metrics2.util.Contracts.*;
 
-class MetricsRecordImpl extends AbstractMetricsRecord {
+@VisibleForTesting
+public class MetricsRecordImpl extends AbstractMetricsRecord {
   protected static final String DEFAULT_CONTEXT = "default";
 
   private final long timestamp;

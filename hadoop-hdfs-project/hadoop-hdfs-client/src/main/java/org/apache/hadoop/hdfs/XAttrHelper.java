@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.XAttr.NameSpace;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 @InterfaceAudience.Private

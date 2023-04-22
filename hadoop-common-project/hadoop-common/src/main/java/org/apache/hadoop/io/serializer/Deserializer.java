@@ -35,13 +35,15 @@ import org.apache.hadoop.classification.InterfaceStability;
  * other producers may read from the input between calls to
  * {@link #deserialize(Object)}.
  * </p>
- * @param <T>
+ * @param <T> generic type.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public interface Deserializer<T> {
   /**
    * <p>Prepare the deserializer for reading.</p>
+   * @param in input stream.
+   * @throws IOException raised on errors performing I/O.
    */
   void open(InputStream in) throws IOException;
   
@@ -53,12 +55,15 @@ public interface Deserializer<T> {
    * stream. Otherwise, if the object <code>t</code> is null a new
    * deserialized object will be created.
    * </p>
+   * @param t t.
    * @return the deserialized object
+   * @throws IOException raised on errors performing I/O.
    */
   T deserialize(T t) throws IOException;
   
   /**
    * <p>Close the underlying input stream and clear up any resources.</p>
+   * @throws IOException raised on errors performing I/O.
    */
   void close() throws IOException;
 }

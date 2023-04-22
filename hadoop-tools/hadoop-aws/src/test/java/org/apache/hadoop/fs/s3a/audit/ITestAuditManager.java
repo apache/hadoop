@@ -121,8 +121,8 @@ public class ITestAuditManager extends AbstractS3ACostTest {
     final S3AFileSystem fs = getFileSystem();
     final long exec0 = lookupCounterStatistic(iostats(),
         AUDIT_REQUEST_EXECUTION.getSymbol());
-    // API call
-    fs.getBucketLocation();
+    // API call to a known path, `getBucketLocation()` does not always result in an API call.
+    fs.listStatus(path("/"));
     // which MUST have ended up calling the extension request handler
     Assertions.assertThat(SimpleAWSRequestHandler.getInvocationCount())
         .describedAs("Invocation count of plugged in request handler")

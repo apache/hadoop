@@ -31,9 +31,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.slf4j.Logger;
 
@@ -196,8 +196,8 @@ class BlockPoolManager {
       
       // Step 2. Any nameservices we currently have but are no longer present
       // need to be removed.
-      toRemove = Sets.newHashSet(Sets.difference(
-          bpByNameserviceId.keySet(), addrMap.keySet()));
+      toRemove = Sets.difference(
+          bpByNameserviceId.keySet(), addrMap.keySet());
       
       assert toRefresh.size() + toAdd.size() ==
         addrMap.size() :
@@ -306,5 +306,28 @@ class BlockPoolManager {
   @VisibleForTesting
   Map<String, BPOfferService> getBpByNameserviceId() {
     return bpByNameserviceId;
+  }
+
+  boolean isSlownodeByNameserviceId(String nsId) {
+    if (bpByNameserviceId.containsKey(nsId)) {
+      return bpByNameserviceId.get(nsId).isSlownode();
+    }
+    return false;
+  }
+
+  boolean isSlownodeByBlockPoolId(String bpId) {
+    if (bpByBlockPoolId.containsKey(bpId)) {
+      return bpByBlockPoolId.get(bpId).isSlownode();
+    }
+    return false;
+  }
+
+  boolean isSlownode() {
+    for (BPOfferService bpOfferService : bpByBlockPoolId.values()) {
+      if (bpOfferService.isSlownode()) {
+        return true;
+      }
+    }
+    return false;
   }
 }

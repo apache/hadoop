@@ -17,7 +17,7 @@
 */
 package org.apache.hadoop.security.ssl;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -319,8 +319,10 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
    */
   @Override
   public synchronized void destroy() {
-    if (trustManager != null) {
+    if (fileMonitoringTimer != null) {
       fileMonitoringTimer.cancel();
+    }
+    if (trustManager != null) {
       trustManager = null;
       keyManagers = null;
       trustManagers = null;

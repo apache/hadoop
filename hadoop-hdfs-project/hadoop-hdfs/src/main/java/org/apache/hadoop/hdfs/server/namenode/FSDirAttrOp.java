@@ -415,7 +415,7 @@ public class FSDirAttrOp {
       bm.setReplication(oldBR, targetReplication, b);
     }
 
-    if (oldBR != -1) {
+    if (oldBR != -1 && FSDirectory.LOG.isDebugEnabled()) {
       if (oldBR > targetReplication) {
         FSDirectory.LOG.debug("Decreasing replication from {} to {} for {}",
                              oldBR, targetReplication, iip.getPath());

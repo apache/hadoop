@@ -19,8 +19,13 @@
 package org.apache.hadoop.fs.s3a.scale;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.IntFunction;
 
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
@@ -35,9 +40,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
@@ -46,6 +54,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING;
@@ -382,7 +391,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
 
   /**
    * This is the set of actions to perform when verifying the file actually
-   * was created. With the s3guard committer, the file doesn't come into
+   * was created. With the S3A committer, the file doesn't come into
    * existence; a different set of assertions must be checked.
    */
   @Test
@@ -402,7 +411,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   public void test_040_PositionedReadHugeFile() throws Throwable {
     assumeHugeFileExists();
     final String encryption = getConf().getTrimmed(
-        SERVER_SIDE_ENCRYPTION_ALGORITHM);
+        Constants.S3_ENCRYPTION_ALGORITHM);
     boolean encrypted = encryption != null;
     if (encrypted) {
       LOG.info("File is encrypted with algorithm {}", encryption);
@@ -443,6 +452,30 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         filetype, mb);
     LOG.info("Time per positioned read = {} nS",
         toHuman(timer.nanosPerOperation(ops)));
+  }
+
+  @Test
+  public void test_045_vectoredIOHugeFile() throws Throwable {
+    assumeHugeFileExists();
+    List<FileRange> rangeList = new ArrayList<>();
+    rangeList.add(FileRange.createFileRange(5856368, 116770));
+    rangeList.add(FileRange.createFileRange(3520861, 116770));
+    rangeList.add(FileRange.createFileRange(8191913, 116770));
+    rangeList.add(FileRange.createFileRange(1520861, 116770));
+    rangeList.add(FileRange.createFileRange(2520861, 116770));
+    rangeList.add(FileRange.createFileRange(9191913, 116770));
+    rangeList.add(FileRange.createFileRange(2820861, 156770));
+    IntFunction<ByteBuffer> allocate = ByteBuffer::allocate;
+    FileSystem fs = getFileSystem();
+    CompletableFuture<FSDataInputStream> builder =
+            fs.openFile(hugefile).build();
+    try (FSDataInputStream in = builder.get()) {
+      in.readVectored(rangeList, allocate);
+      byte[] readFullRes = new byte[(int)filesize];
+      in.readFully(0, readFullRes);
+      // Comparing vectored read results with read fully.
+      validateVectoredReadResult(rangeList, readFullRes);
+    }
   }
 
   /**

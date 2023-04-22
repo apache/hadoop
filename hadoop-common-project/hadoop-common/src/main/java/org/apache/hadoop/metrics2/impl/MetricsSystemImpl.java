@@ -31,8 +31,8 @@ import java.util.TimerTask;
 import javax.management.ObjectName;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
+import org.apache.hadoop.classification.VisibleForTesting;
+import static org.apache.hadoop.util.Preconditions.*;
 
 import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.math3.util.ArithmeticUtils;
@@ -280,7 +280,6 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
       }
       return sink;
     }
-    allSinks.put(name, sink);
     if (config != null) {
       registerSink(name, description, sink);
     }
@@ -301,6 +300,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
         ? newSink(name, desc, sink, conf)
         : newSink(name, desc, sink, config.subset(SINK_KEY));
     sinks.put(name, sa);
+    allSinks.put(name, sink);
     sa.start();
     LOG.info("Registered sink "+ name);
   }
@@ -508,6 +508,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
             conf.getString(DESC_KEY, sinkName), conf);
         sa.start();
         sinks.put(sinkName, sa);
+        allSinks.put(sinkName, sa.sink());
       } catch (Exception e) {
         LOG.warn("Error creating sink '"+ sinkName +"'", e);
       }

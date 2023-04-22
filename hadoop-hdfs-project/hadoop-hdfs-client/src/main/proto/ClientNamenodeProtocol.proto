@@ -18,7 +18,7 @@
 
 /**
  * These .proto interfaces are private and stable.
- * Please see http://wiki.apache.org/hadoop/Compatibility
+ * Please see https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html
  * for what changes are allowed for a *stable* .proto interface.
  */
 syntax="proto2";
@@ -332,6 +332,7 @@ message GetSnapshotDiffReportListingResponseProto {
 }
 message RenewLeaseRequestProto {
   required string clientName = 1;
+  repeated string namespaces = 2;
 }
 
 message RenewLeaseResponseProto { //void response
@@ -422,6 +423,13 @@ message GetPreferredBlockSizeRequestProto {
 
 message GetPreferredBlockSizeResponseProto {
   required uint64 bsize = 1;
+}
+
+message GetSlowDatanodeReportRequestProto {
+}
+
+message GetSlowDatanodeReportResponseProto {
+  repeated DatanodeInfoProto datanodeInfoProto = 1;
 }
 
 enum SafeModeActionProto {
@@ -1070,4 +1078,6 @@ service ClientNamenodeProtocol {
       returns(SatisfyStoragePolicyResponseProto);
   rpc getHAServiceState(HAServiceStateRequestProto)
       returns(HAServiceStateResponseProto);
+  rpc getSlowDatanodeReport(GetSlowDatanodeReportRequestProto)
+      returns(GetSlowDatanodeReportResponseProto);
 }

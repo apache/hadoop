@@ -190,11 +190,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     return committerTestBinding.getCommitterName();
   }
 
-  @Override
-  public boolean useInconsistentClient() {
-    return committerTestBinding.useInconsistentClient();
-  }
-
   /**
    * Verify that the committer binding is happy.
    */
@@ -218,9 +213,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     // that and URI creation fails.
 
     Path outputPath = path("ITestS3ACommitterMRJob-execute-"+ committerName());
-    // create and delete to force in a tombstone marker -see HADOOP-16207
-    fs.mkdirs(outputPath);
-    fs.delete(outputPath, true);
 
     String commitUUID = UUID.randomUUID().toString();
     String suffix = isUniqueFilenames() ? ("-" + commitUUID) : "";
@@ -303,7 +295,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
       fail(message);
     }
 
-    waitForConsistency();
     Path successPath = new Path(outputPath, _SUCCESS);
     SuccessData successData = validateSuccessFile(outputPath,
         committerName(),
@@ -484,12 +475,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     }
 
     /**
-     * Should the inconsistent S3A client be used?
-     * @return true for inconsistent listing
-     */
-    public abstract boolean useInconsistentClient();
-
-    /**
      * Override point for any committer specific validation operations;
      * called after the base assertions have all passed.
      * @param destPath destination of work
@@ -544,13 +529,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     }
 
     /**
-     * @return true for inconsistent listing
-     */
-    public boolean useInconsistentClient() {
-      return true;
-    }
-
-    /**
      * Verify that staging commit dirs are made absolute under the user's
      * home directory, so, in a secure cluster, private.
      */
@@ -584,12 +562,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
       super(PartitionedStagingCommitter.NAME);
     }
 
-    /**
-     * @return true for inconsistent listing
-     */
-    public boolean useInconsistentClient() {
-      return true;
-    }
   }
 
   /**
@@ -601,13 +573,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
 
     private MagicCommitterTestBinding() {
       super(MagicS3GuardCommitter.NAME);
-    }
-
-    /**
-     * @return we need a consistent store.
-     */
-    public boolean useInconsistentClient() {
-      return false;
     }
 
     /**

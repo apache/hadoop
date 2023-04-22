@@ -32,17 +32,27 @@ public interface Seekable {
    * Seek to the given offset from the start of the file.
    * The next read() will be from that location.  Can't
    * seek past the end of the file.
+   *
+   * @param pos offset from the start of the file.
+   * @throws IOException raised on errors performing I/O.
    */
   void seek(long pos) throws IOException;
-  
+
   /**
    * Return the current offset from the start of the file
+   *
+   * @return offset from the start of the file.
+   * @throws IOException raised on errors performing I/O.
    */
   long getPos() throws IOException;
 
   /**
-   * Seeks a different copy of the data.  Returns true if 
+   * Seeks a different copy of the data.  Returns true if
    * found a new source, false otherwise.
+   *
+   * @param targetPos target position.
+   * @return true if found a new source, false otherwise.
+   * @throws IOException raised on errors performing I/O.
    */
   @InterfaceAudience.Private
   boolean seekToNewSource(long targetPos) throws IOException;

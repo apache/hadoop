@@ -17,32 +17,25 @@
  */
 package org.apache.hadoop.http;
 
-import org.apache.log4j.Logger;
-import org.eclipse.jetty.server.CustomRequestLog;
-import org.eclipse.jetty.server.RequestLog;
-import org.junit.Test;
-
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+
+import org.eclipse.jetty.server.CustomRequestLog;
+import org.eclipse.jetty.server.RequestLog;
+import org.eclipse.jetty.server.Slf4jRequestLogWriter;
+import org.junit.Test;
 
 public class TestHttpRequestLog {
 
   @Test
-  public void testAppenderUndefined() {
-    RequestLog requestLog = HttpRequestLog.getRequestLog("test");
-    assertNull("RequestLog should be null", requestLog);
-  }
-
-  @Test
   public void testAppenderDefined() {
-    HttpRequestLogAppender requestLogAppender = new HttpRequestLogAppender();
-    requestLogAppender.setName("testrequestlog");
-    Logger.getLogger("http.requests.test").addAppender(requestLogAppender);
     RequestLog requestLog = HttpRequestLog.getRequestLog("test");
-    Logger.getLogger("http.requests.test").removeAppender(requestLogAppender);
     assertNotNull("RequestLog should not be null", requestLog);
-    assertEquals("Class mismatch",
-        CustomRequestLog.class, requestLog.getClass());
+    assertThat(requestLog, instanceOf(CustomRequestLog.class));
+    CustomRequestLog crl = (CustomRequestLog) requestLog;
+    assertThat(crl.getWriter(), instanceOf(Slf4jRequestLogWriter.class));
+    assertEquals(CustomRequestLog.EXTENDED_NCSA_FORMAT, crl.getFormatString());
   }
 }

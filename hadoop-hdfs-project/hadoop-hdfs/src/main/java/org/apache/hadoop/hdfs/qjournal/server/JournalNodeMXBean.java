@@ -57,4 +57,20 @@ public interface JournalNodeMXBean {
    * @return the version of Hadoop.
    */
   String getVersion();
+
+  /**
+   * Get the start time of the JournalNode.
+   *
+   * @return the start time of the JournalNode.
+   */
+  long getJNStartedTimeInMillis();
+
+  /**
+   * Get the list of the storage infos of JournalNode's journals. Storage infos
+   * include layout version, namespace id, cluster id and creation time of the
+   * File system state.
+   *
+   * @return the list of storage infos associated with journals.
+   */
+  List<String> getStorageInfos();
 }

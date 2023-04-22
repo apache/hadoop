@@ -29,7 +29,7 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import static java.nio.file.Files.createLink;
 
@@ -156,6 +156,7 @@ public class HardLink {
    * Creates a hardlink.
    * @param file - existing source file
    * @param linkName - desired target link file
+   * @throws IOException raised on errors performing I/O.
    */
   public static void createHardLink(File file, File linkName)
       throws IOException {
@@ -177,6 +178,7 @@ public class HardLink {
    * @param fileBaseNames - list of path-less file names, as returned by 
    *                        parentDir.list()
    * @param linkDir - where the hardlinks should be put. It must already exist.
+   * @throws IOException raised on errors performing I/O.
    */
   public static void createHardLinkMult(File parentDir, String[] fileBaseNames,
       File linkDir) throws IOException {
@@ -204,6 +206,10 @@ public class HardLink {
 
    /**
    * Retrieves the number of links to the specified file.
+    *
+    * @param fileName file name.
+    * @throws IOException raised on errors performing I/O.
+    * @return link count.
    */
   public static int getLinkCount(File fileName) throws IOException {
     if (fileName == null) {

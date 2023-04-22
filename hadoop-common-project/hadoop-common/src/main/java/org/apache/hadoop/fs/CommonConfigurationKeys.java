@@ -399,6 +399,12 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String ZK_ACL_DEFAULT = "world:anyone:rwcda";
   /** Authentication for the ZooKeeper ensemble. */
   public static final String ZK_AUTH = ZK_PREFIX + "auth";
+  /** Principal name for zookeeper servers. */
+  public static final String ZK_SERVER_PRINCIPAL = ZK_PREFIX + "server.principal";
+  /** Kerberos principal name for zookeeper connection. */
+  public static final String ZK_KERBEROS_PRINCIPAL = ZK_PREFIX + "kerberos.principal";
+  /** Kerberos keytab for zookeeper connection. */
+  public static final String ZK_KERBEROS_KEYTAB = ZK_PREFIX + "kerberos.keytab";
 
   /** Address of the ZooKeeper ensemble. */
   public static final String ZK_ADDRESS = ZK_PREFIX + "address";
@@ -464,4 +470,26 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** Default value for IOStatistics logging level. */
   public static final String IOSTATISTICS_LOGGING_LEVEL_DEFAULT
       = IOSTATISTICS_LOGGING_LEVEL_DEBUG;
+
+  /**
+   * default hadoop temp dir on local system: {@value}.
+   */
+  public static final String HADOOP_TMP_DIR = "hadoop.tmp.dir";
+
+  /**
+   * Thread-level IOStats Support.
+   * {@value}
+   */
+  public static final String IOSTATISTICS_THREAD_LEVEL_ENABLED =
+      "fs.iostatistics.thread.level.enabled";
+
+  /**
+   * Default value for Thread-level IOStats Support is true.
+   */
+  public static final boolean IOSTATISTICS_THREAD_LEVEL_ENABLED_DEFAULT =
+      true;
+
+  public static final String HADOOP_SECURITY_RESOLVER_IMPL =
+      "hadoop.security.resolver.impl";
+
 }

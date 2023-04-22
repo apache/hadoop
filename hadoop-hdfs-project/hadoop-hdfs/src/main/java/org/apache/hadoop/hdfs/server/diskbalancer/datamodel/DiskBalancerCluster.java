@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -389,6 +389,6 @@ public class DiskBalancerCluster {
    * @return DiskBalancerDataNode.
    */
   public DiskBalancerDataNode getNodeByName(String hostName) {
-    return hostNames.get(hostName);
+    return hostNames.get(hostName.toLowerCase(Locale.US));
   }
 }

@@ -72,6 +72,7 @@ message ApplicationStateDataProto {
     optional hadoop.common.RPCCallerContextProto caller_context = 8;
     repeated ApplicationTimeoutMapProto application_timeouts = 9;
     optional int64 launch_time = 10;
+    optional string real_user = 11;
 }
 
 message ApplicationAttemptStateDataProto {

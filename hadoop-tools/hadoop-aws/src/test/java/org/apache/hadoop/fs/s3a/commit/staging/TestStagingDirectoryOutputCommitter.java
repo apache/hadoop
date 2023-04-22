@@ -29,8 +29,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.PathExistsException;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.*;
@@ -46,7 +50,7 @@ public class TestStagingDirectoryOutputCommitter
 
   @Override
   DirectoryStagingCommitter newJobCommitter() throws Exception {
-    return new DirectoryStagingCommitter(outputPath,
+    return new DirectoryStagingCommitter(getOutputPath(),
         createTaskAttemptForJob());
   }
 
@@ -63,7 +67,7 @@ public class TestStagingDirectoryOutputCommitter
   public void testDefaultConflictResolution() throws Exception {
     getJob().getConfiguration().unset(
         FS_S3A_COMMITTER_STAGING_CONFLICT_MODE);
-    pathIsDirectory(getMockS3A(), outputPath);
+    pathIsDirectory(getMockS3A(), getOutputPath());
     verifyJobSetupAndCommit();
   }
 
@@ -75,7 +79,8 @@ public class TestStagingDirectoryOutputCommitter
   }
 
   protected void verifyFailureConflictOutcome() throws Exception {
-    pathIsDirectory(getMockS3A(), outputPath);
+    final S3AFileSystem mockFS = getMockS3A();
+    pathIsDirectory(mockFS, getOutputPath());
     final DirectoryStagingCommitter committer = newJobCommitter();
 
     // this should fail
@@ -86,20 +91,24 @@ public class TestStagingDirectoryOutputCommitter
 
     // but there are no checks in job commit (HADOOP-15469)
     // this is done by calling the preCommit method directly,
-    committer.preCommitJob(getJob(), AbstractS3ACommitter.ActiveCommit.empty());
 
-    reset(getMockS3A());
-    pathDoesNotExist(getMockS3A(), outputPath);
+    final CommitContext commitContext = new CommitOperations(getWrapperFS()).
+        createCommitContext(getJob(), getOutputPath(), 0,
+            IOStatisticsContext.getCurrentIOStatisticsContext());
+    committer.preCommitJob(commitContext, AbstractS3ACommitter.ActiveCommit.empty());
+
+    reset(mockFS);
+    pathDoesNotExist(mockFS, getOutputPath());
 
     committer.setupJob(getJob());
-    verifyExistenceChecked(getMockS3A(), outputPath);
-    verifyMkdirsInvoked(getMockS3A(), outputPath);
-    verifyNoMoreInteractions(getMockS3A());
+    verifyExistenceChecked(mockFS, getOutputPath());
+    verifyMkdirsInvoked(mockFS, getOutputPath());
+    verifyNoMoreInteractions(mockFS);
 
-    reset(getMockS3A());
-    pathDoesNotExist(getMockS3A(), outputPath);
+    reset(mockFS);
+    pathDoesNotExist(mockFS, getOutputPath());
     committer.commitJob(getJob());
-    verifyCompletion(getMockS3A());
+    verifyCompletion(mockFS);
   }
 
   @Test
@@ -108,7 +117,7 @@ public class TestStagingDirectoryOutputCommitter
     getJob().getConfiguration().set(
         FS_S3A_COMMITTER_STAGING_CONFLICT_MODE, CONFLICT_MODE_APPEND);
     FileSystem mockS3 = getMockS3A();
-    pathIsDirectory(mockS3, outputPath);
+    pathIsDirectory(mockS3, getOutputPath());
     verifyJobSetupAndCommit();
   }
 
@@ -120,7 +129,7 @@ public class TestStagingDirectoryOutputCommitter
     FileSystem mockS3 = getMockS3A();
 
     Mockito.reset(mockS3);
-    pathExists(mockS3, outputPath);
+    pathExists(mockS3, getOutputPath());
 
     committer.commitJob(getJob());
     verifyCompletion(mockS3);
@@ -130,7 +139,7 @@ public class TestStagingDirectoryOutputCommitter
   public void testReplaceConflictResolution() throws Exception {
     FileSystem mockS3 = getMockS3A();
 
-    pathIsDirectory(mockS3, outputPath);
+    pathIsDirectory(mockS3, getOutputPath());
 
     getJob().getConfiguration().set(
         FS_S3A_COMMITTER_STAGING_CONFLICT_MODE, CONFLICT_MODE_REPLACE);
@@ -140,17 +149,17 @@ public class TestStagingDirectoryOutputCommitter
     committer.setupJob(getJob());
 
     Mockito.reset(mockS3);
-    pathExists(mockS3, outputPath);
-    canDelete(mockS3, outputPath);
+    pathExists(mockS3, getOutputPath());
+    canDelete(mockS3, getOutputPath());
 
     committer.commitJob(getJob());
-    verifyDeleted(mockS3, outputPath);
+    verifyDeleted(mockS3, getOutputPath());
     verifyCompletion(mockS3);
   }
 
   @Test
   public void testReplaceConflictFailsIfDestIsFile() throws Exception {
-    pathIsFile(getMockS3A(), outputPath);
+    pathIsFile(getMockS3A(), getOutputPath());
 
     getJob().getConfiguration().set(
         FS_S3A_COMMITTER_STAGING_CONFLICT_MODE, CONFLICT_MODE_REPLACE);
@@ -166,7 +175,7 @@ public class TestStagingDirectoryOutputCommitter
 
   @Test
   public void testAppendConflictFailsIfDestIsFile() throws Exception {
-    pathIsFile(getMockS3A(), outputPath);
+    pathIsFile(getMockS3A(), getOutputPath());
 
     getJob().getConfiguration().set(
         FS_S3A_COMMITTER_STAGING_CONFLICT_MODE, CONFLICT_MODE_APPEND);

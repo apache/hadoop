@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.security.token.delegation.web;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -125,6 +125,7 @@ public class DelegationTokenAuthenticationFilter
    * Set AUTH_TYPE property to the name of the corresponding authentication
    * handler class based on the input properties.
    * @param props input properties.
+   * @throws ServletException servlet exception.
    */
   protected void setAuthHandlerClass(Properties props)
       throws ServletException {

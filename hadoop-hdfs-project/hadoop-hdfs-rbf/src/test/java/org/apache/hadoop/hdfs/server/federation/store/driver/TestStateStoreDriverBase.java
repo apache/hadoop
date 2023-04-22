@@ -48,6 +48,8 @@ import org.apache.hadoop.hdfs.server.federation.store.records.Query;
 import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
+import org.apache.hadoop.metrics2.lib.MutableRate;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.slf4j.Logger;
@@ -76,6 +78,10 @@ public class TestStateStoreDriverBase {
     return stateStore.getDriver();
   }
 
+  protected StateStoreService getStateStoreService() {
+    return stateStore;
+  }
+
   @After
   public void cleanMetrics() {
     if (stateStore != null) {
@@ -88,6 +94,7 @@ public class TestStateStoreDriverBase {
   public static void tearDownCluster() {
     if (stateStore != null) {
       stateStore.stop();
+      stateStore = null;
     }
   }
 
@@ -119,7 +126,7 @@ public class TestStateStoreDriverBase {
   }
 
   @SuppressWarnings("unchecked")
-  private <T extends BaseRecord> T generateFakeRecord(Class<T> recordClass)
+  protected  <T extends BaseRecord> T generateFakeRecord(Class<T> recordClass)
       throws IllegalArgumentException, IllegalAccessException, IOException {
 
     if (recordClass == MembershipState.class) {
@@ -232,6 +239,25 @@ public class TestStateStoreDriverBase {
     QueryResult<T> queryResult2 = driver.get(recordClass);
     List<T> records2 = queryResult2.getRecords();
     assertEquals(11, records2.size());
+  }
+
+  public <T extends BaseRecord> void testInsertWithErrorDuringWrite(
+      StateStoreDriver driver, Class<T> recordClass)
+      throws IllegalArgumentException, IllegalAccessException, IOException {
+
+    assertTrue(driver.removeAll(recordClass));
+    QueryResult<T> queryResult0 = driver.get(recordClass);
+    List<T> records0 = queryResult0.getRecords();
+    assertTrue(records0.isEmpty());
+
+    // Insert single
+    BaseRecord record = generateFakeRecord(recordClass);
+    driver.put(record, true, false);
+
+    // Verify that no record was inserted.
+    QueryResult<T> queryResult1 = driver.get(recordClass);
+    List<T> records1 = queryResult1.getRecords();
+    assertEquals(0, records1.size());
   }
 
   public <T extends BaseRecord> void testFetchErrors(StateStoreDriver driver,
@@ -555,8 +581,38 @@ public class TestStateStoreDriverBase {
     return getters;
   }
 
+  public long getMountTableCacheLoadSamples(StateStoreDriver driver) throws IOException {
+    final MutableRate mountTableCache = getMountTableCache(driver);
+    return mountTableCache.lastStat().numSamples();
+  }
+
+  private static MutableRate getMountTableCache(StateStoreDriver driver) throws IOException {
+    StateStoreMetrics metrics = stateStore.getMetrics();
+    final Query<MountTable> query = new Query<>(MountTable.newInstance());
+    driver.getMultiple(MountTable.class, query);
+    final Map<String, MutableRate> cacheLoadMetrics = metrics.getCacheLoadMetrics();
+    final MutableRate mountTableCache = cacheLoadMetrics.get("CacheMountTableLoad");
+    assertNotNull("CacheMountTableLoad should be present in the state store metrics",
+        mountTableCache);
+    return mountTableCache;
+  }
+
+  public void testCacheLoadMetrics(StateStoreDriver driver, long numRefresh,
+      double expectedHigherThan) throws IOException, IllegalArgumentException {
+    final MutableRate mountTableCache = getMountTableCache(driver);
+    // CacheMountTableLoadNumOps
+    final long mountTableCacheLoadNumOps = getMountTableCacheLoadSamples(driver);
+    assertEquals("Num of samples collected should match", numRefresh, mountTableCacheLoadNumOps);
+    // CacheMountTableLoadAvgTime ms
+    final double mountTableCacheLoadAvgTimeMs = mountTableCache.lastStat().mean();
+    assertTrue(
+        "Mean time duration for cache load is expected to be higher than " + expectedHigherThan
+            + " ms." + " Actual value: " + mountTableCacheLoadAvgTimeMs,
+        mountTableCacheLoadAvgTimeMs > expectedHigherThan);
+  }
+
   /**
-   * Get the type of a field.
+   * Get the type of field.
    *
    * @param fieldName
    * @return Field type
@@ -601,7 +657,7 @@ public class TestStateStoreDriverBase {
   }
 
   /**
-   * Expands a data object from the store into an record object. Default store
+   * Expands a data object from the store into a record object. Default store
    * data type is a String. Override if additional serialization is required.
    *
    * @param data Object containing the serialized data. Only string is

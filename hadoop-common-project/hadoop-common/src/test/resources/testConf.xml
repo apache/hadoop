@@ -163,38 +163,6 @@
     </test>
 
     <test> <!-- TESTED -->
-      <description>help: help for get</description>
-      <test-commands>
-        <command>-help get</command>
-      </test-commands>
-      <cleanup-commands>
-        <!-- No cleanup -->
-      </cleanup-commands>
-      <comparators>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^-get( )*\[-f\]( )*\[-p\]( )*\[-ignoreCrc\]( )*\[-crc\]( )*&lt;src&gt; \.\.\. &lt;localdst&gt; :\s*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>\s*Copy files that match the file pattern &lt;src&gt; to the local name.  &lt;src&gt; is kept.\s*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-           <expected-output>^( |\t)*When copying multiple files, the destination must be a directory. Passing -f( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^( |\t)*overwrites the destination if it already exists and -p preserves access and( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-         <expected-output>^( |\t)*modification times, ownership and the mode.*</expected-output>
-        </comparator>
-      </comparators>
-    </test>
-
-    <test> <!-- TESTED -->
       <description>help: help for du</description>
       <test-commands>
         <command>-help du</command>
@@ -356,51 +324,72 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-cp \[-f\] \[-p \| -p\[topax\]\] \[-d\] &lt;src&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
+          <expected-output>^-cp \[-f\] \[-p \| -p\[topax\]\] \[-d\] \[-t &lt;thread count&gt;\] \[-q &lt;thread pool queue size&gt;\] &lt;src&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*Copy files that match the file pattern &lt;src&gt; to a destination.  When copying( )*</expected-output>
+          <expected-output>^\s*Copy files that match the file pattern &lt;src&gt; to a destination. When copying( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*multiple files, the destination must be a directory.( )*Passing -p preserves status( )*</expected-output>
+          <expected-output>^( |\t)*multiple files, the destination must be a directory.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*\[topax\] \(timestamps, ownership, permission, ACLs, XAttr\). If -p is specified( )*</expected-output>
+          <expected-output>^( |\t)*Flags :( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*with no &lt;arg&gt;, then preserves timestamps, ownership, permission. If -pa is( )*</expected-output>
+          <expected-output>^( |\t)*-p\[topax\]\s+Preserve file attributes \[topx\] \(timestamps,( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*specified, then preserves permission also because ACL is a super-set of( )*</expected-output>
+          <expected-output>^( |\t)*ownership, permission, ACL, XAttr\). If -p is( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*permission. Passing -f overwrites the destination if it already exists. raw( )*</expected-output>
+          <expected-output>^( |\t)*specified with no arg, then preserves timestamps,( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*namespace extended attributes are preserved if \(1\) they are supported \(HDFS( )*</expected-output>
+          <expected-output>^( |\t)*ownership, permission. If -pa is specified, then( )*</expected-output>
         </comparator>
         <comparator>
             <type>RegexpComparator</type>
-            <expected-output>^( |\t)*only\) and, \(2\) all of the source and target pathnames are in the \/\.reserved\/raw( )*</expected-output>
+            <expected-output>^( |\t)*preserves permission also because ACL is a( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*hierarchy. raw namespace xattr preservation is determined solely by the presence( )*</expected-output>
+          <expected-output>^( |\t)*super-set of permission. Determination of whether( )*</expected-output>
+        </comparator>
+
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*raw namespace extended attributes are preserved is( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*independent of the -p flag.( )*</expected-output>
         </comparator>
         <comparator>
             <type>RegexpComparator</type>
-          <expected-output>^\s*\(or absence\) of the \/\.reserved\/raw prefix and not by the -p option\. Passing -d( )*</expected-output>
+          <expected-output>^\s*-f\s+Overwrite the destination if it already exists.( )*</expected-output>
         </comparator>
         <comparator>
-            <type>RegexpComparator</type>
-            <expected-output>^\s*will skip creation of temporary file\(&lt;dst&gt;\._COPYING_\)\.( )*</expected-output>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-d\s+Skip creation of temporary file\(&lt;dst&gt;\._COPYING_\).( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-t &lt;thread count&gt;\s+Number of threads to be used, default is 1.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-q &lt;thread pool queue size&gt;\s+Thread pool queue size to be used, default is( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*1024.\s*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -498,7 +487,7 @@
           <type>RegexpComparator</type>
           <comparator>
             <type>RegexpComparator</type>
-            <expected-output>^-put \[-f\] \[-p\] \[-l\] \[-d\] \[-t &lt;thread count&gt;\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
+            <expected-output>^-put \[-f\] \[-p\] \[-l\] \[-d\] \[-t &lt;thread count&gt;\] \[-q &lt;thread pool queue size&gt;\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
           </comparator>
         </comparator>
         <comparator>
@@ -515,31 +504,39 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-p                 Preserves timestamps, ownership and the mode.( )*</expected-output>
+          <expected-output>^\s*-p\s+Preserves timestamps, ownership and the mode.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-f                 Overwrites the destination if it already exists.( )*</expected-output>
+          <expected-output>^\s*-f\s+Overwrites the destination if it already exists.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-t &lt;thread count&gt;  Number of threads to be used, default is 1.( )*</expected-output>
+          <expected-output>^\s*-t &lt;thread count&gt;\s+Number of threads to be used, default is 1.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-l                 Allow DataNode to lazily persist the file to disk. Forces( )*</expected-output>
+          <expected-output>^\s*-q &lt;thread pool queue size&gt;\s+Thread pool queue size to be used, default is( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*replication factor of 1. This flag will result in reduced( )*</expected-output>
+          <expected-output>^( |\t)*1024.\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*durability. Use with care.( )*</expected-output>
+          <expected-output>^\s*-l\s+Allow DataNode to lazily persist the file to disk.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-d                 Skip creation of temporary file\(&lt;dst&gt;\._COPYING_\).( )*</expected-output>
+          <expected-output>^\s*Forces replication factor of 1. This flag will( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*result in reduced durability. Use with care.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-d\s+Skip creation of temporary file\(&lt;dst&gt;\._COPYING_\).( )*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -554,7 +551,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-copyFromLocal \[-f\] \[-p\] \[-l\] \[-d\] \[-t &lt;thread count&gt;\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
+          <expected-output>^-copyFromLocal \[-f\] \[-p\] \[-l\] \[-d\] \[-t &lt;thread count&gt;\] \[-q &lt;thread pool queue size&gt;\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -596,7 +593,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-get( )*\[-f\]( )*\[-p\]( )*\[-ignoreCrc\]( )*\[-crc\]( )*&lt;src&gt; \.\.\. &lt;localdst&gt; :\s*</expected-output>
+          <expected-output>^-get \[-f\] \[-p\] \[-crc\] \[-ignoreCrc\] \[-t &lt;thread count&gt;\] \[-q &lt;thread pool queue size&gt;\] &lt;src&gt; \.\.\. &lt;localdst&gt; :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -604,15 +601,39 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*When copying multiple files, the destination must be a directory. Passing -f( )*</expected-output>
+          <expected-output>^( |\t)*When copying multiple files, the destination must be a directory.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*overwrites the destination if it already exists and -p preserves access and( )*</expected-output>
+          <expected-output>^( |\t)*Flags:\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-         <expected-output>^( |\t)*modification times, ownership and the mode.*</expected-output>
+         <expected-output>^( |\t)*-p\s+Preserves timestamps, ownership and the mode.\s*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-f\s+Overwrites the destination if it already exists.\s*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-crc\s+ write CRC checksums for the files downloaded.\s*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-ignoreCrc\s+ Skip CRC checks on the file\(s\) downloaded.\s*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-t &lt;thread count&gt;\s+Number of threads to be used, default is 1.\s*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-q &lt;thread pool queue size&gt;\s+Thread pool queue size to be used, default is\s*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*1024.\s*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -719,7 +740,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-copyToLocal \[-f\] \[-p\] \[-ignoreCrc\] \[-crc\] &lt;src&gt; \.\.\. &lt;localdst&gt; :\s*</expected-output>
+          <expected-output>^-copyToLocal \[-f\] \[-p\] \[-crc\] \[-ignoreCrc\] \[-t &lt;thread count&gt;\] \[-q &lt;thread pool queue size&gt;\] &lt;src&gt; \.\.\. &lt;localdst&gt; :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

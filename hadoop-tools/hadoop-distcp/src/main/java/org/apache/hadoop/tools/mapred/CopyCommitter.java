@@ -75,6 +75,7 @@ public class CopyCommitter extends FileOutputCommitter {
   private boolean ignoreFailures = false;
   private boolean skipCrc = false;
   private int blocksPerChunk = 0;
+  private boolean updateRoot = false;
 
   /**
    * Create a output committer
@@ -100,6 +101,8 @@ public class CopyCommitter extends FileOutputCommitter {
     Configuration conf = jobContext.getConfiguration();
     syncFolder = conf.getBoolean(DistCpConstants.CONF_LABEL_SYNC_FOLDERS, false);
     overwrite = conf.getBoolean(DistCpConstants.CONF_LABEL_OVERWRITE, false);
+    updateRoot =
+        conf.getBoolean(CONF_LABEL_UPDATE_ROOT, false);
     targetPathExists = conf.getBoolean(
         DistCpConstants.CONF_LABEL_TARGET_PATH_EXISTS, true);
     ignoreFailures = conf.getBoolean(
@@ -149,9 +152,15 @@ public class CopyCommitter extends FileOutputCommitter {
   }
 
   private void cleanupTempFiles(JobContext context) {
-    try {
-      Configuration conf = context.getConfiguration();
+    Configuration conf = context.getConfiguration();
 
+    final boolean directWrite = conf.getBoolean(
+        DistCpOptionSwitch.DIRECT_WRITE.getConfigLabel(), false);
+    if (directWrite) {
+      return;
+    }
+
+    try {
       Path targetWorkPath = new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
       FileSystem targetFS = targetWorkPath.getFileSystem(conf);
 
@@ -336,9 +345,12 @@ public class CopyCommitter extends FileOutputCommitter {
 
         Path targetFile = new Path(targetRoot.toString() + "/" + srcRelPath);
         //
-        // Skip the root folder when syncOrOverwrite is true.
+        // Skip the root folder when skipRoot is true.
         //
-        if (targetRoot.equals(targetFile) && syncOrOverwrite) continue;
+        boolean skipRoot = syncOrOverwrite && !updateRoot;
+        if (targetRoot.equals(targetFile) && skipRoot) {
+          continue;
+        }
 
         FileSystem targetFS = targetFile.getFileSystem(conf);
         DistCpUtils.preserve(targetFS, targetFile, srcFileStatus, attributes,

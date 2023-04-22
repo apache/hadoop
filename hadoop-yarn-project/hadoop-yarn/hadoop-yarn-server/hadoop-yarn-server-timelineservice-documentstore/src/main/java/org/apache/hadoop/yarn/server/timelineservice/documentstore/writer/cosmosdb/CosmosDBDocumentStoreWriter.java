@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.server.timelineservice.documentstore.writer.cosmosdb;
 
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import com.microsoft.azure.cosmosdb.AccessCondition;
 import com.microsoft.azure.cosmosdb.AccessConditionType;
 import com.microsoft.azure.cosmosdb.Database;

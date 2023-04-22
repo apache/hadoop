@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshQueuesRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshQueuesRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
 
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
@@ -29,9 +30,9 @@ import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 @Unstable
 public class RefreshQueuesRequestPBImpl extends RefreshQueuesRequest {
 
-  RefreshQueuesRequestProto proto = RefreshQueuesRequestProto.getDefaultInstance();
-  RefreshQueuesRequestProto.Builder builder = null;
-  boolean viaProto = false;
+  private RefreshQueuesRequestProto proto = RefreshQueuesRequestProto.getDefaultInstance();
+  private RefreshQueuesRequestProto.Builder builder = null;
+  private boolean viaProto = false;
   
   public RefreshQueuesRequestPBImpl() {
     builder = RefreshQueuesRequestProto.newBuilder();
@@ -55,8 +56,9 @@ public class RefreshQueuesRequestPBImpl extends RefreshQueuesRequest {
 
   @Override
   public boolean equals(Object other) {
-    if (other == null)
+    if (other == null) {
       return false;
+    }
     if (other.getClass().isAssignableFrom(this.getClass())) {
       return this.getProto().equals(this.getClass().cast(other).getProto());
     }
@@ -66,5 +68,28 @@ public class RefreshQueuesRequestPBImpl extends RefreshQueuesRequest {
   @Override
   public String toString() {
     return TextFormat.shortDebugString(getProto());
+  }
+
+  private void maybeInitBuilder() {
+    if (viaProto || builder == null) {
+      builder = RefreshQueuesRequestProto.newBuilder(proto);
+    }
+    viaProto = false;
+  }
+
+  @Override
+  public String getSubClusterId() {
+    RefreshQueuesRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasSubClusterId()) ? p.getSubClusterId() : null;
+  }
+
+  @Override
+  public void setSubClusterId(String clusterId) {
+    maybeInitBuilder();
+    if (clusterId == null) {
+      builder.clearSubClusterId();
+      return;
+    }
+    builder.setSubClusterId(clusterId);
   }
 }

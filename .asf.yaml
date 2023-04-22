@@ -14,6 +14,8 @@
 # limitations under the License.
 
 github:
+  ghp_path: /
+  ghp_branch: gh-pages
   enabled_merge_buttons:
     squash: true
     merge: false
@@ -22,4 +24,4 @@ notifications:
   commits:      common-commits@hadoop.apache.org
   issues:       common-issues@hadoop.apache.org
   pullrequests: common-issues@hadoop.apache.org
-  jira_options: link label worklog
+  jira_options: comment link label

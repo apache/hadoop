@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapred.uploader;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
@@ -331,6 +331,8 @@ public class FrameworkUploader implements Runnable {
     LOG.info("Compressing tarball");
     try (TarArchiveOutputStream out = new TarArchiveOutputStream(
         targetStream)) {
+      // Workaround for the compress issue present from 1.21: COMPRESS-587
+      out.setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_STAR);
       for (String fullPath : filteredInputFiles) {
         LOG.info("Adding " + fullPath);
         File file = new File(fullPath);

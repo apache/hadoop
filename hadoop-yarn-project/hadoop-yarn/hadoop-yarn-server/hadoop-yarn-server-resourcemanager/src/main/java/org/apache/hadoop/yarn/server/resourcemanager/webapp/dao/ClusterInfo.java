@@ -25,7 +25,6 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 
 @XmlRootElement
@@ -44,6 +43,8 @@ public class ClusterInfo {
   protected String hadoopBuildVersion;
   protected String hadoopVersionBuiltOn;
   protected String haZooKeeperConnectionState;
+
+  private String subClusterId;
 
   public ClusterInfo() {
   } // JAXB needs this
@@ -113,5 +114,13 @@ public class ClusterInfo {
 
   public String getHAZookeeperConnectionState() {
     return this.haZooKeeperConnectionState;
+  }
+
+  public String getSubClusterId() {
+    return subClusterId;
+  }
+
+  public void setSubClusterId(String subClusterId) {
+    this.subClusterId = subClusterId;
   }
 }

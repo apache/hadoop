@@ -67,7 +67,7 @@ public class SocketInputStream extends InputStream
    *        Channel for reading, should also be a {@link SelectableChannel}.
    *        The channel will be configured to be non-blocking.
    * @param timeout timeout in milliseconds. must not be negative.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public SocketInputStream(ReadableByteChannel channel, long timeout)
                                                         throws IOException {
@@ -86,7 +86,7 @@ public class SocketInputStream extends InputStream
    *  
    * @param socket should have a channel associated with it.
    * @param timeout timeout timeout in milliseconds. must not be negative.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public SocketInputStream(Socket socket, long timeout) 
                                          throws IOException {
@@ -103,7 +103,7 @@ public class SocketInputStream extends InputStream
    * @see SocketInputStream#SocketInputStream(ReadableByteChannel, long)
    *  
    * @param socket should have a channel associated with it.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public SocketInputStream(Socket socket) throws IOException {
     this(socket.getChannel(), socket.getSoTimeout());
@@ -141,7 +141,7 @@ public class SocketInputStream extends InputStream
   }
 
   /**
-   * Returns underlying channel used by inputstream.
+   * @return Returns underlying channel used by inputstream.
    * This is useful in certain cases like channel for 
    * {@link FileChannel#transferFrom(ReadableByteChannel, long, long)}.
    */

@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.lang3.builder.CompareToBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -246,6 +246,8 @@ public abstract class SchedulerNode {
 
   /**
    * Check if a container is launched by this node.
+   *
+   * @param containerId containerId.
    * @return If the container is launched by the node.
    */
   public synchronized boolean isValidContainer(ContainerId containerId) {

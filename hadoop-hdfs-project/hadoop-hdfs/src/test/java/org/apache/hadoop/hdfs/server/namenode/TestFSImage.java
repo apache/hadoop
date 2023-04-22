@@ -80,6 +80,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SectionName;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -272,6 +273,22 @@ public class TestFSImage {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  @Test
+  public void testImportCheckpoint() throws Exception{
+    Configuration conf = new Configuration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY, "");
+    try(MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()){
+      cluster.waitActive();
+      FSNamesystem fsn = cluster.getNamesystem();
+      FSImage fsImage= new FSImage(conf);
+      LambdaTestUtils.intercept(
+          IOException.class,
+          "Cannot import image from a checkpoint. "
+                  + "\"dfs.namenode.checkpoint.edits.dir\" is not set.",
+          () -> fsImage.doImportCheckpoint(fsn));
     }
   }
 

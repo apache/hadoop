@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.net;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -142,8 +142,12 @@ public class DNS {
   }
 
   /**
-   * Like {@link DNS#getIPs(String, boolean)}, but returns all
+   * @return Like {@link DNS#getIPs(String, boolean)}, but returns all
    * IPs associated with the given interface and its subinterfaces.
+   *
+   * @param strInterface input strInterface.
+   * @throws UnknownHostException
+   * If no IP address for the local host could be found.
    */
   public static String[] getIPs(String strInterface)
       throws UnknownHostException {
@@ -346,6 +350,8 @@ public class DNS {
    *            The name of the network interface to query (e.g. eth0)
    * @param nameserver
    *            The DNS host name
+   * @param tryfallbackResolution
+   *            Input tryfallbackResolution.
    * @return The default host names associated with IPs bound to the network
    *         interface
    * @throws UnknownHostException
@@ -385,7 +391,7 @@ public class DNS {
   }
 
   /**
-   * Returns the default (first) host name associated by the provided
+   * @return Returns the default (first) host name associated by the provided
    * nameserver with the address bound to the specified network interface.
    *
    * @param strInterface

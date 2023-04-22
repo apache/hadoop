@@ -18,14 +18,13 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi
     .FsVolumeReferences;
-import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus
@@ -502,16 +501,13 @@ public class DiskBalancer {
   private Map<String, String> getStorageIDToVolumeBasePathMap()
       throws DiskBalancerException {
     Map<String, String> storageIDToVolBasePathMap = new HashMap<>();
-    FsDatasetSpi.FsVolumeReferences references;
-    try {
-      try(AutoCloseableLock lock = this.dataset.acquireDatasetReadLock()) {
-        references = this.dataset.getFsVolumeReferences();
-        for (int ndx = 0; ndx < references.size(); ndx++) {
-          FsVolumeSpi vol = references.get(ndx);
-          storageIDToVolBasePathMap.put(vol.getStorageID(),
-              vol.getBaseURI().getPath());
-        }
-        references.close();
+    // Get volumes snapshot so no need to acquire dataset lock.
+    try (FsDatasetSpi.FsVolumeReferences references = dataset.
+        getFsVolumeReferences()) {
+      for (int ndx = 0; ndx < references.size(); ndx++) {
+        FsVolumeSpi vol = references.get(ndx);
+        storageIDToVolBasePathMap.put(vol.getStorageID(),
+            vol.getBaseURI().getPath());
       }
     } catch (IOException ex) {
       LOG.error("Disk Balancer - Internal Error.", ex);
@@ -808,7 +804,7 @@ public class DiskBalancer {
       long bytesToCopy = item.getBytesToCopy() - item.getBytesCopied();
       bytesToCopy = bytesToCopy +
           ((bytesToCopy * getBlockTolerancePercentage(item)) / 100);
-      return (blockSize <= bytesToCopy) ? true : false;
+      return blockSize <= bytesToCopy;
     }
 
     /**
@@ -833,7 +829,7 @@ public class DiskBalancer {
     private boolean isCloseEnough(DiskBalancerWorkItem item) {
       long temp = item.getBytesCopied() +
           ((item.getBytesCopied() * getBlockTolerancePercentage(item)) / 100);
-      return (item.getBytesToCopy() >= temp) ? false : true;
+      return item.getBytesToCopy() < temp;
     }
 
     /**
@@ -989,7 +985,7 @@ public class DiskBalancer {
         try {
           iter.close();
         } catch (IOException ex) {
-          LOG.error("Error closing a block pool iter. ex: {}", ex);
+          LOG.error("Error closing a block pool iter. ex: ", ex);
         }
       }
     }
@@ -1124,7 +1120,7 @@ public class DiskBalancer {
                 startTime);
             item.setSecondsElapsed(secondsElapsed);
           } catch (IOException ex) {
-            LOG.error("Exception while trying to copy blocks. error: {}", ex);
+            LOG.error("Exception while trying to copy blocks. error: ", ex);
             item.incErrorCount();
           } catch (InterruptedException e) {
             LOG.error("Copy Block Thread interrupted, exiting the copy.");
@@ -1133,7 +1129,7 @@ public class DiskBalancer {
             this.setExitFlag();
           } catch (RuntimeException ex) {
             // Exiting if any run time exceptions.
-            LOG.error("Got an unexpected Runtime Exception {}", ex);
+            LOG.error("Got an unexpected Runtime Exception ", ex);
             item.incErrorCount();
             this.setExitFlag();
           }

@@ -23,9 +23,10 @@
 #include "platform.h"
 #include "os/mutexes.h"
 #include "os/thread_local_storage.h"
+#include "x-platform/c-api/dirent.h"
+#include "x-platform/types.h"
 
 #include <errno.h>
-#include <dirent.h>
 #include <stdio.h> 
 #include <string.h> 
 

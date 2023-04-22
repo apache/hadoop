@@ -50,7 +50,7 @@ public interface FederationMBean {
 
   /**
    * Get the latest state of all routers.
-   * @return JSON with all of the known routers or null if failure.
+   * @return JSON with all the known routers or null if failure.
    */
   String getRouters();
 
@@ -343,4 +343,11 @@ public interface FederationMBean {
    * with the highest risk of loss.
    */
   long getHighestPriorityLowRedundancyECBlocks();
+
+  /**
+   * Returns the number of paths to be processed by storage policy satisfier.
+   *
+   * @return The number of paths to be processed by sps.
+   */
+  int getPendingSPSPaths();
 }

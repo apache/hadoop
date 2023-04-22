@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.FakeTimer;
 import org.slf4j.event.Level;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -394,13 +395,15 @@ public class TestEditLogTailer {
     // Time in seconds to wait before checking if edit logs are rolled while
     // expecting no edit log roll
     final int noLogRollWaitTime = 2;
+
     // Time in seconds to wait before checking if edit logs are rolled while
-    // expecting edit log roll
+    // expecting edit log roll.
     final int logRollWaitTime = 3;
 
+    final int logRollPeriod = standbyCatchupWaitTime + noLogRollWaitTime + 1;
+    final long logRollPeriodMs = TimeUnit.SECONDS.toMillis(logRollPeriod);
     Configuration conf = getConf();
-    conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY,
-        standbyCatchupWaitTime + noLogRollWaitTime + 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY, logRollPeriod);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
 
@@ -429,19 +432,29 @@ public class TestEditLogTailer {
       waitForStandbyToCatchUpWithInProgressEdits(standby, activeTxId,
           standbyCatchupWaitTime);
 
+      long curTime = standby.getNamesystem().getEditLogTailer().getTimer()
+          .monotonicNow();
+      long insufficientTimeForLogRoll = logRollPeriodMs / 3;
+      final FakeTimer testTimer =
+          new FakeTimer(curTime + insufficientTimeForLogRoll);
+      standby.getNamesystem().getEditLogTailer().setTimerForTest(testTimer);
+      Thread.sleep(2000);
+
       for (int i = DIRS_TO_MAKE / 2; i < DIRS_TO_MAKE; i++) {
         NameNodeAdapter.mkdirs(active, getDirPath(i),
             new PermissionStatus("test", "test",
             new FsPermission((short)00755)), true);
       }
 
-      boolean exceptionThrown = false;
       try {
         checkForLogRoll(active, origTxId, noLogRollWaitTime);
+        fail("Expected to timeout");
       } catch (TimeoutException e) {
-        exceptionThrown = true;
+        // expected
       }
-      assertTrue(exceptionThrown);
+
+      long sufficientTimeForLogRoll = logRollPeriodMs * 3;
+      testTimer.advance(sufficientTimeForLogRoll);
 
       checkForLogRoll(active, origTxId, logRollWaitTime);
     } finally {
@@ -452,26 +465,20 @@ public class TestEditLogTailer {
   private static void waitForStandbyToCatchUpWithInProgressEdits(
       final NameNode standby, final long activeTxId,
       int maxWaitSec) throws Exception {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        long standbyTxId = standby.getNamesystem().getFSImage()
-            .getLastAppliedTxId();
-        return (standbyTxId >= activeTxId);
-      }
-    }, 100, maxWaitSec * 1000);
+    GenericTestUtils.waitFor(() -> {
+      long standbyTxId = standby.getNamesystem().getFSImage()
+          .getLastAppliedTxId();
+      return (standbyTxId >= activeTxId);
+    }, 100, TimeUnit.SECONDS.toMillis(maxWaitSec));
   }
 
   private static void checkForLogRoll(final NameNode active,
       final long origTxId, int maxWaitSec) throws Exception {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        long curSegmentTxId = active.getNamesystem().getFSImage().getEditLog()
-            .getCurSegmentTxId();
-        return (origTxId != curSegmentTxId);
-      }
-    }, 100, maxWaitSec * 1000);
+    GenericTestUtils.waitFor(() -> {
+      long curSegmentTxId = active.getNamesystem().getFSImage().getEditLog()
+          .getCurSegmentTxId();
+      return (origTxId != curSegmentTxId);
+    }, 100, TimeUnit.SECONDS.toMillis(maxWaitSec));
   }
 
   private static MiniDFSCluster createMiniDFSCluster(Configuration conf,
@@ -488,4 +495,5 @@ public class TestEditLogTailer {
         .build();
     return cluster;
   }
+
 }

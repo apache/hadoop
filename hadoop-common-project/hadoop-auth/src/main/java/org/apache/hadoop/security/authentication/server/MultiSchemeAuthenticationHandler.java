@@ -30,7 +30,6 @@ import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
 
 /**
@@ -114,10 +113,10 @@ public class MultiSchemeAuthenticationHandler implements
     }
 
     this.types.clear();
-
-    String schemesProperty =
-        Preconditions.checkNotNull(config.getProperty(SCHEMES_PROPERTY),
-            "%s system property is not specified.", SCHEMES_PROPERTY);
+    if (config.getProperty(SCHEMES_PROPERTY) == null) {
+      throw new NullPointerException(SCHEMES_PROPERTY + " system property is not specified.");
+    }
+    String schemesProperty = config.getProperty(SCHEMES_PROPERTY);
     for (String scheme : STR_SPLITTER.split(schemesProperty)) {
       scheme = AuthenticationHandlerUtil.checkAuthScheme(scheme);
       if (schemeToAuthHandlerMapping.containsKey(scheme)) {
@@ -128,8 +127,10 @@ public class MultiSchemeAuthenticationHandler implements
       String authHandlerPropName =
           String.format(AUTH_HANDLER_PROPERTY, scheme).toLowerCase();
       String authHandlerName = config.getProperty(authHandlerPropName);
-      Preconditions.checkNotNull(authHandlerName,
-          "No auth handler configured for scheme %s.", scheme);
+      if (authHandlerName == null) {
+        throw new NullPointerException(
+            "No auth handler configured for scheme " + scheme);
+      }
 
       String authHandlerClassName =
           AuthenticationHandlerUtil
@@ -145,7 +146,9 @@ public class MultiSchemeAuthenticationHandler implements
   protected AuthenticationHandler initializeAuthHandler(
       String authHandlerClassName, Properties config) throws ServletException {
     try {
-      Preconditions.checkNotNull(authHandlerClassName);
+      if (authHandlerClassName == null) {
+        throw new NullPointerException();
+      }
       logger.debug("Initializing Authentication handler of type "
           + authHandlerClassName);
       Class<?> klass =

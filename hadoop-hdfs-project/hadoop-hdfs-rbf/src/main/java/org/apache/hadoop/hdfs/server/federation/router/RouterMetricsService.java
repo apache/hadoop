@@ -33,6 +33,8 @@ public class RouterMetricsService extends AbstractService {
 
   /** Router metrics. */
   private RouterMetrics routerMetrics;
+  /** Router Client metrics. */
+  private RouterClientMetrics routerClientMetrics;
   /** Federation metrics. */
   private RBFMetrics rbfMetrics;
   /** Namenode mock metrics. */
@@ -47,6 +49,7 @@ public class RouterMetricsService extends AbstractService {
   @Override
   protected void serviceInit(Configuration configuration) throws Exception {
     this.routerMetrics = RouterMetrics.create(configuration);
+    this.routerClientMetrics = RouterClientMetrics.create(configuration);
   }
 
   @Override
@@ -74,6 +77,11 @@ public class RouterMetricsService extends AbstractService {
     if (this.routerMetrics != null) {
       this.routerMetrics.shutdown();
     }
+
+    // Shutdown client metrics
+    if (this.routerClientMetrics != null) {
+      this.routerClientMetrics.shutdown();
+    }
   }
 
   /**
@@ -83,6 +91,15 @@ public class RouterMetricsService extends AbstractService {
    */
   public RouterMetrics getRouterMetrics() {
     return this.routerMetrics;
+  }
+
+  /**
+   * Get the metrics system for the Router Client.
+   *
+   * @return Router Client metrics.
+   */
+  public RouterClientMetrics getRouterClientMetrics() {
+    return this.routerClientMetrics;
   }
 
   /**

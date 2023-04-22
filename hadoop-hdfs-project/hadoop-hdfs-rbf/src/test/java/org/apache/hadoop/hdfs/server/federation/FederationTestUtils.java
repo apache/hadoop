@@ -92,8 +92,6 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.function.Supplier;
-
 /**
  * Helper utilities for testing HDFS Federation.
  */
@@ -165,7 +163,7 @@ public final class FederationTestUtils {
    * @param resolver Active namenode resolver.
    * @param nsId Nameservice identifier.
    * @param nnId Namenode identifier.
-   * @param finalState State to check for.
+   * @param state State to check for.
    * @throws Exception Failed to verify State Store registration of namenode
    *                   nsId:nnId for state.
    */
@@ -174,26 +172,23 @@ public final class FederationTestUtils {
       final String nsId, final String nnId,
       final FederationNamenodeServiceState state) throws Exception {
 
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        try {
-          List<? extends FederationNamenodeContext> namenodes =
-              resolver.getNamenodesForNameserviceId(nsId);
-          if (namenodes != null) {
-            for (FederationNamenodeContext namenode : namenodes) {
-              // Check if this is the Namenode we are checking
-              if (namenode.getNamenodeId() == nnId  ||
-                  namenode.getNamenodeId().equals(nnId)) {
-                return state == null || namenode.getState().equals(state);
-              }
+    GenericTestUtils.waitFor(() -> {
+      try {
+        List<? extends FederationNamenodeContext> namenodes =
+            resolver.getNamenodesForNameserviceId(nsId, false);
+        if (namenodes != null) {
+          for (FederationNamenodeContext namenode : namenodes) {
+            // Check if this is the Namenode we are checking
+            if (namenode.getNamenodeId() == nnId  ||
+                namenode.getNamenodeId().equals(nnId)) {
+              return state == null || namenode.getState().equals(state);
             }
           }
-        } catch (IOException e) {
-          // Ignore
         }
-        return false;
+      } catch (IOException e) {
+        // Ignore
       }
+      return false;
     }, 1000, 60 * 1000);
   }
 
@@ -209,22 +204,19 @@ public final class FederationTestUtils {
       final ActiveNamenodeResolver resolver, final String nsId,
       final FederationNamenodeServiceState state) throws Exception {
 
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        try {
-          List<? extends FederationNamenodeContext> nns =
-              resolver.getNamenodesForNameserviceId(nsId);
-          for (FederationNamenodeContext nn : nns) {
-            if (nn.getState().equals(state)) {
-              return true;
-            }
+    GenericTestUtils.waitFor(() -> {
+      try {
+        List<? extends FederationNamenodeContext> nns =
+            resolver.getNamenodesForNameserviceId(nsId, false);
+        for (FederationNamenodeContext nn : nns) {
+          if (nn.getState().equals(state)) {
+            return true;
           }
-        } catch (IOException e) {
-          // Ignore
         }
-        return false;
+      } catch (IOException e) {
+        // Ignore
       }
+      return false;
     }, 1000, 20 * 1000);
   }
 
@@ -357,23 +349,20 @@ public final class FederationTestUtils {
    *
    * @param stateManager number of routers to be registered.
    * @param routerCount number of routers to be registered.
-   * @param tiemout max wait time in ms
+   * @param timeout max wait time in ms
    */
   public static void waitRouterRegistered(RouterStore stateManager,
       long routerCount, int timeout) throws Exception {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        try {
-          List<RouterState> cachedRecords = stateManager.getCachedRecords();
-          if (cachedRecords.size() == routerCount) {
-            return true;
-          }
-        } catch (IOException e) {
-          // Ignore
+    GenericTestUtils.waitFor(() -> {
+      try {
+        List<RouterState> cachedRecords = stateManager.getCachedRecords();
+        if (cachedRecords.size() == routerCount) {
+          return true;
         }
-        return false;
+      } catch (IOException e) {
+        // Ignore
       }
+      return false;
     }, 100, timeout);
   }
 
@@ -390,15 +379,13 @@ public final class FederationTestUtils {
     ConnectionManager connectionManager =
         new ConnectionManager(server.getConfig());
     ConnectionManager spyConnectionManager = spy(connectionManager);
-    doAnswer(new Answer() {
-      @Override
-      public Object answer(InvocationOnMock invocation) throws Throwable {
-        LOG.info("Simulating connectionManager throw IOException {}",
-            invocation.getMock());
-        throw new IOException("Simulate connectionManager throw IOException");
-      }
+    doAnswer(invocation -> {
+      LOG.info("Simulating connectionManager throw IOException {}",
+          invocation.getMock());
+      throw new IOException("Simulate connectionManager throw IOException");
     }).when(spyConnectionManager).getConnection(
-        any(UserGroupInformation.class), any(String.class), any(Class.class));
+        any(UserGroupInformation.class), any(String.class), any(Class.class),
+        any(String.class));
 
     Whitebox.setInternalState(rpcClient, "connectionManager",
         spyConnectionManager);

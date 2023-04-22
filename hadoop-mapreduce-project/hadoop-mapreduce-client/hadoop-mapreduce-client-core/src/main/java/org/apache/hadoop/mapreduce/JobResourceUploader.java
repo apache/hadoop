@@ -48,7 +48,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * This class is responsible for uploading resources from the client to HDFS
@@ -332,13 +332,12 @@ class JobResourceUploader {
           // separately.
           foundFragment = (newURI.getFragment() != null) && !fromSharedCache;
         }
-        DistributedCache.addFileToClassPath(new Path(newURI.getPath()), conf,
-            jtFs, false);
+        Job.addFileToClassPath(new Path(newURI.getPath()), conf, jtFs, false);
         if (fromSharedCache) {
           // We simply add this URI to the distributed cache. It will not come
           // from the staging directory (it is in the shared cache), so we
           // must add it to the cache regardless of the wildcard feature.
-          DistributedCache.addCacheFile(newURI, conf);
+          Job.addCacheFile(newURI, conf);
         } else {
           libjarURIs.add(newURI);
         }
@@ -352,10 +351,10 @@ class JobResourceUploader {
         // Add the whole directory to the cache using a wild card
         Path libJarsDirWildcard =
             jtFs.makeQualified(new Path(libjarsDir, DistributedCache.WILDCARD));
-        DistributedCache.addCacheFile(libJarsDirWildcard.toUri(), conf);
+        Job.addCacheFile(libJarsDirWildcard.toUri(), conf);
       } else {
         for (URI uri : libjarURIs) {
-          DistributedCache.addCacheFile(uri, conf);
+          Job.addCacheFile(uri, conf);
         }
       }
     }
@@ -784,9 +783,11 @@ class JobResourceUploader {
   void copyJar(Path originalJarPath, Path submitJarFile,
       short replication) throws IOException {
     jtFs.copyFromLocalFile(originalJarPath, submitJarFile);
-    jtFs.setReplication(submitJarFile, replication);
+    // The operation of setReplication requires certain permissions
+    // so we need to make sure it has enough permissions
     jtFs.setPermission(submitJarFile, new FsPermission(
         JobSubmissionFiles.JOB_FILE_PERMISSION));
+    jtFs.setReplication(submitJarFile, replication);
   }
 
   private void addLog4jToDistributedCache(Job job, Path jobSubmitDir)
@@ -847,8 +848,8 @@ class JobResourceUploader {
       }
       Path tmp = new Path(tmpURI);
       Path newPath = copyRemoteFiles(fileDir, tmp, conf, replication);
-      DistributedCache.addFileToClassPath(new Path(newPath.toUri().getPath()),
-          conf);
+      Path path = new Path(newPath.toUri().getPath());
+      Job.addFileToClassPath(path, conf, path.getFileSystem(conf));
     }
   }
 

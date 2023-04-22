@@ -27,6 +27,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.aggregate.ValueAggregatorBaseDescriptor;
 import org.apache.hadoop.mapreduce.lib.aggregate.ValueAggregatorJob;
+import org.apache.hadoop.util.ExitUtil;
 
 /**
  * This is an example Aggregated Hadoop Map/Reduce application. It reads the
@@ -72,7 +73,7 @@ public class AggregateWordCount {
         , new Class[] {WordCountPlugInClass.class});
     job.setJarByClass(AggregateWordCount.class);
     int ret = job.waitForCompletion(true) ? 0 : 1;
-    System.exit(ret);
+    ExitUtil.terminate(ret);
   }
 
 }

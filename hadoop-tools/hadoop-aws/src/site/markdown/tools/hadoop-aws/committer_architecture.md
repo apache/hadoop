@@ -63,7 +63,7 @@ entries, the duration of the lock is low.
 
 In contrast to a "real" filesystem, Amazon's S3A object store, similar to
 most others, does not support `rename()` at all. A hash operation on the filename
-determines the location of of the data —there is no separate metadata to change.
+determines the location of the data —there is no separate metadata to change.
 To mimic renaming, the Hadoop S3A client has to copy the data to a new object
 with the destination filename, then delete the original entry. This copy
 can be executed server-side, but as it does not complete until the in-cluster
@@ -79,7 +79,7 @@ The solution to this problem is closely coupled to the S3 protocol itself:
 delayed completion of multi-part PUT operations
 
 That is: tasks write all data as multipart uploads, *but delay the final
-commit action until until the final, single job commit action.* Only that
+commit action until the final, single job commit action.* Only that
 data committed in the job commit action will be made visible; work from speculative
 and failed tasks will not be instantiated. As there is no rename, there is no
 delay while data is copied from a temporary directory to the final directory.
@@ -307,7 +307,7 @@ def isCommitJobRepeatable() :
 Accordingly, it is a failure point in the protocol. With a low number of files
 and fast rename/list algorithms, the window of vulnerability is low. At
 scale, the vulnerability increases. It could actually be reduced through
-parallel execution of the renaming of of committed tasks.
+parallel execution of the renaming of committed tasks.
 
 
 ### Job Abort
@@ -1818,7 +1818,7 @@ directory on the job commit, so is *very* expensive, and not something which
 we recommend when working with S3.
 
 
-To use a S3Guard committer, it must also be identified as the Parquet committer.
+To use an S3A committer, it must also be identified as the Parquet committer.
 The fact that instances are dynamically instantiated somewhat complicates the process.
 
 In early tests; we can switch committers for ORC output without making any changes
@@ -1927,12 +1927,6 @@ files.
 
 ### Security Risks of all committers
 
-
-#### Visibility
-
-[Obsolete] If S3Guard is used for storing metadata, then the metadata is visible to
-all users with read access. A malicious user with write access could delete
-entries of newly generated files, so they would not be visible.
 
 
 #### Malicious Serialized Data

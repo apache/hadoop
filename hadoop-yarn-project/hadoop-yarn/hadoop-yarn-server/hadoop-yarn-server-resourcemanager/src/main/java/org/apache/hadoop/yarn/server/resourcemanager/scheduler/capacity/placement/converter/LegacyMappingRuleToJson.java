@@ -22,7 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingQueuePath;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -265,7 +265,7 @@ public class LegacyMappingRuleToJson {
    */
   private ObjectNode createUserMappingRule(String match, String target) {
     ObjectNode ruleNode = createDefaultRuleNode("user");
-    MappingQueuePath targetPath = new MappingQueuePath(target);
+    QueuePath targetPath = new QueuePath(target);
 
     //We have a special token in the JSON format to match all user, replacing
     //matcher
@@ -279,8 +279,8 @@ public class LegacyMappingRuleToJson {
       ruleNode.put(JSON_NODE_POLICY, "user");
       if (targetPath.hasParent()) {
         //Parsing parent path, to be able to determine the short name of parent
-        MappingQueuePath targetParentPath =
-            new MappingQueuePath(targetPath.getParent());
+        QueuePath targetParentPath =
+            new QueuePath(targetPath.getParent());
         String parentShortName = targetParentPath.getLeafName();
 
         if (parentShortName.equals(MAPPING_PRIMARY_GROUP)) {
@@ -290,7 +290,7 @@ public class LegacyMappingRuleToJson {
           //Yep, this is confusing. The policy primaryGroupUser actually
           // appends the %primary_group.%user to the parent path, so we need to
           // remove it from the parent path to avoid duplication.
-          targetPath = new MappingQueuePath(targetParentPath.getParent(),
+          targetPath = new QueuePath(targetParentPath.getParent(),
               targetPath.getLeafName());
         } else if (parentShortName.equals(MAPPING_SECONDARY_GROUP)) {
           //%secondary_group.%user mapping
@@ -299,7 +299,7 @@ public class LegacyMappingRuleToJson {
           //Yep, this is confusing. The policy secondaryGroupUser actually
           // appends the %secondary_group.%user to the parent path, so we need
           // to remove it from the parent path to avoid duplication.
-          targetPath = new MappingQueuePath(targetParentPath.getParent(),
+          targetPath = new QueuePath(targetParentPath.getParent(),
               targetPath.getLeafName());
         }
 
@@ -339,7 +339,7 @@ public class LegacyMappingRuleToJson {
    */
   private ObjectNode createGroupMappingRule(String match, String target) {
     ObjectNode ruleNode = createDefaultRuleNode("group");
-    MappingQueuePath targetPath = new MappingQueuePath(target);
+    QueuePath targetPath = new QueuePath(target);
 
     //we simply used the source match part all valid legacy matchers are valid
     //matchers for the JSON format as well
@@ -375,7 +375,7 @@ public class LegacyMappingRuleToJson {
   private ObjectNode createApplicationNameMappingRule(
       String match, String target) {
     ObjectNode ruleNode = createDefaultRuleNode("application");
-    MappingQueuePath targetPath = new MappingQueuePath(target);
+    QueuePath targetPath = new QueuePath(target);
 
     //we simply used the source match part all valid legacy matchers are valid
     //matchers for the JSON format as well

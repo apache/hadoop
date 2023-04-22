@@ -41,6 +41,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -51,7 +52,7 @@ import org.apache.hadoop.util.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ListMultimap;
 
@@ -141,7 +142,8 @@ public class DirectoryScanner implements Runnable {
           + ", missing metadata files: " + missingMetaFile
           + ", missing block files: " + missingBlockFile
           + ", missing blocks in memory: " + missingMemoryBlocks
-          + ", mismatched blocks: " + mismatchBlocks;
+          + ", mismatched blocks: " + mismatchBlocks
+          + ", duplicated blocks: " + duplicateBlocks;
     }
   }
 
@@ -391,7 +393,7 @@ public class DirectoryScanner implements Runnable {
   }
 
   /**
-   * Main program loop for DirectoryScanner. Runs {@link reconcile()} and
+   * Main program loop for DirectoryScanner. Runs {@link #reconcile()} and
    * handles any exceptions.
    */
   @Override
@@ -539,21 +541,30 @@ public class DirectoryScanner implements Runnable {
           m++;
           continue;
         }
-        // Block file and/or metadata file exists on the disk
-        // Block exists in memory
-        if (info.getBlockFile() == null) {
-          // Block metadata file exits and block file is missing
-          addDifference(diffRecord, statsRecord, info);
-        } else if (info.getGenStamp() != memBlock.getGenerationStamp()
-            || info.getBlockLength() != memBlock.getNumBytes()) {
-          // Block metadata file is missing or has wrong generation stamp,
-          // or block file length is different than expected
+
+        // Block and meta must be regular file
+        boolean isRegular = FileUtil.isRegularFile(info.getBlockFile(), false) &&
+                FileUtil.isRegularFile(info.getMetaFile(), false);
+        if (!isRegular) {
           statsRecord.mismatchBlocks++;
           addDifference(diffRecord, statsRecord, info);
-        } else if (memBlock.compareWith(info) != 0) {
-          // volumeMap record and on-disk files do not match.
-          statsRecord.duplicateBlocks++;
-          addDifference(diffRecord, statsRecord, info);
+        } else {
+          // Block file and/or metadata file exists on the disk
+          // Block exists in memory
+          if (info.getBlockFile() == null) {
+            // Block metadata file exits and block file is missing
+            addDifference(diffRecord, statsRecord, info);
+          } else if (info.getGenStamp() != memBlock.getGenerationStamp()
+                  || info.getBlockLength() != memBlock.getNumBytes()) {
+            // Block metadata file is missing or has wrong generation stamp,
+            // or block file length is different than expected
+            statsRecord.mismatchBlocks++;
+            addDifference(diffRecord, statsRecord, info);
+          } else if (memBlock.compareWith(info) != 0) {
+            // volumeMap record and on-disk files do not match.
+            statsRecord.duplicateBlocks++;
+            addDifference(diffRecord, statsRecord, info);
+          }
         }
         d++;
 

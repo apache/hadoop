@@ -255,6 +255,9 @@ public abstract class AppAdminClient extends CompositeService {
    *
    * @param appName            the name of the application.
    * @param componentInstances the name of the component instances.
+   * @return exit code.
+   * @throws IOException io error occur.
+   * @throws YarnException exceptions from yarn servers.
    */
   @Public
   @Unstable
@@ -267,6 +270,9 @@ public abstract class AppAdminClient extends CompositeService {
    *
    * @param appName    the name of the application.
    * @param components the name of the components.
+   * @return exit code.
+   * @throws IOException io error occur.
+   * @throws YarnException exceptions from yarn servers.
    */
   @Public
   @Unstable
@@ -279,6 +285,9 @@ public abstract class AppAdminClient extends CompositeService {
    * @param appName  the name of the application.
    * @param userName the name of the user.
    * @return exit code
+   * @throws IOException io error occur.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws InterruptedException  if interrupted.
    */
   @Public
   @Unstable
@@ -297,6 +306,8 @@ public abstract class AppAdminClient extends CompositeService {
    * @param appName  the name of the application
    * @param fileName specification of application upgrade to save.
    * @return exit code
+   * @throws IOException io error occur.
+   * @throws YarnException exceptions from yarn servers.
    */
   @Public
   @Unstable
@@ -308,8 +319,8 @@ public abstract class AppAdminClient extends CompositeService {
    *
    * @param appName the name of the application
    * @return exit code
-   * @throws IOException
-   * @throws YarnException
+   * @throws IOException io error occur.
+   * @throws YarnException exceptions from yarn servers.
    */
   @Public
   @Unstable
@@ -321,6 +332,9 @@ public abstract class AppAdminClient extends CompositeService {
    *
    * @param appName            the name of the application.
    * @param componentInstances the name of the component instances.
+   * @throws IOException io error occur.
+   * @throws YarnException exceptions from yarn servers.
+   * @return exit code.
    */
   @Public
   @Unstable

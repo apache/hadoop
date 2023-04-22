@@ -324,6 +324,7 @@ The capacity scheduler supports hierarchical queues. This one request will print
 | absoluteMaxCapacity | float | Absolute maximum capacity percentage this queue can use of the entire cluster |
 | absoluteUsedCapacity | float | Absolute used capacity percentage this queue is using of the entire cluster |
 | numApplications | int | The number of applications currently in the queue |
+| maxParallelApps | int | Maximum number of applications that can run at the same time |
 | usedResources | string | A string describing the current resources used by the queue |
 | queueName | string | The name of the queue |
 | state | string of QueueState | The state of the queue |
@@ -423,6 +424,7 @@ Response Body:
                         "capacity": 10.5,
                         "maxCapacity": 50.0,
                         "numApplications": 0,
+                        "maxParallelApps": 2147483647,
                         "queueName": "a",
                         "queues": {
                             "queue": [
@@ -433,6 +435,7 @@ Response Body:
                                     "capacity": 30.000002,
                                     "maxCapacity": 50.0,
                                     "numApplications": 0,
+                                    "maxParallelApps": 2147483647,
                                     "queueName": "a1",
                                     "queues": {
                                         "queue": [
@@ -448,6 +451,7 @@ Response Body:
                                                 "maxCapacity": 100.0,
                                                 "numActiveApplications": 0,
                                                 "numApplications": 0,
+                                                "maxParallelApps": 2147483647,
                                                 "numContainers": 0,
                                                 "numPendingApplications": 0,
                                                 "queueName": "a1a",
@@ -475,6 +479,7 @@ Response Body:
                                                 "maxCapacity": 100.0,
                                                 "numActiveApplications": 0,
                                                 "numApplications": 0,
+                                                "maxParallelApps": 2147483647,
                                                 "numContainers": 0,
                                                 "numPendingApplications": 0,
                                                 "queueName": "a1b",
@@ -512,6 +517,7 @@ Response Body:
                                     "maxCapacity": 100.0,
                                     "numActiveApplications": 0,
                                     "numApplications": 0,
+                                    "maxParallelApps": 2147483647,
                                     "numContainers": 0,
                                     "numPendingApplications": 0,
                                     "queueName": "a2",
@@ -544,6 +550,7 @@ Response Body:
                         "capacity": 89.5,
                         "maxCapacity": 100.0,
                         "numApplications": 2,
+                        "maxParallelApps": 2147483647,
                         "queueName": "b",
                         "queues": {
                             "queue": [
@@ -559,6 +566,7 @@ Response Body:
                                     "maxCapacity": 100.0,
                                     "numActiveApplications": 1,
                                     "numApplications": 2,
+                                    "maxParallelApps": 2147483647,
                                     "numContainers": 0,
                                     "numPendingApplications": 1,
                                     "queueName": "b1",
@@ -607,6 +615,7 @@ Response Body:
                                     "maxCapacity": 100.0,
                                     "numActiveApplications": 0,
                                     "numApplications": 0,
+                                    "maxParallelApps": 2147483647,
                                     "numContainers": 0,
                                     "numPendingApplications": 0,
                                     "queueName": "b2",
@@ -634,6 +643,7 @@ Response Body:
                                     "maxCapacity": 100.0,
                                     "numActiveApplications": 0,
                                     "numApplications": 0,
+                                    "maxParallelApps": 2147483647,
                                     "numContainers": 0,
                                     "numPendingApplications": 0,
                                     "queueName": "b3",
@@ -756,6 +766,7 @@ Response Body:
         <absoluteMaxCapacity>50.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <numApplications>0</numApplications>
+        <maxParallelApps>2147483647</maxParallelApps>
         <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
         <queueName>a</queueName>
         <state>RUNNING</state>
@@ -768,6 +779,7 @@ Response Body:
             <absoluteMaxCapacity>25.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <numApplications>0</numApplications>
+            <maxParallelApps>2147483647</maxParallelApps>
             <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
             <queueName>a1</queueName>
             <state>RUNNING</state>
@@ -780,6 +792,7 @@ Response Body:
                 <absoluteMaxCapacity>25.0</absoluteMaxCapacity>
                 <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
                 <numApplications>0</numApplications>
+                <maxParallelApps>2147483647</maxParallelApps>
                 <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
                 <queueName>a1a</queueName>
                 <state>RUNNING</state>
@@ -806,6 +819,7 @@ Response Body:
                 <absoluteMaxCapacity>25.0</absoluteMaxCapacity>
                 <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
                 <numApplications>0</numApplications>
+                <maxParallelApps>2147483647</maxParallelApps>
                 <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
                 <queueName>a1b</queueName>
                 <state>RUNNING</state>
@@ -838,6 +852,7 @@ Response Body:
             <absoluteMaxCapacity>50.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <numApplications>0</numApplications>
+            <maxParallelApps>2147483647</maxParallelApps>
             <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
             <queueName>a2</queueName>
             <state>RUNNING</state>
@@ -870,6 +885,7 @@ Response Body:
         <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <numApplications>2</numApplications>
+        <maxParallelApps>2147483647</maxParallelApps>
         <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
         <queueName>b</queueName>
         <state>RUNNING</state>
@@ -882,6 +898,7 @@ Response Body:
             <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <numApplications>2</numApplications>
+            <maxParallelApps>2147483647</maxParallelApps>
             <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
             <queueName>b1</queueName>
             <state>RUNNING</state>
@@ -927,6 +944,7 @@ Response Body:
             <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <numApplications>0</numApplications>
+            <maxParallelApps>2147483647</maxParallelApps>
             <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
             <queueName>b2</queueName>
             <state>RUNNING</state>
@@ -953,6 +971,7 @@ Response Body:
             <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <numApplications>0</numApplications>
+            <maxParallelApps>2147483647</maxParallelApps>
             <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
             <queueName>b3</queueName>
             <state>RUNNING</state>
@@ -1586,11 +1605,11 @@ Current supported items:
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| resouceRequests | comma separated string | Skip resource requests of application in return |
+| resourceRequests | comma separated string | Skip resource requests of application in return |
 
 e.g:
 
-      * http://rm-http-address:port/ws/v1/cluster/apps?deSelects=resouceRequests
+      * http://rm-http-address:port/ws/v1/cluster/apps?deSelects=resourceRequests
 
 
 ### Response Examples
@@ -1960,7 +1979,7 @@ With the Application Statistics API, you can obtain a collection of triples, eac
 
 ### Query Parameters Required
 
-Two paramters can be specified. The parameters are case insensitive.
+Two parameters can be specified. The parameters are case insensitive.
 
       * states - states of the applications, specified as a comma-separated list. If states is not provided, the API will enumerate all application states and return the counts of them.
       * applicationTypes - types of the applications, specified as a comma-separated list. If applicationTypes is not provided, the API will count the applications of any application type. In this case, the response shows * to indicate any application type. Note that we only support at most one applicationType temporarily. Otherwise, users will expect an BadRequestException.
@@ -3043,7 +3062,7 @@ Response Body:
 Cluster Writeable APIs
 ----------------------
 
-The setions below refer to APIs which allow to create and modify applications. These APIs are currently in alpha and may change in the future.
+The sections below refer to APIs which allow to create and modify applications. These APIs are currently in alpha and may change in the future.
 
 Cluster New Application API
 ---------------------------
@@ -3073,7 +3092,7 @@ The NewApplication response contains the following elements:
 | application-id | string | The newly created application id |
 | maximum-resource-capabilities | object | The maximum resource capabilities available on this cluster |
 
-The *maximum-resource-capabilites* object contains the following elements:
+The *maximum-resource-capabilities* object contains the following elements:
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
@@ -3167,7 +3186,7 @@ Please note that this feature is currently in the alpha stage and may change in 
 | resource | object | The resources the application master requires, described below |
 | application-type | string | The application type(MapReduce, Pig, Hive, etc) |
 | keep-containers-across-application-attempts | boolean | Should YARN keep the containers used by this application instead of destroying them |
-| application-tags | object | List of application tags, please see the request examples on how to speciy the tags |
+| application-tags | object | List of application tags, please see the request examples on how to specify the tags |
 | log-aggregation-context| object | Represents all of the information needed by the NodeManager to handle the logs for this application |
 | attempt-failures-validity-interval| long | The failure number will no take attempt failures which happen out of the validityInterval into failure count|
 | reservation-id| string | Represent the unique id of the corresponding reserved resource allocation in the scheduler |
@@ -3182,7 +3201,7 @@ The am-container-spec object should be used to provide the container launch cont
 | local-resources | object | Object describing the resources that need to be localized, described below |
 | environment | object | Environment variables for your containers, specified as key value pairs |
 | commands | object | The commands for launching your container, in the order in which they should be executed |
-| service-data | object | Application specific service data; key is the name of the auxiliary servce, value is base-64 encoding of the data you wish to pass |
+| service-data | object | Application specific service data; key is the name of the auxiliary service, value is base-64 encoding of the data you wish to pass |
 | credentials | object | The credentials required for your application to run, described below |
 | application-acls | objec | ACLs for your application; the key can be "VIEW\_APP" or "MODIFY\_APP", the value is the list of users with the permissions |
 
@@ -3218,8 +3237,8 @@ Elements of the POST request body *log-aggregation-context* object
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| log-include-pattern | string | The log files which match the defined include pattern will be uploaded when the applicaiton finishes |
-| log-exclude-pattern | string | The log files which match the defined exclude pattern will not be uploaded when the applicaiton finishes |
+| log-include-pattern | string | The log files which match the defined include pattern will be uploaded when the application finishes |
+| log-exclude-pattern | string | The log files which match the defined exclude pattern will not be uploaded when the application finishes |
 | rolled-log-include-pattern | string | The log files which match the defined include pattern will be aggregated in a rolling fashion |
 | rolled-log-exclude-pattern | string | The log files which match the defined exclude pattern will not be aggregated in a rolling fashion |
 | log-aggregation-policy-class-name | string | The policy which will be used by NodeManager to aggregate the logs |
@@ -3447,7 +3466,7 @@ Response Body:
 Cluster Application State API
 -----------------------------
 
-With the application state API, you can query the state of a submitted app as well kill a running app by modifying the state of a running app using a PUT request with the state set to "KILLED". To perform the PUT operation, authentication has to be setup for the RM web services. In addition, you must be authorized to kill the app. Currently you can only change the state to "KILLED"; an attempt to change the state to any other results in a 400 error response. Examples of the unauthorized and bad request errors are below. When you carry out a successful PUT, the iniital response may be a 202. You can confirm that the app is killed by repeating the PUT request until you get a 200, querying the state using the GET method or querying for app information and checking the state. In the examples below, we repeat the PUT request and get a 200 response.
+With the application state API, you can query the state of a submitted app as well kill a running app by modifying the state of a running app using a PUT request with the state set to "KILLED". To perform the PUT operation, authentication has to be setup for the RM web services. In addition, you must be authorized to kill the app. Currently you can only change the state to "KILLED"; an attempt to change the state to any other results in a 400 error response. Examples of the unauthorized and bad request errors are below. When you carry out a successful PUT, the initial response may be a 202. You can confirm that the app is killed by repeating the PUT request until you get a 200, querying the state using the GET method or querying for app information and checking the state. In the examples below, we repeat the PUT request and get a 200 response.
 
 Please note that in order to kill an app, you must have an authentication filter setup for the HTTP interface. The functionality requires that a username is set in the HttpServletRequest. If no filter is setup, the response will be an "UNAUTHORIZED" response.
 
@@ -3626,7 +3645,7 @@ Request Body:
 
 Response Header:
 
-    HTTP/1.1 403 Unauthorized
+    HTTP/1.1 401 Unauthorized
     Server: Jetty(6.1.26)
 
 **Bad Request Error Response**
@@ -4435,7 +4454,7 @@ Elements of the *reservation-request* object
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| duration | long | The duration of a ReservationRequeust in milliseconds (amount of consecutive milliseconds a satisfiable allocation for this portion of the reservation should exist for). |
+| duration | long | The duration of a ReservationRequest in milliseconds (amount of consecutive milliseconds a satisfiable allocation for this portion of the reservation should exist for). |
 | num-containers | int | The number of containers required in this phase of the reservation (capture the maximum parallelism of the job(s) in this phase). |
 | min-concurrency | int | The minimum number of containers that must be concurrently allocated to satisfy this allocation (capture min-parallelism, useful to express gang semantics). |
 | capability | object | Allows to specify the size of each container (memory, vCores).|
@@ -4611,7 +4630,7 @@ Elements of the *reservation-request* object
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| duration | long | The duration of a ReservationRequeust in milliseconds (amount of consecutive milliseconds a satisfiable allocation for this portion of the reservation should exist for). |
+| duration | long | The duration of a ReservationRequest in milliseconds (amount of consecutive milliseconds a satisfiable allocation for this portion of the reservation should exist for). |
 | num-containers | int | The number of containers required in this phase of the reservation (capture the maximum parallelism of the job(s) in this phase). |
 | min-concurrency | int | The minimum number of containers that must be concurrently allocated to satisfy this allocation (capture min-parallelism, useful to express gang semantics). |
 | capability | object | Allows to specify the size of each container (memory, vCores).|

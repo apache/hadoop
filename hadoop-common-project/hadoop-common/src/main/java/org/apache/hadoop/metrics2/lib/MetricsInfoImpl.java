@@ -23,7 +23,7 @@ import org.apache.hadoop.metrics2.MetricsInfo;
 
 import java.util.StringJoiner;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**
  * Making implementing metric info a little easier

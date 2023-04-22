@@ -56,6 +56,7 @@ public class AccessControlList implements Writable {
   // Indicates an ACL string that represents access to all users
   public static final String WILDCARD_ACL_VALUE = "*";
   private static final int INITIAL_CAPACITY = 256;
+  public static final String USE_REAL_ACLS = "~";
 
   // Set of users who are granted access.
   private Collection<String> users;
@@ -104,8 +105,8 @@ public class AccessControlList implements Writable {
    * @param userGroupStrings build ACL from array of Strings
    */
   private void buildACL(String[] userGroupStrings) {
-    users = new HashSet<String>();
-    groups = new HashSet<String>();
+    users = new HashSet<>();
+    groups = new HashSet<>();
     for (String aclPart : userGroupStrings) {
       if (aclPart != null && isWildCardACLValue(aclPart)) {
         allAllowed = true;
@@ -224,9 +225,12 @@ public class AccessControlList implements Writable {
 
   /**
    * Checks if a user represented by the provided {@link UserGroupInformation}
-   * is a member of the Access Control List
+   * is a member of the Access Control List. If user was proxied and
+   * USE_REAL_ACLS + the real user name is in the control list, then treat this
+   * case as if user were in the ACL list.
    * @param ugi UserGroupInformation to check if contained in the ACL
-   * @return true if ugi is member of the list
+   * @return true if ugi is member of the list or if USE_REAL_ACLS + real user
+   * is in the list
    */
   public final boolean isUserInList(UserGroupInformation ugi) {
     if (allAllowed || users.contains(ugi.getShortUserName())) {
@@ -239,7 +243,9 @@ public class AccessControlList implements Writable {
         }
       }
     }
-    return false;
+    UserGroupInformation realUgi = ugi.getRealUser();
+    return realUgi != null &&
+           users.contains(USE_REAL_ACLS + realUgi.getShortUserName());
   }
 
   public boolean isUserAllowed(UserGroupInformation ugi) {
@@ -290,6 +296,7 @@ public class AccessControlList implements Writable {
   /**
    * Returns the access control list as a String that can be used for building a
    * new instance by sending it to the constructor of {@link AccessControlList}.
+   * @return acl string.
    */
   public String getAclString() {
     StringBuilder sb = new StringBuilder(INITIAL_CAPACITY);

@@ -34,8 +34,6 @@ import org.apache.hadoop.yarn.appcatalog.model.Application;
 import org.apache.hadoop.yarn.appcatalog.utils.RandomWord;
 import org.apache.hadoop.yarn.appcatalog.utils.WordLengthException;
 import org.apache.hadoop.yarn.service.api.records.Service;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrQuery.ORDER;
@@ -48,13 +46,15 @@ import org.apache.solr.common.SolrInputDocument;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Driver class for accessing Solr.
  */
 public class AppCatalogSolrClient {
 
-  private static final Log LOG = LogFactory.getLog(AppCatalogSolrClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AppCatalogSolrClient.class);
   private static String urlString;
 
   public AppCatalogSolrClient() {

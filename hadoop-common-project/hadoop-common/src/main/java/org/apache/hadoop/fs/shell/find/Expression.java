@@ -30,13 +30,15 @@ public interface Expression {
   /**
    * Set the options for this expression, called once before processing any
    * items.
+   * @param options options.
+   * @throws IOException raised on errors performing I/O.
    */
   public void setOptions(FindOptions options) throws IOException;
 
   /**
    * Prepares the expression for execution, called once after setting options
    * and before processing any options.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public void prepare() throws IOException;
 
@@ -46,13 +48,14 @@ public interface Expression {
    * @param item {@link PathData} item to be processed
    * @param depth distance of the item from the command line argument
    * @return {@link Result} of applying the expression to the item
+   * @throws IOException raised on errors performing I/O.
    */
   public Result apply(PathData item, int depth) throws IOException;
 
   /**
    * Finishes the expression, called once after processing all items.
    *
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public void finish() throws IOException;
 
@@ -76,15 +79,21 @@ public interface Expression {
   /**
    * Indicates whether this expression performs an action, i.e. provides output
    * back to the user.
+   * @return if is action true, not false.
    */
   public boolean isAction();
 
-  /** Identifies the expression as an operator rather than a primary. */
+  /**
+   * Identifies the expression as an operator rather than a primary.
+   * @return if is operator true, not false.
+   */
   public boolean isOperator();
 
   /**
    * Returns the precedence of this expression
    * (only applicable to operators).
+   *
+   * @return precedence.
    */
   public int getPrecedence();
 

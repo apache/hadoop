@@ -44,7 +44,7 @@ public final class ViewFileSystemUtil {
   /**
    * Check if the FileSystem is a ViewFileSystem.
    *
-   * @param fileSystem
+   * @param fileSystem file system.
    * @return true if the fileSystem is ViewFileSystem
    */
   public static boolean isViewFileSystem(final FileSystem fileSystem) {
@@ -54,7 +54,7 @@ public final class ViewFileSystemUtil {
   /**
    * Check if the FileSystem is a ViewFileSystemOverloadScheme.
    *
-   * @param fileSystem
+   * @param fileSystem file system.
    * @return true if the fileSystem is ViewFileSystemOverloadScheme
    */
   public static boolean isViewFileSystemOverloadScheme(
@@ -101,6 +101,7 @@ public final class ViewFileSystemUtil {
    * @param fileSystem - ViewFileSystem on which mount point exists
    * @param path - URI for which FsStatus is requested
    * @return Map of ViewFsMountPoint and FsStatus
+   * @throws IOException raised on errors performing I/O.
    */
   public static Map<MountPoint, FsStatus> getStatus(
       FileSystem fileSystem, Path path) throws IOException {

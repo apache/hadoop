@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
+import org.apache.hadoop.hdfs.protocol.XAttrNotFoundException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReencryptionInfoProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
@@ -33,8 +34,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Lists;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -116,8 +117,7 @@ public class FSDirXAttrOp {
       return filteredAll;
     }
     if (filteredAll == null || filteredAll.isEmpty()) {
-      throw new IOException(
-          "At least one of the attributes provided was not found.");
+      throw new XAttrNotFoundException();
     }
     List<XAttr> toGet = Lists.newArrayListWithCapacity(xAttrs.size());
     for (XAttr xAttr : xAttrs) {
@@ -131,8 +131,7 @@ public class FSDirXAttrOp {
         }
       }
       if (!foundIt) {
-        throw new IOException(
-            "At least one of the attributes provided was not found.");
+        throw new XAttrNotFoundException();
       }
     }
     return toGet;

@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+#include "sasl_protocol.h"
 #include "rpc_engine.h"
 #include "rpc_connection.h"
 #include "common/logging.h"
@@ -23,7 +24,6 @@
 #include "x-platform/syscall.h"
 
 #include "sasl_engine.h"
-#include "sasl_protocol.h"
 
 #if defined USE_SASL
   #if defined USE_CYRUS_SASL

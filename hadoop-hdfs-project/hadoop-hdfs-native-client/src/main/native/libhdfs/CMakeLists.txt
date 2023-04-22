@@ -29,6 +29,7 @@ include_directories(
     main/native
     main/native/libhdfs
     ${OS_DIR}
+    ../libhdfspp/lib
 )
 
 hadoop_add_dual_library(hdfs
@@ -38,6 +39,8 @@ hadoop_add_dual_library(hdfs
     jclasses.c
     ${OS_DIR}/mutexes.c
     ${OS_DIR}/thread_local_storage.c
+    $<TARGET_OBJECTS:x_platform_obj>
+    $<TARGET_OBJECTS:x_platform_obj_c_api>
 )
 if(NEED_LINK_DL)
    set(LIB_DL dl)

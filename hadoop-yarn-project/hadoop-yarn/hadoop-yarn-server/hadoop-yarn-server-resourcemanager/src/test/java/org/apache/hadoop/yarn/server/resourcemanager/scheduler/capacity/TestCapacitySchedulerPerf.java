@@ -237,7 +237,7 @@ public class TestCapacitySchedulerPerf {
 
     if (numThreads > 0) {
       // disable async scheduling threads
-      for (CapacityScheduler.AsyncScheduleThread t : cs.asyncSchedulerThreads) {
+      for (CapacityScheduler.AsyncScheduleThread t : cs.getAsyncSchedulerThreads()) {
         t.suspendSchedule();
       }
     }
@@ -268,7 +268,7 @@ public class TestCapacitySchedulerPerf {
 
     if (numThreads > 0) {
       // enable async scheduling threads
-      for (CapacityScheduler.AsyncScheduleThread t : cs.asyncSchedulerThreads) {
+      for (CapacityScheduler.AsyncScheduleThread t : cs.getAsyncSchedulerThreads()) {
         t.beginSchedule();
       }
 

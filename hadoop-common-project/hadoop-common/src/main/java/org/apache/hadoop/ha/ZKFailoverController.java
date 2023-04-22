@@ -52,9 +52,9 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.data.ACL;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -153,6 +153,8 @@ public abstract class ZKFailoverController {
    * the ZKFC will do all of its work. This is so that multiple federated
    * nameservices can run on the same ZK quorum without having to manually
    * configure them to separate subdirectories.
+   *
+   * @return ScopeInsideParentNode.
    */
   protected abstract String getScopeInsideParentNode();
 

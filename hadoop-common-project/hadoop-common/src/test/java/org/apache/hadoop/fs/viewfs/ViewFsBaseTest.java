@@ -522,7 +522,7 @@ abstract public class ViewFsBaseTest {
         Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
   }
       
-  @Test
+  @Test(expected = FileNotFoundException.class)
   public void testFileStatusOnMountLink() throws IOException {
     Assert.assertTrue("Slash should appear as dir", 
         fcView.getFileStatus(new Path("/")).isDirectory());
@@ -534,12 +534,7 @@ abstract public class ViewFsBaseTest {
     checkFileStatus(fcView, "/internalDir/internalDir2/linkToDir3", fileType.isDir);
     checkFileStatus(fcView, "/linkToAFile", fileType.isFile);
 
-    try {
-      fcView.getFileStatus(new Path("/danglingLink"));
-      Assert.fail("Excepted a not found exception here");
-    } catch ( FileNotFoundException e) {
-      // as excepted
-    }
+    fcView.getFileStatus(new Path("/danglingLink"));
   }
   
   @Test

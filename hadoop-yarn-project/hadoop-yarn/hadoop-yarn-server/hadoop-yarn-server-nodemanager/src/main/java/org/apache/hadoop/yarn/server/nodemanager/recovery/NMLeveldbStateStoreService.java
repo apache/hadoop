@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hadoop.conf.Configuration;
@@ -1811,6 +1811,23 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       throw new IOException(
         "Incompatible version for NM state: expecting NM state version " 
             + getCurrentVersion() + ", but loading version " + loadedVersion);
+    }
+  }
+  @Override
+  public void releaseAssignedResources(ContainerId containerId, String resourceType)
+      throws IOException {
+    LOG.debug("releaseAssignedResources: containerId=" + containerId + " resourceType="
+        + resourceType);
+    try {
+      try (WriteBatch batch = db.createWriteBatch()) {
+        String key = CONTAINERS_KEY_PREFIX + containerId
+            + CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX + resourceType;
+        batch.delete(bytes(key));
+        db.write(batch);
+      }
+    }catch (DBException e){
+      markStoreUnHealthy(e);
+      throw new IOException(e);
     }
   }
 }

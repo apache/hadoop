@@ -22,7 +22,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 
 /**
@@ -37,6 +37,9 @@ import org.slf4j.Logger;
 @InterfaceStability.Unstable
 public class InstrumentedWriteLock extends InstrumentedLock {
 
+  private final ReentrantReadWriteLock readWriteLock;
+  private volatile long writeLockHeldTimeStamp = 0;
+
   public InstrumentedWriteLock(String name, Logger logger,
       ReentrantReadWriteLock readWriteLock,
       long minLoggingGapMs, long lockWarningThresholdMs) {
@@ -50,5 +53,28 @@ public class InstrumentedWriteLock extends InstrumentedLock {
       long minLoggingGapMs, long lockWarningThresholdMs, Timer clock) {
     super(name, logger, readWriteLock.writeLock(), minLoggingGapMs,
         lockWarningThresholdMs, clock);
+    this.readWriteLock = readWriteLock;
+  }
+
+  @Override
+  public void unlock() {
+    boolean needReport = readWriteLock.getWriteHoldCount() == 1;
+    long localWriteReleaseTime = getTimer().monotonicNow();
+    long localWriteAcquireTime = writeLockHeldTimeStamp;
+    getLock().unlock();
+    if (needReport) {
+      writeLockHeldTimeStamp = 0;
+      check(localWriteAcquireTime, localWriteReleaseTime, true);
+    }
+  }
+
+  /**
+   * Starts timing for the instrumented write lock.
+   */
+  @Override
+  protected void startLockTiming() {
+    if (readWriteLock.getWriteHoldCount() == 1) {
+      writeLockHeldTimeStamp = getTimer().monotonicNow();
+    }
   }
 }

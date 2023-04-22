@@ -34,20 +34,20 @@ import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
  * Tracks directory markers which have been reported in object listings.
  * This is needed for auditing and cleanup, including during rename
  * operations.
- * <p></p>
+ * <p>
  * Designed to be used while scanning through the results of listObject
  * calls, where are we assume the results come in alphanumeric sort order
  * and parent entries before children.
- * <p></p>
+ * <p>
  * This lets as assume that we can identify all leaf markers as those
  * markers which were added to set of leaf markers and not subsequently
  * removed as a child entries were discovered.
- * <p></p>
+ * <p>
  * To avoid scanning datastructures excessively, the path of the parent
  * directory of the last file added is cached. This allows for a
  * quick bailout when many children of the same directory are
  * returned in a listing.
- * <p></p>
+ * <p>
  * Consult the directory_markers document for details on this feature,
  * including terminology.
  */
@@ -106,7 +106,7 @@ public class DirMarkerTracker {
 
   /**
    * Construct.
-   * <p></p>
+   * <p>
    * The base path is currently only used for information rather than
    * validating paths supplied in other methods.
    * @param basePath base path of track
@@ -128,7 +128,7 @@ public class DirMarkerTracker {
 
   /**
    * A marker has been found; this may or may not be a leaf.
-   * <p></p>
+   * <p>
    * Trigger a move of all markers above it into the surplus map.
    * @param path marker path
    * @param key object key
@@ -160,7 +160,7 @@ public class DirMarkerTracker {
 
   /**
    * A path has been found.
-   * <p></p>
+   * <p>
    * Declare all markers above it as surplus
    * @param path marker path
    * @param key object key
@@ -187,7 +187,7 @@ public class DirMarkerTracker {
   /**
    * Remove all markers from the path and its parents from the
    * {@link #leafMarkers} map.
-   * <p></p>
+   * <p>
    * if {@link #recordSurplusMarkers} is true, the marker is
    * moved to the surplus map. Not doing this is simply an
    * optimisation designed to reduce risk of excess memory consumption
@@ -223,7 +223,7 @@ public class DirMarkerTracker {
 
   /**
    * Get the map of surplus markers.
-   * <p></p>
+   * <p>
    * Empty if they were not being recorded.
    * @return all surplus markers.
    */

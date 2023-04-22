@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -47,7 +47,11 @@ public class DelegationTokenRenewer
     /** @return the renew token. */
     public Token<?> getRenewToken();
 
-    /** Set delegation token. */
+    /**
+     * Set delegation token.
+     * @param <T> generic type T.
+     * @param token token.
+     */
     public <T extends TokenIdentifier> void setDelegationToken(Token<T> token);
   }
 
@@ -172,7 +176,11 @@ public class DelegationTokenRenewer
   /** Queue to maintain the RenewActions to be processed by the {@link #run()} */
   private volatile DelayQueue<RenewAction<?>> queue = new DelayQueue<RenewAction<?>>();
   
-  /** For testing purposes */
+  /**
+   * For testing purposes.
+   *
+   * @return renew queue length.
+   */
   @VisibleForTesting
   protected int getRenewQueueLength() {
     return queue.size();
@@ -211,7 +219,13 @@ public class DelegationTokenRenewer
     }
   }
   
-  /** Add a renew action to the queue. */
+  /**
+   * Add a renew action to the queue.
+   *
+   * @param <T> generic type T.
+   * @param fs file system.
+   * @return renew action.
+   * */
   @SuppressWarnings("static-access")
   public <T extends FileSystem & Renewable> RenewAction<T> addRenewAction(final T fs) {
     synchronized (this) {
@@ -230,8 +244,10 @@ public class DelegationTokenRenewer
 
   /**
    * Remove the associated renew action from the queue
-   * 
-   * @throws IOException
+   *
+   * @param <T> generic type T.
+   * @param fs file system.
+   * @throws IOException raised on errors performing I/O.
    */
   public <T extends FileSystem & Renewable> void removeRenewAction(
       final T fs) throws IOException {
@@ -240,9 +256,8 @@ public class DelegationTokenRenewer
       try {
         action.cancel();
       } catch (InterruptedException ie) {
-        LOG.error("Interrupted while canceling token for " + fs.getUri()
-            + "filesystem");
-        LOG.debug("Exception in removeRenewAction: {}", ie);
+        LOG.error("Interrupted while canceling token for {} filesystem.", fs.getUri());
+        LOG.debug("Exception in removeRenewAction.", ie);
       }
     }
   }

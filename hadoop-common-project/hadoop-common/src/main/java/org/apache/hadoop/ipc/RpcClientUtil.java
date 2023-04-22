@@ -103,7 +103,7 @@ public class RpcClientUtil {
    * @param version The version at the client.
    * @param methodName Name of the method.
    * @return true if the method is supported, false otherwise.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static boolean isMethodSupported(Object rpcProxy, Class<?> protocol,
       RPC.RpcKind rpcKind, long version, String methodName) throws IOException {
@@ -200,6 +200,8 @@ public class RpcClientUtil {
    *
    * the format we want is:
    *   ClientNamenodeProtocol#getServerDefaults
+   * @param method input method.
+   * @return methodToTraceString.
    */
   public static String methodToTraceString(Method method) {
     Class<?> clazz = method.getDeclaringClass();
@@ -221,6 +223,8 @@ public class RpcClientUtil {
    *
    * the format we want is:
    *   ClientProtocol#getBlockLocations
+   * @param fullName input fullName.
+   * @return toTraceName.
    */
   public static String toTraceName(String fullName) {
     int lastPeriod = fullName.lastIndexOf('.');

@@ -194,7 +194,7 @@ public abstract class TestConfigurationFieldsBase {
     HashMap<String,String> retVal = new HashMap<>();
 
     // Setup regexp for valid properties
-    String propRegex = "^[A-Za-z][A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)+$";
+    String propRegex = "^[A-Za-z][A-Za-z0-9_-]+(\\.[A-Za-z%s0-9_-]+)+$";
     Pattern p = Pattern.compile(propRegex);
 
     // Iterate through class member variables

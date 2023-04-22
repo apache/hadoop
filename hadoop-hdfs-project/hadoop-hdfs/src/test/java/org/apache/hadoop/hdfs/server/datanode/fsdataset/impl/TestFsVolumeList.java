@@ -21,6 +21,7 @@ import java.util.function.Supplier;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
@@ -32,12 +33,16 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
+import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.util.StringUtils;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -52,7 +57,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY;
 import static org.junit.Assert.assertEquals;
@@ -73,6 +78,10 @@ public class TestFsVolumeList {
   private FsDatasetImpl dataset = null;
   private String baseDir;
   private BlockScanner blockScanner;
+  private final static int NUM_DATANODES = 3;
+  private final static int STORAGES_PER_DATANODE = 3;
+  private final static int DEFAULT_BLOCK_SIZE = 102400;
+  private final static int BUFFER_LENGTH = 1024;
 
   @Before
   public void setUp() {
@@ -89,7 +98,7 @@ public class TestFsVolumeList {
   public void testGetNextVolumeWithClosedVolume() throws IOException {
     FsVolumeList volumeList = new FsVolumeList(
         Collections.<VolumeFailureInfo>emptyList(),
-        blockScanner, blockChooser, conf);
+        blockScanner, blockChooser, conf, null);
     final List<FsVolumeImpl> volumes = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       File curDir = new File(baseDir, "nextvolume-" + i);
@@ -132,7 +141,7 @@ public class TestFsVolumeList {
   @Test(timeout=30000)
   public void testReleaseVolumeRefIfNoBlockScanner() throws IOException {
     FsVolumeList volumeList = new FsVolumeList(
-        Collections.<VolumeFailureInfo>emptyList(), null, blockChooser, conf);
+        Collections.<VolumeFailureInfo>emptyList(), null, blockChooser, conf, null);
     File volDir = new File(baseDir, "volume-0");
     volDir.mkdirs();
     FsVolumeImpl volume = new FsVolumeImplBuilder()
@@ -397,7 +406,7 @@ public class TestFsVolumeList {
     fs.close();
     FsDatasetImpl fsDataset = (FsDatasetImpl) cluster.getDataNodes().get(0)
         .getFSDataset();
-    ReplicaMap volumeMap = new ReplicaMap(new ReentrantReadWriteLock());
+    ReplicaMap volumeMap = new ReplicaMap(fsDataset.acquireDatasetLockManager());
     RamDiskReplicaTracker ramDiskReplicaMap = RamDiskReplicaTracker
         .getInstance(conf, fsDataset);
     FsVolumeImpl vol = (FsVolumeImpl) fsDataset.getFsVolumeReferences().get(0);
@@ -511,7 +520,7 @@ public class TestFsVolumeList {
         .build();
     FsVolumeList volumeList = new FsVolumeList(
         Collections.<VolumeFailureInfo>emptyList(),
-        blockScanner, blockChooser, conf);
+        blockScanner, blockChooser, conf, null);
     volumeList.addVolume(archivalVolume.obtainReference());
     volumeList.addVolume(diskVolume.obtainReference());
 
@@ -619,5 +628,100 @@ public class TestFsVolumeList {
     // we allocate the full disk capacity regardless of the default ratio.
     mountVolumeMap.removeVolume(spyArchivalVolume);
     assertEquals(dfCapacity - duReserved, spyDiskVolume.getCapacity());
+  }
+
+  @Test
+  public void testExcludeSlowDiskWhenChoosingVolume() throws Exception {
+    conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
+    // Set datanode outliers report interval to 1s.
+    conf.setStrings(DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY, "1s");
+    // Enable datanode disk metrics collector.
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY, 30);
+    // Enable excluding slow disks when choosing volume.
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY, 1);
+    // Ensure that each volume capacity is larger than the DEFAULT_BLOCK_SIZE.
+    long capacity = 10 * DEFAULT_BLOCK_SIZE;
+    long[][] capacities = new long[NUM_DATANODES][STORAGES_PER_DATANODE];
+    String[] hostnames = new String[NUM_DATANODES];
+    for (int i = 0; i < NUM_DATANODES; i++) {
+      hostnames[i] = i + "." + i + "." + i + "." + i;
+      for(int j = 0; j < STORAGES_PER_DATANODE; j++){
+        capacities[i][j]=capacity;
+      }
+    }
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .hosts(hostnames)
+        .numDataNodes(NUM_DATANODES)
+        .storagesPerDatanode(STORAGES_PER_DATANODE)
+        .storageCapacities(capacities).build();
+    cluster.waitActive();
+    FileSystem fs = cluster.getFileSystem();
+
+    // Create file for each datanode.
+    ArrayList<DataNode> dataNodes = cluster.getDataNodes();
+    DataNode dn0 = dataNodes.get(0);
+    DataNode dn1 = dataNodes.get(1);
+    DataNode dn2 = dataNodes.get(2);
+
+    // Mock the first disk of each datanode is a slowest disk.
+    String slowDisk0OnDn0 = dn0.getFSDataset().getFsVolumeReferences().getReference(0)
+        .getVolume().getBaseURI().getPath();
+    String slowDisk0OnDn1 = dn1.getFSDataset().getFsVolumeReferences().getReference(0)
+        .getVolume().getBaseURI().getPath();
+    String slowDisk0OnDn2 = dn2.getFSDataset().getFsVolumeReferences().getReference(0)
+        .getVolume().getBaseURI().getPath();
+
+    String slowDisk1OnDn0 = dn0.getFSDataset().getFsVolumeReferences().getReference(1)
+        .getVolume().getBaseURI().getPath();
+    String slowDisk1OnDn1 = dn1.getFSDataset().getFsVolumeReferences().getReference(1)
+        .getVolume().getBaseURI().getPath();
+    String slowDisk1OnDn2 = dn2.getFSDataset().getFsVolumeReferences().getReference(1)
+        .getVolume().getBaseURI().getPath();
+
+    dn0.getDiskMetrics().addSlowDiskForTesting(slowDisk0OnDn0, ImmutableMap.of(
+        SlowDiskReports.DiskOp.READ, 1.0, SlowDiskReports.DiskOp.WRITE, 1.5,
+        SlowDiskReports.DiskOp.METADATA, 2.0));
+    dn1.getDiskMetrics().addSlowDiskForTesting(slowDisk0OnDn1, ImmutableMap.of(
+        SlowDiskReports.DiskOp.READ, 1.0, SlowDiskReports.DiskOp.WRITE, 1.5,
+        SlowDiskReports.DiskOp.METADATA, 2.0));
+    dn2.getDiskMetrics().addSlowDiskForTesting(slowDisk0OnDn2, ImmutableMap.of(
+        SlowDiskReports.DiskOp.READ, 1.0, SlowDiskReports.DiskOp.WRITE, 1.5,
+        SlowDiskReports.DiskOp.METADATA, 2.0));
+
+    dn0.getDiskMetrics().addSlowDiskForTesting(slowDisk1OnDn0, ImmutableMap.of(
+        SlowDiskReports.DiskOp.READ, 1.0, SlowDiskReports.DiskOp.WRITE, 1.0,
+        SlowDiskReports.DiskOp.METADATA, 1.0));
+    dn1.getDiskMetrics().addSlowDiskForTesting(slowDisk1OnDn1, ImmutableMap.of(
+        SlowDiskReports.DiskOp.READ, 1.0, SlowDiskReports.DiskOp.WRITE, 1.0,
+        SlowDiskReports.DiskOp.METADATA, 1.0));
+    dn2.getDiskMetrics().addSlowDiskForTesting(slowDisk1OnDn2, ImmutableMap.of(
+        SlowDiskReports.DiskOp.READ, 1.0, SlowDiskReports.DiskOp.WRITE, 1.0,
+        SlowDiskReports.DiskOp.METADATA, 1.0));
+
+    // Wait until the data on the slow disk is collected successfully.
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override public Boolean get() {
+        return dn0.getDiskMetrics().getSlowDisksToExclude().size() == 1 &&
+            dn1.getDiskMetrics().getSlowDisksToExclude().size() == 1 &&
+            dn2.getDiskMetrics().getSlowDisksToExclude().size() == 1;
+      }
+    }, 1000, 5000);
+
+    // Create a file with 3 replica.
+    DFSTestUtil.createFile(fs, new Path("/file0"), false, BUFFER_LENGTH, 1000,
+        DEFAULT_BLOCK_SIZE, (short) 3, 0, false, null);
+
+    // Asserts that the number of blocks created on a slow disk is 0.
+    Assert.assertEquals(0, dn0.getVolumeReport().stream()
+        .filter(v -> (v.getPath() + "/").equals(slowDisk0OnDn0)).collect(Collectors.toList()).get(0)
+        .getNumBlocks());
+    Assert.assertEquals(0, dn1.getVolumeReport().stream()
+        .filter(v -> (v.getPath() + "/").equals(slowDisk0OnDn1)).collect(Collectors.toList()).get(0)
+        .getNumBlocks());
+    Assert.assertEquals(0, dn2.getVolumeReport().stream()
+        .filter(v -> (v.getPath() + "/").equals(slowDisk0OnDn2)).collect(Collectors.toList()).get(0)
+        .getNumBlocks());
   }
 }

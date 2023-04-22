@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -270,16 +270,14 @@ public class TestContainerExecutor {
     try {
       int writtenExitCode = 10;
 
-      FileUtils.writeStringToFile(pidFile, "2992",
-          Charset.defaultCharset(), false);
+      FileUtils.writeStringToFile(pidFile, "2992", StandardCharsets.UTF_8, false);
 
       TimerTask task = new java.util.TimerTask() {
         @Override
         public void run() {
           try {
-            FileUtils.writeStringToFile(exitCodeFile,
-                Integer.toString(writtenExitCode),
-                Charset.defaultCharset(), false);
+            FileUtils.writeStringToFile(exitCodeFile, Integer.toString(writtenExitCode),
+                StandardCharsets.UTF_8, false);
           } catch (IOException ioe) {
             LOG.warn("Could not write pid file");
           }

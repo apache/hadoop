@@ -26,9 +26,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import io.netty.util.ReferenceCountUtil;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply.AcceptState;
-import org.apache.hadoop.oncrpc.security.Verifier;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.portmap.PortmapMapping;
 import org.apache.hadoop.portmap.PortmapRequest;
@@ -164,8 +164,16 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
   public void channelRead(ChannelHandlerContext ctx, Object msg)
       throws Exception {
     RpcInfo info = (RpcInfo) msg;
+    try {
+      channelRead(ctx, info);
+    } finally {
+      ReferenceCountUtil.release(info.data());
+    }
+  }
+
+  private void channelRead(ChannelHandlerContext ctx, RpcInfo info)
+      throws Exception {
     RpcCall call = (RpcCall) info.header();
-    
     SocketAddress remoteAddress = info.remoteAddress();
     if (LOG.isTraceEnabled()) {
       LOG.trace(program + " procedure #" + call.getProcedure());
@@ -213,7 +221,7 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
   private void sendAcceptedReply(RpcCall call, SocketAddress remoteAddress,
       AcceptState acceptState, ChannelHandlerContext ctx) {
     RpcAcceptedReply reply = RpcAcceptedReply.getInstance(call.getXid(),
-        acceptState, Verifier.VERIFIER_NONE);
+        acceptState, VerifierNone.INSTANCE);
 
     XDR out = new XDR();
     reply.write(out);

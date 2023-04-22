@@ -20,18 +20,24 @@ package org.apache.hadoop.fs.viewfs;
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
 /**
  * File system instance getter.
  */
-@Private
-class FsGetter {
+@InterfaceAudience.LimitedPrivate({"Common"})
+@InterfaceStability.Unstable
+public class FsGetter {
 
   /**
    * Gets new file system instance of given uri.
+   * @param uri uri.
+   * @param conf configuration.
+   * @throws IOException raised on errors performing I/O.
+   * @return file system.
    */
   public FileSystem getNewInstance(URI uri, Configuration conf)
       throws IOException {
@@ -40,6 +46,11 @@ class FsGetter {
 
   /**
    * Gets file system instance of given uri.
+   *
+   * @param uri uri.
+   * @param conf configuration.
+   * @throws IOException raised on errors performing I/O.
+   * @return FileSystem.
    */
   public FileSystem get(URI uri, Configuration conf) throws IOException {
     return FileSystem.get(uri, conf);

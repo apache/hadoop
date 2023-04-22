@@ -43,7 +43,7 @@ import static org.junit.Assert.assertEquals;
 public class ITestBlockingThreadPoolExecutorService {
 
   private static final Logger LOG = LoggerFactory.getLogger(
-      BlockingThreadPoolExecutorService.class);
+      ITestBlockingThreadPoolExecutorService.class);
 
   private static final int NUM_ACTIVE_TASKS = 4;
   private static final int NUM_WAITING_TASKS = 2;
@@ -57,7 +57,7 @@ public class ITestBlockingThreadPoolExecutorService {
   private static BlockingThreadPoolExecutorService tpe;
 
   @Rule
-  public Timeout testTimeout = new Timeout(60 * 1000);
+  public Timeout testTimeout = new Timeout(60, TimeUnit.SECONDS);
 
   @AfterClass
   public static void afterClass() throws Exception {

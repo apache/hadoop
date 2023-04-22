@@ -32,7 +32,6 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -59,7 +58,8 @@ public class IOUtils {
    * @param out OutputStream to write to
    * @param buffSize the size of the buffer 
    * @param close whether or not close the InputStream and 
-   * OutputStream at the end. The streams are closed in the finally clause.  
+   * OutputStream at the end. The streams are closed in the finally clause.
+   * @throws IOException raised on errors performing I/O.
    */
   public static void copyBytes(InputStream in, OutputStream out,
                                int buffSize, boolean close)
@@ -85,7 +85,8 @@ public class IOUtils {
    * 
    * @param in InputStrem to read from
    * @param out OutputStream to write to
-   * @param buffSize the size of the buffer 
+   * @param buffSize the size of the buffer.
+   * @throws IOException raised on errors performing I/O.
    */
   public static void copyBytes(InputStream in, OutputStream out, int buffSize) 
     throws IOException {
@@ -107,7 +108,8 @@ public class IOUtils {
    *
    * @param in InputStrem to read from
    * @param out OutputStream to write to
-   * @param conf the Configuration object 
+   * @param conf the Configuration object.
+   * @throws IOException raised on errors performing I/O.
    */
   public static void copyBytes(InputStream in, OutputStream out, Configuration conf)
     throws IOException {
@@ -123,6 +125,7 @@ public class IOUtils {
    * @param conf the Configuration object
    * @param close whether or not close the InputStream and 
    * OutputStream at the end. The streams are closed in the finally clause.
+   * @throws IOException raised on errors performing I/O.
    */
   public static void copyBytes(InputStream in, OutputStream out, Configuration conf, boolean close)
     throws IOException {
@@ -181,6 +184,7 @@ public class IOUtils {
    * @param off - offset within buf
    * @param len - amount of data to be read
    * @return number of bytes read
+   * @throws IOException raised on errors performing I/O.
    */
   public static int wrappedReadForCompressedData(InputStream is, byte[] buf,
       int off, int len) throws IOException {
@@ -241,30 +245,6 @@ public class IOUtils {
     }
   }
   
-  /**
-   * Close the Closeable objects and <b>ignore</b> any {@link Throwable} or
-   * null pointers. Must only be used for cleanup in exception handlers.
-   *
-   * @param log the log to record problems to at debug level. Can be null.
-   * @param closeables the objects to close
-   * @deprecated use {@link #cleanupWithLogger(Logger, java.io.Closeable...)}
-   * instead
-   */
-  @Deprecated
-  public static void cleanup(Log log, java.io.Closeable... closeables) {
-    for (java.io.Closeable c : closeables) {
-      if (c != null) {
-        try {
-          c.close();
-        } catch(Throwable e) {
-          if (log != null && log.isDebugEnabled()) {
-            log.debug("Exception in closing " + c, e);
-          }
-        }
-      }
-    }
-  }
-
   /**
    * Close the Closeable objects and <b>ignore</b> any {@link Throwable} or
    * null pointers. Must only be used for cleanup in exception handlers.
@@ -407,6 +387,7 @@ public class IOUtils {
    * once the sync is done.<br>
    * Borrowed from Uwe Schindler in LUCENE-5588
    * @param fileToSync the file to fsync
+   * @throws IOException raised on errors performing I/O.
    */
   public static void fsync(File fileToSync) throws IOException {
     if (!fileToSync.exists()) {
@@ -440,7 +421,7 @@ public class IOUtils {
    * @param isDir if true, the given file is a directory (Channel should be
    *          opened for read and ignore IOExceptions, because not all file
    *          systems and operating systems allow to fsync on a directory)
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static void fsync(FileChannel channel, boolean isDir)
       throws IOException {

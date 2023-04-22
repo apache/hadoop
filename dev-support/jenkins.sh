@@ -149,10 +149,6 @@ function run_ci() {
   # enable writing back to Github
   YETUS_ARGS+=("--github-token=${GITHUB_TOKEN}")
 
-  # enable writing back to ASF JIRA
-  YETUS_ARGS+=("--jira-password=${JIRA_PASSWORD}")
-  YETUS_ARGS+=("--jira-user=${JIRA_USER}")
-
   # auto-kill any surefire stragglers during unit test runs
   YETUS_ARGS+=("--reapermode=kill")
 
@@ -173,7 +169,7 @@ function run_ci() {
   YETUS_ARGS+=("--build-url-artifacts=artifact/out")
 
   # plugins to enable
-  YETUS_ARGS+=("--plugins=all")
+  YETUS_ARGS+=("--plugins=all,-jira")
 
   # don't let these tests cause -1s because we aren't really paying that
   # much attention to them

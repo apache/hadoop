@@ -32,7 +32,6 @@ import org.apache.hadoop.mapred.nativetask.serde.INativeSerializer;
 import org.apache.hadoop.mapred.nativetask.serde.NativeSerialization;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.util.QuickSort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.test;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
+import static org.apache.hadoop.util.Preconditions.*;
 
 import org.junit.Assert;
 
@@ -392,13 +392,59 @@ public class MetricsAsserts {
    */
   public static void assertQuantileGauges(String prefix,
       MetricsRecordBuilder rb, String valueName) {
-    verify(rb).addGauge(eqName(info(prefix + "NumOps", "")), geq(0l));
-    for (Quantile q : MutableQuantiles.quantiles) {
+    verify(rb).addGauge(eqName(info(prefix + "NumOps", "")), geq(0L));
+    for (Quantile q : MutableQuantiles.QUANTILES) {
       String nameTemplate = prefix + "%dthPercentile" + valueName;
       int percentile = (int) (100 * q.quantile);
       verify(rb).addGauge(
           eqName(info(String.format(nameTemplate, percentile), "")),
-          geq(0l));
+          geq(0L));
     }
+  }
+
+  /**
+   * Asserts that the NumOps and inverse quantiles for a metric have been changed at
+   * some point to a non-zero value, for the specified value name of the
+   * metrics (e.g., "Rate").
+   *
+   * @param prefix of the metric
+   * @param rb MetricsRecordBuilder with the metric
+   * @param valueName the value name for the metric
+   */
+  public static void assertInverseQuantileGauges(String prefix,
+      MetricsRecordBuilder rb, String valueName) {
+    verify(rb).addGauge(eqName(info(prefix + "NumOps", "")), geq(0L));
+    for (Quantile q : MutableQuantiles.QUANTILES) {
+      String nameTemplate = prefix + "%dthInversePercentile" + valueName;
+      int percentile = (int) (100 * q.quantile);
+      verify(rb).addGauge(
+          eqName(info(String.format(nameTemplate, percentile), "")),
+          geq(0L));
+    }
+  }
+
+  /**
+   * Assert a tag of metric as expected.
+   * @param name  of the metric tag
+   * @param expected  value of the metric tag
+   * @param rb  the record builder mock used to getMetrics
+   */
+  public static void assertTag(String name, String expected,
+      MetricsRecordBuilder rb) {
+    Assert.assertEquals("Bad Tag for metric " + name,
+        expected, getStringTag(name, rb));
+  }
+
+  /**
+   * get the value tag for the metric.
+   * @param name  of the metric tag
+   * @param rb value of the metric tag
+   * @return the value tag for the metric
+   */
+  public static String getStringTag(String name, MetricsRecordBuilder rb) {
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(rb).tag(eqName(info(name, "")), captor.capture());
+    checkCaptured(captor, name);
+    return captor.getValue();
   }
 }

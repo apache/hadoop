@@ -21,7 +21,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Collections;
@@ -33,11 +32,13 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Time;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.BiMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.HashBiMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.util.Shell.bashQuote;
 
 /**
  * A simple shell-based implementation of {@link IdMappingServiceProvider} 
@@ -211,7 +212,14 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
   /**
    * Get the list of users or groups returned by the specified command,
    * and save them in the corresponding map.
-   * @throws IOException 
+   *
+   * @param map map.
+   * @param mapName mapName.
+   * @param command command.
+   * @param staticMapping staticMapping.
+   * @param regex regex.
+   * @throws IOException raised on errors performing I/O.
+   * @return updateMapInternal.
    */
   @VisibleForTesting
   public static boolean updateMapInternal(BiMap<Integer, String> map,
@@ -223,8 +231,7 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
       Process process = Runtime.getRuntime().exec(
           new String[] { "bash", "-c", command });
       br = new BufferedReader(
-          new InputStreamReader(process.getInputStream(),
-                                Charset.defaultCharset()));
+          new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
       String line = null;
       while ((line = br.readLine()) != null) {
         String[] nameId = line.split(regex);
@@ -467,26 +474,27 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
 
     boolean updated = false;
     updateStaticMapping();
+    String name2 = bashQuote(name);
 
     if (OS.startsWith("Linux") || OS.equals("SunOS") || OS.contains("BSD")) {
       if (isGrp) {
         updated = updateMapInternal(gidNameMap, "group",
-            getName2IdCmdNIX(name, true), ":",
+            getName2IdCmdNIX(name2, true), ":",
             staticMapping.gidMapping);
       } else {
         updated = updateMapInternal(uidNameMap, "user",
-            getName2IdCmdNIX(name, false), ":",
+            getName2IdCmdNIX(name2, false), ":",
             staticMapping.uidMapping);
       }
     } else {
       // Mac
       if (isGrp) {        
         updated = updateMapInternal(gidNameMap, "group",
-            getName2IdCmdMac(name, true), "\\s+",
+            getName2IdCmdMac(name2, true), "\\s+",
             staticMapping.gidMapping);
       } else {
         updated = updateMapInternal(uidNameMap, "user",
-            getName2IdCmdMac(name, false), "\\s+",
+            getName2IdCmdMac(name2, false), "\\s+",
             staticMapping.uidMapping);
       }
     }

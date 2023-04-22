@@ -26,8 +26,6 @@ import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.util.LongBitFormat;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
-
 /**
  * Class to pack an AclEntry into an integer. <br>
  * An ACL entry is represented by a 32-bit integer in Big Endian format. <br>

@@ -27,7 +27,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -85,7 +85,7 @@ public class NMSimulator extends TaskRunner.Task {
     super.init(dispatchTime, dispatchTime + 1000000L * heartBeatInterval,
         heartBeatInterval);
     // create resource
-    String rackHostName[] = SLSUtils.getRackHostName(nodeIdStr);
+    String[] rackHostName = SLSUtils.getRackHostName(nodeIdStr);
     this.node = NodeInfo.newNodeInfo(rackHostName[0], rackHostName[1],
         Resources.clone(nodeResource));
     this.rm = pRm;
@@ -128,7 +128,7 @@ public class NMSimulator extends TaskRunner.Task {
   @Override
   public void middleStep() throws Exception {
     // we check the lifetime for each running containers
-    ContainerSimulator cs = null;
+    ContainerSimulator cs;
     synchronized(completedContainerList) {
       while ((cs = containerQueue.poll()) != null) {
         runningContainers.remove(cs.getId());

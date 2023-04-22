@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.client.impl;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -60,6 +60,8 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DOMA
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_READ_USE_CACHE_PRIORITY;
@@ -142,9 +144,11 @@ public class DfsClientConf {
   private final int retryIntervalForGetLastBlockLength;
   private final long datanodeRestartTimeout;
   private final long slowIoWarningThresholdMs;
+  private final int markSlowNodeAsBadNodeThreshold;
 
   /** wait time window before refreshing blocklocation for inputstream. */
   private final long refreshReadBlockLocationsMS;
+  private final boolean refreshReadBlockLocationsAutomatically;
 
   private final ShortCircuitConf shortCircuitConf;
   private final int clientShortCircuitNum;
@@ -261,11 +265,18 @@ public class DfsClientConf {
         DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT);
     readUseCachePriority = conf.getBoolean(DFS_CLIENT_READ_USE_CACHE_PRIORITY,
         DFS_CLIENT_READ_USE_CACHE_PRIORITY_DEFAULT);
+    markSlowNodeAsBadNodeThreshold = conf.getInt(
+        DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_KEY,
+        DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_DEFAULT);
 
     refreshReadBlockLocationsMS = conf.getLong(
         HdfsClientConfigKeys.DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_MS_KEY,
         HdfsClientConfigKeys.
             DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_MS_DEFAULT);
+
+    refreshReadBlockLocationsAutomatically = conf.getBoolean(
+        HdfsClientConfigKeys.DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_AUTOMATICALLY_KEY,
+        HdfsClientConfigKeys.DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_AUTOMATICALLY_DEFAULT);
 
     hedgedReadThresholdMillis = conf.getLong(
         HedgedRead.THRESHOLD_MILLIS_KEY,
@@ -644,6 +655,13 @@ public class DfsClientConf {
     return slowIoWarningThresholdMs;
   }
 
+  /**
+   * @return the continuous slowNode replies received to mark slowNode as badNode
+   */
+  public int getMarkSlowNodeAsBadNodeThreshold() {
+    return markSlowNodeAsBadNodeThreshold;
+  }
+
   /*
    * @return the clientShortCircuitNum
    */
@@ -701,11 +719,16 @@ public class DfsClientConf {
     return replicaAccessorBuilderClasses;
   }
 
-  /**
-   * @return the replicaAccessorBuilderClasses
-   */
-  public long getRefreshReadBlockLocationsMS() {
+  public boolean isLocatedBlocksRefresherEnabled() {
+    return refreshReadBlockLocationsMS > 0;
+  }
+
+  public long getLocatedBlocksRefresherInterval() {
     return refreshReadBlockLocationsMS;
+  }
+
+  public boolean isRefreshReadBlockLocationsAutomatically() {
+    return refreshReadBlockLocationsAutomatically;
   }
 
   /**

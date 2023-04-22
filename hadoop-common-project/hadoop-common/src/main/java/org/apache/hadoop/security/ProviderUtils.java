@@ -23,8 +23,9 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -135,6 +136,7 @@ public final class ProviderUtils {
    * @param config the existing configuration with provider path
    * @param fileSystemClass the class which providers must be compatible
    * @return Configuration clone with new provider path
+   * @throws IOException raised on errors performing I/O.
    */
   public static Configuration excludeIncompatibleCredentialProviders(
       Configuration config, Class<? extends FileSystem> fileSystemClass)
@@ -224,7 +226,7 @@ public final class ProviderUtils {
           throw new IOException("Password file does not exist");
         }
         try (InputStream is = pwdFile.openStream()) {
-          pass = IOUtils.toString(is).trim().toCharArray();
+          pass = IOUtils.toString(is, StandardCharsets.UTF_8).trim().toCharArray();
         }
       }
     }

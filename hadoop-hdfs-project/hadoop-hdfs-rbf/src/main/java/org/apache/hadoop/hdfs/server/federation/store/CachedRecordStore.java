@@ -85,7 +85,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
    *
    * @param clazz Class of the record to store.
    * @param driver State Store driver.
-   * @param over If the entries should be override if they expire
+   * @param over If the entries should be overridden if they expire
    */
   protected CachedRecordStore(
       Class<R> clazz, StateStoreDriver driver, boolean over) {
@@ -100,7 +100,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
    * @throws StateStoreUnavailableException If the cache is not initialized.
    */
   private void checkCacheAvailable() throws StateStoreUnavailableException {
-    if (!this.initialized) {
+    if (!getDriver().isDriverReady() || !this.initialized) {
       throw new StateStoreUnavailableException(
           "Cached State Store not initialized, " +
           getRecordClass().getSimpleName() + " records not valid");
@@ -113,6 +113,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
     if (force || isUpdateTime()) {
       List<R> newRecords = null;
       long t = -1;
+      long startTime = Time.monotonicNow();
       try {
         QueryResult<R> result = getDriver().get(getRecordClass());
         newRecords = result.getRecords();
@@ -125,7 +126,6 @@ public abstract class CachedRecordStore<R extends BaseRecord>
       } catch (IOException e) {
         LOG.error("Cannot get \"{}\" records from the State Store",
             getRecordClass().getSimpleName());
-        this.initialized = false;
         return false;
       }
 
@@ -144,6 +144,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
       StateStoreMetrics metrics = getDriver().getMetrics();
       if (metrics != null) {
         String recordName = getRecordClass().getSimpleName();
+        metrics.setCacheLoading(recordName, Time.monotonicNow() - startTime);
         metrics.setCacheSize(recordName, this.records.size());
       }
 
@@ -153,7 +154,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
   }
 
   /**
-   * Check if it's time to update the cache. Update it it was never updated.
+   * Check if it's time to update the cache. Update it was never updated.
    *
    * @return If it's time to update this cache.
    */
@@ -206,7 +207,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
    * Updates the state store with any record overrides we detected, such as an
    * expired state.
    *
-   * @param record Record record to be updated.
+   * @param record record to be updated.
    * @throws IOException If the values cannot be updated.
    */
   public void overrideExpiredRecord(R record) throws IOException {

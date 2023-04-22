@@ -22,9 +22,6 @@ import java.net.SocketException;
 import java.net.URI;
 import java.util.concurrent.Callable;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -70,8 +67,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
   private final String logName = TestLogLevel.class.getName();
   private String clientPrincipal;
   private String serverPrincipal;
-  private final Log testlog = LogFactory.getLog(logName);
-  private final Logger log = ((Log4JLogger)testlog).getLogger();
+  private final Logger log = Logger.getLogger(logName);
   private final static String PRINCIPAL = "loglevel.principal";
   private final static String KEYTAB  = "loglevel.keytab";
   private static final String PREFIX = "hadoop.http.authentication.";

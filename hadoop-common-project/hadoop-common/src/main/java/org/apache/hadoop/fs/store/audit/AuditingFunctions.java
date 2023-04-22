@@ -86,6 +86,8 @@ public final class AuditingFunctions {
    * activates and deactivates the span around the inner one.
    * @param auditSpan audit span
    * @param operation operation
+   * @param <T> Generics Type T.
+   * @param <R> Generics Type R.
    * @return a new invocation.
    */
   public static <T, R> FunctionRaisingIOE<T, R> withinAuditSpan(

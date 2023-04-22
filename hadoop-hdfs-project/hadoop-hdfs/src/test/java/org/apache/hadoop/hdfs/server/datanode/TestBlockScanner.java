@@ -282,11 +282,17 @@ public class TestBlockScanner {
   public void testDisableVolumeScanner() throws Exception {
     Configuration conf = new Configuration();
     disableBlockScanner(conf);
-    TestContext ctx = new TestContext(conf, 1);
-    try {
-      Assert.assertFalse(ctx.datanode.getBlockScanner().isEnabled());
-    } finally {
-      ctx.close();
+    try(TestContext ctx = new TestContext(conf, 1)) {
+      assertFalse(ctx.datanode.getBlockScanner().isEnabled());
+    }
+  }
+
+  @Test(timeout=60000)
+  public void testDisableVolumeScanner2() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setLong(DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND, -1L);
+    try(TestContext ctx = new TestContext(conf, 1)) {
+      assertFalse(ctx.datanode.getBlockScanner().isEnabled());
     }
   }
 
@@ -1004,6 +1010,8 @@ public class TestBlockScanner {
         TestScanResultHandler.getInfo(ctx.volumes.get(0));
     synchronized (info) {
       info.shouldRun = true;
+      info.sem = new Semaphore(1);
+      info.sem.acquire();
       info.notify();
     }
     try {
@@ -1017,6 +1025,7 @@ public class TestBlockScanner {
       LOG.debug("Timeout for all files are accessed in last period.");
     }
     synchronized (info) {
+      info.sem.release();
       info.shouldRun = false;
       info.notify();
     }

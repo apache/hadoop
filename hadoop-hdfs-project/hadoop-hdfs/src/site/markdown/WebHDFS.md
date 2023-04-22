@@ -52,10 +52,13 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`GETALLSTORAGEPOLICY`](#Get_all_Storage_Policies) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getAllStoragePolicies)
     * [`GETSTORAGEPOLICY`](#Get_Storage_Policy) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getStoragePolicy)
     * [`GETSNAPSHOTDIFF`](#Get_Snapshot_Diff)
+    * [`GETSNAPSHOTDIFFLISTING`](#Get_Snapshot_Diff_Iteratively)
     * [`GETSNAPSHOTTABLEDIRECTORYLIST`](#Get_Snapshottable_Directory_List)
     * [`GETSNAPSHOTLIST`](#Get_Snapshot_List)
     * [`GETFILEBLOCKLOCATIONS`](#Get_File_Block_Locations) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileBlockLocations)
     * [`GETECPOLICY`](#Get_EC_Policy) (see [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).getErasureCodingPolicy)
+    * [`GETSERVERDEFAULTS`](#Get_Server_Defaults) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getServerDefaults)
+    * [`GETLINKTARGET`](#Get_Link_Target) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTarget)
 *   HTTP PUT
     * [`CREATE`](#Create_and_Write_to_a_File) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).create)
     * [`MKDIRS`](#Make_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).mkdirs)
@@ -516,6 +519,7 @@ See also: [`newlength`](#New_Length), [FileSystem](../../api/org/apache/hadoop/f
             "replication"     : 0,
             "snapshotEnabled" : true
             "type"            : "DIRECTORY"    //enum {FILE, DIRECTORY, SYMLINK}
+            "ecPolicy"        : "RS-6-3-1024k"
           }
         }
 
@@ -1107,6 +1111,51 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getAclSta
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).access
 
+### Get Server Defaults
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETSERVERDEFAULTS"
+
+  The client receives a response with a [`ServerDefaults` JSON object](Server_Defaults_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {
+            "FsServerDefaults": {
+                "replication": 3,
+                "encryptDataTransfer": "false",
+                "defaultStoragePolicyId":7,
+                "writePacketSize": 65536,
+                "fileBufferSize": 4096,
+                "checksumType": 2,
+                "trashInterval": 10080,
+                "keyProviderUri": "",
+                "blockSize": 134217728,
+                "bytesPerChecksum": 512
+            }
+        }
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getServerDefaults
+
+### Get Link Target
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETLINKTARGET"
+
+    The client receives a response with a [`Path` JSON object](#Path_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {"Path": "/user/username/targetFile"}
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTarget
+
 Storage Policy Operations
 -------------------------
 
@@ -1603,6 +1652,27 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).renameSna
         Transfer-Encoding: chunked
 
         {"SnapshotDiffReport":{"diffList":[],"fromSnapshot":"s3","snapshotRoot":"/foo","toSnapshot":"s4"}}
+
+### Get Snapshot Diff Iteratively
+
+* Submit a HTTP GET request.
+
+        curl -i -X GET "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETSNAPSHOTDIFFLISTING
+                           &oldsnapshotname=<SNAPSHOTNAME>&snapshotname=<SNAPSHOTNAME>&snapshotdiffstartpath=<STARTPATH>&snapshotdiffindex=<STARTINDEX>
+
+    If `snapshotdiffstartpath` and `snapshotdiffindex` are not given,
+    `""` (empty string) and `-1` are used respectively implying the first iteration.
+
+    The client receives a response with a
+    [`SnapshotDiffReportListing` JSON object](#SnapshotDiffReportListing_JSON_Schema).
+    The value of `lastPath` and `lastIndex` must be specified as
+    the value of `snapshotdiffstartpath` and `snapshotdiffindex` respectively on next iteration.
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {"SnapshotDiffReportListing":{"createList":[],"deleteList":[],"isFromEarlier":true,"lastIndex":-1,"lastPath":"","modifyList":[]}}
 
 ### Get Snapshottable Directory List
 
@@ -2289,6 +2359,26 @@ var fileStatusProperties =
       "description": "The type of the path object.",
       "enum"       : ["FILE", "DIRECTORY", "SYMLINK"],
       "required"   : true
+    },
+    "aclBit":
+    {
+       "description": "Has ACLs set or not.",
+       "type"       : "boolean",
+    },
+    "encBit":
+    {
+       "description": "Is Encrypted or not.",
+       "type"       : "boolean",
+    },
+    "ecBit":
+    {
+       "description": "Is ErasureCoded or not.",
+       "type"       : "boolean",
+    },
+    "ecPolicy":
+    {
+       "description": "The namenode of ErasureCodePolicy.",
+       "type"       : "String",
     }
   }
 };
@@ -2665,6 +2755,109 @@ var diffReportEntries =
 }
 ```
 
+### SnapshotDiffReportListing JSON Schema
+
+```json
+{
+  "name": "SnapshotDiffReportListing",
+  "type": "object",
+  "properties":
+  {
+    "SnapshotDiffReportListing":
+    {
+      "type"        : "object",
+      "properties"  :
+      {
+        "isFromEarlier":
+        {
+          "description" : "the diff is calculated from older to newer snapshot or not",
+          "type"        : "boolean",
+          "required"    : true
+        },
+        "lastIndex":
+        {
+          "description" : "the last index of listing iteration",
+          "type"        : "integer",
+          "required"    : true
+        },
+        "lastPath":
+        {
+          "description" : "String representation of the last path of the listing iteration",
+          "type"        : "string",
+          "required"    : true
+        },
+        "modifyList":
+        {
+          "description": "An array of DiffReportListingEntry",
+          "type"        : "array",
+          "items"       : diffReportListingEntries,
+          "required"    : true
+        },
+        "createList":
+        {
+          "description": "An array of DiffReportListingEntry",
+          "type"        : "array",
+          "items"       : diffReportListingEntries,
+          "required"    : true
+        },
+        "deleteList":
+        {
+          "description": "An array of DiffReportListingEntry",
+          "type"        : "array",
+          "items"       : diffReportListingEntries,
+          "required"    : true
+        }
+      }
+    }
+  }
+}
+```
+
+#### DiffReportListing Entries
+
+JavaScript syntax is used to define `diffReportEntries` so that it can be referred in `SnapshotDiffReport` JSON schema.
+
+```javascript
+var diffReportListingEntries =
+{
+  "type": "object",
+  "properties":
+  {
+    "dirId":
+    {
+      "description" : "inode id of the directory",
+      "type"        : "integer",
+      "required"    : true
+    },
+    "fileId":
+    {
+      "description" : "inode id of the file",
+      "type"        : "integer",
+      "required"    : true
+    },
+    "isRereference":
+    {
+      "description" : "this is reference or not",
+      "type"        : "boolean",
+      "required"    : true
+    },
+    "sourcePath":
+    {
+      "description" : "string representation of path where changes have happened",
+      "type"        : "string",
+      "required"    : true
+    },
+    "targetPath":
+    {
+      "description" : "string representation of target path of rename op",
+      "type"        : "string",
+      "required"    : false
+    }
+  }
+}
+```
+
+
 ### SnapshottableDirectoryList JSON Schema
 
 ```json
@@ -2895,6 +3088,24 @@ var blockLocationProperties =
     }
   }
 };
+```
+### Server Defaults JSON Schema
+
+```json
+{
+  "FsServerDefaults": {
+    "replication": 3,
+    "encryptDataTransfer": false,
+    "defaultStoragePolicyId": 7,
+    "writePacketSize": 65536,
+    "fileBufferSize": 4096,
+    "checksumType": 2,
+    "trashInterval": 10080,
+    "keyProviderUri": "",
+    "blockSize": 134217728,
+    "bytesPerChecksum": 512
+  }
+}
 ```
 
 HTTP Query Parameter Dictionary

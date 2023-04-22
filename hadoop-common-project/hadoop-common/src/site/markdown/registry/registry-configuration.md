@@ -143,7 +143,7 @@ too must have this context defined.
 
 ### Identifying the system accounts `hadoop.registry.system.acls`
 
-These are the the accounts which are given full access to the base of the
+These are the accounts which are given full access to the base of the
 registry. The Resource Manager needs this option to create the root paths.
 
 Client applications writing to the registry access to the nodes it creates.

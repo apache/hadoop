@@ -60,6 +60,12 @@
       <artifactId>hadoop-client-api</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <!-- This is the api's compile dependency, but we don't want it to be compile dependency here too. -->
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <scope>runtime</scope>
+    </dependency>
     <!-- This comes from our parent pom. If we don't expressly change it here to get included,
          downstream will get warnings at compile time. -->
     <dependency>
@@ -122,13 +128,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-shade-plugin</artifactId>
-            <dependencies>
-              <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-maven-plugins</artifactId>
-                <version>${project.version}</version>
-              </dependency>
-            </dependencies>
             <executions>
               <execution>
                 <phase>package</phase>
@@ -149,12 +148,17 @@
                       <!-- Leave javax APIs that are stable -->
                       <!-- the jdk ships part of the javax.annotation namespace, so if we want to relocate this we'll have to care it out by class :( -->
                       <exclude>com.google.code.findbugs:jsr305</exclude>
+                      <exclude>io.netty:*</exclude>
                       <exclude>io.dropwizard.metrics:metrics-core</exclude>
                       <exclude>org.eclipse.jetty:jetty-servlet</exclude>
                       <exclude>org.eclipse.jetty:jetty-security</exclude>
                       <exclude>org.ow2.asm:*</exclude>
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>
+                      <!-- Leave snappy that includes native methods which cannot be relocated. -->
+                      <exclude>org.xerial.snappy:*</exclude>
+                      <!-- leave out kotlin classes -->
+                      <exclude>org.jetbrains.kotlin:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
@@ -234,6 +238,19 @@
                         <exclude>google/protobuf/**/*.proto</exclude>
                       </excludes>
                     </filter>
+                    <filter>
+                      <artifact>com.fasterxml.jackson.*:*</artifact>
+                      <excludes>
+                        <exclude>META-INF/versions/11/module-info.class</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>com.google.code.gson:gson</artifact>
+                      <excludes>
+                        <exclude>META-INF/versions/9/module-info.class</exclude>
+                      </excludes>
+                    </filter>
+
                   </filters>
                   <relocations>
                     <relocation>
@@ -259,6 +276,9 @@
                         <exclude>org/xml/sax/**/*</exclude>
                         <exclude>org/bouncycastle/*</exclude>
                         <exclude>org/bouncycastle/**/*</exclude>
+                        <!-- Exclude snappy-java -->
+                        <exclude>org/xerial/snappy/*</exclude>
+                        <exclude>org/xerial/snappy/**/*</exclude>
                       </excludes>
                     </relocation>
                     <relocation>
@@ -277,6 +297,8 @@
                         <exclude>com/sun/security/**/*</exclude>
                         <exclude>com/sun/jndi/**/*</exclude>
                         <exclude>com/sun/management/**/*</exclude>
+                        <exclude>com/ibm/security/*</exclude>
+                        <exclude>com/ibm/security/**/*</exclude>
                       </excludes>
                     </relocation>
                     <relocation>
@@ -349,6 +371,9 @@
                         <!-- Exclude config keys for Hadoop that look like package names -->
                         <exclude>net/topology/*</exclude>
                         <exclude>net/topology/**/*</exclude>
+                        <!-- Exclude lz4-java -->
+                        <exclude>net/jpountz/*</exclude>
+                        <exclude>net/jpountz/**/*</exclude>
                       </excludes>
                     </relocation>
                     <!-- okio declares a top level package instead of nested -->
@@ -368,8 +393,7 @@
     -->
                   </relocations>
                   <transformers>
-                    <!-- Needed until MSHADE-182 -->
-                    <transformer implementation="org.apache.hadoop.maven.plugin.shade.resource.ServicesResourceTransformer"/>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                     <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
                     <transformer implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
                       <resources>

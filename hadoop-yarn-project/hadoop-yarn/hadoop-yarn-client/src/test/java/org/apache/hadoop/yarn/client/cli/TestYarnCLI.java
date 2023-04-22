@@ -1722,8 +1722,8 @@ public class TestYarnCLI {
         newInstance("queueA", "root.queueA",
             0.4f, 0.8f, 0.5f,
         null, null, QueueState.RUNNING, nodeLabels,
-        "GPU", null, false, -1.0f, null,
-        false);
+        "GPU", null, false, -1.0f, 10,
+            null, false);
     when(client.getQueueInfo(any(String.class))).thenReturn(queueInfo);
     int result = cli.run(new String[] { "-status", "queueA" });
     assertEquals(0, result);
@@ -1738,6 +1738,7 @@ public class TestYarnCLI {
     pw.println("\tCurrent Capacity : " + "50.00%");
     pw.println("\tMaximum Capacity : " + "80.00%");
     pw.println("\tWeight : " + "-1.00");
+    pw.println("\tMaximum Parallel Apps : " + "10");
     pw.println("\tDefault Node Label expression : " + "GPU");
     pw.println("\tAccessible Node Labels : " + "JDK_7,GPU");
     pw.println("\tPreemption : " + "enabled");
@@ -1895,7 +1896,7 @@ public class TestYarnCLI {
         newInstance("queueA", "root.queueA",
             0.4f, 0.8f, 0.5f,
         null, null, QueueState.RUNNING, null, null, null,
-        true, -1.0f, null, true);
+        true, -1.0f, 10, null, true);
     when(client.getQueueInfo(any(String.class))).thenReturn(queueInfo);
     int result = cli.run(new String[] { "-status", "queueA" });
     assertEquals(0, result);
@@ -1910,6 +1911,7 @@ public class TestYarnCLI {
     pw.println("\tCurrent Capacity : " + "50.00%");
     pw.println("\tMaximum Capacity : " + "80.00%");
     pw.println("\tWeight : " + "-1.00");
+    pw.println("\tMaximum Parallel Apps : " + "10");
     pw.println("\tDefault Node Label expression : "
         + NodeLabel.DEFAULT_NODE_LABEL_PARTITION);
     pw.println("\tAccessible Node Labels : ");
@@ -1926,7 +1928,7 @@ public class TestYarnCLI {
     QueueCLI cli = createAndGetQueueCLI();
     when(client.getQueueInfo(any(String.class))).thenReturn(null);
     int result = cli.run(new String[] { "-status", queueName });
-    assertEquals(-1, result);;
+    assertEquals(-1, result);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter pw = new PrintWriter(baos);
     pw.println("Cannot get queue from RM by queueName = " + queueName

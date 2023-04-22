@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.util.DurationInfo;
 
-import static org.apache.hadoop.fs.impl.FutureIOSupport.raiseInnerCause;
+import static org.apache.hadoop.util.functional.FutureIO.raiseInnerCause;
 
 /**
  * A bridge from Callable to Supplier; catching exceptions

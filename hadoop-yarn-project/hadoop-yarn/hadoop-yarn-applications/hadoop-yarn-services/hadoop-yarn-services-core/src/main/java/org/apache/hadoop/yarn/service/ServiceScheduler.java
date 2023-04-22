@@ -97,6 +97,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.HashMap;
@@ -548,7 +549,7 @@ public class ServiceScheduler extends CompositeService {
                 case TEMPLATE:
                   try (FSDataInputStream fileInput = fileSystem
                       .open(new Path(key.getSrcFile()))) {
-                    return IOUtils.toString(fileInput);
+                    return IOUtils.toString(fileInput, StandardCharsets.UTF_8);
                   }
                 default:
                   return null;
@@ -1138,7 +1139,7 @@ public class ServiceScheduler extends CompositeService {
         LOG.info("YARN sysfs synchronized.");
       }
     } catch (IOException | URISyntaxException | InterruptedException e) {
-      LOG.error("Fail to sync service spec: {}", e);
+      LOG.error("Fail to sync service spec.", e);
     }
   }
 }

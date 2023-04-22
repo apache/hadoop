@@ -25,7 +25,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.LinkedList;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 

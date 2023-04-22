@@ -18,10 +18,13 @@
 #ifndef LIB_READER_DATATRANFER_IMPL_H_
 #define LIB_READER_DATATRANFER_IMPL_H_
 
-#include "datatransfer.pb.h"
 #include "common/continuation/continuation.h"
 #include "common/continuation/asio.h"
 #include "common/continuation/protobuf.h"
+#include "common/sasl_authenticator.h"
+
+#include <boost/asio/read.hpp>
+#include <boost/asio/buffer.hpp>
 
 #include <boost/asio/read.hpp>
 #include <boost/asio/buffer.hpp>

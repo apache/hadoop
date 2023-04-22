@@ -18,16 +18,11 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeSkipIfS3GuardAndS3CSEIOE;
 
 /**
  * The contract of S3A: only enabled if the test bucket is provided.
@@ -65,20 +60,6 @@ public class S3AContract extends AbstractBondedFSContract {
     //insert the base features
     if (addContractResource) {
       addConfResource(CONTRACT_XML);
-    }
-  }
-
-  /**
-   * Skip S3AFS initialization if S3-CSE and S3Guard are enabled.
-   *
-   */
-  @Override
-  public void init() throws IOException {
-    try {
-      super.init();
-    } catch (PathIOException ioe) {
-      // Skip the tests if S3-CSE and S3-Guard are enabled.
-      maybeSkipIfS3GuardAndS3CSEIOE(ioe);
     }
   }
 

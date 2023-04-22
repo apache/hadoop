@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.Upda
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
@@ -1187,10 +1187,7 @@ public class ContainerImpl implements Container {
       if (container.recoveredStatus == RecoveredContainerStatus.COMPLETED) {
         container.sendFinishedEvents();
         return ContainerState.DONE;
-      } else if (container.recoveredStatus == RecoveredContainerStatus.QUEUED) {
-        return ContainerState.SCHEDULED;
-      } else if (container.recoveredAsKilled &&
-          container.recoveredStatus == RecoveredContainerStatus.REQUESTED) {
+      } else if (isContainerRecoveredAsKilled(container)) {
         // container was killed but never launched
         container.metrics.killedContainer();
         NMAuditLogger.logSuccess(container.user,
@@ -1201,6 +1198,8 @@ public class ContainerImpl implements Container {
             container.containerTokenIdentifier.getResource());
         container.sendFinishedEvents();
         return ContainerState.DONE;
+      } else if (container.recoveredStatus == RecoveredContainerStatus.QUEUED) {
+        return ContainerState.SCHEDULED;
       }
 
       final ContainerLaunchContext ctxt = container.launchContext;
@@ -1263,6 +1262,16 @@ public class ContainerImpl implements Container {
         container.metrics.endInitingContainer();
         return ContainerState.LOCALIZATION_FAILED;
       }
+    }
+
+    static boolean isContainerRecoveredAsKilled(ContainerImpl container) {
+      if (!container.recoveredAsKilled) {
+        return false;
+      }
+      // container was killed but never launched
+      RecoveredContainerStatus containerStatus = container.recoveredStatus;
+      return containerStatus == RecoveredContainerStatus.REQUESTED
+          || containerStatus == RecoveredContainerStatus.QUEUED;
     }
   }
 

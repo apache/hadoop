@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.erasurecode.codec.ErasureCodec;
@@ -83,6 +83,7 @@ public final class CodecUtil {
   /**
    * Create encoder corresponding to given codec.
    * @param options Erasure codec options
+   * @param conf configuration.
    * @return erasure encoder
    */
   public static ErasureEncoder createEncoder(Configuration conf,
@@ -100,6 +101,7 @@ public final class CodecUtil {
   /**
    * Create decoder corresponding to given codec.
    * @param options Erasure codec options
+   * @param conf configuration.
    * @return erasure decoder
    */
   public static ErasureDecoder createDecoder(Configuration conf,

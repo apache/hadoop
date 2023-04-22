@@ -43,6 +43,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.apache.hadoop.conf.Configuration;
@@ -72,10 +77,6 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.protocol.EncryptionZone;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
@@ -104,6 +105,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension.DelegationTokenExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.util.XMLUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -152,7 +154,6 @@ import org.xml.sax.InputSource;
 import org.xml.sax.helpers.DefaultHandler;
 
 import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
 
 public class TestEncryptionZones {
   static final Logger LOG = LoggerFactory.getLogger(TestEncryptionZones.class);
@@ -1187,6 +1188,30 @@ public class TestEncryptionZones {
     }
   }
 
+  @Test
+  public void testEncryptionZonesWithSnapshots() throws Exception {
+    final Path snapshottable = new Path("/zones");
+    fsWrapper.mkdir(snapshottable, FsPermission.getDirDefault(),
+        true);
+    dfsAdmin.allowSnapshot(snapshottable);
+    dfsAdmin.createEncryptionZone(snapshottable, TEST_KEY, NO_TRASH);
+    fs.createSnapshot(snapshottable, "snap1");
+    SnapshotDiffReport report =
+        fs.getSnapshotDiffReport(snapshottable, "snap1", "");
+    Assert.assertEquals(0, report.getDiffList().size());
+    report =
+        fs.getSnapshotDiffReport(snapshottable, "snap1", "");
+    System.out.println(report);
+    Assert.assertEquals(0, report.getDiffList().size());
+    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.saveNamespace();
+    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    cluster.restartNameNode(true);
+    report =
+        fs.getSnapshotDiffReport(snapshottable, "snap1", "");
+    Assert.assertEquals(0, report.getDiffList().size());
+  }
+
   private class AuthorizationExceptionInjector extends EncryptionFaultInjector {
     @Override
     public void ensureKeyIsInitialized() throws IOException {
@@ -1709,7 +1734,7 @@ public class TestEncryptionZones {
     PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), pw);
     v.visit(new RandomAccessFile(originalFsimage, "r"));
     final String xml = output.toString();
-    SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
+    SAXParser parser = XMLUtils.newSecureSAXParserFactory().newSAXParser();
     parser.parse(new InputSource(new StringReader(xml)), new DefaultHandler());
   }
 
@@ -1732,7 +1757,6 @@ public class TestEncryptionZones {
         true, fs.getFileStatus(rootDir).isEncrypted());
     assertEquals("File is encrypted",
         true, fs.getFileStatus(zoneFile).isEncrypted());
-    DFSTestUtil.verifyFilesNotEqual(fs, zoneFile, rawFile, len);
   }
 
   @Test

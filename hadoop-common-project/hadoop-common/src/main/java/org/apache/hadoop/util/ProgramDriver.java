@@ -91,12 +91,12 @@ public class ProgramDriver {
   }
     
   /**
-   * This is the method that adds the classed to the repository
+   * This is the method that adds the classed to the repository.
    * @param name The name of the string you want the class instance to be called with
    * @param mainClass The class that you want to add to the repository
    * @param description The description of the class
-   * @throws NoSuchMethodException 
-   * @throws SecurityException 
+   * @throws NoSuchMethodException when a particular method cannot be found.
+   * @throws SecurityException security manager to indicate a security violation.
    */
   public void addClass(String name, Class<?> mainClass, String description)
       throws Throwable {
@@ -111,10 +111,10 @@ public class ProgramDriver {
    * of the command line arguments.
    * @param args The argument from the user. args[0] is the command to run.
    * @return -1 on error, 0 on success
-   * @throws NoSuchMethodException 
-   * @throws SecurityException 
-   * @throws IllegalAccessException 
-   * @throws IllegalArgumentException 
+   * @throws NoSuchMethodException  when a particular method cannot be found.
+   * @throws SecurityException security manager to indicate a security violation.
+   * @throws IllegalAccessException for backward compatibility.
+   * @throws IllegalArgumentException if the arg is invalid.
    * @throws Throwable Anything thrown by the example program's main
    */
   public int run(String[] args)
@@ -146,7 +146,11 @@ public class ProgramDriver {
   }
 
   /**
-   * API compatible with Hadoop 1.x
+   * API compatible with Hadoop 1.x.
+   *
+   * @param argv argv.
+   * @throws Throwable Anything thrown
+   *                   by the example program's main
    */
   public void driver(String[] argv) throws Throwable {
     if (run(argv) == -1) {

@@ -58,15 +58,11 @@ public class TestUsersManager {
   @Mock
   private QueueMetrics metrics;
 
-  @Mock
-  private CapacitySchedulerContext context;
-
   @Before
   public void setup() {
     usersManager = new UsersManager(metrics,
         lQueue,
         labelMgr,
-        context,
         new DefaultResourceCalculator());
 
     when(lQueue.getMinimumAllocation()).thenReturn(MINIMUM_ALLOCATION);

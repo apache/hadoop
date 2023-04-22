@@ -38,8 +38,7 @@ import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * The {@link LdapAuthenticationHandler} implements the BASIC authentication
@@ -144,15 +143,20 @@ public class LdapAuthenticationHandler implements AuthenticationHandler {
     this.enableStartTls =
         Boolean.valueOf(config.getProperty(ENABLE_START_TLS, "false"));
 
-    Preconditions
-        .checkNotNull(this.providerUrl, "The LDAP URI can not be null");
-    Preconditions.checkArgument((this.baseDN == null)
-        ^ (this.ldapDomain == null),
-        "Either LDAP base DN or LDAP domain value needs to be specified");
+    if (this.providerUrl == null) {
+      throw new NullPointerException("The LDAP URI can not be null");
+    }
+    if (!((this.baseDN == null)
+        ^ (this.ldapDomain == null))) {
+      throw new IllegalArgumentException(
+          "Either LDAP base DN or LDAP domain value needs to be specified");
+    }
     if (this.enableStartTls) {
       String tmp = this.providerUrl.toLowerCase();
-      Preconditions.checkArgument(!tmp.startsWith("ldaps"),
-          "Can not use ldaps and StartTLS option at the same time");
+      if (tmp.startsWith("ldaps")) {
+        throw new IllegalArgumentException(
+            "Can not use ldaps and StartTLS option at the same time");
+      }
     }
   }
 

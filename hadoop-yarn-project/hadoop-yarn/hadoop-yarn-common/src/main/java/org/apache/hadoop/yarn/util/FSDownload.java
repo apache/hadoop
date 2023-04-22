@@ -54,13 +54,17 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
-/**
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
+
+ /**
  * Download a single URL to the local disk.
  *
  */
@@ -119,10 +123,13 @@ public class FSDownload implements Callable<Path> {
    * Creates the cache loader for the status loading cache. This should be used
    * to create an instance of the status cache that is passed into the
    * FSDownload constructor.
+   *
+   * @param conf configuration.
+   * @return cache loader for the status loading cache.
    */
-  public static CacheLoader<Path,Future<FileStatus>>
+  public static CacheLoader<Path, Future<FileStatus>>
       createStatusCacheLoader(final Configuration conf) {
-    return new CacheLoader<Path,Future<FileStatus>>() {
+    return new CacheLoader<Path, Future<FileStatus>>() {
       public Future<FileStatus> load(Path path) {
         try {
           FileSystem fs = path.getFileSystem(conf);
@@ -137,14 +144,19 @@ public class FSDownload implements Callable<Path> {
 
   /**
    * Returns a boolean to denote whether a cache file is visible to all (public)
-   * or not
+   * or not.
    *
+   * @param fs fileSystem.
+   * @param current current path.
+   * @param sStat file status.
+   * @param statCache stat cache.
    * @return true if the path in the current path is visible to all, false
    * otherwise
+   * @throws IOException io error occur.
    */
   @Private
   public static boolean isPublic(FileSystem fs, Path current, FileStatus sStat,
-      LoadingCache<Path,Future<FileStatus>> statCache) throws IOException {
+      LoadingCache<Path, Future<FileStatus>> statCache) throws IOException {
     current = fs.makeQualified(current);
     //the leaf level file should be readable by others
     if (!checkPublicPermsForAll(fs, sStat, FsAction.READ_EXECUTE, FsAction.READ)) {
@@ -285,23 +297,25 @@ public class FSDownload implements Callable<Path> {
       }
     }
 
-    downloadAndUnpack(sCopy, destination);
+    downloadAndUnpack(sCopy, sStat, destination);
   }
 
   /**
    * Copy source path to destination with localization rules.
-   * @param source source path to copy. Typically HDFS
+   * @param source source path to copy. Typically HDFS or an object store.
+   * @param sourceStatus status of source
    * @param destination destination path. Typically local filesystem
    * @exception YarnException Any error has occurred
    */
-  private void downloadAndUnpack(Path source, Path destination)
+  private void downloadAndUnpack(Path source,
+      FileStatus sourceStatus,  Path destination)
       throws YarnException {
     try {
       FileSystem sourceFileSystem = source.getFileSystem(conf);
       FileSystem destinationFileSystem = destination.getFileSystem(conf);
-      if (sourceFileSystem.getFileStatus(source).isDirectory()) {
+      if (sourceStatus.isDirectory()) {
         FileUtil.copy(
-            sourceFileSystem, source,
+            sourceFileSystem, sourceStatus,
             destinationFileSystem, destination, false,
             true, conf);
       } else {
@@ -329,7 +343,11 @@ public class FSDownload implements Callable<Path> {
                       FileSystem sourceFileSystem,
                       FileSystem destinationFileSystem)
       throws IOException, InterruptedException, ExecutionException {
-    try (InputStream inputStream = sourceFileSystem.open(source)) {
+    try (InputStream inputStream = awaitFuture(
+        sourceFileSystem.openFile(source)
+            .opt(FS_OPTION_OPENFILE_READ_POLICY,
+                FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE)
+            .build())) {
       File dst = new File(destination.toUri());
       String lowerDst = StringUtils.toLowerCase(dst.getName());
       switch (resource.getType()) {
@@ -445,7 +463,7 @@ public class FSDownload implements Callable<Path> {
    * Change to 755 or 700 for dirs, 555 or 500 for files.
    * @param fs FileSystem
    * @param path Path to modify perms for
-   * @throws IOException
+   * @throws IOException io error occur.
    * @throws InterruptedException 
    */
   private void changePermissions(FileSystem fs, final Path path)

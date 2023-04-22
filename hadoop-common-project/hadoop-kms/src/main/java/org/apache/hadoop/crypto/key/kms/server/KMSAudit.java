@@ -20,8 +20,8 @@ package org.apache.hadoop.crypto.key.kms.server;
 import static org.apache.hadoop.crypto.key.kms.server.KMSAuditLogger.AuditEvent;
 import static org.apache.hadoop.crypto.key.kms.server.KMSAuditLogger.OpStatus;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.server.KMSACLs.Type;
 import org.apache.hadoop.crypto.key.kms.server.KeyAuthorizationKeyProvider.KeyOpType;
@@ -36,9 +36,9 @@ import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.RemovalListener;
 import org.apache.hadoop.thirdparty.com.google.common.cache.RemovalNotification;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -56,10 +56,10 @@ import java.util.Set;
  */
 public class KMSAudit {
   @VisibleForTesting
-  static final Set<KMS.KMSOp> AGGREGATE_OPS_WHITELIST = Sets.newHashSet(
+  static final Set<KMS.KMSOp> AGGREGATE_OPS_WHITELIST = new HashSet<>(Arrays.asList(
       KMS.KMSOp.GET_KEY_VERSION, KMS.KMSOp.GET_CURRENT_KEY,
       KMS.KMSOp.DECRYPT_EEK, KMS.KMSOp.GENERATE_EEK, KMS.KMSOp.REENCRYPT_EEK
-  );
+  ));
 
   private Cache<String, AuditEvent> cache;
 

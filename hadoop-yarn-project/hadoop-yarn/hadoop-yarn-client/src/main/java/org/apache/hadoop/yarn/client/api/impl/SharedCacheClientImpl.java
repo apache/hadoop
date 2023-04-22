@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.sharedcache.SharedCacheChecksum;
 import org.apache.hadoop.yarn.sharedcache.SharedCacheChecksumFactory;
 import org.apache.hadoop.yarn.util.Records;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -158,14 +158,8 @@ public class SharedCacheClientImpl extends SharedCacheClient {
   public String getFileChecksum(Path sourceFile)
       throws IOException {
     FileSystem fs = sourceFile.getFileSystem(this.conf);
-    FSDataInputStream in = null;
-    try {
-      in = fs.open(sourceFile);
+    try (FSDataInputStream in = fs.open(sourceFile)) {
       return this.checksum.computeChecksum(in);
-    } finally {
-      if (in != null) {
-        in.close();
-      }
     }
   }
 }

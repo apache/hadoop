@@ -35,6 +35,12 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_EN
 @InterfaceStability.Unstable
 public final class InternalCommitterConstants {
 
+  /**
+   * How long threads in the thread pool stay alive when
+   * idle. Value in seconds: {@value}.
+   */
+  public static final long THREAD_KEEP_ALIVE_TIME = 60L;
+
   private InternalCommitterConstants() {
   }
 

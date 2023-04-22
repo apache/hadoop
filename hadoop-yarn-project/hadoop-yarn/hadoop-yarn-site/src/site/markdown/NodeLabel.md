@@ -85,7 +85,8 @@ Notes:
 ###Add/modify node-to-labels mapping to YARN
 
 * Configuring nodes to labels mapping in **Centralized** NodeLabel setup
-    * Executing ```yarn rmadmin -replaceLabelsOnNode “node1[:port]=label1 node2=label2” [-failOnUnknownNodes]```. Added label1 to node1, label2 to node2. If user don’t specify port, it adds the label to all ```NodeManagers``` running on the node. If option ```-failOnUnknownNodes``` is set, this command will fail if specified nodes are unknown.
+    * Executing ```yarn rmadmin -replaceLabelsOnNode "node1[:port]=label1 node2=label2" [-failOnUnknownNodes]``` adds label1 to node1, label2 to node2. If user doesn’t specify port, it adds the label to all ```NodeManagers``` running on the node. If option ```-failOnUnknownNodes``` is set, this command will fail if specified nodes are unknown.
+    * To remove mapping from a node, use `-replaceLabelsOnNode` but do not specify any labels. For example, ```yarn rmadmin -replaceLabelsOnNode "node1"``` removes label1 from node1.
 
 * Configuring nodes to labels mapping in **Distributed** NodeLabel setup
 
@@ -149,7 +150,7 @@ yarn.scheduler.capacity.root.marketing.accessible-node-labels.GPU.capacity=50
 yarn.scheduler.capacity.root.engineering.default-node-label-expression=GPU
 ```
 
-You can see root.engineering/marketing/sales.capacity=33, so each of them can has guaranteed resource equals to 1/3 of resource **without partition**. So each of them can use 1/3 resource of h1..h4, which is 24 * 4 * (1/3) = (32G mem, 32 v-cores).
+You can see root.engineering/marketing/sales.capacity=33, so each of them has guaranteed resource equals to 1/3 of resource **without partition**. So each of them can use 1/3 resource of h1..h4, which is 24 * 4 * (1/3) = (32G mem, 32 v-cores).
 
 And only engineering/marketing queue has permission to access GPU partition (see root.`<queue-name>`.accessible-node-labels).
 
@@ -168,6 +169,14 @@ Applications can use following Java APIs to specify node label to request
 * `ApplicationSubmissionContext.setNodeLabelExpression(..)` to set node label expression for all containers of the application.
 * `ResourceRequest.setNodeLabelExpression(..)` to set node label expression for individual resource requests. This can overwrite node label expression set in ApplicationSubmissionContext
 * Specify `setAMContainerResourceRequest.setNodeLabelExpression` in `ApplicationSubmissionContext` to indicate expected node label for application master container.
+
+__Default AM node-label Configuration__
+
+Property  | Value
+----- | ------
+yarn.resourcemanager.node-labels.am.default-node-label-expression | Overwrites default-node-label-expression only for the ApplicationMaster container. It is disabled by default.
+
+
 
 Monitoring
 ----------

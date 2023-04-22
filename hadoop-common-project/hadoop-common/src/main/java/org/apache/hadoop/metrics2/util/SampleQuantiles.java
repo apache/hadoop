@@ -26,9 +26,9 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * Implementation of the Cormode, Korn, Muthukrishnan, and Srivastava algorithm
@@ -108,7 +108,7 @@ public class SampleQuantiles implements QuantileEstimator {
   /**
    * Add a new value from the stream.
    * 
-   * @param v
+   * @param v v.
    */
   synchronized public void insert(long v) {
     buffer[bufferCount] = v;

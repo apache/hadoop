@@ -187,6 +187,7 @@ public class TestFuseDFS {
       "-ononempty",              // Don't complain about junk in mount point
       "-f",                      // Don't background the process
       "-ordbuffer=32768",        // Read buffer size in kb
+      "-omax_background=100",    // Set fuse max_background=100 (12 by default)
       "rw"
     };
 

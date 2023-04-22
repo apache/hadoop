@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.ChannelSftp.LsEntry;
 import com.jcraft.jsch.SftpATTRS;
@@ -709,11 +709,11 @@ public class SFTPFileSystem extends FileSystem {
 
   @Override
   public void close() throws IOException {
-    if (closed.getAndSet(true)) {
-      return;
-    }
     try {
       super.close();
+      if (closed.getAndSet(true)) {
+        return;
+      }
     } finally {
       if (connectionPool != null) {
         connectionPool.shutdown();

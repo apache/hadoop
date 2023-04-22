@@ -20,7 +20,7 @@ package org.apache.hadoop.util;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.security.alias.AbstractJavaKeyStoreProvider;
+
 import org.junit.Assert;
 
 import java.io.BufferedReader;
@@ -51,7 +51,7 @@ import org.junit.rules.Timeout;
 
 public class TestShell extends Assert {
   /**
-   * Set the timeout for every test
+   * Set the timeout for every test.
    */
   @Rule
   public Timeout testTimeout = new Timeout(30000, TimeUnit.MILLISECONDS);

@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.federation.policies;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 import java.util.Random;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Utility class for Federation policy.
@@ -188,8 +188,8 @@ public final class FederationPolicyUtils {
    * @throws FederationPolicyException if there are no usable subclusters.
    */
   public static void validateSubClusterAvailability(
-      List<SubClusterId> activeSubClusters,
-      List<SubClusterId> blackListSubClusters)
+      Collection<SubClusterId> activeSubClusters,
+      Collection<SubClusterId> blackListSubClusters)
       throws FederationPolicyException {
     if (activeSubClusters != null && !activeSubClusters.isEmpty()) {
       if (blackListSubClusters == null) {

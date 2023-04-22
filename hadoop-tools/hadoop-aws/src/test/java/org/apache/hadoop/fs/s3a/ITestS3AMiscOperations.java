@@ -36,8 +36,8 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.EtagChecksum;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -46,6 +46,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasPathCapab
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksPathCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
@@ -68,10 +70,13 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     enableChecksums(true);
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   protected Configuration createConfiguration() {
     final Configuration conf = super.createConfiguration();
     removeBaseAndBucketOverrides(conf,
+        S3_ENCRYPTION_ALGORITHM,
+        S3_ENCRYPTION_KEY,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_KEY);
     return conf;
@@ -97,18 +102,6 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     assertIsFile(shouldWork);
   }
 
-  @Test(expected = FileNotFoundException.class)
-  public void testCreateNonRecursiveNoParent() throws IOException {
-    createNonRecursive(path("/recursive/node"));
-  }
-
-  @Test(expected = FileAlreadyExistsException.class)
-  public void testCreateNonRecursiveParentIsFile() throws IOException {
-    Path parent = path("/file.txt");
-    touch(getFileSystem(), parent);
-    createNonRecursive(new Path(parent, "fail"));
-  }
-
   @Test
   public void testPutObjectDirect() throws Throwable {
     final S3AFileSystem fs = getFileSystem();
@@ -121,7 +114,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
           new ByteArrayInputStream("PUT".getBytes()),
           metadata);
       LambdaTestUtils.intercept(IllegalStateException.class,
-          () -> fs.putObjectDirect(put));
+          () -> fs.putObjectDirect(put, PutObjectOptions.keepingDirs()));
       assertPathDoesNotExist("put object was created", path);
     }
   }

@@ -18,6 +18,8 @@
 package org.apache.hadoop.crypto.key;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeoutException;
@@ -32,7 +34,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
-import org.apache.hadoop.util.Sets;
 
 public class TestValueQueue {
   Logger LOG = LoggerFactory.getLogger(TestValueQueue.class);
@@ -103,10 +104,10 @@ public class TestValueQueue {
     Assert.assertEquals(5, fillInfos[0].num);
     Assert.assertEquals(5, fillInfos[1].num);
     Assert.assertEquals(5, fillInfos[2].num);
-    Assert.assertEquals(Sets.newHashSet("k1", "k2", "k3"),
-        Sets.newHashSet(fillInfos[0].key,
+    Assert.assertEquals(new HashSet<>(Arrays.asList("k1", "k2", "k3")),
+        new HashSet<>(Arrays.asList(fillInfos[0].key,
             fillInfos[1].key,
-            fillInfos[2].key));
+            fillInfos[2].key)));
     vq.shutdown();
   }
 

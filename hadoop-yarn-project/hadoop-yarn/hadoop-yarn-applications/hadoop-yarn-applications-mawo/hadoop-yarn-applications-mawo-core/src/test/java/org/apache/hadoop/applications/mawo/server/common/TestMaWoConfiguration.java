@@ -19,8 +19,10 @@
 package org.apache.hadoop.applications.mawo.server.common;
 
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test MaWo configuration.
@@ -31,29 +33,29 @@ public class TestMaWoConfiguration {
    * Validate default MaWo Configurations.
    */
   @Test
-  public void testMaWoConfiguration() {
+  void testMaWoConfiguration() {
 
     MawoConfiguration mawoConf = new MawoConfiguration();
 
     // validate Rpc server port
-    Assert.assertEquals(mawoConf.getRpcServerPort(), 5120);
+    assertEquals(5120, mawoConf.getRpcServerPort());
 
     // validate Rpc hostname
-    Assert.assertTrue("localhost".equals(mawoConf.getRpcHostName()));
+    assertEquals("localhost", mawoConf.getRpcHostName());
 
     // validate job queue storage conf
     boolean jobQueueStorage = mawoConf.getJobQueueStorageEnabled();
-    Assert.assertTrue(jobQueueStorage);
+    assertTrue(jobQueueStorage);
 
     // validate default teardownWorkerValidity Interval
-    Assert.assertEquals(mawoConf.getTeardownWorkerValidityInterval(), 120000);
+    assertEquals(120000, mawoConf.getTeardownWorkerValidityInterval());
 
     // validate Zk related configs
-    Assert.assertTrue("/tmp/mawoRoot".equals(mawoConf.getZKParentPath()));
-    Assert.assertTrue("localhost:2181".equals(mawoConf.getZKAddress()));
-    Assert.assertEquals(1000, mawoConf.getZKRetryIntervalMS());
-    Assert.assertEquals(10000, mawoConf.getZKSessionTimeoutMS());
-    Assert.assertEquals(1000, mawoConf.getZKRetriesNum());
+    assertEquals("/tmp/mawoRoot", mawoConf.getZKParentPath());
+    assertEquals("localhost:2181", mawoConf.getZKAddress());
+    assertEquals(1000, mawoConf.getZKRetryIntervalMS());
+    assertEquals(10000, mawoConf.getZKSessionTimeoutMS());
+    assertEquals(1000, mawoConf.getZKRetriesNum());
   }
 
 

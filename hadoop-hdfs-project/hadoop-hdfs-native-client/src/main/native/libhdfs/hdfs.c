@@ -38,6 +38,10 @@
 
 #define KERBEROS_TICKET_CACHE_PATH "hadoop.security.kerberos.ticket.cache.path"
 
+// StreamCapability flags taken from o.a.h.fs.StreamCapabilities
+#define IS_READ_BYTE_BUFFER_CAPABILITY "in:readbytebuffer"
+#define IS_PREAD_BYTE_BUFFER_CAPABILITY "in:preadbytebuffer"
+
 // Bit fields for hdfsFile_internal flags
 #define HDFS_FILE_SUPPORTS_DIRECT_READ (1<<0)
 #define HDFS_FILE_SUPPORTS_DIRECT_PREAD (1<<1)
@@ -1075,6 +1079,27 @@ done:
     return 0;
 }
 
+/**
+ * Sets the flags of the given hdfsFile based on the capabilities of the
+ * underlying stream.
+ *
+ * @param file file->flags will be updated based on the capabilities of jFile
+ * @param jFile the underlying stream to check for capabilities
+ */
+static void setFileFlagCapabilities(hdfsFile file, jobject jFile) {
+    // Check the StreamCapabilities of jFile to see if we can do direct
+    // reads
+    if (hdfsHasStreamCapability(jFile, IS_READ_BYTE_BUFFER_CAPABILITY)) {
+        file->flags |= HDFS_FILE_SUPPORTS_DIRECT_READ;
+    }
+
+    // Check the StreamCapabilities of jFile to see if we can do direct
+    // preads
+    if (hdfsHasStreamCapability(jFile, IS_PREAD_BYTE_BUFFER_CAPABILITY)) {
+        file->flags |= HDFS_FILE_SUPPORTS_DIRECT_PREAD;
+    }
+}
+
 static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
                   int32_t bufferSize, int16_t replication, int64_t blockSize)
 {
@@ -1245,17 +1270,7 @@ static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
     file->flags = 0;
 
     if ((flags & O_WRONLY) == 0) {
-        // Check the StreamCapabilities of jFile to see if we can do direct
-        // reads
-        if (hdfsHasStreamCapability(jFile, "in:readbytebuffer")) {
-            file->flags |= HDFS_FILE_SUPPORTS_DIRECT_READ;
-        }
-
-        // Check the StreamCapabilities of jFile to see if we can do direct
-        // preads
-        if (hdfsHasStreamCapability(jFile, "in:preadbytebuffer")) {
-            file->flags |= HDFS_FILE_SUPPORTS_DIRECT_PREAD;
-        }
+        setFileFlagCapabilities(file, jFile);
     }
     ret = 0;
 
@@ -1286,6 +1301,469 @@ hdfsFile hdfsStreamBuilderBuild(struct hdfsStreamBuilder *bld)
     hdfsStreamBuilderFree(bld);
     errno = prevErrno;
     return file;
+}
+
+/**
+ * A wrapper around o.a.h.fs.FutureDataInputStreamBuilder and the file name
+ * associated with the builder.
+ */
+struct hdfsOpenFileBuilder {
+    jobject jBuilder;
+    const char *path;
+};
+
+/**
+ * A wrapper around a java.util.concurrent.Future (created by calling
+ * FutureDataInputStreamBuilder#build) and the file name associated with the
+ * builder.
+ */
+struct hdfsOpenFileFuture {
+    jobject jFuture;
+    const char *path;
+};
+
+hdfsOpenFileBuilder *hdfsOpenFileBuilderAlloc(hdfsFS fs,
+        const char *path) {
+    int ret = 0;
+    jthrowable jthr;
+    jvalue jVal;
+    jobject jFS = (jobject) fs;
+
+    jobject jPath = NULL;
+    jobject jBuilder = NULL;
+
+    JNIEnv *env = getJNIEnv();
+    if (!env) {
+        errno = EINTERNAL;
+        return NULL;
+    }
+
+    hdfsOpenFileBuilder *builder;
+    builder = calloc(1, sizeof(hdfsOpenFileBuilder));
+    if (!builder) {
+        fprintf(stderr, "hdfsOpenFileBuilderAlloc(%s): OOM when creating "
+                        "hdfsOpenFileBuilder\n", path);
+        errno = ENOMEM;
+        goto done;
+    }
+    builder->path = path;
+
+    jthr = constructNewObjectOfPath(env, path, &jPath);
+    if (jthr) {
+        errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                "hdfsOpenFileBuilderAlloc(%s): constructNewObjectOfPath",
+                path);
+        goto done;
+    }
+
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "openFile", JMETHOD1(JPARAM(HADOOP_PATH), JPARAM(HADOOP_FDISB)),
+            jPath);
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                "hdfsOpenFileBuilderAlloc(%s): %s#openFile(Path) failed",
+                HADOOP_FS, path);
+        goto done;
+    }
+    jBuilder = jVal.l;
+
+    builder->jBuilder = (*env)->NewGlobalRef(env, jBuilder);
+    if (!builder->jBuilder) {
+        printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+                "hdfsOpenFileBuilderAlloc(%s): NewGlobalRef(%s) failed", path,
+                HADOOP_FDISB);
+        ret = EINVAL;
+        goto done;
+    }
+
+done:
+    destroyLocalReference(env, jPath);
+    destroyLocalReference(env, jBuilder);
+    if (ret) {
+        if (builder) {
+            if (builder->jBuilder) {
+                (*env)->DeleteGlobalRef(env, builder->jBuilder);
+            }
+            free(builder);
+        }
+        errno = ret;
+        return NULL;
+    }
+    return builder;
+}
+
+/**
+ * Used internally by hdfsOpenFileBuilderWithOption to switch between
+ * FSBuilder#must and #opt.
+ */
+typedef enum { must, opt } openFileBuilderOptionType;
+
+/**
+ * Shared implementation of hdfsOpenFileBuilderMust and hdfsOpenFileBuilderOpt
+ * that switches between each method depending on the value of
+ * openFileBuilderOptionType.
+ */
+static hdfsOpenFileBuilder *hdfsOpenFileBuilderWithOption(
+        hdfsOpenFileBuilder *builder, const char *key,
+        const char *value, openFileBuilderOptionType optionType) {
+    int ret = 0;
+    jthrowable jthr;
+    jvalue jVal;
+    jobject localJBuilder = NULL;
+    jobject globalJBuilder;
+    jstring jKeyString = NULL;
+    jstring jValueString = NULL;
+
+    // If the builder was not previously created by a prior call to
+    // hdfsOpenFileBuilderAlloc then exit
+    if (builder == NULL || builder->jBuilder == NULL) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    JNIEnv *env = getJNIEnv();
+    if (!env) {
+        errno = EINTERNAL;
+        return NULL;
+    }
+    jthr = newJavaStr(env, key, &jKeyString);
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                "hdfsOpenFileBuilderWithOption(%s): newJavaStr(%s)",
+                builder->path, key);
+        goto done;
+    }
+    jthr = newJavaStr(env, value, &jValueString);
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                "hdfsOpenFileBuilderWithOption(%s): newJavaStr(%s)",
+                builder->path, value);
+        goto done;
+    }
+
+    const char *optionTypeMethodName;
+    switch (optionType) {
+        case must:
+            optionTypeMethodName = "must";
+            break;
+        case opt:
+            optionTypeMethodName = "opt";
+            break;
+        default:
+            ret = EINTERNAL;
+            goto done;
+    }
+
+    jthr = invokeMethod(env, &jVal, INSTANCE, builder->jBuilder,
+            JC_FUTURE_DATA_IS_BUILDER, optionTypeMethodName,
+            JMETHOD2(JPARAM(JAVA_STRING), JPARAM(JAVA_STRING),
+                    JPARAM(HADOOP_FS_BLDR)), jKeyString,
+            jValueString);
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                "hdfsOpenFileBuilderWithOption(%s): %s#%s(%s, %s) failed",
+                builder->path, HADOOP_FS_BLDR, optionTypeMethodName, key,
+                value);
+        goto done;
+    }
+
+    localJBuilder = jVal.l;
+    globalJBuilder = (*env)->NewGlobalRef(env, localJBuilder);
+    if (!globalJBuilder) {
+        printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+                "hdfsOpenFileBuilderWithOption(%s): NewGlobalRef(%s) failed",
+                builder->path, HADOOP_FDISB);
+        ret = EINVAL;
+        goto done;
+    }
+    (*env)->DeleteGlobalRef(env, builder->jBuilder);
+    builder->jBuilder = globalJBuilder;
+
+done:
+    destroyLocalReference(env, jKeyString);
+    destroyLocalReference(env, jValueString);
+    destroyLocalReference(env, localJBuilder);
+    if (ret) {
+        errno = ret;
+        return NULL;
+    }
+    return builder;
+}
+
+hdfsOpenFileBuilder *hdfsOpenFileBuilderMust(hdfsOpenFileBuilder *builder,
+        const char *key, const char *value) {
+    openFileBuilderOptionType optionType;
+    optionType = must;
+    return hdfsOpenFileBuilderWithOption(builder, key, value, optionType);
+}
+
+hdfsOpenFileBuilder *hdfsOpenFileBuilderOpt(hdfsOpenFileBuilder *builder,
+        const char *key, const char *value) {
+    openFileBuilderOptionType optionType;
+    optionType = opt;
+    return hdfsOpenFileBuilderWithOption(builder, key, value, optionType);
+}
+
+hdfsOpenFileFuture *hdfsOpenFileBuilderBuild(hdfsOpenFileBuilder *builder) {
+    int ret = 0;
+    jthrowable jthr;
+    jvalue jVal;
+
+    jobject jFuture = NULL;
+
+    // If the builder was not previously created by a prior call to
+    // hdfsOpenFileBuilderAlloc then exit
+    if (builder == NULL || builder->jBuilder == NULL) {
+        ret = EINVAL;
+        return NULL;
+    }
+
+    JNIEnv *env = getJNIEnv();
+    if (!env) {
+        errno = EINTERNAL;
+        return NULL;
+    }
+
+    hdfsOpenFileFuture *future;
+    future = calloc(1, sizeof(hdfsOpenFileFuture));
+    if (!future) {
+        fprintf(stderr, "hdfsOpenFileBuilderBuild: OOM when creating "
+                        "hdfsOpenFileFuture\n");
+        errno = ENOMEM;
+        goto done;
+    }
+    future->path = builder->path;
+
+    jthr = invokeMethod(env, &jVal, INSTANCE, builder->jBuilder,
+            JC_FUTURE_DATA_IS_BUILDER, "build",
+            JMETHOD1("", JPARAM(JAVA_CFUTURE)));
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                "hdfsOpenFileBuilderBuild(%s): %s#build() failed",
+                builder->path, HADOOP_FDISB);
+        goto done;
+    }
+    jFuture = jVal.l;
+
+    future->jFuture = (*env)->NewGlobalRef(env, jFuture);
+    if (!future->jFuture) {
+        printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+                "hdfsOpenFileBuilderBuild(%s): NewGlobalRef(%s) failed",
+                builder->path, JAVA_CFUTURE);
+        ret = EINVAL;
+        goto done;
+    }
+
+done:
+    destroyLocalReference(env, jFuture);
+    if (ret) {
+        if (future) {
+            if (future->jFuture) {
+                (*env)->DeleteGlobalRef(env, future->jFuture);
+            }
+            free(future);
+        }
+        hdfsOpenFileBuilderFree(builder);
+        errno = ret;
+        return NULL;
+    }
+    hdfsOpenFileBuilderFree(builder);
+    return future;
+}
+
+void hdfsOpenFileBuilderFree(hdfsOpenFileBuilder *builder) {
+    JNIEnv *env;
+    env = getJNIEnv();
+    if (!env) {
+        return;
+    }
+    if (builder->jBuilder) {
+        (*env)->DeleteGlobalRef(env, builder->jBuilder);
+        builder->jBuilder = NULL;
+    }
+    free(builder);
+}
+
+/**
+ * Shared implementation of hdfsOpenFileFutureGet and
+ * hdfsOpenFileFutureGetWithTimeout. If a timeout is specified, calls
+ * Future#get() otherwise it calls Future#get(long, TimeUnit).
+ */
+static hdfsFile fileFutureGetWithTimeout(hdfsOpenFileFuture *future,
+        int64_t timeout, jobject jTimeUnit) {
+    int ret = 0;
+    jthrowable jthr;
+    jvalue jVal;
+
+    hdfsFile file = NULL;
+    jobject jFile = NULL;
+
+    JNIEnv *env = getJNIEnv();
+    if (!env) {
+        ret = EINTERNAL;
+        return NULL;
+    }
+
+    if (!jTimeUnit) {
+        jthr = invokeMethod(env, &jVal, INSTANCE, future->jFuture,
+                JC_CFUTURE, "get", JMETHOD1("", JPARAM(JAVA_OBJECT)));
+    } else {
+        jthr = invokeMethod(env, &jVal, INSTANCE, future->jFuture,
+                JC_CFUTURE, "get", JMETHOD2("J",
+                        JPARAM(JAVA_TIMEUNIT), JPARAM(JAVA_OBJECT)), timeout,
+                        jTimeUnit);
+    }
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                "hdfsOpenFileFutureGet(%s): %s#get failed", future->path,
+                JAVA_CFUTURE);
+        goto done;
+    }
+
+    file = calloc(1, sizeof(struct hdfsFile_internal));
+    if (!file) {
+        fprintf(stderr, "hdfsOpenFileFutureGet(%s): OOM when creating "
+                        "hdfsFile\n", future->path);
+        ret = ENOMEM;
+        goto done;
+    }
+    jFile = jVal.l;
+    file->file = (*env)->NewGlobalRef(env, jFile);
+    if (!file->file) {
+        ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+                "hdfsOpenFileFutureGet(%s): NewGlobalRef(jFile) failed",
+                future->path);
+        goto done;
+    }
+
+    file->type = HDFS_STREAM_INPUT;
+    file->flags = 0;
+
+    setFileFlagCapabilities(file, jFile);
+
+done:
+    destroyLocalReference(env, jTimeUnit);
+    destroyLocalReference(env, jFile);
+    if (ret) {
+        if (file) {
+            if (file->file) {
+                (*env)->DeleteGlobalRef(env, file->file);
+            }
+            free(file);
+        }
+        errno = ret;
+        return NULL;
+    }
+    return file;
+}
+
+hdfsFile hdfsOpenFileFutureGet(hdfsOpenFileFuture *future) {
+    return fileFutureGetWithTimeout(future, -1, NULL);
+}
+
+hdfsFile hdfsOpenFileFutureGetWithTimeout(hdfsOpenFileFuture *future,
+        int64_t timeout, javaConcurrentTimeUnit timeUnit) {
+    int ret = 0;
+    jthrowable jthr;
+    jobject jTimeUnit = NULL;
+
+    JNIEnv *env = getJNIEnv();
+    if (!env) {
+        ret = EINTERNAL;
+        return NULL;
+    }
+
+    const char *timeUnitEnumName;
+    switch (timeUnit) {
+        case jNanoseconds:
+            timeUnitEnumName = "NANOSECONDS";
+            break;
+        case jMicroseconds:
+            timeUnitEnumName = "MICROSECONDS";
+            break;
+        case jMilliseconds:
+            timeUnitEnumName = "MILLISECONDS";
+            break;
+        case jSeconds:
+            timeUnitEnumName = "SECONDS";
+            break;
+        case jMinutes:
+            timeUnitEnumName = "MINUTES";
+            break;
+        case jHours:
+            timeUnitEnumName = "HOURS";
+            break;
+        case jDays:
+            timeUnitEnumName = "DAYS";
+            break;
+        default:
+            ret = EINTERNAL;
+            goto done;
+    }
+
+    jthr = fetchEnumInstance(env, JAVA_TIMEUNIT, timeUnitEnumName, &jTimeUnit);
+
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                "hdfsOpenFileFutureGet(%s): %s#get failed", future->path,
+                JAVA_CFUTURE);
+        goto done;
+    }
+    return fileFutureGetWithTimeout(future, timeout, jTimeUnit);
+
+done:
+    if (ret) {
+        errno = ret;
+    }
+    return NULL;
+}
+
+int hdfsOpenFileFutureCancel(hdfsOpenFileFuture *future,
+        int mayInterruptIfRunning) {
+    int ret = 0;
+    jthrowable jthr;
+    jvalue jVal;
+
+    jboolean jMayInterruptIfRunning;
+
+    JNIEnv *env = getJNIEnv();
+    if (!env) {
+        ret = EINTERNAL;
+        return -1;
+    }
+
+    jMayInterruptIfRunning = mayInterruptIfRunning ? JNI_TRUE : JNI_FALSE;
+    jthr = invokeMethod(env, &jVal, INSTANCE, future->jFuture, JC_CFUTURE,
+            "cancel", JMETHOD1("Z", "Z"), jMayInterruptIfRunning);
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                "hdfsOpenFileFutureCancel(%s): %s#cancel failed", future->path,
+                JAVA_CFUTURE);
+        goto done;
+    }
+
+done:
+    if (ret) {
+        errno = ret;
+        return -1;
+    }
+    if (!jVal.z) {
+        return -1;
+    }
+    return 0;
+}
+
+void hdfsOpenFileFutureFree(hdfsOpenFileFuture *future) {
+    JNIEnv *env;
+    env = getJNIEnv();
+    if (!env) {
+        return;
+    }
+    if (future->jFuture) {
+        (*env)->DeleteGlobalRef(env, future->jFuture);
+        future->jFuture = NULL;
+    }
+    free(future);
 }
 
 int hdfsTruncateFile(hdfsFS fs, const char* path, tOffset newlength)

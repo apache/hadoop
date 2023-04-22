@@ -37,7 +37,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.util.JsonSerialization;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.aggregateMaps;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.snapshotMap;
@@ -53,7 +53,7 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.snapshotM
  * deserialized. If for some reason this is required, use
  * {@link #requiredSerializationClasses()} to get the list of classes
  * used when deserializing instances of this object.
- * <p>
+ * </p>
  * <p>
  * It is annotated for correct serializations with jackson2.
  * </p>
@@ -238,6 +238,8 @@ public final class IOStatisticsSnapshot
   /**
    * Serialize by converting each map to a TreeMap, and saving that
    * to the stream.
+   * @param s ObjectOutputStream.
+   * @throws IOException raised on errors performing I/O.
    */
   private synchronized void writeObject(ObjectOutputStream s)
       throws IOException {
@@ -253,6 +255,10 @@ public final class IOStatisticsSnapshot
   /**
    * Deserialize by loading each TreeMap, and building concurrent
    * hash maps from them.
+   *
+   * @param s ObjectInputStream.
+   * @throws IOException raised on errors performing I/O.
+   * @throws ClassNotFoundException class not found exception
    */
   private void readObject(final ObjectInputStream s)
       throws IOException, ClassNotFoundException {

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.sls.scheduler;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -177,14 +178,14 @@ public abstract class SchedulerMetrics {
     pool.scheduleAtFixedRate(new HistogramsRunnable(), 0, 1000,
         TimeUnit.MILLISECONDS);
 
-    // a thread to output metrics for real-tiem tracking
+    // a thread to output metrics for real-time tracking
     pool.scheduleAtFixedRate(new MetricsLogRunnable(), 0, 1000,
         TimeUnit.MILLISECONDS);
 
     // application running information
     jobRuntimeLogBW =
         new BufferedWriter(new OutputStreamWriter(new FileOutputStream(
-            metricsOutputDir + "/jobruntime.csv"), "UTF-8"));
+            metricsOutputDir + "/jobruntime.csv"), StandardCharsets.UTF_8));
     jobRuntimeLogBW.write("JobID,real_start_time,real_end_time," +
         "simulate_start_time,simulate_end_time" + EOL);
     jobRuntimeLogBW.flush();
@@ -316,7 +317,7 @@ public abstract class SchedulerMetrics {
         new Gauge<Long>() {
           @Override
           public Long getValue() {
-            if (scheduler.getRootQueueMetrics() == null) {
+            if (isMetricsAvailable()) {
               return 0L;
             } else {
               return scheduler.getRootQueueMetrics().getAllocatedMB();
@@ -328,7 +329,7 @@ public abstract class SchedulerMetrics {
         new Gauge<Integer>() {
           @Override
           public Integer getValue() {
-            if (scheduler.getRootQueueMetrics() == null) {
+            if (isMetricsAvailable()) {
               return 0;
             } else {
               return scheduler.getRootQueueMetrics().getAllocatedVirtualCores();
@@ -340,7 +341,7 @@ public abstract class SchedulerMetrics {
         new Gauge<Long>() {
           @Override
           public Long getValue() {
-            if (scheduler.getRootQueueMetrics() == null) {
+            if (isMetricsAvailable()) {
               return 0L;
             } else {
               return scheduler.getRootQueueMetrics().getAvailableMB();
@@ -352,7 +353,7 @@ public abstract class SchedulerMetrics {
         new Gauge<Integer>() {
           @Override
           public Integer getValue() {
-            if (scheduler.getRootQueueMetrics() == null) {
+            if (isMetricsAvailable()) {
               return 0;
             } else {
               return scheduler.getRootQueueMetrics().getAvailableVirtualCores();
@@ -360,6 +361,10 @@ public abstract class SchedulerMetrics {
           }
         }
     );
+  }
+
+  private boolean isMetricsAvailable() {
+    return scheduler.getRootQueueMetrics() == null;
   }
 
   private void registerContainerAppNumMetrics() {
@@ -462,6 +467,9 @@ public abstract class SchedulerMetrics {
         schedulerHistogramList.add(histogram);
         histogramTimerMap.put(histogram, schedulerHandleTimerMap.get(e));
       }
+    } catch (Exception e) {
+      LOG.error("Caught exception while registering scheduler metrics", e);
+      throw e;
     } finally {
       samplerLock.unlock();
     }
@@ -505,6 +513,9 @@ public abstract class SchedulerMetrics {
             }
         );
       }
+    } catch (Exception e) {
+      LOG.error("Caught exception while registering nodes usage metrics", e);
+      throw e;
     } finally {
       samplerLock.unlock();
     }
@@ -556,7 +567,7 @@ public abstract class SchedulerMetrics {
       try {
         metricsLogBW =
             new BufferedWriter(new OutputStreamWriter(new FileOutputStream(
-                metricsOutputDir + "/realtimetrack.json"), "UTF-8"));
+                metricsOutputDir + "/realtimetrack.json"), StandardCharsets.UTF_8));
         metricsLogBW.write("[");
       } catch (IOException e) {
         LOG.info(e.getMessage());
@@ -713,11 +724,10 @@ public abstract class SchedulerMetrics {
       long traceEndTimeMS, long simulateStartTimeMS, long simulateEndTimeMS) {
     try {
       // write job runtime information
-      StringBuilder sb = new StringBuilder();
-      sb.append(appId).append(",").append(traceStartTimeMS).append(",")
-          .append(traceEndTimeMS).append(",").append(simulateStartTimeMS)
-          .append(",").append(simulateEndTimeMS);
-      jobRuntimeLogBW.write(sb.toString() + EOL);
+      String runtimeInfo = appId + "," + traceStartTimeMS + "," +
+          traceEndTimeMS + "," + simulateStartTimeMS +
+          "," + simulateEndTimeMS;
+      jobRuntimeLogBW.write(runtimeInfo + EOL);
       jobRuntimeLogBW.flush();
     } catch (IOException e) {
       LOG.info(e.getMessage());

@@ -167,6 +167,29 @@ public class TestCopyListing extends SimpleCopyListing {
     }
   }
 
+  @Test
+  public void testDuplicateSourcePaths() throws Exception {
+    FileSystem fs = FileSystem.get(getConf());
+    List<Path> srcPaths = new ArrayList<Path>();
+    try {
+      srcPaths.add(new Path("/tmp/in"));
+      srcPaths.add(new Path("/tmp/in"));
+      TestDistCpUtils.createFile(fs, "/tmp/in/src1/1.txt");
+      TestDistCpUtils.createFile(fs, "/tmp/in/src2/1.txt");
+      Path target = new Path("/tmp/out");
+      Path listingFile = new Path("/tmp/list");
+      final DistCpOptions options =
+          new DistCpOptions.Builder(srcPaths, target).build();
+      final DistCpContext context = new DistCpContext(options);
+      CopyListing listing =
+          CopyListing.getCopyListing(getConf(), CREDENTIALS, context);
+      listing.buildListing(listingFile, context);
+      Assert.assertTrue(fs.exists(listingFile));
+    } finally {
+      TestDistCpUtils.delete(fs, "/tmp");
+    }
+  }
+
   @Test(timeout=10000)
   public void testBuildListing() {
     FileSystem fs = null;

@@ -83,7 +83,7 @@ public class HeaderProcessing extends AbstractStoreOperation {
       XA_HEADER_PREFIX + Headers.CONTENT_DISPOSITION;
 
   /**
-   * Standard HTTP header found on some S3 objects: {@value}.
+   * Content encoding; can be configured: {@value}.
    */
   public static final String XA_CONTENT_ENCODING =
       XA_HEADER_PREFIX + Headers.CONTENT_ENCODING;

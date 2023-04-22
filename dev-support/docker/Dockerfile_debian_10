@@ -29,11 +29,6 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN echo APT::Install-Recommends "0"\; > /etc/apt/apt.conf.d/10disableextras
 RUN echo APT::Install-Suggests "0"\; >>  /etc/apt/apt.conf.d/10disableextras
 
-#####
-# For installing the latest packages
-#####
-RUN echo 'deb http://deb.debian.org/debian testing main' >> /etc/apt/sources.list
-
 ENV DEBIAN_FRONTEND noninteractive
 ENV DEBCONF_TERSE true
 
@@ -41,16 +36,18 @@ ENV DEBCONF_TERSE true
 # Platform package dependency resolver
 ######
 COPY pkg-resolver pkg-resolver
-RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
-    && chmod a+r pkg-resolver/*.json
+RUN chmod a+x pkg-resolver/install-pkg-resolver.sh
+RUN pkg-resolver/install-pkg-resolver.sh debian:10
 
 ######
 # Install packages from apt
 ######
 # hadolint ignore=DL3008,SC2046
 RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends python3 \
     && apt-get -q install -y --no-install-recommends $(pkg-resolver/resolve.py debian:10) \
+    && echo 'deb http://deb.debian.org/debian bullseye main' >> /etc/apt/sources.list \
+    && apt-get -q update \
+    && apt-get -q install -y --no-install-recommends -t bullseye $(pkg-resolver/resolve.py --release=bullseye debian:10) \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -85,7 +82,7 @@ ENV HADOOP_SKIP_YETUS_VERIFICATION true
 ####
 # Install packages
 ####
-RUN pkg-resolver/install-common-pkgs.sh
+RUN pkg-resolver/install-cmake.sh debian:10
 RUN pkg-resolver/install-spotbugs.sh debian:10
 RUN pkg-resolver/install-boost.sh debian:10
 RUN pkg-resolver/install-protobuf.sh debian:10

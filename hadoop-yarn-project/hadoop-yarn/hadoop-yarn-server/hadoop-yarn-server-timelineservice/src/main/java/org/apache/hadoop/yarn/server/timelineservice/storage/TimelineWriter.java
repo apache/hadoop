@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
@@ -95,4 +96,13 @@ public interface TimelineWriter extends Service {
    *     entities to the backend storage.
    */
   void flush() throws IOException;
+
+  /**
+   * Check if writer connection is working properly.
+   *
+   * @return True if writer connection works as expected, false otherwise.
+   */
+  TimelineHealth getHealthStatus();
+
+
 }

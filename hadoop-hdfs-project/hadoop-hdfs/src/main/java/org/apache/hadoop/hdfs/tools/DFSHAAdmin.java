@@ -23,7 +23,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSortedMap;
 import org.apache.commons.cli.CommandLine;
@@ -247,7 +247,7 @@ public class DFSHAAdmin extends HAAdmin {
   }
 
   private int transitionToObserver(final CommandLine cmd)
-      throws IOException, ServiceFailedException {
+      throws IOException {
     String[] argv = cmd.getArgs();
     if (argv.length != 1) {
       errOut.println("transitionToObserver: incorrect number of arguments");
@@ -262,8 +262,13 @@ public class DFSHAAdmin extends HAAdmin {
     if (!checkManualStateManagementOK(target)) {
       return -1;
     }
-    HAServiceProtocol proto = target.getProxy(getConf(), 0);
-    HAServiceProtocolHelper.transitionToObserver(proto, createReqInfo());
+    try {
+      HAServiceProtocol proto = target.getProxy(getConf(), 0);
+      HAServiceProtocolHelper.transitionToObserver(proto, createReqInfo());
+    } catch (ServiceFailedException e) {
+      errOut.println("transitionToObserver failed! " + e.getLocalizedMessage());
+      return -1;
+    }
     return 0;
   }
 

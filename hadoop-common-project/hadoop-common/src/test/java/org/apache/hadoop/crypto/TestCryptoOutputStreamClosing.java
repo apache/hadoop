@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.crypto;
 
+import java.io.IOException;
 import java.io.OutputStream;
 
 import org.apache.hadoop.conf.Configuration;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.*;
 
 /**
@@ -54,4 +56,22 @@ public class TestCryptoOutputStreamClosing {
     verify(outputStream, never()).close();
   }
 
+  @Test
+  public void testUnderlyingOutputStreamClosedWhenExceptionClosing() throws Exception {
+    OutputStream outputStream = mock(OutputStream.class);
+    CryptoOutputStream cos = spy(new CryptoOutputStream(outputStream, codec,
+        new byte[16], new byte[16], 0L, true));
+
+    // exception while flushing during close
+    doThrow(new IOException("problem flushing wrapped stream"))
+        .when(cos).flush();
+
+    intercept(IOException.class,
+        () -> cos.close());
+
+    // We expect that the close of the CryptoOutputStream closes the
+    // wrapped OutputStream even though we got an exception
+    // during CryptoOutputStream::close (in the flush method)
+    verify(outputStream).close();
+  }
 }

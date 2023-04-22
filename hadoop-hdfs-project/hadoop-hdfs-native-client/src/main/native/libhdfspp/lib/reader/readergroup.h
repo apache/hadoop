@@ -15,14 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #ifndef READER_READER_GROUP_H_
 #define READER_READER_GROUP_H_
 
 #include "block_reader.h"
 
 #include <memory>
-#include <vector>
 #include <mutex>
+#include <vector>
 
 namespace hdfs {
 

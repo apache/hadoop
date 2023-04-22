@@ -25,8 +25,8 @@ import java.net.HttpURLConnection;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +50,7 @@ import static java.lang.Math.min;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
+import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
@@ -137,7 +138,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
     this.eTag = eTag;
     this.readAheadRange = abfsInputStreamContext.getReadAheadRange();
-    this.readAheadEnabled = true;
+    this.readAheadEnabled = abfsInputStreamContext.isReadAheadEnabled();
     this.alwaysReadBufferSize
         = abfsInputStreamContext.shouldReadBufferSizeAlways();
     this.bufferedPreadDisabled = abfsInputStreamContext
@@ -693,9 +694,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   @Override
   public synchronized void close() throws IOException {
+    LOG.debug("Closing {}", this);
     closed = true;
     buffer = null; // de-reference the buffer so it can be GC'ed sooner
-    LOG.debug("Closing {}", this);
+    ReadBufferManager.getBufferManager().purgeBuffersForStream(this);
   }
 
   /**
@@ -742,6 +744,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   byte[] getBuffer() {
     return buffer;
+  }
+
+  @VisibleForTesting
+  public boolean isReadAheadEnabled() {
+    return readAheadEnabled;
   }
 
   @VisibleForTesting
@@ -822,11 +829,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(super.toString());
+    sb.append("AbfsInputStream@(").append(this.hashCode()).append("){");
+    sb.append("[" + CAPABILITY_SAFE_READAHEAD + "]");
     if (streamStatistics != null) {
-      sb.append("AbfsInputStream@(").append(this.hashCode()).append("){");
-      sb.append(streamStatistics.toString());
-      sb.append("}");
+      sb.append(", ").append(streamStatistics);
     }
+    sb.append("}");
     return sb.toString();
   }
 

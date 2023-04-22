@@ -32,7 +32,8 @@ Centralized cache management in HDFS has many significant advantages.
 
 4.  Centralized caching can improve overall cluster memory utilization. When relying on the OS buffer cache at each DataNode, repeated reads of a block will result in all *n* replicas of the block being pulled into buffer cache. With centralized cache management, a user can explicitly pin only *m* of the *n* replicas, saving *n-m* memory.
 
-5.  HDFS supports non-volatile storage class memory (SCM, also known as persistent memory) cache in Linux platform. User can enable either memory cache or SCM cache for a DataNode. Memory cache and SCM cache can coexist among DataNodes. In the current implementation, the cache data in SCM will be cleaned up when DataNode restarts. Persistent HDFS cache support on SCM will be considered in the future.
+5.  HDFS supports non-volatile storage class memory (SCM, also known as persistent memory) cache in Linux platform. User can enable either DRAM cache or SCM cache for a DataNode. DRAM cache and SCM cache can coexist among DataNodes. In addition, cache persistence is supported by SCM cache. The status of cache persisted in SCM will be recovered
+during the start of DataNode if `dfs.datanode.pmem.cache.recovery` is set to true. Otherwise, previously persisted cache will be dropped and data need to be re-cached.
 
 Use Cases
 ---------
@@ -256,11 +257,11 @@ The following properties are not required, but may be specified for tuning:
 
 *   dfs.namenode.caching.enabled
 
-    This parameter can be used to enable/disable the centralized caching in NameNode. When centralized caching is disabled, NameNode will not process cache reports or store information about block cache locations on the cluster. Note that NameNode will continute to store the path based cache locations in the file-system metadata, even though it will not act on this information until the caching is enabled. The default value for this parameter is true (i.e. centralized caching is enabled).
+    This parameter can be used to enable/disable the centralized caching in NameNode. When centralized caching is disabled, NameNode will not process cache reports or store information about block cache locations on the cluster. Note that NameNode will continute to store the path based cache locations in the file-system metadata, even though it will not act on this information until the caching is enabled. The default value for this parameter is true (i.e. centralized caching is enabled). In the current implementation, centralized caching introduces additional write lock overhead (see CacheReplicationMonitor#rescan) even if no path to cache is specified, so we recommend disabling this feature when not in use. We will disable centralized caching by default in later versions.
 
 *   dfs.datanode.pmem.cache.recovery
 
-    This parameter is used to determine whether to recover the status for previous cache on persistent memory during the start of DataNode. If it is enabled, DataNode will recover the status for previously cached data on persistent memory. Thus, re-caching data will be avoided. If this property is not enabled, DataNode will clean up the previous cache, if any, on persistent memory. This property can only work when persistent memory is enabled, i.e., `dfs.datanode.pmem.cache.dirs` is configured.
+    This parameter is used to determine whether to recover the status for previous cache on persistent memory during the start of DataNode. If it is enabled, DataNode will recover the status for previously cached data on persistent memory. Thus, re-caching is avoided. If this property is not enabled, DataNode will drop cache, if any, on persistent memory. This property can only work when persistent memory cache is enabled, i.e., `dfs.datanode.pmem.cache.dirs` is configured.
 
 ### OS Limits
 

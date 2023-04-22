@@ -36,10 +36,16 @@ public class IntWritable implements WritableComparable<IntWritable> {
 
   public IntWritable(int value) { set(value); }
 
-  /** Set the value of this IntWritable. */
+  /**
+   * Set the value of this IntWritable.
+   * @param value input value.
+   */
   public void set(int value) { this.value = value; }
 
-  /** Return the value of this IntWritable. */
+  /**
+   * Return the value of this IntWritable.
+   * @return value of this IntWritable.
+   */
   public int get() { return value; }
 
   @Override

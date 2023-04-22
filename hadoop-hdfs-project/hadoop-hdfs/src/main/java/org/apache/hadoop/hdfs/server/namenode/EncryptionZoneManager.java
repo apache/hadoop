@@ -52,8 +52,8 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Lists;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 
@@ -192,7 +192,7 @@ public class EncryptionZoneManager {
     try {
       iip = dir.resolvePath(pc, zone, DirOp.READ);
     } finally {
-      dir.getFSNamesystem().readUnlock();
+      dir.getFSNamesystem().readUnlock("pauseForTestingAfterNthCheckpoint");
     }
     reencryptionHandler
         .pauseForTestingAfterNthCheckpoint(iip.getLastINode().getId(), count);
@@ -224,7 +224,7 @@ public class EncryptionZoneManager {
       return getReencryptionStatus().getZoneStatus(inode.getId());
     } finally {
       dir.readUnlock();
-      dir.getFSNamesystem().readUnlock();
+      dir.getFSNamesystem().readUnlock("getZoneStatus");
     }
   }
 
@@ -285,7 +285,7 @@ public class EncryptionZoneManager {
     try {
       reencryptionHandler.stopThreads();
     } finally {
-      dir.getFSNamesystem().writeUnlock();
+      dir.getFSNamesystem().writeUnlock("stopReencryptThread");
     }
     if (reencryptHandlerExecutor != null) {
       reencryptHandlerExecutor.shutdownNow();
@@ -616,8 +616,8 @@ public class EncryptionZoneManager {
   /**
    * Resolves the path to inode id, then check if it's the same as the inode id
    * passed in. This is necessary to filter out zones in snapshots.
-   * @param zoneId
-   * @param zonePath
+   * @param zoneId of the encryption zone
+   * @param zonePath encryption zone inode path
    * @return true if path resolve to the id, false if not.
    * @throws AccessControlException
    * @throws ParentNotDirectoryException
@@ -645,8 +645,8 @@ public class EncryptionZoneManager {
   /**
    * Re-encrypts the given encryption zone path. If the given path is not the
    * root of an encryption zone, an exception is thrown.
-   * @param zoneIIP
-   * @param keyVersionName
+   * @param zoneIIP encryption zone inodes in the path containing the file
+   * @param keyVersionName encryption zone version
    * @throws IOException
    */
   List<XAttr> reencryptEncryptionZone(final INodesInPath zoneIIP,
@@ -677,7 +677,7 @@ public class EncryptionZoneManager {
    * Cancels the currently-running re-encryption of the given encryption zone.
    * If the given path is not the root of an encryption zone,
    * an exception is thrown.
-   * @param zoneIIP
+   * @param zoneIIP encryption zone inodes in the path containing the file
    * @throws IOException
    */
   List<XAttr> cancelReencryptEncryptionZone(final INodesInPath zoneIIP)
@@ -700,7 +700,8 @@ public class EncryptionZoneManager {
    * Cursor-based listing of zone re-encryption status.
    * <p>
    * Called while holding the FSDirectory lock.
-   * @param prevId
+   * @param prevId for a given encryption zone id, a larger and more
+   *               encryption zone can be found
    * @throws IOException
    */
   BatchedListEntries<ZoneReencryptionStatus> listReencryptionStatus(
@@ -742,8 +743,8 @@ public class EncryptionZoneManager {
 
   /**
    * Return whether an INode is an encryption zone root.
-   * @param inode
-   * @param name
+   * @param inode of the encryption zone inode
+   * @param name the path name of the encrypted zone inode
    * @return true when INode is an encryption zone root else false
    * @throws FileNotFoundException
    */
@@ -767,7 +768,7 @@ public class EncryptionZoneManager {
    * Return whether an INode is an encryption zone root.
    *
    * @param inode the zone inode
-   * @param name
+   * @param name the path name of the encrypted zone inode
    * @throws IOException if the inode is not a directory,
    *                     or is a directory but not the root of an EZ.
    */

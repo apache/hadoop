@@ -29,7 +29,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.Daemon;
@@ -59,7 +59,7 @@ class PendingReconstructionBlocks {
   // It might take anywhere between 5 to 10 minutes before
   // a request is timed out.
   //
-  private long timeout =
+  private volatile long timeout =
       DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT * 1000;
   private final static long DEFAULT_RECHECK_INTERVAL = 5 * 60 * 1000;
 
@@ -74,6 +74,14 @@ class PendingReconstructionBlocks {
   void start() {
     timerThread = new Daemon(new PendingReconstructionMonitor());
     timerThread.start();
+  }
+
+  public void setTimeout(long timeoutPeriod) {
+    this.timeout = timeoutPeriod;
+  }
+
+  public long getTimeout() {
+    return this.timeout;
   }
 
   /**

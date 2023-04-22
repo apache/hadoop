@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -161,6 +162,8 @@ public class TestDFSRename {
       assertTrue(bm.getStoredBlock(lbs.getLocatedBlocks().get(0).getBlock().
           getLocalBlock()) != null);
       dfs.rename(srcPath, dstPath, Rename.OVERWRITE);
+      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+          cluster.getNamesystem(0).getBlockManager());
       assertTrue(bm.getStoredBlock(lbs.getLocatedBlocks().get(0).getBlock().
           getLocalBlock()) == null);
       
@@ -187,7 +190,7 @@ public class TestDFSRename {
       Path path = new Path("/test");
       dfs.mkdirs(path);
       GenericTestUtils.LogCapturer auditLog =
-          GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+          GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
       dfs.rename(path, new Path("/dir1"),
           new Rename[] {Rename.OVERWRITE, Rename.TO_TRASH});
       String auditOut = auditLog.getOutput();

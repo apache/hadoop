@@ -66,7 +66,7 @@ import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.OperationContext;
 import com.microsoft.azure.storage.RetryExponentialRetry;
@@ -282,9 +282,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   // Retry parameter defaults.
   //
 
-  private static final int DEFAULT_MIN_BACKOFF_INTERVAL = 3 * 1000; // 1s
+  private static final int DEFAULT_MIN_BACKOFF_INTERVAL = 3 * 1000; // 3s
   private static final int DEFAULT_MAX_BACKOFF_INTERVAL = 30 * 1000; // 30s
-  private static final int DEFAULT_BACKOFF_INTERVAL = 3 * 1000; // 1s
+  private static final int DEFAULT_BACKOFF_INTERVAL = 3 * 1000; // 3s
   private static final int DEFAULT_MAX_RETRY_ATTEMPTS = 30;
 
   private static final int DEFAULT_COPYBLOB_MIN_BACKOFF_INTERVAL = 3  * 1000;

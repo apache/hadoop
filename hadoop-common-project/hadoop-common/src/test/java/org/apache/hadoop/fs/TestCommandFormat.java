@@ -43,9 +43,9 @@ public class TestCommandFormat {
   
   @Before
   public void setUp() {
-    args = new ArrayList<String>();
-    expectedOpts = new HashSet<String>();
-    expectedArgs = new ArrayList<String>();
+    args = new ArrayList<>();
+    expectedOpts = new HashSet<>();
+    expectedArgs = new ArrayList<>();
   }
 
   @Test
@@ -205,6 +205,6 @@ public class TestCommandFormat {
   }
   
   private static Set<String> setOf(String ... objects) {
-    return new HashSet<String>(listOf(objects));
+    return new HashSet<>(listOf(objects));
   }
 }

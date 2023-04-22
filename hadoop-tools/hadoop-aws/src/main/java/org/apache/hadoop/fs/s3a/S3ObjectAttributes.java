@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 
 /**
- * This class holds attributed of an object independent of the
+ * This class holds attributes of an object independent of the
  * file status type.
  * It is used in {@link S3AInputStream} and the select equivalent.
  * as a way to reduce parameters being passed
@@ -44,6 +44,17 @@ public class S3ObjectAttributes {
   private final String versionId;
   private final long len;
 
+  /**
+   * Constructor.
+   * @param bucket s3 bucket
+   * @param path path
+   * @param key object key
+   * @param serverSideEncryptionAlgorithm current encryption algorithm
+   * @param serverSideEncryptionKey any server side encryption key?
+   * @param len object length
+   * @param eTag optional etag
+   * @param versionId optional version id
+   */
   public S3ObjectAttributes(
       String bucket,
       Path path,
@@ -66,11 +77,11 @@ public class S3ObjectAttributes {
   /**
    * Construct from the result of a copy and those parameters
    * which aren't included in an AWS SDK response.
-   * @param path
+   * @param path path
    * @param copyResult copy result.
    * @param serverSideEncryptionAlgorithm current encryption algorithm
    * @param serverSideEncryptionKey any server side encryption key?
-   * @param len
+   * @param len object length
    */
   public S3ObjectAttributes(
       final Path path,

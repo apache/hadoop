@@ -62,14 +62,14 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.AMHeartbeatRequestHandler;
 import org.apache.hadoop.yarn.server.AMRMClientRelayer;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.AsyncCallback;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * UnmanagedApplicationManager is used to register unmanaged application and
@@ -382,8 +382,13 @@ public class UnmanagedApplicationManager {
   protected Token<AMRMTokenIdentifier> initializeUnmanagedAM(
       ApplicationId appId) throws IOException, YarnException {
     try {
-      UserGroupInformation appSubmitter =
-          UserGroupInformation.createRemoteUser(this.submitter);
+      UserGroupInformation appSubmitter;
+      if (UserGroupInformation.isSecurityEnabled()) {
+        appSubmitter = UserGroupInformation.createProxyUser(this.submitter,
+            UserGroupInformation.getLoginUser());
+      } else {
+        appSubmitter = UserGroupInformation.createRemoteUser(this.submitter);
+      }
       this.rmClient = createRMProxy(ApplicationClientProtocol.class, this.conf,
           appSubmitter, null);
 
@@ -421,7 +426,7 @@ public class UnmanagedApplicationManager {
 
     ContainerLaunchContext amContainer =
         this.recordFactory.newRecordInstance(ContainerLaunchContext.class);
-    Resource resource = BuilderUtils.newResource(1024, 1);
+    Resource resource = Resources.createResource(1024);
     context.setResource(resource);
     context.setAMContainerSpec(amContainer);
     submitRequest.setApplicationSubmissionContext(context);

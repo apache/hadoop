@@ -199,6 +199,16 @@
       <artifactId>bcprov-jdk15on</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>mockwebserver</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>okhttp</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -247,7 +257,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <testFailureIgnore>${ignoreTestFailure}</testFailureIgnore>
           <threadCount>1</threadCount>
           <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
           <systemPropertyVariables>
@@ -361,7 +370,6 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
-              <testFailureIgnore>${ignoreTestFailure}</testFailureIgnore>
               <forkCount>1</forkCount>
               <reuseForks>true</reuseForks>
               <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>

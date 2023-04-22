@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.SignableRequest;
 import com.amazonaws.auth.AWS4Signer;
+import com.amazonaws.arn.Arn;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.Signer;
 import com.amazonaws.services.s3.internal.AWSS3V4Signer;
@@ -143,7 +144,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
 
     conf.set(TEST_ID_KEY, identifier);
     conf.set(TEST_REGION_KEY, regionName);
-    conf.set(Constants.ENDPOINT, endpoint);
+
     // make absolutely sure there is no caching.
     disableFilesystemCaching(conf);
 
@@ -190,7 +191,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       LOG.info("Signing request #{}", c);
 
       String host = request.getEndpoint().getHost();
-      String bucketName = host.split("\\.")[0];
+      String bucketName = parseBucketFromHost(host);
       try {
         lastStoreValue = CustomSignerInitializer
             .getStoreValue(bucketName, UserGroupInformation.getCurrentUser());
@@ -212,6 +213,38 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
         }
         realSigner.sign(request, credentials);
       }
+    }
+
+    private String parseBucketFromHost(String host) {
+      String[] hostBits = host.split("\\.");
+      String bucketName = hostBits[0];
+      String service = hostBits[1];
+
+      if (bucketName.equals("kms")) {
+        return bucketName;
+      }
+
+      if (service.contains("s3-accesspoint") || service.contains("s3-outposts")
+          || service.contains("s3-object-lambda")) {
+        // If AccessPoint then bucketName is of format `accessPoint-accountId`;
+        String[] accessPointBits = bucketName.split("-");
+        String accountId = accessPointBits[accessPointBits.length - 1];
+        // Extract the access point name from bucket name. eg: if bucket name is
+        // test-custom-signer-<accountId>, get the access point name test-custom-signer by removing
+        // -<accountId> from the bucket name.
+        String accessPointName =
+            bucketName.substring(0, bucketName.length() - (accountId.length() + 1));
+        Arn arn = Arn.builder()
+            .withAccountId(accountId)
+            .withPartition("aws")
+            .withRegion(hostBits[2])
+            .withResource("accesspoint" + "/" + accessPointName)
+            .withService("s3").build();
+
+        bucketName = arn.toString();
+      }
+
+      return bucketName;
     }
 
     public static int getInstantiationCount() {

@@ -23,7 +23,6 @@ import java.util.List;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 
 import org.apache.hadoop.fs.InvalidRequestException;
@@ -31,7 +30,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 
 /**
  * Operations which must be offered by the store for {@link MarkerTool}.
@@ -41,8 +39,7 @@ import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 public interface MarkerToolOperations {
 
   /**
-   * Create an iterator over objects in S3 only; S3Guard
-   * is not involved.
+   * Create an iterator over objects in S3.
    * The listing includes the key itself, if found.
    * @param path  path of the listing.
    * @param key object key
@@ -56,21 +53,11 @@ public interface MarkerToolOperations {
       throws IOException;
 
   /**
-   * Remove keys from the store, updating the metastore on a
-   * partial delete represented as a MultiObjectDeleteException failure by
-   * deleting all those entries successfully deleted and then rethrowing
-   * the MultiObjectDeleteException.
+   * Remove keys from the store.
    * @param keysToDelete collection of keys to delete on the s3-backend.
    *        if empty, no request is made of the object store.
    * @param deleteFakeDir indicates whether this is for deleting fake dirs.
-   * @param undeletedObjectsOnFailure List which will be built up of all
-   * files that were not deleted. This happens even as an exception
-   * is raised.
-   * @param operationState bulk operation state
-   * @param quiet should a bulk query be quiet, or should its result list
    * all deleted keys
-   * @return the deletion result if a multi object delete was invoked
-   * and it returned without a failure, else null.
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
@@ -79,12 +66,9 @@ public interface MarkerToolOperations {
    * @throws IOException other IO Exception.
    */
   @Retries.RetryMixed
-  DeleteObjectsResult removeKeys(
+  void removeKeys(
       List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      boolean deleteFakeDir,
-      List<Path> undeletedObjectsOnFailure,
-      BulkOperationState operationState,
-      boolean quiet)
+      boolean deleteFakeDir)
       throws MultiObjectDeleteException, AmazonClientException,
              IOException;
 

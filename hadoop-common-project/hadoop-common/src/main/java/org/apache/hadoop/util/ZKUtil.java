@@ -88,6 +88,7 @@ public class ZKUtil {
    * Parse comma separated list of ACL entries to secure generated nodes, e.g.
    * <code>sasl:hdfs/host1@MY.DOMAIN:cdrwa,sasl:hdfs/host2@MY.DOMAIN:cdrwa</code>
    *
+   * @param aclString aclString.
    * @return ACL list
    * @throws BadAclFormatException if an ACL is invalid
    */

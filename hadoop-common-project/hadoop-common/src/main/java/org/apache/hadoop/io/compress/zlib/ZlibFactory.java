@@ -26,7 +26,7 @@ import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.util.NativeCodeLoader;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +66,7 @@ public class ZlibFactory {
   /**
    * Set the flag whether to use native library. Used for testing non-native
    * libraries
-   *
+   * @param isLoaded isLoaded.
    */
   @VisibleForTesting
   public static void setNativeZlibLoaded(final boolean isLoaded) {

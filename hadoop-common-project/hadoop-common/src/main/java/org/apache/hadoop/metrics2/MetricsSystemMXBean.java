@@ -29,19 +29,19 @@ import org.apache.hadoop.classification.InterfaceStability;
 public interface MetricsSystemMXBean {
   /**
    * Start the metrics system
-   * @throws MetricsException
+   * @throws MetricsException Metrics Exception.
    */
   public void start();
 
   /**
    * Stop the metrics system
-   * @throws MetricsException
+   * @throws MetricsException Metrics Exception.
    */
   public void stop();
 
   /**
    * Start metrics MBeans
-   * @throws MetricsException
+   * @throws MetricsException Metrics Exception.
    */
   public void startMetricsMBeans();
 
@@ -49,7 +49,7 @@ public interface MetricsSystemMXBean {
    * Stop metrics MBeans.
    * Note, it doesn't stop the metrics system control MBean,
    * i.e this interface.
-   * @throws MetricsException
+   * @throws MetricsException Metrics Exception.
    */
   public void stopMetricsMBeans();
 
@@ -57,7 +57,7 @@ public interface MetricsSystemMXBean {
    * @return the current config
    * Avoided getConfig, as it'll turn into a "Config" attribute,
    * which doesn't support multiple line values in jconsole.
-   * @throws MetricsException
+   * @throws MetricsException Metrics Exception.
    */
   public String currentConfig();
 }

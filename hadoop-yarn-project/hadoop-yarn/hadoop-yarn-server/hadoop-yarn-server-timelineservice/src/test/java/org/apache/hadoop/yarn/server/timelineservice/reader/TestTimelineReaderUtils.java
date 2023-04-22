@@ -18,38 +18,38 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestTimelineReaderUtils {
 
   @Test
-  public void testSplitUsingEscapeAndDelimChar() throws Exception {
+  void testSplitUsingEscapeAndDelimChar() throws Exception {
     List<String> list =
         TimelineReaderUtils.split("*!cluster!*!b**o***!xer!oozie**", '!', '*');
     String[] arr = new String[list.size()];
     arr = list.toArray(arr);
-    assertArrayEquals(new String[] {"!cluster", "!b*o*!xer", "oozie*"}, arr);
+    assertArrayEquals(new String[]{"!cluster", "!b*o*!xer", "oozie*"}, arr);
     list = TimelineReaderUtils.split("*!cluster!*!b**o***!xer!!", '!', '*');
     arr = new String[list.size()];
     arr = list.toArray(arr);
-    assertArrayEquals(new String[] {"!cluster", "!b*o*!xer", "", ""}, arr);
+    assertArrayEquals(new String[]{"!cluster", "!b*o*!xer", "", ""}, arr);
   }
 
   @Test
-  public void testJoinAndEscapeStrings() throws Exception {
+  void testJoinAndEscapeStrings() throws Exception {
     assertEquals("*!cluster!*!b**o***!xer!oozie**",
         TimelineReaderUtils.joinAndEscapeStrings(
-            new String[] {"!cluster", "!b*o*!xer", "oozie*"}, '!', '*'));
+            new String[]{"!cluster", "!b*o*!xer", "oozie*"}, '!', '*'));
     assertEquals("*!cluster!*!b**o***!xer!!",
         TimelineReaderUtils.joinAndEscapeStrings(
-            new String[] {"!cluster", "!b*o*!xer", "", ""}, '!', '*'));
+            new String[]{"!cluster", "!b*o*!xer", "", ""}, '!', '*'));
     assertNull(TimelineReaderUtils.joinAndEscapeStrings(
-        new String[] {"!cluster", "!b*o*!xer", null, ""}, '!', '*'));
+        new String[]{"!cluster", "!b*o*!xer", null, ""}, '!', '*'));
   }
 }

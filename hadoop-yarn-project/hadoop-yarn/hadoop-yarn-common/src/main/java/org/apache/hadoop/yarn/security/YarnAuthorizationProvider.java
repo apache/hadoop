@@ -28,7 +28,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import java.util.List;
 
 /**
@@ -79,6 +79,7 @@ public abstract class YarnAuthorizationProvider {
   /**
    * Initialize the provider. Invoked on daemon startup. DefaultYarnAuthorizer is
    * initialized based on configurations.
+   * @param conf configuration.
    */
   public abstract void init(Configuration conf);
 

@@ -30,7 +30,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.impl.FutureIOSupport;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.util.functional.FunctionRaisingIOE;
@@ -276,7 +275,7 @@ public class TestDurationTracking extends AbstractHadoopTestBase {
    */
   @Test
   public void testDurationThroughEval() throws Throwable {
-    CompletableFuture<Object> eval = FutureIOSupport.eval(
+    CompletableFuture<Object> eval = FutureIO.eval(
         trackDurationOfOperation(stats, REQUESTS, () -> {
           sleepf(100);
           throw new FileNotFoundException("oops");

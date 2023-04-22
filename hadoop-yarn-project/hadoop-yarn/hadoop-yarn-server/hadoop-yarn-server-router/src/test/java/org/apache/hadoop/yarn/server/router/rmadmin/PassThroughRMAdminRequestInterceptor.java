@@ -52,8 +52,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceReque
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 
 /**
- * Mock intercepter that does not do anything other than forwarding it to the
- * next intercepter in the chain.
+ * Mock interceptor that does not do anything other than forwarding it to the
+ * next interceptor in the chain.
  */
 public class PassThroughRMAdminRequestInterceptor
     extends AbstractRMAdminRequestInterceptor {

@@ -31,8 +31,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,7 +76,6 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * untranslated exceptions, as well as the translated ones.
  * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">S3 Error responses</a>
  * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html">Amazon S3 Error Best Practices</a>
- * @see <a href="http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/CommonErrors.html">Dynamo DB Commmon errors</a>
  */
 @SuppressWarnings("visibilitymodifier")  // I want a struct of finals, for real.
 public class S3ARetryPolicy implements RetryPolicy {
@@ -191,10 +189,6 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(UnknownStoreException.class, fail);
     policyMap.put(InvalidRequestException.class, fail);
 
-    // metadata stores should do retries internally when it makes sense
-    // so there is no point doing another layer of retries after that
-    policyMap.put(MetadataPersistenceException.class, fail);
-
     // once the file has changed, trying again is not going to help
     policyMap.put(RemoteFileChangedException.class, fail);
 
@@ -233,11 +227,6 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(AWSServiceIOException.class, retryIdempotentCalls);
     policyMap.put(AWSS3IOException.class, retryIdempotentCalls);
     policyMap.put(SocketTimeoutException.class, retryIdempotentCalls);
-
-    // Dynamo DB exceptions
-    // asking for more than you should get. It's a retry but should be logged
-    // trigger sleep
-    policyMap.put(ProvisionedThroughputExceededException.class, throttlePolicy);
 
     return policyMap;
   }

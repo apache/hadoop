@@ -24,6 +24,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -48,6 +51,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class StartupProgress {
+
+  private static final Logger LOG = LoggerFactory.getLogger(StartupProgress.class);
+
   // package-private for access by StartupProgressView
   final Map<Phase, PhaseTracking> phases =
     new ConcurrentHashMap<Phase, PhaseTracking>();
@@ -81,6 +87,7 @@ public class StartupProgress {
     if (!isComplete()) {
       phases.get(phase).beginTime = monotonicNow();
     }
+    LOG.debug("Beginning of the phase: {}", phase);
   }
 
   /**
@@ -94,6 +101,7 @@ public class StartupProgress {
     if (!isComplete(phase)) {
       lazyInitStep(phase, step).beginTime = monotonicNow();
     }
+    LOG.debug("Beginning of the step. Phase: {}, Step: {}", phase, step);
   }
 
   /**
@@ -105,6 +113,7 @@ public class StartupProgress {
     if (!isComplete()) {
       phases.get(phase).endTime = monotonicNow();
     }
+    LOG.debug("End of the phase: {}", phase);
   }
 
   /**
@@ -118,6 +127,7 @@ public class StartupProgress {
     if (!isComplete(phase)) {
       lazyInitStep(phase, step).endTime = monotonicNow();
     }
+    LOG.debug("End of the step. Phase: {}, Step: {}", phase, step);
   }
 
   /**

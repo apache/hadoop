@@ -21,6 +21,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,7 +32,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.RateLimiter;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -63,7 +64,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * The class provides utilities for accessing a NameNode.
@@ -147,11 +148,11 @@ public class NameNodeConnector implements Closeable {
 
   private final BalancerProtocols namenode;
   /**
-   * If set requestToStandby true, Balancer will getBlocks from
+   * If set getBlocksToStandby true, Balancer will getBlocks from
    * Standby NameNode only and it can reduce the performance impact of Active
    * NameNode, especially in a busy HA mode cluster.
    */
-  private boolean requestToStandby;
+  private boolean getBlocksToStandby;
   private String nsId;
   private Configuration config;
   private final KeyManager keyManager;
@@ -191,9 +192,9 @@ public class NameNodeConnector implements Closeable {
 
     this.namenode = NameNodeProxies.createProxy(conf, nameNodeUri,
         BalancerProtocols.class, fallbackToSimpleAuth).getProxy();
-    this.requestToStandby = conf.getBoolean(
-        DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_KEY,
-        DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_DEFAULT);
+    this.getBlocksToStandby = !conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY,
+        DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_DEFAULT);
     this.config = conf;
 
     this.fs = (DistributedFileSystem)FileSystem.get(nameNodeUri, conf);
@@ -260,13 +261,15 @@ public class NameNodeConnector implements Closeable {
     }
     boolean isRequestStandby = false;
     NamenodeProtocol nnProxy = null;
+    InetSocketAddress standbyAddress = null;
     try {
       ProxyPair proxyPair = getProxy();
       isRequestStandby = proxyPair.isRequestStandby;
       ClientProtocol proxy = proxyPair.clientProtocol;
       if (isRequestStandby) {
+        standbyAddress = RPC.getServerAddress(proxy);
         nnProxy = NameNodeProxies.createNonHAProxy(
-            config, RPC.getServerAddress(proxy), NamenodeProtocol.class,
+            config, standbyAddress, NamenodeProtocol.class,
             UserGroupInformation.getCurrentUser(), false).getProxy();
       } else {
         nnProxy = namenode;
@@ -274,7 +277,8 @@ public class NameNodeConnector implements Closeable {
       return nnProxy.getBlocks(datanode, size, minBlockSize, timeInterval);
     } finally {
       if (isRequestStandby) {
-        LOG.info("Request #getBlocks to Standby NameNode success.");
+        LOG.info("Request #getBlocks to Standby NameNode success. " +
+            "remoteAddress: {}", standbyAddress.getHostString());
       }
     }
   }
@@ -297,15 +301,19 @@ public class NameNodeConnector implements Closeable {
   public DatanodeStorageReport[] getLiveDatanodeStorageReport()
       throws IOException {
     boolean isRequestStandby = false;
+    InetSocketAddress standbyAddress = null;
     try {
       ProxyPair proxyPair = getProxy();
       isRequestStandby = proxyPair.isRequestStandby;
       ClientProtocol proxy = proxyPair.clientProtocol;
+      if (isRequestStandby) {
+        standbyAddress = RPC.getServerAddress(proxy);
+      }
       return proxy.getDatanodeStorageReport(DatanodeReportType.LIVE);
     } finally {
       if (isRequestStandby) {
         LOG.info("Request #getLiveDatanodeStorageReport to Standby " +
-            "NameNode success.");
+            "NameNode success. remoteAddress: {}", standbyAddress.getHostString());
       }
     }
   }
@@ -318,7 +326,7 @@ public class NameNodeConnector implements Closeable {
   private ProxyPair getProxy() throws IOException {
     boolean isRequestStandby = false;
     ClientProtocol clientProtocol = null;
-    if (requestToStandby && nsId != null
+    if (getBlocksToStandby && nsId != null
         && HAUtil.isHAEnabled(config, nsId)) {
       List<ClientProtocol> namenodes =
           HAUtil.getProxiesForAllNameNodesInNameservice(config, nsId);

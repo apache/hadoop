@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.InvalidPathException;
@@ -81,8 +81,12 @@ class FSDirRenameOp {
     // Assume dstParent existence check done by callers.
     INode dstParent = dst.getINode(-2);
     // Use the destination parent's storage policy for quota delta verify.
+    final boolean isSrcSetSp = src.getLastINode().isSetStoragePolicy();
+    final byte storagePolicyID = isSrcSetSp ?
+        src.getLastINode().getLocalStoragePolicyID() :
+        dstParent.getStoragePolicyID();
     final QuotaCounts delta = src.getLastINode()
-        .computeQuotaUsage(bsps, dstParent.getStoragePolicyID(), false,
+        .computeQuotaUsage(bsps, storagePolicyID, false,
             Snapshot.CURRENT_STATE_ID);
 
     // Reduce the required quota by dst that is being removed
@@ -148,8 +152,8 @@ class FSDirRenameOp {
    * @param srcIIP source path
    * @param dstIIP destination path
    * @return true INodesInPath if rename succeeds; null otherwise
-   * @deprecated See {@link #renameToInt(FSDirectory, String, String,
-   * boolean, Options.Rename...)}
+   * @deprecated See {@link #renameToInt(FSDirectory, FSPermissionChecker,
+   * String, String, boolean, Options.Rename...)}
    */
   @Deprecated
   static INodesInPath unprotectedRenameTo(FSDirectory fsd,
@@ -244,8 +248,8 @@ class FSDirRenameOp {
     String src = srcArg;
     String dst = dstArg;
     if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: with options -" +
-          " " + src + " to " + dst);
+      NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: with options={} {} to {}",
+          Arrays.toString(options), src, dst);
     }
 
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
@@ -254,8 +258,8 @@ class FSDirRenameOp {
   }
 
   /**
-   * @see {@link #unprotectedRenameTo(FSDirectory, String, String, INodesInPath,
-   * INodesInPath, long, BlocksMapUpdateInfo, Options.Rename...)}
+   * @see {@link #unprotectedRenameTo(FSDirectory, INodesInPath, INodesInPath,
+   * long, BlocksMapUpdateInfo, Options.Rename...)}
    */
   static RenameResult renameTo(FSDirectory fsd, FSPermissionChecker pc,
       String src, String dst, BlocksMapUpdateInfo collectedBlocks,
@@ -478,8 +482,8 @@ class FSDirRenameOp {
   }
 
   /**
-   * @deprecated Use {@link #renameToInt(FSDirectory, String, String,
-   * boolean, Options.Rename...)}
+   * @deprecated Use {@link #renameToInt(FSDirectory, FSPermissionChecker,
+   * String, String, boolean, Options.Rename...)}
    */
   @Deprecated
   private static RenameResult renameTo(FSDirectory fsd, FSPermissionChecker pc,

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.util;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.slf4j.Logger;
@@ -249,7 +249,7 @@ public final class ShutdownHookManager {
   }
 
   private final Set<HookEntry> hooks =
-      Collections.synchronizedSet(new HashSet<HookEntry>());
+      Collections.synchronizedSet(new HashSet<>());
 
   private AtomicBoolean shutdownInProgress = new AtomicBoolean(false);
 

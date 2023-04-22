@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.command;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.hadoop.conf.Configuration;
@@ -84,7 +84,7 @@ public class QueryCommand extends Command {
         System.out.printf("%s", workStatus.currentStateString());
       }
     } catch (DiskBalancerException ex) {
-      LOG.error("Query plan failed. ex: {}", ex);
+      LOG.error("Query plan failed.", ex);
       throw ex;
     }
   }

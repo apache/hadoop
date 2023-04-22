@@ -24,7 +24,7 @@ import java.net.InetSocketAddress;
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -66,9 +66,9 @@ public class TimelineUtils {
    * @param o
    *          an object to serialize
    * @return a JSON string
-   * @throws IOException
-   * @throws JsonMappingException
-   * @throws JsonGenerationException
+   * @throws IOException io error occur.
+   * @throws JsonMappingException exception used to signal fatal problems with mapping of content.
+   * @throws JsonGenerationException exception type for exceptions during JSON writing.
    */
   public static String dumpTimelineRecordtoJSON(Object o)
       throws JsonGenerationException, JsonMappingException, IOException {
@@ -83,9 +83,9 @@ public class TimelineUtils {
    * @param pretty
    *          whether in a pretty format or not
    * @return a JSON string
-   * @throws IOException
-   * @throws JsonMappingException
-   * @throws JsonGenerationException
+   * @throws IOException io error occur.
+   * @throws JsonMappingException exception used to signal fatal problems with mapping of content.
+   * @throws JsonGenerationException exception type for exceptions during JSON writing.
    */
   public static String dumpTimelineRecordtoJSON(Object o, boolean pretty)
       throws JsonGenerationException, JsonMappingException, IOException {

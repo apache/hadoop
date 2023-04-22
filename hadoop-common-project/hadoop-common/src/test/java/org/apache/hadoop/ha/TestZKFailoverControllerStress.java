@@ -128,7 +128,7 @@ public class TestZKFailoverControllerStress extends ClientBaseWithFixes {
     // Mockito errors if the HM calls the proxy in the middle of
     // setting up the mock.
     cluster.start();
-    
+
     long st = Time.now();
     while (Time.now() - st < runFor) {
       cluster.getTestContext().checkException();

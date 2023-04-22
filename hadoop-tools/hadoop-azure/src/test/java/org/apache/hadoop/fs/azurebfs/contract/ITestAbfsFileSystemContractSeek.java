@@ -37,7 +37,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_RE
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
-import static org.apache.hadoop.fs.impl.FutureIOSupport.awaitFuture;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /**
  * Contract test for seek operation.

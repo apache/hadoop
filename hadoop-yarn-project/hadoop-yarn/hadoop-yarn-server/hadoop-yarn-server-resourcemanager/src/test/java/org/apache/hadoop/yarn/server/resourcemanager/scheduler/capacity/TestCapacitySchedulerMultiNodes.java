@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.waitforNMRegistered;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -53,7 +56,7 @@ import org.junit.Test;
 /**
  * Test class for Multi Node scheduling related tests.
  */
-public class TestCapacitySchedulerMultiNodes extends CapacitySchedulerTestBase {
+public class TestCapacitySchedulerMultiNodes {
 
   private static final Logger LOG = LoggerFactory
       .getLogger(TestCapacitySchedulerMultiNodes.class);

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.util.MonotonicClock;
 import java.io.File;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -269,9 +269,8 @@ public class CGroupElasticMemoryController extends Thread {
 
       // Listen to any errors in the background. We do not expect this to
       // be large in size, so it will fit into a string.
-      Future<String> errorListener = executor.submit(
-          () -> IOUtils.toString(process.getErrorStream(),
-              Charset.defaultCharset()));
+      Future<String> errorListener =
+          executor.submit(() -> IOUtils.toString(process.getErrorStream(), StandardCharsets.UTF_8));
 
       // We get Linux event increments (8 bytes) forwarded from the event stream
       // The events cannot be split, so it is safe to read them as a whole

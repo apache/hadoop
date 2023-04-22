@@ -22,20 +22,21 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestOverrideTimelineStoreYarnClient {
 
   @Test
-  public void testLifecycleAndOverride() throws Throwable {
+  void testLifecycleAndOverride() throws Throwable {
     YarnConfiguration conf = new YarnConfiguration();
-    try(NoRMStore store = new NoRMStore()) {
+    try (NoRMStore store = new NoRMStore()) {
       store.init(conf);
       store.start();
-      Assert.assertEquals(EntityGroupFSTimelineStore.AppState.ACTIVE,
+      assertEquals(EntityGroupFSTimelineStore.AppState.ACTIVE,
           store.getAppState(ApplicationId.newInstance(1, 1)));
       store.stop();
     }

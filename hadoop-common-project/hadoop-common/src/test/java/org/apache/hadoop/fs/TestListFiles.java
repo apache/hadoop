@@ -152,7 +152,7 @@ public class TestListFiles {
     writeFile(fs, FILE1, FILE_LEN);
     writeFile(fs, FILE3, FILE_LEN);
 
-    Set<Path> filesToFind = new HashSet<Path>();
+    Set<Path> filesToFind = new HashSet<>();
     filesToFind.add(fs.makeQualified(FILE1));
     filesToFind.add(fs.makeQualified(FILE2));
     filesToFind.add(fs.makeQualified(FILE3));

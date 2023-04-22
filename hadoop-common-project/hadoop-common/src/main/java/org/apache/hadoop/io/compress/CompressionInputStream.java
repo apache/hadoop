@@ -53,7 +53,7 @@ public abstract class CompressionInputStream extends InputStream
    * the decompressed bytes from the given stream.
    * 
    * @param in The input stream to be compressed.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   protected CompressionInputStream(InputStream in) throws IOException {
     if (!(in instanceof Seekable) || !(in instanceof PositionedReadable)) {
@@ -93,6 +93,8 @@ public abstract class CompressionInputStream extends InputStream
   /**
    * Reset the decompressor to its initial state and discard any buffered data,
    * as the underlying stream may have been repositioned.
+   *
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void resetState() throws IOException;
   
@@ -118,7 +120,7 @@ public abstract class CompressionInputStream extends InputStream
   /**
    * This method is current not supported.
    *
-   * @throws UnsupportedOperationException
+   * @throws UnsupportedOperationException Unsupported Operation Exception.
    */
 
   @Override
@@ -129,7 +131,7 @@ public abstract class CompressionInputStream extends InputStream
   /**
    * This method is current not supported.
    *
-   * @throws UnsupportedOperationException
+   * @throws UnsupportedOperationException Unsupported Operation Exception.
    */
   @Override
   public boolean seekToNewSource(long targetPos) throws UnsupportedOperationException {

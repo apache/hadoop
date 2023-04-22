@@ -24,8 +24,7 @@ import java.util.PriorityQueue;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * A low memory footprint Cache which extends {@link LightWeightGSet}.
@@ -59,10 +58,13 @@ public class LightWeightCache<K, E extends K> extends LightWeightGSet<K, E> {
    * Entries of {@link LightWeightCache}.
    */
   public static interface Entry extends LinkedElement {
-    /** Set the expiration time. */
+    /**
+     * Set the expiration time.
+     * @param timeNano input timeNano.
+     */
     public void setExpirationTime(long timeNano);
 
-    /** Get the expiration time. */
+    /** @return Get the expiration time. */
     public long getExpirationTime();
   }
 

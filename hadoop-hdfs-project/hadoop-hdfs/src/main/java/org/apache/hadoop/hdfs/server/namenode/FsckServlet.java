@@ -48,9 +48,9 @@ public class FsckServlet extends DfsServlet {
     @SuppressWarnings("unchecked")
     final Map<String,String[]> pmap = request.getParameterMap();
     final PrintWriter out = response.getWriter();
-    final InetAddress remoteAddress = 
+    final InetAddress remoteAddress =
       InetAddress.getByName(request.getRemoteAddr());
-    final ServletContext context = getServletContext();    
+    final ServletContext context = getServletContext();
     final Configuration conf = NameNodeHttpServer.getConfFromContext(context);
 
     final UserGroupInformation ugi = getUGI(request, conf);

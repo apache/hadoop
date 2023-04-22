@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.sps;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -29,7 +30,7 @@ import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * A Class to track the block collection IDs (Inode's ID) for which physical
@@ -227,15 +228,18 @@ public class BlockStorageMovementNeeded {
    * ID's to process for satisfy the policy.
    */
   private class SPSPathIdProcessor implements Runnable {
+    private static final int MAX_RETRY_COUNT = 3;
 
     @Override
     public void run() {
       LOG.info("Starting SPSPathIdProcessor!.");
       Long startINode = null;
+      int retryCount = 0;
       while (ctxt.isRunning()) {
         try {
           if (!ctxt.isInSafeMode()) {
             if (startINode == null) {
+              retryCount = 0;
               startINode = ctxt.getNextSPSPath();
             } // else same id will be retried
             if (startINode == null) {
@@ -248,7 +252,12 @@ public class BlockStorageMovementNeeded {
                   pendingWorkForDirectory.get(startINode);
               if (dirPendingWorkInfo != null
                   && dirPendingWorkInfo.isDirWorkDone()) {
-                ctxt.removeSPSHint(startINode);
+                try {
+                  ctxt.removeSPSHint(startINode);
+                } catch (FileNotFoundException e) {
+                  // ignore if the file doesn't already exist
+                  startINode = null;
+                }
                 pendingWorkForDirectory.remove(startINode);
               }
             }
@@ -267,6 +276,11 @@ public class BlockStorageMovementNeeded {
           } catch (InterruptedException e) {
             LOG.info("Interrupted while waiting in SPSPathIdProcessor", t);
             break;
+          }
+          retryCount++;
+          if (retryCount >= MAX_RETRY_COUNT) {
+            LOG.warn("Skipping this inode {} due to too many retries.", startINode);
+            startINode = null;
           }
         }
       }

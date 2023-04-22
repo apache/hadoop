@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.yarn.logaggregation.filecontroller;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -389,7 +390,7 @@ public abstract class LogAggregationFileController {
           remoteFS.setPermission(qualified, new FsPermission(TLDIR_PERMISSIONS));
         } catch ( UnsupportedOperationException use) {
           LOG.info("Unable to set permissions for configured filesystem since"
-              + " it does not support this", remoteFS.getScheme());
+              + " it does not support this {}", remoteFS.getScheme());
           fsSupportsChmod = false;
         }
 
@@ -427,17 +428,25 @@ public abstract class LogAggregationFileController {
         throw new YarnRuntimeException("Failed to create remoteLogDir ["
             + remoteRootLogDir + "]", e);
       }
-    } else{
+    } else {
       //Check if FS has capability to set/modify permissions
+      Path permissionCheckFile = new Path(qualified, String.format("%s.permission_check",
+          RandomStringUtils.randomAlphanumeric(8)));
       try {
-        remoteFS.setPermission(qualified, new FsPermission(TLDIR_PERMISSIONS));
+        remoteFS.createNewFile(permissionCheckFile);
+        remoteFS.setPermission(permissionCheckFile, new FsPermission(TLDIR_PERMISSIONS));
       } catch (UnsupportedOperationException use) {
         LOG.info("Unable to set permissions for configured filesystem since"
-            + " it does not support this", remoteFS.getScheme());
+            + " it does not support this {}", remoteFS.getScheme());
         fsSupportsChmod = false;
       } catch (IOException e) {
-        LOG.warn("Failed to check if FileSystem suppports permissions on "
+        LOG.warn("Failed to check if FileSystem supports permissions on "
             + "remoteLogDir [" + remoteRootLogDir + "]", e);
+      } finally {
+        try {
+          remoteFS.delete(permissionCheckFile, false);
+        } catch (IOException ignored) {
+        }
       }
     }
   }

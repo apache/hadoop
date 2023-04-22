@@ -676,8 +676,6 @@ cause problems.
 As with all Azure storage services, the Azure Datalake Gen 2 store offers
 a fully consistent view of the store, with complete
 Create, Read, Update, and Delete consistency for data and metadata.
-(Compare and contrast with S3 which only offers Create consistency;
-S3Guard adds CRUD to metadata, but not the underlying data).
 
 ### <a name="performance"></a> Performance and Scalability
 
@@ -768,6 +766,23 @@ config will be set to true.
 Hflush() being the only documented API that can provide persistent data
 transfer, Flush() also attempting to persist buffered data will lead to
 performance issues.
+
+### <a name="100continueconfigoptions"></a> Hundred Continue Options
+
+`fs.azure.account.expect.header.enabled`: This configuration parameter is used
+to specify whether you wish to send a expect 100 continue header with each
+append request or not. It is configured to true by default. This flag configures
+the client to check with the Azure store before uploading a block of data from
+an output stream. This allows the client to throttle back gracefully -before
+actually attempting to upload the block. In experiments this provides
+significant throughput improvements under heavy load. For more information :
+- https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expect
+
+
+### <a name="accountlevelthrottlingoptions"></a> Account level throttling Options
+
+`fs.azure.account.operation.idle.timeout`: This value specifies the time after which the timer for the analyzer (read or
+write) should be paused until no new request is made again. The default value for the same is 60 seconds.
 
 ### <a name="hnscheckconfigoptions"></a> HNS Check Options
 Config `fs.azure.account.hns.enabled` provides an option to specify whether
@@ -878,6 +893,9 @@ when there are too many writes from the same process.
  that can be queued. Memory consumption of AbfsOutputStream instance can be
  tuned with this config considering each queued request holds a buffer. Set
  the value 3 or 4 times the value set for s.azure.write.max.concurrent.requests.
+
+`fs.azure.analysis.period`: The time after which sleep duration is recomputed after analyzing metrics. The default value
+for the same is 10 seconds.
 
 ### <a name="securityconfigoptions"></a> Security Options
 `fs.azure.always.use.https`: Enforces to use HTTPS instead of HTTP when the flag

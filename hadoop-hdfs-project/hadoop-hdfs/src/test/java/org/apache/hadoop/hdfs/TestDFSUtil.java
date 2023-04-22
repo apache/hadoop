@@ -45,6 +45,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,6 +54,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +72,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.http.HttpConfig;
@@ -80,7 +83,6 @@ import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.apache.hadoop.util.Sets;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -1042,10 +1044,10 @@ public class TestDFSUtil {
 
     {
       Collection<String> internal = DFSUtil.getInternalNameServices(conf);
-      assertEquals(Sets.newHashSet("nn1"), internal);
+      assertEquals(new HashSet<>(Arrays.asList("nn1")), internal);
 
       Collection<String> all = DFSUtilClient.getNameServiceIds(conf);
-      assertEquals(Sets.newHashSet("nn1", "nn2"), all);
+      assertEquals(new HashSet<>(Arrays.asList("nn1", "nn2")), all);
     }
 
     Map<String, Map<String, InetSocketAddress>> nnMap = DFSUtil
@@ -1107,5 +1109,19 @@ public class TestDFSUtil {
             + " is not configured.";
     LambdaTestUtils.intercept(IOException.class, expectedErrorMessage,
         ()->DFSUtil.getNNServiceRpcAddressesForCluster(conf));
+  }
+
+  @Test
+  public void testAddTransferRateMetricForValidValues() {
+    DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
+    DFSUtil.addTransferRateMetric(mockMetrics, 100, 10);
+    verify(mockMetrics).addReadTransferRate(10000);
+  }
+
+  @Test
+  public void testAddTransferRateMetricForInvalidValue() {
+    DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
+    DFSUtil.addTransferRateMetric(mockMetrics, 100, 0);
+    verify(mockMetrics, times(0)).addReadTransferRate(anyLong());
   }
 }

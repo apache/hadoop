@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs.azurebfs.utils;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 import java.io.File;
@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
+import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
@@ -189,7 +190,7 @@ public class TextFileBasedIdentityHandler implements IdentityHandler {
     } catch (ArrayIndexOutOfBoundsException e) {
       LOG.error("Error while parsing mapping file", e);
     } finally {
-      LineIterator.closeQuietly(it);
+      IOUtils.cleanupWithLogger(LOG, it);
     }
   }
 }

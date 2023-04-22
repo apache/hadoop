@@ -244,9 +244,14 @@ class Checkpointer extends Daemon {
 
       if(needReloadImage) {
         LOG.info("Loading image with txid " + sig.mostRecentCheckpointTxId);
-        File file = bnStorage.findImageFile(NameNodeFile.IMAGE,
-            sig.mostRecentCheckpointTxId);
-        bnImage.reloadFromImageFile(file, backupNode.getNamesystem());
+        backupNode.namesystem.writeLock();
+        try {
+          File file = bnStorage.findImageFile(NameNodeFile.IMAGE,
+              sig.mostRecentCheckpointTxId);
+          bnImage.reloadFromImageFile(file, backupNode.getNamesystem());
+        } finally {
+          backupNode.namesystem.writeUnlock("doCheckpointByBackupNode");
+        }
       }
       rollForwardByApplyingLogs(manifest, bnImage, backupNode.getNamesystem());
     }

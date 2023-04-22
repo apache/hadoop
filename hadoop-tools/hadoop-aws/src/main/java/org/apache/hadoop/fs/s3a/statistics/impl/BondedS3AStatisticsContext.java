@@ -25,7 +25,6 @@ import java.time.Duration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.statistics.DelegationTokenStatistics;
@@ -92,16 +91,6 @@ public class BondedS3AStatisticsContext implements S3AStatisticsContext {
    */
   private FileSystem.Statistics getInstanceStatistics() {
     return statisticsSource.getInstanceStatistics();
-  }
-
-  /**
-   * Get a MetastoreInstrumentation getInstrumentation() instance for this
-   * context.
-   * @return the S3Guard getInstrumentation() point.
-   */
-  @Override
-  public MetastoreInstrumentation getS3GuardInstrumentation() {
-    return getInstrumentation().getS3GuardInstrumentation();
   }
 
   /**

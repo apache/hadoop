@@ -56,7 +56,7 @@ import org.apache.hadoop.yarn.server.scheduler.ResourceRequestSetKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * A component that sits in between AMRMClient(Impl) and Yarn RM. It remembers

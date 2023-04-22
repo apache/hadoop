@@ -208,7 +208,10 @@ public final class WritableUtils  {
 
   /**
    * Make a copy of a writable object using serialization to a buffer.
+   *
+   * @param <T> Generics Type T.
    * @param orig The object to copy
+   * @param conf input Configuration.
    * @return The copied object
    */
   public static <T extends Writable> T clone(T orig, Configuration conf) {
@@ -223,10 +226,10 @@ public final class WritableUtils  {
   }
 
   /**
-   * Make a copy of the writable object using serialization to a buffer
+   * Make a copy of the writable object using serialization to a buffer.
    * @param dst the object to copy from
    * @param src the object to copy into, which is destroyed
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    * @deprecated use ReflectionUtils.cloneInto instead.
    */
   @Deprecated
@@ -248,7 +251,7 @@ public final class WritableUtils  {
    *
    * @param stream Binary output stream
    * @param i Integer to be serialized
-   * @throws java.io.IOException 
+   * @throws IOException raised on errors performing I/O.
    */
   public static void writeVInt(DataOutput stream, int i) throws IOException {
     writeVLong(stream, i);
@@ -268,7 +271,7 @@ public final class WritableUtils  {
    * 
    * @param stream Binary output stream
    * @param i Long to be serialized
-   * @throws java.io.IOException 
+   * @throws IOException raised on errors performing I/O.
    */
   public static void writeVLong(DataOutput stream, long i) throws IOException {
     if (i >= -112 && i <= 127) {
@@ -303,7 +306,7 @@ public final class WritableUtils  {
   /**
    * Reads a zero-compressed encoded long from input stream and returns it.
    * @param stream Binary input stream
-   * @throws java.io.IOException 
+   * @throws IOException raised on errors performing I/O.
    * @return deserialized long from stream.
    */
   public static long readVLong(DataInput stream) throws IOException {
@@ -324,7 +327,7 @@ public final class WritableUtils  {
   /**
    * Reads a zero-compressed encoded integer from input stream and returns it.
    * @param stream Binary input stream
-   * @throws java.io.IOException 
+   * @throws IOException raised on errors performing I/O.
    * @return deserialized integer from stream.
    */
   public static int readVInt(DataInput stream) throws IOException {
@@ -342,8 +345,10 @@ public final class WritableUtils  {
    * inclusive.
    *
    * @param stream Binary input stream
-   * @throws java.io.IOException
-   * @return deserialized integer from stream
+   * @param lower input lower.
+   * @param upper input upper.
+   * @throws IOException raised on errors performing I/O.
+   * @return deserialized integer from stream.
    */
   public static int readVIntInRange(DataInput stream, int lower, int upper)
       throws IOException {
@@ -387,7 +392,8 @@ public final class WritableUtils  {
   }
 
   /**
-   * Get the encoded length if an integer is stored in a variable-length format
+   * Get the encoded length if an integer is stored in a variable-length format.
+   * @param i input i.
    * @return the encoded length 
    */
   public static int getVIntSize(long i) {
@@ -410,7 +416,7 @@ public final class WritableUtils  {
    * @param in DataInput to read from 
    * @param enumType Class type of Enum
    * @return Enum represented by String read from DataInput
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static <T extends Enum<T>> T readEnum(DataInput in, Class<T> enumType)
     throws IOException{
@@ -420,7 +426,7 @@ public final class WritableUtils  {
    * writes String value of enum to DataOutput. 
    * @param out Dataoutput stream
    * @param enumVal enum value
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static void writeEnum(DataOutput out,  Enum<?> enumVal) 
     throws IOException{
@@ -446,7 +452,11 @@ public final class WritableUtils  {
     }
   }
 
-  /** Convert writables to a byte array */
+  /**
+   * Convert writables to a byte array.
+   * @param writables input writables.
+   * @return ByteArray.
+   */
   public static byte[] toByteArray(Writable... writables) {
     final DataOutputBuffer out = new DataOutputBuffer();
     try {

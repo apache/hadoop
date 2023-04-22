@@ -32,11 +32,12 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
-import org.apache.hadoop.fs.s3a.commit.CommitOperations;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-import org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitUtilsWithMR;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -45,9 +46,10 @@ import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.TASK_ATTEMPT_ID;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.TEMP_DATA;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
-import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
+import static org.apache.hadoop.fs.s3a.commit.impl.CommitUtilsWithMR.*;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
 
 /**
@@ -100,25 +102,28 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     try (DurationInfo d = new DurationInfo(LOG,
         "Setup Job %s", jobIdString(context))) {
       super.setupJob(context);
-      Path jobAttemptPath = getJobAttemptPath(context);
-      getDestinationFS(jobAttemptPath,
-          context.getConfiguration()).mkdirs(jobAttemptPath);
+      Path jobPath = getJobPath();
+      final FileSystem destFS = getDestinationFS(jobPath,
+          context.getConfiguration());
+      destFS.delete(jobPath, true);
+      destFS.mkdirs(jobPath);
     }
   }
 
   /**
    * Get the list of pending uploads for this job attempt, by listing
    * all .pendingset files in the job attempt directory.
-   * @param context job context
+   * @param commitContext job context
    * @return a list of pending commits.
    * @throws IOException Any IO failure
    */
   protected ActiveCommit listPendingUploadsToCommit(
-      JobContext context)
+      CommitContext commitContext)
       throws IOException {
     FileSystem fs = getDestFS();
-    return ActiveCommit.fromStatusList(fs,
-        listAndFilter(fs, getJobAttemptPath(context), false,
+    return ActiveCommit.fromStatusIterator(fs,
+        listAndFilter(fs, getJobAttemptPath(commitContext.getJobContext()),
+            false,
             CommitOperations.PENDINGSET_FILTER));
   }
 
@@ -126,11 +131,16 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    * Delete the magic directory.
    */
   public void cleanupStagingDirs() {
-    Path path = magicSubdir(getOutputPath());
+    final Path out = getOutputPath();
+    Path path = magicSubdir(out);
     try(DurationInfo ignored = new DurationInfo(LOG, true,
         "Deleting magic directory %s", path)) {
       Invoker.ignoreIOExceptions(LOG, "cleanup magic directory", path.toString(),
           () -> deleteWithWarning(getDestFS(), path, true));
+      // and the job temp directory with manifests
+      Invoker.ignoreIOExceptions(LOG, "cleanup job directory", path.toString(),
+          () -> deleteWithWarning(getDestFS(),
+              new Path(out, TEMP_DATA), true));
     }
   }
 
@@ -146,13 +156,8 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   @Override
   public boolean needsTaskCommit(TaskAttemptContext context)
       throws IOException {
-    Path taskAttemptPath = getTaskAttemptPath(context);
-    try (DurationInfo d = new DurationInfo(LOG,
-        "needsTaskCommit task %s", context.getTaskAttemptID())) {
-      return taskAttemptPath.getFileSystem(
-          context.getConfiguration())
-          .exists(taskAttemptPath);
-    }
+    // return true as a dir was created here in setup;
+    return true;
   }
 
   @Override
@@ -167,8 +172,9 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
       throw e;
     } finally {
       // delete the task attempt so there's no possibility of a second attempt
+      // incurs a LIST, a bulk DELETE and maybe a parent dir creation, however
+      // as it happens during task commit, it should be off the critical path.
       deleteTaskAttemptPathQuietly(context);
-      destroyThreadPool();
     }
     getCommitOperations().taskCompleted(true);
     LOG.debug("aggregate statistics\n{}",
@@ -190,43 +196,55 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     Path taskAttemptPath = getTaskAttemptPath(context);
     // load in all pending commits.
     CommitOperations actions = getCommitOperations();
-    Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
-        loaded = actions.loadSinglePendingCommits(
-            taskAttemptPath, true);
-    PendingSet pendingSet = loaded.getKey();
-    List<Pair<LocatedFileStatus, IOException>> failures = loaded.getValue();
-    if (!failures.isEmpty()) {
-      // At least one file failed to load
-      // revert all which did; report failure with first exception
-      LOG.error("At least one commit file could not be read: failing");
-      abortPendingUploads(context, pendingSet.getCommits(), true);
-      throw failures.get(0).getValue();
-    }
-    // patch in IDs
-    String jobId = getUUID();
-    String taskId = String.valueOf(context.getTaskAttemptID());
-    for (SinglePendingCommit commit : pendingSet.getCommits()) {
-      commit.setJobId(jobId);
-      commit.setTaskId(taskId);
-    }
-    pendingSet.putExtraData(TASK_ATTEMPT_ID, taskId);
-    pendingSet.setJobId(jobId);
-    Path jobAttemptPath = getJobAttemptPath(context);
-    TaskAttemptID taskAttemptID = context.getTaskAttemptID();
-    Path taskOutcomePath = new Path(jobAttemptPath,
-        taskAttemptID.getTaskID().toString() +
-        CommitConstants.PENDINGSET_SUFFIX);
-    LOG.info("Saving work of {} to {}", taskAttemptID, taskOutcomePath);
-    LOG.debug("task statistics\n{}",
-        IOStatisticsLogging.demandStringifyIOStatisticsSource(pendingSet));
-    try {
-      // We will overwrite if there exists a pendingSet file already
-      pendingSet.save(getDestFS(), taskOutcomePath, true);
-    } catch (IOException e) {
-      LOG.warn("Failed to save task commit data to {} ",
-          taskOutcomePath, e);
-      abortPendingUploads(context, pendingSet.getCommits(), true);
-      throw e;
+    PendingSet pendingSet;
+    try (CommitContext commitContext = initiateTaskOperation(context)) {
+      Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
+          loaded = actions.loadSinglePendingCommits(
+              taskAttemptPath, true, commitContext);
+      pendingSet = loaded.getKey();
+      List<Pair<LocatedFileStatus, IOException>> failures = loaded.getValue();
+      if (!failures.isEmpty()) {
+        // At least one file failed to load
+        // revert all which did; report failure with first exception
+        LOG.error("At least one commit file could not be read: failing");
+        abortPendingUploads(commitContext, pendingSet.getCommits(), true);
+        throw failures.get(0).getValue();
+      }
+      // patch in IDs
+      String jobId = getUUID();
+      String taskId = String.valueOf(context.getTaskAttemptID());
+      for (SinglePendingCommit commit : pendingSet.getCommits()) {
+        commit.setJobId(jobId);
+        commit.setTaskId(taskId);
+      }
+      pendingSet.putExtraData(TASK_ATTEMPT_ID, taskId);
+      pendingSet.setJobId(jobId);
+      // add in the IOStatistics of all the file loading
+      if (commitContext.isCollectIOStatistics()) {
+        pendingSet.getIOStatistics()
+            .aggregate(
+                commitContext.getIOStatisticsContext().getIOStatistics());
+      }
+
+      Path jobAttemptPath = getJobAttemptPath(context);
+      TaskAttemptID taskAttemptID = context.getTaskAttemptID();
+      Path taskOutcomePath = new Path(jobAttemptPath,
+          taskAttemptID.getTaskID().toString() +
+              CommitConstants.PENDINGSET_SUFFIX);
+      LOG.info("Saving work of {} to {}", taskAttemptID, taskOutcomePath);
+      LOG.debug("task statistics\n{}",
+          IOStatisticsLogging.demandStringifyIOStatisticsSource(pendingSet));
+      try {
+        // We will overwrite if there exists a pendingSet file already
+        pendingSet.save(getDestFS(),
+            taskOutcomePath,
+            commitContext.getPendingSetSerializer());
+      } catch (IOException e) {
+        LOG.warn("Failed to save task commit data to {} ",
+            taskOutcomePath, e);
+        abortPendingUploads(commitContext, pendingSet.getCommits(), true);
+        throw e;
+      }
     }
     return pendingSet;
   }
@@ -245,14 +263,25 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   public void abortTask(TaskAttemptContext context) throws IOException {
     Path attemptPath = getTaskAttemptPath(context);
     try (DurationInfo d = new DurationInfo(LOG,
-        "Abort task %s", context.getTaskAttemptID())) {
-      getCommitOperations().abortAllSinglePendingCommits(attemptPath, true);
+        "Abort task %s", context.getTaskAttemptID());
+        CommitContext commitContext = initiateTaskOperation(context)) {
+      getCommitOperations().abortAllSinglePendingCommits(attemptPath,
+          commitContext,
+          true);
     } finally {
       deleteQuietly(
           attemptPath.getFileSystem(context.getConfiguration()),
           attemptPath, true);
-      destroyThreadPool();
     }
+  }
+
+  /**
+   * Compute the path under which all job attempts will be placed.
+   * @return the path to store job attempt data.
+   */
+  @Override
+  protected Path getJobPath() {
+    return getMagicJobPath(getUUID(), getOutputPath());
   }
 
   /**
@@ -261,8 +290,8 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    * @param appAttemptId the ID of the application attempt for this job.
    * @return the path to store job attempt data.
    */
-  protected Path getJobAttemptPath(int appAttemptId) {
-    return getMagicJobAttemptPath(getUUID(), getOutputPath());
+  protected final Path getJobAttemptPath(int appAttemptId) {
+    return getMagicJobAttemptPath(getUUID(), appAttemptId, getOutputPath());
   }
 
   /**
@@ -272,12 +301,12 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    * @param context the context of the task attempt.
    * @return the path where a task attempt should be stored.
    */
-  public Path getTaskAttemptPath(TaskAttemptContext context) {
+  public final Path getTaskAttemptPath(TaskAttemptContext context) {
     return getMagicTaskAttemptPath(context, getUUID(), getOutputPath());
   }
 
   @Override
-  protected Path getBaseTaskAttemptPath(TaskAttemptContext context) {
+  protected final Path getBaseTaskAttemptPath(TaskAttemptContext context) {
     return getBaseMagicTaskAttemptPath(context, getUUID(), getOutputPath());
   }
 

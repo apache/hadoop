@@ -43,7 +43,7 @@ import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * A monitor class for checking whether block storage movements attempt
@@ -299,6 +299,16 @@ public class BlockStorageMovementAttemptedItems {
     synchronized (storageMovementAttemptedItems) {
       return storageMovementAttemptedItems.size();
     }
+  }
+
+  @VisibleForTesting
+  public List<AttemptedItemInfo> getStorageMovementAttemptedItems() {
+    return storageMovementAttemptedItems;
+  }
+
+  @VisibleForTesting
+  public BlockingQueue<Block> getMovementFinishedBlocks() {
+    return movementFinishedBlocks;
   }
 
   public void clearQueues() {

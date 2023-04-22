@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * <p>
  * Encapsulates a {@link Serializer}/{@link Deserializer} pair.
  * </p>
- * @param <T>
+ * @param <T> generic type.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
@@ -34,16 +34,21 @@ public interface Serialization<T> {
   /**
    * Allows clients to test whether this {@link Serialization}
    * supports the given class.
+   *
+   * @param c class.
+   * @return if accept true,not false.
    */
   boolean accept(Class<?> c);
   
   /**
    * @return a {@link Serializer} for the given class.
+   * @param c class.
    */
   Serializer<T> getSerializer(Class<T> c);
 
   /**
    * @return a {@link Deserializer} for the given class.
+   * @param c class.
    */
   Deserializer<T> getDeserializer(Class<T> c);
 }

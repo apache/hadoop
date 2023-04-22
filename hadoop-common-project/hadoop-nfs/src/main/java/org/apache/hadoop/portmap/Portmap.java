@@ -44,7 +44,7 @@ import org.apache.hadoop.oncrpc.RpcProgram;
 import org.apache.hadoop.oncrpc.RpcUtil;
 import org.apache.hadoop.util.StringUtils;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,15 +117,13 @@ final class Portmap {
         .childOption(ChannelOption.SO_REUSEADDR, true)
         .channel(NioServerSocketChannel.class)
         .childHandler(new ChannelInitializer<SocketChannel>() {
-          private final IdleStateHandler idleStateHandler = new IdleStateHandler(
-              0, 0, idleTimeMilliSeconds, TimeUnit.MILLISECONDS);
-
           @Override
           protected void initChannel(SocketChannel ch) throws Exception {
             ChannelPipeline p = ch.pipeline();
 
             p.addLast(RpcUtil.constructRpcFrameDecoder(),
-                RpcUtil.STAGE_RPC_MESSAGE_PARSER, idleStateHandler, handler,
+                RpcUtil.STAGE_RPC_MESSAGE_PARSER, new IdleStateHandler(0, 0,
+                            idleTimeMilliSeconds, TimeUnit.MILLISECONDS), handler,
                 RpcUtil.STAGE_RPC_TCP_RESPONSE);
           }});
 

@@ -164,7 +164,7 @@ public class TestOfflineEditsViewer {
   public void testStored() throws IOException {
     // reference edits stored with source code (see build.xml)
     final String cacheDir = System.getProperty("test.cache.data",
-        "build/test/cache");
+        "target/test-classes");
     // binary, XML, reparsed binary
     String editsStored = cacheDir + "/editsStored";
     String editsStoredParsedXml = cacheDir + "/editsStoredParsed.xml";

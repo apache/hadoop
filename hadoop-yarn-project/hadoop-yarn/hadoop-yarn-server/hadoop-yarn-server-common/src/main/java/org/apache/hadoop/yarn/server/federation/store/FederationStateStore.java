@@ -25,12 +25,14 @@ import org.apache.hadoop.yarn.server.records.Version;
 /**
  * FederationStore extends the three interfaces used to coordinate the state of
  * a federated cluster: {@link FederationApplicationHomeSubClusterStore},
- * {@link FederationMembershipStateStore}, and {@link FederationPolicyStore}.
+ * {@link FederationMembershipStateStore}, {@link FederationPolicyStore}, and
+ * {@link FederationReservationHomeSubClusterStore}.
  *
  */
-public interface FederationStateStore
-    extends FederationApplicationHomeSubClusterStore,
-    FederationMembershipStateStore, FederationPolicyStore {
+public interface FederationStateStore extends
+    FederationApplicationHomeSubClusterStore, FederationMembershipStateStore,
+    FederationPolicyStore, FederationReservationHomeSubClusterStore,
+    FederationDelegationTokenStateStore {
 
   /**
    * Initialize the FederationStore.
@@ -58,7 +60,21 @@ public interface FederationStateStore
    * Load the version information from the federation state store.
    *
    * @return the {@link Version} of the federation state store
+   * @throws Exception an exception occurred in load version.
    */
-  Version loadVersion();
+  Version loadVersion() throws Exception;
 
+  /**
+   * Store the Version information in federation state store.
+   *
+   * @throws Exception an exception occurred in store version.
+   */
+  void storeVersion() throws Exception;
+
+  /**
+   * Check the version of federation stateStore.
+   *
+   * @throws Exception an exception occurred in check version.
+   */
+  void checkVersion() throws Exception;
 }

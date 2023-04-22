@@ -26,7 +26,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 
 /**
@@ -150,23 +150,23 @@ public class InstrumentedLock implements Lock {
 
   @VisibleForTesting
   void logWarning(long lockHeldTime, SuppressedSnapshot stats) {
-    logger.warn(String.format("Lock held time above threshold: " +
+    logger.warn(String.format("Lock held time above threshold(%d ms): " +
         "lock identifier: %s " +
         "lockHeldTimeMs=%d ms. Suppressed %d lock warnings. " +
         "Longest suppressed LockHeldTimeMs=%d. " +
         "The stack trace is: %s" ,
-        name, lockHeldTime, stats.getSuppressedCount(),
+        lockWarningThreshold, name, lockHeldTime, stats.getSuppressedCount(),
         stats.getMaxSuppressedWait(),
         StringUtils.getStackTrace(Thread.currentThread())));
   }
 
   @VisibleForTesting
   void logWaitWarning(long lockWaitTime, SuppressedSnapshot stats) {
-    logger.warn(String.format("Waited above threshold to acquire lock: " +
+    logger.warn(String.format("Waited above threshold(%d ms) to acquire lock: " +
         "lock identifier: %s " +
         "waitTimeMs=%d ms. Suppressed %d lock wait warnings. " +
         "Longest suppressed WaitTimeMs=%d. " +
-        "The stack trace is: %s", name, lockWaitTime,
+        "The stack trace is: %s", lockWarningThreshold, name, lockWaitTime,
         stats.getSuppressedCount(), stats.getMaxSuppressedWait(),
         StringUtils.getStackTrace(Thread.currentThread())));
   }
@@ -185,6 +185,7 @@ public class InstrumentedLock implements Lock {
    *
    * @param acquireTime  - timestamp just after acquiring the lock.
    * @param releaseTime - timestamp just before releasing the lock.
+   * @param checkLockHeld checkLockHeld.
    */
   protected void check(long acquireTime, long releaseTime,
        boolean checkLockHeld) {

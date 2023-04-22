@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.nodelabels;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -61,7 +61,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAttributesUpdateSchedulerEvent;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 /**
  * Manager holding the attributes to Labels.
@@ -272,9 +271,11 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   }
 
   /**
-   * @param nodeAttributeMapping
-   * @param newAttributesToBeAdded
-   * @param isRemoveOperation : to indicate whether its a remove operation.
+   * Validate for attributes.
+   *
+   * @param nodeAttributeMapping NodeAttribute Mapping
+   * @param newAttributesToBeAdded new Attributes ToBeAdded
+   * @param isRemoveOperation : to indicate whether it's a remove operation.
    * @return Map of String to Map of NodeAttribute to AttributeValue
    * @throws IOException : on invalid mapping in the current request or against
    *           already existing NodeAttributes.
@@ -329,12 +330,13 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   }
 
   /**
+   * Validate For AttributeType Mismatch.
    *
-   * @param isRemoveOperation
-   * @param attribute
-   * @param newAttributes
-   * @return Whether its a new Attribute added
-   * @throws IOException
+   * @param isRemoveOperation to indicate whether it's a remove operation.
+   * @param attribute NodeAttribute.
+   * @param newAttributes new Attributes.
+   * @return Whether it's a new Attribute added
+   * @throws IOException an I/O exception of some sort has occurred.
    */
   private boolean validateForAttributeTypeMismatch(boolean isRemoveOperation,
       NodeAttribute attribute,

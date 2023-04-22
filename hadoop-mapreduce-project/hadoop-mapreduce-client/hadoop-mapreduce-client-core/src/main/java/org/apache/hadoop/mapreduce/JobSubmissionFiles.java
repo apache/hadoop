@@ -21,7 +21,7 @@ package org.apache.hadoop.mapreduce;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -159,7 +159,7 @@ public class JobSubmissionFiles {
         fs.setPermission(stagingArea, JOB_DIR_PERMISSION);
       }
     } catch (FileNotFoundException e) {
-      fs.mkdirs(stagingArea, new FsPermission(JOB_DIR_PERMISSION));
+      FileSystem.mkdirs(fs, stagingArea, new FsPermission(JOB_DIR_PERMISSION));
     }
     return stagingArea;
   }

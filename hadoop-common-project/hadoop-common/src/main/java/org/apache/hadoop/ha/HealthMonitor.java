@@ -31,8 +31,8 @@ import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Preconditions;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -184,6 +184,9 @@ public class HealthMonitor {
   
   /**
    * Connect to the service to be monitored. Stubbed out for easier testing.
+   *
+   * @throws IOException raised on errors performing I/O.
+   * @return HAServiceProtocol.
    */
   protected HAServiceProtocol createProxy() throws IOException {
     return targetToMonitor.getHealthMonitorProxy(conf, rpcTimeout, rpcConnectRetries);

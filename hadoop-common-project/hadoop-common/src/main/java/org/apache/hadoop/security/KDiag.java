@@ -46,6 +46,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -434,7 +435,8 @@ public class KDiag extends Configured implements Tool, Closeable {
    * This is a recurrent problem
    * (that is: it keeps creeping back with JVM updates);
    * a fast failure is the best tactic.
-   * @throws NoSuchAlgorithmException
+   * @throws NoSuchAlgorithmException when a particular cryptographic algorithm is
+   *                          requested but is not available in the environment.
    */
 
   protected void validateKeyLength() throws NoSuchAlgorithmException {
@@ -923,7 +925,7 @@ public class KDiag extends Configured implements Tool, Closeable {
    */
   private void dump(File file) throws IOException {
     try (InputStream in = Files.newInputStream(file.toPath())) {
-      for (String line : IOUtils.readLines(in)) {
+      for (String line : IOUtils.readLines(in, StandardCharsets.UTF_8)) {
         println("%s", line);
       }
     }
@@ -1045,7 +1047,7 @@ public class KDiag extends Configured implements Tool, Closeable {
    * @param conf configuration
    * @param argv argument list
    * @return an exception
-   * @throws Exception
+   * @throws Exception Exception.
    */
   public static int exec(Configuration conf, String... argv) throws Exception {
     try(KDiag kdiag = new KDiag()) {

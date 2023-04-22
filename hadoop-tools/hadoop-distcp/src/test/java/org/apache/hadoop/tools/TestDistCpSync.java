@@ -22,6 +22,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.RawLocalFileSystem;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -37,6 +40,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 import org.junit.After;
 import org.junit.Assert;
@@ -46,6 +50,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.io.FileWriter;
 import java.io.BufferedWriter;
+import java.net.URI;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.ArrayList;
@@ -54,6 +59,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class TestDistCpSync {
   private MiniDFSCluster cluster;
@@ -88,6 +96,7 @@ public class TestDistCpSync {
 
     conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, target.toString());
     conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, target.toString());
+    conf.setClass("fs.dummy.impl", DummyFs.class, FileSystem.class);
   }
 
   @After
@@ -1154,6 +1163,84 @@ public class TestDistCpSync {
     snapshotDiffWithPaths(webHdfsSource, webHdfsTarget);
   }
 
+  @Test
+  public void testRenameWithFilter() throws Exception {
+    java.nio.file.Path filterFile = null;
+    try {
+      Path sourcePath = new Path(dfs.getWorkingDirectory(), "source");
+
+      // Create some dir inside source
+      dfs.mkdirs(new Path(sourcePath, "dir1"));
+      dfs.mkdirs(new Path(sourcePath, "dir2"));
+
+      // Allow & Create snapshot at source.
+      dfs.allowSnapshot(sourcePath);
+      dfs.createSnapshot(sourcePath, "s1");
+
+      filterFile = Files.createTempFile("filters", "txt");
+      String str = ".*filterDir1.*";
+      try (BufferedWriter writer = new BufferedWriter(
+          new FileWriter(filterFile.toString()))) {
+        writer.write(str);
+      }
+      final DistCpOptions.Builder builder =
+          new DistCpOptions.Builder(new ArrayList<>(Arrays.asList(sourcePath)),
+              target).withFiltersFile(filterFile.toString())
+              .withSyncFolder(true);
+      new DistCp(conf, builder.build()).execute();
+
+      // Check the two directories get copied.
+      ContractTestUtils
+          .assertPathExists(dfs, "dir1 should get copied to target",
+              new Path(target, "dir1"));
+      ContractTestUtils
+          .assertPathExists(dfs, "dir2 should get copied to target",
+              new Path(target, "dir2"));
+
+      // Allow & create initial snapshots on target.
+      dfs.allowSnapshot(target);
+      dfs.createSnapshot(target, "s1");
+
+      // Now do a rename to a filtered name on source.
+      dfs.rename(new Path(sourcePath, "dir1"),
+          new Path(sourcePath, "filterDir1"));
+
+      ContractTestUtils
+          .assertPathExists(dfs, "'filterDir1' should be there on source",
+              new Path(sourcePath, "filterDir1"));
+
+      // Create the incremental snapshot.
+      dfs.createSnapshot(sourcePath, "s2");
+
+      final DistCpOptions.Builder diffBuilder =
+          new DistCpOptions.Builder(new ArrayList<>(Arrays.asList(sourcePath)),
+              target).withUseDiff("s1", "s2")
+              .withFiltersFile(filterFile.toString()).withSyncFolder(true);
+      new DistCp(conf, diffBuilder.build()).execute();
+
+      // Check the only qualified directory dir2 is there in target
+      ContractTestUtils.assertPathExists(dfs, "dir2 should be there on target",
+          new Path(target, "dir2"));
+
+      // Check the filtered directory is not there.
+      ContractTestUtils.assertPathDoesNotExist(dfs,
+          "Filtered directory 'filterDir1' shouldn't get copied",
+          new Path(target, "filterDir1"));
+
+      // Check the renamed directory gets deleted.
+      ContractTestUtils.assertPathDoesNotExist(dfs,
+          "Renamed directory 'dir1' should get deleted",
+          new Path(target, "dir1"));
+
+      // Check the filtered directory isn't there in the home directory.
+      ContractTestUtils.assertPathDoesNotExist(dfs,
+          "Filtered directory 'filterDir1' shouldn't get copied to home directory",
+          new Path("filterDir1"));
+    } finally {
+      deleteFilterFile(filterFile);
+    }
+  }
+
   private void snapshotDiffWithPaths(Path sourceFSPath,
       Path targetFSPath) throws Exception {
 
@@ -1196,5 +1283,64 @@ public class TestDistCpSync {
 
     verifyCopyByFs(sourceFS, targetFS, sourceFS.getFileStatus(sourceFSPath),
         targetFS.getFileStatus(targetFSPath), false);
+  }
+
+  @Test
+  public void testSyncSnapshotDiffWithLocalFileSystem() throws Exception {
+    String[] args = new String[]{"-update", "-diff", "s1", "s2",
+        "file:///source", "file:///target"};
+    LambdaTestUtils.intercept(
+        UnsupportedOperationException.class,
+        "The source file system file does not support snapshot",
+        () -> new DistCp(conf, OptionsParser.parse(args)).execute());
+  }
+
+  @Test
+  public void testSyncSnapshotDiffWithDummyFileSystem() {
+    String[] args =
+        new String[] { "-update", "-diff", "s1", "s2", "dummy:///source",
+            "dummy:///target" };
+    try {
+      FileSystem dummyFs = FileSystem.get(URI.create("dummy:///"), conf);
+      assertThat(dummyFs).isInstanceOf(DummyFs.class);
+      new DistCp(conf, OptionsParser.parse(args)).execute();
+    } catch (UnsupportedOperationException e) {
+      throw e;
+    } catch (Exception e) {
+      // can expect other exceptions as source and target paths
+      // are not created.
+    }
+  }
+
+  public static class DummyFs extends RawLocalFileSystem {
+    public DummyFs() {
+      super();
+    }
+
+    public URI getUri() {
+      return URI.create("dummy:///");
+    }
+
+    @Override
+    public boolean hasPathCapability(Path path, String capability)
+        throws IOException {
+      switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
+      case CommonPathCapabilities.FS_SNAPSHOTS:
+        return true;
+      default:
+        return super.hasPathCapability(path, capability);
+      }
+    }
+
+    @Override
+    public FileStatus getFileStatus(Path f) throws IOException {
+      return new FileStatus();
+    }
+
+    public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
+        final String fromSnapshot, final String toSnapshot) {
+      return new SnapshotDiffReport(snapshotDir.getName(), fromSnapshot,
+          toSnapshot, new ArrayList<SnapshotDiffReport.DiffReportEntry>());
+    }
   }
 }

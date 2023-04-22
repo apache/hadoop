@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import org.apache.hadoop.util.Sets;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -52,7 +52,7 @@ public class MutableRatesWithAggregation extends MutableMetric {
       LoggerFactory.getLogger(MutableRatesWithAggregation.class);
   private final Map<String, MutableRate> globalMetrics =
       new ConcurrentHashMap<>();
-  private final Set<Class<?>> protocolCache = Sets.newHashSet();
+  private final Set<Class<?>> protocolCache = new HashSet<>();
 
   private final ConcurrentLinkedDeque<WeakReference<ConcurrentMap<String, ThreadSafeSampleStat>>>
       weakReferenceQueue = new ConcurrentLinkedDeque<>();
@@ -72,7 +72,7 @@ public class MutableRatesWithAggregation extends MutableMetric {
       return;
     }
     protocolCache.add(protocol);
-    for (Method method : protocol.getDeclaredMethods()) {
+    for (Method method : protocol.getMethods()) {
       String name = method.getName();
       LOG.debug(name);
       addMetricIfNotExists(name);

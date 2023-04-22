@@ -23,13 +23,14 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServiceProtocol;
+import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 
 /**
- * Defines the contract to be implemented by the request intercepter classes,
+ * Defines the contract to be implemented by the request interceptor classes,
  * that can be used to intercept and inspect messages sent from the client to
  * the resource manager server.
  *
@@ -42,7 +43,7 @@ public interface RESTRequestInterceptor
     extends RMWebServiceProtocol, Configurable {
 
   /**
-   * This method is called for initializing the intercepter. This is guaranteed
+   * This method is called for initializing the interceptor. This is guaranteed
    * to be called only once in the lifetime of this instance.
    *
    * @param user the name of the client
@@ -50,28 +51,28 @@ public interface RESTRequestInterceptor
   void init(String user);
 
   /**
-   * This method is called to release the resources held by the intercepter.
+   * This method is called to release the resources held by the interceptor.
    * This will be called when the application pipeline is being destroyed. The
    * concrete implementations should dispose the resources and forward the
-   * request to the next intercepter, if any.
+   * request to the next interceptor, if any.
    */
   void shutdown();
 
   /**
-   * Sets the next intercepter in the pipeline. The concrete implementation of
+   * Sets the next interceptor in the pipeline. The concrete implementation of
    * this interface should always pass the request to the nextInterceptor after
-   * inspecting the message. The last intercepter in the chain is responsible to
+   * inspecting the message. The last interceptor in the chain is responsible to
    * send the messages to the resource manager service and so the last
-   * intercepter will not receive this method call.
+   * interceptor will not receive this method call.
    *
    * @param nextInterceptor the RESTRequestInterceptor to set in the pipeline
    */
   void setNextInterceptor(RESTRequestInterceptor nextInterceptor);
 
   /**
-   * Returns the next intercepter in the chain.
+   * Returns the next interceptor in the chain.
    *
-   * @return the next intercepter in the chain
+   * @return the next interceptor in the chain
    */
   RESTRequestInterceptor getNextInterceptor();
 
@@ -122,4 +123,18 @@ public interface RESTRequestInterceptor
    */
   ContainerInfo getContainer(HttpServletRequest req, HttpServletResponse res,
       String appId, String appAttemptId, String containerId);
+
+  /**
+   * Set RouterClientRMService.
+   *
+   * @param routerClientRMService routerClientRMService.
+   */
+  void setRouterClientRMService(RouterClientRMService routerClientRMService);
+
+  /**
+   * Get RouterClientRMService.
+   *
+   * @return RouterClientRMService
+   */
+  RouterClientRMService getRouterClientRMService();
 }

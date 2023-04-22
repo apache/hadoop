@@ -28,7 +28,7 @@ import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
 import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
@@ -46,8 +46,8 @@ public class WebServiceClient {
    * Construct a new WebServiceClient based on the configuration. It will try to
    * load SSL certificates when it is specified.
    *
-   * @param conf
-   * @throws Exception
+   * @param conf configuration.
+   * @throws Exception exception occur.
    */
   public static void initialize(Configuration conf) throws Exception {
     if (instance == null) {
@@ -75,9 +75,9 @@ public class WebServiceClient {
   /**
    * Start SSL factory.
    *
-   * @param conf
-   * @return
-   * @throws Exception
+   * @param conf configuration.
+   * @return SSL factory.
+   * @throws Exception exception occur.
    */
   private static SSLFactory createSSLFactory(Configuration conf)
       throws Exception {

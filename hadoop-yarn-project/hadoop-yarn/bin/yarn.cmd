@@ -220,7 +220,7 @@ goto :eof
 :resourcemanager
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\rm-config\log4j.properties
   set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\*
-  set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\lib\*
+  set CLASSPATH=%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\lib\*;%CLASSPATH%
   set CLASS=org.apache.hadoop.yarn.server.resourcemanager.ResourceManager
   set YARN_OPTS=%YARN_OPTS% %YARN_RESOURCEMANAGER_OPTS%
   if defined YARN_RESOURCEMANAGER_HEAPSIZE (
@@ -251,7 +251,7 @@ goto :eof
 :timelinereader
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\timelineserver-config\log4j.properties
   set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\*
-  set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\lib\*
+  set CLASSPATH=%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\lib\*;%CLASSPATH%
   set CLASS=org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer
   set YARN_OPTS=%YARN_OPTS% %YARN_TIMELINEREADER_OPTS%
   goto :eof
@@ -260,12 +260,20 @@ goto :eof
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\router-config\log4j.properties
   set CLASS=org.apache.hadoop.yarn.server.router.Router
   set YARN_OPTS=%YARN_OPTS% %HADOOP_ROUTER_OPTS%
+  if defined YARN_ROUTER_HEAPSIZE (
+    set JAVA_HEAP_MAX=-Xmx%YARN_ROUTER_HEAPSIZE%m
+  )
+  goto :eof
+
+:routeradmin
+  set CLASS=org.apache.hadoop.yarn.client.cli.RouterCLI
+  set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
   goto :eof
 
 :nodemanager
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\nm-config\log4j.properties
   set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\*
-  set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\lib\*
+  set CLASSPATH=%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\lib\*;%CLASSPATH%
   set CLASS=org.apache.hadoop.yarn.server.nodemanager.NodeManager
   set YARN_OPTS=%YARN_OPTS% -server %HADOOP_NODEMANAGER_OPTS%
   if defined YARN_NODEMANAGER_HEAPSIZE (
@@ -339,6 +347,7 @@ goto :eof
   @echo   resourcemanager      run the ResourceManager
   @echo   nodemanager          run a nodemanager on each slave
   @echo   router               run the Router daemon
+  @echo   routeradmin          router admin tools
   @echo   timelineserver       run the timeline server
   @echo   timelinereader       run the timeline reader server
   @echo   rmadmin              admin tools

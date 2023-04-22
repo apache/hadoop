@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.util.concurrent.ExecutorService;
+
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.store.DataBlocks;
+
 /**
  * Class to hold extra output stream configs.
  */
@@ -26,6 +32,8 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
   private int writeBufferSize;
 
   private boolean enableFlush;
+
+  private boolean enableExpectHeader;
 
   private boolean enableSmallWriteOptimization;
 
@@ -41,6 +49,22 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   private AbfsLease lease;
 
+  private DataBlocks.BlockFactory blockFactory;
+
+  private int blockOutputActiveBlocks;
+
+  private AbfsClient client;
+
+  private long position;
+
+  private FileSystem.Statistics statistics;
+
+  private String path;
+
+  private ExecutorService executorService;
+
+  private TracingContext tracingContext;
+
   public AbfsOutputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
   }
@@ -53,6 +77,11 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public AbfsOutputStreamContext enableFlush(final boolean enableFlush) {
     this.enableFlush = enableFlush;
+    return this;
+  }
+
+  public AbfsOutputStreamContext enableExpectHeader(final boolean enableExpectHeader) {
+    this.enableExpectHeader = enableExpectHeader;
     return this;
   }
 
@@ -79,10 +108,63 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this;
   }
 
-  public AbfsOutputStreamContext build() {
-    // Validation of parameters to be done here.
+  public AbfsOutputStreamContext withBlockFactory(
+      final DataBlocks.BlockFactory blockFactory) {
+    this.blockFactory = blockFactory;
     return this;
   }
+
+  public AbfsOutputStreamContext withBlockOutputActiveBlocks(
+      final int blockOutputActiveBlocks) {
+    this.blockOutputActiveBlocks = blockOutputActiveBlocks;
+    return this;
+  }
+
+
+  public AbfsOutputStreamContext withClient(
+      final AbfsClient client) {
+    this.client = client;
+    return this;
+  }
+
+  public AbfsOutputStreamContext withPosition(
+      final long position) {
+    this.position = position;
+    return this;
+  }
+
+  public AbfsOutputStreamContext withFsStatistics(
+      final FileSystem.Statistics statistics) {
+    this.statistics = statistics;
+    return this;
+  }
+
+  public AbfsOutputStreamContext withPath(
+      final String path) {
+    this.path = path;
+    return this;
+  }
+
+  public AbfsOutputStreamContext withExecutorService(
+      final ExecutorService executorService) {
+    this.executorService = executorService;
+    return this;
+  }
+
+  public AbfsOutputStreamContext withTracingContext(
+      final TracingContext tracingContext) {
+    this.tracingContext = tracingContext;
+    return this;
+  }
+
+  public AbfsOutputStreamContext build() {
+    // Validation of parameters to be done here.
+    if (streamStatistics == null) {
+      streamStatistics = new AbfsOutputStreamStatisticsImpl();
+    }
+    return this;
+  }
+
 
   public AbfsOutputStreamContext withWriteMaxConcurrentRequestCount(
       final int writeMaxConcurrentRequestCount) {
@@ -107,6 +189,10 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public boolean isEnableFlush() {
     return enableFlush;
+  }
+
+  public boolean isExpectHeaderEnabled() {
+    return enableExpectHeader;
   }
 
   public boolean isDisableOutputStreamFlush() {
@@ -142,5 +228,37 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
       return null;
     }
     return this.lease.getLeaseID();
+  }
+
+  public DataBlocks.BlockFactory getBlockFactory() {
+    return blockFactory;
+  }
+
+  public int getBlockOutputActiveBlocks() {
+    return blockOutputActiveBlocks;
+  }
+
+  public AbfsClient getClient() {
+    return client;
+  }
+
+  public FileSystem.Statistics getStatistics() {
+    return statistics;
+  }
+
+  public String getPath() {
+    return path;
+  }
+
+  public long getPosition() {
+    return position;
+  }
+
+  public ExecutorService getExecutorService() {
+    return executorService;
+  }
+
+  public TracingContext getTracingContext() {
+    return tracingContext;
   }
 }

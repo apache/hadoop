@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.slf4j.Logger;
@@ -42,10 +43,9 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Sets;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * Manages a collection of Journals. None of the methods are synchronized, it is
@@ -677,7 +677,7 @@ public class JournalSet implements JournalManager {
         // storage directory with ancient logs. Clear out any logs we've
         // accumulated so far, and then skip to the next segment of logs
         // after the gap.
-        SortedSet<Long> startTxIds = Sets.newTreeSet(logsByStartTxId.keySet());
+        SortedSet<Long> startTxIds = new TreeSet<>(logsByStartTxId.keySet());
         startTxIds = startTxIds.tailSet(curStartTxId);
         if (startTxIds.isEmpty()) {
           break;

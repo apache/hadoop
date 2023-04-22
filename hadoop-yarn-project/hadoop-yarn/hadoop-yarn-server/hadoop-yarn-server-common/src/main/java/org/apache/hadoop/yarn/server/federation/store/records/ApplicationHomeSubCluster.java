@@ -17,6 +17,8 @@
 
 package org.apache.hadoop.yarn.server.federation.store.records;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -48,6 +50,17 @@ public abstract class ApplicationHomeSubCluster {
         Records.newRecord(ApplicationHomeSubCluster.class);
     appMapping.setApplicationId(appId);
     appMapping.setHomeSubCluster(homeSubCluster);
+    return appMapping;
+  }
+
+  @Private
+  @Unstable
+  public static ApplicationHomeSubCluster newInstance(ApplicationId appId, long createTime,
+      SubClusterId homeSubCluster) {
+    ApplicationHomeSubCluster appMapping = Records.newRecord(ApplicationHomeSubCluster.class);
+    appMapping.setApplicationId(appId);
+    appMapping.setHomeSubCluster(homeSubCluster);
+    appMapping.setCreateTime(createTime);
     return appMapping;
   }
 
@@ -91,34 +104,63 @@ public abstract class ApplicationHomeSubCluster {
   @Unstable
   public abstract void setHomeSubCluster(SubClusterId homeSubCluster);
 
+  /**
+   * Get the create time of the subcluster.
+   *
+   * @return the state of the subcluster
+   */
+  @Public
+  @Unstable
+  public abstract long getCreateTime();
+
+  /**
+   * Set the create time of the subcluster.
+   *
+   * @param time the last heartbeat time of the subcluster
+   */
+  @Private
+  @Unstable
+  public abstract void setCreateTime(long time);
+
+
   @Override
   public boolean equals(Object obj) {
+
     if (this == obj) {
       return true;
     }
+
     if (obj == null) {
       return false;
     }
-    if (getClass() != obj.getClass()) {
-      return false;
+
+    if (obj instanceof ApplicationHomeSubCluster) {
+      ApplicationHomeSubCluster other = (ApplicationHomeSubCluster) obj;
+      return new EqualsBuilder()
+          .append(this.getApplicationId(), other.getApplicationId())
+          .append(this.getHomeSubCluster(), other.getHomeSubCluster())
+          .isEquals();
     }
-    ApplicationHomeSubCluster other = (ApplicationHomeSubCluster) obj;
-    if (!this.getApplicationId().equals(other.getApplicationId())) {
-      return false;
-    }
-    return this.getHomeSubCluster().equals(other.getHomeSubCluster());
+
+    return false;
   }
 
   @Override
   public int hashCode() {
-    return getApplicationId().hashCode() * 31 + getHomeSubCluster().hashCode();
+    return new HashCodeBuilder().
+        append(this.getApplicationId()).
+        append(this.getHomeSubCluster()).
+        append(this.getCreateTime()).toHashCode();
   }
 
   @Override
   public String toString() {
-    return "ApplicationHomeSubCluster [getApplicationId()="
-        + getApplicationId() + ", getHomeSubCluster()=" + getHomeSubCluster()
-        + "]";
+    StringBuilder sb = new StringBuilder();
+    sb.append("ApplicationHomeSubCluster: [")
+        .append("ApplicationId: ").append(getApplicationId()).append(", ")
+        .append("HomeSubCluster: ").append(getHomeSubCluster()).append(", ")
+        .append("CreateTime: ").append(getCreateTime()).append(", ")
+        .append("]");
+    return sb.toString();
   }
-
 }

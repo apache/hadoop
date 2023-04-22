@@ -49,7 +49,9 @@ import org.junit.rules.Timeout;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
@@ -664,4 +666,75 @@ public class TestDFSStripedInputStream {
       assertNull(in.parityBuf);
       in.close();
   }
+
+  @Test
+  public void testBlockReader() throws Exception {
+    ErasureCodingPolicy targetPolicy = StripedFileTestUtil.getDefaultECPolicy(); // RS-6-3-1024k
+    if (!ecPolicy.equals(targetPolicy)) {
+      // Be sure not affected by random EC policy from
+      // TestDFSStripedInputStreamWithRandomECPolicy.
+      return;
+    }
+    int fileSize = 19 * cellSize + 100;
+    long stripeSize = (long) dataBlocks * cellSize;
+    byte[] bytes = StripedFileTestUtil.generateBytes(fileSize);
+    DFSTestUtil.writeFile(fs, filePath, new String(bytes));
+
+    try (DFSStripedInputStream in =
+             (DFSStripedInputStream) fs.getClient().open(filePath.toString())) {
+      // Verify pread:
+      verifyPreadRanges(in, 0, 2 * cellSize,
+          2 * cellSize, Arrays.asList("0_0_1048576", "1_0_1048576"));
+      verifyPreadRanges(in, 0, 5 * cellSize + 9527,
+          5 * cellSize + 9527, Arrays.asList("0_0_1048576", "1_0_1048576",
+              "2_0_1048576", "3_0_1048576", "4_0_1048576", "5_0_1048576"));
+      verifyPreadRanges(in, 100, 5 * cellSize + 9527,
+          5 * cellSize + 9527, Arrays.asList("0_100_1048476", "1_0_1048576",
+              "2_0_1048576", "3_0_1048576", "4_0_1048576", "5_0_1048576"));
+      verifyPreadRanges(in, stripeSize * 3, 2 * cellSize,
+          cellSize + 100, Arrays.asList("0_1048576_1048576", "1_1048576_100"));
+
+      // Verify sread:
+      verifySreadRanges(in, 0, Arrays.asList("0_0_2097152", "1_0_2097152",
+          "2_0_2097152", "3_0_2097152", "4_0_2097152", "5_0_2097152"));
+      verifySreadRanges(in, stripeSize * 2, Arrays.asList("0_0_2097152", "1_0_1048676",
+          "2_0_1048576", "3_0_1048576", "4_0_1048576", "5_0_1048576"));
+    }
+  }
+
+  private void verifyPreadRanges(DFSStripedInputStream in, long position,
+                                 int length, int lengthExpected,
+                                 List<String> rangesExpected) throws Exception {
+    List<String> ranges = new ArrayList<>(); // range format: chunkIndex_offset_len
+    DFSClientFaultInjector.set(new DFSClientFaultInjector() {
+      @Override
+      public void onCreateBlockReader(LocatedBlock block, int chunkIndex,
+                                      long offset, long length) {
+        ranges.add(String.format("%s_%s_%s", chunkIndex, offset, length));
+      }
+    });
+    assertEquals(lengthExpected, in.read(position, new byte[length], 0, length));
+    Collections.sort(ranges);
+    Collections.sort(rangesExpected);
+    assertEquals(rangesExpected, ranges);
+  }
+
+  private void verifySreadRanges(DFSStripedInputStream in, long position,
+                                 List<String> rangesExpected) throws Exception {
+    List<String> ranges = new ArrayList<>(); // range format: chunkIndex_offset_len
+    DFSClientFaultInjector.set(new DFSClientFaultInjector() {
+      @Override
+      public void onCreateBlockReader(LocatedBlock block, int chunkIndex,
+                                      long offset, long length) {
+        ranges.add(String.format("%s_%s_%s", chunkIndex, offset, length));
+      }
+    });
+    in.seek(position);
+    int length = in.read(new byte[1024]);
+    assertEquals(1024, length);
+    Collections.sort(ranges);
+    Collections.sort(rangesExpected);
+    assertEquals(rangesExpected, ranges);
+  }
+
 }

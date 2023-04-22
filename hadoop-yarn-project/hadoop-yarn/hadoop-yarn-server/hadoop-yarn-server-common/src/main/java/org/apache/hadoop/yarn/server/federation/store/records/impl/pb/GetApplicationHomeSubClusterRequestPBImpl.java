@@ -127,6 +127,7 @@ public class GetApplicationHomeSubClusterRequestPBImpl
       return;
     }
     this.applicationId = applicationId;
+    builder.setApplicationId(convertToProtoFormat(applicationId));
   }
 
   private ApplicationId convertFromProtoFormat(ApplicationIdProto appId) {

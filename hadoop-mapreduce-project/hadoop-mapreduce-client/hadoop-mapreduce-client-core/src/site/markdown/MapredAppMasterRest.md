@@ -48,7 +48,7 @@ When you make a request for the mapreduce application master information, the in
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| appId | long | The application id |
+| appId | string | The application id |
 | startedOn | long | The time the application started (in ms since epoch) |
 | name | string | The name of the application |
 | user | string | The user name of the user who started the application |

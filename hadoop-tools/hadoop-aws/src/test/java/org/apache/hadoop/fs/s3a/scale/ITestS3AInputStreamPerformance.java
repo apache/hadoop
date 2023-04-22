@@ -22,11 +22,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
@@ -41,7 +43,6 @@ import org.apache.hadoop.util.LineReader;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -50,27 +51,34 @@ import org.slf4j.LoggerFactory;
 import java.io.EOFException;
 import java.io.IOException;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_BUFFER_SIZE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getInputStreamStatistics;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getS3AInputStream;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticMinimum;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMaximumStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMeanStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
-import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MAX;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MIN;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /**
- * Look at the performance of S3a operations.
+ * Look at the performance of S3a Input Stream Reads.
  */
 public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestS3AInputStreamPerformance.class);
+  private static final int READAHEAD_128K = 128 * _1KB;
 
   private S3AFileSystem s3aFS;
   private Path testData;
@@ -86,6 +94,14 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   /** Tests only run if the there is a named test file that can be read. */
   private boolean testDataAvailable = true;
   private String assumptionMessage = "test file";
+
+  @Override
+  protected Configuration createScaleConfiguration() {
+    Configuration conf = super.createScaleConfiguration();
+    S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
+    conf.setBoolean(PREFETCH_ENABLED_KEY, false);
+    return conf;
+  }
 
   /**
    * Open the FS and the test data. The input stream is always set up here.
@@ -128,14 +144,16 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     describe("cleanup");
     IOUtils.closeStream(in);
     if (in != null) {
+      final IOStatistics stats = in.getIOStatistics();
       LOG.info("Stream statistics {}",
-          ioStatisticsSourceToString(in));
-      IOSTATS.aggregate(in.getIOStatistics());
+          ioStatisticsToPrettyString(stats));
+      IOSTATS.aggregate(stats);
     }
     if (s3aFS != null) {
+      final IOStatistics stats = s3aFS.getIOStatistics();
       LOG.info("FileSystem statistics {}",
-          ioStatisticsSourceToString(s3aFS));
-      FILESYSTEM_IOSTATS.aggregate(s3aFS.getIOStatistics());
+          ioStatisticsToPrettyString(stats));
+      FILESYSTEM_IOSTATS.aggregate(stats);
       IOUtils.closeStream(s3aFS);
     }
   }
@@ -177,7 +195,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   FSDataInputStream openTestFile(S3AInputPolicy inputPolicy, long readahead)
       throws IOException {
     requireCSVTestData();
-    return openDataFile(s3aFS, this.testData, inputPolicy, readahead);
+    return openDataFile(s3aFS, testData, inputPolicy, readahead, testDataStatus.getLen());
   }
 
   /**
@@ -187,27 +205,28 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
    * @param path path to open
    * @param inputPolicy input policy to use
    * @param readahead readahead/buffer size
+   * @param length
    * @return the stream, wrapping an S3a one
    * @throws IOException IO problems
    */
   private FSDataInputStream openDataFile(S3AFileSystem fs,
       Path path,
       S3AInputPolicy inputPolicy,
-      long readahead) throws IOException {
+      long readahead,
+      final long length) throws IOException {
     int bufferSize = getConf().getInt(KEY_READ_BUFFER_SIZE,
         DEFAULT_READ_BUFFER_SIZE);
-    S3AInputPolicy policy = fs.getInputPolicy();
-    fs.setInputPolicy(inputPolicy);
-    try {
-      FSDataInputStream stream = fs.open(path, bufferSize);
-      if (readahead >= 0) {
-        stream.setReadahead(readahead);
-      }
-      streamStatistics = getInputStreamStatistics(stream);
-      return stream;
-    } finally {
-      fs.setInputPolicy(policy);
+    final FutureDataInputStreamBuilder builder = fs.openFile(path)
+        .opt(FS_OPTION_OPENFILE_READ_POLICY,
+            inputPolicy.toString())
+        .opt(FS_OPTION_OPENFILE_LENGTH, length)
+        .opt(FS_OPTION_OPENFILE_BUFFER_SIZE, bufferSize);
+    if (readahead > 0) {
+      builder.opt(READAHEAD_RANGE, readahead);
     }
+    FSDataInputStream stream = awaitFuture(builder.build());
+    streamStatistics = getInputStreamStatistics(stream);
+    return stream;
   }
 
   /**
@@ -293,8 +312,10 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
       if (bandwidth(blockTimer, blockSize) < minimumBandwidth) {
         LOG.warn("Bandwidth {} too low on block {}: resetting connection",
             bw, blockId);
-        Assert.assertTrue("Bandwidth of " + bw +" too low after  "
-            + resetCount + " attempts", resetCount <= maxResetCount);
+        Assertions.assertThat(resetCount)
+            .describedAs("Bandwidth of %s too low after  %s attempts",
+                bw, resetCount)
+            .isLessThanOrEqualTo(maxResetCount);
         resetCount++;
         // reset the connection
         getS3AInputStream(in).resetConnection();
@@ -359,7 +380,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   public void testDecompressionSequential128K() throws Throwable {
     describe("Decompress with a 128K readahead");
     skipIfClientSideEncryption();
-    executeDecompression(128 * _1KB, S3AInputPolicy.Sequential);
+    executeDecompression(READAHEAD_128K, S3AInputPolicy.Sequential);
     assertStreamOpenedExactlyOnce();
   }
 
@@ -558,7 +579,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     byte[] buffer = new byte[datasetLen];
     int readahead = _8K;
     int halfReadahead = _4K;
-    in = openDataFile(fs, dataFile, S3AInputPolicy.Random, readahead);
+    in = openDataFile(fs, dataFile, S3AInputPolicy.Random, readahead, datasetLen);
 
     LOG.info("Starting initial reads");
     S3AInputStream s3aStream = getS3aStream();

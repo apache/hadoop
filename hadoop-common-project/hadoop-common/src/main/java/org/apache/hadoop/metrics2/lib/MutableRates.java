@@ -19,11 +19,10 @@
 package org.apache.hadoop.metrics2.lib;
 
 import java.lang.reflect.Method;
+import java.util.HashSet;
 import java.util.Set;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
-import org.apache.hadoop.util.Sets;
-
+import static org.apache.hadoop.util.Preconditions.*;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -44,7 +43,7 @@ import org.slf4j.LoggerFactory;
 public class MutableRates extends MutableMetric {
   static final Logger LOG = LoggerFactory.getLogger(MutableRates.class);
   private final MetricsRegistry registry;
-  private final Set<Class<?>> protocolCache = Sets.newHashSet();
+  private final Set<Class<?>> protocolCache = new HashSet<>();
 
   MutableRates(MetricsRegistry registry) {
     this.registry = checkNotNull(registry, "metrics registry");

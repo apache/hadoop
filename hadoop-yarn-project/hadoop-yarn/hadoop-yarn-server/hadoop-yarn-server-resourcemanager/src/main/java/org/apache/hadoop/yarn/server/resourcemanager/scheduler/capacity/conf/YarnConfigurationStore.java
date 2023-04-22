@@ -53,6 +53,7 @@ public abstract class YarnConfigurationStore {
    * audit logging and recovery.
    */
   public static class LogMutation implements Serializable {
+    private static final long serialVersionUID = 7754046036718906356L;
     private Map<String, String> updates;
     private String user;
 
@@ -125,6 +126,7 @@ public abstract class YarnConfigurationStore {
   /**
    * Retrieve the persisted configuration.
    * @return configuration as key-value
+   * @throws IOException an I/O exception has occurred.
    */
   public abstract Configuration retrieve() throws IOException;
 
@@ -138,6 +140,7 @@ public abstract class YarnConfigurationStore {
   /**
    * Get the last updated config version.
    * @return Last updated config version.
+   * @throws Exception On version fetch failure.
    */
   public abstract long getConfigVersion() throws Exception;
 

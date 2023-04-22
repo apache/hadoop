@@ -67,6 +67,13 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <!-- snappy-java is native library and cannot be relocated. So we explicitly exclude it
+         from shaded jar to prevent possible conflict. Make it as transitive dependency to
+         make the downstream pull it. -->
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+    </dependency>
   </dependencies>
   <profiles>
     <profile>
@@ -91,13 +98,6 @@
               <createSourcesJar>true</createSourcesJar>
               <shadeSourcesContent>true</shadeSourcesContent>
             </configuration>
-            <dependencies>
-              <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-maven-plugins</artifactId>
-                <version>${project.version}</version>
-              </dependency>
-            </dependencies>
             <executions>
               <execution>
                 <phase>package</phase>
@@ -109,6 +109,10 @@
                     <includes>
                       <include>org.apache.hadoop:*</include>
                     </includes>
+                    <excludes>
+                      <!-- Leave snappy that includes native methods which cannot be relocated. -->
+                      <exclude>org.xerial.snappy:*</exclude>
+                    </excludes>
                   </artifactSet>
                   <filters>
                     <!-- We get these package level classes from various yarn api jars -->
@@ -147,6 +151,12 @@
                         <exclude>org/xml/sax/**/*</exclude>
                         <exclude>org/bouncycastle/*</exclude>
                         <exclude>org/bouncycastle/**/*</exclude>
+                        <!-- Exclude snappy-java -->
+                        <exclude>org/xerial/snappy/*</exclude>
+                        <exclude>org/xerial/snappy/**/*</exclude>
+                        <!-- Exclude org.widlfly.openssl -->
+                        <exclude>org/wildfly/openssl/*</exclude>
+                        <exclude>org/wildfly/openssl/**/*</exclude>
                       </excludes>
                     </relocation>
                     <relocation>
@@ -165,6 +175,8 @@
                         <exclude>com/sun/security/**/*</exclude>
                         <exclude>com/sun/jndi/**/*</exclude>
                         <exclude>com/sun/management/**/*</exclude>
+                        <exclude>com/ibm/security/*</exclude>
+                        <exclude>com/ibm/security/**/*</exclude>
                       </excludes>
                     </relocation>
                     <relocation>
@@ -223,6 +235,9 @@
                         <!-- Exclude config keys for Hadoop that look like package names -->
                         <exclude>net/topology/*</exclude>
                         <exclude>net/topology/**/*</exclude>
+                        <!-- Exclude lz4-java -->
+                        <exclude>net/jpountz/*</exclude>
+                        <exclude>net/jpountz/**/*</exclude>
                       </excludes>
                     </relocation>
                     <!-- okio declares a top level package instead of nested -->
@@ -232,8 +247,7 @@
                     </relocation>
                   </relocations>
                   <transformers>
-                    <!-- Needed until MSHADE-182 -->
-                    <transformer implementation="org.apache.hadoop.maven.plugin.shade.resource.ServicesResourceTransformer"/>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                     <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
                     <transformer implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
                       <resource>NOTICE.txt</resource>

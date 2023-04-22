@@ -37,7 +37,6 @@ import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 
 import org.apache.hadoop.util.Sets;
 import org.assertj.core.api.Assertions;
-import org.hamcrest.core.StringStartsWith;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,6 +57,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.PathCommitException;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
+import org.apache.hadoop.fs.s3a.commit.files.PersistentCommitData;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -168,7 +168,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     this.tac = new TaskAttemptContextImpl(
         new Configuration(job.getConfiguration()), AID);
 
-    this.jobCommitter = new MockedStagingCommitter(outputPath, tac);
+    this.jobCommitter = new MockedStagingCommitter(getOutputPath(), tac);
     jobCommitter.setupJob(job);
 
     // get the task's configuration copy so modifications take effect
@@ -183,7 +183,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     this.conf.set(BUFFER_DIR,
         String.format("%s/local-0/, %s/local-1 ", tmp, tmp));
 
-    this.committer = new MockedStagingCommitter(outputPath, tac);
+    this.committer = new MockedStagingCommitter(getOutputPath(), tac);
     Paths.resetTempFolderCache();
   }
 
@@ -335,10 +335,11 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     config.set(BUFFER_DIR,
         "file:/tmp/mr-local-0,file:/tmp/mr-local-1");
 
-    assertThat("Path should be the same with file scheme",
+    Assertions.assertThat(
         getLocalTaskAttemptTempDir(config,
-            jobUUID, tac.getTaskAttemptID()).toString(),
-        StringStartsWith.startsWith(commonPath));
+            jobUUID, tac.getTaskAttemptID()).toString())
+        .describedAs("Path should be the same with file scheme")
+        .startsWith(commonPath);
   }
 
   @Test
@@ -379,7 +380,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     assertEquals("Should name the commits file with the task ID: " + results,
         "task_job_0001_r_000002", stats[0].getPath().getName());
 
-    PendingSet pending = PendingSet.load(dfs, stats[0]);
+    PendingSet pending = PersistentCommitData.load(dfs, stats[0], PendingSet.serializer());
     assertEquals("Should have one pending commit", 1, pending.size());
     SinglePendingCommit commit = pending.getCommits().get(0);
     assertEquals("Should write to the correct bucket:" + results,
@@ -419,7 +420,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     assertEquals("Should name the commits file with the task ID",
         "task_job_0001_r_000002", stats[0].getPath().getName());
 
-    PendingSet pending = PendingSet.load(dfs, stats[0]);
+    PendingSet pending = PersistentCommitData.load(dfs, stats[0], PendingSet.serializer());
     assertEquals("Should have one pending commit", 1, pending.size());
   }
 
@@ -442,7 +443,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         "task_job_0001_r_000002", stats[0].getPath().getName());
 
     List<SinglePendingCommit> pending =
-        PendingSet.load(dfs, stats[0]).getCommits();
+        PersistentCommitData.load(dfs, stats[0], PendingSet.serializer()).getCommits();
     assertEquals("Should have correct number of pending commits",
         files.size(), pending.size());
 
@@ -717,7 +718,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
       TaskAttemptContext attempt = new TaskAttemptContextImpl(
           new Configuration(jobContext.getConfiguration()), attemptID);
       MockedStagingCommitter taskCommitter = new MockedStagingCommitter(
-          outputPath, attempt);
+          getOutputPath(), attempt);
       commitTask(taskCommitter, attempt, numFiles);
     }
 

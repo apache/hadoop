@@ -40,6 +40,7 @@ public class PartitionQueueMetrics extends QueueMetrics {
       String parentMetricName =
           partition + METRIC_NAME_DELIMITER + newQueueName;
       setParent(getQueueMetrics().get(parentMetricName));
+      storedPartitionMetrics = null;
     }
   }
 
@@ -77,7 +78,7 @@ public class PartitionQueueMetrics extends QueueMetrics {
       metrics = new PartitionQueueMetrics(this.metricsSystem, this.queueName,
           null, false, this.conf, this.partition);
       users.put(userName, metrics);
-      metricsSystem.register(
+      registerMetrics(
           pSourceName(partitionJMXStr).append(qSourceName(queueName))
               .append(",user=").append(userName).toString(),
           "Metrics for user '" + userName + "' in queue '" + queueName + "'",

@@ -16,6 +16,14 @@
  */
 package org.apache.hadoop.yarn.security;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.nio.ByteBuffer;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -25,16 +33,9 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.util.DockerClientConfigHandler;
-import org.junit.Before;
-import org.junit.Test;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.nio.ByteBuffer;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test the functionality of the DockerClientConfigHandler.
@@ -51,7 +52,7 @@ public class TestDockerClientConfigHandler {
   private File file;
   private Configuration conf = new Configuration();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     file = File.createTempFile("docker-client-config", "test");
     file.deleteOnExit();
@@ -61,7 +62,7 @@ public class TestDockerClientConfigHandler {
   }
 
   @Test
-  public void testReadCredentialsFromConfigFile() throws Exception {
+  void testReadCredentialsFromConfigFile() throws Exception {
     Credentials credentials =
         DockerClientConfigHandler.readCredentialsFromConfigFile(
             new Path(file.toURI()), conf, APPLICATION_ID);
@@ -85,7 +86,7 @@ public class TestDockerClientConfigHandler {
   }
 
   @Test
-  public void testGetCredentialsFromTokensByteBuffer() throws Exception {
+  void testGetCredentialsFromTokensByteBuffer() throws Exception {
     Credentials credentials =
         DockerClientConfigHandler.readCredentialsFromConfigFile(
             new Path(file.toURI()), conf, APPLICATION_ID);
@@ -110,7 +111,7 @@ public class TestDockerClientConfigHandler {
   }
 
   @Test
-  public void testWriteDockerCredentialsToPath() throws Exception {
+  void testWriteDockerCredentialsToPath() throws Exception {
     File outFile = File.createTempFile("docker-client-config", "out");
     outFile.deleteOnExit();
     Credentials credentials =

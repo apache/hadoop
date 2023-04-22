@@ -27,6 +27,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -137,8 +139,17 @@ public class DFSck extends Configured implements Tool {
     super(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
     this.out = out;
+    int connectTimeout = (int) conf.getTimeDuration(
+        HdfsClientConfigKeys.DFS_CLIENT_FSCK_CONNECT_TIMEOUT,
+        HdfsClientConfigKeys.DFS_CLIENT_FSCK_CONNECT_TIMEOUT_DEFAULT,
+        TimeUnit.MILLISECONDS);
+    int readTimeout = (int) conf.getTimeDuration(
+        HdfsClientConfigKeys.DFS_CLIENT_FSCK_READ_TIMEOUT,
+        HdfsClientConfigKeys.DFS_CLIENT_FSCK_READ_TIMEOUT_DEFAULT,
+        TimeUnit.MILLISECONDS);
+
     this.connectionFactory = URLConnectionFactory
-        .newDefaultURLConnectionFactory(conf);
+        .newDefaultURLConnectionFactory(connectTimeout, readTimeout, conf);
     this.isSpnegoEnabled = UserGroupInformation.isSecurityEnabled();
   }
 

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azure;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azure.security.Constants;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.http.Header;

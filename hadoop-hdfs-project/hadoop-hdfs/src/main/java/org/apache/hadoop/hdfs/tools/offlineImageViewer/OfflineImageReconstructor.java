@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.ACL_ENTRY_NAME_MASK;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.ACL_ENTRY_NAME_OFFSET;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.ACL_ENTRY_SCOPE_OFFSET;
@@ -56,6 +56,7 @@ import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -147,6 +148,8 @@ class OfflineImageReconstructor {
       InputStreamReader reader) throws XMLStreamException {
     this.out = out;
     XMLInputFactory factory = XMLInputFactory.newInstance();
+    factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
+    factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
     this.events = factory.createXMLEventReader(reader);
     this.sections = new HashMap<>();
     this.sections.put(NameSectionProcessor.NAME, new NameSectionProcessor());
@@ -1761,6 +1764,10 @@ class OfflineImageReconstructor {
       XMLEvent ev = expectTag("[section header]", true);
       if (ev.getEventType() == XMLStreamConstants.END_ELEMENT) {
         if (ev.asEndElement().getName().getLocalPart().equals("fsimage")) {
+          if(unprocessedSections.size() == 1 && unprocessedSections.contains
+                  (SnapshotDiffSectionProcessor.NAME)){
+            break;
+          }
           throw new IOException("FSImage XML ended prematurely, without " +
               "including section(s) " + StringUtils.join(", ",
               unprocessedSections));

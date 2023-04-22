@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 
 import org.junit.Test;
 
@@ -28,11 +29,15 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionTestsDisabled;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 
 /**
  * Test whether or not encryption works by turning it on. Some checks
@@ -52,17 +57,20 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
   /**
    * This removes the encryption settings from the
    * configuration and then sets the
-   * fs.s3a.server-side-encryption-algorithm value to
+   * fs.s3a.encryption.algorithm value to
    * be that of {@code getSSEAlgorithm()}.
    * Called in {@code createConfiguration()}.
    * @param conf configuration to patch.
    */
+  @SuppressWarnings("deprecation")
   protected void patchConfigurationEncryptionSettings(
       final Configuration conf) {
     removeBaseAndBucketOverrides(conf,
+        S3_ENCRYPTION_ALGORITHM,
+        S3_ENCRYPTION_KEY,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_KEY);
-    conf.set(SERVER_SIDE_ENCRYPTION_ALGORITHM,
+    conf.set(S3_ENCRYPTION_ALGORITHM,
             getSSEAlgorithm().getMethod());
   }
 
@@ -70,14 +78,32 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
       0, 1, 2, 3, 4, 5, 254, 255, 256, 257, 2 ^ 12 - 1
   };
 
+  /**
+   * Skips the tests if encryption is not enabled in configuration.
+   *
+   * @implNote We can use {@link #createConfiguration()} here since
+   * it does not depend on any per-bucket based configuration.
+   * Otherwise, we would need to grab the configuration from an
+   * instance of {@link S3AFileSystem}.
+   */
   protected void requireEncryptedFileSystem() {
-    skipIfEncryptionTestsDisabled(getFileSystem().getConf());
+    skipIfEncryptionTestsDisabled(createConfiguration());
   }
 
+  /**
+   * Skipping tests when running against mandatory encryption bucket
+   * which allows only certain encryption method.
+   * S3 throw AmazonS3Exception with status 403 AccessDenied
+   * then it is translated into AccessDeniedException by S3AUtils.translateException(...)
+   */
   @Override
   public void setup() throws Exception {
-    super.setup();
-    requireEncryptedFileSystem();
+    try {
+      requireEncryptedFileSystem();
+      super.setup();
+    } catch (AccessDeniedException e) {
+      skip("Bucket does not allow " + getSSEAlgorithm() + " encryption method");
+    }
   }
 
   /**
@@ -97,7 +123,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
   @Test
   public void testEncryption() throws Throwable {
     requireEncryptedFileSystem();
-    validateEncrytionSecrets(getFileSystem().getEncryptionSecrets());
+    validateEncryptionSecrets(getFileSystem().getEncryptionSecrets());
     for (int size: SIZES) {
       validateEncryptionForFilesize(size);
     }
@@ -109,7 +135,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     byte[] data = dataset(1024, 'a', 'z');
     S3AFileSystem fs = getFileSystem();
     EncryptionSecrets secrets = fs.getEncryptionSecrets();
-    validateEncrytionSecrets(secrets);
+    validateEncryptionSecrets(secrets);
     writeDataset(fs, src, data, data.length, 1024 * 1024, true);
     ContractTestUtils.verifyFileContents(fs, src, data);
     // this file will be encrypted
@@ -128,7 +154,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
    * This makes sure that the settings have propagated properly.
    * @param secrets encryption secrets of the filesystem.
    */
-  protected void validateEncrytionSecrets(final EncryptionSecrets secrets) {
+  protected void validateEncryptionSecrets(final EncryptionSecrets secrets) {
     assertNotNull("No encryption secrets for filesystem", secrets);
     S3AEncryptionMethods sseAlgorithm = getSSEAlgorithm();
     assertEquals("Filesystem has wrong encryption algorithm",
@@ -158,8 +184,9 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
    */
   protected void assertEncrypted(Path path) throws IOException {
     //S3 will return full arn of the key, so specify global arn in properties
-    String kmsKeyArn = this.getConfiguration().
-        getTrimmed(SERVER_SIDE_ENCRYPTION_KEY);
+    String kmsKeyArn =
+        getS3EncryptionKey(getTestBucketName(getConfiguration()),
+            getConfiguration());
     S3AEncryptionMethods algorithm = getSSEAlgorithm();
     EncryptionTestUtils.assertEncrypted(getFileSystem(),
             path,

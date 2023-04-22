@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.Closeable;
@@ -53,6 +55,7 @@ import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeLifelineProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
+import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -60,6 +63,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
+import org.apache.hadoop.hdfs.server.protocol.InvalidBlockReportLeaseException;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
@@ -70,12 +74,13 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
 import org.slf4j.Logger;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 /**
@@ -112,6 +117,7 @@ class BPServiceActor implements Runnable {
   private String nnId = null;
   private volatile RunningState runningState = RunningState.CONNECTING;
   private volatile boolean shouldServiceRun = true;
+  private volatile boolean isSlownode = false;
   private final DataNode dn;
   private final DNConf dnConf;
   private long prevBlockReportId;
@@ -197,14 +203,18 @@ class BPServiceActor implements Runnable {
   Map<String, String> getActorInfoMap() {
     final Map<String, String> info = new HashMap<String, String>();
     info.put("NamenodeAddress", getNameNodeAddress());
+    info.put("NamenodeHaState", state != null ? state.toString() : "Unknown");
     info.put("BlockPoolID", bpos.getBlockPoolId());
     info.put("ActorState", getRunningState());
     info.put("LastHeartbeat",
         String.valueOf(getScheduler().getLastHearbeatTime()));
+    info.put("LastHeartbeatResponseTime",
+        String.valueOf(getScheduler().getLastHeartbeatResponseTime()));
     info.put("LastBlockReport",
         String.valueOf(getScheduler().getLastBlockReportTime()));
     info.put("maxBlockReportSize", String.valueOf(getMaxBlockReportSize()));
     info.put("maxDataLength", String.valueOf(maxDataLength));
+    info.put("isSlownode", String.valueOf(isSlownode));
     return info;
   }
 
@@ -303,6 +313,10 @@ class BPServiceActor implements Runnable {
     // First phase of the handshake with NN - get the namespace
     // info.
     NamespaceInfo nsInfo = retrieveNamespaceInfo();
+
+    // init block pool lock when init.
+    dn.getDataSetLockManager().addLock(LockLevel.BLOCK_POOl,
+        nsInfo.getBlockPoolID());
 
     // Verify that this matches the other NN in this HA pair.
     // This also initializes our block pool in the DN if we are
@@ -452,8 +466,8 @@ class BPServiceActor implements Runnable {
       dn.getMetrics().addBlockReport(brSendCost, getRpcMetricSuffix());
       final int nCmds = cmds.size();
       LOG.info((success ? "S" : "Uns") +
-          "uccessfully sent block report 0x" +
-          Long.toHexString(reportId) + " to namenode: " + nnAddr +
+          "uccessfully sent block report 0x" + Long.toHexString(reportId) +
+          " with lease ID 0x" + Long.toHexString(fullBrLeaseId) + " to namenode: " + nnAddr +
           ",  containing " + reports.length +
           " storage report(s), of which we sent " + numReportsSent + "." +
           " The reports had " + totalBlockCount +
@@ -549,11 +563,11 @@ class BPServiceActor implements Runnable {
         volumeFailureSummary.getFailedStorageLocations().length : 0;
     final boolean outliersReportDue = scheduler.isOutliersReportDue(now);
     final SlowPeerReports slowPeers =
-        outliersReportDue && dn.getPeerMetrics() != null ?
+        outliersReportDue && dnConf.peerStatsEnabled && dn.getPeerMetrics() != null ?
             SlowPeerReports.create(dn.getPeerMetrics().getOutliers()) :
             SlowPeerReports.EMPTY_REPORT;
     final SlowDiskReports slowDisks =
-        outliersReportDue && dn.getDiskMetrics() != null ?
+        outliersReportDue && dnConf.diskStatsEnabled && dn.getDiskMetrics() != null ?
             SlowDiskReports.create(dn.getDiskMetrics().getDiskOutliersStats()) :
             SlowDiskReports.EMPTY_REPORT;
 
@@ -568,6 +582,8 @@ class BPServiceActor implements Runnable {
         requestBlockReportLease,
         slowPeers,
         slowDisks);
+
+    scheduler.updateLastHeartbeatResponseTime(monotonicNow());
 
     if (outliersReportDue) {
       // If the report was due and successfully sent, schedule the next one.
@@ -687,6 +703,8 @@ class BPServiceActor implements Runnable {
         // Every so often, send heartbeat or block-report
         //
         final boolean sendHeartbeat = scheduler.isHeartbeatDue(startTime);
+        LOG.debug("BP offer service run start time: {}, sendHeartbeat: {}", startTime,
+            sendHeartbeat);
         HeartbeatResponse resp = null;
         if (sendHeartbeat) {
           //
@@ -699,6 +717,8 @@ class BPServiceActor implements Runnable {
           boolean requestBlockReportLease = (fullBlockReportLeaseId == 0) &&
                   scheduler.isBlockReportDue(startTime);
           if (!dn.areHeartbeatsDisabledForTests()) {
+            LOG.debug("Before sending heartbeat to namenode {}, the state of the namenode known"
+                + " to datanode so far is {}", this.getNameNodeAddress(), state);
             resp = sendHeartBeat(requestBlockReportLease);
             assert resp != null;
             if (resp.getFullBlockReportLeaseId() != 0) {
@@ -723,12 +743,18 @@ class BPServiceActor implements Runnable {
             // that we should actually process.
             bpos.updateActorStatesFromHeartbeat(
                 this, resp.getNameNodeHaState());
-            state = resp.getNameNodeHaState().getState();
+            HAServiceState stateFromResp = resp.getNameNodeHaState().getState();
+            if (state != stateFromResp) {
+              LOG.info("After receiving heartbeat response, updating state of namenode {} to {}",
+                  this.getNameNodeAddress(), stateFromResp);
+            }
+            state = stateFromResp;
 
             if (state == HAServiceState.ACTIVE) {
               handleRollingUpgradeStatus(resp);
             }
             commandProcessingThread.enqueue(resp.getCommands());
+            isSlownode = resp.getIsSlownode();
           }
         }
 
@@ -766,6 +792,9 @@ class BPServiceActor implements Runnable {
           shouldServiceRun = false;
           return;
         }
+        if (InvalidBlockReportLeaseException.class.getName().equals(reClass)) {
+          fullBlockReportLeaseId = 0;
+        }
         LOG.warn("RemoteException in offerService", re);
         sleepAfterException();
       } catch (IOException e) {
@@ -783,6 +812,7 @@ class BPServiceActor implements Runnable {
       long sleepTime = Math.min(1000, dnConf.heartBeatInterval);
       Thread.sleep(sleepTime);
     } catch (InterruptedException ie) {
+      LOG.info("BPServiceActor {} is interrupted", this);
       Thread.currentThread().interrupt();
     }
   }
@@ -805,7 +835,7 @@ class BPServiceActor implements Runnable {
     // off disk - so update the bpRegistration object from that info
     DatanodeRegistration newBpRegistration = bpos.createRegistration();
 
-    LOG.info(this + " beginning handshake with NN");
+    LOG.info("{} beginning handshake with NN: {}.", this, nnAddr);
 
     while (shouldRun()) {
       try {
@@ -815,15 +845,14 @@ class BPServiceActor implements Runnable {
         bpRegistration = newBpRegistration;
         break;
       } catch(EOFException e) {  // namenode might have just restarted
-        LOG.info("Problem connecting to server: " + nnAddr + " :"
-            + e.getLocalizedMessage());
+        LOG.info("Problem connecting to server: {} : {}.", nnAddr, e.getLocalizedMessage());
       } catch(SocketTimeoutException e) {  // namenode is busy
-        LOG.info("Problem connecting to server: " + nnAddr);
+        LOG.info("Problem connecting to server: {}.", nnAddr);
       } catch(RemoteException e) {
-        LOG.warn("RemoteException in register", e);
+        LOG.warn("RemoteException in register to server: {}.", nnAddr, e);
         throw e;
       } catch(IOException e) {
-        LOG.warn("Problem connecting to server: " + nnAddr);
+        LOG.warn("Problem connecting to server: {}.", nnAddr);
       }
       // Try again in a second
       sleepAndLogInterrupts(1000, "connecting to server");
@@ -833,7 +862,7 @@ class BPServiceActor implements Runnable {
       throw new IOException("DN shut down before block pool registered");
     }
 
-    LOG.info(this + " successfully registered with NN");
+    LOG.info("{} successfully registered with NN: {}.", this, nnAddr);
     bpos.registrationSucceeded(this, bpRegistration);
 
     // reset lease id whenever registered to NN.
@@ -985,6 +1014,8 @@ class BPServiceActor implements Runnable {
     while (!duplicateQueue.isEmpty()) {
       BPServiceActorAction actionItem = duplicateQueue.remove();
       try {
+        LOG.debug("BPServiceActor ( {} ) processing queued messages. Action item: {}", this,
+            actionItem);
         actionItem.reportTo(bpNamenode, bpRegistration);
       } catch (BPServiceActorActionException baae) {
         LOG.warn(baae.getMessage() + nnAddr , baae);
@@ -1180,6 +1211,9 @@ class BPServiceActor implements Runnable {
     volatile long lastHeartbeatTime = monotonicNow();
 
     @VisibleForTesting
+    private volatile long lastHeartbeatResponseTime = -1;
+
+    @VisibleForTesting
     boolean resetBlockReportTime = true;
 
     @VisibleForTesting
@@ -1190,8 +1224,8 @@ class BPServiceActor implements Runnable {
 
     private final long heartbeatIntervalMs;
     private final long lifelineIntervalMs;
-    private final long blockReportIntervalMs;
-    private final long outliersReportIntervalMs;
+    private volatile long blockReportIntervalMs;
+    private volatile long outliersReportIntervalMs;
 
     Scheduler(long heartbeatIntervalMs, long lifelineIntervalMs,
               long blockReportIntervalMs, long outliersReportIntervalMs) {
@@ -1227,6 +1261,10 @@ class BPServiceActor implements Runnable {
       lastHeartbeatTime = heartbeatTime;
     }
 
+    void updateLastHeartbeatResponseTime(long heartbeatTime) {
+      this.lastHeartbeatResponseTime = heartbeatTime;
+    }
+
     void updateLastBlockReportTime(long blockReportTime) {
       lastBlockReportTime = blockReportTime;
     }
@@ -1237,6 +1275,10 @@ class BPServiceActor implements Runnable {
 
     long getLastHearbeatTime() {
       return (monotonicNow() - lastHeartbeatTime)/1000;
+    }
+
+    private long getLastHeartbeatResponseTime() {
+      return (monotonicNow() - lastHeartbeatResponseTime) / 1000;
     }
 
     long getLastBlockReportTime() {
@@ -1267,6 +1309,7 @@ class BPServiceActor implements Runnable {
 
     void forceFullBlockReportNow() {
       forceFullBlockReport.set(true);
+      resetBlockReportTime = true;
     }
 
     /**
@@ -1333,7 +1376,8 @@ class BPServiceActor implements Runnable {
     }
 
     long getLifelineWaitTime() {
-      return nextLifelineTime - monotonicNow();
+      long waitTime = nextLifelineTime - monotonicNow();
+      return waitTime > 0 ? waitTime : 0;
     }
 
     @VisibleForTesting
@@ -1344,6 +1388,27 @@ class BPServiceActor implements Runnable {
     @VisibleForTesting
     void setNextBlockReportTime(long nextBlockReportTime) {
       this.nextBlockReportTime.getAndSet(nextBlockReportTime);
+    }
+
+    long getBlockReportIntervalMs() {
+      return this.blockReportIntervalMs;
+    }
+
+    void setBlockReportIntervalMs(long intervalMs) {
+      Preconditions.checkArgument(intervalMs > 0,
+          DFS_BLOCKREPORT_INTERVAL_MSEC_KEY + " should be larger than 0");
+      this.blockReportIntervalMs = intervalMs;
+    }
+
+    void setOutliersReportIntervalMs(long intervalMs) {
+      Preconditions.checkArgument(intervalMs > 0,
+          DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY + " should be larger than 0");
+      this.outliersReportIntervalMs = intervalMs;
+    }
+
+    @VisibleForTesting
+    long getOutliersReportIntervalMs() {
+      return this.outliersReportIntervalMs;
     }
 
     /**
@@ -1438,7 +1503,7 @@ class BPServiceActor implements Runnable {
           dn.getMetrics().addNumProcessedCommands(processCommandsMs);
         }
         if (processCommandsMs > dnConf.getProcessCommandsThresholdMs()) {
-          LOG.info("Took {} ms to process {} commands from NN",
+          LOG.warn("Took {} ms to process {} commands from NN",
               processCommandsMs, cmds.length);
         }
       }
@@ -1473,5 +1538,9 @@ class BPServiceActor implements Runnable {
     if (commandProcessingThread != null) {
       commandProcessingThread.interrupt();
     }
+  }
+
+  boolean isSlownode() {
+    return isSlownode;
   }
 }

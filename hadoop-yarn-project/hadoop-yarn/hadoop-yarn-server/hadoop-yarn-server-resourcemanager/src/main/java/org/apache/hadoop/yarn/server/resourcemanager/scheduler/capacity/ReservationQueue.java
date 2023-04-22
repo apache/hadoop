@@ -22,6 +22,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,15 +33,16 @@ import org.slf4j.LoggerFactory;
  *
  */
 public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
-
-  private static final Logger LOG = LoggerFactory
-      .getLogger(ReservationQueue.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ReservationQueue.class);
 
   private PlanQueue parent;
 
-  public ReservationQueue(CapacitySchedulerContext cs, String queueName,
+  public ReservationQueue(CapacitySchedulerQueueContext queueContext, String queueName,
       PlanQueue parent) throws IOException {
-    super(cs, queueName, parent, null);
+    super(queueContext, queueName, parent, null);
+    super.setupQueueConfigs(queueContext.getClusterResource());
+
     // the following parameters are common to all reservation in the plan
     updateQuotas(parent.getUserLimitForReservation(),
         parent.getUserLimitFactor(),
@@ -73,6 +76,10 @@ public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
     }
   }
 
+  public void initializeEntitlements() throws SchedulerDynamicEditException {
+    setEntitlement(new QueueEntitlement(1.0f, 1.0f));
+  }
+
   private void updateQuotas(float userLimit, float userLimitFactor,
       int maxAppsForReservation, int maxAppsPerUserForReservation) {
     setUserLimit(userLimit);
@@ -82,8 +89,7 @@ public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
   }
 
   @Override
-  protected void setupConfigurableCapacities(CapacitySchedulerConfiguration
-      configuration) {
+  protected void setupConfigurableCapacities() {
     super.updateAbsoluteCapacities();
   }
 }

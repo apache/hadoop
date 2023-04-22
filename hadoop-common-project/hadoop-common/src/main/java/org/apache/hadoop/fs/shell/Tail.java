@@ -28,7 +28,9 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.PathIsDirectoryException;
 import org.apache.hadoop.io.IOUtils;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
+
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
 
 /**
  * Get a listing of all files in that match the file patterns.
@@ -107,16 +109,15 @@ class Tail extends FsCommand {
     if (offset < 0) {
       offset = Math.max(fileSize + offset, 0);
     }
-    
-    FSDataInputStream in = item.fs.open(item.path);
-    try {
+    // Always do sequential reads.
+    try (FSDataInputStream in = item.openFile(
+        FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)) {
       in.seek(offset);
       // use conf so the system configured io block size is used
       IOUtils.copyBytes(in, System.out, getConf(), false);
       offset = in.getPos();
-    } finally {
-      in.close();
     }
     return offset;
   }
+
 }

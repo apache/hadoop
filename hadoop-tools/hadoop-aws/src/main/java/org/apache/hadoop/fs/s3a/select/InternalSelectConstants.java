@@ -71,7 +71,7 @@ public final class InternalSelectConstants {
         CSV_OUTPUT_QUOTE_FIELDS,
         CSV_OUTPUT_RECORD_DELIMITER
     ));
-    options.addAll(InternalConstants.STANDARD_OPENFILE_KEYS);
+    options.addAll(InternalConstants.S3A_OPENFILE_KEYS);
     SELECT_OPTIONS = Collections.unmodifiableSet(options);
   }
 }

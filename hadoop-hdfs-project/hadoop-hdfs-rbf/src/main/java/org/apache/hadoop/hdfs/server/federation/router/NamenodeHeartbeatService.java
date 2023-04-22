@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HEALTH_MONITOR_TIMEOUT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HEALTH_MONITOR_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HEARTBEAT_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HEARTBEAT_INTERVAL_MS_DEFAULT;
 
@@ -24,7 +26,9 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -41,11 +45,15 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.tools.DFSHAAdmin;
 import org.apache.hadoop.hdfs.tools.NNHAServiceTarget;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * The {@link Router} periodically checks the state of a Namenode (usually on
@@ -82,6 +90,10 @@ public class NamenodeHeartbeatService extends PeriodicService {
   private NNHAServiceTarget localTarget;
   /** Cache HA protocol. */
   private HAServiceProtocol localTargetHAProtocol;
+  /** Cache NN protocol. */
+  private NamenodeProtocol namenodeProtocol;
+  /** Cache Client protocol. */
+  private ClientProtocol clientProtocol;
   /** RPC address for the namenode. */
   private String rpcAddress;
   /** Service RPC address for the namenode. */
@@ -94,6 +106,12 @@ public class NamenodeHeartbeatService extends PeriodicService {
   private URLConnectionFactory connectionFactory;
   /** URL scheme to use for JMX calls. */
   private String scheme;
+
+  private String resolvedHost;
+  private String originalNnId;
+
+  private int healthMonitorTimeoutMs = (int) DFS_ROUTER_HEALTH_MONITOR_TIMEOUT_DEFAULT;
+
   /**
    * Create a new Namenode status updater.
    * @param resolver Namenode resolver service to handle NN registration.
@@ -110,6 +128,28 @@ public class NamenodeHeartbeatService extends PeriodicService {
 
     this.nameserviceId = nsId;
     this.namenodeId = nnId;
+  }
+
+  /**
+   * Create a new Namenode status updater.
+   *
+   * @param resolver Namenode resolver service to handle NN registration.
+   * @param nsId          Identifier of the nameservice.
+   * @param nnId          Identifier of the namenode in HA.
+   * @param resolvedHost  resolvedHostname for this specific namenode.
+   */
+  public NamenodeHeartbeatService(
+      ActiveNamenodeResolver resolver, String nsId, String nnId, String resolvedHost) {
+    super(getNnHeartBeatServiceName(nsId, nnId));
+
+    this.resolver = resolver;
+
+    this.nameserviceId = nsId;
+    // Concat a uniq id from original nnId and resolvedHost
+    this.namenodeId = nnId + "-" + resolvedHost;
+    this.resolvedHost = resolvedHost;
+    // Same the original nnid to get the ports from config.
+    this.originalNnId = nnId;
 
   }
 
@@ -120,39 +160,58 @@ public class NamenodeHeartbeatService extends PeriodicService {
 
     String nnDesc = nameserviceId;
     if (this.namenodeId != null && !this.namenodeId.isEmpty()) {
-      this.localTarget = new NNHAServiceTarget(
-          conf, nameserviceId, namenodeId);
       nnDesc += "-" + namenodeId;
     } else {
       this.localTarget = null;
     }
 
+    if (originalNnId == null) {
+      originalNnId = namenodeId;
+    }
     // Get the RPC address for the clients to connect
-    this.rpcAddress = getRpcAddress(conf, nameserviceId, namenodeId);
-    LOG.info("{} RPC address: {}", nnDesc, rpcAddress);
+    this.rpcAddress = getRpcAddress(conf, nameserviceId, originalNnId);
 
     // Get the Service RPC address for monitoring
     this.serviceAddress =
-        DFSUtil.getNamenodeServiceAddr(conf, nameserviceId, namenodeId);
+        DFSUtil.getNamenodeServiceAddr(conf, nameserviceId, originalNnId);
     if (this.serviceAddress == null) {
       LOG.error("Cannot locate RPC service address for NN {}, " +
           "using RPC address {}", nnDesc, this.rpcAddress);
       this.serviceAddress = this.rpcAddress;
     }
-    LOG.info("{} Service RPC address: {}", nnDesc, serviceAddress);
 
     // Get the Lifeline RPC address for faster monitoring
     this.lifelineAddress =
-        DFSUtil.getNamenodeLifelineAddr(conf, nameserviceId, namenodeId);
+        DFSUtil.getNamenodeLifelineAddr(conf, nameserviceId, originalNnId);
     if (this.lifelineAddress == null) {
       this.lifelineAddress = this.serviceAddress;
     }
-    LOG.info("{} Lifeline RPC address: {}", nnDesc, lifelineAddress);
 
     // Get the Web address for UI
     this.webAddress =
-        DFSUtil.getNamenodeWebAddr(conf, nameserviceId, namenodeId);
+        DFSUtil.getNamenodeWebAddr(conf, nameserviceId, originalNnId);
+
+    if (resolvedHost != null) {
+      // Get the addresses from resolvedHost plus the configured ports.
+      rpcAddress = resolvedHost + ":"
+          + NetUtils.getPortFromHostPortString(rpcAddress);
+      serviceAddress = resolvedHost + ":"
+          + NetUtils.getPortFromHostPortString(serviceAddress);
+      lifelineAddress = resolvedHost + ":"
+          + NetUtils.getPortFromHostPortString(lifelineAddress);
+      webAddress = resolvedHost + ":"
+          + NetUtils.getPortFromHostPortString(webAddress);
+    }
+
+    LOG.info("{} RPC address: {}", nnDesc, rpcAddress);
+    LOG.info("{} Service RPC address: {}", nnDesc, serviceAddress);
+    LOG.info("{} Lifeline RPC address: {}", nnDesc, lifelineAddress);
     LOG.info("{} Web address: {}", nnDesc, webAddress);
+
+    if (this.namenodeId != null && !this.namenodeId.isEmpty()) {
+      this.localTarget = new NNHAServiceTarget(
+          conf, nameserviceId, namenodeId, serviceAddress, lifelineAddress);
+    }
 
     this.connectionFactory =
         URLConnectionFactory.newDefaultURLConnectionFactory(conf);
@@ -164,13 +223,30 @@ public class NamenodeHeartbeatService extends PeriodicService {
         DFS_ROUTER_HEARTBEAT_INTERVAL_MS,
         DFS_ROUTER_HEARTBEAT_INTERVAL_MS_DEFAULT));
 
+    long timeoutMs = conf.getTimeDuration(DFS_ROUTER_HEALTH_MONITOR_TIMEOUT,
+        DFS_ROUTER_HEALTH_MONITOR_TIMEOUT_DEFAULT, TimeUnit.MILLISECONDS);
+    if (timeoutMs < 0) {
+      LOG.warn("Invalid value {} configured for {} should be greater than or equal to 0. " +
+          "Using value of : 0ms instead.", timeoutMs, DFS_ROUTER_HEALTH_MONITOR_TIMEOUT);
+      this.healthMonitorTimeoutMs = 0;
+    } else {
+      this.healthMonitorTimeoutMs = (int) timeoutMs;
+    }
 
     super.serviceInit(configuration);
   }
 
   @Override
   public void periodicInvoke() {
-    updateState();
+    try {
+      // Run using the login user credentials
+      SecurityUtil.doAsLoginUser((PrivilegedExceptionAction<Void>) () -> {
+        updateState();
+        return null;
+      });
+    } catch (IOException e) {
+      LOG.error("Cannot update namenode state", e);
+    }
   }
 
   /**
@@ -222,12 +298,16 @@ public class NamenodeHeartbeatService extends PeriodicService {
       LOG.error("Namenode is not operational: {}", getNamenodeDesc());
     } else if (report.haStateValid()) {
       // block and HA status available
-      LOG.debug("Received service state: {} from HA namenode: {}",
-          report.getState(), getNamenodeDesc());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Received service state: {} from HA namenode: {}",
+            report.getState(), getNamenodeDesc());
+      }
     } else if (localTarget == null) {
       // block info available, HA status not expected
-      LOG.debug(
-          "Reporting non-HA namenode as operational: " + getNamenodeDesc());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "Reporting non-HA namenode as operational: {}", getNamenodeDesc());
+      }
     } else {
       // block info available, HA status should be available, but was not
       // fetched do nothing and let the current state stand
@@ -237,11 +317,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
       if (!resolver.registerNamenode(report)) {
         LOG.warn("Cannot register namenode {}", report);
       }
-    } catch (IOException e) {
-      LOG.info("Cannot register namenode in the State Store");
-    } catch (Exception ex) {
-      LOG.error("Unhandled exception updating NN registration for {}",
-          getNamenodeDesc(), ex);
+    } catch (Exception e) {
+      LOG.error("Cannot register namenode {} in the State Store", getNamenodeDesc(), e);
     }
   }
 
@@ -258,70 +335,36 @@ public class NamenodeHeartbeatService extends PeriodicService {
       LOG.debug("Probing NN at service address: {}", serviceAddress);
 
       URI serviceURI = new URI("hdfs://" + serviceAddress);
-      // Read the filesystem info from RPC (required)
-      NamenodeProtocol nn = NameNodeProxies
-          .createProxy(this.conf, serviceURI, NamenodeProtocol.class)
-          .getProxy();
 
-      if (nn != null) {
-        NamespaceInfo info = nn.versionRequest();
-        if (info != null) {
-          report.setNamespaceInfo(info);
-        }
-      }
+      // Read the filesystem info from RPC (required)
+      updateNameSpaceInfoParameters(serviceURI, report);
       if (!report.registrationValid()) {
         return report;
       }
 
       // Check for safemode from the client protocol. Currently optional, but
       // should be required at some point for QoS
-      try {
-        ClientProtocol client = NameNodeProxies
-            .createProxy(this.conf, serviceURI, ClientProtocol.class)
-            .getProxy();
-        if (client != null) {
-          boolean isSafeMode = client.setSafeMode(
-              SafeModeAction.SAFEMODE_GET, false);
-          report.setSafeMode(isSafeMode);
-        }
-      } catch (Exception e) {
-        LOG.error("Cannot fetch safemode state for {}", getNamenodeDesc(), e);
-      }
+      updateSafeModeParameters(serviceURI, report);
 
       // Read the stats from JMX (optional)
       updateJMXParameters(webAddress, report);
 
-      if (localTarget != null) {
-        // Try to get the HA status
-        try {
-          // Determine if NN is active
-          // TODO: dynamic timeout
-          if (localTargetHAProtocol == null) {
-            localTargetHAProtocol = localTarget.getProxy(conf, 30*1000);
-          }
-          HAServiceStatus status = localTargetHAProtocol.getServiceStatus();
-          report.setHAServiceState(status.getState());
-        } catch (Throwable e) {
-          if (e.getMessage().startsWith("HA for namenode is not enabled")) {
-            LOG.error("HA for {} is not enabled", getNamenodeDesc());
-            localTarget = null;
-          } else {
-            // Failed to fetch HA status, ignoring failure
-            LOG.error("Cannot fetch HA status for {}: {}",
-                getNamenodeDesc(), e.getMessage(), e);
-          }
-          localTargetHAProtocol = null;
-        }
-      }
-    } catch(IOException e) {
+      // Try to get the HA status
+      updateHAStatusParameters(report);
+    } catch (IOException e) {
       LOG.error("Cannot communicate with {}: {}",
           getNamenodeDesc(), e.getMessage());
-    } catch(Throwable e) {
+    } catch (Throwable e) {
       // Generic error that we don't know about
       LOG.error("Unexpected exception while communicating with {}: {}",
           getNamenodeDesc(), e.getMessage(), e);
     }
     return report;
+  }
+
+  @VisibleForTesting
+  NNHAServiceTarget getLocalTarget(){
+    return this.localTarget;
   }
 
   /**
@@ -333,6 +376,65 @@ public class NamenodeHeartbeatService extends PeriodicService {
       return nameserviceId + "-" + namenodeId + ":" + serviceAddress;
     } else {
       return nameserviceId + ":" + serviceAddress;
+    }
+  }
+
+  private static String getNnHeartBeatServiceName(String nsId, String nnId) {
+    return NamenodeHeartbeatService.class.getSimpleName() +
+        (nsId == null ? "" : " " + nsId) +
+        (nnId == null ? "" : " " + nnId);
+  }
+
+  /**
+   * Get the namespace information for a Namenode via RPC and add them to the report.
+   * @param serviceURI Server address of the Namenode to monitor.
+   * @param report Namenode status report updating with namespace information data.
+   * @throws IOException This method will throw IOException up, because RBF need
+   *                     use Namespace Info to identify this NS. If there are some IOExceptions,
+   *                     RBF doesn't need to get other information from NameNode,
+   *                     so throw IOException up.
+   */
+  private void updateNameSpaceInfoParameters(URI serviceURI,
+      NamenodeStatusReport report) throws IOException {
+    try {
+      if (this.namenodeProtocol == null) {
+        this.namenodeProtocol = NameNodeProxies.createProxy(this.conf, serviceURI,
+            NamenodeProtocol.class).getProxy();
+      }
+      if (namenodeProtocol != null) {
+        NamespaceInfo info = namenodeProtocol.versionRequest();
+        if (info != null) {
+          report.setNamespaceInfo(info);
+        }
+      }
+    } catch (IOException e) {
+      this.namenodeProtocol = null;
+      throw e;
+    }
+  }
+
+  /**
+   * Get the safemode information for a Namenode via RPC and add them to the report.
+   * Safemode is only one status of NameNode and is useless for RBF identify one NameNode.
+   * So If there are some IOExceptions, RBF can just ignore it and try to collect
+   * other information form namenode continue.
+   * @param serviceURI Server address of the Namenode to monitor.
+   * @param report Namenode status report updating with safemode information data.
+   */
+  private void updateSafeModeParameters(URI serviceURI, NamenodeStatusReport report) {
+    try {
+      if (this.clientProtocol == null) {
+        this.clientProtocol = NameNodeProxies
+            .createProxy(this.conf, serviceURI, ClientProtocol.class)
+            .getProxy();
+      }
+      if (clientProtocol != null) {
+        boolean isSafeMode = clientProtocol.setSafeMode(SafeModeAction.SAFEMODE_GET, false);
+        report.setSafeMode(isSafeMode);
+      }
+    } catch (Exception e) {
+      LOG.error("Cannot fetch safemode state for {}", getNamenodeDesc(), e);
+      this.clientProtocol = null;
     }
   }
 
@@ -349,6 +451,34 @@ public class NamenodeHeartbeatService extends PeriodicService {
       getNamenodeInfoMetrics(address, report);
     } catch (Exception e) {
       LOG.error("Cannot get stat from {} using JMX", getNamenodeDesc(), e);
+    }
+  }
+
+  /**
+   * Get the HA status for a Namenode via RPC and add them to the report.
+   * @param report Namenode status report updating with HA status information data.
+   */
+  private void updateHAStatusParameters(NamenodeStatusReport report) {
+    if (localTarget != null) {
+      try {
+        // Determine if NN is active
+        if (localTargetHAProtocol == null) {
+          localTargetHAProtocol = localTarget.getHealthMonitorProxy(
+              conf, this.healthMonitorTimeoutMs);
+          LOG.debug("Get HA status with address {}", lifelineAddress);
+        }
+        HAServiceStatus status = localTargetHAProtocol.getServiceStatus();
+        report.setHAServiceState(status.getState());
+      } catch (Throwable e) {
+        if (e.getMessage().startsWith("HA for namenode is not enabled")) {
+          LOG.error("HA for {} is not enabled", getNamenodeDesc());
+          localTarget = null;
+        } else {
+          // Failed to fetch HA status, ignoring failure
+          LOG.error("Cannot fetch HA status for {}", getNamenodeDesc(), e);
+        }
+        localTargetHAProtocol = null;
+      }
     }
   }
 
@@ -415,7 +545,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
               jsonObject.getLong("PendingReplicationBlocks"),
               jsonObject.getLong("UnderReplicatedBlocks"),
               jsonObject.getLong("PendingDeletionBlocks"),
-              jsonObject.optLong("ProvidedCapacityTotal"));
+              jsonObject.optLong("ProvidedCapacityTotal"),
+              jsonObject.getInt("PendingSPSPaths"));
         }
       }
     }

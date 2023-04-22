@@ -83,6 +83,10 @@ public abstract class ProtoUtil {
    * as the old connection context as was done for writable where
    * the effective and real users are set based on the auth method.
    *
+   * @param protocol protocol.
+   * @param ugi ugi.
+   * @param authMethod authMethod.
+   * @return IpcConnectionContextProto.
    */
   public static IpcConnectionContextProto makeIpcConnectionContext(
       final String protocol,

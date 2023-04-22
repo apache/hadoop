@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
  * Entry to log the state of a
  * {@link org.apache.hadoop.hdfs.server.federation.router.Router Router} in the
  * {@link org.apache.hadoop.hdfs.server.federation.store.StateStoreService
- * FederationStateStoreService}.
+ * StateStoreService}.
  */
 public abstract class RouterState extends BaseRecord {
 

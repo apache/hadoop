@@ -91,6 +91,11 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     return defaultWorkingDirectory;
   }
 
+  @Override
+  protected int getGlobalTimeout() {
+    return 60 * 1000;
+  }
+
   /** HDFS throws AccessControlException
    * when calling exist(..) on a path /foo/bar/file
    * but /foo/bar is indeed a file in HDFS.

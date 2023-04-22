@@ -22,7 +22,7 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -193,6 +193,7 @@ public class RMContainerTokenSecretManager extends
    * @param containerType Container Type
    * @param execType Execution Type
    * @param allocationRequestId allocationRequestId
+   * @param allocationTags allocation Tags
    * @return the container-token
    */
   public Token createContainerToken(ContainerId containerId,

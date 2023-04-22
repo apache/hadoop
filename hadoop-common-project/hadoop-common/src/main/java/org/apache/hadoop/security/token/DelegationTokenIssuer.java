@@ -39,17 +39,24 @@ public interface DelegationTokenIssuer {
    * The service name used as the alias for the  token in the credential
    * token map.  addDelegationTokens will use this to determine if
    * a token exists, and if not, add a new token with this alias.
+   * @return the token.
    */
   String getCanonicalServiceName();
 
   /**
    * Unconditionally get a new token with the optional renewer.  Returning
    * null indicates the service does not issue tokens.
+   * @param renewer renewer.
+   * @return the token.
+   * @throws IOException raised on errors performing I/O.
    */
   Token<?> getDelegationToken(String renewer) throws IOException;
 
   /**
    * Issuers may need tokens from additional services.
+   *
+   * @return delegation token issuer.
+   * @throws IOException raised on errors performing I/O.
    */
   default DelegationTokenIssuer[] getAdditionalTokenIssuers()
       throws IOException {
@@ -81,6 +88,12 @@ public interface DelegationTokenIssuer {
 
   /**
    * NEVER call this method directly.
+   *
+   * @param issuer issuer.
+   * @param renewer renewer.
+   * @param credentials cache in which to add new delegation tokens.
+   * @param tokens list of new delegation tokens.
+   * @throws IOException raised on errors performing I/O.
    */
   @InterfaceAudience.Private
   static void collectDelegationTokens(

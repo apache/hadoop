@@ -31,8 +31,8 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AnonymousAWSCredentials;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,7 +61,7 @@ import org.apache.hadoop.io.IOUtils;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class AWSCredentialProviderList implements AWSCredentialsProvider,
+public final class AWSCredentialProviderList implements AWSCredentialsProvider,
     AutoCloseable {
 
   private static final Logger LOG = LoggerFactory.getLogger(

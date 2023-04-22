@@ -229,60 +229,60 @@ public class TestMRWithDistributedCache {
     Assert.assertEquals("Test Local Archives 1",
         conf.get(DistributedCache.CACHE_LOCALARCHIVES));
     Assert.assertEquals(1,
-        DistributedCache.getLocalCacheArchives(conf).length);
+        JobContextImpl.getLocalCacheArchives(conf).length);
     Assert.assertEquals("Test Local Archives 1",
-        DistributedCache.getLocalCacheArchives(conf)[0].getName());
+        JobContextImpl.getLocalCacheArchives(conf)[0].getName());
     DistributedCache.addLocalArchives(conf, "Test Local Archives 2");
     Assert.assertEquals("Test Local Archives 1,Test Local Archives 2",
         conf.get(DistributedCache.CACHE_LOCALARCHIVES));
     Assert.assertEquals(2,
-        DistributedCache.getLocalCacheArchives(conf).length);
+        JobContextImpl.getLocalCacheArchives(conf).length);
     Assert.assertEquals("Test Local Archives 2",
-        DistributedCache.getLocalCacheArchives(conf)[1].getName());
+        JobContextImpl.getLocalCacheArchives(conf)[1].getName());
     DistributedCache.setLocalArchives(conf, "Test Local Archives 3");
     Assert.assertEquals("Test Local Archives 3",
         conf.get(DistributedCache.CACHE_LOCALARCHIVES));
     Assert.assertEquals(1,
-        DistributedCache.getLocalCacheArchives(conf).length);
+        JobContextImpl.getLocalCacheArchives(conf).length);
     Assert.assertEquals("Test Local Archives 3",
-        DistributedCache.getLocalCacheArchives(conf)[0].getName());
+        JobContextImpl.getLocalCacheArchives(conf)[0].getName());
 
     DistributedCache.addLocalFiles(conf, "Test Local Files 1");
     Assert.assertEquals("Test Local Files 1",
         conf.get(DistributedCache.CACHE_LOCALFILES));
     Assert.assertEquals(1,
-        DistributedCache.getLocalCacheFiles(conf).length);
+        JobContextImpl.getLocalCacheFiles(conf).length);
     Assert.assertEquals("Test Local Files 1",
-        DistributedCache.getLocalCacheFiles(conf)[0].getName());
+        JobContextImpl.getLocalCacheFiles(conf)[0].getName());
     DistributedCache.addLocalFiles(conf, "Test Local Files 2");
     Assert.assertEquals("Test Local Files 1,Test Local Files 2",
         conf.get(DistributedCache.CACHE_LOCALFILES));
     Assert.assertEquals(2,
-        DistributedCache.getLocalCacheFiles(conf).length);
+        JobContextImpl.getLocalCacheFiles(conf).length);
     Assert.assertEquals("Test Local Files 2",
-        DistributedCache.getLocalCacheFiles(conf)[1].getName());
+        JobContextImpl.getLocalCacheFiles(conf)[1].getName());
     DistributedCache.setLocalFiles(conf, "Test Local Files 3");
     Assert.assertEquals("Test Local Files 3",
         conf.get(DistributedCache.CACHE_LOCALFILES));
     Assert.assertEquals(1,
-        DistributedCache.getLocalCacheFiles(conf).length);
+        JobContextImpl.getLocalCacheFiles(conf).length);
     Assert.assertEquals("Test Local Files 3",
-        DistributedCache.getLocalCacheFiles(conf)[0].getName());
+        JobContextImpl.getLocalCacheFiles(conf)[0].getName());
 
     DistributedCache.setArchiveTimestamps(conf, "1234567890");
     Assert.assertEquals(1234567890,
         conf.getLong(DistributedCache.CACHE_ARCHIVES_TIMESTAMPS, 0));
     Assert.assertEquals(1,
-        DistributedCache.getArchiveTimestamps(conf).length);
+        JobContextImpl.getArchiveTimestamps(conf).length);
     Assert.assertEquals(1234567890,
-        DistributedCache.getArchiveTimestamps(conf)[0]);
+        JobContextImpl.getArchiveTimestamps(conf)[0]);
     DistributedCache.setFileTimestamps(conf, "1234567890");
     Assert.assertEquals(1234567890,
         conf.getLong(DistributedCache.CACHE_FILES_TIMESTAMPS, 0));
     Assert.assertEquals(1,
-        DistributedCache.getFileTimestamps(conf).length);
+        JobContextImpl.getFileTimestamps(conf).length);
     Assert.assertEquals(1234567890,
-        DistributedCache.getFileTimestamps(conf)[0]);
+        JobContextImpl.getFileTimestamps(conf)[0]);
 
     DistributedCache.createAllSymlink(conf, new File("Test Job Cache Dir"),
         new File("Test Work Dir"));
@@ -297,18 +297,18 @@ public class TestMRWithDistributedCache {
         DistributedCache.getTimestamp(conf, symlinkFile.toURI()));
     Assert.assertTrue(symlinkFile.delete());
 
-    DistributedCache.addCacheArchive(symlinkFile.toURI(), conf);
+    Job.addCacheArchive(symlinkFile.toURI(), conf);
     Assert.assertEquals(symlinkFile.toURI().toString(),
         conf.get(DistributedCache.CACHE_ARCHIVES));
-    Assert.assertEquals(1, DistributedCache.getCacheArchives(conf).length);
+    Assert.assertEquals(1, JobContextImpl.getCacheArchives(conf).length);
     Assert.assertEquals(symlinkFile.toURI(),
-        DistributedCache.getCacheArchives(conf)[0]);
+        JobContextImpl.getCacheArchives(conf)[0]);
 
-    DistributedCache.addCacheFile(symlinkFile.toURI(), conf);
+    Job.addCacheFile(symlinkFile.toURI(), conf);
     Assert.assertEquals(symlinkFile.toURI().toString(),
         conf.get(DistributedCache.CACHE_FILES));
-    Assert.assertEquals(1, DistributedCache.getCacheFiles(conf).length);
+    Assert.assertEquals(1, JobContextImpl.getCacheFiles(conf).length);
     Assert.assertEquals(symlinkFile.toURI(),
-        DistributedCache.getCacheFiles(conf)[0]);
+        JobContextImpl.getCacheFiles(conf)[0]);
   }
 }

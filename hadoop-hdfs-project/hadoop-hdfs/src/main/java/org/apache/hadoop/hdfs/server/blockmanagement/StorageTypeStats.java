@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.beans.ConstructorProperties;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StorageType;

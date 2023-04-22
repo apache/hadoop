@@ -38,7 +38,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Time;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -191,8 +191,8 @@ public class TrashPolicyDefault extends TrashPolicy {
         cause = e;
       }
     }
-    throw (IOException)
-      new IOException("Failed to move to trash: " + path).initCause(cause);
+    throw new IOException("Failed to move " + path + " to trash " + trashPath,
+        cause);
   }
 
   @SuppressWarnings("deprecation")

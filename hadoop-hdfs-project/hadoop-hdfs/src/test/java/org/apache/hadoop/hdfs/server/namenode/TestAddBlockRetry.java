@@ -99,7 +99,7 @@ public class TestAddBlockRetry {
                                             HdfsConstants.GRANDFATHER_INODE_ID,
                                             "clientName", null, onRetryBlock);
     } finally {
-      ns.readUnlock();;
+      ns.readUnlock();
     }
     DatanodeStorageInfo targets[] = FSDirWriteFileOp.chooseTargetForNewBlock(
         ns.getBlockManager(), src, null, null, null, r);

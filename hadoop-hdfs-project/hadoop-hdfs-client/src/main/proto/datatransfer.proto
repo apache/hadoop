@@ -18,7 +18,7 @@
 
 /**
  * These .proto interfaces are private and stable.
- * Please see http://wiki.apache.org/hadoop/Compatibility
+ * Please see https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html
  * for what changes are allowed for a *stable* .proto interface.
  */
 syntax="proto2";
@@ -44,6 +44,7 @@ message DataTransferEncryptorMessageProto {
   optional string message = 3;
   repeated CipherOptionProto cipherOption = 4;
   optional HandshakeSecretProto handshakeSecret = 5;
+  optional bool accessTokenError = 6;
 }
 
 message HandshakeSecretProto {

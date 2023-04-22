@@ -25,31 +25,45 @@ import org.apache.commons.lang3.StringUtils;
 /**
  * This enum is to centralize the encryption methods and
  * the value required in the configuration.
- *
- * There's two enum values for the two client encryption mechanisms the AWS
- * S3 SDK supports, even though these are not currently supported in S3A.
- * This is to aid supporting CSE in some form in future, fundamental
- * issues about file length of encrypted data notwithstanding.
- *
  */
 public enum S3AEncryptionMethods {
 
-  NONE("", false),
-  SSE_S3("AES256", true),
-  SSE_KMS("SSE-KMS", true),
-  SSE_C("SSE-C", true),
-  CSE_KMS("CSE-KMS", false),
-  CSE_CUSTOM("CSE-CUSTOM", false);
+  NONE("", false, false),
+  SSE_S3("AES256", true, false),
+  SSE_KMS("SSE-KMS", true, false),
+  SSE_C("SSE-C", true, true),
+  CSE_KMS("CSE-KMS", false, true),
+  CSE_CUSTOM("CSE-CUSTOM", false, true);
 
+  /**
+   * Error string when {@link #getMethod(String)} fails.
+   * Used in tests.
+   */
   static final String UNKNOWN_ALGORITHM
       = "Unknown encryption algorithm ";
 
-  private String method;
-  private boolean serverSide;
+  /**
+   * What is the encryption method?
+   */
+  private final String method;
 
-  S3AEncryptionMethods(String method, final boolean serverSide) {
+  /**
+   * Is this server side?
+   */
+  private final boolean serverSide;
+
+  /**
+   * Does the encryption method require a
+   * secret in the encryption.key property?
+   */
+  private final boolean requiresSecret;
+
+  S3AEncryptionMethods(String method,
+      final boolean serverSide,
+      final boolean requiresSecret) {
     this.method = method;
     this.serverSide = serverSide;
+    this.requiresSecret = requiresSecret;
   }
 
   public String getMethod() {
@@ -65,6 +79,14 @@ public enum S3AEncryptionMethods {
   }
 
   /**
+   * Does this encryption algorithm require a secret?
+   * @return true if a secret must be retrieved.
+   */
+  public boolean requiresSecret() {
+    return requiresSecret;
+  }
+
+  /**
    * Get the encryption mechanism from the value provided.
    * @param name algorithm name
    * @return the method
@@ -75,7 +97,7 @@ public enum S3AEncryptionMethods {
       return NONE;
     }
     for (S3AEncryptionMethods v : values()) {
-      if (v.getMethod().equals(name)) {
+      if (v.getMethod().equalsIgnoreCase(name)) {
         return v;
       }
     }

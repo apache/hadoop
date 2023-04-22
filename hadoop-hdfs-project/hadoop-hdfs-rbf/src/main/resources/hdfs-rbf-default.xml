@@ -135,6 +135,33 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.enable.multiple.socket</name>
+    <value>false</value>
+    <description>
+      If enable multiple downstream socket or not. If true, ConnectionPool
+      will use a new socket when creating a new connection for the same user,
+      and RouterRPCClient will get a better throughput. It's best used with
+      dfs.federation.router.max.concurrency.per.connection together to get
+      a better throughput with fewer sockets. Such as enable
+      dfs.federation.router.enable.multiple.socket and
+      set dfs.federation.router.max.concurrency.per.connection = 20.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.max.concurrency.per.connection</name>
+    <value>1</value>
+    <description>
+      The maximum number of requests that a connection can handle concurrently.
+      When the number of requests being processed by a socket is less than this value,
+      new request will be processed by this socket. When enable
+      dfs.federation.router.enable.multiple.socket, it's best
+      set this value greater than 1, such as 20, to avoid frequent
+      creation and idle sockets in the case of a NS with jitter requests.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.connection.pool.clean.ms</name>
     <value>60000</value>
     <description>
@@ -165,6 +192,16 @@
     <value>10s</value>
     <description>
       Expiration time in seconds for datanodereport.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.enable.get.dn.usage</name>
+    <value>true</value>
+    <description>
+      If true, the getNodeUsage method in RBFMetrics will return an up-to-date
+      result collecting from downstream nameservices. But it will take a long
+      time and take up thread resources. If false, it will return a mock result with all 0.
     </description>
   </property>
 
@@ -325,7 +362,8 @@
       Class to implement the State Store. There are three implementation classes currently
       being supported:
       org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl,
-      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileSystemImpl and
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileSystemImpl,
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreMySQLImpl and
       org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.
       These implementation classes use the local file, filesystem and ZooKeeper as a backend respectively.
       By default it uses the ZooKeeper as the default State Store.
@@ -337,6 +375,26 @@
     <value>60000</value>
     <description>
       How often to check for the connection to the State Store in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.driver.zk.parent-path</name>
+    <value>/hdfs-federation</value>
+    <description>
+      The parent path of zookeeper for StateStoreZooKeeperImpl.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.driver.zk.async.max.threads</name>
+    <value>-1</value>
+    <description>
+      Max threads number of StateStoreZooKeeperImpl in async mode.
+      The only class currently being supported:
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.
+      Default value is -1, which means StateStoreZooKeeperImpl is working in sync mode.
+      Use positive integer value to enable async mode.
     </description>
   </property>
 
@@ -382,6 +440,14 @@
     <value>5000</value>
     <description>
       How often the Router should heartbeat into the State Store in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.health.monitor.timeout</name>
+    <value>30s</value>
+    <description>
+      Time out for Router to obtain HAServiceStatus from NameNode.
     </description>
   </property>
 
@@ -459,6 +525,26 @@
     <value></value>
     <description>
       The identifier of the namenodes to monitor and heartbeat.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.monitor.namenode.nameservice.resolution-enabled</name>
+    <value>false</value>
+    <description>
+      Determines if the given monitored namenode address is a domain name which needs to
+      be resolved.
+      This is used by router to resolve namenodes.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.monitor.namenode.nameservice.resolver.impl</name>
+    <value></value>
+    <description>
+      Nameservice resolver implementation used by router.
+      Effective with
+      dfs.federation.router.monitor.namenode.nameservices.resolution-enabled on.
     </description>
   </property>
 
@@ -704,8 +790,16 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.fairness.acquire.timeout</name>
+    <value>1s</value>
+    <description>
+      The maximum time to wait for a permit.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.federation.rename.bandwidth</name>
-    <value></value>
+    <value>10</value>
     <description>
       Specify bandwidth per map in MB.
     </description>
@@ -713,7 +807,7 @@
 
   <property>
     <name>dfs.federation.router.federation.rename.map</name>
-    <value></value>
+    <value>10</value>
     <description>
       Max number of concurrent maps to use for copy.
     </description>
@@ -761,4 +855,72 @@
       (delete the source path directly) and skip (skip both trash and deletion).
     </description>
   </property>
+
+  <property>
+    <name>dfs.federation.router.observer.read.default</name>
+    <value>false</value>
+    <description>
+      Whether observer reads are enabled. This is a default for all nameservices.
+      The default can be inverted for individual namespace by adding them to
+      dfs.federation.router.observer.read.overrides.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.observer.read.overrides</name>
+    <value/>
+    <description>
+      Commas separated list of namespaces for which to invert the default configuration,
+      dfs.federation.router.observer.read.default, for whether to enable observer reads.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.observer.federated.state.propagation.maxsize</name>
+    <value>5</value>
+    <description>
+      The maximum size of the federated state to send in the RPC header. Sending the federated
+      state removes the need to msync on every read call, but at the expense of having a larger
+      header. The cost tradeoff between the larger header and always msync'ing depends on the number
+      of namespaces in use and the latency of the msync requests.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.observer.state.id.refresh.period</name>
+    <value>15s</value>
+    <description>
+      Period to refresh namespace stateID using active namenode. This ensures the
+      namespace stateID is refresh even when an observer is trailing behind.
+      If this is below 0, the auto-refresh is disabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.driver.file.async.threads</name>
+    <value>0</value>
+    <description>
+      Max threads used by StateStoreFileImpl to access state store files concurrently.
+      The only class currently being supported:
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl.
+      Default value is 0, which means StateStoreFileImpl would work in sync mode, meaning it
+      would access one file at a time.
+      Use positive integer value to enable concurrent files access.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.driver.fs.async.threads</name>
+    <value>0</value>
+    <description>
+      Max threads used by StateStoreFileSystemImpl to access state store files from the given
+      filesystem concurrently.
+      The only class currently being supported:
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileSystemImpl.
+      Default value is 0, which means StateStoreFileSystemImpl would work in sync mode, meaning it
+      would access one file from the filesystem at a time.
+      Use positive integer value to enable concurrent files access from the given filesystem.
+    </description>
+  </property>
+
 </configuration>

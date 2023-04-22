@@ -72,6 +72,10 @@ public class ResourceInfo {
     return getResource().toString();
   }
 
+  public String toFormattedString() {
+    return getResource().toFormattedString();
+  }
+
   public void setMemory(int memory) {
     if (resources == null) {
       resources = Resource.newInstance(memory, vCores);

@@ -33,7 +33,7 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.model.Credentials;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -207,9 +207,11 @@ public final class MarshalledCredentialBinding {
               stsEndpoint.isEmpty() ? null : stsEndpoint,
               stsRegion)
               .build();
-      return fromSTSCredentials(
-          STSClientFactory.createClientConnection(tokenService, invoker)
-              .requestSessionCredentials(duration, TimeUnit.SECONDS));
+      try (STSClientFactory.STSClient stsClient = STSClientFactory.createClientConnection(
+          tokenService, invoker)) {
+        return fromSTSCredentials(stsClient.requestSessionCredentials(duration,
+            TimeUnit.SECONDS));
+      }
     } catch (SdkClientException e) {
       if (stsRegion.isEmpty()) {
         LOG.error("Region must be provided when requesting session credentials.",

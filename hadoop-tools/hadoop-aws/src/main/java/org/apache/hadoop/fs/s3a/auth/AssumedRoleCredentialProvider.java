@@ -32,7 +32,7 @@ import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,9 +60,13 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.buildAWSProviderList;
  * unless overridden, creating a session name from the current user.
  *
  * Classname is used in configuration files; do not move.
+ *
+ * @deprecated This class will be replaced by one that implements AWS SDK V2's AwsCredentialProvider
+ * as part of upgrading S3A to SDK V2. See HADOOP-18073.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
+@Deprecated
 public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
     Closeable {
 

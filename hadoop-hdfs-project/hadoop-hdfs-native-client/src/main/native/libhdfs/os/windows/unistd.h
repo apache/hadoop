@@ -22,7 +22,7 @@
 /* On Windows, unistd.h does not exist, so manually define what we need. */
 
 #include <process.h> /* Declares getpid(). */
-#include <windows.h>
+#include <Windows.h>
 
 /* Re-route sleep to Sleep, converting units from seconds to milliseconds. */
 #define sleep(seconds) Sleep((seconds) * 1000)

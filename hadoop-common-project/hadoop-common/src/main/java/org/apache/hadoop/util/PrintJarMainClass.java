@@ -31,7 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class PrintJarMainClass {
   
   /**
-   * @param args
+   * @param args args.
    */
   public static void main(String[] args) {
     try (JarFile jar_file = new JarFile(args[0])) {

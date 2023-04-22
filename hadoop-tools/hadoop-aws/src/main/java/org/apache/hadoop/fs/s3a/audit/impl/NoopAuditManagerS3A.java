@@ -44,8 +44,6 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatist
 /**
  * Simple No-op audit manager for use before a real
  * audit chain is set up, and for testing.
- * Audit spans always have a unique ID and the activation/deactivation
- * operations on them will update this audit manager's active span.
  * It does have the service lifecycle, so do
  * create a unique instance whenever used.
  */
@@ -59,14 +57,7 @@ public class NoopAuditManagerS3A extends CompositeService
   /**
    * The inner auditor.
    */
-  private NoopAuditor auditor = NOOP_AUDITOR;
-
-  /**
-   * Thread local span. This defaults to being
-   * the unbonded span.
-   */
-  private final ThreadLocal<AuditSpanS3A> activeSpan =
-      ThreadLocal.withInitial(this::getUnbondedSpan);
+  private final NoopAuditor auditor = NOOP_AUDITOR;
 
   /**
    * ID which is returned as a span ID in the audit event
@@ -160,7 +151,7 @@ public class NoopAuditManagerS3A extends CompositeService
 
   @Override
   public void activate(final AuditSpanS3A span) {
-    activeSpan.set(span);
+    /* no-op */
   }
 
   @Override
@@ -180,6 +171,6 @@ public class NoopAuditManagerS3A extends CompositeService
       final String name,
       final String path1,
       final String path2) {
-    return NOOP_AUDITOR.createSpan(name, path1, path2);
+    return NoopSpan.INSTANCE;
   }
 }

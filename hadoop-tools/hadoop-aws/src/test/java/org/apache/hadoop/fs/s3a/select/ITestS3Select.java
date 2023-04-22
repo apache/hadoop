@@ -63,8 +63,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.util.DurationInfo;
 
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_NORMAL;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.fs.s3a.select.CsvFile.ALL_QUOTES;
 import static org.apache.hadoop.fs.s3a.select.SelectBinding.expandBackslashChars;
@@ -496,7 +496,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
    */
   @Test
   public void testSelectUnsupportedInputFormat() throws Throwable {
-    describe("Request an unsupported input format");
+    describe("Request an Unsupported input format");
     FutureDataInputStreamBuilder builder = getFileSystem().openFile(csvPath)
         .must(SELECT_SQL, SELECT_ODD_ENTRIES)
         .must(SELECT_INPUT_FORMAT, "pptx");
@@ -510,7 +510,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
    */
   @Test
   public void testSelectUnsupportedOutputFormat() throws Throwable {
-    describe("Request a (currently) unsupported output format");
+    describe("Request a (currently) Unsupported output format");
     FutureDataInputStreamBuilder builder = getFileSystem().openFile(csvPath)
         .must(SELECT_SQL, SELECT_ODD_ENTRIES)
         .must(SELECT_INPUT_FORMAT, "csv")
@@ -567,7 +567,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
     FutureDataInputStreamBuilder builder =
         getFileSystem().openFile(path("/"))
             .must(SELECT_SQL, SELECT_ODD_ENTRIES);
-    interceptFuture(FileNotFoundException.class,
+    interceptFuture(IOException.class,
         "", builder.build());
   }
 
@@ -767,7 +767,8 @@ public class ITestS3Select extends AbstractS3SelectTest {
     JobConf conf = createJobConf();
     inputOpt(conf, CSV_INPUT_HEADER, CSV_HEADER_OPT_NONE);
     inputMust(conf, CSV_INPUT_HEADER, CSV_HEADER_OPT_IGNORE);
-    inputMust(conf, INPUT_FADVISE, INPUT_FADV_NORMAL);
+    inputMust(conf, FS_OPTION_OPENFILE_READ_POLICY,
+        FS_OPTION_OPENFILE_READ_POLICY_DEFAULT);
     inputMust(conf, SELECT_ERRORS_INCLUDE_SQL, "true");
     verifySelectionCount(EVEN_ROWS_COUNT,
         SELECT_EVEN_ROWS_NO_HEADER,

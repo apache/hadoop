@@ -41,6 +41,18 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
  * It performs the directory listing probe ahead of the simple object HEAD
  * call for this reason -the object is the failure mode which SHOULD NOT
  * be encountered on normal execution.
+ *
+ * Magic paths are handled specially
+ * <ul>
+ *   <li>The only path check is for a directory already existing there.</li>
+ *   <li>No ancestors are checked</li>
+ *   <li>Parent markers are never deleted, irrespective of FS settings</li>
+ * </ul>
+ * As a result, irrespective of depth, the operations performed are only
+ * <ol>
+ *   <li>One LIST</li>
+ *   <li>If needed, one PUT</li>
+ * </ol>
  */
 public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
 
@@ -51,13 +63,21 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
 
   private final MkdirCallbacks callbacks;
 
+  /**
+   * Should checks for ancestors existing be skipped?
+   * This flag is set when working with magic directories.
+   */
+  private final boolean isMagicPath;
+
   public MkdirOperation(
       final StoreContext storeContext,
       final Path dir,
-      final MkdirCallbacks callbacks) {
+      final MkdirCallbacks callbacks,
+      final boolean isMagicPath) {
     super(storeContext);
     this.dir = dir;
     this.callbacks = callbacks;
+    this.isMagicPath = isMagicPath;
   }
 
   /**
@@ -77,6 +97,14 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
       return true;
     }
 
+    // get the file status of the path.
+    // this is done even for a magic path, to avoid always  issuing PUT
+    // requests. Doing that without a check wouild seem to be an
+    // optimization, but it is not because
+    // 1. PUT is slower than HEAD
+    // 2. Write capacity is less than read capacity on a shard
+    // 3. It adds needless entries in versioned buckets, slowing
+    //    down subsequent operations.
     FileStatus fileStatus = getPathStatusExpectingDir(dir);
     if (fileStatus != null) {
       if (fileStatus.isDirectory()) {
@@ -85,7 +113,17 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
         throw new FileAlreadyExistsException("Path is a file: " + dir);
       }
     }
-    // dir, walk up tree
+    // file status was null
+
+    // is the path magic?
+    // If so, we declare success without looking any further
+    if (isMagicPath) {
+      // Create the marker file immediately,
+      // and don't delete markers
+      callbacks.createFakeDirectory(dir, true);
+      return true;
+    }
+
     // Walk path to root, ensuring closest ancestor is a directory, not file
     Path fPart = dir.getParent();
     try {
@@ -110,15 +148,15 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
       LOG.info("mkdirs({}}: Access denied when looking"
               + " for parent directory {}; skipping checks",
           dir, fPart);
-      LOG.debug("{}", e.toString(), e);
+      LOG.debug("{}", e, e);
     }
 
     // if we get here there is no directory at the destination.
     // so create one.
-    String key = getStoreContext().pathToKey(dir);
-    // this will create the marker file, delete the parent entries
-    // and update S3Guard
-    callbacks.createFakeDirectory(key);
+
+    // Create the marker file, delete the parent entries
+    // if the filesystem isn't configured to retain them
+    callbacks.createFakeDirectory(dir, false);
     return true;
   }
 
@@ -141,15 +179,21 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
   /**
    * Get the status of a path -optimized for paths
    * where there is a directory marker or child entries.
+   *
+   * Under a magic path, there's no check for a file,
+   * just the listing.
+   *
    * @param path path to probe.
+   *
    * @return the status
+   *
    * @throws IOException failure
    */
   private S3AFileStatus getPathStatusExpectingDir(final Path path)
       throws IOException {
     S3AFileStatus status = probePathStatusOrNull(path,
         StatusProbeEnum.DIRECTORIES);
-    if (status == null) {
+    if (status == null && !isMagicPath) {
       status = probePathStatusOrNull(path,
           StatusProbeEnum.FILE);
     }
@@ -175,10 +219,15 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
     /**
      * Create a fake directory, always ending in "/".
      * Retry policy: retrying; translated.
-     * @param key name of directory object.
+     * the keepMarkers flag controls whether or not markers
+     * are automatically kept (this is set when creating
+     * directories under a magic path, always)
+     * @param dir dir to create
+     * @param keepMarkers always keep markers
+     *
      * @throws IOException IO failure
      */
     @Retries.RetryTranslated
-    void createFakeDirectory(String key) throws IOException;
+    void createFakeDirectory(Path dir, boolean keepMarkers) throws IOException;
   }
 }

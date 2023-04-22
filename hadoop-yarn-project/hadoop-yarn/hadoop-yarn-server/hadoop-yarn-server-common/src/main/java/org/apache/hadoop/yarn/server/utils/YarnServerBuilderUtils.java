@@ -79,7 +79,7 @@ public class YarnServerBuilderUtils {
    *
    * @param applicationId Application ID
    * @param credentials HDFS Tokens
-   * @return systemCredentialsForAppsProto SystemCredentialsForAppsProto
+   * @return systemCredentialsForAppsProto
    */
   public static SystemCredentialsForAppsProto newSystemCredentialsForAppsProto(
       ApplicationId applicationId, ByteBuffer credentials) {

@@ -50,9 +50,12 @@ import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.tools.util.RetriableCommand;
 import org.apache.hadoop.tools.util.ThrottledInputStream;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
 import static org.apache.hadoop.tools.mapred.CopyMapper.getFileAttributeSettings;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /**
  * This class extends RetriableCommand to implement the copy of files,
@@ -154,7 +157,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       if (!source.isSplit()) {
         DistCpUtils.compareFileLengthsAndChecksums(source.getLen(), sourceFS,
                 sourcePath, sourceChecksum, targetFS,
-                targetPath, skipCrc, source.getLen());
+                targetPath, skipCrc, offset + bytesRead);
       }
       // it's not append or direct write (preferred for s3a) case, thus we first
       // write to a temporary file, then rename it to the target path.
@@ -362,7 +365,11 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       FileSystem fs = path.getFileSystem(conf);
       float bandwidthMB = conf.getFloat(DistCpConstants.CONF_LABEL_BANDWIDTH_MB,
               DistCpConstants.DEFAULT_BANDWIDTH_MB);
-      FSDataInputStream in = fs.open(path);
+      // open with sequential read, but not whole-file
+      FSDataInputStream in = awaitFuture(fs.openFile(path)
+          .opt(FS_OPTION_OPENFILE_READ_POLICY,
+              FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)
+          .build());
       return new ThrottledInputStream(in, bandwidthMB * 1024 * 1024);
     }
     catch (IOException e) {

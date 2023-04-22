@@ -43,7 +43,7 @@ public class BlockDecompressorStream extends DecompressorStream {
    * @param in input stream
    * @param decompressor decompressor to use
    * @param bufferSize size of buffer
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public BlockDecompressorStream(InputStream in, Decompressor decompressor, 
                                  int bufferSize) throws IOException {
@@ -55,7 +55,7 @@ public class BlockDecompressorStream extends DecompressorStream {
    * 
    * @param in input stream
    * @param decompressor decompressor to use
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public BlockDecompressorStream(InputStream in, Decompressor decompressor) throws IOException {
     super(in, decompressor);

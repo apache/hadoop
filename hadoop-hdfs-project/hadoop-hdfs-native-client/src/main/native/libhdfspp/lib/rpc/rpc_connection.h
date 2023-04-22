@@ -43,6 +43,7 @@
 #include <unordered_map>
 
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/system/error_code.hpp>
 
 namespace hdfs {
 

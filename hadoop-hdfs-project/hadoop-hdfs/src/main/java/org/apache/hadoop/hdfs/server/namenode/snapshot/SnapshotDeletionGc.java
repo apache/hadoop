@@ -79,7 +79,7 @@ public class SnapshotDeletionGc {
       LOG.error("Failed to chooseDeletedSnapshot", e);
       throw e;
     } finally {
-      namesystem.readUnlock();
+      namesystem.readUnlock("gcDeletedSnapshot");
     }
     if (deleted == null) {
       LOG.trace("{}: no snapshots are marked as deleted.", name);

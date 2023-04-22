@@ -38,7 +38,7 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.security.BaseNMTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 
 public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
@@ -262,7 +262,7 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
   /**
    * This is to be called when NodeManager reconnects or goes down. This will
    * remove if NMTokens if present for any running application from cache.
-   * @param nodeId
+   * @param nodeId Node Id.
    */
   public void removeNodeKey(NodeId nodeId) {
     this.writeLock.lock();

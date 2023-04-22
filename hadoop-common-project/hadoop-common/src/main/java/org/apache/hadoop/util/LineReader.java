@@ -89,7 +89,7 @@ public class LineReader implements Closeable, IOStatisticsSource {
    * <code>Configuration</code>.
    * @param in input stream
    * @param conf configuration
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public LineReader(InputStream in, Configuration conf) throws IOException {
     this(in, conf.getInt(IO_FILE_BUFFER_SIZE_KEY, DEFAULT_BUFFER_SIZE));
@@ -133,7 +133,7 @@ public class LineReader implements Closeable, IOStatisticsSource {
    * @param in input stream
    * @param conf configuration
    * @param recordDelimiterBytes The delimiter
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public LineReader(InputStream in, Configuration conf,
       byte[] recordDelimiterBytes) throws IOException {
@@ -146,7 +146,7 @@ public class LineReader implements Closeable, IOStatisticsSource {
 
   /**
    * Close the underlying stream.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public void close() throws IOException {
     in.close();

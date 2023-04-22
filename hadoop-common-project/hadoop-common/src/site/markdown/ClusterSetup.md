@@ -22,7 +22,17 @@ Purpose
 
 This document describes how to install and configure Hadoop clusters ranging from a few nodes to extremely large clusters with thousands of nodes. To play with Hadoop, you may first want to install it on a single machine (see [Single Node Setup](./SingleCluster.html)).
 
-This document does not cover advanced topics such as [Security](./SecureMode.html) or High Availability.
+This document does not cover advanced topics such as High Availability.
+
+*Important*: all production Hadoop clusters use Kerberos to authenticate callers
+and secure access to HDFS data as well as restriction access to computation
+services (YARN etc.). 
+
+These instructions do not cover integration with any Kerberos services,
+-everyone bringing up a production cluster should include connecting to their
+organisation's Kerberos infrastructure as a key part of the deployment.
+
+See [Security](./SecureMode.html) for details on how to secure a cluster. 
 
 Prerequisites
 -------------
@@ -237,7 +247,7 @@ To start a Hadoop cluster you will need to start both the HDFS and YARN cluster.
 
 The first time you bring up HDFS, it must be formatted. Format a new distributed filesystem as *hdfs*:
 
-    [hdfs]$ $HADOOP_HOME/bin/hdfs namenode -format <cluster_name>
+    [hdfs]$ $HADOOP_HOME/bin/hdfs namenode -format
 
 Start the HDFS NameNode with the following command on the designated node as *hdfs*:
 

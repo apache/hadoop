@@ -46,7 +46,6 @@ This approach has the same architecture as [YARN federation](../../hadoop-yarn/h
 ### Example flow
 The simplest configuration deploys a Router on each NameNode machine.
 The Router monitors the local NameNode and its state and heartbeats to the State Store.
-The Router monitors the local NameNode and heartbeats the state to the State Store.
 When a regular DFS client contacts any of the Routers to access a file in the federated filesystem, the Router checks the Mount Table in the State Store (i.e., the local cache) to find out which subcluster contains the file.
 Then it checks the Membership table in the State Store (i.e., the local cache) for the NameNode responsible for the subcluster.
 After it has identified the correct NameNode, the Router proxies the request.
@@ -329,6 +328,17 @@ To trigger a runtime-refresh of the resource specified by \<key\> on \<host:ipc\
 
     [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -refreshRouterArgs <host:ipc_port> <key> [arg1..argn]
 
+### Router state dump
+
+To diagnose the current state of the routers, you can use the
+dumpState command. It generates a text dump of the records in the
+State Store. Since it uses the configuration to find and read the
+state store, it is often easiest to use the machine where the routers
+run. The command runs locally, so the routers do not have to be up to
+use this command.
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -dumpState
+
 Client configuration
 --------------------
 
@@ -375,6 +385,20 @@ With this setting a user can interact with `ns-fed` as a regular namespace:
 This federated namespace can also be set as the default one at **core-site.xml** using `fs.defaultFS`.
 
 
+NameNode configuration
+--------------------
+
+In order for the system to support data-locality, you must configure your NameNodes so that they will trust the routers to supply the user's client IP address. `dfs.namenode.ip-proxy-users` defines a comma separated list of users that are allowed to provide the client ip address via the caller context.
+
+```xml
+<configuration>
+  <property>
+    <name>dfs.namenode.ip-proxy-users</name>
+    <value>hdfs</value>
+  </property>
+</configuration>
+```
+
 Router configuration
 --------------------
 
@@ -402,11 +426,13 @@ The RPC server to receive connections from the clients.
 The Router forwards the client requests to the NameNodes.
 It uses a pool of connections to reduce the latency of creating them.
 
-| Property | Default | Description|
+| Property | Default | Description |
 |:---- |:---- |:---- |
 | dfs.federation.router.connection.pool-size | 1 | Size of the pool of connections from the router to namenodes. |
 | dfs.federation.router.connection.clean.ms | 10000 | Time interval, in milliseconds, to check if the connection pool should remove unused connections. |
 | dfs.federation.router.connection.pool.clean.ms | 60000 | Time interval, in milliseconds, to check if the connection manager should remove unused connection pools. |
+| dfs.federation.router.enable.multiple.socket | false | If true, ConnectionPool will use a new socket when creating a new connection for the same user. And it's best used with dfs.federation.router.max.concurrency.per.connection together. |
+| dfs.federation.router.max.concurrency.per.connection | 1 | The maximum number of requests that a connection can handle concurrently. |
 
 ### Admin server
 
@@ -500,7 +526,6 @@ Isolation and dedicated assignment of RPC handlers across all configured downstr
 
 | Property | Default | Description|
 |:---- |:---- |:---- |
-| dfs.federation.router.fairness.enable | `false` | If `true`, dedicated RPC handlers will be assigned to each nameservice based on the fairness assignment policy configured. |
 | dfs.federation.router.fairness.policy.controller.class | `org.apache.hadoop.hdfs.server.federation.fairness.NoRouterRpcFairnessPolicyController` | Default handler allocation model to be used if isolation feature is enabled. Recommend to use `org.apache.hadoop.hdfs.server.federation.fairness.StaticRouterRpcFairnessPolicyController` to fully use the feature. |
 | dfs.federation.router.fairness.handler.count.*EXAMPLENAMESERVICE* | | Dedicated handler assigned to a specific nameservice. If none is specified equal allocation is done across all nameservices. |
 | dfs.federation.router.fairness.handler.count.concurrent | | Dedicated handler assigned to fan out calls such as `renewLease`. |
@@ -514,7 +539,7 @@ More metrics info can see [RBF Metrics](../../hadoop-project-dist/hadoop-common/
 Router Federation Rename
 -------
 
-Enable Router to rename across namespaces. Currently it is implemented based on [HDFS Federation Balance](../../../hadoop-federation-balance/HDFSFederationBalance.md) and has some limits comparing with normal rename.
+Enable Router to rename across namespaces. Currently it is implemented based on [HDFS Federation Balance](../../hadoop-federation-balance/HDFSFederationBalance.md) and has some limits comparing with normal rename.
 1. It is much slower than the normal rename so need a longer RPC timeout configuration. See `ipc.client.rpc-timeout.ms` and its description for more information about RPC timeout.
 2. It doesn't support snapshot path.
 3. It doesn't support to rename path with multiple destinations.

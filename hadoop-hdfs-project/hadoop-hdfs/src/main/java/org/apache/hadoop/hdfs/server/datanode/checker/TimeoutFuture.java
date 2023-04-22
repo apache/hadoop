@@ -20,7 +20,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.hdfs.server.datanode.checker.AbstractFuture;
 import org.slf4j.Logger;
@@ -31,6 +31,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Implementation of {@code Futures#withTimeout}.

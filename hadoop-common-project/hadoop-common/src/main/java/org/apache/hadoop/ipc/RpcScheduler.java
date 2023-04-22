@@ -26,7 +26,8 @@ import org.apache.hadoop.ipc.metrics.RpcMetrics;
  */
 public interface RpcScheduler {
   /**
-   * Returns priority level greater than zero as a hint for scheduling.
+   * @return Returns priority level greater than zero as a hint for scheduling.
+   * @param obj input obj.
    */
   int getPriorityLevel(Schedulable obj);
 
@@ -37,6 +38,12 @@ public interface RpcScheduler {
    * implementations. It will not be called by any Hadoop code, and should not
    * be implemented by new implementations.
    *
+   * @param name input name.
+   * @param priorityLevel input priorityLevel.
+   * @param queueTime input queueTime.
+   * @param processingTime input processingTime.
+   * @throws UnsupportedOperationException
+   *         the requested operation is not supported.
    * @deprecated Use
    * {@link #addResponseTime(String, Schedulable, ProcessingDetails)} instead.
    */

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
@@ -45,6 +45,16 @@ public final class AMRMProxyMetrics {
   private MutableGaugeLong failedAllocateRequests;
   @Metric("# of failed application recoveries")
   private MutableGaugeLong failedAppRecoveryCount;
+  @Metric("# of failed application stop")
+  private MutableGaugeLong failedAppStopRequests;
+  @Metric("# of failed update token")
+  private MutableGaugeLong failedUpdateAMRMTokenRequests;
+  @Metric("# all allocate requests count")
+  private MutableGaugeLong allocateCount;
+  @Metric("# all requests count")
+  private MutableGaugeLong requestCount;
+
+
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Application start request latency(ms)")
   private MutableRate totalSucceededAppStartRequests;
@@ -54,11 +64,22 @@ public final class AMRMProxyMetrics {
   private MutableRate totalSucceededFinishAMRequests;
   @Metric("Allocate latency(ms)")
   private MutableRate totalSucceededAllocateRequests;
+  @Metric("Application stop request latency(ms)")
+  private MutableRate totalSucceededAppStopRequests;
+  @Metric("Recover latency(ms)")
+  private MutableRate totalSucceededRecoverRequests;
+  @Metric("UpdateAMRMToken latency(ms)")
+  private MutableRate totalSucceededUpdateAMRMTokenRequests;
+
   // Quantile latency in ms - this is needed for SLA (95%, 99%, etc)
   private MutableQuantiles applicationStartLatency;
   private MutableQuantiles registerAMLatency;
   private MutableQuantiles finishAMLatency;
   private MutableQuantiles allocateLatency;
+  private MutableQuantiles recoverLatency;
+  private MutableQuantiles applicationStopLatency;
+  private MutableQuantiles updateAMRMTokenLatency;
+
   private static volatile AMRMProxyMetrics instance = null;
   private MetricsRegistry registry;
 
@@ -77,6 +98,15 @@ public final class AMRMProxyMetrics {
             "latency", 10);
     allocateLatency = registry
         .newQuantiles("allocateLatency", "latency of allocate", "ops",
+            "latency", 10);
+    applicationStopLatency = registry
+        .newQuantiles("applicationStopLatency", "latency of app stop", "ops",
+            "latency", 10);
+    recoverLatency = registry
+        .newQuantiles("recoverLatency", "latency of recover", "ops",
+            "latency", 10);
+    updateAMRMTokenLatency = registry
+        .newQuantiles("updateAMRMTokenLatency", "latency of update amrm token", "ops",
             "latency", 10);
   }
 
@@ -147,13 +177,54 @@ public final class AMRMProxyMetrics {
   }
 
   @VisibleForTesting
+  long getNumSucceededAppStopRequests() {
+    return totalSucceededAppStopRequests.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  long getNumSucceededRecoverRequests() {
+    return totalSucceededRecoverRequests.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  long getNumSucceededUpdateAMRMTokenRequests() {
+    return totalSucceededUpdateAMRMTokenRequests.lastStat().numSamples();
+  }
+
+
+  @VisibleForTesting
   double getLatencySucceededAllocateRequests() {
     return totalSucceededAllocateRequests.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  double getLatencySucceededAppStopRequests() {
+    return totalSucceededAppStopRequests.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  double getLatencySucceededRecoverRequests() {
+    return totalSucceededRecoverRequests.lastStat().mean();
   }
 
   public void succeededAllocateRequests(long duration) {
     totalSucceededAllocateRequests.add(duration);
     allocateLatency.add(duration);
+  }
+
+  public void succeededAppStopRequests(long duration) {
+    totalSucceededAppStopRequests.add(duration);
+    applicationStopLatency.add(duration);
+  }
+
+  public void succeededRecoverRequests(long duration) {
+    totalSucceededRecoverRequests.add(duration);
+    recoverLatency.add(duration);
+  }
+
+  public void succeededUpdateTokenRequests(long duration) {
+    totalSucceededUpdateAMRMTokenRequests.add(duration);
+    updateAMRMTokenLatency.add(duration);
   }
 
   long getFailedAppStartRequests() {
@@ -194,5 +265,37 @@ public final class AMRMProxyMetrics {
 
   public void incrFailedAppRecoveryCount() {
     failedAppRecoveryCount.incr();
+  }
+
+  long getFailedAppStopRequests() {
+    return failedAppStopRequests.value();
+  }
+
+  public void incrFailedAppStopRequests() {
+    failedAppStopRequests.incr();
+  }
+
+  long getFailedUpdateAMRMTokenRequests() {
+    return failedUpdateAMRMTokenRequests.value();
+  }
+
+  public void incrFailedUpdateAMRMTokenRequests() {
+    failedUpdateAMRMTokenRequests.incr();
+  }
+
+  public void incrAllocateCount() {
+    allocateCount.incr();
+  }
+
+  public void incrRequestCount() {
+    requestCount.incr();
+  }
+
+  long getAllocateCount() {
+    return allocateCount.value();
+  }
+
+  long getRequestCount() {
+    return requestCount.value();
   }
 }

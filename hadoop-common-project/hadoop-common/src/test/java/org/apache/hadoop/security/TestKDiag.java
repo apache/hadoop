@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -235,7 +236,7 @@ public class TestKDiag extends Assert {
    */
   private void dump(File file) throws IOException {
     try (FileInputStream in = new FileInputStream(file)) {
-      for (String line : IOUtils.readLines(in)) {
+      for (String line : IOUtils.readLines(in, StandardCharsets.UTF_8)) {
         LOG.info(line);
       }
     }

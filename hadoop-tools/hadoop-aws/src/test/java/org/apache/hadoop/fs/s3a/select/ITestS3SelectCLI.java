@@ -22,7 +22,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.junit.Assume;
@@ -42,7 +42,7 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.OperationDuration;
 import org.apache.hadoop.util.ToolRunner;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
 import static org.apache.hadoop.fs.s3a.select.ITestS3SelectLandsat.SELECT_NOTHING;
@@ -168,8 +168,7 @@ public class ITestS3SelectCLI extends AbstractS3SelectTest {
         o(OPT_OUTPUT), localFile.toString(),
         landsatSrc,
         SELECT_SUNNY_ROWS_NO_LIMIT);
-    List<String> lines = IOUtils.readLines(new FileInputStream(localFile),
-        Charset.defaultCharset());
+    List<String> lines = IOUtils.readLines(new FileInputStream(localFile), StandardCharsets.UTF_8);
     LOG.info("Result from select:\n{}", lines.get(0));
     assertEquals(lineCount, lines.size());
     selectCount.assertDiffEquals("select count", 1);

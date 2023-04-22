@@ -55,6 +55,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
+import static org.apache.hadoop.fs.FileSystem.TRASH_PREFIX;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -179,6 +180,13 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   @Override
   int getExpectedDelegationTokenCountWithCredentials() {
     return 2;
+  }
+
+  @Override
+  Path getTrashRootInFallBackFS() throws IOException {
+    return new Path(
+        "/" + TRASH_PREFIX + "/" + UserGroupInformation.getCurrentUser()
+            .getShortUserName());
   }
 
   @Test
@@ -478,5 +486,24 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     String owner = otherfs.getFileStatus(user1Path).getOwner();
     assertEquals("The owner did not match ", owner, userUgi.getShortUserName());
     otherfs.delete(user1Path, false);
+  }
+
+  @Test
+  public void testInternalDirectoryPermissions() throws IOException {
+    LOG.info("Starting testInternalDirectoryPermissions!");
+    Configuration localConf = new Configuration(conf);
+    ConfigUtil.addLinkFallback(
+        localConf, new Path(targetTestRoot, "fallbackDir").toUri());
+    FileSystem fs = FileSystem.get(FsConstants.VIEWFS_URI, localConf);
+    // check that the default permissions on a sub-folder of an internal
+    // directory are the same as those created on non-internal directories.
+    Path subDirOfInternalDir = new Path("/internalDir/dir1");
+    fs.mkdirs(subDirOfInternalDir);
+
+    Path subDirOfRealDir = new Path("/internalDir/linkToDir2/dir1");
+    fs.mkdirs(subDirOfRealDir);
+
+    assertEquals(fs.getFileStatus(subDirOfInternalDir).getPermission(),
+        fs.getFileStatus(subDirOfRealDir).getPermission());
   }
 }

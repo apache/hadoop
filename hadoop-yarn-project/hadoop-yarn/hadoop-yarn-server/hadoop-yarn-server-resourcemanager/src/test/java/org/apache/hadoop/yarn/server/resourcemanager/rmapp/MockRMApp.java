@@ -119,6 +119,11 @@ public class MockRMApp implements RMApp {
     return user;
   }
 
+  @Override
+  public String getRealUser() {
+    return null;
+  }
+
   public void setUser(String user) {
     this.user = user;
   }

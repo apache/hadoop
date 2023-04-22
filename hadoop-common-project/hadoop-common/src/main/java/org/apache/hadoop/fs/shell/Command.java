@@ -77,7 +77,11 @@ abstract public class Command extends Configured {
     err = System.err;
   }
   
-  /** Constructor */
+  /**
+   * Constructor.
+   *
+   * @param conf configuration.
+   */
   protected Command(Configuration conf) {
     super(conf);
   }
@@ -109,7 +113,7 @@ abstract public class Command extends Configured {
    * Execute the command on the input path data. Commands can override to make
    * use of the resolved filesystem.
    * @param pathData The input path with resolved filesystem
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   protected void run(PathData pathData) throws IOException {
     run(pathData.path);
@@ -136,11 +140,19 @@ abstract public class Command extends Configured {
     return exitCode;
   }
 
-  /** sets the command factory for later use */
+  /**
+   * sets the command factory for later use.
+   * @param factory factory.
+   */
   public void setCommandFactory(CommandFactory factory) {
     this.commandFactory = factory;
   }
-  /** retrieves the command factory */
+
+  /**
+   * retrieves the command factory.
+   *
+   * @return command factory.
+   */
   protected CommandFactory getCommandFactory() {
     return this.commandFactory;
   }
@@ -201,7 +213,7 @@ abstract public class Command extends Configured {
    * IllegalArgumentException is thrown, the FsShell object will print the
    * short usage of the command.
    * @param args the command line arguments
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   protected void processOptions(LinkedList<String> args) throws IOException {}
 
@@ -211,7 +223,7 @@ abstract public class Command extends Configured {
    * {@link #expandArguments(LinkedList)} and pass the resulting list to
    * {@link #processArguments(LinkedList)} 
    * @param args the list of argument strings
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   protected void processRawArguments(LinkedList<String> args)
   throws IOException {

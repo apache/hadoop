@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.webapp;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import com.google.inject.Singleton;
 import com.sun.jersey.api.client.Client;
@@ -138,6 +138,9 @@ public class LogWebService implements AppInfoProvider {
    * @param containerIdStr     The container ID
    * @param nmId               The Node Manager NodeId
    * @param redirectedFromNode Whether this is a redirected request from NM
+   * @param clusterId          clusterId the id of the cluster
+   * @param manualRedirection  whether to return a response with a Location
+   *                           instead of an automatic redirection
    * @return The log file's name and current file size
    */
   @GET
@@ -242,6 +245,9 @@ public class LogWebService implements AppInfoProvider {
    * @param size               the size of the log file
    * @param nmId               The Node Manager NodeId
    * @param redirectedFromNode Whether this is the redirect request from NM
+   * @param clusterId          the id of the cluster
+   * @param manualRedirection  whether to return a response with a Location
+   *                           instead of an automatic redirection
    * @return The contents of the container's log file
    */
   @GET

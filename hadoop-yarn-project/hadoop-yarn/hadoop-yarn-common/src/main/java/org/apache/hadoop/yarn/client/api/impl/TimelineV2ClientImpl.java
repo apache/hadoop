@@ -56,7 +56,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.UniformInterfaceException;
@@ -531,7 +531,7 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
               count++;
               if (count == numberOfAsyncsToMerge) {
                 // Flush the entities if the number of the async
-                // putEntites merged reaches the desired limit. To avoid
+                // putEntities merged reaches the desired limit. To avoid
                 // collecting multiple entities and delaying for a long
                 // time.
                 entitiesHolder.run();

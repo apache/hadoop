@@ -77,8 +77,8 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.VersionInfo;
 
 import javax.management.ObjectName;
@@ -803,7 +803,7 @@ public class SecondaryNameNode implements Runnable,
       geteditsizeOpt = new Option("geteditsize",
         "return the number of uncheckpointed transactions on the NameNode");
       checkpointOpt = OptionBuilder.withArgName("force")
-        .hasOptionalArg().withDescription("checkpoint on startup").create("checkpoint");;
+        .hasOptionalArg().withDescription("checkpoint on startup").create("checkpoint");
       formatOpt = new Option("format", "format the local storage during startup");
       helpOpt = new Option("h", "help", false, "get help information");
       
@@ -1098,7 +1098,7 @@ public class SecondaryNameNode implements Runnable,
       try {
         dstImage.reloadFromImageFile(file, dstNamesystem);
       } finally {
-        dstNamesystem.writeUnlock();
+        dstNamesystem.writeUnlock("reloadFromImageFile");
       }
       dstNamesystem.imageLoadComplete();
     }

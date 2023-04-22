@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -38,6 +39,9 @@ public class ApplicationPlacementAllocatorFactory {
    *
    * @param appPlacementAllocatorName
    *          allocator class name.
+   * @param appSchedulingInfo app SchedulingInfo.
+   * @param schedulerRequestKey scheduler RequestKey.
+   * @param rmContext RMContext.
    * @return Specific AppPlacementAllocator instance based on type
    */
   public static AppPlacementAllocator<SchedulerNode> getAppPlacementAllocator(
@@ -45,7 +49,7 @@ public class ApplicationPlacementAllocatorFactory {
       SchedulerRequestKey schedulerRequestKey, RMContext rmContext) {
     Class<?> policyClass;
     try {
-      if (appPlacementAllocatorName == null) {
+      if (StringUtils.isEmpty(appPlacementAllocatorName)) {
         policyClass = ApplicationSchedulingConfig.DEFAULT_APPLICATION_PLACEMENT_TYPE_CLASS;
       } else {
         policyClass = Class.forName(appPlacementAllocatorName);

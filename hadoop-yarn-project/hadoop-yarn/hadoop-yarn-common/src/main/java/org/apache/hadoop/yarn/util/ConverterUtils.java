@@ -57,7 +57,8 @@ public class ConverterUtils {
    * @param url
    *          url to convert
    * @return path from {@link URL}
-   * @throws URISyntaxException
+   * @throws URISyntaxException exception thrown to indicate that a string could not be parsed as a
+   * URI reference.
    */
   @Public
   @Deprecated
@@ -171,6 +172,7 @@ public class ConverterUtils {
    *
    * @param protoToken the yarn token
    * @param serviceAddr the connect address for the service
+   * @param <T> Generic Type T.
    * @return rpc token
    */
   public static <T extends TokenIdentifier> Token<T> convertFromYarn(
@@ -191,6 +193,8 @@ public class ConverterUtils {
    *
    * @param protoToken the yarn token
    * @param service the service for the token
+   * @param <T> Generic Type T.
+   * @return rpc token
    */
   public static <T extends TokenIdentifier> Token<T> convertFromYarn(
       org.apache.hadoop.yarn.api.records.Token protoToken,

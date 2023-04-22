@@ -347,6 +347,8 @@ public class TestHASafeMode {
     // once it starts up
     banner("Removing the blocks without rolling the edit log");
     fs.delete(new Path("/test"), true);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     BlockManagerTestUtil.computeAllPendingWork(
         nn0.getNamesystem().getBlockManager());
     cluster.triggerHeartbeats();
@@ -386,6 +388,8 @@ public class TestHASafeMode {
     // ACKed when due to block removals.
     banner("Removing the blocks without rolling the edit log");
     fs.delete(new Path("/test"), true);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     BlockManagerTestUtil.computeAllPendingWork(
         nn0.getNamesystem().getBlockManager());
     
@@ -848,13 +852,13 @@ public class TestHASafeMode {
           null);
       create.write(testData.getBytes());
       create.hflush();
-      long fileId = ((DFSOutputStream)create.
-          getWrappedStream()).getFileId();
+      String renewLeaseKey = ((DFSOutputStream)create.
+          getWrappedStream()).getUniqKey();
       FileStatus fileStatus = dfs.getFileStatus(filePath);
       DFSClient client = DFSClientAdapter.getClient(dfs);
       // add one dummy block at NN, but not write to DataNode
       ExtendedBlock previousBlock =
-          DFSClientAdapter.getPreviousBlock(client, fileId);
+          DFSClientAdapter.getPreviousBlock(client, renewLeaseKey);
       DFSClientAdapter.getNamenode(client).addBlock(
           pathString,
           client.getClientName(),
@@ -971,6 +975,28 @@ public class TestHASafeMode {
       LambdaTestUtils.intercept(ServiceFailedException.class,
           "NameNode still not leave safemode",
           () -> miniCluster.transitionToActive(0));
+    }
+  }
+
+  @Test
+  public void testTransitionToObserverWhenSafeMode() throws Exception {
+    Configuration config = new Configuration();
+    config.setBoolean(DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE, true);
+    try (MiniDFSCluster miniCluster = new MiniDFSCluster.Builder(config,
+        new File(GenericTestUtils.getRandomizedTempPath()))
+        .nnTopology(MiniDFSNNTopology.simpleHATopology())
+        .numDataNodes(1)
+        .build()) {
+      miniCluster.waitActive();
+      miniCluster.transitionToStandby(0);
+      miniCluster.transitionToStandby(1);
+      NameNode namenode0 = miniCluster.getNameNode(0);
+      NameNode namenode1 = miniCluster.getNameNode(1);
+      NameNodeAdapter.enterSafeMode(namenode0, false);
+      NameNodeAdapter.enterSafeMode(namenode1, false);
+      LambdaTestUtils.intercept(ServiceFailedException.class,
+          "NameNode still not leave safemode",
+          () -> miniCluster.transitionToObserver(0));
     }
   }
 }

@@ -31,8 +31,10 @@ import org.junit.Assert;
 public class MockClientRequestInterceptor
     extends DefaultClientRequestInterceptor {
 
+  MockRM mockRM = null;
+
   public void init(String user) {
-    MockRM mockRM = new MockRM(super.getConf()) {
+    mockRM = new MockRM(super.getConf()) {
       @Override
       protected ClientRMService createClientRMService() {
         return new ClientRMService(getRMContext(), getResourceScheduler(),
@@ -68,4 +70,11 @@ public class MockClientRequestInterceptor
     super.setRMClient(mockRM.getClientRMService());
   }
 
+  @Override
+  public void shutdown() {
+    if (mockRM != null) {
+      mockRM.stop();
+    }
+    super.shutdown();
+  }
 }

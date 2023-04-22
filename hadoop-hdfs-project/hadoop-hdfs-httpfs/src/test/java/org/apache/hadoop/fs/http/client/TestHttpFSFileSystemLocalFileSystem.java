@@ -32,8 +32,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.net.URI;
-import java.net.URISyntaxException;
 
 @RunWith(value = Parameterized.class)
 public class TestHttpFSFileSystemLocalFileSystem extends BaseTestHttpFSWith {

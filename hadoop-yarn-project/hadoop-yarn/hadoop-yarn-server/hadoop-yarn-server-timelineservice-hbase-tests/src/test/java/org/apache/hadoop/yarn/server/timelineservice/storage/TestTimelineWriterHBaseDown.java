@@ -43,12 +43,12 @@ public class TestTimelineWriterHBaseDown {
     HBaseTestingUtility util = new HBaseTestingUtility();
     HBaseTimelineWriterImpl writer = new HBaseTimelineWriterImpl();
     try {
+      util.startMiniCluster();
       Configuration c1 = util.getConfiguration();
       c1.setLong(TIMELINE_SERVICE_READER_STORAGE_MONITOR_INTERVAL_MS, 5000);
       writer.init(c1);
       writer.start();
 
-      util.startMiniCluster();
       DataGeneratorForTest.createSchema(util.getConfiguration());
 
       TimelineStorageMonitor storageMonitor = writer.

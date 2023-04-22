@@ -415,18 +415,13 @@ public class ITestS3SelectLandsat extends AbstractS3SelectTest {
       long increment = 64 * _1KB;
 
       // seek forward, comparing bytes
-      for(offset = 32 * _1KB; offset < actualLen; offset += increment) {
+      for(offset = 32 * _1KB; offset < _1MB; offset += increment) {
         seek(seekStream, offset);
         assertEquals("Seek position in " + seekStream,
             offset, seekStream.getPos());
         // now do a read and compare values
         assertEquals("byte at seek position",
             dataset[(int) seekStream.getPos()], seekStream.read());
-      }
-      for(; offset < len; offset += _1MB) {
-        seek(seekStream, offset);
-        assertEquals("Seek position in " + seekStream,
-            offset, seekStream.getPos());
       }
       // there's no knowledge of how much data is left, but with Gzip
       // involved there can be a lot. To keep the test duration down,

@@ -18,7 +18,7 @@
 
 /**
  * These .proto interfaces are private and stable.
- * Please see http://wiki.apache.org/hadoop/Compatibility
+ * Please see https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html
  * for what changes are allowed for a *stable* .proto interface.
  */
 syntax = "proto2";
@@ -91,6 +91,10 @@ message RpcRequestHeaderProto { // the header for the RpcRequest
   optional RPCTraceInfoProto traceInfo = 6; // tracing info
   optional RPCCallerContextProto callerContext = 7; // call context
   optional int64 stateId = 8; // The last seen Global State ID
+  // Alignment context info for use with routers.
+  // The client should not interpret these bytes, but only forward bytes
+  // received from RpcResponseHeaderProto.routerFederatedState.
+  optional bytes routerFederatedState = 9;
 }
 
 
@@ -157,6 +161,10 @@ message RpcResponseHeaderProto {
   optional bytes clientId = 7; // Globally unique client ID
   optional sint32 retryCount = 8 [default = -1];
   optional int64 stateId = 9; // The last written Global State ID
+  // Alignment context info for use with routers.
+  // The client should not interpret these bytes, but only
+  // forward them to the router using RpcRequestHeaderProto.routerFederatedState.
+  optional bytes routerFederatedState = 10;
 }
 
 message RpcSaslProto {

@@ -21,8 +21,6 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-
 /**
  * A closeable object that maintains a reference count.
  *

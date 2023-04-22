@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.s3a;
 import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.SocketException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletableFuture;
 
 import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.GetObjectRequest;
@@ -34,9 +35,10 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopSpan;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
-import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import static java.lang.Math.min;
+import static org.apache.hadoop.util.functional.FutureIO.eval;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
@@ -54,7 +56,6 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
   @Test
   public void testInputStreamReadRetryForException() throws IOException {
     S3AInputStream s3AInputStream = getMockedS3AInputStream();
-
     assertEquals("'a' from the test input stream 'ab' should be the first " +
         "character being read", INPUT.charAt(0), s3AInputStream.read());
     assertEquals("'b' from the test input stream 'ab' should be the second " +
@@ -103,13 +104,15 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
         INPUT.length());
 
     S3AReadOpContext s3AReadOpContext = fs.createReadContext(
-        s3AFileStatus, S3AInputPolicy.Normal,
-        ChangeDetectionPolicy.getPolicy(fs.getConf()), 100, NoopSpan.INSTANCE);
+        s3AFileStatus,
+        NoopSpan.INSTANCE);
 
     return new S3AInputStream(
         s3AReadOpContext,
         s3ObjectAttributes,
-        getMockedInputStreamCallback());
+        getMockedInputStreamCallback(),
+        s3AReadOpContext.getS3AStatisticsContext().newInputStreamStatistics(),
+            null);
   }
 
   /**
@@ -149,6 +152,11 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
       @Override
       public GetObjectRequest newGetRequest(String key) {
         return new GetObjectRequest(fs.getBucket(), key);
+      }
+
+      @Override
+      public <T> CompletableFuture<T> submit(final CallableRaisingIOE<T> operation) {
+        return eval(operation);
       }
 
       @Override
@@ -200,8 +208,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
    * @return mocked object.
    */
   private S3ObjectInputStream getMockedInputStream(boolean triggerFailure) {
-    return new S3ObjectInputStream(
-        IOUtils.toInputStream(INPUT, Charset.defaultCharset()), null) {
+    return new S3ObjectInputStream(IOUtils.toInputStream(INPUT, StandardCharsets.UTF_8), null) {
 
       private final IOException exception =
           new SSLException(new SocketException("Connection reset"));

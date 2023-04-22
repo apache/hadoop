@@ -37,12 +37,17 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
 
   /**
    * Set optional Builder parameter.
+   * @param key key.
+   * @param value value.
+   * @return generic type B.
    */
   B opt(@Nonnull String key, @Nonnull String value);
 
   /**
    * Set optional boolean parameter for the Builder.
-   *
+   * @param key key.
+   * @param value value.
+   * @return generic type B.
    * @see #opt(String, String)
    */
   B opt(@Nonnull String key, boolean value);
@@ -50,6 +55,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
   /**
    * Set optional int parameter for the Builder.
    *
+   * @param key key.
+   * @param value value.
+   * @return generic type B.
    * @see #opt(String, String)
    */
   B opt(@Nonnull String key, int value);
@@ -57,13 +65,29 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
   /**
    * Set optional float parameter for the Builder.
    *
+   * @param key key.
+   * @param value value.
+   * @return generic type B.
    * @see #opt(String, String)
    */
   B opt(@Nonnull String key, float value);
 
   /**
+   * Set optional long parameter for the Builder.
+   *
+   * @param key key.
+   * @param value value.
+   * @return generic type B.
+   * @see #opt(String, String)
+   */
+  B opt(@Nonnull String key, long value);
+
+  /**
    * Set optional double parameter for the Builder.
    *
+   * @param key key.
+   * @param value value.
+   * @return generic type B.
    * @see #opt(String, String)
    */
   B opt(@Nonnull String key, double value);
@@ -71,6 +95,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
   /**
    * Set an array of string values as optional parameter for the Builder.
    *
+   * @param key key.
+   * @param values values.
+   * @return generic type B.
    * @see #opt(String, String)
    */
   B opt(@Nonnull String key, @Nonnull String... values);
@@ -80,12 +107,19 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    *
    * If the option is not supported or unavailable,
    * the client should expect {@link #build()} throws IllegalArgumentException.
+   *
+   * @param key key.
+   * @param value value.
+   * @return generic type B.
    */
   B must(@Nonnull String key, @Nonnull String value);
 
   /**
    * Set mandatory boolean option.
    *
+   * @param key key.
+   * @param value value.
+   * @return generic type B.
    * @see #must(String, String)
    */
   B must(@Nonnull String key, boolean value);
@@ -93,6 +127,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
   /**
    * Set mandatory int option.
    *
+   * @param key key.
+   * @param value value.
+   * @return generic type B.
    * @see #must(String, String)
    */
   B must(@Nonnull String key, int value);
@@ -100,13 +137,29 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
   /**
    * Set mandatory float option.
    *
+   * @param key key.
+   * @param value value.
+   * @return generic type B.
    * @see #must(String, String)
    */
   B must(@Nonnull String key, float value);
 
   /**
+   * Set mandatory long option.
+   *
+   * @param key key.
+   * @param value value.
+   * @return generic type B.
+   * @see #must(String, String)
+   */
+  B must(@Nonnull String key, long value);
+
+  /**
    * Set mandatory double option.
    *
+   * @param key key.
+   * @param value value.
+   * @return generic type B.
    * @see #must(String, String)
    */
   B must(@Nonnull String key, double value);
@@ -114,6 +167,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
   /**
    * Set a string array as mandatory option.
    *
+   * @param key key.
+   * @param values values.
+   * @return generic type B.
    * @see #must(String, String)
    */
   B must(@Nonnull String key, @Nonnull String... values);
@@ -125,6 +181,7 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @throws UnsupportedOperationException if the filesystem does not support
    * the specific operation.
    * @throws IOException on filesystem IO errors.
+   * @return generic type S.
    */
   S build() throws IllegalArgumentException,
       UnsupportedOperationException, IOException;

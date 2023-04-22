@@ -51,7 +51,7 @@ import org.apache.hadoop.hdfs.shortcircuit.ClientMmap;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -375,15 +375,20 @@ public class BlockReaderRemote implements BlockReader {
    * Create a new BlockReader specifically to satisfy a read.
    * This method also sends the OP_READ_BLOCK request.
    *
-   * @param file  File location
-   * @param block  The block object
-   * @param blockToken  The block token for security
-   * @param startOffset  The read offset, relative to block head
-   * @param len  The number of bytes to read
-   * @param verifyChecksum  Whether to verify checksum
-   * @param clientName  Client name
-   * @param peer  The Peer to use
-   * @param datanodeID  The DatanodeID this peer is connected to
+   * @param file  File location.
+   * @param block  The block object.
+   * @param blockToken  The block token for security.
+   * @param startOffset  The read offset, relative to block head.
+   * @param len  The number of bytes to read.
+   * @param verifyChecksum  Whether to verify checksum.
+   * @param clientName  Client name.
+   * @param peer  The Peer to use.
+   * @param datanodeID  The DatanodeID this peer is connected to.
+   * @param peerCache Caches TCP and UNIX domain sockets for reuse.
+   * @param cachingStrategy Caching strategy to use when reading the block.
+   * @param networkDistance Return the distance between two nodes by
+   *                        comparing their network paths.
+   * @param configuration Configuration of client.
    * @return New BlockReader instance, or null on error.
    */
   public static BlockReader newBlockReader(String file,

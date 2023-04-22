@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,16 +42,20 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.metrics.RBFMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MultipleDestinationMountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
+import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.impl.DisabledNameserviceStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.impl.MountTableStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
+import org.apache.hadoop.hdfs.server.federation.store.records.MockStateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.tools.federation.RouterAdmin;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -163,8 +167,9 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin, argv));
     assertEquals(-1, ToolRunner.run(admin, argv));
 
-
     stateStore.loadCache(MountTableStoreImpl.class, true);
+    verifyMountTableContents(src, dest);
+
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
         .newInstance(src);
     GetMountTableEntriesResponse getResponse = client.getMountTableManager()
@@ -201,6 +206,15 @@ public class TestRouterAdminCLI {
     assertEquals(dest, loc3.getDest());
     assertTrue(mountTable.isReadOnly());
     assertTrue(mountTable.isFaultTolerant());
+  }
+
+  private void verifyMountTableContents(String src, String dest) throws Exception {
+    String[] argv = new String[] {"-ls", "/"};
+    System.setOut(new PrintStream(out));
+    assertEquals(0, ToolRunner.run(admin, argv));
+    String response = out.toString();
+    assertTrue("The response should have " + src + ": " + response, response.contains(src));
+    assertTrue("The response should have " + dest + ": " + response, response.contains(dest));
   }
 
   @Test
@@ -742,7 +756,7 @@ public class TestRouterAdminCLI {
    * @param mount
    *          target mount table
    * @param canRead
-   *          whether can list mount tables under specified mount
+   *          whether you can list mount tables under specified mount
    * @param addCommandCode
    *          expected return code of add command executed for specified mount
    * @param rmCommandCode
@@ -852,6 +866,7 @@ public class TestRouterAdminCLI {
         + " <quota in bytes or quota size string>]\n"
         + "\t[-clrQuota <path>]\n"
         + "\t[-clrStorageTypeQuota <path>]\n"
+        + "\t[-dumpState]\n"
         + "\t[-safemode enter | leave | get]\n"
         + "\t[-nameservice enable | disable <nameservice>]\n"
         + "\t[-getDisabledNameservices]\n"
@@ -1467,7 +1482,7 @@ public class TestRouterAdminCLI {
         err.toString().contains("update: /noMount doesn't exist."));
     err.reset();
 
-    // Check update if non true/false value is passed for readonly.
+    // Check update if no true/false value is passed for readonly.
     argv = new String[] {"-update", src, "-readonly", "check"};
     assertEquals(-1, ToolRunner.run(admin, argv));
     assertTrue(err.toString(), err.toString().contains("update: "
@@ -1738,6 +1753,91 @@ public class TestRouterAdminCLI {
     argv = new String[] {"-add", "/mntft", "ns0,ns1", "/tmp",
         "-order", "HASH_ALL", "-faulttolerant"};
     assertEquals(0, ToolRunner.run(admin, argv));
+  }
+
+  @Test
+  public void testRefreshCallQueue() throws Exception {
+
+    System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
+
+    String[] argv = new String[]{"-refreshCallQueue"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains("Refresh call queue successfully"));
+
+    argv = new String[]{};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains("-refreshCallQueue"));
+
+    argv = new String[]{"-refreshCallQueue", "redundant"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(err.toString().contains("No arguments allowed"));
+  }
+
+  @Test
+  public void testDumpState() throws Exception {
+    MockStateStoreDriver driver = new MockStateStoreDriver();
+    driver.clearAll();
+    // Add two records for block1
+    driver.put(MembershipState.newInstance("routerId", "ns1",
+        "ns1-ha1", "cluster1", "block1", "rpc1",
+        "service1", "lifeline1", "https", "nn01",
+        FederationNamenodeServiceState.ACTIVE, false), false, false);
+    driver.put(MembershipState.newInstance("routerId", "ns1",
+        "ns1-ha2", "cluster1", "block1", "rpc2",
+        "service2", "lifeline2", "https", "nn02",
+        FederationNamenodeServiceState.STANDBY, false), false, false);
+    Configuration conf = new Configuration();
+    conf.setClass(RBFConfigKeys.FEDERATION_STORE_DRIVER_CLASS,
+        MockStateStoreDriver.class,
+        StateStoreDriver.class);
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    try (PrintStream stream = new PrintStream(buffer)) {
+      RouterAdmin.dumpStateStore(conf, stream);
+    }
+    final String expected =
+        "---- DisabledNameservice ----\n" +
+            "\n" +
+            "---- MembershipState ----\n" +
+            "  ns1-ha1-ns1-routerId:\n" +
+            "    dateCreated: XXX\n" +
+            "    dateModified: XXX\n" +
+            "    routerId: \"routerId\"\n" +
+            "    nameserviceId: \"ns1\"\n" +
+            "    namenodeId: \"ns1-ha1\"\n" +
+            "    clusterId: \"cluster1\"\n" +
+            "    blockPoolId: \"block1\"\n" +
+            "    webAddress: \"nn01\"\n" +
+            "    rpcAddress: \"rpc1\"\n" +
+            "    serviceAddress: \"service1\"\n" +
+            "    lifelineAddress: \"lifeline1\"\n" +
+            "    state: \"ACTIVE\"\n" +
+            "    isSafeMode: false\n" +
+            "    webScheme: \"https\"\n" +
+            "    \n" +
+            "  ns1-ha2-ns1-routerId:\n" +
+            "    dateCreated: XXX\n" +
+            "    dateModified: XXX\n" +
+            "    routerId: \"routerId\"\n" +
+            "    nameserviceId: \"ns1\"\n" +
+            "    namenodeId: \"ns1-ha2\"\n" +
+            "    clusterId: \"cluster1\"\n" +
+            "    blockPoolId: \"block1\"\n" +
+            "    webAddress: \"nn02\"\n" +
+            "    rpcAddress: \"rpc2\"\n" +
+            "    serviceAddress: \"service2\"\n" +
+            "    lifelineAddress: \"lifeline2\"\n" +
+            "    state: \"STANDBY\"\n" +
+            "    isSafeMode: false\n" +
+            "    webScheme: \"https\"\n" +
+            "    \n" +
+            "\n" +
+            "---- MountTable ----\n" +
+            "\n" +
+            "---- RouterState ----";
+    // Replace the time values with XXX
+    assertEquals(expected,
+        buffer.toString().trim().replaceAll("[0-9]{4,}+", "XXX"));
   }
 
   private void addMountTable(String src, String nsId, String dst)

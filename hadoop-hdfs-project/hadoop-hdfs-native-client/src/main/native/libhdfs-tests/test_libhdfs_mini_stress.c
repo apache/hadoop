@@ -18,23 +18,26 @@
 
 #include "common/util_c.h"
 #include "expect.h"
-#include "hdfs/hdfs.h"
 #include "hdfspp/hdfs_ext.h"
 #include "native_mini_dfs.h"
 #include "os/thread.h"
 #include "x-platform/c-api/syscall.h"
+#include "hdfs/hdfs.h"
 
 #include <errno.h>
 #include <inttypes.h>
-#include <pwd.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <unistd.h>
+
+#ifndef WIN32
+#include <sys/socket.h>
+#include <sys/wait.h>
+#include <pwd.h>
+#endif
 
 #define TO_STR_HELPER(X) #X
 #define TO_STR(X) TO_STR_HELPER(X)
@@ -197,7 +200,7 @@ static int fileEventCallback1(const char * event, const char * cluster, const ch
   if (randomErrRatioStr) randomErrRatio = (int64_t)atoi(randomErrRatioStr);
   if (randomErrRatio == 0) return DEBUG_SIMULATE_ERROR;
   else if (randomErrRatio < 0) return LIBHDFSPP_EVENT_OK;
-  return random() % randomErrRatio == 0 ? DEBUG_SIMULATE_ERROR : LIBHDFSPP_EVENT_OK;
+  return rand() % randomErrRatio == 0 ? DEBUG_SIMULATE_ERROR : LIBHDFSPP_EVENT_OK;
 }
 
 static int fileEventCallback2(const char * event, const char * cluster, const char * file, int64_t value, int64_t cookie)
@@ -235,7 +238,7 @@ static int doTestHdfsMiniStress(struct tlhThreadInfo *ti, int randomErr)
     EXPECT_ZERO(hdfsCloseFile(ti->hdfs, file));
     file = hdfsOpenFile(ti->hdfs, ti->fileNm, O_RDONLY, 0, 0, 0);
     EXPECT_NONNULL(file);
-    seekPos = (((double)random()) / RAND_MAX) * (fileInfo->mSize - expected);
+    seekPos = (((double)rand()) / RAND_MAX) * (fileInfo->mSize - expected);
     seekPos = (seekPos / expected) * expected;
     ret = hdfsSeek(ti->hdfs, file, seekPos);
     if (ret < 0) {

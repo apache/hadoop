@@ -91,11 +91,11 @@ static void dfsPrintOptions(FILE *fp, const struct options *o)
   INFO("Mounting with options: [ protected=%s, nn_uri=%s, nn_port=%d, "
           "debug=%d, read_only=%d, initchecks=%d, "
           "no_permissions=%d, usetrash=%d, entry_timeout=%d, "
-          "attribute_timeout=%d, rdbuffer_size=%zd, direct_io=%d ]",
+          "attribute_timeout=%d, rdbuffer_size=%zd, direct_io=%d, max_background=%d ]",
           (o->protected ? o->protected : "(NULL)"), o->nn_uri, o->nn_port, 
           o->debug, o->read_only, o->initchecks,
           o->no_permissions, o->usetrash, o->entry_timeout,
-          o->attribute_timeout, o->rdbuffer_size, o->direct_io);
+          o->attribute_timeout, o->rdbuffer_size, o->direct_io, o->max_background);
 }
 
 void *dfs_init(struct fuse_conn_info *conn)

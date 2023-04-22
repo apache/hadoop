@@ -411,6 +411,7 @@
               { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
               { 'type': 'num' , "defaultContent": 0},
               { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
+              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
               { 'type': 'string' , "defaultContent": ""}
             ],
             initComplete: function () {
@@ -474,6 +475,22 @@
         var base = dust.makeBase(HELPERS);
         dust.render('mounttable', base.push(data), function(err, out) {
           $('#tab-mounttable').html(out);
+          $('#table-mounttable').dataTable( {
+            'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
+            'columns': [
+              { 'orderDataType': 'ng-value', 'searchable': true },
+              { 'orderDataType': 'ng-value', 'searchable': true },
+              { 'orderDataType': 'ng-value', 'searchable': true },
+              { 'type': 'string' , "defaultContent": "" },
+              { 'type': 'string' , "defaultContent": "" },
+              { 'type': 'string' , "defaultContent": "" },
+              { 'type': 'string' , "defaultContent": "" },
+              { 'type': 'string' , "defaultContent": "" },
+              { 'type': 'string' , "defaultContent": "" },
+              { 'type': 'string' , "defaultContent": "" },
+              { 'type': 'string' , "defaultContent": "" },
+              { 'type': 'string' , "defaultContent": "" }
+            ]});
           $('#ui-tabs a[href="#tab-mounttable"]').tab('show');
         });
       })).fail(ajax_error_handler);

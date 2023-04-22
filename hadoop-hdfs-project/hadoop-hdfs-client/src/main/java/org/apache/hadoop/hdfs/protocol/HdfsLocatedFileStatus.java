@@ -54,6 +54,8 @@ public class HdfsLocatedFileStatus
   // BlockLocations[] is the user-facing type
   private transient LocatedBlocks hdfsloc;
 
+  private String namespace = null;
+
   /**
    * Constructor.
    * @param length the number of bytes the file has
@@ -215,6 +217,16 @@ public class HdfsLocatedFileStatus
     setBlockLocations(
         DFSUtilClient.locatedBlocks2Locations(getLocatedBlocks()));
     return this;
+  }
+
+  @Override
+  public String getNamespace() {
+    return namespace;
+  }
+
+  @Override
+  public void setNamespace(String namespace) {
+    this.namespace = namespace;
   }
 
 }

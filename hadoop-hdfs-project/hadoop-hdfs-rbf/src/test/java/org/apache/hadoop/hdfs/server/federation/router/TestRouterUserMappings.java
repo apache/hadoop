@@ -39,7 +39,6 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
-import org.apache.hadoop.util.Sets;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,6 +56,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -120,7 +121,7 @@ public class TestRouterUserMappings {
       LOG.info("Getting groups in MockUnixGroupsMapping");
       String g1 = user + (10 * i + 1);
       String g2 = user + (10 * i + 2);
-      Set<String> s = Sets.newHashSet(g1, g2);
+      Set<String> s = new HashSet<>(Arrays.asList(g1, g2));
       i++;
       return s;
     }

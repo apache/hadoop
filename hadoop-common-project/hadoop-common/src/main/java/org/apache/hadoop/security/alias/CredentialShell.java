@@ -25,7 +25,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -70,9 +70,9 @@ public class CredentialShell extends CommandShell {
    * % hadoop credential check alias [-provider providerPath]
    * % hadoop credential delete alias [-provider providerPath] [-f]
    * </pre>
-   * @param args
+   * @param args args.
    * @return 0 if the argument(s) were recognized, 1 otherwise
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   protected int init(String[] args) throws IOException {
@@ -523,7 +523,7 @@ public class CredentialShell extends CommandShell {
    *
    * @param args
    *          Command line arguments
-   * @throws Exception
+   * @throws Exception exception.
    */
   public static void main(String[] args) throws Exception {
     int res = ToolRunner.run(new Configuration(), new CredentialShell(), args);

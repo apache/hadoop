@@ -60,7 +60,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 @SuppressWarnings(value={"unchecked"})
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
@@ -878,5 +878,10 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
       }
       return super.compareTo(obj);
     }
+  }
+
+  @VisibleForTesting
+  OnDiskMerger getOnDiskMerger() {
+    return onDiskMerger;
   }
 }

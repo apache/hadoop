@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
@@ -27,7 +28,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationRowKey;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test for row key as string.
@@ -50,8 +52,9 @@ public class TestRowKeysAsString {
   private final static String APPLICATION_ID =
       ApplicationId.newInstance(System.currentTimeMillis(), 1).toString();
 
-  @Test(timeout = 10000)
-  public void testApplicationRow() {
+  @Test
+  @Timeout(10000)
+  void testApplicationRow() {
     String rowKeyAsString = new ApplicationRowKey(CLUSTER, USER, FLOW_NAME,
         FLOW_RUN_ID, APPLICATION_ID).getRowKeyAsString();
     ApplicationRowKey rowKey =
@@ -63,8 +66,9 @@ public class TestRowKeysAsString {
     assertEquals(APPLICATION_ID, rowKey.getAppId());
   }
 
-  @Test(timeout = 10000)
-  public void testEntityRowKey() {
+  @Test
+  @Timeout(10000)
+  void testEntityRowKey() {
     char del = TimelineReaderUtils.DEFAULT_DELIMITER_CHAR;
     char esc = TimelineReaderUtils.DEFAULT_ESCAPE_CHAR;
     String id = del + esc + "ent" + esc + del + "ity" + esc + del + esc + "id"
@@ -78,7 +82,7 @@ public class TestRowKeysAsString {
     String rowKeyAsString =
         new EntityRowKey(CLUSTER, USER, FLOW_NAME, FLOW_RUN_ID, APPLICATION_ID,
             entity.getType(), entity.getIdPrefix(), entity.getId())
-                .getRowKeyAsString();
+            .getRowKeyAsString();
     EntityRowKey rowKey = EntityRowKey.parseRowKeyFromString(rowKeyAsString);
     assertEquals(CLUSTER, rowKey.getClusterId());
     assertEquals(USER, rowKey.getUserId());
@@ -91,8 +95,9 @@ public class TestRowKeysAsString {
 
   }
 
-  @Test(timeout = 10000)
-  public void testFlowActivityRowKey() {
+  @Test
+  @Timeout(10000)
+  void testFlowActivityRowKey() {
     Long ts = 1459900830000L;
     Long dayTimestamp = HBaseTimelineSchemaUtils.getTopOfTheDayTimestamp(ts);
     String rowKeyAsString = new FlowActivityRowKey(CLUSTER, ts, USER, FLOW_NAME)
@@ -105,8 +110,9 @@ public class TestRowKeysAsString {
     assertEquals(FLOW_NAME, rowKey.getFlowName());
   }
 
-  @Test(timeout = 10000)
-  public void testFlowRunRowKey() {
+  @Test
+  @Timeout(10000)
+  void testFlowRunRowKey() {
     String rowKeyAsString =
         new FlowRunRowKey(CLUSTER, USER, FLOW_NAME, FLOW_RUN_ID)
             .getRowKeyAsString();
@@ -117,8 +123,9 @@ public class TestRowKeysAsString {
     assertEquals(FLOW_RUN_ID, rowKey.getFlowRunId());
   }
 
-  @Test(timeout = 10000)
-  public void testSubApplicationRowKey() {
+  @Test
+  @Timeout(10000)
+  void testSubApplicationRowKey() {
     char del = TimelineReaderUtils.DEFAULT_DELIMITER_CHAR;
     char esc = TimelineReaderUtils.DEFAULT_ESCAPE_CHAR;
     String id = del + esc + "ent" + esc + del + "ity" + esc + del + esc + "id"
@@ -131,7 +138,7 @@ public class TestRowKeysAsString {
 
     String rowKeyAsString = new SubApplicationRowKey(SUB_APP_USER, CLUSTER,
         entity.getType(), entity.getIdPrefix(), entity.getId(), USER)
-            .getRowKeyAsString();
+        .getRowKeyAsString();
     SubApplicationRowKey rowKey = SubApplicationRowKey
         .parseRowKeyFromString(rowKeyAsString);
     assertEquals(SUB_APP_USER, rowKey.getSubAppUserId());

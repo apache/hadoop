@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.logaggregation.filecontroller.ifile;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -282,7 +282,8 @@ public class LogAggregationIndexedFileController
           checksumFileInputStream = fc.open(remoteLogCheckSumFile);
           int nameLength = checksumFileInputStream.readInt();
           byte[] b = new byte[nameLength];
-          int actualLength = checksumFileInputStream.read(b);
+          checksumFileInputStream.readFully(b);
+          int actualLength = b.length;
           if (actualLength == nameLength) {
             String recoveredLogFile = new String(
                 b, Charset.forName("UTF-8"));
@@ -765,7 +766,8 @@ public class LogAggregationIndexedFileController
         checksumFileInputStream = fc.open(file.getPath());
         int nameLength = checksumFileInputStream.readInt();
         byte[] b = new byte[nameLength];
-        int actualLength = checksumFileInputStream.read(b);
+        checksumFileInputStream.readFully(b);
+        int actualLength = b.length;
         if (actualLength == nameLength) {
           nodeName = new String(b, Charset.forName("UTF-8"));
           index = checksumFileInputStream.readLong();
@@ -799,7 +801,8 @@ public class LogAggregationIndexedFileController
       checksumFileInputStream = fileContext.open(file.getPath());
       int nameLength = checksumFileInputStream.readInt();
       byte[] b = new byte[nameLength];
-      int actualLength = checksumFileInputStream.read(b);
+      checksumFileInputStream.readFully(b);
+      int actualLength = b.length;
       if (actualLength == nameLength) {
         nodeName = new String(b, StandardCharsets.UTF_8);
         index = checksumFileInputStream.readLong();
@@ -938,7 +941,8 @@ public class LogAggregationIndexedFileController
 
       // Load UUID and make sure the UUID is correct.
       byte[] uuidRead = new byte[UUID_LENGTH];
-      int uuidReadLen = fsDataIStream.read(uuidRead);
+      fsDataIStream.readFully(uuidRead);
+      int uuidReadLen = uuidRead.length;
       if (this.uuid == null) {
         this.uuid = createUUID(appId);
       }
@@ -1322,7 +1326,8 @@ public class LogAggregationIndexedFileController
                 .endsWith(CHECK_SUM_FILE_SUFFIX)) {
           fsDataInputStream = fc.open(checkPath);
           byte[] b = new byte[uuid.length];
-          int actual = fsDataInputStream.read(b);
+          fsDataInputStream.readFully(b);
+          int actual = b.length;
           if (actual != uuid.length || Arrays.equals(b, uuid)) {
             deleteFileWithRetries(fc, checkPath);
           } else if (id == null){

@@ -99,7 +99,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -902,8 +902,8 @@ public class MiniYARNCluster extends CompositeService {
         LOG.info("CustomAMRMProxyService is enabled. "
             + "All the AM->RM requests will be intercepted by the proxy");
         AMRMProxyService amrmProxyService =
-            useRpc ? new AMRMProxyService(getContext(), dispatcher)
-                : new ShortCircuitedAMRMProxy(getContext(), dispatcher);
+            useRpc ? new AMRMProxyService(getContext(), getDispatcher())
+                : new ShortCircuitedAMRMProxy(getContext(), getDispatcher());
         this.setAMRMProxyService(amrmProxyService);
         addService(this.getAMRMProxyService());
       } else {
@@ -934,8 +934,8 @@ public class MiniYARNCluster extends CompositeService {
         LOG.info("CustomAMRMProxyService is enabled. "
             + "All the AM->RM requests will be intercepted by the proxy");
         AMRMProxyService amrmProxyService =
-            useRpc ? new AMRMProxyService(getContext(), dispatcher)
-                : new ShortCircuitedAMRMProxy(getContext(), dispatcher);
+            useRpc ? new AMRMProxyService(getContext(), getDispatcher())
+                : new ShortCircuitedAMRMProxy(getContext(), getDispatcher());
         this.setAMRMProxyService(amrmProxyService);
         addService(this.getAMRMProxyService());
       } else {
@@ -946,7 +946,7 @@ public class MiniYARNCluster extends CompositeService {
     @Override
     protected ContainersMonitor createContainersMonitor(ContainerExecutor
         exec) {
-      return new ContainersMonitorImpl(exec, dispatcher, this.context) {
+      return new ContainersMonitorImpl(exec, getDispatcher(), this.context) {
         @Override
         public float getVmemRatio() {
           return 2.0f;

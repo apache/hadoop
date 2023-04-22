@@ -21,28 +21,30 @@ package org.apache.hadoop.yarn.server.webproxy.amfilter;
 import java.io.File;
 import java.net.URI;
 import java.net.URL;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
-import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.mockito.Mockito;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test AmIpFilter. Requests to a no declared hosts should has way through
@@ -63,7 +65,7 @@ public class TestSecureAmFilter {
   private static boolean miniKDCStarted = false;
   private static MiniKdc testMiniKDC;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() {
     rmconf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
     rmconf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
@@ -88,11 +90,11 @@ public class TestSecureAmFilter {
       testMiniKDC = new MiniKdc(MiniKdc.createConf(), TEST_ROOT_DIR);
       setupKDC();
     } catch (Exception e) {
-      assertTrue("Couldn't create MiniKDC", false);
+      fail("Couldn't create MiniKDC");
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (testMiniKDC != null) {
       testMiniKDC.stop();
@@ -125,7 +127,7 @@ public class TestSecureAmFilter {
   }
 
   @Test
-  public void testFindRedirectUrl() throws Exception {
+  void testFindRedirectUrl() throws Exception {
     final String rm1 = "rm1";
     final String rm2 = "rm2";
     // generate a valid URL
@@ -139,7 +141,7 @@ public class TestSecureAmFilter {
     spy.proxyUriBases = new HashMap<>();
     spy.proxyUriBases.put(rm1, rm1Url);
     spy.proxyUriBases.put(rm2, rm2Url);
-    spy.rmUrls = new String[] {rm1, rm2};
+    spy.rmUrls = new String[]{rm1, rm2};
 
     assertTrue(spy.isValidUrl(rm1Url));
     assertFalse(spy.isValidUrl(rm2Url));

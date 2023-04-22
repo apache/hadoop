@@ -26,9 +26,9 @@ MYNAME="${BASH_SOURCE-$0}"
 function hadoop_usage
 {
   hadoop_add_option "buildpaths" "attempt to add class files from build tree"
-  hadoop_add_option "hostnames list[,of,host,names]" "hosts to use in slave mode"
+  hadoop_add_option "hostnames list[,of,host,names]" "hosts to use in worker mode"
   hadoop_add_option "loglevel level" "set the log4j level for this command"
-  hadoop_add_option "hosts filename" "list of hosts to use in slave mode"
+  hadoop_add_option "hosts filename" "list of hosts to use in worker mode"
   hadoop_add_option "workers" "turn on worker mode"
 
   hadoop_add_subcommand "checknative" client "check native Hadoop and compression libraries availability"

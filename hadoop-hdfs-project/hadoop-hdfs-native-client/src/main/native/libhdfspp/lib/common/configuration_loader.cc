@@ -21,7 +21,6 @@
 #include "x-platform/syscall.h"
 
 #include <fstream>
-#include <strings.h>
 #include <sstream>
 #include <map>
 #include <sys/stat.h>

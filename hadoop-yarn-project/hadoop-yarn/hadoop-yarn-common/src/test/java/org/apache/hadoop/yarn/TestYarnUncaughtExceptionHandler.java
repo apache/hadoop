@@ -18,18 +18,20 @@
 
 package org.apache.hadoop.yarn;
 
-import static org.junit.Assert.assertSame;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 public class TestYarnUncaughtExceptionHandler {
 
   private static final YarnUncaughtExceptionHandler exHandler =
         new YarnUncaughtExceptionHandler();
+
   /**
    * Throw {@code YarnRuntimeException} inside thread and
    * check {@code YarnUncaughtExceptionHandler} instance
@@ -37,7 +39,7 @@ public class TestYarnUncaughtExceptionHandler {
    * @throws InterruptedException
    */
   @Test
-  public void testUncaughtExceptionHandlerWithRuntimeException()
+  void testUncaughtExceptionHandlerWithRuntimeException()
       throws InterruptedException {
     final YarnUncaughtExceptionHandler spyYarnHandler = spy(exHandler);
     final YarnRuntimeException yarnException = new YarnRuntimeException(
@@ -67,7 +69,7 @@ public class TestYarnUncaughtExceptionHandler {
    * @throws InterruptedException
    */
   @Test
-  public void testUncaughtExceptionHandlerWithError()
+  void testUncaughtExceptionHandlerWithError()
       throws InterruptedException {
     ExitUtil.disableSystemExit();
     final YarnUncaughtExceptionHandler spyErrorHandler = spy(exHandler);
@@ -96,7 +98,7 @@ public class TestYarnUncaughtExceptionHandler {
    * @throws InterruptedException
    */
   @Test
-  public void testUncaughtExceptionHandlerWithOutOfMemoryError()
+  void testUncaughtExceptionHandlerWithOutOfMemoryError()
       throws InterruptedException {
     ExitUtil.disableSystemHalt();
     final YarnUncaughtExceptionHandler spyOomHandler = spy(exHandler);

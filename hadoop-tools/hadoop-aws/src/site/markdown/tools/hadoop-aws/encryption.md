@@ -146,12 +146,12 @@ There is no extra cost for storing data with this option.
 ### Enabling SSE-S3
 
 To write S3-SSE encrypted files, the value of
-`fs.s3a.server-side-encryption-algorithm` must be set to that of
+`fs.s3a.encryption.algorithm` must be set to that of
 the encryption mechanism used in `core-site`; currently only `AES256` is supported.
 
 ```xml
 <property>
-  <name>fs.s3a.server-side-encryption-algorithm</name>
+  <name>fs.s3a.encryption.algorithm</name>
   <value>AES256</value>
 </property>
 ```
@@ -177,7 +177,7 @@ The AWS KMS [can be used encrypt data on S3uploaded data](http://docs.aws.amazon
 
 When uploading data encrypted with SSE-KMS, the sequence is as follows.
 
-1. The S3A client must declare a specific CMK in the property `fs.s3a.server-side-encryption.key`, or leave
+1. The S3A client must declare a specific CMK in the property `fs.s3a.encryption.key`, or leave
 it blank to use the default configured for that region.
 
 1. The S3A client uploads all the data as normal, now including encryption information.
@@ -221,32 +221,32 @@ they can be increased through the AWS console.
 
 ### Enabling SSE-KMS
 
-To enable SSE-KMS, the property `fs.s3a.server-side-encryption-algorithm` must be set to `SSE-KMS` in `core-site`:
+To enable SSE-KMS, the property `fs.s3a.encryption.algorithm` must be set to `SSE-KMS` in `core-site`:
 
 ```xml
 <property>
-  <name>fs.s3a.server-side-encryption-algorithm</name>
+  <name>fs.s3a.encryption.algorithm</name>
   <value>SSE-KMS</value>
 </property>
 ```
 
-The ID of the specific key used to encrypt the data should also be set in the property `fs.s3a.server-side-encryption.key`:
+The ID of the specific key used to encrypt the data should also be set in the property `fs.s3a.encryption.key`:
 
 ```xml
 <property>
-  <name>fs.s3a.server-side-encryption.key</name>
+  <name>fs.s3a.encryption.key</name>
   <value>arn:aws:kms:us-west-2:360379543683:key/071a86ff-8881-4ba0-9230-95af6d01ca01</value>
 </property>
 ```
 
 Organizations may define a default key in the Amazon KMS; if a default key is set,
-then it will be used whenever SSE-KMS encryption is chosen and the value of `fs.s3a.server-side-encryption.key` is empty.
+then it will be used whenever SSE-KMS encryption is chosen and the value of `fs.s3a.encryption.key` is empty.
 
 ### the S3A `fs.s3a.encryption.key` key only affects created files
 
-With SSE-KMS, the S3A client option `fs.s3a.server-side-encryption.key` sets the
+With SSE-KMS, the S3A client option `fs.s3a.encryption.key` sets the
 key to be used when new files are created. When reading files, this key,
-and indeed the value of `fs.s3a.server-side-encryption-algorithme` is ignored:
+and indeed the value of `fs.s3a.encryption.algorithm` is ignored:
 S3 will attempt to retrieve the key and decrypt the file based on the create-time settings.
 
 This means that
@@ -270,18 +270,18 @@ directory listings do not fail with "Bad Request" errors.
 
 ### Enabling SSE-C
 
-To use SSE-C, the configuration option `fs.s3a.server-side-encryption-algorithm`
+To use SSE-C, the configuration option `fs.s3a.encryption.algorithm`
 must be set to `SSE-C`, and a base-64 encoding of the key placed in
-`fs.s3a.server-side-encryption.key`.
+`fs.s3a.encryption.key`.
 
 ```xml
 <property>
-  <name>fs.s3a.server-side-encryption-algorithm</name>
+  <name>fs.s3a.encryption.algorithm</name>
   <value>SSE-C</value>
 </property>
 
 <property>
-  <name>fs.s3a.server-side-encryption.key</name>
+  <name>fs.s3a.encryption.key</name>
   <value>SGVscCwgSSdtIHRyYXBwZWQgaW5zaWRlIGEgYmFzZS02NC1jb2RlYyE=</value>
 </property>
 ```
@@ -290,11 +290,11 @@ All clients must share this same key.
 
 ### The `fs.s3a.encryption.key` value is used to read and write data
 
-With SSE-C, the S3A client option `fs.s3a.server-side-encryption.key` sets the
+With SSE-C, the S3A client option `fs.s3a.encryption.key` sets the
 key to be used for both reading *and* writing data.
 
 When reading any file written with SSE-C, the same key must be set
-in the property `fs.s3a.server-side-encryption.key`.
+in the property `fs.s3a.encryption.key`.
 
 This is unlike SSE-S3 and SSE-KMS, where the information needed to
 decode data is kept in AWS infrastructure.
@@ -601,7 +601,6 @@ clients where S3-CSE has not been enabled.
 
 ### Limitations
 
-- S3Guard is not supported with S3-CSE.
 - Performance will be reduced. All encrypt/decrypt is now being done on the
  client.
 - Writing files may be slower, as only a single block can be encrypted and
@@ -618,8 +617,8 @@ clients where S3-CSE has not been enabled.
 - Generate an AWS KMS Key ID from AWS console for your bucket, with same
  region as the storage bucket.
 - If already created, [view the kms key ID by these steps.](https://docs.aws.amazon.com/kms/latest/developerguide/find-cmk-id-arn.html)
-- Set `fs.s3a.server-side-encryption-algorithm=CSE-KMS`.
-- Set `fs.s3a.server-side-encryption.key=<KMS_KEY_ID>`.
+- Set `fs.s3a.encryption.algorithm=CSE-KMS`.
+- Set `fs.s3a.encryption.key=<KMS_KEY_ID>`.
 
 KMS_KEY_ID:
 
@@ -634,18 +633,18 @@ For example:
 - Alias name: `alias/ExampleAlias`
 - Alias ARN: `arn:aws:kms:us-east-2:111122223333:alias/ExampleAlias`
 
-*Note:* If `fs.s3a.server-side-encryption-algorithm=CSE-KMS` is set,
-`fs.s3a.server-side-encryption.key=<KMS_KEY_ID>` property must be set for
+*Note:* If `fs.s3a.encryption.algorithm=CSE-KMS` is set,
+`fs.s3a.encryption.key=<KMS_KEY_ID>` property must be set for
 S3-CSE to work.
 
 ```xml
 <property>
-     <name>fs.s3a.server-side-encryption-algorithm</name>
+     <name>fs.s3a.encryption.algorithm</name>
      <value>CSE-KMS</value>
  </property>
 
  <property>
-     <name>fs.s3a.server-side-encryption.key</name>
+     <name>fs.s3a.encryption.key</name>
      <value>${KMS_KEY_ID}</value>
  </property>
 ```
