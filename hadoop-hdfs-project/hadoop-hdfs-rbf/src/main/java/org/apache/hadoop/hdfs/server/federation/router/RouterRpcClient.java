@@ -602,7 +602,6 @@ public class RouterRpcClient {
           // Communication retries are handled by the retry policy
           if (this.rpcMonitor != null) {
 
-            this.rpcMonitor.proxyOpFailureCommunicate();
             LOG.error("Cannot connect to the namenode for {}  at {}", nsId,
                 rpcAddress, ioe);
             this.rpcMonitor.proxyOpFailureCommunicate(nsId);
