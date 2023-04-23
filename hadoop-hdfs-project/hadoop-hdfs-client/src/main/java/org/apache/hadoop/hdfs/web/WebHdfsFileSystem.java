@@ -2162,9 +2162,7 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
-  public FileStatus getFileLinkStatus(Path f)
-      throws AccessControlException, FileNotFoundException,
-      UnsupportedFileSystemException, IOException {
+  public FileStatus getFileLinkStatus(Path f) throws IOException {
     statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.GET_FILE_LINK_STATUS);
     final HttpOpParam.Op op = GetOpParam.Op.GETFILELINKSTATUS;
