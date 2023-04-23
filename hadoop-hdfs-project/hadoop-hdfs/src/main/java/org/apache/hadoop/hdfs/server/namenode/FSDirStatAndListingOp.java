@@ -275,7 +275,8 @@ class FSDirStatAndListingOp {
                 locationBudget -= blks.locatedBlockCount() *
                     (ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits());
               } else {
-                // Approximate #locations with locatedBlockCount() * repl_factor
+                // Approximate #locations with locatedBlockCount() *
+                // replicationFactor
                 locationBudget -=
                     blks.locatedBlockCount() * listing[i].getReplication();
               }

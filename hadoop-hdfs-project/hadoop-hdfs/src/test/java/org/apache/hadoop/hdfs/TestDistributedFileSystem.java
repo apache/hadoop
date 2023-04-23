@@ -113,8 +113,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeRpcServer;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.ipc.RemoteException;
@@ -679,6 +677,10 @@ public class TestDistributedFileSystem {
     }
   }
 
+  /**
+   * This is to test that {@link DFSConfigKeys#DFS_LIST_LIMIT} works as
+   * expected when {@link DistributedFileSystem#listLocatedStatus} is called.
+   */
   @Test
   public void testGetListingLimit() throws Exception {
     final Configuration conf = getTestConfiguration();
