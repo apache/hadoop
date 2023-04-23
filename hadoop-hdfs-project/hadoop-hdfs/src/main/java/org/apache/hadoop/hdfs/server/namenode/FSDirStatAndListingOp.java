@@ -269,7 +269,9 @@ class FSDirStatAndListingOp {
             if (blks != null) {
               ErasureCodingPolicy ecPolicy =
                   listing[i].getErasureCodingPolicy();
-              if (ecPolicy != null) {
+              if (ecPolicy != null && !ecPolicy.isReplicationPolicy()) {
+                // Approximate #locations with locatedBlockCount() *
+                // internalBlocksNum.
                 locationBudget -= blks.locatedBlockCount() *
                     (ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits());
               } else {

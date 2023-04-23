@@ -683,14 +683,12 @@ public class TestDistributedFileSystem {
   public void testGetListingLimit() throws Exception {
     final Configuration conf = getTestConfiguration();
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 9);
-    final MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(9).build();
-    try {
+    try (MiniDFSCluster cluster =
+             new MiniDFSCluster.Builder(conf).numDataNodes(9).build()) {
       cluster.waitActive();
       ErasureCodingPolicy ecPolicy = StripedFileTestUtil.getDefaultECPolicy();
       final DistributedFileSystem fs = cluster.getFileSystem();
       fs.dfs = spy(fs.dfs);
-      fs.enableErasureCodingPolicy(ecPolicy.getName());
       Path dir1 = new Path("/testRep");
       Path dir2 = new Path("/testEC");
       fs.mkdirs(dir1);
@@ -703,30 +701,15 @@ public class TestDistributedFileSystem {
             String.valueOf(i)), dir2, 1, 1, false);
       }
 
-      RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(dir1);
-      int total = 0;
-      while (iter.hasNext()) {
-        iter.next();
-        ++total;
-      }
-      assertEquals(3, total);
+      List<LocatedFileStatus> str = RemoteIterators.toList(fs.listLocatedStatus(dir1));
+      assertThat(str).hasSize(3);
       Mockito.verify(fs.dfs, Mockito.times(1)).listPaths(anyString(), any(),
           anyBoolean());
 
-      iter = fs.listLocatedStatus(dir2);
-      total = 0;
-      while (iter.hasNext()) {
-        iter.next();
-        ++total;
-      }
-      assertEquals(3, total);
+      str = RemoteIterators.toList(fs.listLocatedStatus(dir2));
+      assertThat(str).hasSize(3);
       Mockito.verify(fs.dfs, Mockito.times(4)).listPaths(anyString(), any(),
           anyBoolean());
-
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
     }
   }
 
