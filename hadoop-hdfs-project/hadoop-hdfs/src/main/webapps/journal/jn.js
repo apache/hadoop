@@ -63,7 +63,7 @@
         for (var i in journals){
             var str= journals[i]['modelerType'];
             var index= str.indexOf("-");
-            journals[i]['NameService']= str.substr(index + 1, str.length);
+            journals[i]['NameService']= str.substr(index + 1);
         }
 
         return journals;
