@@ -2248,7 +2248,7 @@ public class TestWebHDFS {
       Path linkToFile = new Path(root, "linkToFile");
 
       webHdfs.createSymlink(file, linkToFile, false);
-      assertFalse(webHdfs.getFileStatus(file).isSymlink());
+      assertFalse(webHdfs.getFileLinkStatus(file).isSymlink());
       assertTrue(webHdfs.getFileLinkStatus(linkToFile).isSymlink());
     } finally {
       cluster.shutdown();
