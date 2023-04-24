@@ -797,8 +797,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         );
 
       } else {
-        if (!abfsConfiguration.shouldIngressFallbackToDfs() && getPrefixMode() == PrefixMode.BLOB) {
-          boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
+        boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
+        if (!isNormalBlob && !abfsConfiguration.shouldMkdirFallbackToDfs() && getPrefixMode() == PrefixMode.BLOB) {
+          op = createPathBlob(relativePath, isNormalBlob, overwrite, metadata, null, tracingContext);
+        } else if (!abfsConfiguration.shouldIngressFallbackToDfs() && getPrefixMode() == PrefixMode.BLOB) {
           op = createPathBlob(relativePath, isNormalBlob, overwrite, metadata, null, tracingContext);
         } else {
           op = createPath(relativePath, true, overwrite, isNamespaceEnabled ? getOctalNotation(permission) : null,
@@ -867,13 +869,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // Trigger a create with overwrite=false first so that eTag fetch can be
       // avoided for cases when no pre-existing file is present (major portion
       // of create file traffic falls into the case of no pre-existing file).
-      if (!abfsConfiguration.shouldIngressFallbackToDfs() && getPrefixMode() == PrefixMode.BLOB) {
-        boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
+      boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
+      if (!isNormalBlob && !abfsConfiguration.shouldMkdirFallbackToDfs() && getPrefixMode() == PrefixMode.BLOB) {
+        op = createPathBlob(relativePath, isNormalBlob, false, metadata, null, tracingContext);
+      } else if (!abfsConfiguration.shouldIngressFallbackToDfs() && getPrefixMode() == PrefixMode.BLOB) {
         op = createPathBlob(relativePath, isNormalBlob, false, metadata, null, tracingContext);
       } else {
         op = createPath(relativePath, true, false, permission, umask, isAppendBlob, null, tracingContext);
       }
-
     } catch (AbfsRestOperationException e) {
       if (e.getStatusCode() == HTTP_CONFLICT) {
         // File pre-exists, fetch eTag
@@ -896,8 +899,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
         try {
           // overwrite only if eTag matches with the file properties fetched before.
-          if (!abfsConfiguration.shouldIngressFallbackToDfs() && getPrefixMode() == PrefixMode.BLOB) {
-            boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
+          boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
+          if (!isNormalBlob && !abfsConfiguration.shouldMkdirFallbackToDfs() && getPrefixMode() == PrefixMode.BLOB) {
+            op = createPathBlob(relativePath, isNormalBlob, true, metadata, eTag, tracingContext);
+          } else if (!abfsConfiguration.shouldIngressFallbackToDfs() && getPrefixMode() == PrefixMode.BLOB) {
             op = createPathBlob(relativePath, isNormalBlob, true, metadata, eTag, tracingContext);
           } else {
             op = createPath(relativePath, true, true, permission, umask, isAppendBlob, eTag, tracingContext);
