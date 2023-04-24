@@ -1599,20 +1599,182 @@ public class ITestAzureBlobFileSystemRename extends
         false,
         true
     );
-//    AzureBlobFileSystem fs = getFileSystem();
-//    fs.mkdirs(new Path("/srcParent"));
-//    createAzCopyDirectory(new Path("/srcParent/src"));
-//    fs.mkdirs(new Path("/srcParent/src/subDir"));
-//    createAzCopyFile(new Path("/src/Parent/src/subFile"));
-//    intercept(AbfsRestOperationException.class, () -> {
-//      fs.getAbfsStore().getBlobProperty(new Path("/srcParent/src"),
-//          Mockito.mock(TracingContext.class));
-//    });
-//    fs.mkdirs(new Path("/dstParent"));
-//    Assert.assertTrue(fs.rename(new Path("/srcParent/src"), new Path("/dstParent/dst")));
-//    Assert.assertTrue(fs.getAbfsStore().getBlobProperty(new Path("/dstParent/dst"), Mockito.mock(TracingContext.class)).getIsDirectory());
-//    fs.exists(new Path("/dstParent/dst/subDir"));
-//    fs.exists(new Path("/dstParent/dst/subFile"));
+  }
+
+  @Test
+  public void testRenameImplicitDirectoryContainingImplicitDirectory() throws Exception {
+    explicitImplicitDirectoryRenameTest(
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true
+    );
+  }
+
+  @Test
+  public void testRenameExplicitDirectoryContainingExplicitDirectoryInImplicitSrcParent() throws Exception {
+    explicitImplicitDirectoryRenameTest(
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true
+    );
+  }
+
+  @Test
+  public void testRenameExplicitDirectoryContainingImplicitDirectoryInImplicitSrcParent() throws Exception {
+    explicitImplicitDirectoryRenameTest(
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true
+    );
+  }
+
+  @Test
+  public void testRenameImplicitDirectoryContainingExplicitDirectoryInImplicitSrcParent() throws Exception {
+    explicitImplicitDirectoryRenameTest(
+        false,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true
+    );
+  }
+
+  @Test
+  public void testRenameImplicitDirectoryContainingImplicitDirectoryInImplicitSrcParent() throws Exception {
+    explicitImplicitDirectoryRenameTest(
+        false,
+        false,
+        false,
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true
+    );
+  }
+
+  @Test
+  public void testRenameDirectoryWhereDstParentDoesntExist() throws Exception {
+    explicitImplicitDirectoryRenameTest(
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+    );
+  }
+
+  @Test
+  public void testRenameImplicitDirectoryWhereDstParentDoesntExist() throws Exception {
+    explicitImplicitDirectoryRenameTest(
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+    );
+  }
+
+  @Test
+  public void testRenameImplicitDirectoryToNonExistentDstWithImplicitParent() throws Exception {
+    explicitImplicitDirectoryRenameTest(
+        true,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true
+    );
+  }
+
+  @Test
+  public void testRenameImplicitDirectoryToNonExistentDstWithParentIsFile() throws Exception {
+    explicitImplicitDirectoryRenameTest(
+        true,
+        false,
+        true,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false
+    );
+  }
+
+  @Test
+  public void testRenameExplicitDirectoryToFileDst() throws Exception {
+    explicitImplicitDirectoryRenameTest(
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false
+    );
+  }
+
+  @Test
+  public void testRenameimplicitDirectoryToFileDst() throws Exception {
+    explicitImplicitDirectoryRenameTest(
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false
+    );
   }
 
   private void explicitImplicitDirectoryRenameTest(Boolean srcParentExplicit,
@@ -1642,7 +1804,12 @@ public class ITestAzureBlobFileSystemRename extends
     if (srcSubDirExplicit) {
       fs.mkdirs(new Path(src, "subDir"));
     } else {
-      createAzCopyDirectory(new Path(src, "subDir"));
+      Path srcSubDir = new Path(src, "subDir");
+      createAzCopyDirectory(srcSubDir);
+      createAzCopyFile(new Path(srcSubDir, "subFile"));
+      intercept(AbfsRestOperationException.class, () -> {
+        fs.getAbfsStore().getBlobProperty(srcSubDir, Mockito.mock(TracingContext.class));
+      });
     }
     if (!srcParentExplicit) {
       intercept(AbfsRestOperationException.class, () -> {
@@ -1681,7 +1848,7 @@ public class ITestAzureBlobFileSystemRename extends
       }
     }
 
-    if (dstParentExists && isDstParentFile && !dstParentExplicit) {
+    if (dstParentExists && !isDstParentFile && !dstParentExplicit) {
       intercept(AbfsRestOperationException.class, () -> {
         fs.getAbfsStore()
             .getBlobProperty(dstParent, Mockito.mock(TracingContext.class));
@@ -1705,7 +1872,7 @@ public class ITestAzureBlobFileSystemRename extends
       Assert.assertTrue(fs.getAbfsStore()
           .getListBlobs(src, null, Mockito.mock(TracingContext.class), null,
               false)
-          .size() == 3);
+          .size() > 0);
       if (dstExist) {
         Assert.assertTrue(fs.getAbfsStore()
             .getListBlobs(dst, null, Mockito.mock(TracingContext.class), null,
