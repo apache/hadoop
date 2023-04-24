@@ -5431,4 +5431,23 @@ public class TestLeafQueue {
     rm.stop();
     rm.close();
   }
+
+  @Test
+  public void testLeafHasAllNodeLabelsOfItsRoot() throws IOException {
+
+    CapacitySchedulerConfiguration conf = csConf;
+    String rootChild = root.getChildQueues().get(0).getQueuePath();
+    ParentQueue rootQueue = (ParentQueue) cs.getRootQueue();
+    ConfiguredNodeLabels nodeLabelsForAllQueues =
+        rootQueue.getQueueContext().getQueueManager().getConfiguredNodeLabelsForAllQueues();
+
+    QueueNodeLabelsSettings labelsSettings =
+        new QueueNodeLabelsSettings(conf, root, new QueuePath(rootQueue.getQueuePath(), "test"), nodeLabelsForAllQueues);
+    Assert.assertEquals(labelsSettings.getAccessibleNodeLabels(), "*");
+
+    labelsSettings = new QueueNodeLabelsSettings(conf, root,
+        new QueuePath(rootQueue.getQueuePath(), rootQueue.getChildQueues().get(0).getQueuePath()),
+        nodeLabelsForAllQueues);
+    Assert.assertEquals(labelsSettings.getAccessibleNodeLabels(), "*");
+  }
 }
