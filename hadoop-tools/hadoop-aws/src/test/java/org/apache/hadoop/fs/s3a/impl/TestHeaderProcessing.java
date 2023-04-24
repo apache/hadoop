@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.util.Lists;
@@ -319,6 +320,11 @@ public class TestHeaderProcessing extends HadoopTestBase {
         throw new FileNotFoundException(key);
       }
 
+    }
+
+    @Override
+    public HeadBucketResponse getBucketMetadata() throws IOException {
+      return HeadBucketResponse.builder().build();
     }
 
     public void setHeader(String key, String val) {

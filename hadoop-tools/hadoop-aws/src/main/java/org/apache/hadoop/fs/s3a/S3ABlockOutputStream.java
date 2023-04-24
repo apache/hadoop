@@ -38,10 +38,9 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
-import com.amazonaws.event.ProgressEvent;
-import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
 
+import org.apache.hadoop.fs.s3a.impl.ProgressListener;
+import org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.util.Preconditions;
@@ -71,6 +70,7 @@ import org.apache.hadoop.util.Progressable;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
+import static org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent.*;
 import static org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext.EMPTY_BLOCK_OUTPUT_STREAM_STATISTICS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
@@ -194,7 +194,7 @@ class S3ABlockOutputStream extends OutputStream implements
     this.executorService = MoreExecutors.listeningDecorator(
         builder.executorService);
     this.multiPartUpload = null;
-    final Progressable progress = builder.progress;
+    Progressable progress = builder.progress;
     this.progressListener = (progress instanceof ProgressListener) ?
         (ProgressListener) progress
         : new ProgressableListener(progress);
@@ -610,21 +610,19 @@ class S3ABlockOutputStream extends OutputStream implements
             builder.putOptions,
         false);
 
-          // TODO: You cannot currently add progress listeners to requests not via the TM.
-          // There is an open ticket for this with the SDK team. But need to check how important
-          // this is for us?
-    //    BlockUploadProgress callback =
-    //        new BlockUploadProgress(
-    //            block, progressListener,  now());
-    // putObjectRequest.setGeneralProgressListener(callback);
+    BlockUploadProgress progressCallback =
+        new BlockUploadProgress(block, progressListener, now());
     statistics.blockUploadQueued(size);
     ListenableFuture<PutObjectResponse> putObjectResult =
         executorService.submit(() -> {
           try {
             // the putObject call automatically closes the input
             // stream afterwards.
-            return writeOperationHelper.putObject(putObjectRequest, builder.putOptions, uploadData,
-                uploadData.hasFile(), statistics);
+            PutObjectResponse response =
+                writeOperationHelper.putObject(putObjectRequest, builder.putOptions, uploadData,
+                    uploadData.hasFile(), statistics);
+            progressCallback.progressChanged(REQUEST_BYTE_TRANSFER_EVENT);
+            return response;
           } finally {
             cleanupWithLogger(LOG, uploadData, block);
           }
@@ -904,12 +902,8 @@ class S3ABlockOutputStream extends OutputStream implements
         throw e;
       }
 
-      // TODO: You cannot currently add progress listeners to requests not via the TM.
-      // See also putObject
-      // BlockUploadProgress callback =
-      //    new BlockUploadProgress(
-      //        block, progressListener, now());
-      // request.setGeneralProgressListener(callback);
+      BlockUploadProgress progressCallback =
+          new BlockUploadProgress(block, progressListener, now());
 
       statistics.blockUploadQueued(block.dataSize());
       ListenableFuture<CompletedPart> partETagFuture =
@@ -919,12 +913,18 @@ class S3ABlockOutputStream extends OutputStream implements
             try {
               LOG.debug("Uploading part {} for id '{}'",
                   currentPartNumber, uploadId);
+
+              progressCallback.progressChanged(TRANSFER_PART_STARTED_EVENT);
+
               UploadPartResponse response = writeOperationHelper
                   .uploadPart(request, requestBody, statistics);
               LOG.debug("Completed upload of {} to part {}",
                   block, response.eTag());
               LOG.debug("Stream statistics of {}", statistics);
               partsUploaded++;
+
+              progressCallback.progressChanged(TRANSFER_PART_COMPLETED_EVENT);
+
               return CompletedPart.builder()
                   .eTag(response.eTag())
                   .partNumber(currentPartNumber)
@@ -932,6 +932,7 @@ class S3ABlockOutputStream extends OutputStream implements
             } catch (IOException e) {
               // save immediately.
               noteUploadFailure(e);
+              progressCallback.progressChanged(TRANSFER_PART_FAILED_EVENT);
               throw e;
             } finally {
               // close the stream and block
@@ -1027,22 +1028,24 @@ class S3ABlockOutputStream extends OutputStream implements
     }
   }
 
+
   /**
    * The upload progress listener registered for events returned
    * during the upload of a single block.
    * It updates statistics and handles the end of the upload.
    * Transfer failures are logged at WARN.
    */
-  private final class BlockUploadProgress implements ProgressListener {
+  private final class BlockUploadProgress  {
+
     private final S3ADataBlocks.DataBlock block;
     private final ProgressListener nextListener;
     private final Instant transferQueueTime;
     private Instant transferStartTime;
+    private long size;
 
     /**
      * Track the progress of a single block upload.
      * @param block block to monitor
-     * @param nextListener optional next progress listener
      * @param transferQueueTime time the block was transferred
      * into the queue
      */
@@ -1051,20 +1054,17 @@ class S3ABlockOutputStream extends OutputStream implements
         Instant transferQueueTime) {
       this.block = block;
       this.transferQueueTime = transferQueueTime;
+      this.size = block.dataSize();
       this.nextListener = nextListener;
     }
 
-    @Override
-    public void progressChanged(ProgressEvent progressEvent) {
-      ProgressEventType eventType = progressEvent.getEventType();
-      long bytesTransferred = progressEvent.getBytesTransferred();
+    public void progressChanged(ProgressListenerEvent eventType) {
 
-      long size = block.dataSize();
       switch (eventType) {
 
       case REQUEST_BYTE_TRANSFER_EVENT:
         // bytes uploaded
-        statistics.bytesTransferred(bytesTransferred);
+        statistics.bytesTransferred(size);
         break;
 
       case TRANSFER_PART_STARTED_EVENT:
@@ -1079,6 +1079,7 @@ class S3ABlockOutputStream extends OutputStream implements
         statistics.blockUploadCompleted(
             Duration.between(transferStartTime, now()),
             size);
+        statistics.bytesTransferred(size);
         break;
 
       case TRANSFER_PART_FAILED_EVENT:
@@ -1093,13 +1094,13 @@ class S3ABlockOutputStream extends OutputStream implements
       }
 
       if (nextListener != null) {
-        nextListener.progressChanged(progressEvent);
+        nextListener.progressChanged(eventType, size);
       }
     }
   }
 
   /**
-   * Bridge from AWS {@code ProgressListener} to Hadoop {@link Progressable}.
+   * Bridge from {@link ProgressListener} to Hadoop {@link Progressable}.
    */
   private static class ProgressableListener implements ProgressListener {
     private final Progressable progress;
@@ -1108,7 +1109,7 @@ class S3ABlockOutputStream extends OutputStream implements
       this.progress = progress;
     }
 
-    public void progressChanged(ProgressEvent progressEvent) {
+    public void progressChanged(ProgressListenerEvent eventType, int bytesTransferred) {
       if (progress != null) {
         progress.progress();
       }

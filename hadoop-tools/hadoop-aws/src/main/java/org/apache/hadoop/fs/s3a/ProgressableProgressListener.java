@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import software.amazon.awssdk.transfer.s3.ObjectTransfer;
+import software.amazon.awssdk.transfer.s3.model.ObjectTransfer;
 import software.amazon.awssdk.transfer.s3.progress.TransferListener;
 import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
@@ -66,7 +66,7 @@ public class ProgressableProgressListener implements TransferListener {
       progress.progress();
     }
 
-    long transferred = context.progressSnapshot().bytesTransferred();
+    long transferred = context.progressSnapshot().transferredBytes();
     long delta = transferred - lastBytesTransferred;
     fs.incrementPutProgressStatistics(key, delta);
     lastBytesTransferred = transferred;
@@ -80,7 +80,7 @@ public class ProgressableProgressListener implements TransferListener {
   public long uploadCompleted(ObjectTransfer upload) {
 
     long delta =
-        upload.progress().snapshot().bytesTransferred() - lastBytesTransferred;
+        upload.progress().snapshot().transferredBytes() - lastBytesTransferred;
     if (delta > 0) {
       LOG.debug("S3A write delta changed after finished: {} bytes", delta);
       fs.incrementPutProgressStatistics(key, delta);

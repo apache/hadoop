@@ -411,7 +411,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
    */
   private GetBucketEncryptionResponse getDefaultEncryption() throws IOException {
     S3AFileSystem fs = getFileSystem();
-    S3Client s3 = fs.getAmazonS3V2ClientForTesting("check default encryption");
+    S3Client s3 = fs.getAmazonS3ClientForTesting("check default encryption");
     try {
       return Invoker.once("getBucketEncryption()",
           fs.getBucket(),

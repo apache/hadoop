@@ -34,6 +34,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -58,11 +59,11 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
-import software.amazon.awssdk.services.s3.model.GetBucketAclRequest;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
@@ -78,29 +79,29 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
-import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Error;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
 import software.amazon.awssdk.services.s3.model.SelectObjectContentResponseHandler;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
-import software.amazon.awssdk.transfer.s3.CompletedCopy;
-import software.amazon.awssdk.transfer.s3.CompletedFileUpload;
-import software.amazon.awssdk.transfer.s3.Copy;
-import software.amazon.awssdk.transfer.s3.CopyRequest;
-import software.amazon.awssdk.transfer.s3.FileUpload;
+import software.amazon.awssdk.transfer.s3.model.CompletedCopy;
+import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
+import software.amazon.awssdk.transfer.s3.model.Copy;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
-import software.amazon.awssdk.transfer.s3.UploadFileRequest;
+import software.amazon.awssdk.transfer.s3.model.CopyRequest;
+import software.amazon.awssdk.transfer.s3.model.FileUpload;
+import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -156,6 +157,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.store.audit.AuditEntryPoint;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
@@ -228,6 +230,7 @@ import static org.apache.hadoop.fs.s3a.Listing.toLocatedFileStatusIterator;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.INITIALIZE_SPAN;
+import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.createAWSCredentialProviderSet;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_ALLOW_SSE_KMS_RW;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3Operations;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.TokenIssuingPolicy.NoTokensAvailable;
@@ -239,12 +242,12 @@ import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FIL
 import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FILE_OVERWRITE;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_INACCESSIBLE;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_REQUIRED_EXCEPTION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.ARN_BUCKET_OPTION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_301_MOVED_PERMANENTLY;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_403_FORBIDDEN;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404_NOT_FOUND;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
@@ -329,10 +332,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private int executorCapacity;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
+  /** Exactly once log to warn about setting the region in config to avoid probe. */
+  private static final LogExactlyOnce SET_REGION_WARNING = new LogExactlyOnce(LOG);
   private static final Logger PROGRESS =
       LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
   private LocalDirAllocator directoryAllocator;
-  private ObjectCannedACL cannedACL;
+  private String cannedACL;
 
   /**
    * This must never be null; until initialized it just declares that there
@@ -444,6 +449,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Scheme for the current filesystem.
    */
   private String scheme = FS_S3A;
+
+  private final static Map<String, Region> BUCKET_REGIONS = new HashMap<>();
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -718,7 +725,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * bucket existence check is not done to improve performance of
    * S3AFileSystem initialization. When set to 1 or 2, bucket existence check
    * will be performed which is potentially slow.
-   * If 3 or higher: warn and use the v2 check.
+   * If 3 or higher: warn and skip check.
    * Also logging DNS address of the s3 endpoint if the bucket probe value is
    * greater than 0 else skipping it for increased performance.
    * @throws UnknownStoreException the bucket is absent
@@ -735,18 +742,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("skipping check for bucket existence");
       break;
     case 1:
+    case 2:
       logDnsLookup(getConf());
       verifyBucketExists();
       break;
-    case 2:
-      logDnsLookup(getConf());
-      verifyBucketExistsV2();
-      break;
     default:
       // we have no idea what this is, assume it is from a later release.
-      LOG.warn("Unknown bucket probe option {}: {}; falling back to check #2",
+      LOG.warn("Unknown bucket probe option {}: {}; skipping check for bucket existence",
           S3A_BUCKET_PROBE, bucketProbe);
-      verifyBucketExistsV2();
       break;
     }
   }
@@ -844,58 +847,32 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws UnknownStoreException the bucket is absent
    * @throws IOException any other problem talking to S3
    */
-  // TODO: Review: this used to call doesBucketExist in v1, which does not check permissions,
-  //  not even read access.
   @Retries.RetryTranslated
   protected void verifyBucketExists() throws UnknownStoreException, IOException {
-    if (!invoker.retry("doesBucketExist", bucket, true,
-        trackDurationOfOperation(getDurationTrackerFactory(), STORE_EXISTS_PROBE.getSymbol(),
-            () -> {
+
+    if(!trackDurationAndSpan(
+        STORE_EXISTS_PROBE, bucket, null, () ->
+            invoker.retry("doestBucketExist", bucket, true, () -> {
               try {
+                if (BUCKET_REGIONS.containsKey(bucket)) {
+                  return true;
+                }
                 s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
                 return true;
-              } catch (NoSuchBucketException e) {
-                return false;
-              }
-            }))) {
-      throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does " + "not exist");
-    }
-  }
-
-  /**
-   * Verify that the bucket exists. This will correctly throw an exception
-   * when credentials are invalid.
-   * TODO: Review. May be redundant in v2.
-   * Retry policy: retrying, translated.
-   * @throws UnknownStoreException the bucket is absent
-   * @throws IOException any other problem talking to S3
-   */
-  @Retries.RetryTranslated
-  protected void verifyBucketExistsV2()
-      throws UnknownStoreException, IOException {
-    if (!invoker.retry("doesBucketExistV2", bucket, true,
-        trackDurationOfOperation(getDurationTrackerFactory(),
-            STORE_EXISTS_PROBE.getSymbol(),
-            () -> {
-              // Bug in SDK always returns `true` for AccessPoint ARNs with `doesBucketExistV2()`
-              // expanding implementation to use ARNs and buckets correctly
-              try {
-                s3Client.getBucketAcl(GetBucketAclRequest.builder()
-                    .bucket(bucket)
-                    .build());
               } catch (AwsServiceException ex) {
                 int statusCode = ex.statusCode();
                 if (statusCode == SC_404_NOT_FOUND ||
-                    (statusCode == SC_403_FORBIDDEN &&
-                        ex.getMessage().contains(AP_INACCESSIBLE))) {
+                    (statusCode == SC_403_FORBIDDEN && accessPoint != null)) {
                   return false;
                 }
               }
 
               return true;
             }))) {
-      throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does "
-          + "not exist");
+
+      throw new UnknownStoreException("s3a://" + bucket + "/",
+          " Bucket does " + "not exist. " + "Accessing with " + ENDPOINT + " set to "
+              + getConf().getTrimmed(ENDPOINT, null));
     }
   }
 
@@ -986,6 +963,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         ? conf.getTrimmed(ENDPOINT, DEFAULT_ENDPOINT)
         : accessPoint.getEndpoint();
 
+    String configuredRegion = accessPoint == null
+        ? conf.getTrimmed(AWS_REGION)
+        : accessPoint.getRegion();
+
+    Region region = getS3Region(configuredRegion);
+
     S3ClientFactory.S3ClientCreationParameters parameters =
         new S3ClientFactory.S3ClientCreationParameters()
         .withCredentialSet(credentials)
@@ -997,12 +980,94 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withRequesterPays(conf.getBoolean(ALLOW_REQUESTER_PAYS, DEFAULT_ALLOW_REQUESTER_PAYS))
         .withExecutionInterceptors(auditManager.createExecutionInterceptors())
         .withMinimumPartSize(partSize)
-        .withTransferManagerExecutor(unboundedThreadPool);
+        .withTransferManagerExecutor(unboundedThreadPool)
+        .withRegion(region);
 
     S3ClientFactory clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
-    s3Client = clientFactory.createS3ClientV2(getUri(), parameters);
+    s3Client = clientFactory.createS3Client(getUri(), parameters);
+    createS3AsyncClient(clientFactory, parameters);
+    transferManager =  clientFactory.createS3TransferManager(s3AsyncClient);
+  }
+
+  /**
+   * Creates and configures the S3AsyncClient.
+   * Uses synchronized method to suppress spotbugs error.
+   *
+   * @param clientFactory factory used to create S3AsyncClient
+   * @param parameters parameter object
+   * @throws IOException on any IO problem
+   */
+  private synchronized void createS3AsyncClient(S3ClientFactory clientFactory,
+      S3ClientFactory.S3ClientCreationParameters parameters) throws IOException {
     s3AsyncClient = clientFactory.createS3AsyncClient(getUri(), parameters);
-    transferManager =  clientFactory.createS3TransferManager(getUri(), parameters);
+  }
+
+  /**
+   * Get the bucket region.
+   *
+   * @param region AWS S3 Region set in the config. This property may not be set, in which case
+   *               ask S3 for the region.
+   * @return region of the bucket.
+   */
+  private Region getS3Region(String region) throws IOException {
+
+    if (!StringUtils.isBlank(region)) {
+      return Region.of(region);
+    }
+
+    Region cachedRegion = BUCKET_REGIONS.get(bucket);
+
+    if (cachedRegion != null) {
+      LOG.debug("Got region {} for bucket {} from cache", cachedRegion, bucket);
+      return cachedRegion;
+    }
+
+    Region s3Region = trackDurationAndSpan(STORE_REGION_PROBE, bucket, null,
+        () -> invoker.retry("getS3Region", bucket, true, () -> {
+          try {
+
+            SET_REGION_WARNING.warn(
+                "Getting region for bucket {} from S3, this will slow down FS initialisation. "
+                    + "To avoid this, set the region using property {}", bucket,
+                FS_S3A_BUCKET_PREFIX + bucket + ".endpoint.region");
+
+            // build a s3 client with region eu-west-1 that can be used to get the region of the
+            // bucket. Using eu-west-1, as headBucket() doesn't work with us-east-1. This is because
+            // us-east-1 uses the endpoint s3.amazonaws.com, which resolves bucket.s3.amazonaws.com
+            // to the actual region the bucket is in. As the request is signed with us-east-1 and
+            // not the bucket's region, it fails.
+            S3Client getRegionS3Client =
+                S3Client.builder().region(Region.EU_WEST_1).credentialsProvider(credentials)
+                    .build();
+
+            HeadBucketResponse headBucketResponse =
+                getRegionS3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
+
+            Region bucketRegion = Region.of(
+                headBucketResponse.sdkHttpResponse().headers().get(BUCKET_REGION_HEADER).get(0));
+            BUCKET_REGIONS.put(bucket, bucketRegion);
+
+            return bucketRegion;
+          } catch (S3Exception exception) {
+            if (exception.statusCode() == SC_301_MOVED_PERMANENTLY) {
+              Region bucketRegion = Region.of(
+                  exception.awsErrorDetails().sdkHttpResponse().headers().get(BUCKET_REGION_HEADER)
+                      .get(0));
+              BUCKET_REGIONS.put(bucket, bucketRegion);
+
+              return bucketRegion;
+            }
+
+            if (exception.statusCode() == SC_404_NOT_FOUND) {
+              throw new UnknownStoreException("s3a://" + bucket + "/",
+                  " Bucket does " + "not exist");
+            }
+
+            throw exception;
+          }
+        }));
+
+    return s3Region;
   }
 
   /**
@@ -1179,7 +1244,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private void initCannedAcls(Configuration conf) {
     String cannedACLName = conf.get(CANNED_ACL, DEFAULT_CANNED_ACL);
     if (!cannedACLName.isEmpty()) {
-      cannedACL = ObjectCannedACL.valueOf(AWSCannedACL.valueOf(cannedACLName).toString());
+      cannedACL = AWSCannedACL.valueOf(cannedACLName).toString();
     } else {
       cannedACL = null;
     }
@@ -1283,7 +1348,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return S3Client
    */
   @VisibleForTesting
-  public S3Client getAmazonS3V2ClientForTesting(String reason) {
+  public S3Client getAmazonS3ClientForTesting(String reason) {
     LOG.warn("Access to S3 client requested, reason {}", reason);
     return s3Client;
   }
@@ -1424,7 +1489,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Get the canned ACL of this FS.
    * @return an ACL, if any
    */
-  ObjectCannedACL getCannedACL() {
+  String getCannedACL() {
     return cannedACL;
   }
 
@@ -2700,6 +2765,26 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * Request bucket metadata.
+   * @return the metadata
+   * @throws UnknownStoreException the bucket is absent
+   * @throws IOException  any other problem talking to S3
+   */
+  @Retries.RetryRaw
+  protected HeadBucketResponse getBucketMetadata() throws IOException {
+    final HeadBucketResponse response = trackDurationAndSpan(STORE_EXISTS_PROBE, bucket, null,
+        () -> invoker.retry("getBucketMetadata()", bucket, true, () -> {
+          try {
+            return s3Client.headBucket(
+                getRequestFactory().newHeadBucketRequestBuilder(bucket).build());
+          } catch (NoSuchBucketException e) {
+            throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does " + "not exist");
+          }
+        }));
+    return response;
+  }
+
+  /**
    * Initiate a {@code listObjects} operation, incrementing metrics
    * in the process.
    *
@@ -2976,10 +3061,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("PUT {} bytes to {} via transfer manager ", len, putObjectRequest.key());
     incrementPutStartStatistics(len);
 
-    // TODO: Something not right with the TM listener, fix
     FileUpload upload = transferManager.uploadFile(
-        UploadFileRequest.builder().putObjectRequest(putObjectRequest).source(file).build());
-          //  .overrideConfiguration(o -> o.addListener(listener)).build());
+            UploadFileRequest.builder()
+                .putObjectRequest(putObjectRequest)
+                .source(file)
+                .addTransferListener(listener)
+                .build());
 
     return new UploadInfo(upload, len);
   }
@@ -3038,16 +3125,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IllegalArgumentException if the length is negative
    */
   private long getPutRequestLength(PutObjectRequest putObjectRequest) {
-    long len;
-
-    // TODO: Check why this exists. Content length is set before. Why can't that be used directly?
-//    if (putObjectRequest.getFile() != null) {
-//      len = putObjectRequest.getFile().length();
-//    } else {
-//      len = putObjectRequest.getMetadata().getContentLength();
-//    }
-
-    len = putObjectRequest.contentLength();
+    long len = putObjectRequest.contentLength();
 
     Preconditions.checkState(len >= 0, "Cannot PUT object of unknown length");
     return len;
@@ -4261,18 +4339,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   private CopyObjectResponse copyFile(String srcKey, String dstKey, long size,
       S3ObjectAttributes srcAttributes, S3AReadOpContext readContext)
-      throws IOException, InterruptedIOException  {
+      throws IOException {
     LOG.debug("copyFile {} -> {} ", srcKey, dstKey);
-
-    // TODO: Transfer manager currently only provides transfer listeners for upload,
-    //  add progress listener for copy when this is supported.
-// TODO: Is the above still valid? Try to enable when logger issue is resolved.
-//    TransferListener progressListener = new TransferListener() {
-//      @Override
-//      public void transferComplete(Context.TransferComplete context) {
-//        incrementWriteOperations();
-//      }
-//    };
 
     ChangeTracker changeTracker = new ChangeTracker(
         keyToQualifiedPath(srcKey).toString(),
@@ -4316,10 +4384,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           Copy copy = transferManager.copy(
               CopyRequest.builder()
                   .copyObjectRequest(copyObjectRequestBuilder.build())
-// TODO: Enable when logger issue is resolved.
-//                  .overrideConfiguration(c -> c
-//                      .addListener(getAuditManager().createTransferListener())
-//                      .addListener(progressListener))
                   .build());
 
           try {
@@ -4833,6 +4897,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         throws IOException {
       return once("getObjectMetadata", key, () ->
           S3AFileSystem.this.getObjectMetadata(key));
+    }
+
+    @Override
+    public HeadBucketResponse getBucketMetadata()
+        throws IOException {
+      return once("getBucketMetadata", bucket, () ->
+          S3AFileSystem.this.getBucketMetadata());
     }
   }
   /**

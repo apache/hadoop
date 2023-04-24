@@ -34,13 +34,13 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListMultipartUploadsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.MetadataDirective;
-import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
@@ -99,7 +99,7 @@ public class RequestFactoryImpl implements RequestFactory {
   /**
    * ACL For new objects.
    */
-  private final ObjectCannedACL cannedACL;
+  private final String cannedACL;
 
   /**
    * Max number of multipart entries allowed in a large
@@ -161,7 +161,7 @@ public class RequestFactoryImpl implements RequestFactory {
    * @return an ACL, if any
    */
   @Override
-  public ObjectCannedACL getCannedACL() {
+  public String getCannedACL() {
     return cannedACL;
   }
 
@@ -207,7 +207,6 @@ public class RequestFactoryImpl implements RequestFactory {
    */
   protected void uploadPartEncryptionParameters(
       UploadPartRequest.Builder builder) {
-    // TODO: review/refactor together with similar methods for other requests.
     // need to set key to get objects encrypted with SSE_C
     EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets).ifPresent(base64customerKey -> {
       builder.sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
@@ -236,7 +235,7 @@ public class RequestFactoryImpl implements RequestFactory {
 
     Map<String, String> dstom = new HashMap<>();
     HeaderProcessing.cloneObjectMetadata(srcom, dstom, copyObjectRequestBuilder);
-    copyEncryptionParameters(copyObjectRequestBuilder);
+    copyEncryptionParameters(srcom, copyObjectRequestBuilder);
 
     copyObjectRequestBuilder
         .metadata(dstom)
@@ -257,10 +256,21 @@ public class RequestFactoryImpl implements RequestFactory {
    * Propagate encryption parameters from source file if set else use the
    * current filesystem encryption settings.
    * @param copyObjectRequestBuilder copy object request builder.
+   * @param srcom source object metadata.
    */
-  protected void copyEncryptionParameters(CopyObjectRequest.Builder copyObjectRequestBuilder) {
+  protected void copyEncryptionParameters(HeadObjectResponse srcom,
+      CopyObjectRequest.Builder copyObjectRequestBuilder) {
 
     final S3AEncryptionMethods algorithm = getServerSideEncryptionAlgorithm();
+
+    String sourceKMSId = srcom.ssekmsKeyId();
+    if (isNotEmpty(sourceKMSId)) {
+      // source KMS ID is propagated
+      LOG.debug("Propagating SSE-KMS settings from source {}",
+          sourceKMSId);
+      copyObjectRequestBuilder.ssekmsKeyId(sourceKMSId);
+      return;
+    }
 
     if (S3AEncryptionMethods.SSE_S3 == algorithm) {
       copyObjectRequestBuilder.serverSideEncryption(algorithm.getMethod());
@@ -475,6 +485,15 @@ public class RequestFactoryImpl implements RequestFactory {
   }
 
   @Override
+  public HeadBucketRequest.Builder newHeadBucketRequestBuilder(String bucketName) {
+
+    HeadBucketRequest.Builder headBucketRequestBuilder =
+        HeadBucketRequest.builder().bucket(bucketName);
+
+    return prepareRequest(headBucketRequestBuilder);
+  }
+
+  @Override
   public GetObjectRequest.Builder newGetObjectRequestBuilder(String key) {
     GetObjectRequest.Builder builder = GetObjectRequest.builder()
         .bucket(bucket)
@@ -613,7 +632,7 @@ public class RequestFactoryImpl implements RequestFactory {
     /**
      * ACL For new objects.
      */
-    private ObjectCannedACL cannedACL = null;
+    private String cannedACL = null;
 
     /** Content Encoding. */
     private String contentEncoding;
@@ -696,7 +715,7 @@ public class RequestFactoryImpl implements RequestFactory {
      * @return the builder
      */
     public RequestFactoryBuilder withCannedACL(
-        final ObjectCannedACL value) {
+        final String value) {
       cannedACL = value;
       return this;
     }

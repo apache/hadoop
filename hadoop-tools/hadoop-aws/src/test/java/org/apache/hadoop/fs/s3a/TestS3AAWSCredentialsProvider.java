@@ -34,11 +34,14 @@ import javax.annotation.Nullable;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.ContainerCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
+
+import org.apache.hadoop.fs.s3a.adapter.V1V2AwsCredentialProviderAdapter;
 import org.apache.hadoop.util.Sets;
 import org.junit.Rule;
 import org.junit.Test;
@@ -55,6 +58,11 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.ABSTRACT_PROVIDER;
+import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.NOT_AWS_V2_PROVIDER;
+import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.STANDARD_AWS_PROVIDERS;
+import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.buildAWSProviderList;
+import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.createAWSCredentialProviderSet;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.junit.Assert.*;
@@ -62,7 +70,6 @@ import static org.junit.Assert.*;
 /**
  * Unit tests for {@link Constants#AWS_CREDENTIALS_PROVIDER} logic.
  */
-// TODO: Add new tests that use a mix of V1 and V2 providers and assert that everything works ok.
 public class TestS3AAWSCredentialsProvider {
 
   /**
@@ -147,6 +154,27 @@ public class TestS3AAWSCredentialsProvider {
     conf.unset(AWS_CREDENTIALS_PROVIDER);
     assertCredentialProviders(STANDARD_AWS_PROVIDERS,
         createAWSCredentialProviderSet(null, conf));
+  }
+
+  @Test
+  public void testConfiguredChainV1V2() throws Exception {
+    URI uri1 = new URI("s3a://bucket1"), uri2 = new URI("s3a://bucket2");
+    List<Class<?>> credentialProviders =
+        Arrays.asList(
+            ContainerCredentialsProvider.class,
+            AnonymousAWSCredentialsProvider.class);
+    List<Class<?>> expectedClasses =
+        Arrays.asList(
+            V1V2AwsCredentialProviderAdapter.class,
+            AnonymousAWSCredentialsProvider.class);
+    Configuration conf =
+        createProviderConfiguration(buildClassListString(credentialProviders));
+    AWSCredentialProviderList list1 = createAWSCredentialProviderSet(
+        uri1, conf);
+    AWSCredentialProviderList list2 = createAWSCredentialProviderSet(
+        uri2, conf);
+    assertCredentialProviders(expectedClasses, list1);
+    assertCredentialProviders(expectedClasses, list2);
   }
 
   @Test

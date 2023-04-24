@@ -18,11 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.AbortedException;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -31,7 +26,6 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -45,14 +39,11 @@ import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.fs.s3a.audit.AuditFailureException;
 import org.apache.hadoop.fs.s3a.audit.AuditIntegration;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
-import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteException;
-import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.Preconditions;
-import org.apache.hadoop.util.VersionInfo;
 
 import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
@@ -73,19 +64,13 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -107,12 +92,7 @@ public final class S3AUtils {
   static final String CONSTRUCTOR_EXCEPTION = "constructor exception";
   static final String INSTANTIATION_EXCEPTION
       = "instantiation exception";
-  static final String NOT_AWS_PROVIDER =
-      "does not implement AWSCredentialsProvider";
-  static final String NOT_AWS_V2_PROVIDER =
-      "does not implement AwsCredentialsProvider";
-  static final String ABSTRACT_PROVIDER =
-      "is abstract and therefore cannot be created";
+
   static final String ENDPOINT_KEY = "Endpoint";
 
   /** Filesystem is closed; kept here to keep the errors close. */
@@ -146,14 +126,6 @@ public final class S3AUtils {
       = "Data read has a different length than the expected";
 
   private static final String BUCKET_PATTERN = FS_S3A_BUCKET_PREFIX + "%s.%s";
-
-  /**
-   * Error message when the AWS provider list built up contains a forbidden
-   * entry.
-   */
-  @VisibleForTesting
-  public static final String E_FORBIDDEN_AWS_PROVIDER
-      = "AWS provider class cannot be used";
 
   private S3AUtils() {
   }
@@ -235,16 +207,11 @@ public final class S3AUtils {
       case SC_301_MOVED_PERMANENTLY:
       case SC_307_TEMPORARY_REDIRECT:
         if (s3Exception != null) {
-          // TODO: Can we get the endpoint in v2?
-          // Maybe not: https://github.com/aws/aws-sdk-java-v2/issues/3048
-//          if (s3Exception.getAdditionalDetails() != null &&
-//              s3Exception.getAdditionalDetails().containsKey(ENDPOINT_KEY)) {
-//            message = String.format("Received permanent redirect response to "
-//                + "endpoint %s.  This likely indicates that the S3 endpoint "
-//                + "configured in %s does not match the AWS region containing "
-//                + "the bucket.",
-//                s3Exception.getAdditionalDetails().get(ENDPOINT_KEY), ENDPOINT);
-//          }
+          message = String.format("Received permanent redirect response to "
+                  + "region %s.  This likely indicates that the S3 region "
+                  + "configured in %s does not match the AWS region containing " + "the bucket.",
+              s3Exception.awsErrorDetails().sdkHttpResponse().headers().get(BUCKET_REGION_HEADER),
+              AWS_REGION);
           ioe = new AWSRedirectException(message, s3Exception);
         } else {
           ioe = new AWSRedirectException(message, ase);
@@ -569,135 +536,8 @@ public final class S3AUtils {
     return date.getTime();
   }
 
-  /**
-   * The standard AWS provider list for AWS connections.
-   */
-  public static final List<Class<?>>
-      STANDARD_AWS_PROVIDERS = Collections.unmodifiableList(
-      Arrays.asList(
-          TemporaryAWSCredentialsProvider.class,
-          SimpleAWSCredentialsProvider.class,
-          EnvironmentVariableCredentialsProvider.class,
-          IAMInstanceCredentialsProvider.class));
-
-  /**
-   * Create the AWS credentials from the providers, the URI and
-   * the key {@link Constants#AWS_CREDENTIALS_PROVIDER} in the configuration.
-   * @param binding Binding URI -may be null
-   * @param conf filesystem configuration
-   * @return a credentials provider list
-   * @throws IOException Problems loading the providers (including reading
-   * secrets from credential files).
-   */
-  public static AWSCredentialProviderList createAWSCredentialProviderSet(
-      @Nullable URI binding,
-      Configuration conf) throws IOException {
-    // this will reject any user:secret entries in the URI
-    S3xLoginHelper.rejectSecretsInURIs(binding);
-    AWSCredentialProviderList credentials =
-        buildAWSProviderList(binding,
-            conf,
-            AWS_CREDENTIALS_PROVIDER,
-            STANDARD_AWS_PROVIDERS,
-            new HashSet<>());
-    // make sure the logging message strips out any auth details
-    LOG.debug("For URI {}, using credentials {}",
-        binding, credentials);
-    return credentials;
-  }
-
-  /**
-   * Load list of AWS credential provider/credential provider factory classes.
-   * @param conf configuration
-   * @param key key
-   * @param defaultValue list of default values
-   * @return the list of classes, possibly empty
-   * @throws IOException on a failure to load the list.
-   */
-  public static List<Class<?>> loadAWSProviderClasses(Configuration conf,
-      String key,
-      Class<?>... defaultValue) throws IOException {
-    try {
-      return Arrays.asList(conf.getClasses(key, defaultValue));
-    } catch (RuntimeException e) {
-      Throwable c = e.getCause() != null ? e.getCause() : e;
-      throw new IOException("From option " + key + ' ' + c, c);
-    }
-  }
-
-  /**
-   * Maps V1 credential providers to either their equivalent SDK V2 class or hadoop provider.
-   */
-  private static Map<String, Class> initCredentialProvidersMap() {
-    Map<String, Class> v1v2CredentialProviderMap = new HashMap<>();
-
-    v1v2CredentialProviderMap.put("EnvironmentVariableCredentialsProvider",
-        EnvironmentVariableCredentialsProvider.class);
-    v1v2CredentialProviderMap.put("EC2ContainerCredentialsProviderWrapper",
-        IAMInstanceCredentialsProvider.class);
-    v1v2CredentialProviderMap.put("InstanceProfileCredentialsProvider",
-        IAMInstanceCredentialsProvider.class);
-
-    return v1v2CredentialProviderMap;
-  }
-
-  /**
-   * Load list of AWS credential provider/credential provider factory classes;
-   * support a forbidden list to prevent loops, mandate full secrets, etc.
-   * @param binding Binding URI -may be null
-   * @param conf configuration
-   * @param key key
-   * @param forbidden a possibly empty set of forbidden classes.
-   * @param defaultValues list of default providers.
-   * @return the list of classes, possibly empty
-   * @throws IOException on a failure to load the list.
-   */
-  public static AWSCredentialProviderList buildAWSProviderList(
-      @Nullable final URI binding,
-      final Configuration conf,
-      final String key,
-      final List<Class<?>> defaultValues,
-      final Set<Class<?>> forbidden) throws IOException {
-
-    // build up the base provider
-    List<Class<?>> awsClasses = loadAWSProviderClasses(conf,
-        key,
-        defaultValues.toArray(new Class[defaultValues.size()]));
-
-    Map<String, Class> v1v2CredentialProviderMap = initCredentialProvidersMap();
-    // and if the list is empty, switch back to the defaults.
-    // this is to address the issue that configuration.getClasses()
-    // doesn't return the default if the config value is just whitespace.
-    if (awsClasses.isEmpty()) {
-      awsClasses = defaultValues;
-    }
-    // iterate through, checking for blacklists and then instantiating
-    // each provider
-    AWSCredentialProviderList providers = new AWSCredentialProviderList();
-    for (Class<?> aClass : awsClasses) {
-
-      if (forbidden.contains(aClass)) {
-        throw new IOException(E_FORBIDDEN_AWS_PROVIDER
-            + " in option " + key + ": " + aClass);
-      }
-
-      if (v1v2CredentialProviderMap.containsKey(aClass.getSimpleName()) &&
-          aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)){
-        providers.add(createAWSV2CredentialProvider(conf,
-            v1v2CredentialProviderMap.get(aClass.getSimpleName()), binding));
-      } else if (AWSCredentialsProvider.class.isAssignableFrom(aClass)) {
-        providers.add(createAWSV1CredentialProvider(conf,
-            aClass, binding));
-      } else {
-        providers.add(createAWSV2CredentialProvider(conf, aClass, binding));
-      }
-
-    }
-    return providers;
-  }
-
-  /**
-   * Create an AWS credential provider from its class by using reflection.  The
+  /***
+   * Creates an instance of a class using reflection. The
    * class must implement one of the following means of construction, which are
    * attempted in order:
    *
@@ -706,187 +546,79 @@ public final class S3AUtils {
    *     org.apache.hadoop.conf.Configuration</li>
    * <li>a public constructor accepting
    *    org.apache.hadoop.conf.Configuration</li>
-   * <li>a public static method named getInstance that accepts no
+   * <li>a public static method named as per methodName, that accepts no
    *    arguments and returns an instance of
-   *    com.amazonaws.auth.AWSCredentialsProvider, or</li>
+   *    specified type, or</li>
    * <li>a public default constructor.</li>
    * </ol>
    *
+   * @param instanceClass Class for which instance is to be created
    * @param conf configuration
-   * @param credClass credential class
    * @param uri URI of the FS
-   * @return the instantiated class
-   * @throws IOException on any instantiation failure.
+   * @param interfaceImplemented interface that this class implements
+   * @param methodName name of factory method to be invoked
+   * @param configKey config key under which this class is specified
+   * @param <InstanceT> Instance of class
+   * @return instance of the specified class
+   * @throws IOException on any problem
    */
-  private static AWSCredentialsProvider createAWSV1CredentialProvider(
-      Configuration conf,
-      Class<?> credClass,
-      @Nullable URI uri) throws IOException {
-    AWSCredentialsProvider credentials = null;
-    String className = credClass.getName();
-    if (!AWSCredentialsProvider.class.isAssignableFrom(credClass)) {
-      throw new IOException("Class " + credClass + " " + NOT_AWS_PROVIDER);
-    }
-    if (Modifier.isAbstract(credClass.getModifiers())) {
-      throw new IOException("Class " + credClass + " " + ABSTRACT_PROVIDER);
-    }
-    LOG.debug("Credential provider class is {}", className);
+  @SuppressWarnings("unchecked")
+  public static <InstanceT> InstanceT getInstanceFromReflection(Class<?> instanceClass,
+      Configuration conf, @Nullable URI uri, Class<?> interfaceImplemented, String methodName,
+      String configKey) throws IOException {
+
+    String className = instanceClass.getName();
 
     try {
-      // new X(uri, conf)
-      Constructor cons = getConstructor(credClass, URI.class,
-          Configuration.class);
-      if (cons != null) {
-        credentials = (AWSCredentialsProvider)cons.newInstance(uri, conf);
-        return credentials;
-      }
-      // new X(conf)
-      cons = getConstructor(credClass, Configuration.class);
-      if (cons != null) {
-        credentials = (AWSCredentialsProvider)cons.newInstance(conf);
-        return credentials;
+      Constructor cons = null;
+      if (conf != null) {
+        // new X(uri, conf)
+        cons = getConstructor(instanceClass, URI.class, Configuration.class);
+
+        if (cons != null) {
+          return (InstanceT) cons.newInstance(uri, conf);
+        }
+        // new X(conf)
+        cons = getConstructor(instanceClass, Configuration.class);
+        if (cons != null) {
+          return (InstanceT) cons.newInstance(conf);
+        }
       }
 
-      // X.getInstance()
-      Method factory = getFactoryMethod(credClass, AWSCredentialsProvider.class,
-          "getInstance");
+      // X.methodName()
+      Method factory = getFactoryMethod(instanceClass, interfaceImplemented, methodName);
       if (factory != null) {
-        credentials = (AWSCredentialsProvider)factory.invoke(null);
-        return credentials;
+        return (InstanceT) factory.invoke(null);
       }
 
       // new X()
-      cons = getConstructor(credClass);
+      cons = getConstructor(instanceClass);
       if (cons != null) {
-        credentials = (AWSCredentialsProvider)cons.newInstance();
-        return credentials;
+        return (InstanceT) cons.newInstance();
       }
 
       // no supported constructor or factory method found
       throw new IOException(String.format("%s " + CONSTRUCTOR_EXCEPTION
           + ".  A class specified in %s must provide a public constructor "
           + "of a supported signature, or a public factory method named "
-          + "getInstance that accepts no arguments.",
-          className, AWS_CREDENTIALS_PROVIDER));
+          + "create that accepts no arguments.", className, configKey));
     } catch (InvocationTargetException e) {
       Throwable targetException = e.getTargetException();
       if (targetException == null) {
-        targetException =  e;
+        targetException = e;
       }
       if (targetException instanceof IOException) {
         throw (IOException) targetException;
       } else if (targetException instanceof SdkException) {
-        throw translateException("Instantiate " + className, "",
-            (SdkException) targetException);
+        throw translateException("Instantiate " + className, "", (SdkException) targetException);
       } else {
         // supported constructor or factory method found, but the call failed
-        throw new IOException(className + " " + INSTANTIATION_EXCEPTION
-            + ": " + targetException,
+        throw new IOException(className + " " + INSTANTIATION_EXCEPTION + ": " + targetException,
             targetException);
       }
     } catch (ReflectiveOperationException | IllegalArgumentException e) {
       // supported constructor or factory method found, but the call failed
-      throw new IOException(className + " " + INSTANTIATION_EXCEPTION
-          + ": " + e,
-          e);
-    }
-  }
-
-  /**
-   * Create an AWS credential provider from its class by using reflection.  The
-   * class must implement one of the following means of construction, which are
-   * attempted in order:
-   *
-   * <ol>
-   * <li>a public constructor accepting java.net.URI and
-   *     org.apache.hadoop.conf.Configuration</li>
-   * <li>a public constructor accepting
-   *    org.apache.hadoop.conf.Configuration</li>
-   * <li>a public static method named getInstance that accepts no
-   *    arguments and returns an instance of
-   *    software.amazon.awssdk.auth.credentials.AwsCredentialsProvider, or</li>
-   * <li>a public default constructor.</li>
-   * </ol>
-   *
-   * @param conf configuration
-   * @param credClass credential class
-   * @param uri URI of the FS
-   * @return the instantiated class
-   * @throws IOException on any instantiation failure.
-   */
-  private static AwsCredentialsProvider createAWSV2CredentialProvider(
-      Configuration conf,
-      Class<?> credClass,
-      @Nullable URI uri) throws IOException {
-    AwsCredentialsProvider credentials = null;
-    String className = credClass.getName();
-    if (!AwsCredentialsProvider.class.isAssignableFrom(credClass)) {
-      throw new IOException("Class " + credClass + " " + NOT_AWS_V2_PROVIDER);
-    }
-    if (Modifier.isAbstract(credClass.getModifiers())) {
-      throw new IOException("Class " + credClass + " " + ABSTRACT_PROVIDER);
-    }
-    LOG.debug("Credential provider class is {}", className);
-
-    try {
-      // new X(uri, conf)
-      Constructor cons = getConstructor(credClass, URI.class,
-          Configuration.class);
-      if (cons != null) {
-        credentials = (AwsCredentialsProvider)cons.newInstance(uri, conf);
-        return credentials;
-      }
-      // new X(conf)
-      cons = getConstructor(credClass, Configuration.class);
-      if (cons != null) {
-        credentials = (AwsCredentialsProvider)cons.newInstance(conf);
-        return credentials;
-      }
-
-      // X.getInstance()
-      Method factory = getFactoryMethod(credClass, AwsCredentialsProvider.class,
-          "create");
-      if (factory != null) {
-        credentials = (AwsCredentialsProvider)factory.invoke(null);
-        return credentials;
-      }
-
-      // new X()
-      cons = getConstructor(credClass);
-      if (cons != null) {
-        credentials = (AwsCredentialsProvider)cons.newInstance();
-        return credentials;
-      }
-
-      // no supported constructor or factory method found
-      throw new IOException(String.format("%s " + CONSTRUCTOR_EXCEPTION
-              + ".  A class specified in %s must provide a public constructor "
-              + "of a supported signature, or a public factory method named "
-              + "create that accepts no arguments.",
-          className, AWS_CREDENTIALS_PROVIDER));
-    } catch (InvocationTargetException e) {
-      // TODO: Can probably be moved to a common method, but before doing this, check if we still
-      //  want to extend V2 providers the same way v1 providers are.
-      Throwable targetException = e.getTargetException();
-      if (targetException == null) {
-        targetException =  e;
-      }
-      if (targetException instanceof IOException) {
-        throw (IOException) targetException;
-      } else if (targetException instanceof SdkException) {
-        throw translateException("Instantiate " + className, "",
-            (SdkException) targetException);
-      } else {
-        // supported constructor or factory method found, but the call failed
-        throw new IOException(className + " " + INSTANTIATION_EXCEPTION
-            + ": " + targetException,
-            targetException);
-      }
-    } catch (ReflectiveOperationException | IllegalArgumentException e) {
-      // supported constructor or factory method found, but the call failed
-      throw new IOException(className + " " + INSTANTIATION_EXCEPTION
-          + ": " + e,
-          e);
+      throw new IOException(className + " " + INSTANTIATION_EXCEPTION + ": " + e, e);
     }
   }
 
@@ -1354,216 +1086,6 @@ public final class S3AUtils {
     } catch (IOException e) {
       LOG.warn("Failed to delete {}", path, e);
     }
-  }
-
-  /**
-   * Create a new AWS {@code ClientConfiguration}.
-   * All clients to AWS services <i>MUST</i> use this for consistent setup
-   * of connectivity, UA, proxy settings.
-   * @param conf The Hadoop configuration
-   * @param bucket Optional bucket to use to look up per-bucket proxy secrets
-   * @return new AWS client configuration
-   * @throws IOException problem creating AWS client configuration
-   *
-   * @deprecated use {@link #createAwsConf(Configuration, String, String)}
-   */
-  @Deprecated
-  public static ClientConfiguration createAwsConf(Configuration conf,
-      String bucket)
-      throws IOException {
-    return createAwsConf(conf, bucket, null);
-  }
-
-  /**
-   * Create a new AWS {@code ClientConfiguration}. All clients to AWS services
-   * <i>MUST</i> use this or the equivalents for the specific service for
-   * consistent setup of connectivity, UA, proxy settings.
-   *
-   * @param conf The Hadoop configuration
-   * @param bucket Optional bucket to use to look up per-bucket proxy secrets
-   * @param awsServiceIdentifier a string representing the AWS service (S3,
-   * etc) for which the ClientConfiguration is being created.
-   * @return new AWS client configuration
-   * @throws IOException problem creating AWS client configuration
-   */
-  public static ClientConfiguration createAwsConf(Configuration conf,
-      String bucket, String awsServiceIdentifier)
-      throws IOException {
-    final ClientConfiguration awsConf = new ClientConfiguration();
-    initConnectionSettings(conf, awsConf);
-    initProxySupport(conf, bucket, awsConf);
-    initUserAgent(conf, awsConf);
-    if (StringUtils.isNotEmpty(awsServiceIdentifier)) {
-      String configKey = null;
-      switch (awsServiceIdentifier) {
-      case AWS_SERVICE_IDENTIFIER_S3:
-        configKey = SIGNING_ALGORITHM_S3;
-        break;
-      case AWS_SERVICE_IDENTIFIER_STS:
-        configKey = SIGNING_ALGORITHM_STS;
-        break;
-      default:
-        // Nothing to do. The original signer override is already setup
-      }
-      if (configKey != null) {
-        String signerOverride = conf.getTrimmed(configKey, "");
-        if (!signerOverride.isEmpty()) {
-          LOG.debug("Signer override for {}} = {}", awsServiceIdentifier,
-              signerOverride);
-          awsConf.setSignerOverride(signerOverride);
-        }
-      }
-    }
-    return awsConf;
-  }
-
-  /**
-   * Initializes all AWS SDK settings related to connection management.
-   *
-   * @param conf Hadoop configuration
-   * @param awsConf AWS SDK configuration
-   *
-   * @throws IOException if there was an error initializing the protocol
-   *                     settings
-   */
-  public static void initConnectionSettings(Configuration conf,
-      ClientConfiguration awsConf) throws IOException {
-    awsConf.setMaxConnections(intOption(conf, MAXIMUM_CONNECTIONS,
-        DEFAULT_MAXIMUM_CONNECTIONS, 1));
-    initProtocolSettings(conf, awsConf);
-    awsConf.setMaxErrorRetry(intOption(conf, MAX_ERROR_RETRIES,
-        DEFAULT_MAX_ERROR_RETRIES, 0));
-    awsConf.setConnectionTimeout(intOption(conf, ESTABLISH_TIMEOUT,
-        DEFAULT_ESTABLISH_TIMEOUT, 0));
-    awsConf.setSocketTimeout(intOption(conf, SOCKET_TIMEOUT,
-        DEFAULT_SOCKET_TIMEOUT, 0));
-    int sockSendBuffer = intOption(conf, SOCKET_SEND_BUFFER,
-        DEFAULT_SOCKET_SEND_BUFFER, 2048);
-    int sockRecvBuffer = intOption(conf, SOCKET_RECV_BUFFER,
-        DEFAULT_SOCKET_RECV_BUFFER, 2048);
-    long requestTimeoutMillis = conf.getTimeDuration(REQUEST_TIMEOUT,
-        DEFAULT_REQUEST_TIMEOUT, TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
-
-    if (requestTimeoutMillis > Integer.MAX_VALUE) {
-      LOG.debug("Request timeout is too high({} ms). Setting to {} ms instead",
-          requestTimeoutMillis, Integer.MAX_VALUE);
-      requestTimeoutMillis = Integer.MAX_VALUE;
-    }
-    awsConf.setRequestTimeout((int) requestTimeoutMillis);
-    awsConf.setSocketBufferSizeHints(sockSendBuffer, sockRecvBuffer);
-    String signerOverride = conf.getTrimmed(SIGNING_ALGORITHM, "");
-    if (!signerOverride.isEmpty()) {
-     LOG.debug("Signer override = {}", signerOverride);
-      awsConf.setSignerOverride(signerOverride);
-    }
-  }
-
-  /**
-   * Initializes the connection protocol settings when connecting to S3 (e.g.
-   * either HTTP or HTTPS). If secure connections are enabled, this method
-   * will load the configured SSL providers.
-   *
-   * @param conf Hadoop configuration
-   * @param awsConf AWS SDK configuration
-   *
-   * @throws IOException if there is an error initializing the configured
-   *                     {@link javax.net.ssl.SSLSocketFactory}
-   */
-  private static void initProtocolSettings(Configuration conf,
-      ClientConfiguration awsConf) throws IOException {
-    boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS,
-        DEFAULT_SECURE_CONNECTIONS);
-    awsConf.setProtocol(secureConnections ?  Protocol.HTTPS : Protocol.HTTP);
-    if (secureConnections) {
-      NetworkBinding.bindSSLChannelMode(conf, awsConf);
-    }
-  }
-
-  /**
-   * Initializes AWS SDK proxy support in the AWS client configuration
-   * if the S3A settings enable it.
-   * <br>
-   * <i>Note:</i> LimitedPrivate to provide proxy support in ranger repository.
-   *
-   * @param conf Hadoop configuration
-   * @param bucket Optional bucket to use to look up per-bucket proxy secrets
-   * @param awsConf AWS SDK configuration to update
-   * @throws IllegalArgumentException if misconfigured
-   * @throws IOException problem getting username/secret from password source.
-   */
-  @InterfaceAudience.LimitedPrivate("Ranger")
-  public static void initProxySupport(Configuration conf,
-      String bucket,
-      ClientConfiguration awsConf) throws IllegalArgumentException,
-      IOException {
-    String proxyHost = conf.getTrimmed(PROXY_HOST, "");
-    int proxyPort = conf.getInt(PROXY_PORT, -1);
-    if (!proxyHost.isEmpty()) {
-      awsConf.setProxyHost(proxyHost);
-      if (proxyPort >= 0) {
-        awsConf.setProxyPort(proxyPort);
-      } else {
-        if (conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS)) {
-          LOG.warn("Proxy host set without port. Using HTTPS default 443");
-          awsConf.setProxyPort(443);
-        } else {
-          LOG.warn("Proxy host set without port. Using HTTP default 80");
-          awsConf.setProxyPort(80);
-        }
-      }
-      final String proxyUsername = lookupPassword(bucket, conf, PROXY_USERNAME,
-          null, null);
-      final String proxyPassword = lookupPassword(bucket, conf, PROXY_PASSWORD,
-          null, null);
-      if ((proxyUsername == null) != (proxyPassword == null)) {
-        String msg = "Proxy error: " + PROXY_USERNAME + " or " +
-            PROXY_PASSWORD + " set without the other.";
-        LOG.error(msg);
-        throw new IllegalArgumentException(msg);
-      }
-      boolean isProxySecured = conf.getBoolean(PROXY_SECURED, false);
-      awsConf.setProxyUsername(proxyUsername);
-      awsConf.setProxyPassword(proxyPassword);
-      awsConf.setProxyDomain(conf.getTrimmed(PROXY_DOMAIN));
-      awsConf.setProxyWorkstation(conf.getTrimmed(PROXY_WORKSTATION));
-      awsConf.setProxyProtocol(isProxySecured ? Protocol.HTTPS : Protocol.HTTP);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Using proxy server {}://{}:{} as user {} with password {} "
-                + "on domain {} as workstation {}",
-            awsConf.getProxyProtocol(),
-            awsConf.getProxyHost(),
-            awsConf.getProxyPort(),
-            String.valueOf(awsConf.getProxyUsername()),
-            awsConf.getProxyPassword(), awsConf.getProxyDomain(),
-            awsConf.getProxyWorkstation());
-      }
-    } else if (proxyPort >= 0) {
-      String msg =
-          "Proxy error: " + PROXY_PORT + " set without " + PROXY_HOST;
-      LOG.error(msg);
-      throw new IllegalArgumentException(msg);
-    }
-  }
-
-  /**
-   * Initializes the User-Agent header to send in HTTP requests to AWS
-   * services.  We always include the Hadoop version number.  The user also
-   * may set an optional custom prefix to put in front of the Hadoop version
-   * number.  The AWS SDK internally appends its own information, which seems
-   * to include the AWS SDK version, OS and JVM version.
-   *
-   * @param conf Hadoop configuration
-   * @param awsConf AWS SDK configuration to update
-   */
-  private static void initUserAgent(Configuration conf,
-      ClientConfiguration awsConf) {
-    String userAgent = "Hadoop " + VersionInfo.getVersion();
-    String userAgentPrefix = conf.getTrimmed(USER_AGENT_PREFIX, "");
-    if (!userAgentPrefix.isEmpty()) {
-      userAgent = userAgentPrefix + ", " + userAgent;
-    }
-    LOG.debug("Using User-Agent: {}", userAgent);
-    awsConf.setUserAgentPrefix(userAgent);
   }
 
   /**

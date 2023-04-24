@@ -26,6 +26,7 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import org.junit.AfterClass;
@@ -176,8 +177,7 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
     conf.set(YarnConfiguration.RM_PRINCIPAL, YARN_RM);
     // turn on ACLs so as to verify role DT permissions include
     // write access.
-   // TODO: Why do we need this? Can we get rid of ACLs?
-   // conf.set(CANNED_ACL, LOG_DELIVERY_WRITE);
+    conf.set(CANNED_ACL, LOG_DELIVERY_WRITE);
     return conf;
   }
 
@@ -330,10 +330,9 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
         + " if role restricted, permissions are tightened.");
     S3AFileSystem fs = getFileSystem();
     // force a probe of the remote FS to make sure its endpoint is valid
-    // TODO: Previously a call to getObjectMetadata for a base path, ie with an empty key would
-    //  return some metadata. (bucket region, content type). headObject() fails without a key, check
-    // how this can be fixed.
-    // fs.getObjectMetadata(new Path("/"));
+    // TODO: Check what should happen here. Calling headObject() on the root path fails in V2,
+    // with the error that key cannot be empty.
+   // fs.getObjectMetadata(new Path("/"));
     readLandsatMetadata(fs);
 
     URI uri = fs.getUri();
@@ -588,17 +587,18 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
     URI landsat = new URI(DEFAULT_CSVTEST_FILE);
     DefaultS3ClientFactory factory
         = new DefaultS3ClientFactory();
-    factory.setConf(new Configuration(delegatedFS.getConf()));
+    Configuration conf = delegatedFS.getConf();
+    factory.setConf(conf);
     String host = landsat.getHost();
     S3ClientFactory.S3ClientCreationParameters parameters = null;
     parameters = new S3ClientFactory.S3ClientCreationParameters()
         .withCredentialSet(testingCreds)
         .withPathUri(new URI("s3a://localhost/"))
-        .withEndpoint(DEFAULT_ENDPOINT)
         .withMetrics(new EmptyS3AStatisticsContext()
             .newStatisticsFromAwsSdk())
-        .withUserAgentSuffix("ITestSessionDelegationInFilesystem");
-    S3Client s3 = factory.createS3ClientV2(landsat, parameters);
+        .withUserAgentSuffix("ITestSessionDelegationInFilesystem")
+        .withRegion(Region.US_WEST_2);
+    S3Client s3 = factory.createS3Client(landsat, parameters);
 
     return Invoker.once("HEAD", host,
         () -> s3.headBucket(b -> b.bucket(host)));

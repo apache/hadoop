@@ -19,25 +19,11 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 /**
- * Enum to map AWS SDK V1 Acl values to SDK V2.
+ * Enum for progress listener events.
  */
-public enum AWSCannedACL {
-  Private("private"),
-  PublicRead("public-read"),
-  PublicReadWrite("public-read-write"),
-  AuthenticatedRead("authenticated-read"),
-  AwsExecRead("aws-exec-read"),
-  BucketOwnerRead("bucket-owner-read"),
-  BucketOwnerFullControl("bucket-owner-full-control"),
-  LogDeliveryWrite("log-delivery-write");
-
-  private final String value;
-
-  AWSCannedACL(String value){
-    this.value = value;
-  }
-
-  public String toString() {
-    return this.value;
-  }
+public enum ProgressListenerEvent {
+  REQUEST_BYTE_TRANSFER_EVENT,
+  TRANSFER_PART_STARTED_EVENT,
+  TRANSFER_PART_COMPLETED_EVENT,
+  TRANSFER_PART_FAILED_EVENT;
 }

@@ -265,8 +265,9 @@ public class LoggingAuditor
     private void attachRangeFromRequest(SdkHttpRequest request,
         ExecutionAttributes executionAttributes) {
 
-      if (executionAttributes.getAttribute(AwsExecutionAttribute.OPERATION_NAME)
-          .equals("GetObject")) {
+      String operationName = executionAttributes.getAttribute(AwsExecutionAttribute.OPERATION_NAME);
+
+      if (operationName != null && operationName.equals("GetObject")) {
         if (request.headers() != null && request.headers().get("Range") != null) {
           String[] rangeHeader = request.headers().get("Range").get(0).split("=");
           // only set header if range unit is  bytes

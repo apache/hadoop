@@ -26,10 +26,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
-import com.amazonaws.monitoring.MonitoringListener;
-import com.amazonaws.services.s3.AmazonS3;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
@@ -41,7 +40,7 @@ import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
 
 /**
- * Factory for creation of {@link AmazonS3} client instances.
+ * Factory for creation of {@link S3Client} client instances.
  * Important: HBase's HBoss module implements this interface in its
  * tests.
  * Take care when updating this interface to ensure that a client
@@ -56,17 +55,6 @@ import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
 public interface S3ClientFactory {
 
   /**
-   * Creates a new {@link AmazonS3} client.
-   *
-   * @param uri S3A file system URI
-   * @param parameters parameter object
-   * @return S3 client
-   * @throws IOException IO problem
-   */
-  AmazonS3 createS3Client(URI uri,
-      S3ClientCreationParameters parameters) throws IOException;
-
-  /**
    * Creates a new {@link S3Client}.
    * The client returned supports synchronous operations. For
    * asynchronous operations, use
@@ -77,14 +65,14 @@ public interface S3ClientFactory {
    * @return S3 client
    * @throws IOException on any IO problem
    */
-  S3Client createS3ClientV2(URI uri,
+  S3Client createS3Client(URI uri,
       S3ClientCreationParameters parameters) throws IOException;
 
   /**
    * Creates a new {@link S3AsyncClient}.
    * The client returned supports asynchronous operations. For
    * synchronous operations, use
-   * {@link #createS3ClientV2(URI, S3ClientCreationParameters)}.
+   * {@link #createS3Client(URI, S3ClientCreationParameters)}.
    *
    * @param uri S3A file system URI
    * @param parameters parameter object
@@ -97,13 +85,10 @@ public interface S3ClientFactory {
   /**
    * Creates a new {@link S3TransferManager}.
    *
-   * @param uri S3A file system URI
-   * @param parameters parameter object
+   * @param s3AsyncClient the async client to be used by the TM.
    * @return S3 transfer manager
-   * @throws IOException on any IO problem
    */
-  S3TransferManager createS3TransferManager(URI uri,
-      S3ClientCreationParameters parameters) throws IOException;
+  S3TransferManager createS3TransferManager(S3AsyncClient s3AsyncClient);
 
   /**
    * Settings for the S3 Client.
@@ -127,11 +112,6 @@ public interface S3ClientFactory {
      * Custom Headers.
      */
     private final Map<String, String> headers = new HashMap<>();
-
-    /**
-     * Monitoring listener.
-     */
-    private MonitoringListener monitoringListener;
 
     /**
      * RequestMetricCollector metrics...if not-null will be wrapped
@@ -177,6 +157,12 @@ public interface S3ClientFactory {
     private Executor transferManagerExecutor;
 
     /**
+     * Region of the S3 bucket.
+     */
+    private Region region;
+
+
+    /**
      * List of execution interceptors to include in the chain
      * of interceptors in the SDK.
      * @return the interceptors list
@@ -193,21 +179,6 @@ public interface S3ClientFactory {
     public S3ClientCreationParameters withExecutionInterceptors(
         @Nullable final List<ExecutionInterceptor> interceptors) {
       executionInterceptors = interceptors;
-      return this;
-    }
-
-    public MonitoringListener getMonitoringListener() {
-      return monitoringListener;
-    }
-
-    /**
-     * listener for AWS monitoring events.
-     * @param listener listener
-     * @return this object
-     */
-    public S3ClientCreationParameters withMonitoringListener(
-        @Nullable final MonitoringListener listener) {
-      monitoringListener = listener;
       return this;
     }
 
@@ -383,6 +354,26 @@ public interface S3ClientFactory {
         final Executor value) {
       transferManagerExecutor = value;
       return this;
+    }
+
+    /**
+     * Set region.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withRegion(
+        final Region value) {
+      region = value;
+      return this;
+    }
+
+    /**
+     * Get the region.
+     * @return invoker
+     */
+    public Region getRegion() {
+      return region;
     }
   }
 }

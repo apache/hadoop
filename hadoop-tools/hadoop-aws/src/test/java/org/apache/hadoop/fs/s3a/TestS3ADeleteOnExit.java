@@ -75,7 +75,7 @@ public class TestS3ADeleteOnExit extends AbstractS3AMockTest {
     // unset S3CSE property from config to avoid pathIOE.
     conf.unset(Constants.S3_ENCRYPTION_ALGORITHM);
     testFs.initialize(uri, conf);
-    S3Client testS3 = testFs.getAmazonS3V2ClientForTesting("mocking");
+    S3Client testS3 = testFs.getAmazonS3ClientForTesting("mocking");
 
     Path path = new Path("/file");
     String key = path.toUri().getPath().substring(1);

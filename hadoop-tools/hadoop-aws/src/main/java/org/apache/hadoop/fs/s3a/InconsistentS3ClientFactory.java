@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
@@ -45,7 +46,7 @@ public class InconsistentS3ClientFactory extends DefaultS3ClientFactory {
 
   @Override
   protected ClientOverrideConfiguration createClientOverrideConfiguration(
-      S3ClientCreationParameters parameters, Configuration conf) {
+      S3ClientCreationParameters parameters, Configuration conf) throws IOException {
     LOG.warn("** FAILURE INJECTION ENABLED.  Do not run in production! **");
     LOG.warn("List inconsistency is no longer emulated; only throttling and read errors");
     return super.createClientOverrideConfiguration(parameters, conf)

@@ -42,6 +42,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.Statistic.DELEGATION_TOKENS_ISSUED;
@@ -227,10 +228,7 @@ public class S3ADelegationTokens extends AbstractDTService {
     try {
       super.serviceStop();
     } finally {
-      // TODO: Importing the transfer manager preview outside of the bundle causes some
-      //  issues. Over here, it can no longer find the LOG. We expect this to be fixed with the
-      //  release of the TM.
-     // ServiceOperations.stopQuietly(LOG, tokenBinding);
+      ServiceOperations.stopQuietly(LOG, tokenBinding);
     }
   }
 

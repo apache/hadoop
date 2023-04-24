@@ -30,6 +30,7 @@ import java.util.Optional;
 import java.util.TreeMap;
 
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -276,9 +277,28 @@ public class HeaderProcessing extends AbstractStoreOperation {
       final Statistic statistic) throws IOException {
     StoreContext context = getStoreContext();
     String objectKey = context.pathToKey(path);
-    HeadObjectResponse md;
     String symbol = statistic.getSymbol();
     S3AStatisticsContext instrumentation = context.getInstrumentation();
+    Map<String, byte[]> headers = new TreeMap<>();
+    HeadObjectResponse md;
+
+    // Attempting to get metadata for the root, so use head bucket.
+    if (objectKey.isEmpty()) {
+      HeadBucketResponse headBucketResponse =
+          trackDuration(instrumentation, symbol, () -> callbacks.getBucketMetadata());
+
+      if (headBucketResponse.sdkHttpResponse() != null
+          && headBucketResponse.sdkHttpResponse().headers() != null
+          && headBucketResponse.sdkHttpResponse().headers().get(AWSHeaders.CONTENT_TYPE) != null) {
+        maybeSetHeader(headers, XA_CONTENT_TYPE,
+            headBucketResponse.sdkHttpResponse().headers().get(AWSHeaders.CONTENT_TYPE).get(0));
+      }
+
+      maybeSetHeader(headers, XA_CONTENT_LENGTH, 0);
+
+      return headers;
+    }
+
     try {
       md = trackDuration(instrumentation, symbol, () ->
               callbacks.getObjectMetadata(objectKey));
@@ -289,7 +309,6 @@ public class HeaderProcessing extends AbstractStoreOperation {
     }
     // all user metadata
     Map<String, String> rawHeaders = md.metadata();
-    Map<String, byte[]> headers = new TreeMap<>();
     rawHeaders.forEach((key, value) ->
         headers.put(XA_HEADER_PREFIX + key, encodeBytes(value)));
 
@@ -346,9 +365,7 @@ public class HeaderProcessing extends AbstractStoreOperation {
         md.serverSideEncryptionAsString());
     maybeSetHeader(headers, XA_STORAGE_CLASS,
         md.storageClassAsString());
-    // TODO: check this, looks wrong.
-    //    maybeSetHeader(headers, XA_STORAGE_CLASS,
-//        md.getReplicationStatus());
+
     return headers;
   }
 
@@ -525,5 +542,14 @@ public class HeaderProcessing extends AbstractStoreOperation {
      */
     @Retries.RetryTranslated
     HeadObjectResponse getObjectMetadata(String key) throws IOException;
+
+    /**
+     * Retrieve the bucket metadata.
+     *
+     * @return metadata
+     * @throws IOException IO and object access problems.
+     */
+    @Retries.RetryTranslated
+    HeadBucketResponse getBucketMetadata() throws IOException;
   }
 }

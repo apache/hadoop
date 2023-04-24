@@ -53,7 +53,7 @@ import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3AUtils.buildAWSProviderList;
+import static org.apache.hadoop.fs.s3a.auth.AwsCredentialListProvider.buildAWSProviderList;
 
 /**
  * Support IAM Assumed roles by instantiating an instance of

@@ -30,14 +30,13 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.nio.file.AccessDeniedException;
-import java.util.Collections;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import org.junit.Test;
@@ -61,21 +60,26 @@ public class TestS3AExceptionTranslation {
       = new SocketTimeoutException("socket");
 
   @Test
-  public void test301ContainsEndpoint() throws Exception {
-    String bucket = "bucket.s3-us-west-2.amazonaws.com";
-    S3Exception s3Exception = createS3Exception("wrong endpoint",
+  public void test301ContainsRegion() throws Exception {
+    String region = "us-west-1";
+
+    AwsErrorDetails redirectError = AwsErrorDetails.builder()
+        .sdkHttpResponse(
+            SdkHttpResponse.builder().putHeader(BUCKET_REGION_HEADER, region).build())
+        .build();
+
+    S3Exception s3Exception = createS3Exception("wrong region",
         SC_301_MOVED_PERMANENTLY,
-        Collections.singletonMap(S3AUtils.ENDPOINT_KEY,
-            bucket));
+        redirectError);
     AWSRedirectException ex = verifyTranslated(
         AWSRedirectException.class, s3Exception);
     assertStatusCode(SC_301_MOVED_PERMANENTLY, ex);
     assertNotNull(ex.getMessage());
 
-    assertContained(ex.getMessage(), bucket);
-    assertContained(ex.getMessage(), ENDPOINT);
-    assertExceptionContains(ENDPOINT, ex, "endpoint");
-    assertExceptionContains(bucket, ex, "bucket name");
+    assertContained(ex.getMessage(), region);
+    assertContained(ex.getMessage(), AWS_REGION);
+    assertExceptionContains(AWS_REGION, ex, "region");
+    assertExceptionContains(region, ex, "region name");
   }
 
   protected void assertContained(String text, String contained) {
@@ -189,16 +193,13 @@ public class TestS3AExceptionTranslation {
   }
 
   private static S3Exception createS3Exception(String message, int code,
-      Map<String, String> additionalDetails) {
+      AwsErrorDetails additionalDetails) {
+
     S3Exception source = (S3Exception) S3Exception.builder()
         .message(message)
         .statusCode(code)
+        .awsErrorDetails(additionalDetails)
         .build();
-    // TODO: is there an equivalent for v2?
-    //       currently used to retrieve endpoint on redirect
-    //       see S3AUtils.translateException and
-    //       https://github.com/aws/aws-sdk-java-v2/issues/3048
-    // source.setAdditionalDetails(additionalDetails);
     return source;
   }
 

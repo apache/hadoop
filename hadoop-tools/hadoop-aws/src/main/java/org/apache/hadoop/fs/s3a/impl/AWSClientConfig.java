@@ -32,19 +32,19 @@ import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
-// TODO: Update to use the non shaded dependency. There is an issue with the preview version of TM
-//  which is preventing this, should be resolve with the TM release.
-import software.amazon.awssdk.thirdparty.org.apache.http.client.utils.URIBuilder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AUtils;
+import org.apache.hadoop.fs.s3a.auth.SignerFactory;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.http.client.utils.URIBuilder;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_STS;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MAX_ERROR_RETRIES;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_REQUEST_TIMEOUT;
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
@@ -53,10 +53,13 @@ import static org.apache.hadoop.fs.s3a.Constants.PROXY_DOMAIN;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_HOST;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_PASSWORD;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_PORT;
+import static org.apache.hadoop.fs.s3a.Constants.PROXY_SECURED;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_USERNAME;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_WORKSTATION;
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
-import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
+import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
+import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_STS;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
 
@@ -71,7 +74,8 @@ public final class AWSClientConfig {
   private AWSClientConfig() {
   }
 
-  public static ClientOverrideConfiguration.Builder createClientConfigBuilder(Configuration conf) {
+  public static ClientOverrideConfiguration.Builder createClientConfigBuilder(Configuration conf,
+      String awsServiceIdentifier) throws IOException {
     ClientOverrideConfiguration.Builder overrideConfigBuilder =
         ClientOverrideConfiguration.builder();
 
@@ -79,12 +83,14 @@ public final class AWSClientConfig {
 
     initUserAgent(conf, overrideConfigBuilder);
 
-    // TODO: Look at signers. See issue https://github.com/aws/aws-sdk-java-v2/issues/1024
-    //    String signerOverride = conf.getTrimmed(SIGNING_ALGORITHM, "");
-    //    if (!signerOverride.isEmpty()) {
-    //      LOG.debug("Signer override = {}", signerOverride);
-    //      overrideConfigBuilder.putAdvancedOption(SdkAdvancedClientOption.SIGNER)
-    //    }
+    String signer = conf.getTrimmed(SIGNING_ALGORITHM, "");
+    if (!signer.isEmpty()) {
+      LOG.debug("Signer override = {}", signer);
+      overrideConfigBuilder.putAdvancedOption(SdkAdvancedClientOption.SIGNER,
+          SignerFactory.createSigner(signer, SIGNING_ALGORITHM));
+    }
+
+    initSigner(conf, overrideConfigBuilder, awsServiceIdentifier);
 
     return overrideConfigBuilder;
   }
@@ -94,8 +100,10 @@ public final class AWSClientConfig {
    *
    * @param conf The Hadoop configuration
    * @return Http client builder
+   * @throws IOException on any problem
    */
-  public static ApacheHttpClient.Builder createHttpClientBuilder(Configuration conf) {
+  public static ApacheHttpClient.Builder createHttpClientBuilder(Configuration conf)
+      throws IOException {
     ApacheHttpClient.Builder httpClientBuilder =
         ApacheHttpClient.builder();
 
@@ -109,8 +117,7 @@ public final class AWSClientConfig {
     httpClientBuilder.connectionTimeout(Duration.ofSeconds(connectionEstablishTimeout));
     httpClientBuilder.socketTimeout(Duration.ofSeconds(socketTimeout));
 
-    // TODO: Need to set ssl socket factory, as done in
-    //  NetworkBinding.bindSSLChannelMode(conf, awsConf);
+    NetworkBinding.bindSSLChannelMode(conf, httpClientBuilder);
 
     return httpClientBuilder;
   }
@@ -136,7 +143,7 @@ public final class AWSClientConfig {
     httpClientBuilder.readTimeout(Duration.ofSeconds(socketTimeout));
     httpClientBuilder.writeTimeout(Duration.ofSeconds(socketTimeout));
 
-    // TODO: Need to set ssl socket factory, as done in
+    // TODO: Don't think you can set a socket factory for the netty client.
     //  NetworkBinding.bindSSLChannelMode(conf, awsConf);
 
     return httpClientBuilder;
@@ -176,14 +183,15 @@ public final class AWSClientConfig {
 
     if (!proxyHost.isEmpty()) {
       if (proxyPort >= 0) {
-        proxyConfigBuilder.endpoint(buildURI(proxyHost, proxyPort));
+        String scheme = conf.getBoolean(PROXY_SECURED, false) ? "https" : "http";
+        proxyConfigBuilder.endpoint(buildURI(scheme, proxyHost, proxyPort));
       } else {
-        if (conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS)) {
+        if (conf.getBoolean(PROXY_SECURED, false)) {
           LOG.warn("Proxy host set without port. Using HTTPS default 443");
-          proxyConfigBuilder.endpoint(buildURI(proxyHost, 443));
+          proxyConfigBuilder.endpoint(buildURI("https", proxyHost, 443));
         } else {
           LOG.warn("Proxy host set without port. Using HTTP default 80");
-          proxyConfigBuilder.endpoint(buildURI(proxyHost, 80));
+          proxyConfigBuilder.endpoint(buildURI("http", proxyHost, 80));
         }
       }
       final String proxyUsername = S3AUtils.lookupPassword(bucket, conf, PROXY_USERNAME,
@@ -235,17 +243,21 @@ public final class AWSClientConfig {
 
     if (!proxyHost.isEmpty()) {
       if (proxyPort >= 0) {
+        String scheme = conf.getBoolean(PROXY_SECURED, false) ? "https" : "http";
         proxyConfigBuilder.host(proxyHost);
         proxyConfigBuilder.port(proxyPort);
+        proxyConfigBuilder.scheme(scheme);
       } else {
-        if (conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS)) {
+        if (conf.getBoolean(PROXY_SECURED, false)) {
           LOG.warn("Proxy host set without port. Using HTTPS default 443");
           proxyConfigBuilder.host(proxyHost);
           proxyConfigBuilder.port(443);
+          proxyConfigBuilder.scheme("https");
         } else {
           LOG.warn("Proxy host set without port. Using HTTP default 80");
           proxyConfigBuilder.host(proxyHost);
           proxyConfigBuilder.port(80);
+          proxyConfigBuilder.scheme("http");
         }
       }
       final String proxyUsername = S3AUtils.lookupPassword(bucket, conf, PROXY_USERNAME,
@@ -287,9 +299,9 @@ public final class AWSClientConfig {
    * @param port proxy port
    * @return uri with host and port
    */
-  private static URI buildURI(String host, int port) {
+  private static URI buildURI(String scheme, String host, int port) {
     try {
-      return new URIBuilder().setHost(host).setPort(port).build();
+      return new URIBuilder().setScheme(scheme).setHost(host).setPort(port).build();
     } catch (URISyntaxException e) {
       String msg =
           "Proxy error: incorrect " + PROXY_HOST + " or " + PROXY_PORT;
@@ -317,6 +329,30 @@ public final class AWSClientConfig {
     }
     LOG.debug("Using User-Agent: {}", userAgent);
     clientConfig.putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX, userAgent);
+  }
+
+  private static void initSigner(Configuration conf,
+      ClientOverrideConfiguration.Builder clientConfig, String awsServiceIdentifier)
+      throws IOException {
+    String configKey = null;
+    switch (awsServiceIdentifier) {
+    case AWS_SERVICE_IDENTIFIER_S3:
+      configKey = SIGNING_ALGORITHM_S3;
+      break;
+    case AWS_SERVICE_IDENTIFIER_STS:
+      configKey = SIGNING_ALGORITHM_STS;
+      break;
+    default:
+      // Nothing to do. The original signer override is already setup
+    }
+    if (configKey != null) {
+      String signerOverride = conf.getTrimmed(configKey, "");
+      if (!signerOverride.isEmpty()) {
+        LOG.debug("Signer override for {}} = {}", awsServiceIdentifier, signerOverride);
+        clientConfig.putAdvancedOption(SdkAdvancedClientOption.SIGNER,
+            SignerFactory.createSigner(signerOverride, configKey));
+      }
+    }
   }
 
   /**

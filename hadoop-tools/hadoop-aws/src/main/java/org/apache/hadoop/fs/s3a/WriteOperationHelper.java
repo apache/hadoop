@@ -709,6 +709,7 @@ public class WriteOperationHelper implements WriteOperations {
     /**
      * Initiates a select request.
      * @param request selectObjectContent request
+     * @param t selectObjectContent request handler
      * @return selectObjectContentResult
      */
     CompletableFuture<Void> selectObjectContent(SelectObjectContentRequest request,

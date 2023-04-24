@@ -64,7 +64,7 @@ public abstract class AbstractS3AMockTest {
     // unset S3CSE property from config to avoid pathIOE.
     conf.unset(Constants.S3_ENCRYPTION_ALGORITHM);
     fs.initialize(uri, conf);
-    s3 = fs.getAmazonS3V2ClientForTesting("mocking");
+    s3 = fs.getAmazonS3ClientForTesting("mocking");
   }
 
   public Configuration createConfiguration() {
@@ -79,6 +79,8 @@ public abstract class AbstractS3AMockTest {
     // assertions to be safely made without worrying
     // about any race conditions
     conf.setInt(ASYNC_DRAIN_THRESHOLD, Integer.MAX_VALUE);
+    // set the region to avoid the getBucketLocation on FS init.
+    conf.set(AWS_REGION, "eu-west-1");
     return conf;
   }
 

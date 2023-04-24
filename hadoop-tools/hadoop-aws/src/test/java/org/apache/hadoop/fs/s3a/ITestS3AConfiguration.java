@@ -18,11 +18,17 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.ClientConfiguration;
 import software.amazon.awssdk.core.client.config.SdkClientConfiguration;
 import software.amazon.awssdk.core.client.config.SdkClientOption;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.core.signer.Signer;
+import software.amazon.awssdk.http.SdkHttpFullRequest;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.model.StsException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -30,11 +36,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -53,7 +59,6 @@ import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.http.HttpStatus;
 import org.junit.rules.TemporaryFolder;
-
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
@@ -113,7 +118,7 @@ public class ITestS3AConfiguration {
     } else {
       conf.set(Constants.ENDPOINT, endpoint);
       fs = S3ATestUtils.createTestFileSystem(conf);
-      S3Client s3 = fs.getAmazonS3V2ClientForTesting("test endpoint");
+      S3Client s3 = fs.getAmazonS3ClientForTesting("test endpoint");
       String endPointRegion = "";
       // Differentiate handling of "s3-" and "s3." based endpoint identifiers
       String[] endpointParts = StringUtils.split(endpoint, '.');
@@ -353,7 +358,7 @@ public class ITestS3AConfiguration {
     try {
       fs = S3ATestUtils.createTestFileSystem(conf);
       assertNotNull(fs);
-      S3Client s3 = fs.getAmazonS3V2ClientForTesting("configuration");
+      S3Client s3 = fs.getAmazonS3ClientForTesting("configuration");
       assertNotNull(s3);
 
       SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
@@ -388,7 +393,7 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
-    S3Client s3 = fs.getAmazonS3V2ClientForTesting("User Agent");
+    S3Client s3 = fs.getAmazonS3ClientForTesting("User Agent");
     assertNotNull(s3);
     SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
@@ -403,7 +408,7 @@ public class ITestS3AConfiguration {
     conf.set(Constants.USER_AGENT_PREFIX, "MyApp");
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
-    S3Client s3 = fs.getAmazonS3V2ClientForTesting("User agent");
+    S3Client s3 = fs.getAmazonS3ClientForTesting("User agent");
     assertNotNull(s3);
     SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
@@ -417,7 +422,7 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     conf.set(REQUEST_TIMEOUT, "120");
     fs = S3ATestUtils.createTestFileSystem(conf);
-    S3Client s3 = fs.getAmazonS3V2ClientForTesting("Request timeout (ms)");
+    S3Client s3 = fs.getAmazonS3ClientForTesting("Request timeout (ms)");
     SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
     assertEquals("Configured " + REQUEST_TIMEOUT +
@@ -525,37 +530,74 @@ public class ITestS3AConfiguration {
 
   @Test(timeout = 10_000L)
   public void testS3SpecificSignerOverride() throws IOException {
-    ClientConfiguration clientConfiguration = null;
-    Configuration config;
+    Configuration config = new Configuration();
 
-    String signerOverride = "testSigner";
-    String s3SignerOverride = "testS3Signer";
+    config.set(CUSTOM_SIGNERS,
+        "CustomS3Signer:" + CustomS3Signer.class.getName() + ",CustomSTSSigner:"
+            + CustomSTSSigner.class.getName());
 
-    // Default SIGNING_ALGORITHM, overridden for S3 only
-    config = new Configuration();
-    config.set(SIGNING_ALGORITHM_S3, s3SignerOverride);
+    config.set(SIGNING_ALGORITHM_S3, "CustomS3Signer");
+    config.set(SIGNING_ALGORITHM_STS, "CustomSTSSigner");
 
-    // TODO: update during signer work.
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_S3);
-    Assert.assertEquals(s3SignerOverride,
-        clientConfiguration.getSignerOverride());
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_STS);
-    Assert.assertNull(clientConfiguration.getSignerOverride());
+    config.set(AWS_REGION, "eu-west-1");
+    fs = S3ATestUtils.createTestFileSystem(config);
 
-    // Configured base SIGNING_ALGORITHM, overridden for S3 only
-    config = new Configuration();
-    config.set(SIGNING_ALGORITHM, signerOverride);
-    config.set(SIGNING_ALGORITHM_S3, s3SignerOverride);
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_S3);
-    Assert.assertEquals(s3SignerOverride,
-        clientConfiguration.getSignerOverride());
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_STS);
-    Assert
-        .assertEquals(signerOverride, clientConfiguration.getSignerOverride());
+    S3Client s3Client = fs.getAmazonS3ClientForTesting("testS3SpecificSignerOverride");
+
+    StsClient stsClient =
+        STSClientFactory.builder(config, fs.getBucket(), new AnonymousAWSCredentialsProvider(), "",
+            "").build();
+
+    try {
+      stsClient.getSessionToken();
+    } catch (StsException exception) {
+      // Expected 403, as credentials are not provided.
+    }
+
+    try {
+      s3Client.headBucket(HeadBucketRequest.builder().bucket(fs.getBucket()).build());
+    } catch (S3Exception exception) {
+      // Expected 403, as credentials are not provided.
+    }
+
+    Assertions.assertThat(CustomS3Signer.isS3SignerCalled())
+        .describedAs("Custom S3 signer not called").isTrue();
+
+    Assertions.assertThat(CustomSTSSigner.isSTSSignerCalled())
+        .describedAs("Custom STS signer not called").isTrue();
   }
 
+  public static final class CustomS3Signer implements Signer {
+
+    private static boolean s3SignerCalled = false;
+
+    @Override
+    public SdkHttpFullRequest sign(SdkHttpFullRequest request,
+        ExecutionAttributes executionAttributes) {
+      LOG.debug("Custom S3 signer called");
+      s3SignerCalled = true;
+      return request;
+    }
+
+    public static boolean isS3SignerCalled() {
+      return s3SignerCalled;
+    }
+  }
+
+  public static final class CustomSTSSigner implements Signer {
+
+    private static boolean stsSignerCalled = false;
+
+    @Override
+    public SdkHttpFullRequest sign(SdkHttpFullRequest request,
+        ExecutionAttributes executionAttributes) {
+      LOG.debug("Custom STS signer called");
+      stsSignerCalled = true;
+      return request;
+    }
+
+    public static boolean isSTSSignerCalled() {
+      return stsSignerCalled;
+    }
+  }
 }

@@ -64,9 +64,6 @@ public class ITestXAttrCost extends AbstractS3ACostTest {
   @Test
   public void testXAttrRoot() throws Throwable {
     describe("Test xattr on root");
-    // TODO: Previously a call to getObjectMetadata for a base path, ie with an empty key would
-    //  return some metadata. (bucket region, content type). headObject() fails without a key, check
-    // how this can be fixed.
     Path root = new Path("/");
     S3AFileSystem fs = getFileSystem();
     Map<String, byte[]> xAttrs = verifyMetrics(

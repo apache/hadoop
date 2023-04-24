@@ -207,15 +207,13 @@ public class ChangeTracker {
     // be the same on the copy.  As such, there isn't really anything that
     // can be verified on the response, except that a revision ID is present
     // if required.
-    // TODO: Commenting out temporarily, due to the TM not returning copyObjectResult
-    //  in the response.
-//    String newRevisionId = policy.getRevisionId(copyObjectResponse);
-//    LOG.debug("Copy result {}: {}", policy.getSource(), newRevisionId);
-//    if (newRevisionId == null && policy.isRequireVersion()) {
-//      throw new NoVersionAttributeException(uri, String.format(
-//          "Change detection policy requires %s",
-//          policy.getSource()));
-//    }
+    String newRevisionId = policy.getRevisionId(copyObjectResponse);
+    LOG.debug("Copy result {}: {}", policy.getSource(), newRevisionId);
+    if (newRevisionId == null && policy.isRequireVersion()) {
+      throw new NoVersionAttributeException(uri, String.format(
+          "Change detection policy requires %s",
+          policy.getSource()));
+    }
   }
 
   /**
@@ -232,9 +230,6 @@ public class ChangeTracker {
       RemoteFileChangedException {
     if (e instanceof AwsServiceException) {
       AwsServiceException serviceException = (AwsServiceException)e;
-      // TODO: Verify whether this is fixed in SDK v2.
-      // In SDK v1, this wasn't really going to be hit due to
-      // https://github.com/aws/aws-sdk-java/issues/1644
       if (serviceException.statusCode() == SC_412_PRECONDITION_FAILED) {
         versionMismatches.versionMismatchError();
         throw new RemoteFileChangedException(uri, operation, String.format(
