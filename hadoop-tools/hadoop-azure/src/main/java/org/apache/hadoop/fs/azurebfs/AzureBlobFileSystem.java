@@ -24,10 +24,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.AccessDeniedException;
 import java.util.Hashtable;
 import java.util.List;
@@ -231,16 +229,6 @@ public class AzureBlobFileSystem extends FileSystem
     if (!isNamespaceEnabled && (abfsConfiguration.shouldEnableBlobEndPoint() ||
             uri.toString().contains(FileSystemUriSchemes.WASB_DNS_PREFIX))) {
       this.prefixMode = PrefixMode.BLOB;
-    }
-    abfsConfiguration.setPrefixMode(this.prefixMode);
-    if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
-      if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH), tracingContext) == null) {
-        try {
-          this.createFileSystem(tracingContext);
-        } catch (AzureBlobFileSystemException ex) {
-          checkException(null, ex, AzureServiceErrorCode.FILE_SYSTEM_ALREADY_EXISTS);
-        }
-      }
     }
     abfsConfiguration.setPrefixMode(this.prefixMode);
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
