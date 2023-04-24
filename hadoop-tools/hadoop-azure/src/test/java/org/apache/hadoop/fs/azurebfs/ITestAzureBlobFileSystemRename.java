@@ -1877,6 +1877,207 @@ public class ITestAzureBlobFileSystemRename extends
     );
   }
 
+  @Test
+  public void testImplicitDirectoryIntoSameNameDestination() throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        "src",
+        null,
+        null,
+        true, true
+    );
+  }
+
+  @Test
+  public void testImplicitDirectoryIntoExplicitDestination() throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        null,
+        null,
+        null,
+        true, true
+    );
+  }
+
+  @Test
+  public void testRenameImplicitDirectoryToExplicitDirectoryDestinationHavingSameNameSubDir() throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        null,
+        null,
+        "src",
+        true, false
+    );
+  }
+
+  @Test
+  public void testRenameImplicitDirectoryToExplicitDirectoryDestinationHavingSameNameSubFile() throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        null,
+        "src",
+        null,
+        true, false
+    );
+  }
+
+  @Test
+  public void testRenameImplicitDirectoryToExplicitDirectoryDestinationHavingSameNameImplicitSubDir() throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        null,
+        null,
+        "src",
+        false, false
+    );
+  }
+
+  @Test
+  public void testImplicitDirectoryIntoSameNameImplicitDestination() throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        "src",
+        null,
+        null,
+        true, true
+    );
+  }
+
+  @Test
+  public void testImplicitDirectoryIntoImplicitDestination() throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        null,
+        null,
+        null,
+        true, true
+    );
+  }
+
+  @Test
+  public void testRenameImplicitDirectoryToImplicitDirectoryDestinationHavingSameNameSubDir() throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        null,
+        null,
+        "src",
+        true, false
+    );
+  }
+
+  @Test
+  public void testRenameImplicitDirectoryToImplicitDirectoryDestinationHavingSameNameSubFile() throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        null,
+        "src",
+        null,
+        true, false
+    );
+  }
+
+  @Test
+  public void testRenameImplicitDirectoryToImplicitDirectoryDestinationHavingSameNameImplicitSubDir() throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        null,
+        null,
+        "src",
+        false, false
+    );
+  }
+
+
   private void explicitImplicitDirectoryRenameTest(Boolean srcParentExplicit,
       Boolean srcExplicit,
       Boolean srcSubDirExplicit,
