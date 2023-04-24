@@ -2230,6 +2230,31 @@ public class TestWebHDFS {
     }
   }
 
+  @Test
+  public void testFileLinkStatus() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster.waitActive();
+
+      final WebHdfsFileSystem webHdfs =
+          WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+              WebHdfsConstants.WEBHDFS_SCHEME);
+      // Symbolic link
+      Path root = new Path("/webHdfsTest/");
+      Path file = new Path(root, "file");
+      FileSystemTestHelper.createFile(webHdfs, file);
+
+      Path linkToFile = new Path(root, "linkToFile");
+
+      webHdfs.createSymlink(file, linkToFile, false);
+      assertFalse(webHdfs.getFileLinkStatus(file).isSymlink());
+      assertTrue(webHdfs.getFileLinkStatus(linkToFile).isSymlink());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   /**
    * Get FileStatus JSONObject from ListStatus response.
    */
