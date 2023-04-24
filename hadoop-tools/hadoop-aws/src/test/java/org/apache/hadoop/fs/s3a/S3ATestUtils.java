@@ -1508,7 +1508,6 @@ public final class S3ATestUtils {
    * @param conf Configuration to remove the prefetch property from.
    */
   public static void disablePrefetching(Configuration conf) {
-    // TODO: Reinstate once HADOOP-18028 is merged.
-    // removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
+    removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
   }
 }
