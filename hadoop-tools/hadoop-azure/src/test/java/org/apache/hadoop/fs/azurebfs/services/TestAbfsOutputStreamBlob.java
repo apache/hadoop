@@ -353,7 +353,8 @@ public final class TestAbfsOutputStreamBlob {
         AbfsOutputStream out = Mockito.spy(getOutputStream(client, getConf()));
         LinkedHashMap<String, BlockStatus> map = Mockito.spy(new LinkedHashMap<>());
         map.put("MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", BlockStatus.SUCCESS);
-        when(out.getMap().containsKey(any())).thenReturn(true);
+        when(out.getMap()).thenReturn(map);
+        when(out.getMap().containsKey(anyString())).thenReturn(true);
 
         final byte[] b = new byte[BUFFER_SIZE];
         new Random().nextBytes(b);

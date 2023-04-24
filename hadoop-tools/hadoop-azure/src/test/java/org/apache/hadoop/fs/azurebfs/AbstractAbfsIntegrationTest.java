@@ -57,6 +57,8 @@ import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DNS_PREFIX;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.WASB_DNS_PREFIX;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.FILE_SYSTEM_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -320,6 +322,11 @@ public abstract class AbstractAbfsIntegrationTest extends
   }
 
   protected String getTestUrl() {
+    if (abfsConfig.shouldEnableBlobEndPoint()) {
+      if (testUrl.contains(ABFS_DNS_PREFIX)) {
+        testUrl = testUrl.replace(ABFS_DNS_PREFIX, WASB_DNS_PREFIX);
+      }
+    }
     return testUrl;
   }
 
