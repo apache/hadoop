@@ -95,6 +95,18 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   }
 
   @Test
+  public void testRenameNonExistentFileInImplicitParent() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    createAzCopyDirectory(new Path("/src"));
+    intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(new Path("/src"), Mockito.mock(
+          TracingContext.class));
+    });
+
+    Assert.assertFalse(fs.rename(new Path("/src/file"), new Path("/dstFile2")));
+  }
+
+  @Test
   public void testRenameFileToNonExistingDstInImplicitParent()
       throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
@@ -703,6 +715,48 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
         null,
         "src",
         false, false
+    );
+  }
+
+  @Test
+  public void testRenameExplicitSrcWithImplicitSubDirToImplicitDstWithExplicitSubDir()
+    throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        null,
+        null,
+        null,
+        true, true
+    );
+  }
+
+  @Test
+  public void testRenameExplicitSrcWithImplicitSubDirToImplicitDstWithImplicitSubDir()
+      throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        null,
+        null,
+        null,
+        false, true
     );
   }
 
