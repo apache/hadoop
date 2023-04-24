@@ -92,7 +92,7 @@ public class Fetcher<K, V> extends Thread {
   protected final ShuffleClientMetrics metrics;
   protected final ExceptionReporter exceptionReporter;
   protected final int id;
-  private static final AtomicInteger nextId = new AtomicInteger(0);
+  private static final AtomicInteger NEXT_ID = new AtomicInteger(0);
   protected final int reduce;
   
   private final int connectionTimeout;
@@ -119,7 +119,7 @@ public class Fetcher<K, V> extends Thread {
                  Reporter reporter, ShuffleClientMetrics metrics,
                  ExceptionReporter exceptionReporter, SecretKey shuffleKey) {
     this(job, reduceId, scheduler, merger, reporter, metrics,
-        exceptionReporter, shuffleKey, nextId.incrementAndGet());
+        exceptionReporter, shuffleKey, NEXT_ID.incrementAndGet());
   }
 
   @VisibleForTesting
