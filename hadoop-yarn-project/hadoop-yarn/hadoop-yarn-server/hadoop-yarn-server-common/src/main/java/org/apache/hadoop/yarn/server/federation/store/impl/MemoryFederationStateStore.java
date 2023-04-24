@@ -391,28 +391,6 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public void checkVersion() throws Exception {
-    Version loadedVersion = loadVersion();
-    LOG.info("Loaded Router State Version Info = {}.", loadedVersion);
-    Version currentVersion = getCurrentVersion();
-    if (loadedVersion != null && loadedVersion.equals(currentVersion)) {
-      return;
-    }
-    // if there is no version info, treat it as CURRENT_VERSION_INFO;
-    if (loadedVersion == null) {
-      loadedVersion = currentVersion;
-    }
-    if (loadedVersion.isCompatibleTo(currentVersion)) {
-      LOG.info("Storing Router State Version Info {}.", currentVersion);
-      storeVersion();
-    } else {
-      throw new FederationStateVersionIncompatibleException(
-          "Expecting Router state version " + currentVersion +
-          ", but loading version " + loadedVersion);
-    }
-  }
-
-  @Override
   public AddReservationHomeSubClusterResponse addReservationHomeSubCluster(
       AddReservationHomeSubClusterRequest request) throws YarnException {
     FederationReservationHomeSubClusterStoreInputValidator.validate(request);

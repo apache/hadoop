@@ -30,7 +30,6 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -38,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos;
 import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreInvalidInputException;
@@ -102,6 +102,7 @@ import org.apache.hadoop.yarn.server.federation.store.sql.RouterMasterKeyHandler
 import org.apache.hadoop.yarn.server.federation.store.sql.RouterStoreTokenHandler;
 import org.apache.hadoop.yarn.server.federation.store.sql.RowCountHandler;
 import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
@@ -202,6 +203,12 @@ public class SQLFederationStateStore implements FederationStateStore {
   protected static final String CALL_SP_DELETE_DELEGATIONTOKEN =
       "{call sp_deleteDelegationToken(?, ?)}";
 
+  private static final String CALL_SP_STORE_VERSION =
+      "{call sp_storeVersion(?, ?, ?, ?)}";
+
+  private static final String CALL_SP_LOAD_VERSION =
+      "{call sp_getVersion(?, ?, ?, ?)}";
+
   private Calendar utcCalendar =
       Calendar.getInstance(TimeZone.getTimeZone("UTC"));
 
@@ -217,6 +224,8 @@ public class SQLFederationStateStore implements FederationStateStore {
   @VisibleForTesting
   private Connection conn = null;
   private int maxAppsInStateStore;
+
+  protected static final Version CURRENT_VERSION_INFO = Version.newInstance(1, 1);
 
   @Override
   public void init(Configuration conf) throws YarnException {
@@ -993,22 +1002,93 @@ public class SQLFederationStateStore implements FederationStateStore {
 
   @Override
   public Version getCurrentVersion() {
-    throw new NotImplementedException("Code is not implemented");
+    return CURRENT_VERSION_INFO;
   }
 
   @Override
   public Version loadVersion() throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+    return getVersion();
+  }
+
+  public Version getVersion() throws Exception {
+    CallableStatement cstmt = null;
+    Version version = null;
+
+    try {
+      cstmt = getCallableStatement(CALL_SP_LOAD_VERSION);
+
+      // Set the parameters for the stored procedure
+      cstmt.registerOutParameter("fedVersion_OUT", java.sql.Types.VARBINARY);
+      cstmt.registerOutParameter("versionComment_OUT", VARCHAR);
+
+      // Execute the query
+      long startTime = clock.getTime();
+      cstmt.executeUpdate();
+      long stopTime = clock.getTime();
+
+      // Check if the output it is a valid policy
+      String versionComment = cstmt.getString("versionComment_OUT");
+      byte[] fedVersion = cstmt.getBytes("fedVersion_OUT");
+      if (versionComment != null && fedVersion != null) {
+        version = new VersionPBImpl(YarnServerCommonProtos.VersionProto.parseFrom(fedVersion));
+      }
+    } catch (SQLException e) {
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+        "Unable to select the version.");
+    } finally {
+      // Return to the pool the CallableStatement
+      FederationStateStoreUtils.returnToPool(LOG, cstmt);
+    }
+    return version;
   }
 
   @Override
   public void storeVersion() throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+    byte[] fedVersion = ((VersionPBImpl) CURRENT_VERSION_INFO).getProto().toByteArray();
+    String versionComment = CURRENT_VERSION_INFO.toString();
+    storeVersion(fedVersion, versionComment);
   }
 
-  @Override
-  public void checkVersion() throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+  public void storeVersion(byte[] fedVersion, String versionComment) throws YarnException {
+    CallableStatement cstmt = null;
+
+    try {
+      cstmt = getCallableStatement(CALL_SP_STORE_VERSION);
+
+      // Set the parameters for the stored procedure
+      cstmt.setBytes("fedVersion_IN", fedVersion);
+      cstmt.setString("versionComment_IN", versionComment);
+      cstmt.registerOutParameter("rowCount_OUT", INTEGER);
+
+      // Execute the query
+      long startTime = clock.getTime();
+      cstmt.executeUpdate();
+      long stopTime = clock.getTime();
+
+      // Check the ROWCOUNT value, if it is equal to 0 it means the call
+      // did not add a new policy into FederationStateStore
+      int rowCount = cstmt.getInt("rowCount_OUT");
+      if (rowCount == 0) {
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "The version %s was not insert into the StateStore.", versionComment);
+      }
+      // Check the ROWCOUNT value, if it is different from 1 it means the call
+      // had a wrong behavior. Maybe the database is not set correctly.
+      if (rowCount != 1) {
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "Wrong behavior during insert the version %s.", versionComment);
+      }
+
+      LOG.info("Insert into the state store the version : {}.", versionComment);
+      FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
+    } catch (SQLException e) {
+      FederationStateStoreClientMetrics.failedStateStoreCall();
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to insert the newly version : %s.", versionComment);
+    } finally {
+      // Return to the pool the CallableStatement
+      FederationStateStoreUtils.returnToPool(LOG, cstmt);
+    }
   }
 
   @Override
