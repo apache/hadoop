@@ -1584,4 +1584,134 @@ public class ITestAzureBlobFileSystemRename extends
     Assert.assertTrue(fs.exists(new Path("/dst/dir/subFile")));
     Assert.assertTrue(fs.exists(new Path("/dst/dir/subDir/subFile")));
   }
+
+  @Test
+  public void testRenameImplicitDirectoryContainingExplicitDirectory() throws Exception {
+    explicitImplicitDirectoryRenameTest(
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true
+    );
+//    AzureBlobFileSystem fs = getFileSystem();
+//    fs.mkdirs(new Path("/srcParent"));
+//    createAzCopyDirectory(new Path("/srcParent/src"));
+//    fs.mkdirs(new Path("/srcParent/src/subDir"));
+//    createAzCopyFile(new Path("/src/Parent/src/subFile"));
+//    intercept(AbfsRestOperationException.class, () -> {
+//      fs.getAbfsStore().getBlobProperty(new Path("/srcParent/src"),
+//          Mockito.mock(TracingContext.class));
+//    });
+//    fs.mkdirs(new Path("/dstParent"));
+//    Assert.assertTrue(fs.rename(new Path("/srcParent/src"), new Path("/dstParent/dst")));
+//    Assert.assertTrue(fs.getAbfsStore().getBlobProperty(new Path("/dstParent/dst"), Mockito.mock(TracingContext.class)).getIsDirectory());
+//    fs.exists(new Path("/dstParent/dst/subDir"));
+//    fs.exists(new Path("/dstParent/dst/subFile"));
+  }
+
+  private void explicitImplicitDirectoryRenameTest(Boolean srcParentExplicit,
+      Boolean srcExplicit,
+      Boolean srcSubDirExplicit,
+      Boolean dstParentExplicit,
+      Boolean dstExplicit,
+      Boolean dstParentExists,
+      Boolean isDstParentFile,
+      Boolean dstExist,
+      Boolean isDstFile,
+      Boolean shouldRenamePass) throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    Path srcParent = new Path("/srcParent");
+    if (srcParentExplicit) {
+      fs.mkdirs(srcParent);
+    } else {
+      createAzCopyDirectory(srcParent);
+    }
+    Path src = new Path(srcParent, "src");
+    if (srcExplicit) {
+      fs.mkdirs(src);
+    } else {
+      createAzCopyDirectory(src);
+    }
+    createAzCopyFile(new Path(src, "subFile"));
+    if (srcSubDirExplicit) {
+      fs.mkdirs(new Path(src, "subDir"));
+    } else {
+      createAzCopyDirectory(new Path(src, "subDir"));
+    }
+    if (!srcParentExplicit) {
+      intercept(AbfsRestOperationException.class, () -> {
+        fs.getAbfsStore()
+            .getBlobProperty(srcParent, Mockito.mock(TracingContext.class));
+      });
+    }
+    if (!srcExplicit) {
+      intercept(AbfsRestOperationException.class, () -> {
+        fs.getAbfsStore()
+            .getBlobProperty(src, Mockito.mock(TracingContext.class));
+      });
+    }
+    Path dstParent = new Path("/dstParent");
+    if (dstParentExists) {
+      if (!isDstParentFile) {
+        if (dstParentExplicit) {
+          fs.mkdirs(dstParent);
+        } else {
+          createAzCopyDirectory(dstParent);
+        }
+      } else {
+        createAzCopyFile(dstParent);
+      }
+    }
+    Path dst = new Path(dstParent, "dst");
+    if (dstExist) {
+      if (!isDstFile) {
+        if (dstExplicit) {
+          fs.mkdirs(dst);
+        } else {
+          createAzCopyDirectory(dst);
+        }
+      } else {
+        createAzCopyFile(dst);
+      }
+    }
+
+    if (dstParentExists && isDstParentFile && !dstParentExplicit) {
+      intercept(AbfsRestOperationException.class, () -> {
+        fs.getAbfsStore()
+            .getBlobProperty(dstParent, Mockito.mock(TracingContext.class));
+      });
+    }
+
+    if (shouldRenamePass) {
+      Assert.assertTrue(fs.rename(src, dst));
+      if (dstExist) {
+        Assert.assertTrue(fs.getAbfsStore()
+            .getBlobProperty(new Path(dst, src.getName()),
+                Mockito.mock(TracingContext.class))
+            .getIsDirectory());
+      } else {
+        Assert.assertTrue(fs.getAbfsStore()
+            .getBlobProperty(dst, Mockito.mock(TracingContext.class))
+            .getIsDirectory());
+      }
+    } else {
+      Assert.assertFalse(fs.rename(src, dst));
+      Assert.assertTrue(fs.getAbfsStore()
+          .getListBlobs(src, null, Mockito.mock(TracingContext.class), null,
+              false)
+          .size() == 3);
+      if (dstExist) {
+        Assert.assertTrue(fs.getAbfsStore()
+            .getListBlobs(dst, null, Mockito.mock(TracingContext.class), null,
+                false)
+            .size() > 0);
+      }
+    }
+  }
 }
