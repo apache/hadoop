@@ -1449,25 +1449,54 @@ public class ITestAzureBlobFileSystemRename extends
   public void testParallelCopy() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     fs.create(new Path("/src"));
+    boolean[] dstBlobAlreadyThereExceptionReceived = new boolean[1];
+    dstBlobAlreadyThereExceptionReceived[0] = false;
+    AtomicInteger threadsCompleted = new AtomicInteger(0);
     new Thread(() -> {
-      try {
-        fs.getAbfsStore().copyBlob(new Path("/src"),
-            new Path("/dst"), Mockito.mock(TracingContext.class));
-      } catch (
-          AzureBlobFileSystemException e) {
-        throw new RuntimeException(e);
-      }
+      parallelCopyRunnable(fs, dstBlobAlreadyThereExceptionReceived,
+          threadsCompleted);
     }).start();
-    fs.getAbfsStore().copyBlob(new Path("/src"),
-        new Path("/dst"), Mockito.mock(TracingContext.class));
-    Thread.sleep(10000);
+    new Thread(() -> {
+      parallelCopyRunnable(fs, dstBlobAlreadyThereExceptionReceived,
+          threadsCompleted);
+    }).start();
+    while (threadsCompleted.get() < 2) ;
+    Assert.assertTrue(dstBlobAlreadyThereExceptionReceived[0]);
+  }
+
+  private void parallelCopyRunnable(final AzureBlobFileSystem fs,
+      final boolean[] dstBlobAlreadyThereExceptionReceived,
+      final AtomicInteger threadsCompleted) {
+    try {
+      fs.getAbfsClient().copyBlob(new Path("/src"),
+          new Path("/dst"), Mockito.mock(TracingContext.class));
+    } catch (AbfsRestOperationException ex) {
+      if (ex.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+        dstBlobAlreadyThereExceptionReceived[0] = true;
+      }
+    } catch (
+        AzureBlobFileSystemException e) {
+    }
+    threadsCompleted.incrementAndGet();
   }
 
   @Test
   public void testCopyAfterSourceHasBeenDeleted() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     fs.create(new Path("/src"));
-    fs.getAbfsStore().getClient().deleteBlobPath(new Path("/src"), Mockito.mock(TracingContext.class));
-    fs.getAbfsStore().copyBlob(new Path("/src"), new Path("/dst"), Mockito.mock(TracingContext.class));
+    fs.getAbfsStore()
+        .getClient()
+        .deleteBlobPath(new Path("/src"), Mockito.mock(TracingContext.class));
+    Boolean srcBlobNotFoundExReceived = false;
+    try {
+      fs.getAbfsStore()
+          .copyBlob(new Path("/src"), new Path("/dst"),
+              Mockito.mock(TracingContext.class));
+    } catch (AbfsRestOperationException ex) {
+      if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+        srcBlobNotFoundExReceived = true;
+      }
+    }
+    Assert.assertTrue(srcBlobNotFoundExReceived);
   }
 }
