@@ -871,7 +871,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     long id = getId();
     return (int)(id^(id>>>32));  
   }
-  
+
+  @VisibleForTesting
+  public final StringBuilder dumpParentINodes() {
+    final StringBuilder b = parent == null? new StringBuilder()
+        : parent.dumpParentINodes().append("\n  ");
+    return b.append(toDetailString());
+  }
+
   /**
    * Dump the subtree starting from this inode.
    * @return a text representation of the tree.
@@ -896,10 +903,17 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   @VisibleForTesting
   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
       int snapshotId) {
+    dumpINode(out, prefix, snapshotId);
+  }
+
+  public void dumpINode(PrintWriter out, StringBuilder prefix,
+      int snapshotId) {
     out.print(prefix);
     out.print(" ");
     final String name = getLocalName();
-    out.print(name.isEmpty()? "/": name);
+    out.print(name != null && name.isEmpty()? "/": name);
+    out.print(", isInCurrentState? ");
+    out.print(isInCurrentState());
     out.print("   (");
     out.print(getObjectString());
     out.print("), ");

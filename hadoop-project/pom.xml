@@ -37,7 +37,7 @@
     <!--Whether to proceed to next module if any test failures exist-->
     <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>9.4.48.v20220622</jetty.version>
+    <jetty.version>9.4.51.v20230217</jetty.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -129,7 +129,7 @@
     <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.3.1</ehcache.version>
     <hikari.version>4.0.3</hikari.version>
-    <derby.version>10.10.2.0</derby.version>
+    <derby.version>10.14.2.0</derby.version>
     <mysql-connector-java.version>8.0.29</mysql-connector-java.version>
     <mssql.version>6.2.1.jre7</mssql.version>
     <okhttp3.version>4.10.0</okhttp3.version>
@@ -210,8 +210,7 @@
     <openssl-wildfly.version>1.1.3.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
     <woodstox.version>5.4.0</woodstox.version>
-    <json-smart.version>2.4.7</json-smart.version>
-    <nimbus-jose-jwt.version>9.8.1</nimbus-jose-jwt.version>
+    <nimbus-jose-jwt.version>9.31</nimbus-jose-jwt.version>
     <nodejs.version>v12.22.1</nodejs.version>
     <yarnpkg.version>v1.22.5</yarnpkg.version>
     <apache-ant.version>1.10.13</apache-ant.version>
@@ -1516,7 +1515,7 @@
       <dependency>
         <groupId>org.codehaus.jettison</groupId>
         <artifactId>jettison</artifactId>
-        <version>1.5.3</version>
+        <version>1.5.4</version>
         <exclusions>
           <exclusion>
             <groupId>stax</groupId>
@@ -1729,11 +1728,6 @@
         <version>${dnsjava.version}</version>
       </dependency>
 
-      <dependency>
-        <groupId>net.minidev</groupId>
-        <artifactId>json-smart</artifactId>
-        <version>${json-smart.version}</version>
-      </dependency>
       <dependency>
         <groupId>org.skyscreamer</groupId>
         <artifactId>jsonassert</artifactId>

@@ -61,7 +61,9 @@
 
     function workaround(journals) {
         for (var i in journals){
-            journals[i]['NameService']= journals[i]['modelerType'].split("-")[1];
+            var str= journals[i]['modelerType'];
+            var index= str.indexOf("-");
+            journals[i]['NameService']= str.substr(index + 1);
         }
 
         return journals;
