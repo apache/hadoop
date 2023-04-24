@@ -18,14 +18,16 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DelegateToFileSystem;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
 
 /**
  * S3A implementation of AbstractFileSystem.
@@ -37,7 +39,8 @@ public class S3A extends DelegateToFileSystem {
 
   public S3A(URI theUri, Configuration conf)
       throws IOException, URISyntaxException {
-    super(theUri, new S3AFileSystem(), conf, "s3a", false);
+    super(theUri, new S3AFileSystem(), conf,
+        theUri.getScheme().isEmpty() ? FS_S3A : theUri.getScheme(), false);
   }
 
   @Override

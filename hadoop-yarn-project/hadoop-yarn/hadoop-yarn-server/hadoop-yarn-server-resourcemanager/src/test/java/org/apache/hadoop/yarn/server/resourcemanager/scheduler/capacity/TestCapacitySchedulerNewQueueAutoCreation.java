@@ -1251,6 +1251,17 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     Assert.assertNull("root.e.e1-auto should have been removed", eAuto);
   }
 
+  @Test()
+  public void testAutoCreateInvalidParent() throws Exception {
+    startScheduler();
+    Assert.assertThrows(SchedulerDynamicEditException.class,
+        () -> createQueue("invalid.queue"));
+    Assert.assertThrows(SchedulerDynamicEditException.class,
+        () -> createQueue("invalid.queue.longer"));
+    Assert.assertThrows(SchedulerDynamicEditException.class,
+        () -> createQueue("invalidQueue"));
+  }
+
   protected AbstractLeafQueue createQueue(String queuePath) throws YarnException,
       IOException {
     return autoQueueHandler.createQueue(new QueuePath(queuePath));

@@ -201,9 +201,9 @@ public class AzureBlobFileSystem extends FileSystem
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
     this.setWorkingDirectory(this.getHomeDirectory());
 
+    TracingContext tracingContext = new TracingContext(clientCorrelationId,
+            fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
-      TracingContext tracingContext = new TracingContext(clientCorrelationId,
-          fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
       if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH), tracingContext) == null) {
         try {
           this.createFileSystem(tracingContext);
@@ -442,7 +442,7 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     // Non-HNS account need to check dst status on driver side.
-    if (!abfsStore.getIsNamespaceEnabled(tracingContext) && dstFileStatus == null) {
+    if (!getIsNamespaceEnabled(tracingContext) && dstFileStatus == null) {
       dstFileStatus = tryGetFileStatus(qualifiedDstPath, tracingContext);
     }
 

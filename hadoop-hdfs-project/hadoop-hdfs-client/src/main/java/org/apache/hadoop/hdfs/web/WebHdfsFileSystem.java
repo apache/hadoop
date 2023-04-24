@@ -2147,6 +2147,19 @@ public class WebHdfsFileSystem extends FileSystem
     }.run();
   }
 
+  @Override
+  public Path getLinkTarget(Path f) throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_LINK_TARGET);
+    final HttpOpParam.Op op = GetOpParam.Op.GETLINKTARGET;
+    return new FsPathResponseRunner<Path>(op, f) {
+      @Override
+      Path decodeResponse(Map<?, ?> json) {
+        return new Path((String) json.get(Path.class.getSimpleName()));
+      }
+    }.run();
+  }
+
   @VisibleForTesting
   InetSocketAddress[] getResolvedNNAddr() {
     return nnAddrs;

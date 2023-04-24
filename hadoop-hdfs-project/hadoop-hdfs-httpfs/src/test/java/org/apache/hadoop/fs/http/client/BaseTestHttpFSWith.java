@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
@@ -302,7 +303,15 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       AppendTestUtil.checkFullFile(fs, file, newLength, data, file.toString());
 
       fs.close();
+      assertPathCapabilityForTruncate(file);
     }
+  }
+
+  private void assertPathCapabilityForTruncate(Path file) throws Exception {
+    FileSystem fs = this.getHttpFSFileSystem();
+    assertTrue("HttpFS/WebHdfs/SWebHdfs support truncate",
+        fs.hasPathCapability(file, CommonPathCapabilities.FS_TRUNCATE));
+    fs.close();
   }
 
   private void testConcat() throws Exception {

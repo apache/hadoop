@@ -48,8 +48,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT;
@@ -1069,11 +1067,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
-  @SuppressWarnings("deprecation")
   private static void checkForAsyncLogEnabledByOldConfigs(Configuration conf) {
-    if (conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY, DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT)) {
-      LOG.warn("Use log4j properties to enable async log for audit logs. {} is deprecated",
-          DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY);
+    // dfs.namenode.audit.log.async is no longer in use. Use log4j properties instead.
+    if (conf.getBoolean("dfs.namenode.audit.log.async", false)) {
+      LOG.warn("Use log4j properties to enable async log for audit logs. "
+          + "dfs.namenode.audit.log.async is no longer in use.");
     }
   }
 

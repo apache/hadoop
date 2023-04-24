@@ -79,12 +79,14 @@ message GetGroupsForUserResponseProto {
 
 message UpdateNodeResourceRequestProto {
   repeated NodeResourceMapProto node_resource_map = 1;
+  optional string sub_cluster_id = 2;
 }
 
 message UpdateNodeResourceResponseProto {
 }
 
 message RefreshNodesResourcesRequestProto {
+  optional string sub_cluster_id = 1;
 }
 
 message RefreshNodesResourcesResponseProto {
@@ -93,6 +95,7 @@ message RefreshNodesResourcesResponseProto {
 message AddToClusterNodeLabelsRequestProto {
   repeated string deprecatedNodeLabels = 1;
   repeated NodeLabelProto nodeLabels = 2;
+  optional string sub_cluster_id = 3;
 }
 
 message AddToClusterNodeLabelsResponseProto {
@@ -100,6 +103,7 @@ message AddToClusterNodeLabelsResponseProto {
 
 message RemoveFromClusterNodeLabelsRequestProto {
   repeated string nodeLabels = 1;
+  optional string sub_cluster_id = 2;
 }
 
 message RemoveFromClusterNodeLabelsResponseProto {
@@ -108,6 +112,7 @@ message RemoveFromClusterNodeLabelsResponseProto {
 message ReplaceLabelsOnNodeRequestProto {
   repeated NodeIdToLabelsProto nodeToLabels = 1;
   optional bool failOnUnknownNodes = 2;
+  optional string sub_cluster_id = 3;
 }
 
 message ReplaceLabelsOnNodeResponseProto {
