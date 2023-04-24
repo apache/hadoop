@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
@@ -84,7 +85,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
 
   protected final List<CSQueue> childQueues;
   private final boolean rootQueue;
-  private volatile int numApplications;
+  private AtomicInteger numApplications = new AtomicInteger(0);
 
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
@@ -734,17 +735,12 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
 
   private void addApplication(ApplicationId applicationId,
       String user) {
-    writeLock.lock();
-    try {
-      ++numApplications;
+    numApplications.incrementAndGet();
 
-      LOG.info(
-          "Application added -" + " appId: " + applicationId + " user: " + user
-              + " leaf-queue of parent: " + getQueuePath() + " #applications: "
-              + getNumApplications());
-    } finally {
-      writeLock.unlock();
-    }
+    LOG.info(
+        "Application added -" + " appId: " + applicationId + " user: " + user
+            + " leaf-queue of parent: " + getQueuePath() + " #applications: "
+            + getNumApplications());
   }
 
   @Override
@@ -762,16 +758,11 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
 
   private void removeApplication(ApplicationId applicationId,
       String user) {
-    writeLock.lock();
-    try {
-      --numApplications;
+    numApplications.decrementAndGet();
 
-      LOG.info("Application removed -" + " appId: " + applicationId + " user: "
-          + user + " leaf-queue of parent: " + getQueuePath()
-          + " #applications: " + getNumApplications());
-    } finally {
-      writeLock.unlock();
-    }
+    LOG.info("Application removed -" + " appId: " + applicationId + " user: "
+        + user + " leaf-queue of parent: " + getQueuePath()
+        + " #applications: " + getNumApplications());
   }
 
   private String getParentName() {
@@ -1410,7 +1401,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
   }
 
   public int getNumApplications() {
-    return numApplications;
+    return numApplications.get();
   }
 
   void allocateResource(Resource clusterResource,
