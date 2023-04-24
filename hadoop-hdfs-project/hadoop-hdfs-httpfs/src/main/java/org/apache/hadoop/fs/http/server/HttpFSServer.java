@@ -162,7 +162,7 @@ public class HttpFSServer {
 
   /**
    * Returns a filesystem instance. The filesystem instance is wired for release at the completion
-	* of the current Servlet request via the {@link FileSystemReleaseFilter}.
+   * of the current Servlet request via the {@link FileSystemReleaseFilter}.
    * <p>
    * If a do-as user is specified, the current user must be a valid proxyuser, otherwise an
    * <code>AccessControlException</code> will be thrown.
