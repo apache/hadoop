@@ -1777,6 +1777,106 @@ public class ITestAzureBlobFileSystemRename extends
     );
   }
 
+  @Test
+  public void testDirectoryIntoSameNameDestination() throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        "src",
+        null,
+        null,
+        true, true
+    );
+  }
+
+  @Test
+  public void testRenameDirectoryToSameNameImplicitDirectoryDestination() throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        "src",
+        null,
+        null,
+        true, true
+    );
+  }
+
+  @Test
+  public void testRenameDirectoryToImplicitDirectoryDestinationHavingSameNameSubDir() throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        null,
+        null,
+        "src",
+        true, false
+    );
+  }
+
+  @Test
+  public void testRenameDirectoryToImplicitDirectoryDestinationHavingSameNameSubFile() throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        null,
+        "src",
+        null,
+        true, false
+    );
+  }
+
+  @Test
+  public void testRenameDirectoryToImplicitDirectoryDestinationHavingSameNameImplicitSubDir() throws Exception {
+    explicitImplicitDirectoryRenameTestWithDestPathNames(
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        "src",
+        null,
+        null,
+        "src",
+        false, false
+    );
+  }
+
   private void explicitImplicitDirectoryRenameTest(Boolean srcParentExplicit,
       Boolean srcExplicit,
       Boolean srcSubDirExplicit,
@@ -1789,12 +1889,73 @@ public class ITestAzureBlobFileSystemRename extends
       Boolean shouldRenamePass) throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     Path srcParent = new Path("/srcParent");
+    Path src = new Path(srcParent, "src");
+    createSourcePaths(srcParentExplicit, srcExplicit, srcSubDirExplicit, fs, srcParent,
+        src);
+
+    Path dstParent = new Path("/dstParent");
+    Path dst = new Path(dstParent, "dst");
+    createDestinationPaths(dstParentExplicit, dstExplicit, dstParentExists, isDstParentFile,
+        dstExist, isDstFile, fs, dstParent, dst, null, null, true);
+
+    if (dstParentExists && !isDstParentFile && !dstParentExplicit) {
+      intercept(AbfsRestOperationException.class, () -> {
+        fs.getAbfsStore()
+            .getBlobProperty(dstParent, Mockito.mock(TracingContext.class));
+      });
+    }
+
+    explicitImplicitCaseRenameAssert(dstExist, shouldRenamePass, fs, src, dst);
+  }
+
+  private void explicitImplicitDirectoryRenameTestWithDestPathNames(Boolean srcParentExplicit,
+      Boolean srcExplicit,
+      Boolean srcSubDirExplicit,
+      Boolean dstParentExplicit,
+      Boolean dstExplicit,
+      Boolean dstParentExists,
+      Boolean isDstParentFile,
+      Boolean dstExist,
+      Boolean isDstFile,
+      String srcName,
+      String dstName,
+      String dstSubFileName,
+      String dstSubDirName,
+      final Boolean isSubDirExplicit, Boolean shouldRenamePass) throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    Path srcParent = new Path("/srcParent");
+    Path src = new Path(srcParent, srcName != null ? srcName : "src");
+    createSourcePaths(srcParentExplicit, srcExplicit, srcSubDirExplicit, fs, srcParent,
+        src);
+
+    Path dstParent = new Path("/dstParent");
+    Path dst = new Path(dstParent, dstName!= null ? dstName : "dst");
+    createDestinationPaths(dstParentExplicit, dstExplicit, dstParentExists, isDstParentFile,
+        dstExist, isDstFile, fs, dstParent, dst, dstSubFileName, dstSubDirName,
+        isSubDirExplicit);
+
+    if (dstParentExists && !isDstParentFile && !dstParentExplicit) {
+      intercept(AbfsRestOperationException.class, () -> {
+        fs.getAbfsStore()
+            .getBlobProperty(dstParent, Mockito.mock(TracingContext.class));
+      });
+    }
+
+    explicitImplicitCaseRenameAssert(dstExist, shouldRenamePass, fs, src, dst);
+  }
+
+  private void createSourcePaths(final Boolean srcParentExplicit,
+      final Boolean srcExplicit,
+      final Boolean srcSubDirExplicit,
+      final AzureBlobFileSystem fs,
+      final Path srcParent,
+      final Path src) throws Exception {
     if (srcParentExplicit) {
       fs.mkdirs(srcParent);
     } else {
       createAzCopyDirectory(srcParent);
     }
-    Path src = new Path(srcParent, "src");
+
     if (srcExplicit) {
       fs.mkdirs(src);
     } else {
@@ -1823,7 +1984,18 @@ public class ITestAzureBlobFileSystemRename extends
             .getBlobProperty(src, Mockito.mock(TracingContext.class));
       });
     }
-    Path dstParent = new Path("/dstParent");
+  }
+
+  private void createDestinationPaths(final Boolean dstParentExplicit,
+      final Boolean dstExplicit,
+      final Boolean dstParentExists,
+      final Boolean isDstParentFile,
+      final Boolean dstExist,
+      final Boolean isDstFile,
+      final AzureBlobFileSystem fs,
+      final Path dstParent,
+      final Path dst, final String subFileName, final String subDirName,
+      final Boolean isSubDirExplicit) throws Exception {
     if (dstParentExists) {
       if (!isDstParentFile) {
         if (dstParentExplicit) {
@@ -1835,7 +2007,7 @@ public class ITestAzureBlobFileSystemRename extends
         createAzCopyFile(dstParent);
       }
     }
-    Path dst = new Path(dstParent, "dst");
+
     if (dstExist) {
       if (!isDstFile) {
         if (dstExplicit) {
@@ -1843,18 +2015,27 @@ public class ITestAzureBlobFileSystemRename extends
         } else {
           createAzCopyDirectory(dst);
         }
+        if(subFileName != null) {
+          createAzCopyFile(new Path(dst, subFileName));
+        }
+        if(subDirName != null) {
+          if(isSubDirExplicit) {
+            fs.mkdirs(new Path(dst, subDirName));
+          } else {
+            createAzCopyDirectory(new Path(dst, subDirName));
+          }
+        }
       } else {
         createAzCopyFile(dst);
       }
     }
+  }
 
-    if (dstParentExists && !isDstParentFile && !dstParentExplicit) {
-      intercept(AbfsRestOperationException.class, () -> {
-        fs.getAbfsStore()
-            .getBlobProperty(dstParent, Mockito.mock(TracingContext.class));
-      });
-    }
-
+  private void explicitImplicitCaseRenameAssert(final Boolean dstExist,
+      final Boolean shouldRenamePass,
+      final AzureBlobFileSystem fs,
+      final Path src,
+      final Path dst) throws IOException {
     if (shouldRenamePass) {
       Assert.assertTrue(fs.rename(src, dst));
       if (dstExist) {
