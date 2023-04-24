@@ -360,12 +360,30 @@ public class AbfsConfiguration{
   }
 
   @BooleanConfigurationValidatorAnnotation(
-          ConfigurationKey = FS_AZURE_FALLBACK_TO_DFS,
-          DefaultValue = DEFAULT_FS_AZURE_FALLBACK_TO_DFS)
-  private boolean fallbackToDfs;
+          ConfigurationKey = FS_AZURE_ENABLE_BLOB_ENDPOINT,
+          DefaultValue = DEFAULT_FS_AZURE_ENABLE_BLOBENDPOINT)
+  private boolean enableBlobEndpoint;
 
-  public boolean shouldFallbackToDfs() {
-    return this.fallbackToDfs;
+  public boolean shouldEnableBlobEndPoint() {
+    return this.enableBlobEndpoint;
+  }
+
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_MKDIRS_FALLBACK_TO_DFS,
+          DefaultValue = DEFAULT_FS_AZURE_MKDIRS_FALLBACK_TO_DFS)
+  private boolean mkdirFallbackToDfs;
+
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_INGRESS_FALLBACK_TO_DFS,
+          DefaultValue = DEFAULT_FS_AZURE_INGRESS_FALLBACK_TO_DFS)
+  private boolean ingressFallbackToDfs;
+
+  public boolean shouldMkdirFallbackToDfs() {
+    return mkdirFallbackToDfs;
+  }
+
+  public boolean shouldIngressFallbackToDfs() {
+    return ingressFallbackToDfs;
   }
 
   /**

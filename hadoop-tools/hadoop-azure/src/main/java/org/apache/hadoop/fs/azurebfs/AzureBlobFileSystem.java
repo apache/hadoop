@@ -24,8 +24,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.AccessDeniedException;
 import java.util.Hashtable;
 import java.util.List;
@@ -111,6 +113,8 @@ import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DNS_PREFIX;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.WASB_DNS_PREFIX;
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicityUtils.SUFFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS;
@@ -216,11 +220,18 @@ public class AzureBlobFileSystem extends FileSystem
         throw ex;
       }
     }
-    if (!isNamespaceEnabled && abfsConfiguration.shouldFallbackToDfs()) {
-      this.prefixMode = PrefixMode.DFS;
-    } else {
-      if (!isNamespaceEnabled && uri.toString().contains(FileSystemUriSchemes.WASB_DNS_PREFIX)) {
-        this.prefixMode = PrefixMode.BLOB;
+    if (!isNamespaceEnabled && (abfsConfiguration.shouldEnableBlobEndPoint() ||
+            uri.toString().contains(FileSystemUriSchemes.WASB_DNS_PREFIX))) {
+      this.prefixMode = PrefixMode.BLOB;
+    }
+    abfsConfiguration.setPrefixMode(this.prefixMode);
+    if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
+      if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH), tracingContext) == null) {
+        try {
+          this.createFileSystem(tracingContext);
+        } catch (AzureBlobFileSystemException ex) {
+          checkException(null, ex, AzureServiceErrorCode.FILE_SYSTEM_ALREADY_EXISTS);
+        }
       }
     }
     abfsConfiguration.setPrefixMode(this.prefixMode);
@@ -274,6 +285,15 @@ public class AzureBlobFileSystem extends FileSystem
 
   public void registerListener(Listener listener1) {
     listener = listener1;
+  }
+
+  private URI changePrefixFromDfsToBlob(URI uri) throws InvalidUriException {
+    try {
+      String uriString = uri.toString().replace(ABFS_DNS_PREFIX, WASB_DNS_PREFIX);
+      return new URI(uriString);
+    } catch (URISyntaxException ex) {
+      throw new InvalidUriException(uri.toString());
+    }
   }
 
   @Override
@@ -357,7 +377,7 @@ public class AzureBlobFileSystem extends FileSystem
       fileOverwrite = true;
     }
 
-    if (prefixMode == PrefixMode.BLOB) {
+    if (!getAbfsStore().getAbfsConfiguration().shouldIngressFallbackToDfs() && prefixMode == PrefixMode.BLOB) {
       validatePathOrSubPathDoesNotExist(qualifiedPath, tracingContext);
     }
 

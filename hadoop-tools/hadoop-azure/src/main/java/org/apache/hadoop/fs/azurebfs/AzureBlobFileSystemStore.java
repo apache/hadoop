@@ -797,7 +797,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         );
 
       } else {
-        if (getPrefixMode() == PrefixMode.BLOB) {
+        if (!abfsConfiguration.shouldIngressFallbackToDfs() && getPrefixMode() == PrefixMode.BLOB) {
           boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
           op = createPathBlob(relativePath, isNormalBlob, overwrite, metadata, null, tracingContext);
         } else {
@@ -867,7 +867,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // Trigger a create with overwrite=false first so that eTag fetch can be
       // avoided for cases when no pre-existing file is present (major portion
       // of create file traffic falls into the case of no pre-existing file).
-      if (getPrefixMode() == PrefixMode.BLOB) {
+      if (!abfsConfiguration.shouldIngressFallbackToDfs() && getPrefixMode() == PrefixMode.BLOB) {
         boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
         op = createPathBlob(relativePath, isNormalBlob, false, metadata, null, tracingContext);
       } else {
@@ -896,7 +896,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
         try {
           // overwrite only if eTag matches with the file properties fetched before.
-          if (getPrefixMode() == PrefixMode.BLOB) {
+          if (!abfsConfiguration.shouldIngressFallbackToDfs() && getPrefixMode() == PrefixMode.BLOB) {
             boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
             op = createPathBlob(relativePath, isNormalBlob, true, metadata, eTag, tracingContext);
           } else {
@@ -977,7 +977,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final FsPermission umask, TracingContext tracingContext)
           throws IOException {
     try (AbfsPerfInfo perfInfo = startTracking("createDirectory", "createPath")) {
-      if (getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
+      if (!abfsConfiguration.shouldMkdirFallbackToDfs() && getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
         checkParentChainForFile(path, tracingContext);
 
         HashMap<String, String> metadata = new HashMap<>();
