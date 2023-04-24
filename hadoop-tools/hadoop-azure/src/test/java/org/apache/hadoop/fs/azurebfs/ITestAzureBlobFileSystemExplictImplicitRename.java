@@ -32,7 +32,8 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
-public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsIntegrationTest {
+public class ITestAzureBlobFileSystemExplictImplicitRename
+    extends AbstractAbfsIntegrationTest {
 
   public ITestAzureBlobFileSystemExplictImplicitRename() throws Exception {
     super();
@@ -41,23 +42,31 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   @Override
   public void setup() throws Exception {
     super.setup();
-    Assume.assumeTrue(getFileSystem().getAbfsStore().getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB);
+    Assume.assumeTrue(
+        getFileSystem().getAbfsStore().getAbfsConfiguration().getPrefixMode()
+            == PrefixMode.BLOB);
   }
 
   void createAzCopyDirectory(Path path) throws Exception {
     ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper();
     azcopyHelper.fileSystemName = getFileSystemName();
     azcopyHelper.accountName = getAccountName();
-    azcopyHelper.configuration = getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration();
-    azcopyHelper.createFolderUsingAzcopy(getFileSystem().makeQualified(path).toUri().getPath().substring(1));
+    azcopyHelper.configuration = getFileSystem().getAbfsStore()
+        .getAbfsConfiguration()
+        .getRawConfiguration();
+    azcopyHelper.createFolderUsingAzcopy(
+        getFileSystem().makeQualified(path).toUri().getPath().substring(1));
   }
 
   void createAzCopyFile(Path path) throws Exception {
     ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper();
     azcopyHelper.fileSystemName = getFileSystemName();
     azcopyHelper.accountName = getAccountName();
-    azcopyHelper.configuration = getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration();
-    azcopyHelper.createFileUsingAzcopy(getFileSystem().makeQualified(path).toUri().getPath().substring(1));
+    azcopyHelper.configuration = getFileSystem().getAbfsStore()
+        .getAbfsConfiguration()
+        .getRawConfiguration();
+    azcopyHelper.createFileUsingAzcopy(
+        getFileSystem().makeQualified(path).toUri().getPath().substring(1));
   }
 
   @Test
@@ -69,84 +78,111 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
       fs.getAbfsStore().getBlobProperty(new Path("/src"), Mockito.mock(
           TracingContext.class));
     });
-    Assert.assertNotNull(fs.getAbfsStore().getBlobProperty(new Path("/src/file"), Mockito.mock(TracingContext.class)));
+    Assert.assertNotNull(fs.getAbfsStore()
+        .getBlobProperty(new Path("/src/file"),
+            Mockito.mock(TracingContext.class)));
     Assert.assertTrue(fs.rename(new Path("/src/file"), new Path("/dstFile")));
-    Assert.assertNotNull(fs.getAbfsStore().getBlobProperty(new Path("/dstFile"), Mockito.mock(TracingContext.class)));
+    Assert.assertNotNull(fs.getAbfsStore()
+        .getBlobProperty(new Path("/dstFile"),
+            Mockito.mock(TracingContext.class)));
     intercept(AbfsRestOperationException.class, () -> {
-      fs.getAbfsStore().getBlobProperty(new Path("/src/file"), Mockito.mock(TracingContext.class));
+      fs.getAbfsStore()
+          .getBlobProperty(new Path("/src/file"),
+              Mockito.mock(TracingContext.class));
     });
 
     Assert.assertFalse(fs.rename(new Path("/src/file"), new Path("/dstFile2")));
   }
 
   @Test
-  public void testRenameFileToNonExistingDstInImplicitParent() throws  Exception {
+  public void testRenameFileToNonExistingDstInImplicitParent()
+      throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     createAzCopyFile(new Path("/file"));
     createAzCopyDirectory(new Path("/dstDir"));
     createAzCopyFile(new Path("/dstDir/file2"));
     intercept(AbfsRestOperationException.class, () -> {
-      fs.getAbfsStore().getBlobProperty(new Path("/dstDir"), Mockito.mock(TracingContext.class));
+      fs.getAbfsStore()
+          .getBlobProperty(new Path("/dstDir"),
+              Mockito.mock(TracingContext.class));
     });
     Assert.assertTrue(fs.rename(new Path("/file"), new Path("/dstDir")));
     Assert.assertTrue(fs.exists(new Path("/dstDir/file")));
   }
 
   @Test
-  public void testRenameFileAsExistingExplicitDirectoryInImplicitDirectory() throws Exception {
+  public void testRenameFileAsExistingExplicitDirectoryInImplicitDirectory()
+      throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     createAzCopyFile(new Path("/file"));
     createAzCopyDirectory(new Path("/dst"));
     fs.mkdirs(new Path("/dst/dir"));
     intercept(AbfsRestOperationException.class, () -> {
-      fs.getAbfsStore().getBlobProperty(new Path("/dst"), Mockito.mock(TracingContext.class));
+      fs.getAbfsStore()
+          .getBlobProperty(new Path("/dst"),
+              Mockito.mock(TracingContext.class));
     });
     Assert.assertTrue(fs.rename(new Path("/file"), new Path("/dst/dir")));
     Assert.assertTrue(fs.exists(new Path("/dst/dir/file")));
     intercept(AbfsRestOperationException.class, () -> {
-      fs.getAbfsStore().getBlobProperty(new Path("/file"), Mockito.mock(TracingContext.class));
+      fs.getAbfsStore()
+          .getBlobProperty(new Path("/file"),
+              Mockito.mock(TracingContext.class));
     });
   }
 
   @Test
-  public void testRenameFileAsExistingImplicitDirectoryInExplicitDirectory() throws Exception {
+  public void testRenameFileAsExistingImplicitDirectoryInExplicitDirectory()
+      throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     createAzCopyFile(new Path("/file"));
     fs.mkdirs(new Path("/dst"));
     createAzCopyDirectory(new Path("/dst/dir"));
     createAzCopyFile(new Path("/dst/dir/file2"));
     intercept(AbfsRestOperationException.class, () -> {
-      fs.getAbfsStore().getBlobProperty(new Path("/dst/dir"), Mockito.mock(TracingContext.class));
+      fs.getAbfsStore()
+          .getBlobProperty(new Path("/dst/dir"),
+              Mockito.mock(TracingContext.class));
     });
     Assert.assertTrue(fs.rename(new Path("/file"), new Path("/dst/dir")));
     Assert.assertTrue(fs.exists(new Path("/dst/dir/file")));
     intercept(AbfsRestOperationException.class, () -> {
-      fs.getAbfsStore().getBlobProperty(new Path("/file"), Mockito.mock(TracingContext.class));
+      fs.getAbfsStore()
+          .getBlobProperty(new Path("/file"),
+              Mockito.mock(TracingContext.class));
     });
   }
 
   @Test
-  public void testRenameFileAsExistingImplicitDirectoryInImplicitDirectory() throws Exception {
+  public void testRenameFileAsExistingImplicitDirectoryInImplicitDirectory()
+      throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     createAzCopyFile(new Path("/file"));
     createAzCopyDirectory(new Path("/dst"));
     createAzCopyDirectory(new Path("/dst/dir"));
     createAzCopyFile(new Path("/dst/dir/file2"));
     intercept(AbfsRestOperationException.class, () -> {
-      fs.getAbfsStore().getBlobProperty(new Path("/dst"), Mockito.mock(TracingContext.class));
+      fs.getAbfsStore()
+          .getBlobProperty(new Path("/dst"),
+              Mockito.mock(TracingContext.class));
     });
     intercept(AbfsRestOperationException.class, () -> {
-      fs.getAbfsStore().getBlobProperty(new Path("/dst/dir"), Mockito.mock(TracingContext.class));
+      fs.getAbfsStore()
+          .getBlobProperty(new Path("/dst/dir"),
+              Mockito.mock(TracingContext.class));
     });
     Assert.assertTrue(fs.rename(new Path("/file"), new Path("/dst/dir")));
     Assert.assertTrue(fs.exists(new Path("/dst/dir/file")));
     intercept(AbfsRestOperationException.class, () -> {
-      fs.getAbfsStore().getBlobProperty(new Path("/file"), Mockito.mock(TracingContext.class));
+      fs.getAbfsStore()
+          .getBlobProperty(new Path("/file"),
+              Mockito.mock(TracingContext.class));
     });
   }
 
   @Test
-  public void testRenameDirectoryContainingImplicitDirectory() throws Exception {
+  public void testRenameDirectoryContainingImplicitDirectory()
+      throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     fs.mkdirs(new Path("/src"));
     fs.mkdirs(new Path("/dst"));
@@ -159,7 +195,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameImplicitDirectoryContainingExplicitDirectory() throws Exception {
+  public void testRenameImplicitDirectoryContainingExplicitDirectory()
+      throws Exception {
     explicitImplicitDirectoryRenameTest(
         true,
         false,
@@ -175,7 +212,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameImplicitDirectoryContainingImplicitDirectory() throws Exception {
+  public void testRenameImplicitDirectoryContainingImplicitDirectory()
+      throws Exception {
     explicitImplicitDirectoryRenameTest(
         true,
         false,
@@ -191,7 +229,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameExplicitDirectoryContainingExplicitDirectoryInImplicitSrcParent() throws Exception {
+  public void testRenameExplicitDirectoryContainingExplicitDirectoryInImplicitSrcParent()
+      throws Exception {
     explicitImplicitDirectoryRenameTest(
         false,
         true,
@@ -207,7 +246,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameExplicitDirectoryContainingImplicitDirectoryInImplicitSrcParent() throws Exception {
+  public void testRenameExplicitDirectoryContainingImplicitDirectoryInImplicitSrcParent()
+      throws Exception {
     explicitImplicitDirectoryRenameTest(
         false,
         true,
@@ -223,7 +263,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameImplicitDirectoryContainingExplicitDirectoryInImplicitSrcParent() throws Exception {
+  public void testRenameImplicitDirectoryContainingExplicitDirectoryInImplicitSrcParent()
+      throws Exception {
     explicitImplicitDirectoryRenameTest(
         false,
         false,
@@ -239,7 +280,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameImplicitDirectoryContainingImplicitDirectoryInImplicitSrcParent() throws Exception {
+  public void testRenameImplicitDirectoryContainingImplicitDirectoryInImplicitSrcParent()
+      throws Exception {
     explicitImplicitDirectoryRenameTest(
         false,
         false,
@@ -271,7 +313,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameImplicitDirectoryWhereDstParentDoesntExist() throws Exception {
+  public void testRenameImplicitDirectoryWhereDstParentDoesntExist()
+      throws Exception {
     explicitImplicitDirectoryRenameTest(
         true,
         false,
@@ -287,7 +330,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameImplicitDirectoryToNonExistentDstWithImplicitParent() throws Exception {
+  public void testRenameImplicitDirectoryToNonExistentDstWithImplicitParent()
+      throws Exception {
     explicitImplicitDirectoryRenameTest(
         true,
         false,
@@ -303,7 +347,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameImplicitDirectoryToNonExistentDstWithParentIsFile() throws Exception {
+  public void testRenameImplicitDirectoryToNonExistentDstWithParentIsFile()
+      throws Exception {
     explicitImplicitDirectoryRenameTest(
         true,
         false,
@@ -371,7 +416,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameDirectoryToSameNameImplicitDirectoryDestination() throws Exception {
+  public void testRenameDirectoryToSameNameImplicitDirectoryDestination()
+      throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
         true,
         true,
@@ -391,7 +437,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameDirectoryToImplicitDirectoryDestinationHavingSameNameSubDir() throws Exception {
+  public void testRenameDirectoryToImplicitDirectoryDestinationHavingSameNameSubDir()
+      throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
         true,
         true,
@@ -411,7 +458,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameDirectoryToImplicitDirectoryDestinationHavingSameNameSubFile() throws Exception {
+  public void testRenameDirectoryToImplicitDirectoryDestinationHavingSameNameSubFile()
+      throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
         true,
         true,
@@ -431,7 +479,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameDirectoryToImplicitDirectoryDestinationHavingSameNameImplicitSubDir() throws Exception {
+  public void testRenameDirectoryToImplicitDirectoryDestinationHavingSameNameImplicitSubDir()
+      throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
         true,
         true,
@@ -491,7 +540,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameImplicitDirectoryToExplicitDirectoryDestinationHavingSameNameSubDir() throws Exception {
+  public void testRenameImplicitDirectoryToExplicitDirectoryDestinationHavingSameNameSubDir()
+      throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
         true,
         false,
@@ -511,7 +561,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameImplicitDirectoryToExplicitDirectoryDestinationHavingSameNameSubFile() throws Exception {
+  public void testRenameImplicitDirectoryToExplicitDirectoryDestinationHavingSameNameSubFile()
+      throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
         true,
         false,
@@ -531,7 +582,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameImplicitDirectoryToExplicitDirectoryDestinationHavingSameNameImplicitSubDir() throws Exception {
+  public void testRenameImplicitDirectoryToExplicitDirectoryDestinationHavingSameNameImplicitSubDir()
+      throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
         true,
         false,
@@ -551,7 +603,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testImplicitDirectoryIntoSameNameImplicitDestination() throws Exception {
+  public void testImplicitDirectoryIntoSameNameImplicitDestination()
+      throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
         true,
         false,
@@ -591,7 +644,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameImplicitDirectoryToImplicitDirectoryDestinationHavingSameNameSubDir() throws Exception {
+  public void testRenameImplicitDirectoryToImplicitDirectoryDestinationHavingSameNameSubDir()
+      throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
         true,
         false,
@@ -611,7 +665,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameImplicitDirectoryToImplicitDirectoryDestinationHavingSameNameSubFile() throws Exception {
+  public void testRenameImplicitDirectoryToImplicitDirectoryDestinationHavingSameNameSubFile()
+      throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
         true,
         false,
@@ -631,7 +686,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
   }
 
   @Test
-  public void testRenameImplicitDirectoryToImplicitDirectoryDestinationHavingSameNameImplicitSubDir() throws Exception {
+  public void testRenameImplicitDirectoryToImplicitDirectoryDestinationHavingSameNameImplicitSubDir()
+      throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
         true,
         false,
@@ -664,12 +720,14 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
     AzureBlobFileSystem fs = getFileSystem();
     Path srcParent = new Path("/srcParent");
     Path src = new Path(srcParent, "src");
-    createSourcePaths(srcParentExplicit, srcExplicit, srcSubDirExplicit, fs, srcParent,
+    createSourcePaths(srcParentExplicit, srcExplicit, srcSubDirExplicit, fs,
+        srcParent,
         src);
 
     Path dstParent = new Path("/dstParent");
     Path dst = new Path(dstParent, "dst");
-    createDestinationPaths(dstParentExplicit, dstExplicit, dstParentExists, isDstParentFile,
+    createDestinationPaths(dstParentExplicit, dstExplicit, dstParentExists,
+        isDstParentFile,
         dstExist, isDstFile, fs, dstParent, dst, null, null, true);
 
     if (dstParentExists && !isDstParentFile && !dstParentExplicit) {
@@ -695,16 +753,19 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
       String dstName,
       String dstSubFileName,
       String dstSubDirName,
-      final Boolean isSubDirExplicit, Boolean shouldRenamePass) throws Exception {
+      final Boolean isSubDirExplicit, Boolean shouldRenamePass)
+      throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     Path srcParent = new Path("/srcParent");
     Path src = new Path(srcParent, srcName != null ? srcName : "src");
-    createSourcePaths(srcParentExplicit, srcExplicit, srcSubDirExplicit, fs, srcParent,
+    createSourcePaths(srcParentExplicit, srcExplicit, srcSubDirExplicit, fs,
+        srcParent,
         src);
 
     Path dstParent = new Path("/dstParent");
-    Path dst = new Path(dstParent, dstName!= null ? dstName : "dst");
-    createDestinationPaths(dstParentExplicit, dstExplicit, dstParentExists, isDstParentFile,
+    Path dst = new Path(dstParent, dstName != null ? dstName : "dst");
+    createDestinationPaths(dstParentExplicit, dstExplicit, dstParentExists,
+        isDstParentFile,
         dstExist, isDstFile, fs, dstParent, dst, dstSubFileName, dstSubDirName,
         isSubDirExplicit);
 
@@ -743,7 +804,8 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
       createAzCopyDirectory(srcSubDir);
       createAzCopyFile(new Path(srcSubDir, "subFile"));
       intercept(AbfsRestOperationException.class, () -> {
-        fs.getAbfsStore().getBlobProperty(srcSubDir, Mockito.mock(TracingContext.class));
+        fs.getAbfsStore()
+            .getBlobProperty(srcSubDir, Mockito.mock(TracingContext.class));
       });
     }
     if (!srcParentExplicit) {
@@ -789,11 +851,11 @@ public class ITestAzureBlobFileSystemExplictImplicitRename extends AbstractAbfsI
         } else {
           createAzCopyDirectory(dst);
         }
-        if(subFileName != null) {
+        if (subFileName != null) {
           createAzCopyFile(new Path(dst, subFileName));
         }
-        if(subDirName != null) {
-          if(isSubDirExplicit) {
+        if (subDirName != null) {
+          if (isSubDirExplicit) {
             fs.mkdirs(new Path(dst, subDirName));
           } else {
             createAzCopyDirectory(new Path(dst, subDirName));
