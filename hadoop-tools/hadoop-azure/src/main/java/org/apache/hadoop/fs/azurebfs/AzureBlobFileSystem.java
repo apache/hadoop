@@ -199,7 +199,6 @@ public class AzureBlobFileSystem extends FileSystem
 
     final AbfsConfiguration abfsConfiguration = abfsStore
         .getAbfsConfiguration();
-
     clientCorrelationId = TracingContext.validateClientCorrelationID(
         abfsConfiguration.getClientCorrelationId());
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
