@@ -1,5 +1,8 @@
 {
   "directory": "bower_components",
   "analytics": false,
-  "registry": "https://registry.bower.io"
+  "resolvers": [
+    "bower-art-resolver"
+],
+  "registry": "https://npm.infra.cloudera.com/api/bower/cloudera-bower"
 }
