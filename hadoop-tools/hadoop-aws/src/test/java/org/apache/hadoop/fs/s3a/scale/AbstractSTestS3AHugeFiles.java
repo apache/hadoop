@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntFunction;
@@ -67,8 +66,6 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_COMPLETED;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.XA_MAGIC_MARKER;
-import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.extractXAttrLongValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticGaugeValue;
@@ -314,24 +311,6 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         "Put file " + fileToCreate + " of size " + filesize);
     assertEquals("actively allocated blocks in " + streamStatistics,
         0, streamStatistics.getBlocksActivelyAllocated());
-
-    if (!expectImmediateFileVisibility()) {
-      // and for a multipart upload, also verify that the file attributes
-      // includes the length of the file uploaded.
-      final FileStatus st = fs.getFileStatus(fileToCreate);
-      Assertions.assertThat(st.getLen())
-          .describedAs("expected marker file %s", st)
-          .isEqualTo(0);
-      final Map<String, byte[]> xAttr = fs.getXAttrs(fileToCreate);
-      final String header = XA_MAGIC_MARKER;
-      Assertions.assertThat(xAttr)
-          .describedAs("Header %s of %s", header, fileToCreate)
-          .containsKey(header);
-      Assertions.assertThat(extractXAttrLongValue(xAttr.get(header)))
-          .describedAs("Decoded header %s of %s", header, fileToCreate)
-          .get()
-          .isEqualTo(filesize);
-    }
   }
 
   /**
@@ -369,6 +348,14 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
    */
   protected int uploadBlockSize() {
     return DEFAULT_UPLOAD_BLOCKSIZE;
+  }
+
+  /**
+   * Get the size of the file.
+   * @return file size
+   */
+  public long getFilesize() {
+    return filesize;
   }
 
   /**
