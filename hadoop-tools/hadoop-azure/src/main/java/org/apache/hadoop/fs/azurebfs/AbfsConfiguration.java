@@ -312,6 +312,11 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ENABLE_READAHEAD)
   private boolean enabledReadAhead;
 
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_ENABLE_CPK,
+          DefaultValue = DEFAULT_FS_AZURE_ENABLE_CPK)
+  private boolean isCpkEnabled;
+
   @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS,
       MinValue = 0,
       DefaultValue = DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS)
@@ -365,6 +370,10 @@ public class AbfsConfiguration{
    */
   public String getAccountName() {
     return accountName;
+  }
+
+  public boolean isCpkEnabled() {
+    return isCpkEnabled;
   }
 
   /**
@@ -750,7 +759,7 @@ public class AbfsConfiguration{
   }
 
   public String getCustomUserAgentPrefix() {
-    return this.userAgentId;
+    return "abfsdriverV2.1";
   }
 
   public String getClusterName() {

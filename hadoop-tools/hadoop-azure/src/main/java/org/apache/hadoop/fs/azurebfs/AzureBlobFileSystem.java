@@ -42,6 +42,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.services.BlobProperty;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.services.PathInformation;
@@ -217,6 +218,9 @@ public class AzureBlobFileSystem extends FileSystem
       }
     }
     if (!isNamespaceEnabled && uri.toString().contains(FileSystemUriSchemes.WASB_DNS_PREFIX)) {
+      if (abfsConfiguration.isCpkEnabled()) {
+        throw new InvalidConfigurationValueException("CPK is not supported over blob endpoint");
+      }
       this.prefixMode = PrefixMode.BLOB;
     }
     abfsConfiguration.setPrefixMode(this.prefixMode);
