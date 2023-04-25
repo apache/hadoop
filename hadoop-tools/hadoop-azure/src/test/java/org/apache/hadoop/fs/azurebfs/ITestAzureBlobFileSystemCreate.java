@@ -219,6 +219,19 @@ public class ITestAzureBlobFileSystemCreate extends
   }
 
   /**
+   * Create a file with name /dir1 and then mkdirs for /dir1/dir2 should fail.
+   * @throws Exception
+   */
+  @Test
+  public void testFileCreateMkdirsRoot() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.setWorkingDirectory(new Path("/"));
+    final Path p1 = new Path("dir1");
+    fs.create(p1);
+    intercept(IOException.class, () -> fs.mkdirs(new Path("dir1/dir2")));
+  }
+
+  /**
    * Creation of same directory without overwrite flag should pass.
    * @throws Exception
    */
