@@ -355,7 +355,10 @@ public class AzureBlobFileSystem extends FileSystem
 
     if (prefixMode == PrefixMode.BLOB) {
       validatePathOrSubPathDoesNotExist(qualifiedPath, tracingContext);
-      mkdirs(qualifiedPath.getParent());
+      Path parent = qualifiedPath.getParent();
+      if (!parent.isRoot()) {
+        mkdirs(parent);
+      }
     }
 
     try {

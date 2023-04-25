@@ -1014,21 +1014,20 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param path path to check the hierarchy for.
    * @param tracingContext the tracingcontext.
    */
-  private void checkParentChainForFile(Path path, TracingContext tracingContext, ArrayList<Path> keysToCreateAsFolder) throws IOException {
+  private void checkParentChainForFile(Path path, TracingContext tracingContext,
+                                       List<Path> keysToCreateAsFolder) throws IOException {
     if (directoryExists(path, tracingContext)) {
       return;
     }
     keysToCreateAsFolder.add(path);
     Path current = path.getParent();
-    Path parent = current.getParent();
 
-    while (parent != null) {
+    while (current != null && !current.isRoot()) {
       if (directoryExists(current, tracingContext)) {
         break;
       }
       keysToCreateAsFolder.add(current);
-      current = parent;
-      parent = current.getParent();
+      current = current.getParent();
     }
   }
 

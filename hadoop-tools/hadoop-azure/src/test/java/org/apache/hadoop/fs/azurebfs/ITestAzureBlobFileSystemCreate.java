@@ -25,6 +25,7 @@ import java.lang.reflect.Field;
 import java.util.EnumSet;
 import java.util.UUID;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -191,6 +192,9 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(new Path("a/b/c/d/e"));
   }
 
+  /*
+    Delete part of a path and validate subpath exists.
+   */
   @Test
   public void testMkdirsWithDelete() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -198,15 +202,20 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(new Path("a/b/c/d"));
     fs.delete(new Path("a/b/c/d"));
     fs.getFileStatus(new Path("a/b/c"));
+    Assert.assertTrue(fs.exists(new Path("a/b/c")));
   }
 
+  /**
+   * Verify mkdir and rename of parent.
+   */
   @Test
   public void testMkdirsWithRename() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     fs.mkdirs(new Path("a/b/c/d"));
-    fs.mkdirs(new Path("e"));
+    fs.create(new Path("e/file"));
     fs.delete(new Path("a/b/c/d"));
-    fs.rename(new Path("e"), new Path("a/b/c/d"));
+    Assert.assertTrue(fs.rename(new Path("e"), new Path("a/b/c/d")));
+    Assert.assertTrue(fs.exists(new Path("a/b/c/d/file")));
   }
 
   /**
