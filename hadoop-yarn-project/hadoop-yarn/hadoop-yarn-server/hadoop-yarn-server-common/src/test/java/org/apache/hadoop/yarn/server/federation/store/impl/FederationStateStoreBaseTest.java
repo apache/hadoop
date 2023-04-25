@@ -81,11 +81,14 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRes
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
+import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Base class for FederationMembershipStateStore implementations.
@@ -1045,22 +1048,30 @@ public abstract class FederationStateStoreBaseTest {
     checkRouterStoreToken(identifier, getStoreTokenResp);
   }
 
-  @Test(expected = NotImplementedException.class)
+  @Test
   public void testGetCurrentVersion() {
-    stateStore.getCurrentVersion();
+    Version version = stateStore.getCurrentVersion();
+    assertEquals(1, version.getMajorVersion());
+    assertEquals(1, version.getMinorVersion());
   }
 
-  @Test(expected = NotImplementedException.class)
+  @Test
   public void testStoreVersion() throws Exception {
     stateStore.storeVersion();
+    Version version = stateStore.getCurrentVersion();
+    assertEquals(1, version.getMajorVersion());
+    assertEquals(1, version.getMinorVersion());
   }
 
-  @Test(expected = NotImplementedException.class)
+  @Test
   public void testLoadVersion() throws Exception {
-    stateStore.loadVersion();
+    stateStore.storeVersion();
+    Version version = stateStore.loadVersion();
+    assertEquals(1, version.getMajorVersion());
+    assertEquals(1, version.getMinorVersion());
   }
 
-  @Test(expected = NotImplementedException.class)
+  @Test
   public void testCheckVersion() throws Exception {
     stateStore.checkVersion();
   }

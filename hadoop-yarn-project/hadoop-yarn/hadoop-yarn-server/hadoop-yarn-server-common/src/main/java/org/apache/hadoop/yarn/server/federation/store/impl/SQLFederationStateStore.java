@@ -204,10 +204,10 @@ public class SQLFederationStateStore implements FederationStateStore {
       "{call sp_deleteDelegationToken(?, ?)}";
 
   private static final String CALL_SP_STORE_VERSION =
-      "{call sp_storeVersion(?, ?, ?, ?)}";
+      "{call sp_storeVersion(?, ?, ?)}";
 
   private static final String CALL_SP_LOAD_VERSION =
-      "{call sp_getVersion(?, ?, ?, ?)}";
+      "{call sp_getVersion(?, ?)}";
 
   private Calendar utcCalendar =
       Calendar.getInstance(TimeZone.getTimeZone("UTC"));
@@ -1010,6 +1010,11 @@ public class SQLFederationStateStore implements FederationStateStore {
     return getVersion();
   }
 
+  /**
+   *
+   * @return
+   * @throws Exception
+   */
   public Version getVersion() throws Exception {
     CallableStatement cstmt = null;
     Version version = null;
@@ -1022,9 +1027,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.registerOutParameter("versionComment_OUT", VARCHAR);
 
       // Execute the query
-      long startTime = clock.getTime();
       cstmt.executeUpdate();
-      long stopTime = clock.getTime();
 
       // Check if the output it is a valid policy
       String versionComment = cstmt.getString("versionComment_OUT");
@@ -1034,7 +1037,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       }
     } catch (SQLException e) {
       FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
-        "Unable to select the version.");
+          "Unable to select the version.");
     } finally {
       // Return to the pool the CallableStatement
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
@@ -1049,6 +1052,12 @@ public class SQLFederationStateStore implements FederationStateStore {
     storeVersion(fedVersion, versionComment);
   }
 
+  /**
+   *
+   * @param fedVersion
+   * @param versionComment
+   * @throws YarnException
+   */
   public void storeVersion(byte[] fedVersion, String versionComment) throws YarnException {
     CallableStatement cstmt = null;
 
@@ -1061,9 +1070,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.registerOutParameter("rowCount_OUT", INTEGER);
 
       // Execute the query
-      long startTime = clock.getTime();
       cstmt.executeUpdate();
-      long stopTime = clock.getTime();
 
       // Check the ROWCOUNT value, if it is equal to 0 it means the call
       // did not add a new policy into FederationStateStore
@@ -1080,7 +1087,6 @@ public class SQLFederationStateStore implements FederationStateStore {
       }
 
       LOG.info("Insert into the state store the version : {}.", versionComment);
-      FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
       FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
