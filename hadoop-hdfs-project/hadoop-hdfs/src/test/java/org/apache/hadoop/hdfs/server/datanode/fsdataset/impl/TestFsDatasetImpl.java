@@ -1919,7 +1919,7 @@ public class TestFsDatasetImpl {
 
       String bpid = cluster.getNameNode().getNamesystem().getBlockPoolId();
       DataNode dn = cluster.getDataNodes().get(0);
-      FsDatasetSpi fsdataset = dn.getFSDataset();
+      FsDatasetImpl fsdataset = (FsDatasetImpl) dn.getFSDataset();
       List<ReplicaInfo> replicaInfos = fsdataset.getFinalizedBlocks(bpid);
       assertEquals(1, replicaInfos.size());
 
