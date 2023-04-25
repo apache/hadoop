@@ -32,10 +32,15 @@ public class ITestAzcopyHelper {
 
     File hadoopAzureDir;
     String azcopyDirPath;
+    private String accountName;
+    private String fileSystemName;
+    private Configuration configuration;
 
-    public String accountName;
-    public String fileSystemName;
-    public Configuration configuration;
+    public ITestAzcopyHelper(String accountName, String fileSystemName, Configuration configuration) throws Exception {
+      this.accountName = accountName;
+      this.fileSystemName = fileSystemName;
+      this.configuration = configuration;
+    }
 
     public void downloadAzcopyExecutableIfNotPresent() throws IOException, InterruptedException {
         // Find the hadoop-azure directory from the current working directory
@@ -117,7 +122,7 @@ public class ITestAzcopyHelper {
 
     public void createFileOrFolder(String pathFromContainerRoot, boolean isFile) throws Exception {
         downloadAzcopyExecutableIfNotPresent();
-        String url = "https://" + accountName+ FORWARD_SLASH + fileSystemName + FORWARD_SLASH +
+        String url = "https://" + accountName + FORWARD_SLASH + fileSystemName + FORWARD_SLASH +
                 pathFromContainerRoot;
         // Add the SAS token in config file (should be Account SAS or Container SAS").
         String configuredFixedToken = configuration.get(FS_AZURE_SAS_FIXED_TOKEN, null);

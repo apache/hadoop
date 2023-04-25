@@ -48,23 +48,19 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   }
 
   void createAzCopyDirectory(Path path) throws Exception {
-    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper();
-    azcopyHelper.fileSystemName = getFileSystemName();
-    azcopyHelper.accountName = getAccountName();
-    azcopyHelper.configuration = getFileSystem().getAbfsStore()
+    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(getFileSystemName(),
+        getAccountName(), getFileSystem().getAbfsStore()
         .getAbfsConfiguration()
-        .getRawConfiguration();
+        .getRawConfiguration());
     azcopyHelper.createFolderUsingAzcopy(
         getFileSystem().makeQualified(path).toUri().getPath().substring(1));
   }
 
   void createAzCopyFile(Path path) throws Exception {
-    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper();
-    azcopyHelper.fileSystemName = getFileSystemName();
-    azcopyHelper.accountName = getAccountName();
-    azcopyHelper.configuration = getFileSystem().getAbfsStore()
+    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(getFileSystemName(),
+        getAccountName(), getFileSystem().getAbfsStore()
         .getAbfsConfiguration()
-        .getRawConfiguration();
+        .getRawConfiguration());
     azcopyHelper.createFileUsingAzcopy(
         getFileSystem().makeQualified(path).toUri().getPath().substring(1));
   }
