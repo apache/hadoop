@@ -90,39 +90,4 @@ public class TestMemoryFederationStateStore extends FederationStateStoreBaseTest
     assertTrue(tokenIdentifier instanceof RMDelegationTokenIdentifier);
     assertEquals(identifier, tokenIdentifier);
   }
-
-  @Test
-  public void testGetCurrentVersion() {
-    MemoryFederationStateStore memoryStateStore =
-        MemoryFederationStateStore.class.cast(this.getStateStore());
-    Version version = memoryStateStore.getCurrentVersion();
-    assertEquals(version.getMajorVersion(), 1);
-    assertEquals(version.getMinorVersion(), 1);
-  }
-
-  @Test
-  public void testStoreVersion() throws Exception {
-    MemoryFederationStateStore memoryStateStore =
-        MemoryFederationStateStore.class.cast(this.getStateStore());
-    memoryStateStore.storeVersion();
-    Version version = memoryStateStore.getCurrentVersion();
-    assertEquals(version.getMajorVersion(), 1);
-    assertEquals(version.getMinorVersion(), 1);
-  }
-
-  @Test
-  public void testLoadVersion() throws Exception {
-    MemoryFederationStateStore memoryStateStore =
-        MemoryFederationStateStore.class.cast(this.getStateStore());
-    Version version = memoryStateStore.loadVersion();
-    assertEquals(version.getMajorVersion(), 1);
-    assertEquals(version.getMinorVersion(), 1);
-  }
-
-  @Test
-  public void testCheckVersion() throws Exception {
-    MemoryFederationStateStore memoryStateStore =
-        MemoryFederationStateStore.class.cast(this.getStateStore());
-    memoryStateStore.checkVersion();
-  }
 }

@@ -95,6 +95,11 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " nextVal bigint NOT NULL,"
           + " CONSTRAINT pk_sequenceName PRIMARY KEY (sequenceName))";
 
+  private static final String TABLE_VERSIONS =
+      "CREATE TABLE versions ("
+          + " fedVersion varbinary(1024) NOT NULL,"
+          + " versionComment VARCHAR(255),"
+          + " CONSTRAINT pk_fedVersion PRIMARY KEY (fedVersion))";
   private static final String SP_REGISTERSUBCLUSTER =
       "CREATE PROCEDURE sp_registerSubCluster("
           + " IN subClusterId_IN varchar(256),"
@@ -431,6 +436,25 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT; "
           + " END ";
 
+  protected static final String SP_STORE_VERSION =
+      "CREATE PROCEDURE sp_storeVersion("
+          + " IN fedVersion_IN varbinary(1024), IN versionComment_IN varchar(256), "
+          + " OUT rowCount_OUT int)"
+          + " MODIFIES SQL DATA BEGIN ATOMIC"
+          + " DELETE FROM versions;"
+          + " INSERT INTO versions (fedVersion, versionComment)"
+          + " VALUES (fedVersion_IN, versionComment_IN);"
+          + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT; "
+          + " END ";
+
+  protected static final String SP_GET_VERSION =
+      "CREATE PROCEDURE sp_getVersion("
+          + " OUT fedVersion_OUT varbinary(1024), OUT versionComment_OUT varchar(256))"
+          + " MODIFIES SQL DATA BEGIN ATOMIC"
+          + " SELECT fedVersion, versionComment INTO fedVersion_OUT, versionComment_OUT"
+          + " FROM versions; "
+          + " END ";
+
   private List<String> tables = new ArrayList<>();
 
   @Override
@@ -449,6 +473,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
       conn.prepareStatement(TABLE_MASTERKEYS).execute();
       conn.prepareStatement(TABLE_DELEGATIONTOKENS).execute();
       conn.prepareStatement(TABLE_SEQUENCETABLE).execute();
+      conn.prepareStatement(TABLE_VERSIONS).execute();
 
       conn.prepareStatement(SP_REGISTERSUBCLUSTER).execute();
       conn.prepareStatement(SP_DEREGISTERSUBCLUSTER).execute();
@@ -480,6 +505,9 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
       conn.prepareStatement(SP_GET_DELEGATIONTOKEN).execute();
       conn.prepareStatement(SP_UPDATE_DELEGATIONTOKEN).execute();
       conn.prepareStatement(SP_DELETE_DELEGATIONTOKEN).execute();
+
+      conn.prepareStatement(SP_STORE_VERSION).execute();
+      conn.prepareStatement(SP_GET_VERSION).execute();
 
       LOG.info("Database Init: Complete");
     } catch (Exception e) {
