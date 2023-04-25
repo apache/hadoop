@@ -71,6 +71,7 @@ import org.apache.hadoop.hdfs.tools.GetGroups;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.junit.After;
@@ -650,6 +651,17 @@ public class TestObserverNode {
         fail("Unexpected exception: " + e);
       }
     }
+  }
+
+  @Test
+  public void testGetListingForDeletedDir() throws Exception {
+    Path path = new Path("/dir1/dir2/testFile");
+    dfs.create(path).close();
+
+    assertTrue(dfs.delete(new Path("/dir1/dir2"), true));
+
+    LambdaTestUtils.intercept(FileNotFoundException.class,
+        () -> dfs.listLocatedStatus(new Path("/dir1/dir2")));
   }
 
   @Test

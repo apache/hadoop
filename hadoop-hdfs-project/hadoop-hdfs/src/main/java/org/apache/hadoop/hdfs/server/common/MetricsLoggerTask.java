@@ -18,9 +18,7 @@
 package org.apache.hadoop.hdfs.server.common;
 
 import java.lang.management.ManagementFactory;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import javax.management.Attribute;
@@ -34,8 +32,6 @@ import javax.management.ObjectName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.metrics2.util.MBeans;
-import org.apache.log4j.Appender;
-import org.apache.log4j.AsyncAppender;
 
 /**
  * MetricsLoggerTask can be used as utility to dump metrics to log.
@@ -56,12 +52,12 @@ public class MetricsLoggerTask implements Runnable {
     }
   }
 
-  private org.apache.log4j.Logger metricsLog;
+  private Logger metricsLog;
   private String nodeName;
   private short maxLogLineLength;
 
   public MetricsLoggerTask(String metricsLog, String nodeName, short maxLogLineLength) {
-    this.metricsLog = org.apache.log4j.Logger.getLogger(metricsLog);
+    this.metricsLog = LoggerFactory.getLogger(metricsLog);
     this.nodeName = nodeName;
     this.maxLogLineLength = maxLogLineLength;
   }
@@ -115,8 +111,11 @@ public class MetricsLoggerTask implements Runnable {
         .substring(0, maxLogLineLength) + "...");
   }
 
-  private static boolean hasAppenders(org.apache.log4j.Logger logger) {
-    return logger.getAllAppenders().hasMoreElements();
+  // TODO : hadoop-logging module to hide log4j implementation details, this method
+  //  can directly call utility from hadoop-logging.
+  private static boolean hasAppenders(Logger logger) {
+    return org.apache.log4j.Logger.getLogger(logger.getName()).getAllAppenders()
+        .hasMoreElements();
   }
 
   /**
@@ -138,26 +137,4 @@ public class MetricsLoggerTask implements Runnable {
     return attributeNames;
   }
 
-  /**
-   * Make the metrics logger async and add all pre-existing appenders to the
-   * async appender.
-   */
-  public static void makeMetricsLoggerAsync(String metricsLog) {
-    org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(metricsLog);
-    logger.setAdditivity(false); // Don't pollute actual logs with metrics dump
-
-    @SuppressWarnings("unchecked")
-    List<Appender> appenders = Collections.list(logger.getAllAppenders());
-    // failsafe against trying to async it more than once
-    if (!appenders.isEmpty() && !(appenders.get(0) instanceof AsyncAppender)) {
-      AsyncAppender asyncAppender = new AsyncAppender();
-      // change logger to have an async appender containing all the
-      // previously configured appenders
-      for (Appender appender : appenders) {
-        logger.removeAppender(appender);
-        asyncAppender.addAppender(appender);
-      }
-      logger.addAppender(asyncAppender);
-    }
-  }
 }

@@ -130,6 +130,9 @@ public class TracingHeaderValidator implements Listener {
     }
     Assertions.assertThat(idList[5]).describedAs("Operation name incorrect")
         .isEqualTo(operation.toString());
+    if (idList[6].contains("_")) {
+      idList[6] = idList[6].split("_")[0];
+    }
     int retryCount = Integer.parseInt(idList[6]);
     Assertions.assertThat(retryCount)
         .describedAs("Retry was required due to issue on server side")

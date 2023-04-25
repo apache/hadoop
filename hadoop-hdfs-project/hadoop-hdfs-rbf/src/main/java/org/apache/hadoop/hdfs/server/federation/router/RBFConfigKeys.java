@@ -201,6 +201,10 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "observer.federated.state.propagation.maxsize";
   public static final int DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE_DEFAULT = 5;
 
+  public static final String DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_KEY =
+      FEDERATION_ROUTER_PREFIX + "observer.state.id.refresh.period";
+  public static final String DFS_ROUTER_OBSERVER_STATE_ID_REFRESH_PERIOD_DEFAULT = "15s";
+
   public static final String FEDERATION_STORE_SERIALIZER_CLASS =
       FEDERATION_STORE_PREFIX + "serializer";
   public static final Class<StateStoreSerializerPBImpl>
@@ -250,6 +254,15 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_STORE_ZK_DRIVER_PREFIX + "async.max.threads";
   public static final int FEDERATION_STORE_ZK_ASYNC_MAX_THREADS_DEFAULT =
       -1;
+
+  // HDFS Router-based federation File based store implementation specific configs
+  public static final String FEDERATION_STORE_FILE_ASYNC_THREADS =
+      FEDERATION_STORE_PREFIX + "driver.file.async.threads";
+  public static final int FEDERATION_STORE_FILE_ASYNC_THREADS_DEFAULT = 0;
+
+  public static final String FEDERATION_STORE_FS_ASYNC_THREADS =
+      FEDERATION_STORE_PREFIX + "driver.fs.async.threads";
+  public static final int FEDERATION_STORE_FS_ASYNC_THREADS_DEFAULT = 0;
 
   // HDFS Router safe mode
   public static final String DFS_ROUTER_SAFEMODE_ENABLE =

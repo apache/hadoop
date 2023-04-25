@@ -36,7 +36,7 @@ public class TestYarnConfiguration {
   void testDefaultRMWebUrl() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     String rmWebUrl = WebAppUtils.getRMWebAppURLWithScheme(conf);
-    // shouldn't have a "/" on the end of the url as all the other uri routinnes
+    // shouldn't have a "/" on the end of the url as all the other uri routines
     // specifically add slashes and Jetty doesn't handle double slashes.
     assertNotSame("http://0.0.0.0:8088",
         rmWebUrl,
@@ -77,7 +77,7 @@ public class TestYarnConfiguration {
     String[] parts = rmWebUrl.split(":");
     assertEquals(24543,
         Integer.parseInt(parts[parts.length - 1]),
-        "RM Web URL Port is incrrect");
+        "RM Web URL Port is incorrect");
     assertNotSame("http://rmtesting:24543", rmWebUrl,
         "RM Web Url not resolved correctly. Should not be rmtesting");
   }

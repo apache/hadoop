@@ -797,7 +797,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
       }
       @Override
       protected ContainerScheduler createContainerScheduler(Context context) {
-        return new ContainerScheduler(context, dispatcher, metrics){
+        return new ContainerScheduler(context, getDispatcher(), metrics){
           @Override
           public ContainersMonitor getContainersMonitor() {
             return new ContainersMonitorImpl(null, null, null) {
@@ -1001,7 +1001,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
             return null;
           }
     };
-    containerManager.dispatcher.disableExitOnDispatchException();
+    containerManager.getDispatcher().disableExitOnDispatchException();
     return containerManager;
   }
 

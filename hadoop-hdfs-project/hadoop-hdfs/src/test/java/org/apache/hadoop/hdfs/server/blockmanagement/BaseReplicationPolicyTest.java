@@ -56,13 +56,13 @@ abstract public class BaseReplicationPolicyTest {
   protected String blockPlacementPolicy;
   protected NamenodeProtocols nameNodeRpc = null;
 
-  static void updateHeartbeatWithUsage(DatanodeDescriptor dn,
+  void updateHeartbeatWithUsage(DatanodeDescriptor dn,
     long capacity, long dfsUsed, long remaining, long blockPoolUsed,
     long dnCacheCapacity, long dnCacheUsed, int xceiverCount,
     int volFailures) {
     dn.getStorageInfos()[0].setUtilizationForTesting(
         capacity, dfsUsed, remaining, blockPoolUsed);
-    dn.updateHeartbeat(
+    dnManager.getHeartbeatManager().updateHeartbeat(dn,
         BlockManagerTestUtil.getStorageReportsForDatanode(dn),
         dnCacheCapacity, dnCacheUsed, xceiverCount, volFailures, null);
   }

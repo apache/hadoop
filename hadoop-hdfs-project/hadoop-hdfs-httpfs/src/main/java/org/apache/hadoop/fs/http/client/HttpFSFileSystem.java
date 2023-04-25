@@ -1646,6 +1646,7 @@ public class HttpFSFileSystem extends FileSystem
     case CommonPathCapabilities.FS_SNAPSHOTS:
     case CommonPathCapabilities.FS_STORAGEPOLICY:
     case CommonPathCapabilities.FS_XATTRS:
+    case CommonPathCapabilities.FS_TRUNCATE:
       return true;
     case CommonPathCapabilities.FS_SYMLINKS:
       return false;

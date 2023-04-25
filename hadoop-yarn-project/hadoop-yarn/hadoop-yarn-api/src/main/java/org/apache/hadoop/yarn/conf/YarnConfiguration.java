@@ -217,6 +217,16 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_RM_APPLICATION_MAX_TAG_LENGTH = 100;
 
+  public static final String NODE_STORE_ROOT_DIR_NUM_RETRIES =
+      RM_PREFIX + "nodestore-rootdir.num-retries";
+
+  public static final int NODE_STORE_ROOT_DIR_NUM_DEFAULT_RETRIES = 1000;
+
+  public static final String NODE_STORE_ROOT_DIR_RETRY_INTERVAL =
+      RM_PREFIX + "nodestore-rootdir.retry-interval-ms";
+
+  public static final int NODE_STORE_ROOT_DIR_RETRY_DEFAULT_INTERVAL = 1000;
+
   public static final String RM_APPLICATION_MASTER_SERVICE_PROCESSORS =
       RM_PREFIX + "application-master-service.processors";
 
@@ -3070,6 +3080,10 @@ public class YarnConfiguration extends Configuration {
       + "amrmproxy.ha.enable";
   public static final boolean DEFAULT_AMRM_PROXY_HA_ENABLED = false;
 
+  // Enable NM Dispatcher Metric default False.
+  public static final String NM_DISPATCHER_METRIC_ENABLED = NM_PREFIX + "dispatcher.metric.enable";
+  public static final boolean DEFAULT_NM_DISPATCHER_METRIC_ENABLED = false;
+
   /**
    * Default platform-agnostic CLASSPATH for YARN applications. A
    * comma-separated list of CLASSPATH entries. The parameter expansion marker
@@ -4248,6 +4262,13 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_ROUTER_WEBAPP_DEFAULT_INTERCEPTOR_CLASS =
       "org.apache.hadoop.yarn.server.router.webapp."
           + "DefaultRequestInterceptorREST";
+
+  /**
+   * ApplicationSubmissionContextInterceptor configurations.
+   **/
+  public static final String ROUTER_ASC_INTERCEPTOR_MAX_SIZE =
+      ROUTER_PREFIX + "asc-interceptor-max-size";
+  public static final String DEFAULT_ROUTER_ASC_INTERCEPTOR_MAX_SIZE = "1MB";
 
   /**
    * The interceptor class used in FederationInterceptorREST should return

@@ -102,6 +102,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueu
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.MutableCSConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
@@ -111,7 +112,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
@@ -137,6 +140,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationReque
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateResponseInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteResponseInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
@@ -156,10 +160,11 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
+import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT_FULL;
@@ -305,9 +310,14 @@ public class MockDefaultRequestInterceptorREST
     if (!isRunning) {
       throw new RuntimeException("RM is stopped");
     }
-    NodeInfo node = new NodeInfo();
-    node.setId(nodeId);
-    node.setLastHealthUpdate(Integer.valueOf(getSubClusterId().getId()));
+    NodeInfo node = null;
+    SubClusterId subCluster = getSubClusterId();
+    String subClusterId = subCluster.getId();
+    if (nodeId.contains(subClusterId) || nodeId.contains("test")) {
+      node = new NodeInfo();
+      node.setId(nodeId);
+      node.setLastHealthUpdate(Integer.valueOf(getSubClusterId().getId()));
+    }
     return node;
   }
 
@@ -1000,7 +1010,7 @@ public class MockDefaultRequestInterceptorREST
     }
 
     if (resContext.getReservationId() == null) {
-      throw new BadRequestException("Update operations must specify an existing ReservaitonId");
+      throw new BadRequestException("Update operations must specify an existing ReservationId");
     }
 
     ReservationRequestInterpreter[] values = ReservationRequestInterpreter.values();
@@ -1236,7 +1246,17 @@ public class MockDefaultRequestInterceptorREST
     return webSvc.dumpSchedulerLogs(time, hsr);
   }
 
+  public Response replaceLabelsOnNodes(NodeToLabelsEntryList newNodeToLabels,
+      HttpServletRequest hsr) throws IOException {
+    return super.replaceLabelsOnNodes(newNodeToLabels, hsr);
+  }
+
   @Override
+  public Response replaceLabelsOnNode(Set<String> newNodeLabelsName,
+      HttpServletRequest hsr, String nodeId) throws Exception {
+    return super.replaceLabelsOnNode(newNodeLabelsName, hsr, nodeId);
+  }
+
   public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId, String groupBy) {
     if (!EnumUtils.isValidEnum(RMWSConsts.ActivitiesGroupBy.class, groupBy.toUpperCase())) {
       String errMessage = "Got invalid groupBy: " + groupBy + ", valid groupBy types: "
@@ -1346,5 +1366,41 @@ public class MockDefaultRequestInterceptorREST
       }
     }
     throw new YarnException("removeFromClusterNodeLabels Error");
+  }
+
+  @Override
+  public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
+      HttpServletRequest req) throws AuthorizationException, InterruptedException {
+    RMContext rmContext = mockRM.getRMContext();
+    MutableCSConfigurationProvider provider = new MutableCSConfigurationProvider(rmContext);
+    try {
+      Configuration conf = new Configuration();
+      conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+          YarnConfiguration.MEMORY_CONFIGURATION_STORE);
+      provider.init(conf);
+      provider.logAndApplyMutation(UserGroupInformation.getCurrentUser(), mutationInfo);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return Response.status(Status.OK).
+        entity("Configuration change successfully applied.").build();
+  }
+
+  @Override
+  public Response getSchedulerConfiguration(HttpServletRequest req) throws AuthorizationException {
+    return Response.status(Status.OK).entity(new ConfInfo(mockRM.getConfig()))
+        .build();
+  }
+
+  public ClusterInfo getClusterInfo() {
+    ClusterInfo clusterInfo = new ClusterInfo(mockRM);
+    return clusterInfo;
+  }
+
+  @Override
+  public ClusterUserInfo getClusterUserInfo(HttpServletRequest hsr) {
+    String remoteUser = hsr.getRemoteUser();
+    UserGroupInformation callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+    return new ClusterUserInfo(mockRM, callerUGI);
   }
 }
