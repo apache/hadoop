@@ -23,17 +23,25 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
+
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_FIXED_TOKEN;
 
-public class ITestAzcopyHelper extends AbstractAbfsIntegrationTest {
-
-    public ITestAzcopyHelper() throws Exception {
-        super.setup();
-    }
+public class ITestAzcopyHelper {
 
     File hadoopAzureDir;
     String azcopyDirPath;
+
+    private String accountName;
+    private String fileSystemName;
+    private Configuration configuration;
+
+    public ITestAzcopyHelper(String accountName, String fileSystemName, Configuration configuration) throws Exception {
+      this.accountName = accountName;
+      this.fileSystemName = fileSystemName;
+      this.configuration = configuration;
+    }
 
     public void downloadAzcopyExecutableIfNotPresent() throws IOException, InterruptedException {
         // Find the hadoop-azure directory from the current working directory
@@ -115,10 +123,10 @@ public class ITestAzcopyHelper extends AbstractAbfsIntegrationTest {
 
     public void createFileOrFolder(String pathFromContainerRoot, boolean isFile) throws Exception {
         downloadAzcopyExecutableIfNotPresent();
-        String url = "https://" + this.getAccountName() + FORWARD_SLASH + this.getFileSystemName() + FORWARD_SLASH +
+        String url = "https://" + accountName + FORWARD_SLASH + fileSystemName + FORWARD_SLASH +
                 pathFromContainerRoot;
         // Add the SAS token in config file (should be Account SAS or Container SAS").
-        String configuredFixedToken = getRawConfiguration().get(FS_AZURE_SAS_FIXED_TOKEN, null);
+        String configuredFixedToken = configuration.get(FS_AZURE_SAS_FIXED_TOKEN, null);
         if (configuredFixedToken != null) {
             if (isFile) {
                 createFileCreationScript(azcopyDirPath, "createFile.sh", azcopyDirPath, configuredFixedToken, url);
