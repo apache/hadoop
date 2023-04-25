@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -70,14 +71,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Collection;
+import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class FederationRMAdminInterceptor extends AbstractRMAdminRequestInterceptor {
 
@@ -623,16 +627,89 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
   @Override
   public CheckForDecommissioningNodesResponse checkForDecommissioningNodes(
-      CheckForDecommissioningNodesRequest checkForDecommissioningNodesRequest)
-      throws YarnException, IOException {
-    throw new NotImplementedException();
+      CheckForDecommissioningNodesRequest request) throws YarnException, IOException {
+
+    // Parameter check
+    if (request == null) {
+      RouterServerUtil.logAndThrowException("Missing checkForDecommissioningNodes request.", null);
+      routerMetrics.incrCheckForDecommissioningNodesFailedRetrieved();
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrCheckForDecommissioningNodesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing checkForDecommissioningNodes SubClusterId.",
+          null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{CheckForDecommissioningNodesRequest.class}, new Object[]{request});
+
+      Collection<CheckForDecommissioningNodesResponse> responses =
+          remoteMethod.invokeConcurrent(this, CheckForDecommissioningNodesResponse.class,
+          subClusterId);
+
+      if (CollectionUtils.isNotEmpty(responses)) {
+        // We selected a subCluster, the list is not empty and size=1.
+        List<CheckForDecommissioningNodesResponse> collects =
+            responses.stream().collect(Collectors.toList());
+        if (!collects.isEmpty() && collects.size() == 1) {
+          CheckForDecommissioningNodesResponse response = collects.get(0);
+          long stopTime = clock.getTime();
+          routerMetrics.succeededCheckForDecommissioningNodesRetrieved((stopTime - startTime));
+          Set<NodeId> nodes = response.getDecommissioningNodes();
+          return CheckForDecommissioningNodesResponse.newInstance(nodes);
+        }
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrCheckForDecommissioningNodesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to checkForDecommissioningNodes due to exception " + e.getMessage());
+    }
+
+    routerMetrics.incrCheckForDecommissioningNodesFailedRetrieved();
+    throw new YarnException("Unable to checkForDecommissioningNodes.");
   }
 
   @Override
   public RefreshClusterMaxPriorityResponse refreshClusterMaxPriority(
-      RefreshClusterMaxPriorityRequest request)
-      throws YarnException, IOException {
-    throw new NotImplementedException();
+      RefreshClusterMaxPriorityRequest request) throws YarnException, IOException {
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrRefreshClusterMaxPriorityFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshClusterMaxPriority request.", null);
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrRefreshClusterMaxPriorityFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshClusterMaxPriority SubClusterId.",
+          null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{RefreshClusterMaxPriorityRequest.class}, new Object[]{request});
+      Collection<RefreshClusterMaxPriorityResponse> refreshClusterMaxPriorityResps =
+          remoteMethod.invokeConcurrent(this, RefreshClusterMaxPriorityResponse.class,
+          subClusterId);
+      if (CollectionUtils.isNotEmpty(refreshClusterMaxPriorityResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRefreshClusterMaxPriorityRetrieved(stopTime - startTime);
+        return RefreshClusterMaxPriorityResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRefreshClusterMaxPriorityFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshClusterMaxPriority due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrRefreshClusterMaxPriorityFailedRetrieved();
+    throw new YarnException("Unable to refreshClusterMaxPriority.");
   }
 
   @Override
