@@ -1011,36 +1011,40 @@ public class SQLFederationStateStore implements FederationStateStore {
   }
 
   /**
+   * Query the Version information of Federation from the database.
    *
-   * @return
-   * @throws Exception
+   * @return Version Info.
+   * @throws Exception Exception Information.
    */
   public Version getVersion() throws Exception {
-    CallableStatement cstmt = null;
+    CallableStatement callableStatement = null;
     Version version = null;
-
     try {
-      cstmt = getCallableStatement(CALL_SP_LOAD_VERSION);
+      callableStatement = getCallableStatement(CALL_SP_LOAD_VERSION);
 
       // Set the parameters for the stored procedure
-      cstmt.registerOutParameter("fedVersion_OUT", java.sql.Types.VARBINARY);
-      cstmt.registerOutParameter("versionComment_OUT", VARCHAR);
+      callableStatement.registerOutParameter("fedVersion_OUT", java.sql.Types.VARBINARY);
+      callableStatement.registerOutParameter("versionComment_OUT", VARCHAR);
 
       // Execute the query
-      cstmt.executeUpdate();
+      long startTime = clock.getTime();
+      callableStatement.executeUpdate();
+      long stopTime = clock.getTime();
 
-      // Check if the output it is a valid policy
-      String versionComment = cstmt.getString("versionComment_OUT");
-      byte[] fedVersion = cstmt.getBytes("fedVersion_OUT");
+      // Parsing version information.
+      String versionComment = callableStatement.getString("versionComment_OUT");
+      byte[] fedVersion = callableStatement.getBytes("fedVersion_OUT");
       if (versionComment != null && fedVersion != null) {
         version = new VersionPBImpl(YarnServerCommonProtos.VersionProto.parseFrom(fedVersion));
+        FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
       }
     } catch (SQLException e) {
+      FederationStateStoreClientMetrics.failedStateStoreCall();
       FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
           "Unable to select the version.");
     } finally {
       // Return to the pool the CallableStatement
-      FederationStateStoreUtils.returnToPool(LOG, cstmt);
+      FederationStateStoreUtils.returnToPool(LOG, callableStatement);
     }
     return version;
   }
@@ -1053,28 +1057,32 @@ public class SQLFederationStateStore implements FederationStateStore {
   }
 
   /**
+   * Store the Federation Version in the database.
    *
-   * @param fedVersion
-   * @param versionComment
-   * @throws YarnException
+   * @param fedVersion Federation Version.
+   * @param versionComment Federation Version Comment,
+   *                       We use the result of Version toString as version Comment.
+   * @throws YarnException indicates exceptions from yarn servers.
    */
   public void storeVersion(byte[] fedVersion, String versionComment) throws YarnException {
-    CallableStatement cstmt = null;
+    CallableStatement callableStatement = null;
 
     try {
-      cstmt = getCallableStatement(CALL_SP_STORE_VERSION);
+      callableStatement = getCallableStatement(CALL_SP_STORE_VERSION);
 
       // Set the parameters for the stored procedure
-      cstmt.setBytes("fedVersion_IN", fedVersion);
-      cstmt.setString("versionComment_IN", versionComment);
-      cstmt.registerOutParameter("rowCount_OUT", INTEGER);
+      callableStatement.setBytes("fedVersion_IN", fedVersion);
+      callableStatement.setString("versionComment_IN", versionComment);
+      callableStatement.registerOutParameter("rowCount_OUT", INTEGER);
 
       // Execute the query
-      cstmt.executeUpdate();
+      long startTime = clock.getTime();
+      callableStatement.executeUpdate();
+      long stopTime = clock.getTime();
 
       // Check the ROWCOUNT value, if it is equal to 0 it means the call
-      // did not add a new policy into FederationStateStore
-      int rowCount = cstmt.getInt("rowCount_OUT");
+      // did not add a new version into FederationStateStore
+      int rowCount = callableStatement.getInt("rowCount_OUT");
       if (rowCount == 0) {
         FederationStateStoreUtils.logAndThrowStoreException(LOG,
             "The version %s was not insert into the StateStore.", versionComment);
@@ -1085,7 +1093,7 @@ public class SQLFederationStateStore implements FederationStateStore {
         FederationStateStoreUtils.logAndThrowStoreException(LOG,
             "Wrong behavior during insert the version %s.", versionComment);
       }
-
+      FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
       LOG.info("Insert into the state store the version : {}.", versionComment);
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
@@ -1093,7 +1101,7 @@ public class SQLFederationStateStore implements FederationStateStore {
           "Unable to insert the newly version : %s.", versionComment);
     } finally {
       // Return to the pool the CallableStatement
-      FederationStateStoreUtils.returnToPool(LOG, cstmt);
+      FederationStateStoreUtils.returnToPool(LOG, callableStatement);
     }
   }
 
