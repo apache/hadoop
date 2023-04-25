@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
@@ -82,8 +83,8 @@ public class TestContainerAllocation {
   private final int GB = 1024;
 
   private YarnConfiguration conf;
-  
-  RMNodeLabelsManager mgr;
+
+  NullRMNodeLabelsManager mgr;
 
   @Before
   public void setUp() throws Exception {
@@ -103,6 +104,8 @@ public class TestContainerAllocation {
     // Register node1
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 2 * GB, 4);
     MockNM nm2 = rm.registerNode("127.0.0.1:2234", 3 * GB, 4);
+
+    CapacityScheduler cs = getCapacityScheduler(rm, 5);
 
     nm1.nodeHeartbeat(true);
     nm2.nodeHeartbeat(true);
@@ -169,6 +172,7 @@ public class TestContainerAllocation {
     MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 = rm1.registerNode("127.0.0.1:1234", 8000);
+    CapacityScheduler cs = getCapacityScheduler(rm1, 8);
     RMApp app1 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     // request a container.
@@ -198,6 +202,7 @@ public class TestContainerAllocation {
     MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 = rm1.registerNode("unknownhost:1234", 8000);
+    CapacityScheduler cs = getCapacityScheduler(rm1, 8);
     RMApp app1 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
@@ -235,6 +240,9 @@ public class TestContainerAllocation {
     rm1.start();
     MockNM nm1 = rm1.registerNode("127.0.0.1:1234", 8000);
     MockNM nm2 = rm1.registerNode("127.0.0.1:2345", 8000);
+
+    CapacityScheduler cs = getCapacityScheduler(rm1, 16);
+
     // LogAggregationContext is set as null
     Assert
       .assertNull(getLogAggregationContextFromContainerToken(rm1, nm1, null));
@@ -334,6 +342,9 @@ public class TestContainerAllocation {
     rm1.start();
 
     MockNM nm1 = rm1.registerNode("unknownhost:1234", 8000);
+
+    CapacityScheduler cs = getCapacityScheduler(rm1, 8);
+
     RMApp app1;
     try {
       SecurityUtilTestHelper.setTokenServiceUseIp(true);
@@ -374,6 +385,8 @@ public class TestContainerAllocation {
     MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB);
     MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
 
+    CapacityScheduler cs = getCapacityScheduler(rm1, 16);
+
     // launch an app to queue, AM container should be launched in nm1
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
@@ -401,7 +414,6 @@ public class TestContainerAllocation {
     am1.allocate("*", 4 * GB, 1, new ArrayList<ContainerId>());
     am2.allocate("*", 4 * GB, 1, new ArrayList<ContainerId>());
     
-    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("default");
 
@@ -473,6 +485,8 @@ public class TestContainerAllocation {
     MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB);
     MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
 
+    CapacityScheduler cs = getCapacityScheduler(rm1, 16);
+
     // launch an app to queue, AM container should be launched in nm1
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
@@ -500,7 +514,6 @@ public class TestContainerAllocation {
     am1.allocate("*", 4 * GB, 1, new ArrayList<ContainerId>());
     am2.allocate("*", 4 * GB, 1, new ArrayList<ContainerId>());
 
-    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("default");
 
@@ -585,6 +598,8 @@ public class TestContainerAllocation {
     MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB);
     MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
 
+    CapacityScheduler cs = getCapacityScheduler(rm1, 16);
+
     // launch an app to queue, AM container should be launched in nm1
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
@@ -612,7 +627,6 @@ public class TestContainerAllocation {
     am1.allocate("*", 4 * GB, 1, new ArrayList<ContainerId>());
     am2.allocate("*", 4 * GB, 1, new ArrayList<ContainerId>());
 
-    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("default");
 
@@ -672,6 +686,7 @@ public class TestContainerAllocation {
     rm1.getRMContext().setNodeLabelManager(mgr);
     rm1.start();
     MockNM nm1 = rm1.registerNode("h1:1234", 80 * GB);
+    CapacityScheduler cs = getCapacityScheduler(rm1, 80);
 
     // launch an app to queue, AM container should be launched in nm1
     MockRMAppSubmissionData data =
@@ -687,7 +702,6 @@ public class TestContainerAllocation {
 
     am1.allocate("*", 1 * GB, 5, new ArrayList<ContainerId>());
 
-    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
 
     // Do node heartbeats once
@@ -730,6 +744,8 @@ public class TestContainerAllocation {
     MockNM nm1 = rm1.registerNode("h1:1234", 10 * GB);
     MockNM nm2 = rm1.registerNode("h2:1234", 90 * GB);
 
+    CapacityScheduler cs = getCapacityScheduler(rm1, 100);
+
     // launch an app to queue A, AM container should be launched in nm1
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
@@ -757,7 +773,6 @@ public class TestContainerAllocation {
 
     am1.allocate("*", 4 * GB, 2, null);
 
-    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
     RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
 
@@ -798,6 +813,8 @@ public class TestContainerAllocation {
     MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB);
     MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
 
+    CapacityScheduler cs = getCapacityScheduler(rm1, 16);
+
     // launch an app to queue default, AM container should be launched in nm1
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
@@ -828,7 +845,6 @@ public class TestContainerAllocation {
     // am2 asks 4 * 5G container
     am2.allocate("*", 5 * GB, 4, null);
 
-    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
     RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
 
@@ -905,6 +921,8 @@ public class TestContainerAllocation {
     rm1.start();
     MockNM nm1 = rm1.registerNode("h1:1234", 100 * GB);
 
+    CapacityScheduler cs = getCapacityScheduler(rm1, 100);
+
     // launch an app to queue A, AM container should be launched in nm1
     MockRMAppSubmissionData data2 =
         MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
@@ -946,7 +964,6 @@ public class TestContainerAllocation {
     am2.allocate("*", 5 * GB, 10, null);
     am3.allocate("*", 5 * GB, 10, null);
 
-    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
 
     FiCaSchedulerApp schedulerApp1 =
@@ -1017,8 +1034,6 @@ public class TestContainerAllocation {
     rm1.close();
   }
 
-
-
   @Test(timeout = 60000)
   public void testUserLimitAllocationMultipleContainers() throws Exception {
     CapacitySchedulerConfiguration newConf =
@@ -1033,6 +1048,8 @@ public class TestContainerAllocation {
     rm1.getRMContext().setNodeLabelManager(mgr);
     rm1.start();
     MockNM nm1 = rm1.registerNode("h1:1234", 1000 * GB);
+
+    CapacityScheduler cs = getCapacityScheduler(rm1, 1000);
 
     // launch app from 1st user to queue C, AM container should be launched in nm1
     MockRMAppSubmissionData data1 =
@@ -1068,7 +1085,6 @@ public class TestContainerAllocation {
     am2.allocate("h1", 5 * GB, 1000, null);
     am2.allocate(NetworkTopology.DEFAULT_RACK, 5 * GB, 1000, null);
 
-    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
 
     FiCaSchedulerApp schedulerApp1 =
@@ -1097,6 +1113,8 @@ public class TestContainerAllocation {
     rm1.getRMContext().setNodeLabelManager(mgr);
     rm1.start();
     MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB);
+
+    CapacityScheduler cs = getCapacityScheduler(rm1, 8);
 
     MockRMAppSubmissionData data3 =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
@@ -1144,7 +1162,6 @@ public class TestContainerAllocation {
     am1.allocate("*", 1 * GB, 50, null);
     am2.allocate("*", 1 * GB, 50, null);
 
-    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
 
     for (int i = 0; i < 10; i++) {
@@ -1195,6 +1212,8 @@ public class TestContainerAllocation {
     MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB);
     MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
 
+    CapacityScheduler cs = getCapacityScheduler(rm1, 16);
+
     // launch an app to queue "a", AM container should be launched on nm1
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
@@ -1221,7 +1240,6 @@ public class TestContainerAllocation {
 
     am1.allocate("*", 7 * GB, 2, new ArrayList<ContainerId>());
 
-    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
     RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
     FiCaSchedulerApp schedulerApp1 =
@@ -1292,6 +1310,8 @@ public class TestContainerAllocation {
     MockNM nm1 = rm1.registerNode("h1:1234", 10 * GB);
     MockNM nm2 = rm1.registerNode("h2:1234", 10 * GB);
 
+    CapacityScheduler cs = getCapacityScheduler(rm1, 20);
+
     // launch an app to queue "c1", AM container should be launched on nm1
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
@@ -1319,7 +1339,6 @@ public class TestContainerAllocation {
     am1.allocate("*", 2 * GB, 1, new ArrayList<ContainerId>());
     am2.allocate("*", 2 * GB, 1, new ArrayList<ContainerId>());
 
-    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
     FiCaSchedulerApp schedulerApp1 =
         cs.getApplicationAttempt(am1.getApplicationAttemptId());
@@ -1349,6 +1368,8 @@ public class TestContainerAllocation {
     MockRM rm1 = new MockRM(newConf);
     rm1.start();
 
+    CapacityScheduler cs = getCapacityScheduler(rm1, 4);
+
     // before any node registered or before registration timeout,
     // submit an app beyond queue max leads to failure.
     boolean submitFailed = false;
@@ -1374,7 +1395,6 @@ public class TestContainerAllocation {
     am1.allocate("*", 4 * GB, 1, null);
 
     // Add a new node, now the cluster maximum should be refreshed to 3GB.
-    CapacityScheduler cs = (CapacityScheduler)rm1.getResourceScheduler();
     cs.getNodeTracker().setForceConfiguredMaxAllocation(false);
     rm1.registerNode("h2:1234", 3 * GB, 1);
 
@@ -1391,5 +1411,16 @@ public class TestContainerAllocation {
     am1.allocate("*", 3 * GB, 1, null);
 
     rm1.close();
+  }
+
+  private CapacityScheduler getCapacityScheduler(MockRM rm1, int memoryGb) {
+    CapacitySchedulerQueueCapacityHandler queueController =
+        new CapacitySchedulerQueueCapacityHandler(mgr);
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    Resource clusterResource = Resource.newInstance(memoryGb * GB, 16);
+    mgr.setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, clusterResource);
+    queueController.updateRoot(cs.getQueue("root"), clusterResource);
+    queueController.updateChildren(clusterResource, cs.getQueue("root"));
+    return cs;
   }
 }
