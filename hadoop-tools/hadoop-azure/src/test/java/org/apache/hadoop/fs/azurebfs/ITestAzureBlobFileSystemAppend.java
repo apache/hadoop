@@ -24,8 +24,12 @@ import java.lang.reflect.Field;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -198,5 +202,45 @@ public class ITestAzureBlobFileSystemAppend extends
         fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
         fs.getFileSystemId(), FSOperationType.APPEND, false, 0));
     fs.append(TEST_FILE_PATH, 10);
+  }
+
+  /**
+   * Verify that no calls to getBlockList were made.
+   */
+  @Test
+  public void testCreateEmptyBlob() throws IOException {
+    AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    Mockito.doReturn(store).when(fs).getAbfsStore();
+    AbfsClient client = store.getClient();
+    AbfsClient spiedClient = Mockito.spy(client);
+    store.setClient(spiedClient);
+
+    fs.create(TEST_FILE_PATH);
+    Mockito.verify(spiedClient, Mockito.times(0))
+            .getBlockList(Mockito.any(String.class),
+                    Mockito.any(TracingContext.class));
+  }
+
+  /**
+   * Verify that no calls to getBlockList were made.
+   */
+  @Test
+  public void testCreateNonEmptyBlob() throws IOException {
+    AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    Mockito.doReturn(store).when(fs).getAbfsStore();
+    AbfsClient client = store.getClient();
+    AbfsClient spiedClient = Mockito.spy(client);
+    store.setClient(spiedClient);
+
+    FSDataOutputStream outputStream = fs.create(TEST_FILE_PATH);
+    outputStream.write(10);
+    outputStream.hsync();
+    outputStream.close();
+    fs.append(TEST_FILE_PATH);
+    Mockito.verify(spiedClient, Mockito.times(1))
+            .getBlockList(Mockito.any(String.class),
+                    Mockito.any(TracingContext.class));
   }
 }
