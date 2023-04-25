@@ -1506,7 +1506,7 @@
       <dependency>
         <groupId>org.codehaus.jettison</groupId>
         <artifactId>jettison</artifactId>
-        <version>1.5.3</version>
+        <version>1.5.4</version>
         <exclusions>
           <exclusion>
             <groupId>stax</groupId>
