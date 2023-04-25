@@ -191,6 +191,24 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(new Path("a/b/c/d/e"));
   }
 
+  @Test
+  public void testMkdirsWithDelete() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.mkdirs(new Path("a/b"));
+    fs.mkdirs(new Path("a/b/c/d"));
+    fs.delete(new Path("a/b/c/d"));
+    fs.getFileStatus(new Path("a/b/c"));
+  }
+
+  @Test
+  public void testMkdirsWithRename() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.mkdirs(new Path("a/b/c/d"));
+    fs.mkdirs(new Path("e"));
+    fs.delete(new Path("a/b/c/d"));
+    fs.rename(new Path("e"), new Path("a/b/c/d"));
+  }
+
   /**
    * Creation of same directory without overwrite flag should pass.
    * @throws Exception

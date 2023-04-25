@@ -978,12 +978,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           throws IOException {
     try (AbfsPerfInfo perfInfo = startTracking("createDirectory", "createPath")) {
       if (getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
-        checkParentChainForFile(path, tracingContext);
+        ArrayList<Path> keysToCreateAsFolder = new ArrayList<>();
+        checkParentChainForFile(path, tracingContext, keysToCreateAsFolder);
 
         HashMap<String, String> metadata = new HashMap<>();
         metadata.put(X_MS_META_HDI_ISFOLDER, TRUE);
-        createFile(path, statistics, true,
-                permission, umask, tracingContext, metadata);
+        for (Path pathToCreate: keysToCreateAsFolder) {
+          createFile(pathToCreate, statistics, true,
+                  permission, umask, tracingContext, metadata);
+        }
         return;
       }
       boolean isNamespaceEnabled = getIsNamespaceEnabled(tracingContext);
@@ -1011,10 +1014,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param path path to check the hierarchy for.
    * @param tracingContext the tracingcontext.
    */
-  private void checkParentChainForFile(Path path, TracingContext tracingContext) throws IOException {
+  private void checkParentChainForFile(Path path, TracingContext tracingContext, ArrayList<Path> keysToCreateAsFolder) throws IOException {
     if (directoryExists(path, tracingContext)) {
       return;
     }
+    keysToCreateAsFolder.add(path);
     Path current = path.getParent();
     Path parent = current.getParent();
 
@@ -1022,6 +1026,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       if (directoryExists(current, tracingContext)) {
         break;
       }
+      keysToCreateAsFolder.add(current);
       current = parent;
       parent = current.getParent();
     }
