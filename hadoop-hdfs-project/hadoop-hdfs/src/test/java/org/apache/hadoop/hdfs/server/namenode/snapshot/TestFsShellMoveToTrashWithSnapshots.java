@@ -45,6 +45,7 @@ public class TestFsShellMoveToTrashWithSnapshots {
   static {
     SnapshotTestHelper.disableLogs();
   }
+
   private static final Logger LOG =
       LoggerFactory.getLogger("XXX");
 
@@ -78,7 +79,7 @@ public class TestFsShellMoveToTrashWithSnapshots {
       this.base = base;
       this.moved = new boolean[depth];
 
-      for(int i = 0; i < depth; i++) {
+      for (int i = 0; i < depth; i++) {
         renames.add(i);
       }
       Collections.shuffle(renames);
@@ -100,7 +101,7 @@ public class TestFsShellMoveToTrashWithSnapshots {
         return base;
       }
       final StringBuilder b = new StringBuilder();
-      for(int i = 0; i < n; i++) {
+      for (int i = 0; i < n; i++) {
         if (!moved[i]) {
           b.append(TO_BE_REMOVED);
         }
@@ -133,8 +134,8 @@ public class TestFsShellMoveToTrashWithSnapshots {
     }
 
     synchronized Path getPath() {
-      return trash != null? trash
-          : dst != null? dst
+      return trash != null ? trash
+          : dst != null ? dst
           : tmp;
     }
 
@@ -188,11 +189,11 @@ public class TestFsShellMoveToTrashWithSnapshots {
     cluster.mkdirs(dirs.getPath());
     final List<MyFile> buckets = new ArrayList<>();
 
-    for(int i = 0; i < dirs.depth()/2; i++) {
+    for (int i = 0; i < dirs.depth() / 2; i++) {
       ops.add(dirs.rename());
     }
-    final int offset = numFiles/4;
-    for(int i = 0; i < numFiles; i++) {
+    final int offset = numFiles / 4;
+    for (int i = 0; i < numFiles; i++) {
       final String bucket = tmpDir + String.format("/bucket_%04d", i);
       createSnapshot(ops);
       buckets.add(createTmp(bucket));
@@ -205,7 +206,7 @@ public class TestFsShellMoveToTrashWithSnapshots {
       }
     }
 
-    for(int i = dirs.depth()/2; i < dirs.depth(); i++) {
+    for (int i = dirs.depth() / 2; i < dirs.depth(); i++) {
       ops.add(dirs.rename());
     }
 
@@ -222,7 +223,7 @@ public class TestFsShellMoveToTrashWithSnapshots {
     ops.add(m);
 
     LOG.info("ops count: {}", ops.size());
-    for(; !ops.isEmpty(); ) {
+    while (!ops.isEmpty()) {
       runOneOp(ops);
     }
     cluster.printFs("END");
@@ -238,12 +239,10 @@ public class TestFsShellMoveToTrashWithSnapshots {
 
   void updateTrashPath(String trashPathPrefix, List<MyFile> files) {
     final String commonPrefix;
-    {
-      final int i = trashPathPrefix.lastIndexOf('/');
-      commonPrefix = trashPathPrefix.substring(0, i + 1);
-    }
+    final int j = trashPathPrefix.lastIndexOf('/');
+    commonPrefix = trashPathPrefix.substring(0, j + 1);
 
-    for(MyFile f : files) {
+    for (MyFile f : files) {
       final String original = f.trash.toUri().getPath();
       if (!original.startsWith(trashPathPrefix)) {
         Assert.assertTrue(original.startsWith(commonPrefix));
@@ -271,7 +270,7 @@ public class TestFsShellMoveToTrashWithSnapshots {
 
     final ExecutorService executor = Executors.newFixedThreadPool(10);
     try {
-      for(int i = 0; i < numTasks; i++) {
+      for (int i = 0; i < numTasks; i++) {
         final String db = "db" + i;
         final String tmp = "tmp" + i;
         futures.add(executor.submit(() -> {
@@ -281,7 +280,7 @@ public class TestFsShellMoveToTrashWithSnapshots {
         }));
       }
 
-      for(Future<List<MyFile>> f : futures) {
+      for (Future<List<MyFile>> f : futures) {
         buckets.addAll(f.get());
       }
     } finally {
@@ -312,7 +311,7 @@ public class TestFsShellMoveToTrashWithSnapshots {
   public void test50files10times() throws Exception {
     final Path tmpDir = cluster.mkdirs(WAREHOUSE_DIR + "tmp");
     final List<MyFile> buckets = new ArrayList<>();
-    for(int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; i++) {
       final Path dbDir = cluster.mkdirs(WAREHOUSE_DIR + "db");
       buckets.addAll(runTestMoveToTrashWithShell(dbDir, tmpDir, 50));
     }
@@ -382,9 +381,9 @@ public class TestFsShellMoveToTrashWithSnapshots {
     }
   }
 
-  void assertExists(List<MyFile> files, Function<MyFile, Path> getPath
-      ) throws Exception {
-    for(MyFile f : files) {
+  void assertExists(List<MyFile> files, Function<MyFile, Path> getPath)
+      throws Exception {
+    for (MyFile f : files) {
       final Path p = getPath.apply(f);
       final boolean exists = cluster.assertExists(p);
       if (cluster.getPrintTree()) {
