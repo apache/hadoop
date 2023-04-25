@@ -984,7 +984,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         HashMap<String, String> metadata = new HashMap<>();
         metadata.put(X_MS_META_HDI_ISFOLDER, TRUE);
         for (Path pathToCreate: keysToCreateAsFolder) {
-          createFile(pathToCreate, statistics, true,
+          createFile(pathToCreate, statistics, false,
                   permission, umask, tracingContext, metadata);
         }
         return;
@@ -1039,9 +1039,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws IOException
    */
   private boolean directoryExists(Path path, TracingContext tracingContext) throws IOException {
-    if (getListBlobs(path, null, tracingContext, 2, true).size() > 0) {
-      return true;
-    }
     return checkPathIsDirectory(path, tracingContext);
   }
 
