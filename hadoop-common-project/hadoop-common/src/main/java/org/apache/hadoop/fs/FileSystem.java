@@ -3602,9 +3602,9 @@ public abstract class FileSystem extends Configured
       } catch (IOException | RuntimeException e) {
         // exception raised during initialization.
         // log summary at warn and full stack at debug
-        LOGGER.warn("Failed to initialize fileystem {}: {}",
+        LOGGER.warn("Failed to initialize filesystem {}: {}",
             uri, e.toString());
-        LOGGER.debug("Failed to initialize fileystem", e);
+        LOGGER.debug("Failed to initialize filesystem", e);
         // then (robustly) close the FS, so as to invoke any
         // cleanup code.
         IOUtils.cleanupWithLogger(LOGGER, fs);
