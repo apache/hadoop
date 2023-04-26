@@ -261,7 +261,7 @@ this queue size should not be a limit on manifest load performance.
 
 It can help limit the amount of memory consumed during manifest load during
 job commit.
-The maximumum number of loaded manifests will be
+The maximum number of loaded manifests will be:
 
 ```
 mapreduce.manifest.committer.writer.queue.capacity + mapreduce.manifest.committer.io.threads

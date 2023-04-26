@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.EntryStatus;
 import org.apache.hadoop.util.functional.TaskPool;
@@ -242,6 +243,7 @@ public class CreateOutputDirectoriesStage extends
    * and, if the operation took place, the list of created dirs.
    * Reports progress on invocation.
    * @param dirEntry entry
+   * @throws PathIOException if after multiple attempts, the dest dir couldn't be created.
    * @throws IOException failure.
    */
   private void createOneDirectory(final DirEntry dirEntry) throws IOException {
@@ -270,9 +272,17 @@ public class CreateOutputDirectoriesStage extends
    * Try to efficiently and robustly create a directory in a method which is
    * expected to be executed in parallel with operations creating
    * peer directories.
+   * A return value of {@link DirMapState#dirWasCreated} or
+   * {@link DirMapState#dirCreatedOnSecondAttempt} indicates
+   * this thread did the creation.
+   * Other outcomes imply it already existed; if the directory
+   * cannot be created/found then a {@link PathIOException} is thrown.
+   * The outcome should be added to the {@link #dirMap} to avoid further creation attempts.
    * @param dirEntry dir to create
-   * @return Outcome
-   * @throws IOException IO Failure.
+   * @return Outcome of the operation, such as whether the entry was created, found in store.
+   *           It will always be a success outcome of some form.
+   * @throws PathIOException if after multiple attempts, the dest dir couldn't be created.
+   * @throws IOException Other IO failure
    */
   private DirMapState maybeCreateOneDirectory(DirEntry dirEntry) throws IOException {
     final EntryStatus status = dirEntry.getStatus();

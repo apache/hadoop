@@ -72,7 +72,7 @@ public class CommitJobStage extends
         storeSupportsResilientCommit());
 
     // once the manifest has been loaded, a temp file needs to be
-    // deleted; so track teh value.
+    // deleted; so track the value.
     LoadedManifestData loadedManifestData = null;
 
     try {

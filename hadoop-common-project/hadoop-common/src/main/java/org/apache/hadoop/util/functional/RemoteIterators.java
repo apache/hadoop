@@ -211,7 +211,7 @@ public final class RemoteIterators {
    * This is primarily for tests or when submitting work into a TaskPool.
    * equivalent to
    * <pre>
-   *   for(long l = start, l &lt; finis; l++) yield l;
+   *   for(long l = start, l &lt; excludedFinish; l++) yield l;
    * </pre>
    * @param start start value
    * @param excludedFinish excluded finish
@@ -422,8 +422,8 @@ public final class RemoteIterators {
   /**
    * Wrapper of another remote iterator; IOStatistics
    * and Closeable methods are passed down if implemented.
-   * This class may be subclasses if custom iterators
-   * are needed.
+   * This class may be subclassed within the hadoop codebase
+   * if custom iterators are needed.
    * @param <S> source type
    * @param <T> type of returned value
    */

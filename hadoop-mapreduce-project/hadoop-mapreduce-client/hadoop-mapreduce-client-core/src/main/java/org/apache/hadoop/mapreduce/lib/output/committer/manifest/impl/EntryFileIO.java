@@ -63,6 +63,8 @@ public class EntryFileIO {
   private static final Logger LOG = LoggerFactory.getLogger(
       EntryFileIO.class);
 
+  public static final int WRITER_SHUTDOWN_TIMEOUT = 60;
+
   /** Configuration used to load filesystems. */
   private final Configuration conf;
 
@@ -212,7 +214,7 @@ public class EntryFileIO {
    * the output stream.
    * Other threads can queue the file entry lists from loaded manifests
    * for them to be written.
-   * The these threads will be blocked when the queue capacity is reached.
+   * These threads will be blocked when the queue capacity is reached.
    * This is quite a complex process, with the main troublespots in the code
    * being:
    * - managing the shutdown
@@ -239,6 +241,8 @@ public class EntryFileIO {
      * Is the processor thread active.
      */
     private final AtomicBoolean active = new AtomicBoolean(false);
+
+    private final int capacity;
 
     /**
      * Executor of writes.
@@ -271,6 +275,7 @@ public class EntryFileIO {
     private EntryWriter(SequenceFile.Writer writer, int capacity) {
       checkState(capacity > 0, "invalid queue capacity %s", capacity);
       this.writer = requireNonNull(writer);
+      this.capacity = capacity;
       this.queue = new ArrayBlockingQueue<>(capacity);
     }
 
@@ -330,7 +335,7 @@ public class EntryFileIO {
           return false;
         }
       } else {
-        LOG.debug("Queue inactive; discarding {} entries", entries.size());
+        LOG.warn("EntryFile write queue inactive; discarding {} entries", entries.size());
         return false;
       }
     }
@@ -406,7 +411,9 @@ public class EntryFileIO {
         // already stopped
         return;
       }
-      LOG.debug("Shutting down writer");
+      LOG.debug("Shutting down writer; entry lists in queue: {}",
+          capacity - queue.remainingCapacity());
+
       // signal queue closure by queuing a stop option.
       // this is added at the end of the list of queued blocks,
       // of which are written.
@@ -417,7 +424,7 @@ public class EntryFileIO {
       }
       try {
         // wait for the op to finish.
-        int total = FutureIO.awaitFuture(future, 30, TimeUnit.SECONDS);
+        int total = FutureIO.awaitFuture(future, WRITER_SHUTDOWN_TIMEOUT, TimeUnit.SECONDS);
         LOG.debug("Processed {} files", total);
         executor.shutdown();
       } catch (TimeoutException e) {

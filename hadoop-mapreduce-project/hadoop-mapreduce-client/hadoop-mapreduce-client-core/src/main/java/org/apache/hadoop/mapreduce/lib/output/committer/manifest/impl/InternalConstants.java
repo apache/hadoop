@@ -40,7 +40,6 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  */
 @InterfaceAudience.Private
 public final class InternalConstants {
-
   private InternalConstants() {
   }
 
