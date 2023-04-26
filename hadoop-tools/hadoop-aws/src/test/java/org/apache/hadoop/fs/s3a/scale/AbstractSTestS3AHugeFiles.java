@@ -68,6 +68,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_COMPLETED;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticGaugeValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
@@ -206,7 +207,6 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     String putBytes = Statistic.OBJECT_PUT_BYTES.getSymbol();
     Statistic putRequestsActive = Statistic.OBJECT_PUT_REQUESTS_ACTIVE;
     Statistic putBytesPending = Statistic.OBJECT_PUT_BYTES_PENDING;
-    final boolean multipartUpload = expectMultipartUpload();
 
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     BlockOutputStreamStatistics streamStatistics;
@@ -241,7 +241,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
               writtenMB / elapsedTime));
         }
       }
-      if (!multipartUpload) {
+      if (!expectMultipartUpload()) {
         // it is required that no data has uploaded at this point on a
         // non-multipart upload
         Assertions.assertThat(progress.getUploadEvents())
@@ -272,26 +272,22 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     long putByteCount = lookupCounterStatistic(iostats, putBytes);
     long putRequestCount;
 
-    if (multipartUpload) {
+    if (expectMultipartUpload()) {
       requestKey = multipartBlockUploads;
       putRequestCount = lookupCounterStatistic(streamIOstats, requestKey);
       assertThatStatisticCounter(streamIOstats, multipartBlockUploads)
           .isGreaterThanOrEqualTo(1);
-      assertThatStatisticCounter(streamIOstats, STREAM_WRITE_BLOCK_UPLOADS)
-          .isEqualTo(putRequestCount);
+      verifyStatisticCounterValue(streamIOstats, STREAM_WRITE_BLOCK_UPLOADS, putRequestCount);
       // non-magic uploads will have completed
-      assertThatStatisticCounter(streamIOstats, MULTIPART_UPLOAD_COMPLETED.getSymbol())
-          .isEqualTo(expectImmediateFileVisibility() ? 1 : 0);
+      verifyStatisticCounterValue(streamIOstats, MULTIPART_UPLOAD_COMPLETED.getSymbol(),
+          expectImmediateFileVisibility() ? 1 : 0);
     } else {
       // single put
       requestKey = putRequests;
       putRequestCount = lookupCounterStatistic(streamIOstats, requestKey);
-      assertThatStatisticCounter(streamIOstats, putRequests)
-          .isEqualTo(1);
-      assertThatStatisticCounter(streamIOstats, STREAM_WRITE_BLOCK_UPLOADS)
-          .isEqualTo(1);
-      assertThatStatisticCounter(streamIOstats, MULTIPART_UPLOAD_COMPLETED.getSymbol())
-          .isEqualTo(0);
+      verifyStatisticCounterValue(streamIOstats, putRequests, 1);
+      verifyStatisticCounterValue(streamIOstats, STREAM_WRITE_BLOCK_UPLOADS, 1);
+      verifyStatisticCounterValue(streamIOstats, MULTIPART_UPLOAD_COMPLETED.getSymbol(), 0);
     }
     Assertions.assertThat(putByteCount)
         .describedAs("%s count from stream stats %s",
@@ -304,8 +300,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     LOG.info("Time per PUT {} nS",
         toHuman(timer.nanosPerOperation(putRequestCount)));
     verifyStatisticGaugeValue(iostats, putRequestsActive.getSymbol(), 0);
-    verifyStatisticGaugeValue(iostats,
-        STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol(), 0);
+    verifyStatisticGaugeValue(iostats, STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol(), 0);
 
     progress.verifyNoFailures(
         "Put file " + fileToCreate + " of size " + filesize);
@@ -624,7 +619,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     try (FSDataInputStream in = fs.openFile(hugefile)
         .withFileStatus(status)
-        .opt(FS_OPTION_OPENFILE_BUFFER_SIZE,uploadBlockSize)
+        .opt(FS_OPTION_OPENFILE_BUFFER_SIZE, uploadBlockSize)
         .opt(FS_OPTION_OPENFILE_READ_POLICY, FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE)
         .build().get();
          DurationInfo ignored = new DurationInfo(LOG, "Vector Read")) {
