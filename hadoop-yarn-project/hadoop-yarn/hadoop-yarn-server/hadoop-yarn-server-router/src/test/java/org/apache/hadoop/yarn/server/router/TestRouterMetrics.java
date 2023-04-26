@@ -568,6 +568,46 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed getBulkActivitie call");
       metrics.incrGetBulkActivitiesFailedRetrieved();
     }
+
+    public void getSchedulerConfigurationFailed() {
+      LOG.info("Mocked: failed getSchedulerConfiguration call");
+      metrics.incrGetSchedulerConfigurationFailedRetrieved();
+    }
+
+    public void updateSchedulerConfigurationFailedRetrieved() {
+      LOG.info("Mocked: failed updateSchedulerConfiguration call");
+      metrics.incrUpdateSchedulerConfigurationFailedRetrieved();
+    }
+
+    public void getClusterInfoFailed() {
+      LOG.info("Mocked: failed getClusterInfo call");
+      metrics.incrGetClusterInfoFailedRetrieved();
+    }
+
+    public void getClusterUserInfoFailed() {
+      LOG.info("Mocked: failed getClusterUserInfo call");
+      metrics.incrGetClusterUserInfoFailedRetrieved();
+    }
+
+    public void getUpdateNodeResourceFailed() {
+      LOG.info("Mocked: failed getClusterUserInfo call");
+      metrics.incrUpdateNodeResourceFailedRetrieved();
+    }
+
+    public void getRefreshNodesResourcesFailed() {
+      LOG.info("Mocked: failed refreshNodesResources call");
+      metrics.incrRefreshNodesResourcesFailedRetrieved();
+    }
+
+    public void getCheckForDecommissioningNodesFailed() {
+      LOG.info("Mocked: failed checkForDecommissioningNodes call");
+      metrics.incrCheckForDecommissioningNodesFailedRetrieved();
+    }
+
+    public void getRefreshClusterMaxPriorityFailed() {
+      LOG.info("Mocked: failed refreshClusterMaxPriority call");
+      metrics.incrRefreshClusterMaxPriorityFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -837,6 +877,48 @@ public class TestRouterMetrics {
     public void addToClusterNodeLabelsRetrieved(long duration) {
       LOG.info("Mocked: successful AddToClusterNodeLabels call with duration {}", duration);
       metrics.succeededAddToClusterNodeLabelsRetrieved(duration);
+    }
+
+    public void getSchedulerConfigurationRetrieved(long duration) {
+      LOG.info("Mocked: successful GetSchedulerConfiguration call with duration {}", duration);
+      metrics.succeededGetSchedulerConfigurationRetrieved(duration);
+    }
+
+    public void getUpdateSchedulerConfigurationRetrieved(long duration) {
+      LOG.info("Mocked: successful UpdateSchedulerConfiguration call with duration {}", duration);
+      metrics.succeededUpdateSchedulerConfigurationRetrieved(duration);
+    }
+
+    public void getClusterInfoRetrieved(long duration) {
+      LOG.info("Mocked: successful GetClusterInfoRetrieved call with duration {}", duration);
+      metrics.succeededGetClusterInfoRetrieved(duration);
+    }
+
+    public void getClusterUserInfoRetrieved(long duration) {
+      LOG.info("Mocked: successful GetClusterUserInfoRetrieved call with duration {}", duration);
+      metrics.succeededGetClusterUserInfoRetrieved(duration);
+    }
+
+    public void getUpdateNodeResourceRetrieved(long duration) {
+      LOG.info("Mocked: successful UpdateNodeResourceRetrieved call with duration {}", duration);
+      metrics.succeededUpdateNodeResourceRetrieved(duration);
+    }
+
+    public void getRefreshNodesResourcesRetrieved(long duration) {
+      LOG.info("Mocked: successful RefreshNodesResourcesRetrieved call with duration {}", duration);
+      metrics.succeededRefreshNodesResourcesRetrieved(duration);
+    }
+
+    public void getCheckForDecommissioningNodesRetrieved(long duration) {
+      LOG.info("Mocked: successful CheckForDecommissioningNodesRetrieved call with duration {}",
+          duration);
+      metrics.succeededCheckForDecommissioningNodesRetrieved(duration);
+    }
+
+    public void getRefreshClusterMaxPriorityRetrieved(long duration) {
+      LOG.info("Mocked: successful RefreshClusterMaxPriority call with duration {}",
+          duration);
+      metrics.succeededRefreshClusterMaxPriorityRetrieved(duration);
     }
   }
 
@@ -1847,5 +1929,184 @@ public class TestRouterMetrics {
         metrics.getNumSucceededAddToClusterNodeLabelsRetrieved());
     Assert.assertEquals(225,
         metrics.getLatencySucceededAddToClusterNodeLabelsRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetSchedulerConfigurationRetrievedFailed() {
+    long totalBadBefore = metrics.getSchedulerConfigurationFailedRetrieved();
+    badSubCluster.getSchedulerConfigurationFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getSchedulerConfigurationFailedRetrieved());
+  }
+
+  @Test
+  public void testGetSchedulerConfigurationRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetSchedulerConfigurationRetrieved();
+    goodSubCluster.getSchedulerConfigurationRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetSchedulerConfigurationRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetSchedulerConfigurationRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getSchedulerConfigurationRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetSchedulerConfigurationRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetSchedulerConfigurationRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testUpdateSchedulerConfigurationRetrievedFailed() {
+    long totalBadBefore = metrics.getUpdateSchedulerConfigurationFailedRetrieved();
+    badSubCluster.updateSchedulerConfigurationFailedRetrieved();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getUpdateSchedulerConfigurationFailedRetrieved());
+  }
+
+  @Test
+  public void testUpdateSchedulerConfigurationRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededUpdateSchedulerConfigurationRetrieved();
+    goodSubCluster.getUpdateSchedulerConfigurationRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededUpdateSchedulerConfigurationRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededUpdateSchedulerConfigurationRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getUpdateSchedulerConfigurationRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededUpdateSchedulerConfigurationRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededUpdateSchedulerConfigurationRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetClusterInfoRetrievedFailed() {
+    long totalBadBefore = metrics.getClusterInfoFailedRetrieved();
+    badSubCluster.getClusterInfoFailed();
+    Assert.assertEquals(totalBadBefore + 1, metrics.getClusterInfoFailedRetrieved());
+  }
+
+  @Test
+  public void testGetClusterInfoRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetClusterInfoRetrieved();
+    goodSubCluster.getClusterInfoRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetClusterInfoRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetClusterInfoRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getClusterInfoRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetClusterInfoRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetClusterInfoRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetClusterUserInfoRetrievedFailed() {
+    long totalBadBefore = metrics.getClusterUserInfoFailedRetrieved();
+    badSubCluster.getClusterUserInfoFailed();
+    Assert.assertEquals(totalBadBefore + 1, metrics.getClusterUserInfoFailedRetrieved());
+  }
+
+  @Test
+  public void testGetClusterUserInfoRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetClusterUserInfoRetrieved();
+    goodSubCluster.getClusterUserInfoRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetClusterUserInfoRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetClusterUserInfoRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getClusterUserInfoRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetClusterUserInfoRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetClusterUserInfoRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testUpdateNodeResourceRetrievedFailed() {
+    long totalBadBefore = metrics.getUpdateNodeResourceFailedRetrieved();
+    badSubCluster.getUpdateNodeResourceFailed();
+    Assert.assertEquals(totalBadBefore + 1, metrics.getUpdateNodeResourceFailedRetrieved());
+  }
+
+  @Test
+  public void testUpdateNodeResourceRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetClusterUserInfoRetrieved();
+    goodSubCluster.getUpdateNodeResourceRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededUpdateNodeResourceRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededUpdateNodeResourceRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getUpdateNodeResourceRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededUpdateNodeResourceRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededUpdateNodeResourceRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testRefreshNodesResourcesRetrievedFailed() {
+    long totalBadBefore = metrics.getRefreshNodesResourcesFailedRetrieved();
+    badSubCluster.getRefreshNodesResourcesFailed();
+    Assert.assertEquals(totalBadBefore + 1, metrics.getRefreshNodesResourcesFailedRetrieved());
+  }
+
+  @Test
+  public void testRefreshNodesResourcesRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededRefreshNodesResourcesRetrieved();
+    goodSubCluster.getRefreshNodesResourcesRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededRefreshNodesResourcesRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededRefreshNodesResourcesRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getRefreshNodesResourcesRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededRefreshNodesResourcesRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededRefreshNodesResourcesRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testCheckForDecommissioningNodesFailedRetrieved() {
+    long totalBadBefore = metrics.getCheckForDecommissioningNodesFailedRetrieved();
+    badSubCluster.getCheckForDecommissioningNodesFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getCheckForDecommissioningNodesFailedRetrieved());
+  }
+
+  @Test
+  public void testCheckForDecommissioningNodesRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededCheckForDecommissioningNodesRetrieved();
+    goodSubCluster.getCheckForDecommissioningNodesRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededCheckForDecommissioningNodesRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededCheckForDecommissioningNodesRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getCheckForDecommissioningNodesRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededCheckForDecommissioningNodesRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededCheckForDecommissioningNodesRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testRefreshClusterMaxPriorityFailedRetrieved() {
+    long totalBadBefore = metrics.getRefreshClusterMaxPriorityFailedRetrieved();
+    badSubCluster.getRefreshClusterMaxPriorityFailed();
+    Assert.assertEquals(totalBadBefore + 1, metrics.getRefreshClusterMaxPriorityFailedRetrieved());
+  }
+
+  @Test
+  public void testRefreshClusterMaxPriorityRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededRefreshClusterMaxPriorityRetrieved();
+    goodSubCluster.getRefreshClusterMaxPriorityRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededRefreshClusterMaxPriorityRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededRefreshClusterMaxPriorityRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getRefreshClusterMaxPriorityRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededRefreshClusterMaxPriorityRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededRefreshClusterMaxPriorityRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 }

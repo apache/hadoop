@@ -290,4 +290,21 @@ BEGIN
    SELECT ROW_COUNT() INTO rowCount_OUT;
 END //
 
+CREATE PROCEDURE sp_storeVersion(
+   IN fedVersion_IN varbinary(1024), IN versionComment_IN varchar(255), OUT rowCount_OUT int)
+BEGIN
+   DELETE FROM versions;
+   INSERT INTO versions (fedVersion, versionComment)
+   VALUES (fedVersion_IN, versionComment_IN);
+   SELECT ROW_COUNT() INTO rowCount_OUT;
+END //
+
+CREATE PROCEDURE sp_getVersion(
+   OUT fedVersion_OUT varbinary(1024), OUT versionComment_OUT varchar(255))
+BEGIN
+   SELECT fedVersion, versionComment INTO fedVersion_OUT, versionComment_OUT
+   FROM versions
+   LIMIT 1;
+END //
+
 DELIMITER ;

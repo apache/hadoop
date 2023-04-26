@@ -255,6 +255,15 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final int FEDERATION_STORE_ZK_ASYNC_MAX_THREADS_DEFAULT =
       -1;
 
+  // HDFS Router-based federation File based store implementation specific configs
+  public static final String FEDERATION_STORE_FILE_ASYNC_THREADS =
+      FEDERATION_STORE_PREFIX + "driver.file.async.threads";
+  public static final int FEDERATION_STORE_FILE_ASYNC_THREADS_DEFAULT = 0;
+
+  public static final String FEDERATION_STORE_FS_ASYNC_THREADS =
+      FEDERATION_STORE_PREFIX + "driver.fs.async.threads";
+  public static final int FEDERATION_STORE_FS_ASYNC_THREADS_DEFAULT = 0;
+
   // HDFS Router safe mode
   public static final String DFS_ROUTER_SAFEMODE_ENABLE =
       FEDERATION_ROUTER_PREFIX + "safemode.enable";

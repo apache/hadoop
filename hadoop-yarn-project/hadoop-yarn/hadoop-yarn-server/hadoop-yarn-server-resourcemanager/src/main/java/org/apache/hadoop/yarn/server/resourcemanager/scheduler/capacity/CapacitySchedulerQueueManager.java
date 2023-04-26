@@ -575,6 +575,11 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       firstExistingStaticParent = getQueue(parentCandidate.toString());
     }
 
+    if (firstExistingParent == null || firstExistingStaticParent == null) {
+      throw new SchedulerDynamicEditException("Could not auto-create queue "
+          + queue + " parent queue does not exist.");
+    }
+
     int maximumDepthOfStaticParent = csContext.getConfiguration().getMaximumAutoCreatedQueueDepth(
         firstExistingStaticParent.getQueuePathObject());
     if (firstStaticParentDistance > maximumDepthOfStaticParent) {

@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
@@ -1029,6 +1030,38 @@ public final class S3AUtils {
       partSize = MULTIPART_MIN_SIZE;
     }
     return partSize;
+  }
+
+  /**
+   * Validates the output stream configuration.
+   * @param path path: for error messages
+   * @param conf : configuration object for the given context
+   * @throws PathIOException Unsupported configuration.
+   */
+  public static void validateOutputStreamConfiguration(final Path path,
+      Configuration conf) throws PathIOException {
+    if(!checkDiskBuffer(conf)){
+      throw new PathIOException(path.toString(),
+          "Unable to create OutputStream with the given"
+          + " multipart upload and buffer configuration.");
+    }
+  }
+
+  /**
+   * Check whether the configuration for S3ABlockOutputStream is
+   * consistent or not. Multipart uploads allow all kinds of fast buffers to
+   * be supported. When the option is disabled only disk buffers are allowed to
+   * be used as the file size might be bigger than the buffer size that can be
+   * allocated.
+   * @param conf : configuration object for the given context
+   * @return true if the disk buffer and the multipart settings are supported
+   */
+  public static boolean checkDiskBuffer(Configuration conf) {
+    boolean isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
+        DEFAULT_MULTIPART_UPLOAD_ENABLED);
+    return isMultipartUploadEnabled
+        || FAST_UPLOAD_BUFFER_DISK.equals(
+            conf.get(FAST_UPLOAD_BUFFER, DEFAULT_FAST_UPLOAD_BUFFER));
   }
 
   /**

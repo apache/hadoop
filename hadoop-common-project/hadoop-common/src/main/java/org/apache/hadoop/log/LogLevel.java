@@ -34,6 +34,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -44,6 +46,7 @@ import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.GenericsUtil;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -338,14 +341,18 @@ public class LogLevel {
         out.println(MARKER
             + "Submitted Class Name: <b>" + logName + "</b><br />");
 
-        Logger log = Logger.getLogger(logName);
+        org.slf4j.Logger log = LoggerFactory.getLogger(logName);
         out.println(MARKER
             + "Log Class: <b>" + log.getClass().getName() +"</b><br />");
         if (level != null) {
           out.println(MARKER + "Submitted Level: <b>" + level + "</b><br />");
         }
 
-        process(log, level, out);
+        if (GenericsUtil.isLog4jLogger(logName)) {
+          process(Logger.getLogger(logName), level, out);
+        } else {
+          out.println("Sorry, setting log level is only supported for log4j loggers.<br />");
+        }
       }
 
       out.println(FORMS);

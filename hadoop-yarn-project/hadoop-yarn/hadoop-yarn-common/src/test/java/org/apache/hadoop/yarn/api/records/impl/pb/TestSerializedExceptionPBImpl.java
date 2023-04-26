@@ -49,7 +49,7 @@ public class TestSerializedExceptionPBImpl {
 
     try {
       pb.deSerialize();
-      fail("deSerialze should throw YarnRuntimeException");
+      fail("deSerialize should throw YarnRuntimeException");
     } catch (YarnRuntimeException e) {
       assertEquals(ClassNotFoundException.class,
           e.getCause().getClass());

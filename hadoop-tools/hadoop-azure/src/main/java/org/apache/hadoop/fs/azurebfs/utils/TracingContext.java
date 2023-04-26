@@ -63,6 +63,16 @@ public class TracingContext {
   //final concatenated ID list set into x-ms-client-request-id header
   private String header = EMPTY_STRING;
 
+  /**
+   * If {@link #primaryRequestId} is null, this field shall be set equal
+   * to the last part of the {@link #clientRequestId}'s UUID
+   * in {@link #constructHeader(AbfsHttpOperation, String)} only on the
+   * first API call for an operation. Subsequent retries for that operation
+   * will not change this field. In case {@link  #primaryRequestId} is non-null,
+   * this field shall not be set.
+   */
+  private String primaryRequestIdForRetry;
+
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
   public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
@@ -139,6 +149,10 @@ public class TracingContext {
     this.opType = operation;
   }
 
+  public int getRetryCount() {
+    return retryCount;
+  }
+
   public void setRetryCount(int retryCount) {
     this.retryCount = retryCount;
   }
@@ -152,15 +166,18 @@ public class TracingContext {
    * X_MS_CLIENT_REQUEST_ID header of the http operation
    * @param httpOperation AbfsHttpOperation instance to set header into
    *                      connection
+   * @param previousFailure Failure seen before this API trigger on same operation
+   * from AbfsClient.
    */
-  public void constructHeader(AbfsHttpOperation httpOperation) {
+  public void constructHeader(AbfsHttpOperation httpOperation, String previousFailure) {
     clientRequestId = UUID.randomUUID().toString();
     switch (format) {
     case ALL_ID_FORMAT: // Optional IDs (e.g. streamId) may be empty
       header =
           clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID + ":"
-              + primaryRequestId + ":" + streamID + ":" + opType + ":"
-              + retryCount;
+              + getPrimaryRequestIdForHeader(retryCount > 0) + ":" + streamID
+              + ":" + opType + ":" + retryCount;
+      header = addFailureReasons(header, previousFailure);
       break;
     case TWO_ID_FORMAT:
       header = clientCorrelationID + ":" + clientRequestId;
@@ -172,6 +189,39 @@ public class TracingContext {
       listener.callTracingHeaderValidator(header, format);
     }
     httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
+    /*
+    * In case the primaryRequestId is an empty-string and if it is the first try to
+    * API call (previousFailure shall be null), maintain the last part of clientRequestId's
+    * UUID in primaryRequestIdForRetry. This field shall be used as primaryRequestId part
+    * of the x-ms-client-request-id header in case of retry of the same API-request.
+    */
+    if (primaryRequestId.isEmpty() && previousFailure == null) {
+      String[] clientRequestIdParts = clientRequestId.split("-");
+      primaryRequestIdForRetry = clientRequestIdParts[
+          clientRequestIdParts.length - 1];
+    }
+  }
+
+  /**
+   * Provide value to be used as primaryRequestId part of x-ms-client-request-id header.
+   * @param isRetry define if it's for a retry case.
+   * @return {@link #primaryRequestIdForRetry}:If the {@link #primaryRequestId}
+   * is an empty-string, and it's a retry iteration.
+   * {@link #primaryRequestId} for other cases.
+   */
+  private String getPrimaryRequestIdForHeader(final Boolean isRetry) {
+    if (!primaryRequestId.isEmpty() || !isRetry) {
+      return primaryRequestId;
+    }
+    return primaryRequestIdForRetry;
+  }
+
+  private String addFailureReasons(final String header,
+      final String previousFailure) {
+    if (previousFailure == null) {
+      return header;
+    }
+    return String.format("%s_%s", header, previousFailure);
   }
 
   /**

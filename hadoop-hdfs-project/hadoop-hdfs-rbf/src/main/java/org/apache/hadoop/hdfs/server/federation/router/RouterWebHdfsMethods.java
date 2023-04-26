@@ -385,6 +385,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       case GETXATTRS:
       case LISTXATTRS:
       case CHECKACCESS:
+      case GETLINKTARGET:
+      case GETFILELINKSTATUS:
       {
         return super.get(ugi, delegation, username, doAsUser, fullpath, op,
             offset, length, renewer, bufferSize, xattrNames, xattrEncoding,

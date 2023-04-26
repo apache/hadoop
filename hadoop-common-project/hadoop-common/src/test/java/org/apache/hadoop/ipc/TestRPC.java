@@ -1336,11 +1336,15 @@ public class TestRPC extends TestRpcBase {
           3000, getLongCounter("RpcProcessingTimeNumOps", rpcMetrics));
       assertEquals("Expected correct rpc lock wait count",
           3000, getLongCounter("RpcLockWaitTimeNumOps", rpcMetrics));
+      assertEquals("Expected correct rpc response count",
+          3000, getLongCounter("RpcResponseTimeNumOps", rpcMetrics));
       assertEquals("Expected zero rpc lock wait time",
           0, getDoubleGauge("RpcLockWaitTimeAvgTime", rpcMetrics), 0.001);
       MetricsAsserts.assertQuantileGauges("RpcQueueTime" + interval + "s",
           rpcMetrics);
       MetricsAsserts.assertQuantileGauges("RpcProcessingTime" + interval + "s",
+          rpcMetrics);
+      MetricsAsserts.assertQuantileGauges("RpcResponseTime" + interval + "s",
           rpcMetrics);
       String actualUserVsCon = MetricsAsserts
           .getStringMetric("NumOpenConnectionsPerUser", rpcMetrics);
