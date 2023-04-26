@@ -152,6 +152,10 @@ public class TracingContext {
     this.fallbackDFSAppend = fallbackDFSAppend;
   }
 
+  public String getFallbackDFSAppend() {
+    return fallbackDFSAppend;
+  }
+
   /**
    * Concatenate all identifiers separated by (:) into a string and set into
    * X_MS_CLIENT_REQUEST_ID header of the http operation
