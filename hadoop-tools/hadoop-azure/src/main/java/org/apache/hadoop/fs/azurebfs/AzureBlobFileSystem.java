@@ -217,11 +217,13 @@ public class AzureBlobFileSystem extends FileSystem
         throw ex;
       }
     }
+    // CPK is not supported over blob endpoint and hence initialization should fail if key is not null.
     if (!isNamespaceEnabled && uri.toString().contains(FileSystemUriSchemes.WASB_DNS_PREFIX)) {
-      if (abfsConfiguration.isCpkEnabled()) {
-        throw new InvalidConfigurationValueException("CPK is not supported over blob endpoint");
+      if (abfsConfiguration.getClientProvidedEncryptionKey() == null) {
+        this.prefixMode = PrefixMode.BLOB;
+      } else {
+        throw new InvalidConfigurationValueException("CPK is not supported over blob endpoint " + uri);
       }
-      this.prefixMode = PrefixMode.BLOB;
     }
     abfsConfiguration.setPrefixMode(this.prefixMode);
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {

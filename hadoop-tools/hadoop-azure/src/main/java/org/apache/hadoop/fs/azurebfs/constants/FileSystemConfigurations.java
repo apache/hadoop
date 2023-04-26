@@ -118,7 +118,6 @@ public final class FileSystemConfigurations {
 
   public static final int STREAM_ID_LEN = 12;
   public static final boolean DEFAULT_ENABLE_ABFS_LIST_ITERATOR = true;
-  public static final boolean DEFAULT_FS_AZURE_ENABLE_CPK = false;
 
   /**
    * Limit of queued block upload operations before writes
