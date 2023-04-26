@@ -6543,6 +6543,16 @@
       problem. In produce default set false, because it's have little performance loss.
     </description>
   </property>
+
+  <property>
+    <name>dfs.datanode.networkerrors.display.topcount</name>
+    <value>-1</value>
+    <description>
+      The number of datanodenetworkerror metric per datanode displays.
+      -1 represents having no limit.
+    </description>
+  </property>
+
   <property>
     <name>dfs.client.fsck.connect.timeout</name>
     <value>60000ms</value>
