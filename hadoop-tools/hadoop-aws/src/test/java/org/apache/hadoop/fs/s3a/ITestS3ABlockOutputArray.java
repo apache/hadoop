@@ -33,6 +33,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.Objects;
 
 import static org.apache.hadoop.fs.StreamCapabilities.ABORTABLE_STREAM;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -89,8 +92,6 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
    */
   @Test
   public void testDiskBlockCreate() throws IOException {
-    S3ADataBlocks.BlockFactory diskBlockFactory =
-      new S3ADataBlocks.DiskBlockFactory(getFileSystem());
     String s3Key = // 1024 char
       "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
         "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
@@ -107,13 +108,18 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
         "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
         "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
         "very_long_s3_key";
-    S3ADataBlocks.DataBlock dataBlock = diskBlockFactory.create("spanId", s3Key, 1,
-      getFileSystem().getDefaultBlockSize(), null);
-    LOG.info(dataBlock.toString()); // block file name and location can be viewed in failsafe-report
-
-    // delete the block file
-    dataBlock.innerClose();
-    diskBlockFactory.close();
+    long blockSize = getFileSystem().getDefaultBlockSize();
+    try (S3ADataBlocks.BlockFactory diskBlockFactory =
+           new S3ADataBlocks.DiskBlockFactory(getFileSystem());
+         S3ADataBlocks.DataBlock dataBlock =
+           diskBlockFactory.create("spanId", s3Key, 1, blockSize, null);
+    ) {
+      boolean created = Arrays.stream(
+        Objects.requireNonNull(new File(getConfiguration().get("hadoop.tmp.dir")).listFiles()))
+          .anyMatch(f -> f.getName().contains("very_long_s3_key"));
+      assertTrue(created);
+      LOG.info(dataBlock.toString()); // block file name/location can be viewed in failsafe-report
+    }
   }
 
   @Test(expected = IOException.class)
