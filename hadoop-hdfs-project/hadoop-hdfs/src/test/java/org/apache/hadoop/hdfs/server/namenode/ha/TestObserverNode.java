@@ -637,7 +637,15 @@ public class TestObserverNode {
     public void run() {
       try {
         fs.mkdirs(DIR_PATH);
-        Thread.sleep(150); // wait until mkdir is logged
+        // wait until mkdir is logged and get last seen stateId
+        GenericTestUtils.waitFor(() -> {
+          try {
+            return HATestUtil.getLastSeenStateId(fs) > 0L;
+          } catch (Exception e) {
+            LOG.warn("Not get last seen stateId yet: " + e.getMessage());
+            return false;
+          }
+        }, 50, 150);
         clientState.lastSeenStateId = HATestUtil.getLastSeenStateId(fs);
         assertSentTo(fs, 0);
 
