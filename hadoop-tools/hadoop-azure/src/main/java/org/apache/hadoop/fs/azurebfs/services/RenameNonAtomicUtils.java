@@ -35,7 +35,8 @@ public class RenameNonAtomicUtils extends RenameAtomicityUtils {
   }
 
   @Override
-  public void preRename(final List<BlobProperty> blobPropertyList)
+  public void preRename(final List<BlobProperty> blobPropertyList,
+      final Boolean createOnBlobEndpoint)
       throws IOException {
 
   }
