@@ -61,6 +61,7 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_BLOB_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_META_HDI_ISFOLDER;
 import static org.mockito.ArgumentMatchers.any;
@@ -267,9 +268,9 @@ public class ITestAzureBlobFileSystemCreate extends
    * @throws Exception
    */
   @Test
-  public void testCreateSameDirectoryOverwriteFalse() throws Exception {
+  public void testCreateSameDirectoryOverwriteTrue() throws Exception {
     Configuration configuration = getRawConfiguration();
-    configuration.setBoolean(FS_AZURE_ENABLE_MKDIR_OVERWRITE, false);
+    configuration.setBoolean(FS_AZURE_ENABLE_BLOB_MKDIR_OVERWRITE, true);
     AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
     fs1.mkdirs(new Path("a/b/c"));
     fs1.mkdirs(new Path("a/b/c"));

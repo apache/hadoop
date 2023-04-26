@@ -81,6 +81,7 @@ public final class FileSystemConfigurations {
   public static final String HBASE_ROOT = "/hbase";
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE = true;
   public static final boolean DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE = true;
+  public static final boolean DEFAULT_FS_AZURE_BLOB_ENABLE_MKDIR_OVERWRITE = false;
   public static final String DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES = "";
   public static final String DEFAULT_FS_AZURE_INFINITE_LEASE_DIRECTORIES = "";
   public static final int DEFAULT_LEASE_THREADS = 0;
