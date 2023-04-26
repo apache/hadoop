@@ -145,237 +145,6 @@ public class ITestAzureBlobFileSystemCreate extends
   }
 
   /**
-   * Creation of directory with parent directory existing as implicit.
-   * And the directory to be created does not exist
-   * @throws Exception
-   */
-  @Test
-  public void testMkdirOnNonExistingPathWithImplicitParentDir() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    final Path implicitPath = new Path("dir1");
-    final Path path = new Path("dir1/dir2");
-
-    // Creating implicit directory to be used as parent
-    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
-        getAccountName(),
-        getFileSystemName(),
-        getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration());
-    azcopyHelper.createFolderUsingAzcopy(
-        getFileSystem().makeQualified(implicitPath).toUri().getPath().substring(1));
-
-    // Creating a directory on non-existing path inside an implicit directory
-    fs.mkdirs(path);
-
-    // Asserting that path created by azcopy remains implicit.
-    // 1. Listing on parent should return implicit directory
-    // 2. GetBlobProperty on the path should fail
-    FileStatus[] files = fs.listStatus(implicitPath.getParent());
-    assertEquals("Wrong number of files in listing", 1, files.length);
-
-    LambdaTestUtils.intercept(AbfsRestOperationException.class, () -> {
-      fs.getAbfsStore().getBlobProperty(
-          new Path(getFileSystem().makeQualified(implicitPath).toUri().getPath()),
-          Mockito.mock(TracingContext.class)
-      );
-    });
-
-    // Asserting that the directory created by mkdir exists as explicit.
-    Assert.assertTrue(
-        fs.getAbfsStore().getBlobProperty(
-            new Path(getFileSystem().makeQualified(path).toUri().getPath()),
-            Mockito.mock(TracingContext.class)
-        ).getIsDirectory()
-    );
-  }
-
-  /**
-   * Creation of directory with parent directory existing as implicit.
-   * And the directory to be created existing as explicit directory
-   * @throws Exception
-   */
-  @Test
-  public void testMkdirOnExistingExplicitDirWithImplicitParentDir() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    final Path implicitPath = new Path("dir1");
-    final Path path = new Path("dir1/dir2");
-
-    // Creating implicit directory to be used as parent
-    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
-        getAccountName(),
-        getFileSystemName(),
-        getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration());
-    azcopyHelper.createFolderUsingAzcopy(
-        getFileSystem().makeQualified(implicitPath).toUri().getPath().substring(1));
-
-    // Creating an explicit directory on the path first
-    fs.mkdirs(path);
-
-    // Creating a directory on existing explicit directory inside an implicit directory
-    fs.mkdirs(path);
-
-    // Asserting that path created by azcopy remains implicit.
-    // 1. Listing on parent should return implicit directory
-    // 2. GetBlobProperty on the path should fail
-    FileStatus[] files = fs.listStatus(implicitPath.getParent());
-    assertEquals("Wrong number of files in listing", 1, files.length);
-
-    LambdaTestUtils.intercept(AbfsRestOperationException.class, () -> {
-      fs.getAbfsStore().getBlobProperty(
-          new Path(getFileSystem().makeQualified(implicitPath).toUri().getPath()),
-          Mockito.mock(TracingContext.class)
-      );
-    });
-
-    // Asserting that the directory created by mkdir remains explicit.
-    Assert.assertTrue(
-        fs.getAbfsStore().getBlobProperty(
-            new Path(getFileSystem().makeQualified(path).toUri().getPath()),
-            Mockito.mock(TracingContext.class)
-        ).getIsDirectory()
-    );
-  }
-
-  /**
-   * Creation of directory with parent directory existing as explicit.
-   * And the directory to be created existing as implicit directory
-   * @throws Exception
-   */
-  @Test
-  public void testMkdirOnExistingImplicitDirWithExplicitParentDir() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    final Path explicitPath = new Path("dir1");
-    final Path path = new Path("dir1/dir2");
-
-    // Creating an explicit directory to be used a parent
-    fs.mkdirs(explicitPath);
-
-    // Creating implicit directory on the path
-    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
-        getAccountName(),
-        getFileSystemName(),
-        getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration());
-    azcopyHelper.createFolderUsingAzcopy(
-        getFileSystem().makeQualified(path).toUri().getPath().substring(1));
-
-    // Creating a directory on existing implicit directory inside an explicit directory
-    fs.mkdirs(path);
-
-    // Asserting that the parent directory created by mkdir exists as explicit.
-    Assert.assertTrue(
-        fs.getAbfsStore().getBlobProperty(
-            new Path(getFileSystem().makeQualified(explicitPath).toUri().getPath()),
-            Mockito.mock(TracingContext.class)
-        ).getIsDirectory()
-    );
-
-    // Asserting that the directory created by mkdir becomes explicit.
-    Assert.assertTrue(
-        fs.getAbfsStore().getBlobProperty(
-            new Path(getFileSystem().makeQualified(path).toUri().getPath()),
-            Mockito.mock(TracingContext.class)
-        ).getIsDirectory()
-    );
-  }
-
-  /**
-   * Creation of directory with parent directory existing as implicit.
-   * And the directory to be created existing as implicit directory
-   * @throws Exception
-   */
-  @Test
-  public void testMkdirOnExistingImplicitDirWithImplicitParentDir() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    final Path implicitPath = new Path("dir1");
-    final Path path = new Path("dir1/dir2");
-
-    // Creating implicit directory to be used as parent
-    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
-        getAccountName(),
-        getFileSystemName(),
-        getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration());
-    azcopyHelper.createFolderUsingAzcopy(
-        getFileSystem().makeQualified(implicitPath).toUri().getPath().substring(1));
-
-    // Creating an implicit directory on path
-    azcopyHelper.createFolderUsingAzcopy(
-        getFileSystem().makeQualified(path).toUri().getPath().substring(1));
-
-    // Creating a directory on existing implicit directory inside an implicit directory
-    fs.mkdirs(path);
-
-    // Asserting that path created by azcopy remains implicit.
-    // 1. Listing on parent should return implicit directory
-    // 2. GetBlobProperty on the path should fail
-    FileStatus[] files = fs.listStatus(implicitPath.getParent());
-    assertEquals("Wrong number of files in listing", 1, files.length);
-
-    LambdaTestUtils.intercept(AbfsRestOperationException.class, () -> {
-      fs.getAbfsStore().getBlobProperty(
-          new Path(getFileSystem().makeQualified(implicitPath).toUri().getPath()),
-          Mockito.mock(TracingContext.class)
-      );
-    });
-
-    // Asserting that the directory created by mkdir becomes explicit.
-    Assert.assertTrue(
-        fs.getAbfsStore().getBlobProperty(
-            new Path(getFileSystem().makeQualified(path).toUri().getPath()),
-            Mockito.mock(TracingContext.class)
-        ).getIsDirectory()
-    );
-  }
-
-  /**
-   * Creation of directory with parent directory existing as implicit.
-   * And the directory to be created existing as file
-   * @throws Exception
-   */
-  @Test
-  public void testMkdirOnExistingFileWithImplicitParentDir() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    final Path implicitPath = new Path("dir1");
-    final Path path = new Path("dir1/dir2");
-
-    // Creating implicit directory to be used as parent
-    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
-        getAccountName(),
-        getFileSystemName(),
-        getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration());
-    azcopyHelper.createFolderUsingAzcopy(
-        getFileSystem().makeQualified(implicitPath).toUri().getPath().substring(1));
-
-    // Creating a file on path
-    fs.create(path);
-
-    // Creating a directory on existing file inside an implicit directory
-    // Asserting that the mkdir fails
-    LambdaTestUtils.intercept(FileAlreadyExistsException.class, () -> {
-      fs.mkdirs(path);
-    });
-
-    // Asserting that path created by azcopy remains implicit.
-    // 1. Listing on parent should return implicit directory
-    // 2. GetBlobProperty on the path should fail
-    FileStatus[] files = fs.listStatus(implicitPath.getParent());
-    assertEquals("Wrong number of files in listing", 1, files.length);
-
-    LambdaTestUtils.intercept(AbfsRestOperationException.class, () -> {
-      fs.getAbfsStore().getBlobProperty(
-          new Path(getFileSystem().makeQualified(implicitPath).toUri().getPath()),
-          Mockito.mock(TracingContext.class)
-      );
-    });
-
-    // Asserting that the file still exists at path.
-    Assert.assertFalse(
-        fs.getAbfsStore().getBlobProperty(
-            new Path(getFileSystem().makeQualified(path).toUri().getPath()),
-            Mockito.mock(TracingContext.class)
-        ).getIsDirectory()
-    );
-  }
-
-  /**
    * Creation of already existing subpath should fail.
    * @throws Exception
    */
@@ -519,6 +288,242 @@ public class ITestAzureBlobFileSystemCreate extends
   }
 
   /**
+   * Creation of directory with parent directory existing as implicit.
+   * And the directory to be created does not exist
+   * @throws Exception
+   */
+  @Test
+  public void testMkdirOnNonExistingPathWithImplicitParentDir() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final Path implicitPath = new Path("dir1");
+    final Path path = new Path("dir1/dir2");
+
+    // Creating implicit directory to be used as parent
+    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+        getAccountName(),
+        getFileSystemName(),
+        getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration(),
+        fs.getAbfsStore().getPrefixMode());
+    azcopyHelper.createFolderUsingAzcopy(
+        getFileSystem().makeQualified(implicitPath).toUri().getPath().substring(1));
+
+    // Creating a directory on non-existing path inside an implicit directory
+    fs.mkdirs(path);
+
+    // Asserting that path created by azcopy remains implicit.
+    // 1. Listing on parent should return implicit directory
+    // 2. GetBlobProperty on the path should fail
+    FileStatus[] files = fs.listStatus(implicitPath.getParent());
+    assertEquals("Wrong number of files in listing", 1, files.length);
+
+    LambdaTestUtils.intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(
+          new Path(getFileSystem().makeQualified(implicitPath).toUri().getPath()),
+          Mockito.mock(TracingContext.class)
+      );
+    });
+
+    // Asserting that the directory created by mkdir exists as explicit.
+    Assert.assertTrue(
+        fs.getAbfsStore().getBlobProperty(
+            new Path(getFileSystem().makeQualified(path).toUri().getPath()),
+            Mockito.mock(TracingContext.class)
+        ).getIsDirectory()
+    );
+  }
+
+  /**
+   * Creation of directory with parent directory existing as implicit.
+   * And the directory to be created existing as explicit directory
+   * @throws Exception
+   */
+  @Test
+  public void testMkdirOnExistingExplicitDirWithImplicitParentDir() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final Path implicitPath = new Path("dir1");
+    final Path path = new Path("dir1/dir2");
+
+    // Creating implicit directory to be used as parent
+    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+        getAccountName(),
+        getFileSystemName(),
+        getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration(),
+        fs.getAbfsStore().getPrefixMode());
+    azcopyHelper.createFolderUsingAzcopy(
+        getFileSystem().makeQualified(implicitPath).toUri().getPath().substring(1));
+
+    // Creating an explicit directory on the path first
+    fs.mkdirs(path);
+
+    // Creating a directory on existing explicit directory inside an implicit directory
+    fs.mkdirs(path);
+
+    // Asserting that path created by azcopy remains implicit.
+    // 1. Listing on parent should return implicit directory
+    // 2. GetBlobProperty on the path should fail
+    FileStatus[] files = fs.listStatus(implicitPath.getParent());
+    assertEquals("Wrong number of files in listing", 1, files.length);
+
+    LambdaTestUtils.intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(
+          new Path(getFileSystem().makeQualified(implicitPath).toUri().getPath()),
+          Mockito.mock(TracingContext.class)
+      );
+    });
+
+    // Asserting that the directory created by mkdir remains explicit.
+    Assert.assertTrue(
+        fs.getAbfsStore().getBlobProperty(
+            new Path(getFileSystem().makeQualified(path).toUri().getPath()),
+            Mockito.mock(TracingContext.class)
+        ).getIsDirectory()
+    );
+  }
+
+  /**
+   * Creation of directory with parent directory existing as explicit.
+   * And the directory to be created existing as implicit directory
+   * @throws Exception
+   */
+  @Test
+  public void testMkdirOnExistingImplicitDirWithExplicitParentDir() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final Path explicitPath = new Path("dir1");
+    final Path path = new Path("dir1/dir2");
+
+    // Creating an explicit directory to be used a parent
+    fs.mkdirs(explicitPath);
+
+    // Creating implicit directory on the path
+    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+        getAccountName(),
+        getFileSystemName(),
+        getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration(),
+        fs.getAbfsStore().getPrefixMode());
+    azcopyHelper.createFolderUsingAzcopy(
+        getFileSystem().makeQualified(path).toUri().getPath().substring(1));
+
+    // Creating a directory on existing implicit directory inside an explicit directory
+    fs.mkdirs(path);
+
+    // Asserting that the parent directory created by mkdir exists as explicit.
+    Assert.assertTrue(
+        fs.getAbfsStore().getBlobProperty(
+            new Path(getFileSystem().makeQualified(explicitPath).toUri().getPath()),
+            Mockito.mock(TracingContext.class)
+        ).getIsDirectory()
+    );
+
+    // Asserting that the directory created by mkdir becomes explicit.
+    Assert.assertTrue(
+        fs.getAbfsStore().getBlobProperty(
+            new Path(getFileSystem().makeQualified(path).toUri().getPath()),
+            Mockito.mock(TracingContext.class)
+        ).getIsDirectory()
+    );
+  }
+
+  /**
+   * Creation of directory with parent directory existing as implicit.
+   * And the directory to be created existing as implicit directory
+   * @throws Exception
+   */
+  @Test
+  public void testMkdirOnExistingImplicitDirWithImplicitParentDir() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final Path implicitPath = new Path("dir1");
+    final Path path = new Path("dir1/dir2");
+
+    // Creating implicit directory to be used as parent
+    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+        getAccountName(),
+        getFileSystemName(),
+        getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration(),
+        fs.getAbfsStore().getPrefixMode());
+    azcopyHelper.createFolderUsingAzcopy(
+        getFileSystem().makeQualified(implicitPath).toUri().getPath().substring(1));
+
+    // Creating an implicit directory on path
+    azcopyHelper.createFolderUsingAzcopy(
+        getFileSystem().makeQualified(path).toUri().getPath().substring(1));
+
+    // Creating a directory on existing implicit directory inside an implicit directory
+    fs.mkdirs(path);
+
+    // Asserting that path created by azcopy remains implicit.
+    // 1. Listing on parent should return implicit directory
+    // 2. GetBlobProperty on the path should fail
+    FileStatus[] files = fs.listStatus(implicitPath.getParent());
+    assertEquals("Wrong number of files in listing", 1, files.length);
+
+    LambdaTestUtils.intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(
+          new Path(getFileSystem().makeQualified(implicitPath).toUri().getPath()),
+          Mockito.mock(TracingContext.class)
+      );
+    });
+
+    // Asserting that the directory created by mkdir becomes explicit.
+    Assert.assertTrue(
+        fs.getAbfsStore().getBlobProperty(
+            new Path(getFileSystem().makeQualified(path).toUri().getPath()),
+            Mockito.mock(TracingContext.class)
+        ).getIsDirectory()
+    );
+  }
+
+  /**
+   * Creation of directory with parent directory existing as implicit.
+   * And the directory to be created existing as file
+   * @throws Exception
+   */
+  @Test
+  public void testMkdirOnExistingFileWithImplicitParentDir() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final Path implicitPath = new Path("dir1");
+    final Path path = new Path("dir1/dir2");
+
+    // Creating implicit directory to be used as parent
+    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+        getAccountName(),
+        getFileSystemName(),
+        getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration(),
+        fs.getAbfsStore().getPrefixMode());
+    azcopyHelper.createFolderUsingAzcopy(
+        getFileSystem().makeQualified(implicitPath).toUri().getPath().substring(1));
+
+    // Creating a file on path
+    fs.create(path);
+
+    // Creating a directory on existing file inside an implicit directory
+    // Asserting that the mkdir fails
+    LambdaTestUtils.intercept(FileAlreadyExistsException.class, () -> {
+      fs.mkdirs(path);
+    });
+
+    // Asserting that path created by azcopy remains implicit.
+    // 1. Listing on parent should return implicit directory
+    // 2. GetBlobProperty on the path should fail
+    FileStatus[] files = fs.listStatus(implicitPath.getParent());
+    assertEquals("Wrong number of files in listing", 1, files.length);
+
+    LambdaTestUtils.intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(
+          new Path(getFileSystem().makeQualified(implicitPath).toUri().getPath()),
+          Mockito.mock(TracingContext.class)
+      );
+    });
+
+    // Asserting that the file still exists at path.
+    Assert.assertFalse(
+        fs.getAbfsStore().getBlobProperty(
+            new Path(getFileSystem().makeQualified(path).toUri().getPath()),
+            Mockito.mock(TracingContext.class)
+        ).getIsDirectory()
+    );
+  }
+
+  /**
    * 1. a/b/c as implicit.
    * 2. Create marker for b.
    * 3. Do mkdir on a/b/c/d.
@@ -532,7 +537,8 @@ public class ITestAzureBlobFileSystemCreate extends
     ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
         getAccountName(),
         getFileSystemName(),
-        getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration());
+        getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration(),
+        fs.getAbfsStore().getPrefixMode());
     azcopyHelper.createFolderUsingAzcopy(
         getFileSystem().makeQualified(implicitPath).toUri().getPath().substring(1));
     Path path = makeQualified(new Path("a/b"));
@@ -591,7 +597,8 @@ public class ITestAzureBlobFileSystemCreate extends
     ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
         getAccountName(),
         getFileSystemName(),
-        getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration());
+        getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration(),
+        fs.getAbfsStore().getPrefixMode());
     azcopyHelper.createFolderUsingAzcopy(
         getFileSystem().makeQualified(implicitPath).toUri().getPath().substring(1));
     Path path = makeQualified(new Path("a"));

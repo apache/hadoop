@@ -23,7 +23,10 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 
+import org.junit.Assume;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_FIXED_TOKEN;
@@ -36,14 +39,19 @@ public class ITestAzcopyHelper {
     private String accountName;
     private String fileSystemName;
     private Configuration configuration;
+    private PrefixMode mode;
 
-    public ITestAzcopyHelper(String accountName, String fileSystemName, Configuration configuration) throws Exception {
+    public ITestAzcopyHelper(String accountName, String fileSystemName, Configuration configuration ,PrefixMode mode) throws Exception {
       this.accountName = accountName;
       this.fileSystemName = fileSystemName;
       this.configuration = configuration;
+      this.mode = mode;
     }
 
     public void downloadAzcopyExecutableIfNotPresent() throws IOException, InterruptedException {
+        // Skip execution if Prefix Mode is DFS.
+        Assume.assumeTrue(mode == PrefixMode.BLOB);
+
         // Find the hadoop-azure directory from the current working directory
         File currentDir = new File(System.getProperty("user.dir"));
         if (!currentDir.isDirectory() && !currentDir.getName().equals("hadoop-azure")) {
