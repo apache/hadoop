@@ -347,6 +347,7 @@ public class AzureBlobFileSystem extends FileSystem
     }
   }
 
+  // Fallback plan : default to v1 create flow which will hit dfs endpoint. Config to enable: "fs.azure.ingress.fallback.to.dfs".
   @Override
   public FSDataOutputStream create(final Path f, final FsPermission permission, final boolean overwrite, final int bufferSize,
       final short replication, final long blockSize, final Progressable progress) throws IOException {
@@ -436,6 +437,7 @@ public class AzureBlobFileSystem extends FileSystem
         overwrite, bufferSize, replication, blockSize, progress);
   }
 
+  // Fallback plan : default to v1 append flow which will hit dfs endpoint. Config to enable: "fs.azure.ingress.fallback.to.dfs".
   @Override
   public FSDataOutputStream append(final Path f, final int bufferSize, final Progressable progress) throws IOException {
     LOG.debug(
@@ -819,6 +821,7 @@ public class AzureBlobFileSystem extends FileSystem
     }
   }
 
+  // Fallback plan : default to v1 Mkdir flow which will hit dfs endpoint. Config to enable: "fs.azure.mkdirs.fallback.to.dfs".
   @Override
   public boolean mkdirs(final Path f, final FsPermission permission) throws IOException {
     LOG.debug(
