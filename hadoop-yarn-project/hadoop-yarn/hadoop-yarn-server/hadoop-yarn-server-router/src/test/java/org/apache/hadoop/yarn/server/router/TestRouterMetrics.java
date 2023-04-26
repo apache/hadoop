@@ -608,6 +608,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed refreshClusterMaxPriority call");
       metrics.incrRefreshClusterMaxPriorityFailedRetrieved();
     }
+
+    public void getMapAttributesToNodesFailed() {
+      LOG.info("Mocked: failed getMapAttributesToNode call");
+      metrics.incrMapAttributesToNodesFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -2108,5 +2113,12 @@ public class TestRouterMetrics {
         metrics.getNumSucceededRefreshClusterMaxPriorityRetrieved());
     Assert.assertEquals(225,
         metrics.getLatencySucceededRefreshClusterMaxPriorityRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetMapAttributesToNodesFailedRetrieved() {
+    long totalBadBefore = metrics.getMapAttributesToNodesFailedRetrieved();
+    badSubCluster.getMapAttributesToNodesFailed();
+    Assert.assertEquals(totalBadBefore + 1, metrics.getMapAttributesToNodesFailedRetrieved());
   }
 }

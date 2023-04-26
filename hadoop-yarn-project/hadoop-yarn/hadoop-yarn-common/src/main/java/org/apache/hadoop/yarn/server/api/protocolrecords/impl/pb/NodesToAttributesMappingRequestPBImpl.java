@@ -158,6 +158,16 @@ public class NodesToAttributesMappingRequestPBImpl
   }
 
   @Override
+  public String getSubClusterId() {
+    return null;
+  }
+
+  @Override
+  public void setSubClusterId(String subClusterId) {
+
+  }
+
+  @Override
   public int hashCode() {
     return getProto().hashCode();
   }
