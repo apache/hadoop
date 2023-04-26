@@ -31,7 +31,10 @@ import java.util.function.Supplier;
 
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.datanode.*;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
+import org.apache.hadoop.hdfs.server.datanode.DataSetLockManager;
+import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
+import org.apache.hadoop.hdfs.server.datanode.LocalReplica;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -56,6 +59,16 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
+import org.apache.hadoop.hdfs.server.datanode.DNConf;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.DataStorage;
+import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaHandler;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
+import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry;
+import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
@@ -103,7 +116,10 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -1903,6 +1919,15 @@ public class TestFsDatasetImpl {
       DataNodeFaultInjector.set(oldInjector);
     }
   }
+
+  /**
+   * Test the block file which is not found when disk with some exception.
+   * We expect:
+   *     1. block file wouldn't be deleted from disk.
+   *     2. block info would be removed from dn memory.
+   *     3. block would be reported to nn as missing block.
+   *     4. block would be recovered when disk back to normal.
+   */
   @Test
   public void tesInvalidateMissingBlock() throws Exception {
     long blockSize = 1024;
@@ -1929,7 +1954,7 @@ public class TestFsDatasetImpl {
       File blockFile = new File(blockPath);
       File metaFile = new File(metaPath);
 
-      // mock local block file not found when disk with some exception
+      // Mock local block file not found when disk with some exception.
       fsdataset.invalidateMissingBlock(bpid, replicaInfo);
 
       // assert local block file wouldn't be deleted from disk.
