@@ -391,6 +391,33 @@ public class AbfsConfiguration{
     this.prefixMode = prefixMode;
   }
 
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_ENABLE_BLOB_ENDPOINT,
+          DefaultValue = DEFAULT_FS_AZURE_ENABLE_BLOBENDPOINT)
+  private boolean enableBlobEndpoint;
+
+  public boolean shouldEnableBlobEndPoint() {
+    return this.enableBlobEndpoint;
+  }
+
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_MKDIRS_FALLBACK_TO_DFS,
+          DefaultValue = DEFAULT_FS_AZURE_MKDIRS_FALLBACK_TO_DFS)
+  private boolean mkdirFallbackToDfs;
+
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_INGRESS_FALLBACK_TO_DFS,
+          DefaultValue = DEFAULT_FS_AZURE_INGRESS_FALLBACK_TO_DFS)
+  private boolean ingressFallbackToDfs;
+
+  public boolean shouldMkdirFallbackToDfs() {
+    return mkdirFallbackToDfs;
+  }
+
+  public boolean shouldIngressFallbackToDfs() {
+    return ingressFallbackToDfs;
+  }
+
   /**
    * Gets the Azure Storage account name corresponding to this instance of configuration.
    * @return the Azure Storage account name
