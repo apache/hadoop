@@ -343,7 +343,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   }
 
   /**
-   * Get the desired upload block size for this test run
+   * Get the desired upload block size for this test run.
    * @return the block size
    */
   protected int uploadBlockSize() {
@@ -423,9 +423,9 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
             progressEvent,
             writtenMB, elapsedTimeS, writtenMB / elapsedTimeS));
         break;
-        case REQUEST_BYTE_TRANSFER_EVENT:
-          uploadEvents.incrementAndGet();
-          break;
+      case REQUEST_BYTE_TRANSFER_EVENT:
+        uploadEvents.incrementAndGet();
+        break;
       default:
         if (!eventType.isByteCountEvent()) {
           LOG.info("Event {}", progressEvent);
@@ -581,10 +581,10 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         .opt(FS_OPTION_OPENFILE_SPLIT_START, 0)
         .opt(FS_OPTION_OPENFILE_SPLIT_END, validateSize)
         .opt(FS_OPTION_OPENFILE_READ_POLICY, "sequential")
-        .opt(FS_OPTION_OPENFILE_BUFFER_SIZE,uploadBlockSize)
-
+        .opt(FS_OPTION_OPENFILE_BUFFER_SIZE, uploadBlockSize)
         .build().get();
-         DurationInfo ignored = new DurationInfo(LOG, "Sequential read of %,d bytes", validateSize)) {
+         DurationInfo ignored = new DurationInfo(LOG, "Sequential read of %,d bytes",
+             validateSize)) {
       readFullRes = new byte[validateSize];
       in.readFully(0, readFullRes);
       sequentialIOStats = in.getIOStatistics();
