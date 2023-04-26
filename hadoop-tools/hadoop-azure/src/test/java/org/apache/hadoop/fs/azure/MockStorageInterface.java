@@ -38,6 +38,7 @@ import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.http.client.utils.URIBuilder;
 
 import com.microsoft.azure.storage.AccessCondition;
@@ -178,6 +179,13 @@ public class MockStorageInterface extends StorageInterface {
     return container;
   }
 
+  @Override
+  public CloudBlobContainerWrapper getContainerReference(final String name,
+      final AccessTokenProvider tokenProvider)
+      throws URISyntaxException, StorageException {
+    return getContainerReference(name);
+  }
+
   class MockCloudBlobContainerWrapper extends CloudBlobContainerWrapper {
     private boolean created = false;
     private HashMap<String, String> metadata;
@@ -235,6 +243,13 @@ public class MockStorageInterface extends StorageInterface {
     }
 
     @Override
+    public CloudBlobDirectoryWrapper getDirectoryReference(String relativePath, AccessTokenProvider tokenProvider)
+        throws URISyntaxException, StorageException {
+      return new MockCloudBlobDirectoryWrapper(new URI(fullUriString(
+          relativePath, true)));
+    }
+
+    @Override
     public CloudBlockBlobWrapper getBlockBlobReference(String relativePath)
         throws URISyntaxException, StorageException {
       return new MockCloudBlockBlobWrapper(new URI(fullUriString(relativePath,
@@ -242,8 +257,23 @@ public class MockStorageInterface extends StorageInterface {
     }
 
     @Override
+    public CloudBlobWrapper getBlockBlobReference(final String relativePath,
+        final AccessTokenProvider tokenProvider)
+        throws URISyntaxException, StorageException, IOException {
+      return new MockCloudBlockBlobWrapper(new URI(fullUriString(relativePath,
+          false)), null, 0);
+    }
+
+    @Override
     public CloudPageBlobWrapper getPageBlobReference(String blobAddressUri)
         throws URISyntaxException, StorageException {
+      return new MockCloudPageBlobWrapper(new URI(blobAddressUri), null, 0);
+    }
+
+    @Override
+    public CloudBlobWrapper getPageBlobReference(String blobAddressUri,
+        final AccessTokenProvider tokenProvider)
+        throws URISyntaxException, StorageException, IOException {
       return new MockCloudPageBlobWrapper(new URI(blobAddressUri), null, 0);
     }
 

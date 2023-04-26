@@ -18,6 +18,20 @@
 
 package org.apache.hadoop.fs.azure;
 import static org.apache.hadoop.fs.azure.NativeAzureFileSystem.PATH_DELIMITER;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_USER_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -58,15 +72,34 @@ import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azure.metrics.BandwidthGaugeUpdater;
 import org.apache.hadoop.fs.azure.metrics.ErrorMetricUpdater;
 import org.apache.hadoop.fs.azure.metrics.ResponseReceivedMetricUpdater;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TokenAccessProviderException;
+import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
+import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.CustomTokenProviderAdapter;
+import org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.RefreshTokenBasedTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.UserPasswordTokenProvider;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.VersionInfo;
+
+import com.microsoft.azure.storage.StorageCredentialsToken;
+import com.microsoft.azure.storage.blob.CloudBlobClient;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.kerby.kerberos.kerb.provider.TokenProvider;
+
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.OperationContext;
 import com.microsoft.azure.storage.RetryExponentialRetry;
@@ -115,7 +148,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * Configuration for User-Agent field.
    */
   static final String USER_AGENT_ID_KEY = "fs.azure.user.agent.prefix";
-  static final String USER_AGENT_ID_DEFAULT = "unknown";
+  static final String USER_AGENT_ID_DEFAULT = "version1";
 
   public static final Logger LOG = LoggerFactory.getLogger(AzureNativeFileSystemStore.class);
 
@@ -358,6 +391,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
   private TestHookOperationContext testHookOperationContext = null;
 
+  private AccessTokenProvider tokenProvider = null;
+
   // Set if we're running against a storage emulator..
   private boolean isStorageEmulator = false;
 
@@ -417,6 +452,206 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     if (suppressRetryPolicy) {
       storageInteractionLayer.setRetryPolicyFactory(new RetryNoRetry());
     }
+  }
+  public String accountConf(String key) throws URISyntaxException {
+    return key + "." + getAccountFromAuthority(sessionUri);
+  }
+
+  private  <T extends Enum<T>> T getEnum(String name, T defaultValue)
+      throws URISyntaxException {
+    return sessionConfiguration.getEnum(accountConf(name),
+        sessionConfiguration.getEnum(name, defaultValue));
+  }
+
+  private String getPasswordString(String key)
+      throws IOException, URISyntaxException {
+    char[] passchars = sessionConfiguration.getPassword(accountConf(key));
+    if (passchars == null) {
+      passchars = sessionConfiguration.getPassword(key);
+    }
+    if (passchars != null) {
+      return new String(passchars);
+    }
+    return null;
+  }
+
+  private String getMandatoryPasswordString(String key)
+      throws IOException, URISyntaxException {
+    String value = getPasswordString(key);
+    if (value == null) {
+      throw new ConfigurationPropertyNotFoundException(key);
+    }
+    return value;
+  }
+
+  private  <U> Class<? extends U> getAccountSpecificClass(String name,
+      Class<? extends U> defaultValue,
+      Class<U> xface) throws URISyntaxException {
+    return sessionConfiguration.getClass(accountConf(name),
+        defaultValue,
+        xface);
+  }
+
+  private  <T extends Enum<T>> T getAccountAgnosticEnum(String name, T defaultValue) {
+    return sessionConfiguration.getEnum(name, defaultValue);
+  }
+
+  private int getCustomTokenFetchRetryCount() {
+    return sessionConfiguration.getInt(AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT,
+        DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT);
+  }
+
+  private  <U> Class<? extends U> getAccountAgnosticClass(String name,
+      Class<? extends U> defaultValue,
+      Class<U> xface) {
+    return sessionConfiguration.getClass(name, defaultValue, xface);
+  }
+
+
+  private  <U> Class<? extends U> getTokenProviderClass(AuthType authType,
+      String name,
+      Class<? extends U> defaultValue,
+      Class<U> xface) throws URISyntaxException {
+    Class<?> tokenProviderClass = getAccountSpecificClass(name, defaultValue,
+        xface);
+
+    // If there is none set specific for account
+    // fall back to generic setting if Auth Type matches
+    if ((tokenProviderClass == null)
+        && (authType == getAccountAgnosticEnum(
+        FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey))) {
+      tokenProviderClass = getAccountAgnosticClass(name, defaultValue, xface);
+    }
+
+    return (tokenProviderClass == null)
+        ? null
+        : tokenProviderClass.asSubclass(xface);
+  }
+
+  private String getTrimmedPasswordString(String key, String defaultValue)
+      throws IOException, URISyntaxException {
+    String value = getPasswordString(key);
+    if (StringUtils.isBlank(value)) {
+      value = defaultValue;
+    }
+    return value.trim();
+  }
+
+  private String appendSlashIfNeeded(String authority) {
+    if (!authority.endsWith(AbfsHttpConstants.FORWARD_SLASH)) {
+      authority = authority + AbfsHttpConstants.FORWARD_SLASH;
+    }
+    return authority;
+  }
+
+  public AccessTokenProvider getTokenProviderStore() {
+    return tokenProvider;
+  }
+
+  public AccessTokenProvider getTokenProvider() throws
+      TokenAccessProviderException, URISyntaxException {
+    AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
+    if (authType == AuthType.OAuth) {
+      LOG.debug("The auth type is " + authType);
+      try {
+        Class<? extends AccessTokenProvider> tokenProviderClass =
+            getTokenProviderClass(authType,
+                FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME, null,
+                AccessTokenProvider.class);
+
+        AccessTokenProvider tokenProvider;
+        LOG.debug("The token provider class is " + tokenProviderClass);
+        if (tokenProviderClass == ClientCredsTokenProvider.class) {
+          String authEndpoint =
+              getMandatoryPasswordString(
+                  FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
+          String clientId =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+          String clientSecret =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET);
+          tokenProvider = new ClientCredsTokenProvider(authEndpoint, clientId,
+              clientSecret);
+          LOG.debug("ClientCredsTokenProvider initialized");
+        } else if (tokenProviderClass == UserPasswordTokenProvider.class) {
+          String authEndpoint =
+              getMandatoryPasswordString(
+                  FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
+          String username =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_NAME);
+          String password =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD);
+          tokenProvider = new UserPasswordTokenProvider(authEndpoint, username,
+              password);
+          LOG.debug("UserPasswordTokenProvider initialized");
+        } else if (tokenProviderClass == MsiTokenProvider.class) {
+          String authEndpoint = getTrimmedPasswordString(
+              FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT,
+              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT);
+          String tenantGuid =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
+          String clientId =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+          String authority = getTrimmedPasswordString(
+              FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
+              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY);
+          authority = appendSlashIfNeeded(authority);
+          tokenProvider = new MsiTokenProvider(authEndpoint, tenantGuid,
+              clientId, authority);
+          LOG.debug("MsiTokenProvider initialized");
+        } else if (tokenProviderClass == RefreshTokenBasedTokenProvider.class) {
+          String authEndpoint = getTrimmedPasswordString(
+              FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT,
+              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT);
+          String refreshToken =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN);
+          String clientId =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+          tokenProvider = new RefreshTokenBasedTokenProvider(authEndpoint,
+              clientId, refreshToken);
+          LOG.debug("RefreshTokenBasedTokenProvider initialized");
+        } else {
+          throw new IllegalArgumentException(
+              "Failed to initialize " + tokenProviderClass);
+        }
+        return tokenProvider;
+      } catch (IllegalArgumentException e) {
+        LOG.debug("Exception while returning token provider ", e);
+        throw e;
+      } catch (Exception e) {
+        LOG.debug("Exception while returning token provider ", e);
+        throw new TokenAccessProviderException(
+            "Unable to load OAuth token provider class.", e);
+      }
+    }else if (authType == AuthType.Custom) {
+      LOG.debug("The auth type is " + authType);
+      try {
+        String configKey = FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
+
+        Class<? extends CustomTokenProviderAdaptee> customTokenProviderClass
+            = getTokenProviderClass(authType, configKey, null,
+            CustomTokenProviderAdaptee.class);
+
+        if (customTokenProviderClass == null) {
+          LOG.debug("Exception while returning custom token provider class");
+          throw new IllegalArgumentException(
+              String.format("The configuration value for \"%s\" is invalid.", configKey));
+        }
+        CustomTokenProviderAdaptee azureTokenProvider = ReflectionUtils
+            .newInstance(customTokenProviderClass, sessionConfiguration);
+        if (azureTokenProvider == null) {
+          throw new IllegalArgumentException("Failed to initialize " + customTokenProviderClass);
+        }
+        LOG.debug("Initializing {}", customTokenProviderClass.getName());
+        azureTokenProvider.initialize(sessionConfiguration, getAccountFromAuthority(sessionUri));
+        LOG.debug("{} init complete", customTokenProviderClass.getName());
+        return new CustomTokenProviderAdapter(azureTokenProvider, getCustomTokenFetchRetryCount());
+      } catch(IllegalArgumentException e) {
+        throw e;
+      } catch (Exception e) {
+        throw new TokenAccessProviderException("Unable to load custom token provider class: " + e, e);
+      }
+    }
+    return null;
   }
 
   /**
@@ -511,13 +746,13 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    */
   @Override
   public void initialize(URI uri, Configuration conf, AzureFileSystemInstrumentation instrumentation)
-      throws IllegalArgumentException, AzureException, IOException  {
+      throws IllegalArgumentException, AzureException, IOException,
+      URISyntaxException {
 
     if (null == instrumentation) {
       throw new IllegalArgumentException("Null instrumentation");
     }
     this.instrumentation = instrumentation;
-
     // Check that URI exists.
     //
     if (null == uri) {
@@ -543,7 +778,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     //
     sessionUri = uri;
     sessionConfiguration = conf;
-
+    if (tokenProvider == null) {
+      tokenProvider = getTokenProvider();
+    }
     useSecureMode = conf.getBoolean(KEY_USE_SECURE_MODE,
         DEFAULT_USE_SECURE_MODE);
     useLocalSasKeyMode = conf.getBoolean(KEY_USE_LOCAL_SAS_KEY_MODE,
@@ -593,8 +830,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       LOG.warn("Unable to initialize HBase root as an atomic rename directory.");
     }
     LOG.debug("Atomic rename directories: {} ", setToString(atomicRenameDirs));
-    metadataKeyCaseSensitive = conf
-        .getBoolean(KEY_BLOB_METADATA_KEY_CASE_SENSITIVE, true);
+    metadataKeyCaseSensitive = false;
     if (!metadataKeyCaseSensitive) {
       LOG.info("{} configured as false. Blob metadata will be treated case insensitive.",
           KEY_BLOB_METADATA_KEY_CASE_SENSITIVE);
@@ -843,8 +1079,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       autoThrottlingEnabled = false;
     }
 
-    OperationContext.setLoggingEnabledByDefault(sessionConfiguration.
-        getBoolean(KEY_ENABLE_STORAGE_CLIENT_LOGGING, false));
+    if (LOG.isDebugEnabled()) {
+      OperationContext.setLoggingEnabledByDefault(true);
+    }
 
     LOG.debug(
         "AzureNativeFileSystemStore init. Settings={},{},{},{{},{},{},{}},{{},{},{}}",
@@ -907,7 +1144,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
   private void connectUsingCredentials(String accountName,
       StorageCredentials credentials, String containerName)
-      throws URISyntaxException, StorageException, AzureException {
+      throws URISyntaxException, StorageException, IOException {
 
     URI blobEndPoint;
     if (isStorageEmulatorAccount(accountName)) {
@@ -921,10 +1158,14 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     }
     suppressRetryPolicyInClientIfNeeded();
 
+    if (tokenProvider != null) {
+      container = storageInteractionLayer.getContainerReference(containerName, tokenProvider);
+      rootDirectory = container.getDirectoryReference("", tokenProvider);
+    } else {
+      container = storageInteractionLayer.getContainerReference(containerName);
+      rootDirectory = container.getDirectoryReference("");
+    }
     // Capture the container reference for debugging purposes.
-    container = storageInteractionLayer.getContainerReference(containerName);
-    rootDirectory = container.getDirectoryReference("");
-
     // Can only create container if using account key credentials
     canCreateOrModifyContainer = credentials instanceof StorageCredentialsAccountAndKey;
   }
@@ -937,7 +1178,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    */
   private void connectToAzureStorageInSecureMode(String accountName,
       String containerName, URI sessionUri)
-          throws AzureException, StorageException, URISyntaxException {
+      throws IOException, StorageException, URISyntaxException {
 
     LOG.debug("Connecting to Azure storage in Secure Mode");
     // Assertion: storageInteractionLayer instance has to be a SecureStorageInterfaceImpl
@@ -979,6 +1220,13 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     StorageCredentials credentials = new StorageCredentialsSharedAccessSignature(
         sas);
     connectingUsingSAS = true;
+    connectUsingCredentials(accountName, credentials, containerName);
+  }
+
+  private void connectUsingOAuthCredentials(final String accountName,
+      final String containerName, AzureADToken token) throws InvalidKeyException,
+      StorageException, IOException, URISyntaxException {
+    StorageCredentials credentials = new StorageCredentialsToken(accountName, token.getAccessToken());
     connectUsingCredentials(accountName, credentials, containerName);
   }
 
@@ -1093,11 +1341,16 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         connectToAzureStorageInSecureMode(accountName, containerName, sessionUri);
         return;
       }
+      if (tokenProvider != null){
+        connectUsingOAuthCredentials(accountName, containerName, tokenProvider.getToken());
+        return;
+      }
 
       // Check whether we have a shared access signature for that container.
       String propertyValue = sessionConfiguration.get(KEY_ACCOUNT_SAS_PREFIX
           + containerName + "." + accountName);
       if (propertyValue != null) {
+        LOG.debug("The SAS config property value is not null");
         // SAS was found. Connect using that.
         connectUsingSASCredentials(accountName, containerName, propertyValue);
         return;
@@ -1106,17 +1359,18 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       // Check whether the account is configured with an account key.
       propertyValue = getAccountKeyFromConfiguration(accountName,
           sessionConfiguration);
-      if (StringUtils.isNotEmpty(propertyValue)) {
-        // Account key was found.
-        // Create the Azure storage session using the account key and container.
-        connectUsingConnectionStringCredentials(
-            getAccountFromAuthority(sessionUri),
-            getContainerFromAuthority(sessionUri), propertyValue);
-      } else {
-        LOG.debug("The account access key is not configured for {}. "
-            + "Now try anonymous access.", sessionUri);
-        connectUsingAnonymousCredentials(sessionUri);
-      }
+        if (StringUtils.isNotEmpty(propertyValue)) {
+          LOG.debug("The Account Key config property value is not null");
+          // Account key was found.
+          // Create the Azure storage session using the account key and container.
+          connectUsingConnectionStringCredentials(
+              getAccountFromAuthority(sessionUri),
+              getContainerFromAuthority(sessionUri), propertyValue);
+        } else {
+          LOG.debug("The account access key is not configured for {}. "
+              + "Now try anonymous access.", sessionUri);
+          connectUsingAnonymousCredentials(sessionUri);
+        }
     } catch (Exception e) {
       // Caught exception while attempting to initialize the Azure File
       // System store, re-throw the exception.
@@ -1340,7 +1594,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * container's metadata if it's not already there.
    */
   private ContainerState checkContainer(ContainerAccessType accessType)
-      throws StorageException, AzureException {
+      throws StorageException, IOException {
     synchronized (containerStateLock) {
       if (isOkContainerState(accessType)) {
         return currentKnownContainerState;
@@ -1372,6 +1626,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         } else {
           throw ex;
         }
+      } catch (IOException e) {
+        e.printStackTrace();
       }
 
       if (currentKnownContainerState == ContainerState.DoesntExist) {
@@ -1417,7 +1673,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
 
-  private AzureException wrongVersionException(String containerVersion) {
+  private AzureException wrongVersionException(String containerVersion)
+      throws IOException {
     return new AzureException("The container " + container.getName()
         + " is at an unsupported version: " + containerVersion
         + ". Current supported version: " + FIRST_WASB_VERSION);
@@ -1585,7 +1842,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * to populate it from scratch with data.
    */
   private OutputStream openOutputStream(final CloudBlobWrapper blob)
-      throws StorageException {
+      throws StorageException, IOException {
     if (blob instanceof CloudPageBlobWrapper){
       return new PageBlobOutputStream(
           (CloudPageBlobWrapper) blob, getInstrumentedContext(), sessionConfiguration);
@@ -1638,7 +1895,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   }
 
   private static void storeMetadataAttribute(CloudBlobWrapper blob,
-      String key, String value) {
+      String key, String value) throws IOException {
     HashMap<String, String> metadata = blob.getMetadata();
     if (null == metadata) {
       metadata = new HashMap<String, String>();
@@ -1671,7 +1928,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   }
 
   private static void removeMetadataAttribute(CloudBlobWrapper blob,
-      String key) {
+      String key) throws IOException {
     HashMap<String, String> metadata = blob.getMetadata();
     if (metadata != null) {
       metadata.remove(key);
@@ -1680,14 +1937,15 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   }
 
   private static void storePermissionStatus(CloudBlobWrapper blob,
-      PermissionStatus permissionStatus) {
+      PermissionStatus permissionStatus) throws IOException {
     storeMetadataAttribute(blob, PERMISSION_METADATA_KEY,
         PERMISSION_JSON_SERIALIZER.toJSON(permissionStatus));
     // Remove the old metadata key if present
     removeMetadataAttribute(blob, OLD_PERMISSION_METADATA_KEY);
   }
 
-  private PermissionStatus getPermissionStatus(CloudBlobWrapper blob) {
+  private PermissionStatus getPermissionStatus(CloudBlobWrapper blob)
+      throws IOException {
     String permissionMetadataValue = getMetadataAttribute(blob.getMetadata(),
         PERMISSION_METADATA_KEY, OLD_PERMISSION_METADATA_KEY);
     if (permissionMetadataValue != null) {
@@ -1698,7 +1956,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
 
-  private static void storeFolderAttribute(CloudBlobWrapper blob) {
+  private static void storeFolderAttribute(CloudBlobWrapper blob)
+      throws IOException {
     storeMetadataAttribute(blob, IS_FOLDER_METADATA_KEY, "true");
     // Remove the old metadata key if present
     removeMetadataAttribute(blob, OLD_IS_FOLDER_METADATA_KEY);
@@ -1726,7 +1985,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   }
 
   private static void storeLinkAttribute(CloudBlobWrapper blob,
-      String linkTarget) throws UnsupportedEncodingException {
+      String linkTarget) throws IOException {
     String encodedLinkTarget = encodeMetadataAttribute(linkTarget);
     storeMetadataAttribute(blob,
         LINK_BACK_TO_UPLOAD_IN_PROGRESS_METADATA_KEY,
@@ -1737,14 +1996,15 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   }
 
   private String getLinkAttributeValue(CloudBlobWrapper blob)
-      throws UnsupportedEncodingException {
+      throws IOException {
     String encodedLinkTarget = getMetadataAttribute(blob.getMetadata(),
         LINK_BACK_TO_UPLOAD_IN_PROGRESS_METADATA_KEY,
         OLD_LINK_BACK_TO_UPLOAD_IN_PROGRESS_METADATA_KEY);
     return decodeMetadataAttribute(encodedLinkTarget);
   }
 
-  private boolean retrieveFolderAttribute(CloudBlobWrapper blob) {
+  private boolean retrieveFolderAttribute(CloudBlobWrapper blob)
+      throws IOException {
     HashMap<String, String> metadata = blob.getMetadata();
     if (null != metadata) {
       if (metadataKeyCaseSensitive) {
@@ -1764,7 +2024,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     return false;
   }
 
-  private static void storeVersionAttribute(CloudBlobContainerWrapper container) {
+  private static void storeVersionAttribute(CloudBlobContainerWrapper container)
+      throws IOException {
     HashMap<String, String> metadata = container.getMetadata();
     if (null == metadata) {
       metadata = new HashMap<String, String>();
@@ -1776,7 +2037,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     container.setMetadata(metadata);
   }
 
-  private String retrieveVersionAttribute(CloudBlobContainerWrapper container) {
+  private String retrieveVersionAttribute(CloudBlobContainerWrapper container)
+      throws IOException {
     return getMetadataAttribute(container.getMetadata(), VERSION_METADATA_KEY,
         OLD_VERSION_METADATA_KEY);
   }
@@ -1927,7 +2189,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    *
    */
   private Iterable<ListBlobItem> listRootBlobs(boolean includeMetadata,
-      boolean useFlatBlobListing) throws StorageException, URISyntaxException {
+      boolean useFlatBlobListing)
+      throws StorageException, URISyntaxException, IOException {
     return rootDirectory.listBlobs(
         null,
         useFlatBlobListing,
@@ -1958,7 +2221,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    *
    */
   private Iterable<ListBlobItem> listRootBlobs(String aPrefix, boolean includeMetadata,
-      boolean useFlatBlobListing) throws StorageException, URISyntaxException {
+      boolean useFlatBlobListing)
+      throws StorageException, URISyntaxException, IOException {
 
     Iterable<ListBlobItem> list = rootDirectory.listBlobs(aPrefix,
         useFlatBlobListing,
@@ -1996,7 +2260,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    */
   private Iterable<ListBlobItem> listRootBlobs(String aPrefix, boolean useFlatBlobListing,
       EnumSet<BlobListingDetails> listingDetails, BlobRequestOptions options,
-      OperationContext opContext) throws StorageException, URISyntaxException {
+      OperationContext opContext)
+      throws StorageException, URISyntaxException, IOException {
 
     CloudBlobDirectoryWrapper directory =  this.container.getDirectoryReference(aPrefix);
     return directory.listBlobs(
@@ -2021,13 +2286,21 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    *
    */
   private CloudBlobWrapper getBlobReference(String aKey)
-      throws StorageException, URISyntaxException {
+      throws StorageException, URISyntaxException, IOException {
 
     CloudBlobWrapper blob = null;
     if (isPageBlobKey(aKey)) {
-      blob = this.container.getPageBlobReference(aKey);
+      if (tokenProvider != null) {
+        blob = this.container.getPageBlobReference(aKey, tokenProvider);
+      } else {
+        blob = this.container.getPageBlobReference(aKey);
+      }
     } else {
-      blob = this.container.getBlockBlobReference(aKey);
+      if (tokenProvider != null) {
+        blob = this.container.getBlockBlobReference(aKey, tokenProvider);
+      } else {
+        blob = this.container.getBlockBlobReference(aKey);
+      }
     blob.setStreamMinimumReadSizeInBytes(downloadBlockSizeBytes);
     blob.setWriteBlockSizeInBytes(uploadBlockSizeBytes);
     }
@@ -2666,16 +2939,16 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * @param lease Azure blob lease, or null if no lease is to be used.
    * @throws StorageException
    */
-  private void safeDelete(CloudBlobWrapper blob, SelfRenewingLease lease) throws StorageException {
+  private void safeDelete(CloudBlobWrapper blob, SelfRenewingLease lease) throws StorageException, IOException {
     OperationContext operationContext = getInstrumentedContext();
     try {
       blob.delete(operationContext, lease);
     } catch (StorageException e) {
-      if (!NativeAzureFileSystemHelper.isFileNotFoundException(e)) {
-        LOG.error("Encountered Storage Exception for delete on Blob: {}"
-            + ", Exception Details: {} Error Code: {}",
-            blob.getUri(), e.getMessage(), e.getErrorCode());
-      }
+        if (!NativeAzureFileSystemHelper.isFileNotFoundException(e)) {
+          LOG.error("Encountered Storage Exception for delete on Blob: {}"
+                  + ", Exception Details: {} Error Code: {}",
+              blob.getUri(), e.getMessage(), e.getErrorCode());
+        }
       // On exception, check that if:
       // 1. It's a BlobNotFound exception AND
       // 2. It got there after one-or-more retries THEN
@@ -2903,13 +3176,14 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
 
-  private void waitForCopyToComplete(CloudBlobWrapper blob, OperationContext opContext){
+  private void waitForCopyToComplete(CloudBlobWrapper blob, OperationContext opContext)
+      throws IOException {
     boolean copyInProgress = true;
     while (copyInProgress) {
       try {
         blob.downloadAttributes(opContext);
         }
-      catch (StorageException se){
+      catch (StorageException | IOException se){
       }
 
       // test for null because mocked filesystem doesn't know about copystates yet.
@@ -2939,7 +3213,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * does not exist. So this method explicitly checks for the blob.
    */
   @Override
-  public boolean explicitFileExists(String key) throws AzureException {
+  public boolean explicitFileExists(String key) throws IOException {
     CloudBlobWrapper blob;
     try {
       blob = getBlobReference(key);
@@ -2952,6 +3226,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       throw new AzureException(e);
     } catch (URISyntaxException e) {
       throw new AzureException(e);
+    } catch (IOException e) {
+      throw new IOException(e);
     }
   }
 

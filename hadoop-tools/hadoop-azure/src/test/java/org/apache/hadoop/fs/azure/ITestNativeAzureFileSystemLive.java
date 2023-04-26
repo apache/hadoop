@@ -189,7 +189,7 @@ public class ITestNativeAzureFileSystemLive extends
             LOG.info("Freeing lease");
             lease.free();
           }
-        } catch (StorageException se) {
+        } catch (StorageException | IOException se) {
           LOG.warn("Unable to free lease.", se);
         }
       }
