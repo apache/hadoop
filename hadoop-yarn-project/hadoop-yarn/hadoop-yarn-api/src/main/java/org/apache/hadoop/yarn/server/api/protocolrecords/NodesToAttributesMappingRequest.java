@@ -43,6 +43,19 @@ public abstract class NodesToAttributesMappingRequest {
     return request;
   }
 
+  public static NodesToAttributesMappingRequest newInstance(
+      AttributeMappingOperationType operation, List<NodeToAttributes> nodesToAttributes,
+      boolean failOnUnknownNodes, String subClusterId) {
+    NodesToAttributesMappingRequest request =
+        Records.newRecord(NodesToAttributesMappingRequest.class);
+    request.setNodesToAttributes(nodesToAttributes);
+    request.setFailOnUnknownNodes(failOnUnknownNodes);
+    request.setOperation(operation);
+    request.setOperation(operation);
+    request.setSubClusterId(subClusterId);
+    return request;
+  }
+
   @Public
   @Unstable
   public abstract void setNodesToAttributes(

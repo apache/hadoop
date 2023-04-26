@@ -613,6 +613,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed getMapAttributesToNode call");
       metrics.incrMapAttributesToNodesFailedRetrieved();
     }
+
+    public void getGroupsForUserFailed() {
+      LOG.info("Mocked: failed getGroupsForUser call");
+      metrics.incrGetGroupsForUserFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -924,6 +929,18 @@ public class TestRouterMetrics {
       LOG.info("Mocked: successful RefreshClusterMaxPriority call with duration {}",
           duration);
       metrics.succeededRefreshClusterMaxPriorityRetrieved(duration);
+    }
+
+    public void getMapAttributesToNodesRetrieved(long duration) {
+      LOG.info("Mocked: successful MapAttributesToNodes call with duration {}",
+          duration);
+      metrics.succeededMapAttributesToNodesRetrieved(duration);
+    }
+
+    public void getGroupsForUsersRetrieved(long duration) {
+      LOG.info("Mocked: successful GetGroupsForUsers call with duration {}",
+          duration);
+      metrics.succeededGetGroupsForUsersRetrieved(duration);
     }
   }
 
@@ -2120,5 +2137,42 @@ public class TestRouterMetrics {
     long totalBadBefore = metrics.getMapAttributesToNodesFailedRetrieved();
     badSubCluster.getMapAttributesToNodesFailed();
     Assert.assertEquals(totalBadBefore + 1, metrics.getMapAttributesToNodesFailedRetrieved());
+  }
+
+  @Test
+  public void testGetMapAttributesToNodesRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededMapAttributesToNodesRetrieved();
+    goodSubCluster.getMapAttributesToNodesRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededMapAttributesToNodesRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededMapAttributesToNodesRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getMapAttributesToNodesRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededMapAttributesToNodesRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededMapAttributesToNodesRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetGroupsForUserFailedRetrieved() {
+    long totalBadBefore = metrics.getGroupsForUserFailedRetrieved();
+    badSubCluster.getGroupsForUserFailed();
+    Assert.assertEquals(totalBadBefore + 1, metrics.getGroupsForUserFailedRetrieved());
+  }
+
+  @Test
+  public void testGetGroupsForUserRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetGroupsForUsersRetrieved();
+    goodSubCluster.getGroupsForUsersRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetGroupsForUsersRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetGroupsForUsersRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getGroupsForUsersRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetGroupsForUsersRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetGroupsForUsersRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 }
