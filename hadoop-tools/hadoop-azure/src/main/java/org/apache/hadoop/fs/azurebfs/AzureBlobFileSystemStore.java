@@ -878,13 +878,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws AzureBlobFileSystemException
    */
   private AbfsRestOperation conditionalCreateOverwriteFile(final String relativePath,
-                                                           final FileSystem.Statistics statistics,
-                                                           boolean isNamespaceEnabled,
-                                                           final FsPermission permission,
-                                                           final FsPermission umask,
-                                                           final boolean isAppendBlob,
-                                                           HashMap<String, String> metadata,
-                                                           TracingContext tracingContext) throws AzureBlobFileSystemException {
+      final FileSystem.Statistics statistics,
+      boolean isNamespaceEnabled,
+      final FsPermission permission,
+      final FsPermission umask,
+      final boolean isAppendBlob,
+      HashMap<String, String> metadata,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsRestOperation op;
 
     try {
