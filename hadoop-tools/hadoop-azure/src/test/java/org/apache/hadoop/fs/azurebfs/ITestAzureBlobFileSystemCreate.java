@@ -61,6 +61,7 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_BLOB_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_META_HDI_ISFOLDER;
 import static org.mockito.ArgumentMatchers.any;
@@ -240,6 +241,18 @@ public class ITestAzureBlobFileSystemCreate extends
   }
 
   /**
+   * Create a file with name /dir1 and then mkdirs for /dir1/dir2 should fail.
+   * @throws Exception
+   */
+  @Test
+  public void testFileCreateMkdirsNonRoot() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final Path p1 = new Path("dir1");
+    fs.create(p1);
+    intercept(IOException.class, () -> fs.mkdirs(new Path("dir1/dir2")));
+  }
+
+  /**
    * Creation of same directory without overwrite flag should pass.
    * @throws Exception
    */
@@ -251,13 +264,24 @@ public class ITestAzureBlobFileSystemCreate extends
   }
 
   /**
+   * Creation of same directory without overwrite flag should pass.
+   * @throws Exception
+   */
+  @Test
+  public void testCreateSamePathDirectory() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.create(new Path("a"));
+    intercept(IOException.class, () -> fs.mkdirs(new Path("a")));
+  }
+
+  /**
    * Creation of directory with overwrite set to false should not fail according to DFS code.
    * @throws Exception
    */
   @Test
-  public void testCreateSameDirectoryOverwriteFalse() throws Exception {
+  public void testCreateSameDirectoryOverwriteTrue() throws Exception {
     Configuration configuration = getRawConfiguration();
-    configuration.setBoolean(FS_AZURE_ENABLE_MKDIR_OVERWRITE, false);
+    configuration.setBoolean(FS_AZURE_ENABLE_BLOB_MKDIR_OVERWRITE, true);
     AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
     fs1.mkdirs(new Path("a/b/c"));
     fs1.mkdirs(new Path("a/b/c"));

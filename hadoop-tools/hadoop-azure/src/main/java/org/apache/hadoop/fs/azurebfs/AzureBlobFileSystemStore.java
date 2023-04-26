@@ -58,6 +58,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.azurebfs.enums.BlobCopyProgress;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.fs.azurebfs.services.BlobList;
@@ -980,12 +981,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       if (getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
         ArrayList<Path> keysToCreateAsFolder = new ArrayList<>();
         checkParentChainForFile(path, tracingContext, keysToCreateAsFolder);
+        boolean blobOverwrite = abfsConfiguration.isEnabledBlobMkdirOverwrite();
 
         HashMap<String, String> metadata = new HashMap<>();
         metadata.put(X_MS_META_HDI_ISFOLDER, TRUE);
+        createFile(path, statistics, blobOverwrite,
+                permission, umask, tracingContext, metadata);
+
         for (Path pathToCreate: keysToCreateAsFolder) {
-          createFile(pathToCreate, statistics, false,
-                  permission, umask, tracingContext, metadata);
+            createFile(pathToCreate, statistics, blobOverwrite,
+                    permission, umask, tracingContext, metadata);
         }
         return;
       }
@@ -1016,30 +1021,17 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    */
   private void checkParentChainForFile(Path path, TracingContext tracingContext,
                                        List<Path> keysToCreateAsFolder) throws IOException {
-    if (directoryExists(path, tracingContext)) {
+    if (checkPathIsDirectory(path, tracingContext)) {
       return;
     }
-    keysToCreateAsFolder.add(path);
     Path current = path.getParent();
-
     while (current != null && !current.isRoot()) {
-      if (directoryExists(current, tracingContext)) {
+      if (checkPathIsDirectory(current, tracingContext)) {
         break;
       }
       keysToCreateAsFolder.add(current);
       current = current.getParent();
     }
-  }
-
-  /**
-   * Returns true if path is directory.
-   * @param path path to verify.
-   * @param tracingContext the tracingContext.
-   * @return true or false.
-   * @throws IOException
-   */
-  private boolean directoryExists(Path path, TracingContext tracingContext) throws IOException {
-    return checkPathIsDirectory(path, tracingContext);
   }
 
   /**
