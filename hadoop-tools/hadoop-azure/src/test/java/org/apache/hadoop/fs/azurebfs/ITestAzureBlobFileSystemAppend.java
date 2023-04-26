@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
+import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.junit.Assume;
 import org.junit.Test;
@@ -231,15 +232,17 @@ public class ITestAzureBlobFileSystemAppend extends
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     Mockito.doReturn(store).when(fs).getAbfsStore();
     AbfsClient client = store.getClient();
-    AbfsClient spiedClient = Mockito.spy(client);
-    store.setClient(spiedClient);
+    AbfsClient testClient = Mockito.spy(TestAbfsClient.createTestClientFromCurrentContext(
+            client,
+            fs.getAbfsStore().getAbfsConfiguration()));
+    store.setClient(testClient);
 
     FSDataOutputStream outputStream = fs.create(TEST_FILE_PATH);
     outputStream.write(10);
     outputStream.hsync();
     outputStream.close();
     fs.append(TEST_FILE_PATH);
-    Mockito.verify(spiedClient, Mockito.times(1))
+    Mockito.verify(testClient, Mockito.times(1))
             .getBlockList(Mockito.any(String.class),
                     Mockito.any(TracingContext.class));
   }
