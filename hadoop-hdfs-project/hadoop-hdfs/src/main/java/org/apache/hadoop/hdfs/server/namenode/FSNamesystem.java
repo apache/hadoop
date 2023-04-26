@@ -3712,7 +3712,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if(nrCompleteBlocks == nrBlocks) {
       finalizeINodeFileUnderConstruction(src, pendingFile,
           iip.getLatestSnapshotId(), false);
-      NameNode.stateChangeLog.warn("BLOCK*" +
+      NameNode.stateChangeLog.info("BLOCK*" +
           " internalReleaseLease: All existing blocks are COMPLETE," +
           " lease removed, file " + src + " closed.");
       return true;  // closed!
@@ -3751,7 +3751,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           blockManager.hasMinStorage(lastBlock)) {
         finalizeINodeFileUnderConstruction(src, pendingFile,
             iip.getLatestSnapshotId(), false);
-        NameNode.stateChangeLog.warn("BLOCK*" +
+        NameNode.stateChangeLog.info("BLOCK*" +
             " internalReleaseLease: Committed blocks are minimally" +
             " replicated, lease removed, file" + src + " closed.");
         return true;  // closed!
@@ -3798,7 +3798,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         pendingFile.removeLastBlock(lastBlock);
         finalizeINodeFileUnderConstruction(src, pendingFile,
             iip.getLatestSnapshotId(), false);
-        NameNode.stateChangeLog.warn("BLOCK* internalReleaseLease: "
+        NameNode.stateChangeLog.info("BLOCK* internalReleaseLease: "
             + "Removed empty last block and closed file " + src);
         return true;
       }
