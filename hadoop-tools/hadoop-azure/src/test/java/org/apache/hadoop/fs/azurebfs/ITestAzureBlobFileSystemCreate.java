@@ -264,6 +264,17 @@ public class ITestAzureBlobFileSystemCreate extends
   }
 
   /**
+   * Creation of same directory without overwrite flag should pass.
+   * @throws Exception
+   */
+  @Test
+  public void testCreateSamePathDirectory() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.create(new Path("a"));
+    intercept(IOException.class, () -> fs.mkdirs(new Path("a")));
+  }
+
+  /**
    * Creation of directory with overwrite set to false should not fail according to DFS code.
    * @throws Exception
    */

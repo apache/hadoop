@@ -989,10 +989,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
                 permission, umask, tracingContext, metadata);
 
         for (Path pathToCreate: keysToCreateAsFolder) {
-          try {
             createFile(pathToCreate, statistics, blobOverwrite,
                     permission, umask, tracingContext, metadata);
-          } catch (FileAlreadyExistsException ex) {}
         }
         return;
       }
