@@ -1392,7 +1392,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   private Boolean isCreateOnBlobEndpoint() {
     return getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB
-        && !"false".equalsIgnoreCase(
+        && !"true".equalsIgnoreCase(
         getAbfsConfiguration().get("fs.azure.ingress.fallback.to.dfs"));
   }
 
