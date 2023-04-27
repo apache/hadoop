@@ -651,11 +651,21 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws AzureBlobFileSystemException exception thrown from
    * {@link AbfsClient#getBlobProperty(Path, TracingContext)} call
    */
-  BlobProperty getBlobProperty(Path blobPath,
-      TracingContext tracingContext) throws AzureBlobFileSystemException {
-    AbfsRestOperation op = client.getBlobProperty(blobPath, tracingContext);
+  BlobProperty getBlobProperty(Path blobPath, TracingContext tracingContext)
+      throws AzureBlobFileSystemException {
+    boolean isNamespaceEnabled = getIsNamespaceEnabled(tracingContext);
+    AbfsRestOperation op;
     BlobProperty blobProperty = new BlobProperty();
+
+    if (blobPath.isRoot()) {
+      op = client.getContainerProperty(tracingContext);
+    }
+    else {
+      op = client.getBlobProperty(blobPath, tracingContext);
+    }
+
     final AbfsHttpOperation opResult = op.getResult();
+
     blobProperty.setIsDirectory(opResult
         .getResponseHeader(X_MS_META_HDI_ISFOLDER) != null);
     blobProperty.setUrl(op.getUrl().toString());
@@ -667,6 +677,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     blobProperty.setCopyStatus(opResult.getResponseHeader(X_MS_COPY_STATUS));
     blobProperty.setContentLength(
         Long.parseLong(opResult.getResponseHeader(CONTENT_LENGTH)));
+
+    if (blobPath.isRoot()) {
+      blobProperty.setContentLength(0L);
+      blobProperty.setIsDirectory(true);
+    }
     return blobProperty;
   }
 
