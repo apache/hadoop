@@ -592,12 +592,14 @@ public class DistCpUtils {
     // comparison that took place and return not compatible.
     // else if matched, return compatible with the matched result.
     if (sourceChecksum == null || targetChecksum == null) {
-      LOG.error("Checksum incompatible. Source checksum: {}, target checksum: {}", sourceChecksum, targetChecksum);
+      LOG.error("Checksum incompatible. Source checksum: {}, target checksum: {}",
+          sourceChecksum, targetChecksum);
       return CopyMapper.ChecksumComparison.INCOMPATIBLE;
     } else if (sourceChecksum.equals(targetChecksum)) {
       return CopyMapper.ChecksumComparison.TRUE;
     }
-    LOG.error("Checksum not equal. Source checksum: {}, target checksum: {}", sourceChecksum, targetChecksum);
+    LOG.error("Checksum not equal. Source checksum: {}, target checksum: {}",
+        sourceChecksum, targetChecksum);
     return CopyMapper.ChecksumComparison.FALSE;
   }
 
