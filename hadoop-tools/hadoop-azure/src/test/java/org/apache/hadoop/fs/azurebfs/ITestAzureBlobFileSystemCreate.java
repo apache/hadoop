@@ -23,10 +23,14 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.UUID;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -49,6 +53,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
+import org.mockito.Mockito;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
@@ -57,7 +62,10 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_BLOB_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_MKDIR_OVERWRITE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_META_HDI_ISFOLDER;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -195,6 +203,57 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(new Path("a/b/c/d/e"));
   }
 
+  /*
+    Delete part of a path and validate subpath exists.
+   */
+  @Test
+  public void testMkdirsWithDelete() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.mkdirs(new Path("a/b"));
+    fs.mkdirs(new Path("a/b/c/d"));
+    fs.delete(new Path("a/b/c/d"));
+    fs.getFileStatus(new Path("a/b/c"));
+    Assert.assertTrue(fs.exists(new Path("a/b/c")));
+  }
+
+  /**
+   * Verify mkdir and rename of parent.
+   */
+  @Test
+  public void testMkdirsWithRename() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.mkdirs(new Path("a/b/c/d"));
+    fs.create(new Path("e/file"));
+    fs.delete(new Path("a/b/c/d"));
+    Assert.assertTrue(fs.rename(new Path("e"), new Path("a/b/c/d")));
+    Assert.assertTrue(fs.exists(new Path("a/b/c/d/file")));
+  }
+
+  /**
+   * Create a file with name /dir1 and then mkdirs for /dir1/dir2 should fail.
+   * @throws Exception
+   */
+  @Test
+  public void testFileCreateMkdirsRoot() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.setWorkingDirectory(new Path("/"));
+    final Path p1 = new Path("dir1");
+    fs.create(p1);
+    intercept(IOException.class, () -> fs.mkdirs(new Path("dir1/dir2")));
+  }
+
+  /**
+   * Create a file with name /dir1 and then mkdirs for /dir1/dir2 should fail.
+   * @throws Exception
+   */
+  @Test
+  public void testFileCreateMkdirsNonRoot() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final Path p1 = new Path("dir1");
+    fs.create(p1);
+    intercept(IOException.class, () -> fs.mkdirs(new Path("dir1/dir2")));
+  }
+
   /**
    * Creation of same directory without overwrite flag should pass.
    * @throws Exception
@@ -207,13 +266,24 @@ public class ITestAzureBlobFileSystemCreate extends
   }
 
   /**
+   * Creation of same directory without overwrite flag should pass.
+   * @throws Exception
+   */
+  @Test
+  public void testCreateSamePathDirectory() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.create(new Path("a"));
+    intercept(IOException.class, () -> fs.mkdirs(new Path("a")));
+  }
+
+  /**
    * Creation of directory with overwrite set to false should not fail according to DFS code.
    * @throws Exception
    */
   @Test
-  public void testCreateSameDirectoryOverwriteFalse() throws Exception {
+  public void testCreateSameDirectoryOverwriteTrue() throws Exception {
     Configuration configuration = getRawConfiguration();
-    configuration.setBoolean(FS_AZURE_ENABLE_MKDIR_OVERWRITE, false);
+    configuration.setBoolean(FS_AZURE_ENABLE_BLOB_MKDIR_OVERWRITE, true);
     AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
     fs1.mkdirs(new Path("a/b/c"));
     fs1.mkdirs(new Path("a/b/c"));
@@ -249,6 +319,127 @@ public class ITestAzureBlobFileSystemCreate extends
     Assume.assumeTrue(getFileSystem().getAbfsStore().getPrefixMode() == PrefixMode.BLOB);
     Configuration configuration = getRawConfiguration();
     AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+  }
+
+  /**
+   * 1. a/b/c as implicit.
+   * 2. Create marker for b.
+   * 3. Do mkdir on a/b/c/d.
+   * 4. Verify all b,c,d have marker but a is implicit.
+   */
+  @Test
+  public void testImplicitExplicitFolder() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Assume.assumeTrue(fs.getAbfsStore().getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB);
+    final Path implicitPath = new Path("a/b/c");
+    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+            getAccountName(),
+            getFileSystemName(),
+            getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration());
+    azcopyHelper.createFolderUsingAzcopy(
+            getFileSystem().makeQualified(implicitPath).toUri().getPath().substring(1));
+    Path path = makeQualified(new Path("a/b"));
+    HashMap<String, String> metadata = new HashMap<>();
+    metadata.put(X_MS_META_HDI_ISFOLDER, TRUE);
+    fs.getAbfsStore().createFile(path, null, true,
+            null, null, getTestTracingContext(fs, true), metadata);
+    fs.mkdirs(new Path("a/b/c/d"));
+
+    // 1. Listing on parent should return implicit directory
+    // 2. GetBlobProperty on the path should fail
+    FileStatus[] files = fs.listStatus(implicitPath.getParent());
+    assertEquals("Wrong number of files in listing", 1, files.length);
+
+    LambdaTestUtils.intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(
+              new Path(getFileSystem().makeQualified(new Path("a")).toUri().getPath()),
+              Mockito.mock(TracingContext.class)
+      );
+    });
+
+    // Asserting that the directory created by mkdir exists as explicit.
+    Assert.assertTrue(
+            fs.getAbfsStore().getBlobProperty(
+                    new Path(getFileSystem().makeQualified(new Path("a/b")).toUri().getPath()),
+                    Mockito.mock(TracingContext.class)
+            ).getIsDirectory()
+    );
+
+    Assert.assertTrue(
+            fs.getAbfsStore().getBlobProperty(
+                    new Path(getFileSystem().makeQualified(new Path("a/b/c")).toUri().getPath()),
+                    Mockito.mock(TracingContext.class)
+            ).getIsDirectory()
+    );
+
+    Assert.assertTrue(
+            fs.getAbfsStore().getBlobProperty(
+                    new Path(getFileSystem().makeQualified(new Path("a/b/c/d")).toUri().getPath()),
+                    Mockito.mock(TracingContext.class)
+            ).getIsDirectory()
+    );
+  }
+
+  /**
+   * 1. a/b/c implicit.
+   * 2. Marker for a and c.
+   * 3. mkdir on a/b/c/d.
+   * 4. Verify a,c,d are explicit but b is implicit.
+   */
+  @Test
+  public void testImplicitExplicitFolder1() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Assume.assumeTrue(fs.getAbfsStore().getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB);
+    final Path implicitPath = new Path("a/b/c");
+    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+            getAccountName(),
+            getFileSystemName(),
+            getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration());
+    azcopyHelper.createFolderUsingAzcopy(
+            getFileSystem().makeQualified(implicitPath).toUri().getPath().substring(1));
+    Path path = makeQualified(new Path("a"));
+    HashMap<String, String> metadata = new HashMap<>();
+    metadata.put(X_MS_META_HDI_ISFOLDER, TRUE);
+    fs.getAbfsStore().createFile(path, null, true,
+            null, null, getTestTracingContext(fs, true), metadata);
+    fs.getAbfsStore().createFile(makeQualified(new Path("a/b/c")), null, true,
+            null, null, getTestTracingContext(fs, true), metadata);
+    fs.mkdirs(new Path("a/b/c/d"));
+
+    // 1. Listing on parent should return implicit directory
+    // 2. GetBlobProperty on the path should fail
+    FileStatus[] files = fs.listStatus(implicitPath.getParent());
+    assertEquals("Wrong number of files in listing", 1, files.length);
+
+    LambdaTestUtils.intercept(AbfsRestOperationException.class, () -> {
+      fs.getAbfsStore().getBlobProperty(
+              new Path(getFileSystem().makeQualified(new Path("a/b")).toUri().getPath()),
+              Mockito.mock(TracingContext.class)
+      );
+    });
+
+    // Asserting that the directory created by mkdir exists as explicit.
+    Assert.assertTrue(
+            fs.getAbfsStore().getBlobProperty(
+                    new Path(getFileSystem().makeQualified(new Path("a")).toUri().getPath()),
+                    Mockito.mock(TracingContext.class)
+            ).getIsDirectory()
+    );
+
+    // Asserting that the directory created by mkdir exists as explicit.
+    Assert.assertTrue(
+            fs.getAbfsStore().getBlobProperty(
+                    new Path(getFileSystem().makeQualified(new Path("a/b/c")).toUri().getPath()),
+                    Mockito.mock(TracingContext.class)
+            ).getIsDirectory()
+    );
+
+    Assert.assertTrue(
+            fs.getAbfsStore().getBlobProperty(
+                    new Path(getFileSystem().makeQualified(new Path("a/b/c/d")).toUri().getPath()),
+                    Mockito.mock(TracingContext.class)
+            ).getIsDirectory()
+    );
   }
 
   @Test
