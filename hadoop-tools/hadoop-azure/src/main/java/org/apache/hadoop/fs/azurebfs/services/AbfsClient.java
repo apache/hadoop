@@ -404,7 +404,7 @@ public class AbfsClient implements Closeable {
         : SASTokenProvider.CREATE_DIRECTORY_OPERATION;
     appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
 
-    URL url = createRequestUrl(abfsUriQueryBuilder.toString());
+    URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     if (url.toString().contains(WASB_DNS_PREFIX)) {
       url = changePrefixFromBlobtoDfs(url);
     }
@@ -473,9 +473,13 @@ public class AbfsClient implements Closeable {
         throw ex;
       }
       if (!isFile && op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
-        if (metadata != null && metadata.containsKey(IS_FOLDER_METADATA_KEY)
-                && metadata.get(IS_FOLDER_METADATA_KEY).equals(TRUE)) {
-          return op; //don't throw ex on mkdirs for existing directory
+         // This ensures that we don't throw ex only for existing directory but if a blob exists we throw exception.
+        tracingContext.setFallbackDFSAppend(tracingContext.getFallbackDFSAppend() + "M");
+        AbfsRestOperation blobProperty = getBlobProperty(new Path(path), tracingContext);
+        final AbfsHttpOperation opResult = blobProperty.getResult();
+        boolean isDirectory = (opResult.getResponseHeader(X_MS_META_HDI_ISFOLDER) != null);
+        if (isDirectory) {
+          return op;
         }
       }
       throw ex;

@@ -215,6 +215,11 @@ public class AbfsConfiguration{
       DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE)
   private boolean mkdirOverwrite;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+          FS_AZURE_ENABLE_BLOB_MKDIR_OVERWRITE, DefaultValue =
+          DEFAULT_FS_AZURE_BLOB_ENABLE_MKDIR_OVERWRITE)
+  private boolean blobMkdirOverwrite;
+
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APPEND_BLOB_KEY,
       DefaultValue = DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES)
   private String azureAppendBlobDirs;
@@ -379,6 +384,33 @@ public class AbfsConfiguration{
 
   public void setPrefixMode(final PrefixMode prefixMode) {
     this.prefixMode = prefixMode;
+  }
+
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_ENABLE_BLOB_ENDPOINT,
+          DefaultValue = DEFAULT_FS_AZURE_ENABLE_BLOBENDPOINT)
+  private boolean enableBlobEndpoint;
+
+  public boolean shouldEnableBlobEndPoint() {
+    return this.enableBlobEndpoint;
+  }
+
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_MKDIRS_FALLBACK_TO_DFS,
+          DefaultValue = DEFAULT_FS_AZURE_MKDIRS_FALLBACK_TO_DFS)
+  private boolean mkdirFallbackToDfs;
+
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_INGRESS_FALLBACK_TO_DFS,
+          DefaultValue = DEFAULT_FS_AZURE_INGRESS_FALLBACK_TO_DFS)
+  private boolean ingressFallbackToDfs;
+
+  public boolean shouldMkdirFallbackToDfs() {
+    return mkdirFallbackToDfs;
+  }
+
+  public boolean shouldIngressFallbackToDfs() {
+    return ingressFallbackToDfs;
   }
 
   /**
@@ -723,6 +755,10 @@ public class AbfsConfiguration{
 
   public boolean isEnabledMkdirOverwrite() {
     return mkdirOverwrite;
+  }
+
+  public boolean isEnabledBlobMkdirOverwrite() {
+    return blobMkdirOverwrite;
   }
 
   public String getAppendBlobDirs() {

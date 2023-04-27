@@ -112,6 +112,9 @@ import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_BLOB_ENDPOINT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DNS_PREFIX;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.WASB_DNS_PREFIX;
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicityUtils.SUFFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS;
@@ -182,6 +185,13 @@ public class AzureBlobFileSystem extends FileSystem
       blockOutputActiveBlocks = 1;
     }
 
+    if (configuration.getBoolean(FS_AZURE_ENABLE_BLOB_ENDPOINT, false)) {
+      if (uri.toString().contains(FileSystemUriSchemes.ABFS_DNS_PREFIX)) {
+        uri = changePrefixFromDfsToBlob(uri);
+        this.uri = uri;
+      }
+    }
+
     // AzureBlobFileSystemStore with params in builder.
     AzureBlobFileSystemStore.AzureBlobFileSystemStoreBuilder
         systemStoreBuilder =
@@ -218,7 +228,8 @@ public class AzureBlobFileSystem extends FileSystem
         throw ex;
       }
     }
-    if (!isNamespaceEnabled && uri.toString().contains(FileSystemUriSchemes.WASB_DNS_PREFIX)) {
+    if (!isNamespaceEnabled && (abfsConfiguration.shouldEnableBlobEndPoint() ||
+            uri.toString().contains(FileSystemUriSchemes.WASB_DNS_PREFIX))) {
       this.prefixMode = PrefixMode.BLOB;
     }
     abfsConfiguration.setPrefixMode(this.prefixMode);
@@ -319,8 +330,17 @@ public class AzureBlobFileSystem extends FileSystem
 
   protected static String abfsUrlToWasbUrl(final String abfsUrl, final boolean isAlwaysHttpsUsed) {
     return convertTestUrls(
-        abfsUrl, FileSystemUriSchemes.ABFS_SCHEME, FileSystemUriSchemes.ABFS_SECURE_SCHEME, FileSystemUriSchemes.ABFS_DNS_PREFIX,
-        FileSystemUriSchemes.WASB_SCHEME, FileSystemUriSchemes.WASB_SECURE_SCHEME, FileSystemUriSchemes.WASB_DNS_PREFIX, isAlwaysHttpsUsed);
+            abfsUrl, FileSystemUriSchemes.ABFS_SCHEME, FileSystemUriSchemes.ABFS_SECURE_SCHEME, FileSystemUriSchemes.ABFS_DNS_PREFIX,
+            FileSystemUriSchemes.WASB_SCHEME, FileSystemUriSchemes.WASB_SECURE_SCHEME, FileSystemUriSchemes.WASB_DNS_PREFIX, isAlwaysHttpsUsed);
+  }
+
+  private URI changePrefixFromDfsToBlob(URI uri) throws InvalidUriException {
+    try {
+      String uriString = uri.toString().replace(ABFS_DNS_PREFIX, WASB_DNS_PREFIX);
+      return new URI(uriString);
+    } catch (URISyntaxException ex) {
+      throw new InvalidUriException(uri.toString());
+    }
   }
 
   @Override
@@ -393,6 +413,7 @@ public class AzureBlobFileSystem extends FileSystem
     return false;
   }
 
+  // Fallback plan : default to v1 create flow which will hit dfs endpoint. Config to enable: "fs.azure.ingress.fallback.to.dfs".
   @Override
   public FSDataOutputStream create(final Path f, final FsPermission permission, final boolean overwrite, final int bufferSize,
       final short replication, final long blockSize, final Progressable progress) throws IOException {
@@ -421,6 +442,10 @@ public class AzureBlobFileSystem extends FileSystem
 
     if (prefixMode == PrefixMode.BLOB) {
       validatePathOrSubPathDoesNotExist(qualifiedPath, tracingContext);
+      Path parent = qualifiedPath.getParent();
+      if (parent != null && !parent.isRoot()) {
+          mkdirs(parent);
+      }
     }
 
     try {
@@ -482,6 +507,7 @@ public class AzureBlobFileSystem extends FileSystem
         overwrite, bufferSize, replication, blockSize, progress);
   }
 
+  // Fallback plan : default to v1 append flow which will hit dfs endpoint. Config to enable: "fs.azure.ingress.fallback.to.dfs".
   @Override
   public FSDataOutputStream append(final Path f, final int bufferSize, final Progressable progress) throws IOException {
     LOG.debug(
@@ -903,6 +929,7 @@ public class AzureBlobFileSystem extends FileSystem
     }
   }
 
+  // Fallback plan : default to v1 Mkdir flow which will hit dfs endpoint. Config to enable: "fs.azure.mkdirs.fallback.to.dfs".
   @Override
   public boolean mkdirs(final Path f, final FsPermission permission) throws IOException {
     LOG.debug(
