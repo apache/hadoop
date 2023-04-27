@@ -23,16 +23,14 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.azurebfs.services.*;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -40,10 +38,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperationDetectedException;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
-import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
-import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 
@@ -143,6 +137,149 @@ public class ITestAzureBlobFileSystemCreate extends
     final AzureBlobFileSystem fs = getFileSystem();
     fs.create(new Path("a/b/c"));
     intercept(IOException.class, () -> fs.create(new Path("a/b")));
+  }
+
+  @Test
+  public void testParentExplicitPathImplicit() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AzureBlobFileSystemStore store = fs.getAbfsStore();
+    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+            getAccountName(),
+            getFileSystemName(),
+            getRawConfiguration()
+            );
+    fs.mkdirs(new Path("/explicitParent"));
+    String sourcePathName = "/explicitParent/implicitDir";
+    Path sourcePath = new Path(sourcePathName);
+    azcopyHelper.createFolderUsingAzcopy(fs.makeQualified(sourcePath).toUri().getPath().substring(1));
+
+    intercept(IOException.class, () ->
+            fs.create(sourcePath, true));
+    intercept(IOException.class, () ->
+            fs.create(sourcePath, false));
+
+    assertTrue("Parent directory should be explicit.",
+            fs.getAbfsStore().getBlobProperty(sourcePath.getParent(), getTestTracingContext(fs, false))
+            .getIsDirectory());
+
+    // assert that path is implicit
+    FileStatus[] status = fs.listStatus(sourcePath);
+    // the only child of given path should be the /azcopy folder
+    // and no marker
+    assertEquals(1, status.length);
+
+    // check additionally that getBlobProperty fails on this path
+    intercept(AbfsRestOperationException.class, ()->
+            store.getBlobProperty(sourcePath, getTestTracingContext(fs, false)));
+  }
+
+  @Test
+  public void testParentImplicitPathImplicit() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AzureBlobFileSystemStore store = fs.getAbfsStore();
+    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+            getAccountName(),
+            getFileSystemName(),
+            getRawConfiguration()
+    );
+    String parentPathName = "/implicitParent";
+    Path parentPath = new Path(parentPathName);
+    String sourcePathName = "/implicitParent/implicitDir";
+    Path sourcePath = new Path(sourcePathName);
+
+    azcopyHelper.createFolderUsingAzcopy(fs.makeQualified(parentPath).toUri().getPath().substring(1));
+    azcopyHelper.createFolderUsingAzcopy(fs.makeQualified(sourcePath).toUri().getPath().substring(1));
+
+    intercept(IOException.class, () ->
+            fs.create(sourcePath, true));
+    intercept(IOException.class, () ->
+            fs.create(sourcePath, false));
+
+
+    // assert that parent is implicit
+    intercept(AbfsRestOperationException.class, () ->
+                    fs.getAbfsStore().getBlobProperty(parentPath.getParent(), getTestTracingContext(fs, false)));
+
+    // assert that path is implicit
+    FileStatus[] status = fs.listStatus(parentPath);
+    // the only children of given path should be the /implicitDir folder
+    // and /azcopy folder
+    // and no marker
+    assertEquals(2, status.length);
+
+    // check additionally that getBlobProperty fails on this path
+    intercept(AbfsRestOperationException.class, ()->
+            store.getBlobProperty(sourcePath, getTestTracingContext(fs, false)));
+
+    // assert that path is implicit
+    FileStatus[] childStatus = fs.listStatus(sourcePath);
+    // the only child of given path should be the /implicitDir folder
+    // and no marker
+    assertEquals(1, childStatus.length);
+
+  }
+
+  @Test
+  public void testCreateFileExistsImplicitParent() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AzureBlobFileSystemStore store = fs.getAbfsStore();
+    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+            getAccountName(),
+            getFileSystemName(),
+            getRawConfiguration()
+    );
+    String parentPathName = "/implicitParent";
+    Path parentPath = new Path(parentPathName);
+    azcopyHelper.createFolderUsingAzcopy(parentPathName);
+
+    String fileName = "/implicitParent/testFile";
+    Path filePath = new Path(fileName);
+    fs.create(filePath);
+    String eTag = extractFileEtag(fileName);
+
+    // testing createFile on already existing file path
+    fs.create(filePath, true);
+
+    String eTagAfterCreateOverwrite = extractFileEtag(fileName);
+
+    assertTrue("New file eTag after create overwrite should be different from old",
+            !eTag.equals(eTagAfterCreateOverwrite));
+
+    intercept(IOException.class, () ->
+            fs.create(filePath, false));
+
+    String eTagAfterCreate = extractFileEtag(fileName);
+
+    assertTrue("File eTag should not change as creation fails",
+            eTagAfterCreateOverwrite.equals(eTagAfterCreate));
+
+  }
+
+  @Test
+  public void testCreateFileParentFile() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AzureBlobFileSystemStore store = fs.getAbfsStore();
+
+    String parentName = "/testParentFile";
+    Path parent = new Path(parentName);
+    fs.create(parent);
+
+    String childName = "/testParentFile/testChildFile";
+    Path child = new Path(childName);
+    fs.create(child, false);
+
+    assertTrue("Parent Path should be a file.",
+            fs.getAbfsStore().getBlobProperty(parent, getTestTracingContext(fs, false))
+                    .getIsDirectory());
+
+  }
+
+  private String extractFileEtag(String fileName) throws IOException {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AbfsClient client = fs.getAbfsClient();
+    final TracingContext testTracingContext = getTestTracingContext(fs, false);
+    AbfsRestOperation op = client.getPathStatus(fileName, true, testTracingContext);
+    return AzureBlobFileSystemStore.extractEtagHeader(op.getResult());
   }
 
   /**
