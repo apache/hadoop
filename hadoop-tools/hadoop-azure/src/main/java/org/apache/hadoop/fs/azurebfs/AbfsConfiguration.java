@@ -352,6 +352,28 @@ public class AbfsConfiguration{
     }
   }
 
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_REDIRECT_RENAME,
+          DefaultValue = DEFAULT_FS_AZURE_REDIRECT_RENAME)
+  private boolean redirectRename;
+
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_REDIRECT_DELETE,
+          DefaultValue = DEFAULT_FS_AZURE_REDIRECT_DELETE)
+  private boolean redirectDelete;
+
+  public boolean shouldRedirectRename() {
+    return this.redirectRename;
+  }
+
+  public boolean shouldRedirectDelete() {
+    return this.redirectDelete;
+  }
+
+  public boolean isRedirection() {
+    return (shouldRedirectRename() || shouldRedirectDelete());
+  }
+
   public Trilean getIsNamespaceEnabledAccount() {
     return Trilean.getTrilean(isNamespaceEnabledAccount);
   }

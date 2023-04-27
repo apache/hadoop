@@ -123,6 +123,8 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_FS_AZURE_ENABLE_BLOBENDPOINT = false;
   public static final boolean DEFAULT_FS_AZURE_MKDIRS_FALLBACK_TO_DFS = false;
   public static final boolean DEFAULT_FS_AZURE_INGRESS_FALLBACK_TO_DFS = false;
+
+  // To have functionality similar to drop1 delete is going to wasb by default for now.
   public static final boolean DEFAULT_FS_AZURE_REDIRECT_RENAME = false;
   public static final boolean DEFAULT_FS_AZURE_REDIRECT_DELETE = true;
 

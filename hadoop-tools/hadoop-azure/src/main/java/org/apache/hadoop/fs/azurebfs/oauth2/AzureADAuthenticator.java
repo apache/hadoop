@@ -386,6 +386,7 @@ public final class AzureADAuthenticator {
       long responseContentLength = conn.getHeaderFieldLong("Content-Length", 0);
 
       requestId = requestId == null ? "" : requestId;
+      LOG.debug("The res " + responseContentType);
       if (httpResponseCode == HttpURLConnection.HTTP_OK
               && responseContentType.startsWith("application/json") && responseContentLength > 0) {
         InputStream httpResponseStream = conn.getInputStream();

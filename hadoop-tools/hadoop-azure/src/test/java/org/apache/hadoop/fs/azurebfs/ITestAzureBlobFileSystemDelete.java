@@ -27,6 +27,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -44,11 +46,14 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.mockito.Mockito;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_REDIRECT_DELETE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_REDIRECT_RENAME;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
@@ -114,6 +119,20 @@ public class ITestAzureBlobFileSystemDelete extends
     touch(testfile);
     assertDeleted(fs, testfile, false);
     assertPathDoesNotExist(fs, "deleted", testfile);
+  }
+
+  @Test
+  public void testEnsureFileIsDeletedWithRedirection() throws Exception {
+
+    // Set redirect to wasb delete as true and assert deletion.
+    Configuration configuration = Mockito.spy(getRawConfiguration());
+    configuration.setBoolean(FS_AZURE_REDIRECT_DELETE, true);
+    AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+
+    Path testfile = makeQualified(new Path("testfile"));
+    touch(testfile);
+    assertDeleted(fs1, testfile, false);
+    assertPathDoesNotExist(fs1, "deleted", testfile);
   }
 
   @Test

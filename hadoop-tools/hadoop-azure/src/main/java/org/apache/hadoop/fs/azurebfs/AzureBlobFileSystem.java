@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.azurebfs.services.RenameAtomicityUtils;
 import org.apache.hadoop.fs.azurebfs.services.RenameNonAtomicUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -158,6 +159,7 @@ public class AzureBlobFileSystem extends FileSystem
   private int blockOutputActiveBlocks;
   private PrefixMode prefixMode = PrefixMode.DFS;
   private boolean isNamespaceEnabled;
+  private NativeAzureFileSystem nativeFs;
 
   @Override
   public void initialize(URI uri, Configuration configuration)
@@ -260,7 +262,25 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     AbfsClientThrottlingIntercept.initializeSingleton(abfsConfiguration.isAutoThrottlingEnabled());
-
+    boolean isRedirect = abfsConfiguration.isRedirection();
+    if (isRedirect) {
+      String abfsUrl = uri.toString();
+      URI wasbUri = null;
+      try {
+        wasbUri = new URI(abfsUrlToWasbUrl(abfsUrl,
+            abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
+      } catch (URISyntaxException e) {
+        e.printStackTrace();
+      }
+      nativeFs = new NativeAzureFileSystem();
+      Configuration config = getConf();
+      try {
+        nativeFs.initialize(wasbUri, config);
+      } catch (IOException e) {
+        LOG.debug("Initializing  NativeAzureBlobFileSystem failed ", e);
+        throw e;
+      }
+    }
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
   }
 
@@ -287,6 +307,37 @@ public class AzureBlobFileSystem extends FileSystem
 
   public void registerListener(Listener listener1) {
     listener = listener1;
+  }
+
+  private static String convertTestUrls(
+      final String url,
+      final String fromNonSecureScheme,
+      final String fromSecureScheme,
+      final String fromDnsPrefix,
+      final String toNonSecureScheme,
+      final String toSecureScheme,
+      final String toDnsPrefix,
+      final boolean isAlwaysHttpsUsed) {
+    String data = null;
+    if (url.startsWith(fromNonSecureScheme + "://") && isAlwaysHttpsUsed) {
+      data = url.replace(fromNonSecureScheme + "://", toSecureScheme + "://");
+    } else if (url.startsWith(fromNonSecureScheme + "://")) {
+      data = url.replace(fromNonSecureScheme + "://", toNonSecureScheme + "://");
+    } else if (url.startsWith(fromSecureScheme + "://")) {
+      data = url.replace(fromSecureScheme + "://", toSecureScheme + "://");
+    }
+
+    if (data != null) {
+      data = data.replace("." + fromDnsPrefix + ".",
+          "." + toDnsPrefix + ".");
+    }
+    return data;
+  }
+
+  protected static String abfsUrlToWasbUrl(final String abfsUrl, final boolean isAlwaysHttpsUsed) {
+    return convertTestUrls(
+            abfsUrl, FileSystemUriSchemes.ABFS_SCHEME, FileSystemUriSchemes.ABFS_SECURE_SCHEME, FileSystemUriSchemes.ABFS_DNS_PREFIX,
+            FileSystemUriSchemes.WASB_SCHEME, FileSystemUriSchemes.WASB_SECURE_SCHEME, FileSystemUriSchemes.WASB_DNS_PREFIX, isAlwaysHttpsUsed);
   }
 
   private URI changePrefixFromDfsToBlob(URI uri) throws InvalidUriException {
@@ -351,6 +402,21 @@ public class AzureBlobFileSystem extends FileSystem
               PATH_EXISTS,
               null);
     }
+  }
+
+  private boolean shouldRedirect(FSOperationType type, TracingContext context)
+          throws AzureBlobFileSystemException {
+    if (getIsNamespaceEnabled(context)) {
+      return false;
+    }
+    switch (type) {
+      case DELETE:
+        return abfsStore.getAbfsConfiguration().shouldRedirectDelete();
+      case RENAME:
+        return abfsStore.getAbfsConfiguration().shouldRedirectRename();
+    }
+
+    return false;
   }
 
   // Fallback plan : default to v1 create flow which will hit dfs endpoint. Config to enable: "fs.azure.ingress.fallback.to.dfs".
@@ -572,6 +638,32 @@ public class AzureBlobFileSystem extends FileSystem
         getAbfsStore().getAbfsConfiguration().getPrefixMode());
     statIncrement(CALL_RENAME);
 
+    TracingContext tracingContext = new TracingContext(clientCorrelationId,
+            fileSystemId, FSOperationType.RENAME, true, tracingHeaderFormat,
+            listener);
+
+    if (shouldRedirect(FSOperationType.RENAME, tracingContext)) {
+      LOG.debug("Rename redirected for the given src {} and the given destination {}", src, dst);
+      Path wasbSrc = src;
+      Path wasbDest = dst;
+      if (FileSystemUriSchemes.ABFS_SCHEME.equalsIgnoreCase(src.toUri().getScheme())
+              || FileSystemUriSchemes.ABFS_SECURE_SCHEME.equalsIgnoreCase(src.toUri().getScheme())) {
+        wasbSrc = new Path(abfsUrlToWasbUrl(src.toString(),
+                abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
+      }
+      if (FileSystemUriSchemes.ABFS_SCHEME.equalsIgnoreCase(dst.toUri().getScheme())
+              || FileSystemUriSchemes.ABFS_SECURE_SCHEME.equalsIgnoreCase(dst.toUri().getScheme())) {
+        wasbDest = new Path(abfsUrlToWasbUrl(dst.toString(),
+                abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
+      }
+      try {
+        return nativeFs.rename(wasbSrc, wasbDest);
+      } catch (IOException e) {
+        LOG.debug("Rename redirection failed for the given src {} and the given destination {}", src, dst);
+        throw e;
+      }
+    }
+
     trailingPeriodCheck(dst);
 
     Path parentFolder = src.getParent();
@@ -581,10 +673,6 @@ public class AzureBlobFileSystem extends FileSystem
     Path qualifiedSrcPath = makeQualified(src);
     Path qualifiedDstPath = makeQualified(dst);
 
-
-    TracingContext tracingContext = new TracingContext(clientCorrelationId,
-        fileSystemId, FSOperationType.RENAME, true, tracingHeaderFormat,
-        listener);
     // special case 2:
     // rename under same folder;
     if (makeQualified(parentFolder).equals(qualifiedDstPath)) {
@@ -732,6 +820,25 @@ public class AzureBlobFileSystem extends FileSystem
         "AzureBlobFileSystem.delete path: {} recursive: {}", f.toString(), recursive);
     statIncrement(CALL_DELETE);
     Path qualifiedPath = makeQualified(f);
+    TracingContext tracingContext = new TracingContext(clientCorrelationId,
+            fileSystemId, FSOperationType.DELETE, tracingHeaderFormat,
+            listener);
+
+    if (shouldRedirect(FSOperationType.DELETE, tracingContext)) {
+      LOG.debug("Delete redirected for the given path {} ", qualifiedPath);
+      Path wasbPath = f;
+      if (FileSystemUriSchemes.ABFS_SCHEME.equalsIgnoreCase(wasbPath.toUri().getScheme())
+              || FileSystemUriSchemes.ABFS_SECURE_SCHEME.equalsIgnoreCase(wasbPath.toUri().getScheme())) {
+        wasbPath = new Path(abfsUrlToWasbUrl(wasbPath.toString(),
+                abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
+      }
+      try {
+        return nativeFs.delete(wasbPath, recursive);
+      } catch (IOException e) {
+        LOG.debug("Delete redirection failed for the given path {} ", qualifiedPath);
+        throw e;
+      }
+    }
 
     if (f.isRoot()) {
       if (!recursive) {
@@ -742,9 +849,6 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     try {
-      TracingContext tracingContext = new TracingContext(clientCorrelationId,
-          fileSystemId, FSOperationType.DELETE, tracingHeaderFormat,
-          listener);
       abfsStore.delete(qualifiedPath, recursive, tracingContext);
       return true;
     } catch (AzureBlobFileSystemException ex) {

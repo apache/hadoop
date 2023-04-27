@@ -22,6 +22,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Date;
 import java.util.Optional;
 
@@ -40,7 +41,8 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 @InterfaceAudience.Private
 interface NativeFileSystemStore {
 
-  void initialize(URI uri, Configuration conf, AzureFileSystemInstrumentation instrumentation) throws IOException;
+  void initialize(URI uri, Configuration conf, AzureFileSystemInstrumentation instrumentation)
+      throws IOException, URISyntaxException;
 
   void storeEmptyFolder(String key, PermissionStatus permissionStatus)
       throws AzureException;
@@ -144,5 +146,5 @@ interface NativeFileSystemStore {
 
   DataOutputStream retrieveAppendStream(String key, int bufferSize) throws IOException;
 
-  boolean explicitFileExists(String key) throws AzureException;
+  boolean explicitFileExists(String key) throws IOException;
 }
