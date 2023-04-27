@@ -653,7 +653,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    */
   BlobProperty getBlobProperty(Path blobPath, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
-    boolean isNamespaceEnabled = getIsNamespaceEnabled(tracingContext);
     AbfsRestOperation op;
     BlobProperty blobProperty = new BlobProperty();
 
