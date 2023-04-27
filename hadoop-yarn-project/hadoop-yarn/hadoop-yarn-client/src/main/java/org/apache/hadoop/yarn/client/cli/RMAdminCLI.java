@@ -174,14 +174,14 @@ public class RMAdminCLI extends HAAdmin {
                   "Access the underlying levelDB data store through CRUD APIs.\n\t\t"
                       + "'key' should be a complete key which will return / update / delete 1 or 0 records. \n\t\t"
                       + "'value' is optional & ignored for get & del calls. It is mandatory for set calls\n\t\t"
-                      + "If 'database' is for RMStateStore"
+                      + "If 'database' is 'yarn-rm-state'"
                       + " it will provide access to apps, app attempts, delegation tokens, master keys, reservations, AM RM tokens.\n\t\t\t"
                       + "'key' for this database is 'RMAppRoot/<appId>', RMAppRoot/<appId>/<attemptID>, ReservationSystemRoot/<plan>/<reservationID>,"
                       + " RMDTSecretManagerRoot/RMDelegationToken_<tokenNo>, RMDTSecretManagerRoot/DelegationKey_<MasterKeyNo>,"
                       + " RMDTSecretManagerRoot/RMDTSequentialNumber, AMRMTokenSecretManagerRoot."
                       + " Additional metadata keys are 'RMVersionNode', 'EpochNode' \n\t\t\t"
                       + "Most of the values for these keys are binary data & hence get / set will not provide any useful info. But keys can be deleted.\n\t\t"
-                      + "If 'database' is for YarnConfigurationStore "
+                      + "If 'database' is 'yarn-conf-store' "
                       + " it will provide access to the scheduler conf & its related internal keys.\n\t\t\t"
                       + "'key' for this database is the config name which is seen in /scheduler-conf or scheduler xml file."
                       + " Additional metadata keys are 'version', 'log'"
@@ -800,7 +800,7 @@ public class RMAdminCLI extends HAAdmin {
       } else if ("-replaceLabelsOnNode".equals(cmd)) {
         exitCode = handleReplaceLabelsOnNodes(args, cmd, isHAEnabled);
       } else if ("-accessDataStore".equals(cmd)) {
-        exitCode = handleDBAccess(args, cmd, isHAEnabled);
+        exitCode = handleDBAccess(args, cmd);
       } else {
         exitCode = -1;
         System.err.println(cmd.substring(1) + ": Unknown command");
@@ -808,12 +808,11 @@ public class RMAdminCLI extends HAAdmin {
       }
 
     } catch (IllegalArgumentException arge) {
-      arge.printStackTrace();
       exitCode = -1;
       System.err.println(cmd.substring(1) + ": " + arge.getLocalizedMessage());
+      arge.printStackTrace();
       printUsage(cmd, isHAEnabled);
     } catch (RemoteException e) {
-      e.printStackTrace();
       //
       // This is a error returned by hadoop server. Print
       // out the first line of the error message, ignore the stack trace.
@@ -821,17 +820,16 @@ public class RMAdminCLI extends HAAdmin {
       try {
         String[] content;
         content = e.getLocalizedMessage().split("\n");
-        System.err.println(cmd.substring(1) + ": "
-                           + content[0]);
+        System.err.println(cmd.substring(1) + ": " + content[0]);
+        e.printStackTrace();
       } catch (Exception ex) {
-        System.err.println(cmd.substring(1) + ": "
-                           + ex.getLocalizedMessage());
+        System.err.println(cmd.substring(1) + ": " + ex.getLocalizedMessage());
+        ex.printStackTrace();
       }
     } catch (Exception e) {
-      e.printStackTrace();
       exitCode = -1;
-      System.err.println(cmd.substring(1) + ": "
-                         + e.getLocalizedMessage());
+      System.err.println(cmd.substring(1) + ": " + e.getLocalizedMessage());
+      e.printStackTrace();
     }
     if (null != localNodeLabelsManager) {
       localNodeLabelsManager.stop();
@@ -982,7 +980,7 @@ public class RMAdminCLI extends HAAdmin {
     return resource;
   }
 
-  private int handleDBAccess(String[] args, String cmd, boolean isHAEnabled)
+  private int handleDBAccess(String[] args, String cmd)
       throws IOException, YarnException {
     boolean invalidParam = false;
     String operation = null;

@@ -28,11 +28,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.iq80.leveldb.Options;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -53,6 +51,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
@@ -100,18 +99,20 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResp
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.KVStore;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.LevelDbStore;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.LeveldbRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.KVStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.LevelDbStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.LeveldbConfigurationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
-
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.protobuf.BlockingService;
+import org.iq80.leveldb.Options;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AdminService extends CompositeService implements
     HAServiceProtocol, ResourceManagerAdministrationProtocol {
@@ -140,7 +141,7 @@ public class AdminService extends CompositeService implements
   boolean isCentralizedNodeLabelConfiguration = true;
 
   // Map of database name to corresponding KVStore instance
-  Map<String, KVStore> kvStoreMap = new HashMap<>();
+  Map<String, KVStore> kvStoreMap = new ConcurrentHashMap<>();
 
   public AdminService(ResourceManager rm) {
     super(AdminService.class.getName());
@@ -992,6 +993,9 @@ public class AdminService extends CompositeService implements
   @Override
   public DatabaseAccessResponse accessDatabase(DatabaseAccessRequest request)
       throws IOException {
+
+    checkAccess("accessDatabase");
+
     // Do not enable access if RM is started.
     // This is to prevent inconsistencies between in memory data structures & the database
     // in classes like RMStateStore & MutableCSConfigurationProvider
@@ -1003,24 +1007,17 @@ public class AdminService extends CompositeService implements
       throw new IllegalArgumentException("Invalid Request " + request);
     }
 
-    KVStore store;
-    if (kvStoreMap.containsKey(request.getDatabase())) {
-      store = kvStoreMap.get(request.getDatabase());
-    } else {
-      // Currently it enables access to only Level DB
-      Options options = new Options();
-      options.createIfMissing(false);
-      store = new LevelDbStore(request.getDatabase(), options);
-      store.init();
-      kvStoreMap.put(request.getDatabase(), store);
-    }
+    KVStore store = getKVStore(request);
+
+    String charsetName = "UTF-8";
+    byte[] key = request.getKey().getBytes(charsetName);
 
     List<DBRecord> records = new ArrayList<>();
     switch (request.getOperation()) {
       case "get":
-        byte[] val = store.get(request.getKey().getBytes());
+        byte[] val = store.get(key);
         if (val != null) {
-          DBRecord record = DBRecord.newInstance(request.getKey(), new String(val));
+          DBRecord record = DBRecord.newInstance(request.getKey(), new String(val, charsetName));
           records.add(record);
         }
         break;
@@ -1028,16 +1025,39 @@ public class AdminService extends CompositeService implements
         if (request.getValue() == null) {
           throw new IllegalArgumentException("Value can't be null when inserting to database");
         }
-        store.set(request.getKey().getBytes(), request.getValue().getBytes());
+        store.set(key, request.getValue().getBytes(charsetName));
         break;
       case "del":
-        store.del(request.getKey().getBytes());
+        store.del(key);
         break;
       default:
         throw new IllegalArgumentException("Invalid Operation");
     }
 
     return DatabaseAccessResponse.newInstance(records);
+  }
+
+  private String getActualDatabase(DatabaseAccessRequest request) {
+    if (request.getDatabase().equals(LeveldbConfigurationStore.DB_NAME)) {
+      return getConfig().get(YarnConfiguration.RM_SCHEDCONF_STORE_PATH) + "/" + request.getDatabase();
+    } else if (request.getDatabase().equals(LeveldbRMStateStore.DB_NAME)) {
+      return getConfig().get(YarnConfiguration.RM_LEVELDB_STORE_PATH) + "/" + request.getDatabase();
+    } else {
+      throw new IllegalArgumentException("Invalid Database " + request.getDatabase());
+    }
+  }
+
+  private KVStore getKVStore(DatabaseAccessRequest request) throws IOException {
+    String database = getActualDatabase(request);
+    if (!kvStoreMap.containsKey(database)) {
+      // Currently it enables access to only Level DB
+      Options options = new Options();
+      options.createIfMissing(false);
+      KVStore store = new LevelDbStore(database, options);
+      store.init();
+      kvStoreMap.putIfAbsent(database, store);
+    }
+    return kvStoreMap.get(database);
   }
 
   private void refreshClusterMaxPriority() throws IOException, YarnException {

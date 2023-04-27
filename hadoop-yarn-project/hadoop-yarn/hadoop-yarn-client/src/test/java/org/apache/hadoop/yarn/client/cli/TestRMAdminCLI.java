@@ -18,38 +18,25 @@
 
 package org.apache.hadoop.yarn.client.cli;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HAServiceTarget;
-import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -65,6 +52,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsR
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DBRecord;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
@@ -81,12 +71,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
+import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 public class TestRMAdminCLI {
 
@@ -589,6 +581,51 @@ public class TestRMAdminCLI {
   }
 
   @Test
+  public void testDatabaseAccess() throws Exception {
+    when(admin.accessDatabase(Matchers.<DatabaseAccessRequest>any())).thenReturn(
+        DatabaseAccessResponse.newInstance(new ArrayList<>())
+    );
+    String[] args = {"-accessDataStore", "get", "db", "key"};
+    assertEquals(0, rmAdminCLI.run(args));
+
+    args = new String[]{"-accessDataStore", "set", "db", "key", "value"};
+    assertEquals(0, rmAdminCLI.run(args));
+
+    args = new String[]{"-accessDataStore", "del", "db", "key"};
+    assertEquals(0, rmAdminCLI.run(args));
+
+    verify(admin, times(3)).accessDatabase(Matchers.<DatabaseAccessRequest>any());
+  }
+
+  @Test
+  public void testDatabaseAccessInvalidInput() throws Exception {
+
+    when(admin.accessDatabase(Matchers.<DatabaseAccessRequest>any())).thenReturn(
+        DatabaseAccessResponse.newInstance(new ArrayList<DBRecord>())
+    );
+
+    String[] args = {"-accessDataStore", "get", "db"};
+    assertEquals(-1, rmAdminCLI.run(args));
+
+    args = new String[]{"-accessDataStore", "set", "db", "key"};
+    assertEquals(-1, rmAdminCLI.run(args));
+
+    args = new String[]{"-accessDataStore", "del", "db"};
+    assertEquals(-1, rmAdminCLI.run(args));
+
+    args = new String[]{"-accessDataStore", "get", "db", ""};
+    assertEquals(-1, rmAdminCLI.run(args));
+
+    args = new String[]{"-accessDataStore", "set", "", "key", "val"};
+    assertEquals(-1, rmAdminCLI.run(args));
+
+    args = new String[]{"-accessDataStore", "invalidcmd", "db", "key", "val"};
+    assertEquals(-1, rmAdminCLI.run(args));
+
+    verify(admin, never()).accessDatabase(Matchers.<DatabaseAccessRequest>any());
+  }
+
+  @Test
   public void testTransitionToActive() throws Exception {
     String[] args = {"-transitionToActive", "rm1"};
 
@@ -708,7 +745,8 @@ public class TestRMAdminCLI {
               "[-directlyAccessNodeLabelStore] [-refreshClusterMaxPriority] " +
               "[-updateNodeResource [NodeID] [MemSize] [vCores] "
               + "([OvercommitTimeout]) or -updateNodeResource "
-              + "[NodeID] [ResourceTypes] ([OvercommitTimeout])] "
+              + "[NodeID] [ResourceTypes] ([OvercommitTimeout]) " + 
+              "[-accessDataStore get|set|del [database] [key] [value]] "    
               + "[-help [cmd]]"));
       assertTrue(dataOut
           .toString()
@@ -777,6 +815,11 @@ public class TestRMAdminCLI {
           "Usage: yarn rmadmin [-getServiceState <serviceId>]", dataErr, 0);
       testError(new String[] { "-help", "-checkHealth" },
           "Usage: yarn rmadmin [-checkHealth <serviceId>]", dataErr, 0);
+      testError(new String[] { "-help", "-failover" },
+          "Usage: yarn rmadmin " +
+              "[-failover [--forcefence] [--forceactive] " +
+              "<serviceId> <serviceId>]",
+          dataErr, 0);
 
       testError(new String[] { "-help", "-badParameter" },
           "Usage: yarn rmadmin", dataErr, 0);
@@ -802,6 +845,7 @@ public class TestRMAdminCLI {
               + "([OvercommitTimeout]) "
               + "or -updateNodeResource [NodeID] [ResourceTypes] "
               + "([OvercommitTimeout])] "
+              + "[-accessDataStore get|set|del [database] [key] [value]] "
               + "[-transitionToActive [--forceactive] <serviceId>] "
               + "[-transitionToStandby <serviceId>] "
               + "[-getServiceState <serviceId>] [-getAllServiceState] "

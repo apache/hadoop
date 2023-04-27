@@ -78,7 +78,7 @@ public class LeveldbRMStateStore extends RMStateStore {
       LoggerFactory.getLogger(LeveldbRMStateStore.class);
 
   private static final String SEPARATOR = "/";
-  private static final String DB_NAME = "yarn-rm-state";
+  public static final String DB_NAME = "yarn-rm-state";
   private static final String RM_DT_MASTER_KEY_KEY_PREFIX =
       RM_DT_SECRET_MANAGER_ROOT + SEPARATOR + DELEGATION_KEY_PREFIX;
   private static final String RM_DT_TOKEN_KEY_PREFIX =

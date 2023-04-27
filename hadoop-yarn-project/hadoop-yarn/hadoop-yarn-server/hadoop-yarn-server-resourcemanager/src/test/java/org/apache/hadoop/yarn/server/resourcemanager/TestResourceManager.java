@@ -18,14 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.TimeoutException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
@@ -33,6 +28,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -59,6 +55,9 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.*;
+import static org.junit.Assert.*;
 
 public class TestResourceManager {
   private static final Logger LOG =
@@ -383,5 +382,22 @@ public class TestResourceManager {
     } finally {
       dummyResourceManager.stop();
     }
+  }
+
+  /**
+   * Tests that RM object can be initialised in safe mode but RM service isn't started
+   * Also that Admin service is started
+   */
+  @Test
+  public void testRMInSafeMode() {
+    ResourceManager rm = ResourceManager.startRMInSafeMode();
+    try {
+      Assert.assertTrue(rm.isInState(Service.STATE.NOTINITED));
+      Assert.assertTrue(rm.adminService.isInState(Service.STATE.STARTED));
+    } finally {
+      rm.stop();
+    }
+    Assert.assertTrue(rm.isInState(Service.STATE.STOPPED));
+    Assert.assertTrue(rm.adminService.isInState(Service.STATE.STOPPED));
   }
 }

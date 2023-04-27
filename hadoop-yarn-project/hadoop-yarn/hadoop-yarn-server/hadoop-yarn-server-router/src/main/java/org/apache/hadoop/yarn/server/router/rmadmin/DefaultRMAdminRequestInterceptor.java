@@ -20,8 +20,7 @@ package org.apache.hadoop.yarn.server.router.rmadmin;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
-
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -61,8 +60,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceReque
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Extends the {@link AbstractRMAdminRequestInterceptor} class and provides an
@@ -227,7 +224,7 @@ public class DefaultRMAdminRequestInterceptor
   }
 
   @Override
-  public DatabaseAccessResponse accessDatabase(DatabaseAccessRequest request) {
-    throw new NotImplementedException();
+  public DatabaseAccessResponse accessDatabase(DatabaseAccessRequest request) throws IOException, YarnException {
+    return rmAdminProxy.accessDatabase(request);
   }
 }

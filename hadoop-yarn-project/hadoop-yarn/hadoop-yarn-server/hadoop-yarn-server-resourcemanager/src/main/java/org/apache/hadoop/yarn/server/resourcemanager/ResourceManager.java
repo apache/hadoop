@@ -1784,7 +1784,7 @@ public class ResourceManager extends CompositeService
    *
    *  This has been tested with LevelDB as RMStateStore & YarnConfigurationStore
    */
-  private static void startRMInSafeMode() {
+  static ResourceManager startRMInSafeMode() {
 
     Configuration conf = new YarnConfiguration();
 
@@ -1798,6 +1798,9 @@ public class ResourceManager extends CompositeService
     adminService.start();
 
     resourceManager.adminService = adminService;
+    resourceManager.addService(adminService);
+
+    return resourceManager;
   }
 
   /**

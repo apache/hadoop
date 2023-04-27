@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -33,17 +29,18 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
@@ -52,6 +49,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
@@ -66,8 +66,14 @@ import org.apache.hadoop.yarn.conf.ConfigurationProvider;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.AddToClusterNodeLabelsRequestProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AttributeMappingOperationType;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
@@ -82,30 +88,26 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLa
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNodeLabelsRequestPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.LevelDbStore;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_PROXY_USER_PREFIX;
-import static org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration.NODES;
-import static org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration.PREFIX;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.LeveldbConfigurationStore;
+import org.iq80.leveldb.Options;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.AddToClusterNodeLabelsRequestProto;
-
-import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.*;
+import static org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class TestRMAdminService {
 
@@ -1539,6 +1541,65 @@ public class TestRMAdminService {
     } catch (YarnRuntimeException e) {
       assertTrue("The RM initialization threw an unexpected exception",
           e.getMessage().startsWith(HAUtil.BAD_CONFIG_MESSAGE_PREFIX));
+    }
+  }
+
+  @Test
+  public void testDatabaseAccessInSafeMode() throws IOException {
+    ResourceManager resourceManager = ResourceManager.startRMInSafeMode();
+
+    // Create the required dependencies - leveldb, local filesystem
+    String dbName = LeveldbConfigurationStore.DB_NAME;
+    String dbPath = configuration.get(RM_SCHEDCONF_STORE_PATH) + "/" + dbName;
+    FileSystem fs = FileSystem.getLocal(configuration);
+    fs.mkdirs(new Path(dbPath), new FsPermission((short) 0700));
+
+    try {
+      // Initialise database (create if it doesn't exist)
+      Options options = new Options();
+      options.createIfMissing(true);
+
+      LevelDbStore store = new LevelDbStore(dbPath, options);
+      store.init();
+      store.close();
+
+      // Verify the entry doesn't exist initially
+      DatabaseAccessRequest getRequest = DatabaseAccessRequest.newInstance("get", dbName, "key", null);
+      DatabaseAccessResponse response = resourceManager.adminService.accessDatabase(getRequest);
+      assertEquals(0, response.getRecords().size());
+
+      // Verify key is inserted correctly
+      DatabaseAccessRequest request = DatabaseAccessRequest.newInstance("set", dbName, "key", "val");
+      resourceManager.adminService.accessDatabase(request);
+      response = resourceManager.adminService.accessDatabase(getRequest);
+      assertEquals(1, response.getRecords().size());
+      assertEquals("val", response.getRecords().get(0).getValue());
+
+      // Verify key is deleted correctly
+      request = DatabaseAccessRequest.newInstance("del", dbName, "key", null);
+      resourceManager.adminService.accessDatabase(request);
+      response = resourceManager.adminService.accessDatabase(getRequest);
+      assertEquals(0, response.getRecords().size());
+    } finally {
+      resourceManager.stop();
+
+      // Cleanup datastore
+      File file = new File(dbPath);
+      FileUtils.deleteDirectory(file);
+    }
+
+  }
+
+  @Test
+  public void testDatabaseAccessFailsInRegularMode() {
+    try {
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+      rm.adminService.accessDatabase(null);
+      fail("Database access should not be possible when RM is started");
+    } catch(Exception ex) {
+      assertEquals(ex.getClass().getName(), IllegalStateException.class.getName());
     }
   }
 
