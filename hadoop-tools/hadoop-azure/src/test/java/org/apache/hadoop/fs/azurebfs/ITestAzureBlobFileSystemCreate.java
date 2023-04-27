@@ -278,21 +278,15 @@ public class ITestAzureBlobFileSystemCreate extends
 
     String childName = "/testParentFile/testChildFile";
     Path child = new Path(childName);
-    fs.create(child, false);
+    FileAlreadyExistsException e = intercept(FileAlreadyExistsException.class, () ->
+            fs.create(child, false));
 
-    assertTrue("Parent Path should be a file.",
+    assertFalse("Parent Path should be a file.",
             fs.getAbfsStore().getBlobProperty(parent, getTestTracingContext(fs, false))
                     .getIsDirectory());
 
   }
 
-  private String extractFileEtag(String fileName) throws IOException {
-    final AzureBlobFileSystem fs = getFileSystem();
-    final AbfsClient client = fs.getAbfsClient();
-    final TracingContext testTracingContext = getTestTracingContext(fs, false);
-    AbfsRestOperation op = client.getPathStatus(fileName, true, testTracingContext);
-    return AzureBlobFileSystemStore.extractEtagHeader(op.getResult());
-  }
 
   /**
    * Creating directory on existing file path should fail.
@@ -1009,5 +1003,19 @@ public class ITestAzureBlobFileSystemCreate extends
         GenericTestUtils.assertExceptionContains(fnfe.getMessage(), inner.getCause(), inner.getCause().getMessage());
       }
     }
+  }
+
+  /**
+   * Extracts the eTag for an existing file
+   * @param fileName file Path in String from container root
+   * @return String etag for the file
+   * @throws IOException
+   */
+  private String extractFileEtag(String fileName) throws IOException {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AbfsClient client = fs.getAbfsClient();
+    final TracingContext testTracingContext = getTestTracingContext(fs, false);
+    AbfsRestOperation op = client.getPathStatus(fileName, true, testTracingContext);
+    return AzureBlobFileSystemStore.extractEtagHeader(op.getResult());
   }
 }
