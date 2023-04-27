@@ -22,9 +22,15 @@ import java.io.FileNotFoundException;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
@@ -307,6 +313,37 @@ public class ITestAzureBlobFileSystemCreate extends
     final AzureBlobFileSystem fs = getFileSystem();
     final Path path = new Path("/dir\u0031");
     fs.mkdirs(path);
+
+    // Asserting that the directory created by mkdir exists as explicit.
+    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(path, fs));
+  }
+
+  /**
+   * Creation of directory on same path with parallel threads
+   */
+  @Test
+  public void testMkdirParallelRequests() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final Path path = new Path("/dir1");
+
+    ExecutorService es;
+    try {
+      es = Executors.newFixedThreadPool(10);
+      List<Future<Void>> tasks = new ArrayList<>();
+      for (int i = 0; i < 3; i++) {
+        Callable<Void> callable = new Callable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            fs.mkdirs(path);
+            return null;
+          }
+        };
+        tasks.add(es.submit(callable));
+      }
+    }
+    catch(Exception ex) {
+      Assert.assertTrue(false);
+    }
 
     // Asserting that the directory created by mkdir exists as explicit.
     Assert.assertTrue(ITestAbfsTestHelper.isExplicit(path, fs));
