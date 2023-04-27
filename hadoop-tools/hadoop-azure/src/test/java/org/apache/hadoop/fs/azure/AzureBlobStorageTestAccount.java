@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azure;
 import com.microsoft.azure.storage.*;
 import com.microsoft.azure.storage.blob.*;
 import com.microsoft.azure.storage.core.Base64;
+import jdk.nashorn.internal.parser.Token;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,11 +34,14 @@ import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
 import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TokenAccessProviderException;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsSink;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.impl.TestMetricsConfig;
+import org.apache.kerby.kerberos.kerb.provider.TokenProvider;
 
 import java.io.File;
 import java.io.IOException;
@@ -71,6 +75,7 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
   public static final String MOCK_CONTAINER_NAME = "mockContainer";
   public static final String WASB_AUTHORITY_DELIMITER = "@";
   public static final String WASB_SCHEME = "wasb";
+  public static final String WASBS_SCHEME = "wasbs";
   public static final String PATH_DELIMITER = "/";
   public static final String AZURE_ROOT_CONTAINER = "$root";
   public static final String MOCK_WASB_URI = "wasb://" + MOCK_CONTAINER_NAME
@@ -456,13 +461,13 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
 
   private static URI createAccountUri(String accountName)
       throws URISyntaxException {
-    return new URI(WASB_SCHEME + ":" + PATH_DELIMITER + PATH_DELIMITER
+    return new URI(WASBS_SCHEME + ":" + PATH_DELIMITER + PATH_DELIMITER
         + accountName);
   }
 
   private static URI createAccountUri(String accountName, String containerName)
       throws URISyntaxException {
-    return new URI(WASB_SCHEME + ":" + PATH_DELIMITER + PATH_DELIMITER
+    return new URI(WASBS_SCHEME + ":" + PATH_DELIMITER + PATH_DELIMITER
         + containerName + WASB_AUTHORITY_DELIMITER + accountName);
   }
 
@@ -493,6 +498,37 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
     String accountKey = AzureNativeFileSystemStore
         .getAccountKeyFromConfiguration(accountName, conf);
     final StorageCredentials credentials;
+    if (accountKey == null) {
+      if (allowAnonymous) {
+        credentials = StorageCredentialsAnonymous.ANONYMOUS;
+      } else {
+        LOG.warn("Skipping live Azure test because of missing key for"
+            + " account '" + accountName + "'.");
+        return null;
+      }
+    } else {
+      credentials = new StorageCredentialsAccountAndKey(
+          accountName.split("\\.")[0], accountKey);
+    }
+    return new CloudStorageAccount(credentials);
+  }
+
+  static CloudStorageAccount createStorageAccount(String accountName,
+      Configuration conf, boolean allowAnonymous, NativeAzureFileSystem fs)
+      throws URISyntaxException,
+      KeyProviderException, IOException {
+    String accountKey = AzureNativeFileSystemStore
+        .getAccountKeyFromConfiguration(accountName, conf);
+    final StorageCredentials credentials;
+    if (fs.getStore().getTokenProviderStore() != null){
+      AccessTokenProvider tokenProvider = fs.getStore().getTokenProviderStore();
+      int iend = accountName.indexOf("."); //this finds the first occurrence of "."
+      if (iend != -1) {
+        accountName = accountName.substring(0 , iend); //this will give abc
+      }
+      credentials = new StorageCredentialsToken(accountName, tokenProvider.getToken().getAccessToken());
+      return new CloudStorageAccount(credentials, true);
+    }
     if (accountKey == null) {
       if (allowAnonymous) {
         credentials = StorageCredentialsAnonymous.ANONYMOUS;
@@ -540,6 +576,18 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
     return createStorageAccount(testAccountName, conf, false);
   }
 
+  static CloudStorageAccount createTestAccount(Configuration conf, NativeAzureFileSystem fs)
+      throws URISyntaxException, KeyProviderException, IOException {
+    AzureTestUtils.assumeNamespaceDisabled(conf);
+
+    String testAccountName = verifyWasbAccountNameInConfig(conf);
+    if (testAccountName == null) {
+      LOG.warn("Skipping live Azure test because of missing test account");
+      return null;
+    }
+    return createStorageAccount(testAccountName, conf, false, fs);
+  }
+
   public static enum CreateOptions {
     UseSas, Readonly, CreateContainer, useThrottling
   }
@@ -565,15 +613,12 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
       throws Exception {
     saveMetricsConfigFile();
     NativeAzureFileSystem fs = null;
+    fs = new NativeAzureFileSystem();
     CloudBlobContainer container = null;
     Configuration conf = createTestConfiguration(initialConfiguration);
     configurePageBlobDir(conf);
     configureAtomicRenameDir(conf);
-    CloudStorageAccount account = createTestAccount(conf);
-    if (account == null) {
-      return null;
-    }
-    fs = new NativeAzureFileSystem();
+    CloudStorageAccount account = null;
     String containerName = useContainerSuffixAsContainerName
         ? containerNameSuffix
         : String.format(
@@ -581,43 +626,44 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
             System.getProperty("user.name"),
             UUID.randomUUID().toString(),
             containerNameSuffix);
+    String accountName = verifyWasbAccountNameInConfig(conf);
+    // Check if throttling is turned on and set throttling parameters
+    // appropriately.
+    conf.setBoolean(KEY_DISABLE_THROTTLING,
+        !createOptions.contains(CreateOptions.useThrottling));
+
+//    // Set account URI and initialize Azure file system.
+    URI accountUri = createAccountUri(accountName, containerName);
+    fs.initialize(accountUri, conf);
+    if (fs.getStore().getTokenProviderStore() != null){
+      account = createTestAccount(conf, fs);
+    } else {
+      account = createTestAccount(conf);
+    }
+    if (account == null) {
+      return null;
+    }
     container = account.createCloudBlobClient().getContainerReference(
         containerName);
     if (createOptions.contains(CreateOptions.CreateContainer)) {
       container.createIfNotExists();
     }
-    String accountName = verifyWasbAccountNameInConfig(conf);
     if (createOptions.contains(CreateOptions.UseSas)) {
       String sas = generateSAS(container,
           createOptions.contains(CreateOptions.Readonly));
-      if (!createOptions.contains(CreateOptions.CreateContainer)) {
-        // The caller doesn't want the container to be pre-created,
-        // so delete it now that we have generated the SAS.
-        container.delete();
-      }
-      // Remove the account key from the configuration to make sure we don't
-      // cheat and use that.
-      // but only if not in secure mode, which requires that login
       if (!conf.getBoolean(AzureNativeFileSystemStore.KEY_USE_SECURE_MODE, false)) {
         conf.set(ACCOUNT_KEY_PROPERTY_NAME + accountName, "");
       }
       // Set the SAS key.
       conf.set(SAS_PROPERTY_NAME + containerName + "." + accountName, sas);
+      fs.setConf(conf);
+      if (!createOptions.contains(CreateOptions.CreateContainer)) {
+        // The caller doesn't want the container to be pre-created,
+        // so delete it now that we have generated the SAS.
+        container.delete();
+      }
     }
-
-    // Check if throttling is turned on and set throttling parameters
-    // appropriately.
-    if (createOptions.contains(CreateOptions.useThrottling)) {
-      conf.setBoolean(KEY_DISABLE_THROTTLING, false);
-    } else {
-      conf.setBoolean(KEY_DISABLE_THROTTLING, true);
-    }
-
     configureSecureModeTestSettings(conf);
-
-    // Set account URI and initialize Azure file system.
-    URI accountUri = createAccountUri(accountName, containerName);
-    fs.initialize(accountUri, conf);
 
     // Create test account initializing the appropriate member variables.
     //

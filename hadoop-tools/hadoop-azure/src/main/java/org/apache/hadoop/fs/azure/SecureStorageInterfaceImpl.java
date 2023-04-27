@@ -56,6 +56,7 @@ import com.microsoft.azure.storage.blob.PageRange;
 import com.microsoft.azure.storage.blob.BlockEntry;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 
 /***
  * An implementation of the StorageInterface for SAS Key mode.
@@ -169,6 +170,13 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
     }
   }
 
+  @Override
+  public CloudBlobContainerWrapper getContainerReference(final String name,
+      final AccessTokenProvider tokenProvider)
+      throws URISyntaxException, StorageException {
+    return getContainerReference(name);
+  }
+
   public void setStorageAccountName(String storageAccount) {
     this.storageAccount = storageAccount;
   }
@@ -237,6 +245,14 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
     }
 
     @Override
+    public CloudBlobDirectoryWrapper getDirectoryReference(String relativePath, AccessTokenProvider tokenProvider)
+        throws URISyntaxException, StorageException {
+
+      CloudBlobDirectory dir = container.getDirectoryReference(relativePath);
+      return new SASCloudBlobDirectoryWrapperImpl(dir);
+    }
+
+    @Override
     public CloudBlobWrapper getBlockBlobReference(String relativePath)
         throws URISyntaxException, StorageException {
       try {
@@ -253,6 +269,13 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
         LOG.error(errorMsg);
         throw new StorageException(SAS_ERROR_CODE, errorMsg, sasEx);
       }
+    }
+
+    @Override
+    public CloudBlobWrapper getBlockBlobReference(final String relativePath,
+        final AccessTokenProvider tokenProvider)
+        throws URISyntaxException, StorageException, IOException {
+      return getBlockBlobReference(relativePath);
     }
 
     @Override
@@ -274,6 +297,13 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
         LOG.error(errorMsg);
         throw new StorageException(SAS_ERROR_CODE, errorMsg, sasEx);
       }
+    }
+
+    @Override
+    public CloudBlobWrapper getPageBlobReference(final String relativePath,
+        final AccessTokenProvider tokenProvider)
+        throws URISyntaxException, StorageException, IOException {
+      return getPageBlobReference(relativePath);
     }
   }
 
@@ -508,7 +538,7 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
     @Override
     public void startCopyFromBlob(CloudBlobWrapper sourceBlob, BlobRequestOptions options,
         OperationContext opContext, boolean overwriteDestination)
-            throws StorageException, URISyntaxException {
+        throws StorageException, URISyntaxException, IOException {
       AccessCondition dstAccessCondition =
           overwriteDestination
               ? null
@@ -526,7 +556,8 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
     }
 
     @Override
-    public SelfRenewingLease acquireLease() throws StorageException {
+    public SelfRenewingLease acquireLease() throws StorageException,
+        IOException {
       return new SelfRenewingLease(this, false);
     }
   }

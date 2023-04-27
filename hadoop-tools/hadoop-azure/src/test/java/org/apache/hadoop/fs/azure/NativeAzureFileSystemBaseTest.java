@@ -1689,7 +1689,7 @@ public abstract class NativeAzureFileSystemBaseTest
           firstEndTime = System.currentTimeMillis();
           lease.free();
           LOG.info(name + " freed lease " + lease.getLeaseID());
-        } catch (StorageException e) {
+        } catch (StorageException | IOException e) {
           fail("Unanticipated exception");
         }
       } else if (name.equals("second-thread")) {
@@ -1712,7 +1712,7 @@ public abstract class NativeAzureFileSystemBaseTest
         try {
           lease.free();
           LOG.info(name + " freed lease " + lease.getLeaseID());
-        } catch (StorageException e) {
+        } catch (StorageException | IOException e) {
           assertTrue("Unanticipated exception", false);
         }
       } else {

@@ -158,6 +158,7 @@
     <dependency>
       <groupId>com.microsoft.azure</groupId>
       <artifactId>azure-storage</artifactId>
+      <version>7.1.0-Preview</version>
       <scope>compile</scope>
       <exclusions>
         <exclusion>
