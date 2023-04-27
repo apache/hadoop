@@ -429,7 +429,7 @@ public class AzureBlobFileSystem extends FileSystem
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.APPEND, tracingHeaderFormat,
           listener);
-      OutputStream outputStream = abfsStore
+      OutputStream outputStream = getAbfsStore()
           .openFileForWrite(qualifiedPath, statistics, false, tracingContext);
       return new FSDataOutputStream(outputStream, statistics);
     } catch(AzureBlobFileSystemException ex) {
