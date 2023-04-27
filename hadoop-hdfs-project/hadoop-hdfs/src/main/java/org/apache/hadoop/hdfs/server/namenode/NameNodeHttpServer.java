@@ -77,8 +77,7 @@ public class NameNodeHttpServer {
   }
 
   public static void initWebHdfs(Configuration conf, HttpServer2 httpServer2,
-                                 String jerseyResourcePackage)
-          throws IOException {
+      String jerseyResourcePackage) throws IOException {
     // set user pattern based on configuration file
     UserParam.setUserPattern(conf.get(
         HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY,
@@ -159,8 +158,7 @@ public class NameNodeHttpServer {
           datanodeSslPort.getPort());
     }
 
-    initWebHdfs(conf, httpServer,
-        NamenodeWebHdfsMethods.class.getPackage().getName());
+    initWebHdfs(conf, httpServer, NamenodeWebHdfsMethods.class.getPackage().getName());
 
     httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);
     httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
