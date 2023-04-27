@@ -1318,7 +1318,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         if (isAtomicRenameKey(source.toUri().getPath())) {
           LOG.debug("source dir {} is an atomicRenameKey",
               source.toUri().getPath());
-          renameAtomicityUtils.preRename(srcBlobProperties, isCreateOnBlobEndpoint());
+          renameAtomicityUtils.preRename(srcBlobProperties, isCreateOperationOnBlobEndpoint());
         } else {
           LOG.debug("source dir {} is not an atomicRenameKey",
               source.toUri().getPath());
@@ -1397,10 +1397,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     } while (shouldContinue);
   }
 
-  private Boolean isCreateOnBlobEndpoint() {
+  private Boolean isCreateOperationOnBlobEndpoint() {
     return getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB
-        && !"true".equalsIgnoreCase(
-        getAbfsConfiguration().get("fs.azure.ingress.fallback.to.dfs"));
+        && !getAbfsConfiguration().shouldIngressFallbackToDfs();
   }
 
   /**

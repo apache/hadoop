@@ -217,7 +217,7 @@ public class RenameAtomicityUtils {
    * @throws IOException Thrown when fail to write file.
    */
   public void preRename(List<BlobProperty> blobPropertyList,
-      final Boolean createOnBlobEndpoint) throws IOException {
+      final Boolean isCreateOperationOnBlobEndpoint) throws IOException {
     Path path = getRenamePendingFilePath();
     LOG.debug("Preparing to write atomic rename state to {}", path.toString());
     OutputStream output = null;
@@ -231,9 +231,22 @@ public class RenameAtomicityUtils {
       output.flush();
       output.close();
     } catch (IOException e) {
-      if ((!createOnBlobEndpoint && e instanceof FileNotFoundException) || (
-          createOnBlobEndpoint && getWrappedException(e) instanceof AbfsRestOperationException &&
-              ((AbfsRestOperationException) getWrappedException(e)).getStatusCode()
+      /*
+       * Scenario: file has been deleted by parallel thread before the RenameJSON
+       * could be written and flushed.
+       * ref: https://issues.apache.org/jira/browse/HADOOP-12678
+       * On DFS endpoint, flush API is called. If file is not there, server returns
+       * 404.
+       * On blob endpoint, flush API is not there. PutBlockList is called with
+       * if-match header. If file is not there, the conditional header will fail,
+       * the server will return 412.
+       */
+      if ((!isCreateOperationOnBlobEndpoint
+          && e instanceof FileNotFoundException) || (
+          isCreateOperationOnBlobEndpoint && getWrappedException(
+              e) instanceof AbfsRestOperationException &&
+              ((AbfsRestOperationException) getWrappedException(
+                  e)).getStatusCode()
                   == HttpURLConnection.HTTP_PRECON_FAILED)) {
         /*
          * In case listStatus done on directory before any content could be written,
@@ -256,7 +269,7 @@ public class RenameAtomicityUtils {
   }
 
   private Throwable getWrappedException(final IOException e) {
-    if(e.getCause() != null) {
+    if (e.getCause() != null) {
       return e.getCause().getCause();
     }
     return e;
