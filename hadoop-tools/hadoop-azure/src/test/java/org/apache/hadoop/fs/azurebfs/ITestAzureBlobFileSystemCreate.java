@@ -115,6 +115,9 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.create(new Path("a/b/c"));
     fs.mkdirs(new Path("a/b/d"));
     intercept(IOException.class, () -> fs.mkdirs(new Path("a/b/c/d/e")));
+
+    // Asserting directory created still exists as explicit.
+    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/d"), fs));
   }
 
   /**
@@ -126,6 +129,9 @@ public class ITestAzureBlobFileSystemCreate extends
     final AzureBlobFileSystem fs = getFileSystem();
     fs.mkdirs(new Path("a/b/c"));
     intercept(IOException.class, () -> fs.create(new Path("a/b/c")));
+
+    // Asserting that directory still exists
+    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c"), fs));
   }
 
   /**
@@ -182,6 +188,11 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(new Path("a/b"));
     fs.mkdirs(new Path("a/b/c/d"));
     fs.mkdirs(new Path("a/b/c/e"));
+
+    //Asserting that directories created as explicit
+    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b"), fs));
+    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c/d"), fs));
+    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c/e"), fs));
   }
 
   /**
@@ -193,6 +204,9 @@ public class ITestAzureBlobFileSystemCreate extends
     final AzureBlobFileSystem fs = getFileSystem();
     fs.mkdirs(new Path("a/b/c"));
     intercept(IOException.class, () -> fs.create(new Path("a/b")));
+
+    //Asserting that directories created as explicit
+    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c"), fs));
   }
 
   /**
@@ -205,10 +219,15 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(new Path("a"));
     fs.mkdirs(new Path("a/b/c"));
     fs.mkdirs(new Path("a/b/c/d/e"));
+
+    //Asserting that directories created as explicit
+    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/"), fs));
+    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c"), fs));
+    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c/d/e"), fs));
   }
 
   /*
-    Delete part of a path and validate subpath exists.
+    Delete part of a path and validate sub path exists.
    */
   @Test
   public void testMkdirsWithDelete() throws Exception {
@@ -267,6 +286,9 @@ public class ITestAzureBlobFileSystemCreate extends
     final AzureBlobFileSystem fs = getFileSystem();
     fs.mkdirs(new Path("a/b/c"));
     fs.mkdirs(new Path("a/b/c"));
+
+    //Asserting that directories created as explicit
+    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c"), fs));
   }
 
   /**
@@ -327,22 +349,17 @@ public class ITestAzureBlobFileSystemCreate extends
     final Path path = new Path("/dir1");
 
     ExecutorService es;
-    try {
-      es = Executors.newFixedThreadPool(10);
-      List<Future<Void>> tasks = new ArrayList<>();
-      for (int i = 0; i < 3; i++) {
-        Callable<Void> callable = new Callable<Void>() {
-          @Override
-          public Void call() throws Exception {
-            fs.mkdirs(path);
-            return null;
-          }
-        };
-        tasks.add(es.submit(callable));
-      }
-    }
-    catch(Exception ex) {
-      Assert.assertTrue(false);
+    es = Executors.newFixedThreadPool(3);
+    List<Future<Void>> tasks = new ArrayList<>();
+    for (int i = 0; i < 3; i++) {
+      Callable<Void> callable = new Callable<Void>() {
+        @Override
+        public Void call() throws Exception {
+          fs.mkdirs(path);
+          return null;
+        }
+      };
+      tasks.add(es.submit(callable));
     }
 
     // Asserting that the directory created by mkdir exists as explicit.
@@ -360,6 +377,9 @@ public class ITestAzureBlobFileSystemCreate extends
     AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
     fs1.mkdirs(new Path("a/b/c"));
     fs1.mkdirs(new Path("a/b/c"));
+
+    //Asserting that directories created as explicit
+    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c"), fs1));
   }
 
   /**
