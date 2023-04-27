@@ -93,7 +93,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class NodeManager extends CompositeService
     implements EventHandler<NodeManagerEvent>, NodeManagerMXBean {
@@ -148,6 +152,8 @@ public class NodeManager extends CompositeService
   private boolean nmDispatherMetricEnabled;
 
   private NMLogAggregationStatusTracker nmLogAggregationStatusTracker;
+
+  private ScheduledThreadPoolExecutor eventQueueMetricExecutor;
 
   /**
    * Default Container State transition listener.
@@ -498,6 +504,16 @@ public class NodeManager extends CompositeService
     registerMXBean();
 
     context.getContainerExecutor().start();
+
+    eventQueueMetricExecutor = new ScheduledThreadPoolExecutor(1,
+        new ThreadFactoryBuilder().setDaemon(true)
+            .setNameFormat("EventQueueSizeMetricThread").build());
+    eventQueueMetricExecutor.scheduleAtFixedRate(() -> {
+      metrics.setNmDispatcherEventQueueSize(dispatcher.getEventQueueSize());
+      metrics.setSchedulerEventQueueSize(
+          containerManager.getDispatcher().getEventQueueSize());
+    }, 1, 1, TimeUnit.SECONDS);
+
     super.serviceInit(conf);
     // TODO add local dirs to del
   }
@@ -524,6 +540,9 @@ public class NodeManager extends CompositeService
       // YARN-3641: NM's services stop get failed shouldn't block the
       // release of NMLevelDBStore.
       stopRecoveryStore();
+    }
+    if (eventQueueMetricExecutor != null) {
+      eventQueueMetricExecutor.shutdownNow();
     }
   }
 
