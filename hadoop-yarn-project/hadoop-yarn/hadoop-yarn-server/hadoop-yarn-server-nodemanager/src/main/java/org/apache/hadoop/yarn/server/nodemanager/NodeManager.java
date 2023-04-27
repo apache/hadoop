@@ -506,8 +506,8 @@ public class NodeManager extends CompositeService
     context.getContainerExecutor().start();
 
     eventQueueMetricExecutor = new ScheduledThreadPoolExecutor(1,
-        new ThreadFactoryBuilder().setDaemon(true)
-            .setNameFormat("EventQueueSizeMetricThread").build());
+         new ThreadFactoryBuilder().setDaemon(true)
+         .setNameFormat("EventQueueSizeMetricThread").build());
     eventQueueMetricExecutor.scheduleAtFixedRate(() -> {
       metrics.setNmDispatcherEventQueueSize(dispatcher.getEventQueueSize());
       metrics.setSchedulerEventQueueSize(
