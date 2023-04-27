@@ -30,14 +30,18 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -52,6 +56,9 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_REDIRECT_RENAME;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INGRESS_FALLBACK_TO_DFS;
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicityUtils.SUFFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_ABORTED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_FAILED;
@@ -112,6 +119,28 @@ public class ITestAzureBlobFileSystemRename extends
     FileStatus status = fileStatus[0];
     assertEquals("Wrong filename in " + status,
         filename, status.getPath().getName());
+  }
+
+  @Test
+  public void testRenameFileUnderDirRedirection() throws Exception {
+    Configuration configuration = Mockito.spy(getRawConfiguration());
+
+    // Set redirect to wasb rename true and assert rename.
+    configuration.setBoolean(FS_AZURE_REDIRECT_RENAME, true);
+    AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+    Path sourceDir = makeQualified(new Path("/testSrc"));
+    assertMkdirs(fs1, sourceDir);
+    String filename = "file1";
+    Path file1 = new Path(sourceDir, filename);
+    touch(file1);
+
+    Path destDir = makeQualified(new Path("/testDst"));
+    assertRenameOutcome(fs1, sourceDir, destDir, true);
+    FileStatus[] fileStatus = fs1.listStatus(destDir);
+    assertNotNull("Null file status", fileStatus);
+    FileStatus status = fileStatus[0];
+    assertEquals("Wrong filename in " + status,
+            filename, status.getPath().getName());
   }
 
   @Test
@@ -680,12 +709,30 @@ public class ITestAzureBlobFileSystemRename extends
    * ref: <a href="https://issues.apache.org/jira/browse/HADOOP-12678">issue</a>
    */
   @Test
-  public void testHbaseListStatusBeforeRenamePendingFileAppended()
+  public void testHbaseListStatusBeforeRenamePendingFileAppendedWithIngressOnBlob()
       throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeNonHnsAccountBlobEndpoint(fs);
-    final String failedCopyPath = "hbase/test1/test2/test3/file1";
     fs.setWorkingDirectory(new Path("/"));
+    testHbaseListStatusBeforeRenamePendingFileAppended(fs);
+  }
+
+  @Test
+  public void testHbaseListStatusBeforeRenamePendingFileAppendedWithIngressOnDFS()
+      throws Exception {
+    AzureBlobFileSystem fs = this.getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
+
+
+    Configuration configuration = Mockito.spy(fs.getAbfsStore().getAbfsConfiguration().getRawConfiguration());
+    configuration.set(FS_AZURE_INGRESS_FALLBACK_TO_DFS, TRUE);
+    fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+    fs.setWorkingDirectory(new Path("/"));
+    testHbaseListStatusBeforeRenamePendingFileAppended(fs);
+  }
+
+  private void testHbaseListStatusBeforeRenamePendingFileAppended(final AzureBlobFileSystem fs) throws IOException {
+    final String failedCopyPath = "hbase/test1/test2/test3/file1";
     fs.mkdirs(new Path("hbase/test1/test2/test3"));
     fs.create(new Path("hbase/test1/test2/test3/file"));
     fs.create(new Path(failedCopyPath));

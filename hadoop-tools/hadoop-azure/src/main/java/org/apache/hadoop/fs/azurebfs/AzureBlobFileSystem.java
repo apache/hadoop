@@ -42,6 +42,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.services.BlobProperty;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.services.PathInformation;
@@ -228,9 +229,14 @@ public class AzureBlobFileSystem extends FileSystem
         throw ex;
       }
     }
+    // CPK is not supported over blob endpoint and hence initialization should fail if key is not null.
     if (!isNamespaceEnabled && (abfsConfiguration.shouldEnableBlobEndPoint() ||
             uri.toString().contains(FileSystemUriSchemes.WASB_DNS_PREFIX))) {
-      this.prefixMode = PrefixMode.BLOB;
+      if (abfsConfiguration.getClientProvidedEncryptionKey() == null) {
+        this.prefixMode = PrefixMode.BLOB;
+      } else {
+        throw new InvalidConfigurationValueException("CPK is not supported over blob endpoint " + uri);
+      }
     }
     abfsConfiguration.setPrefixMode(this.prefixMode);
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
@@ -330,8 +336,8 @@ public class AzureBlobFileSystem extends FileSystem
 
   protected static String abfsUrlToWasbUrl(final String abfsUrl, final boolean isAlwaysHttpsUsed) {
     return convertTestUrls(
-        abfsUrl, FileSystemUriSchemes.ABFS_SCHEME, FileSystemUriSchemes.ABFS_SECURE_SCHEME, FileSystemUriSchemes.ABFS_DNS_PREFIX,
-        FileSystemUriSchemes.WASB_SCHEME, FileSystemUriSchemes.WASB_SECURE_SCHEME, FileSystemUriSchemes.WASB_DNS_PREFIX, isAlwaysHttpsUsed);
+            abfsUrl, FileSystemUriSchemes.ABFS_SCHEME, FileSystemUriSchemes.ABFS_SECURE_SCHEME, FileSystemUriSchemes.ABFS_DNS_PREFIX,
+            FileSystemUriSchemes.WASB_SCHEME, FileSystemUriSchemes.WASB_SECURE_SCHEME, FileSystemUriSchemes.WASB_DNS_PREFIX, isAlwaysHttpsUsed);
   }
 
   private URI changePrefixFromDfsToBlob(URI uri) throws InvalidUriException {
@@ -403,7 +409,6 @@ public class AzureBlobFileSystem extends FileSystem
     if (getIsNamespaceEnabled(context)) {
       return false;
     }
-
     switch (type) {
       case DELETE:
         return abfsStore.getAbfsConfiguration().shouldRedirectDelete();
@@ -414,6 +419,7 @@ public class AzureBlobFileSystem extends FileSystem
     return false;
   }
 
+  // Fallback plan : default to v1 create flow which will hit dfs endpoint. Config to enable: "fs.azure.ingress.fallback.to.dfs".
   @Override
   public FSDataOutputStream create(final Path f, final FsPermission permission, final boolean overwrite, final int bufferSize,
       final short replication, final long blockSize, final Progressable progress) throws IOException {
@@ -442,6 +448,10 @@ public class AzureBlobFileSystem extends FileSystem
 
     if (prefixMode == PrefixMode.BLOB) {
       validatePathOrSubPathDoesNotExist(qualifiedPath, tracingContext);
+      Path parent = qualifiedPath.getParent();
+      if (parent != null && !parent.isRoot()) {
+          mkdirs(parent);
+      }
     }
 
     try {
@@ -503,6 +513,7 @@ public class AzureBlobFileSystem extends FileSystem
         overwrite, bufferSize, replication, blockSize, progress);
   }
 
+  // Fallback plan : default to v1 append flow which will hit dfs endpoint. Config to enable: "fs.azure.ingress.fallback.to.dfs".
   @Override
   public FSDataOutputStream append(final Path f, final int bufferSize, final Progressable progress) throws IOException {
     LOG.debug(
@@ -635,13 +646,13 @@ public class AzureBlobFileSystem extends FileSystem
       LOG.debug("Rename redirected for the given src {} and the given destination {}", src, dst);
       Path wasbSrc = src;
       Path wasbDest = dst;
-      if (src.toString().contains(FileSystemUriSchemes.ABFS_SCHEME)
-              || src.toString().contains(FileSystemUriSchemes.ABFS_SECURE_SCHEME)) {
+      if (FileSystemUriSchemes.ABFS_SCHEME.equalsIgnoreCase(src.toUri().getScheme())
+              || FileSystemUriSchemes.ABFS_SECURE_SCHEME.equalsIgnoreCase(src.toUri().getScheme())) {
         wasbSrc = new Path(abfsUrlToWasbUrl(src.toString(),
                 abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
       }
-      if (dst.toString().contains(FileSystemUriSchemes.ABFS_SCHEME)
-              || dst.toString().contains(FileSystemUriSchemes.ABFS_SECURE_SCHEME)) {
+      if (FileSystemUriSchemes.ABFS_SCHEME.equalsIgnoreCase(dst.toUri().getScheme())
+              || FileSystemUriSchemes.ABFS_SECURE_SCHEME.equalsIgnoreCase(dst.toUri().getScheme())) {
         wasbDest = new Path(abfsUrlToWasbUrl(dst.toString(),
                 abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
       }
@@ -816,8 +827,8 @@ public class AzureBlobFileSystem extends FileSystem
     if (shouldRedirect(FSOperationType.DELETE, tracingContext)) {
       LOG.debug("Delete redirected for the given path {} ", qualifiedPath);
       Path wasbPath = f;
-      if (wasbPath.toString().contains(FileSystemUriSchemes.ABFS_SCHEME)
-              || wasbPath.toString().contains(FileSystemUriSchemes.ABFS_SECURE_SCHEME)) {
+      if (FileSystemUriSchemes.ABFS_SCHEME.equalsIgnoreCase(wasbPath.toUri().getScheme())
+              || FileSystemUriSchemes.ABFS_SECURE_SCHEME.equalsIgnoreCase(wasbPath.toUri().getScheme())) {
         wasbPath = new Path(abfsUrlToWasbUrl(wasbPath.toString(),
                 abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
       }
@@ -924,6 +935,7 @@ public class AzureBlobFileSystem extends FileSystem
     }
   }
 
+  // Fallback plan : default to v1 Mkdir flow which will hit dfs endpoint. Config to enable: "fs.azure.mkdirs.fallback.to.dfs".
   @Override
   public boolean mkdirs(final Path f, final FsPermission permission) throws IOException {
     LOG.debug(

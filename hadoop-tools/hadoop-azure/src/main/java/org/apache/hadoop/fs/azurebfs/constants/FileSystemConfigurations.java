@@ -81,6 +81,7 @@ public final class FileSystemConfigurations {
   public static final String HBASE_ROOT = "/hbase";
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE = true;
   public static final boolean DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE = true;
+  public static final boolean DEFAULT_FS_AZURE_BLOB_ENABLE_MKDIR_OVERWRITE = false;
   public static final String DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES = "";
   public static final String DEFAULT_FS_AZURE_INFINITE_LEASE_DIRECTORIES = "";
   public static final int DEFAULT_LEASE_THREADS = 0;
@@ -122,6 +123,8 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_FS_AZURE_ENABLE_BLOBENDPOINT = false;
   public static final boolean DEFAULT_FS_AZURE_MKDIRS_FALLBACK_TO_DFS = false;
   public static final boolean DEFAULT_FS_AZURE_INGRESS_FALLBACK_TO_DFS = false;
+
+  // To have functionality similar to drop1 delete is going to wasb by default for now.
   public static final boolean DEFAULT_FS_AZURE_REDIRECT_RENAME = false;
   public static final boolean DEFAULT_FS_AZURE_REDIRECT_DELETE = true;
 
