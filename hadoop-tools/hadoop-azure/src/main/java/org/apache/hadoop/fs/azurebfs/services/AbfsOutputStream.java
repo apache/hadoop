@@ -457,14 +457,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
             AppendRequestParameters reqParams = new AppendRequestParameters(
                 offset, 0, bytesLength, mode, false, leaseId);
             AbfsRestOperation op;
-            if (prefixMode == PrefixMode.DFS) {
-              TracingContext tracingContextAppend = new TracingContext(tracingContext);
-              if (fallbackDFSAppend) {
-                tracingContextAppend.setFallbackDFSAppend("D");
-              }
-              op = client.append(path, blockUploadData.toByteArray(), reqParams,
-                      cachedSasToken.get(), tracingContextAppend);
-            } else {
+            if (!client.getAbfsConfiguration().shouldIngressFallbackToDfs() && prefixMode == PrefixMode.BLOB) {
               try {
                 op = client.append(blockToUpload.getBlockId(), path, blockUploadData.toByteArray(), reqParams,
                         cachedSasToken.get(), new TracingContext(tracingContext), getETag());
@@ -493,6 +486,13 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
                   throw ex;
                 }
               }
+            } else {
+              TracingContext tracingContextAppend = new TracingContext(tracingContext);
+              if (fallbackDFSAppend) {
+                tracingContextAppend.setFallbackDFSAppend("D");
+              }
+              op = client.append(path, blockUploadData.toByteArray(), reqParams,
+                      cachedSasToken.get(), tracingContextAppend);
             }
             cachedSasToken.update(op.getSasToken());
             perfInfo.registerResult(op.getResult());
@@ -799,14 +799,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
             "flushWrittenBytesToServiceInternal", "flush")) {
       AbfsRestOperation op;
-      if (prefixMode == PrefixMode.DFS) {
-        TracingContext tracingContextFlush = new TracingContext(tracingContext);
-        if (fallbackDFSAppend) {
-          tracingContextFlush.setFallbackDFSAppend("D");
-        }
-        op = client.flush(path, offset, retainUncommitedData, isClose,
-                cachedSasToken.get(), leaseId, tracingContextFlush);
-      } else {
+      if (!client.getAbfsConfiguration().shouldIngressFallbackToDfs() && prefixMode == PrefixMode.BLOB) {
         // Adds all the committed blocks if available to the list of blocks to be added in putBlockList.
         blockIdList.addAll(committedBlockEntries);
         boolean successValue = true;
@@ -820,7 +813,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
 
         int mapEntry = 0;
         // If any of the entry in the map doesn't have the status of SUCCESS, fail the flush.
-        for (Map.Entry<String, BlockStatus> entry: getMap().entrySet()) {
+        for (Map.Entry<String, BlockStatus> entry : getMap().entrySet()) {
           if (!success.equals(entry.getValue())) {
             successValue = false;
             failedBlockId = entry.getKey();
@@ -847,6 +840,13 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
         setETag(op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG));
         getMap().clear();
         orderedBlockList.clear();
+      } else {
+        TracingContext tracingContextFlush = new TracingContext(tracingContext);
+        if (fallbackDFSAppend) {
+          tracingContextFlush.setFallbackDFSAppend("D");
+        }
+        op = client.flush(path, offset, retainUncommitedData, isClose,
+                cachedSasToken.get(), leaseId, tracingContextFlush);
       }
       cachedSasToken.update(op.getSasToken());
       perfInfo.registerResult(op.getResult()).registerSuccess(true);

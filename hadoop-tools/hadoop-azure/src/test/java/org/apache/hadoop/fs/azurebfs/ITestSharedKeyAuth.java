@@ -50,13 +50,12 @@ public class ITestSharedKeyAuth extends AbstractAbfsIntegrationTest {
 
     AbfsClient abfsClient = this.getFileSystem(config).getAbfsClient();
     intercept(AbfsRestOperationException.class,
-        "\"Server failed to authenticate the request. Make sure the value of "
-            + "Authorization header is formed correctly including the "
-            + "signature.\", 403",
-        () -> {
-          abfsClient
-              .getAclStatus(getTestUrl(), getTestTracingContext(getFileSystem(), false));
-        });
+            "\"Server failed to authenticate the request. Make sure the value of "
+                    + "Authorization header is formed correctly including the "
+                    + "signature.\", 403",
+            () -> {
+              this.getFileSystem(config).getAbfsClient();
+            });
   }
 
 }

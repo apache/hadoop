@@ -33,6 +33,8 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_AVAILABLE;
 import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME;
 import static org.apache.hadoop.fs.CommonPathCapabilities.FS_ACLS;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DNS_PREFIX;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.WASB_DNS_PREFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
 import static org.junit.Assume.assumeTrue;
 
@@ -47,11 +49,16 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
   @Test
   public void ensureAzureBlobFileSystemIsInitialized() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final String accountName = getAccountName();
+    String accountName = getAccountName();
     final String filesystem = getFileSystemName();
 
     String scheme = this.getAuthType() == AuthType.SharedKey ? FileSystemUriSchemes.ABFS_SCHEME
             : FileSystemUriSchemes.ABFS_SECURE_SCHEME;
+    if (fs.getAbfsStore().getAbfsConfiguration().shouldEnableBlobEndPoint()) {
+      if (accountName.contains(ABFS_DNS_PREFIX)) {
+        accountName = accountName.replace(ABFS_DNS_PREFIX, WASB_DNS_PREFIX);
+      }
+    }
     assertEquals(fs.getUri(),
         new URI(scheme,
             filesystem + "@" + accountName,
@@ -63,8 +70,13 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
 
   @Test
   public void ensureSecureAzureBlobFileSystemIsInitialized() throws Exception {
-    final String accountName = getAccountName();
+    String accountName = getAccountName();
     final String filesystem = getFileSystemName();
+    if (getFileSystem().getAbfsStore().getAbfsConfiguration().shouldEnableBlobEndPoint()) {
+      if (accountName.contains(ABFS_DNS_PREFIX)) {
+        accountName = accountName.replace(ABFS_DNS_PREFIX, WASB_DNS_PREFIX);
+      }
+    }
     final URI defaultUri = new URI(FileSystemUriSchemes.ABFS_SECURE_SCHEME,
         filesystem + "@" + accountName,
         null,
