@@ -53,7 +53,7 @@ class PendingReconstructionBlocks {
   private final ArrayList<BlockInfo> timedOutItems;
   Daemon timerThread = null;
   private volatile boolean fsRunning = true;
-  private long timedOutCount = 0L;
+  private volatile long timedOutCount = 0L;
 
   //
   // It might take anywhere between 5 to 10 minutes before
@@ -176,7 +176,9 @@ class PendingReconstructionBlocks {
    */
   long getNumTimedOuts() {
     synchronized (timedOutItems) {
-      return timedOutCount + timedOutItems.size();
+      long numTimeOuts = timedOutCount + timedOutItems.size();
+      timedOutCount = 0;
+      return numTimeOuts;
     }
   }
 
