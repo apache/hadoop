@@ -162,7 +162,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
         out2.hsync();
       } catch (IOException e) {
         if (expectException) {
-          if (getConfiguration().getPrefixMode() == PrefixMode.DFS) {
+          if (fs.getAbfsStore().getPrefixMode() == PrefixMode.DFS) {
             GenericTestUtils.assertExceptionContains(ERR_ACQUIRING_LEASE, e);
           } else {
             GenericTestUtils.assertExceptionContains(CONDITION_NOT_MET, e);
