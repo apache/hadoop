@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.util.List;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -45,7 +46,7 @@ public class BlobDirectoryStateHelper {
    * @param fs AzureBlobFileSystem for API calls
    * @return boolean whether the path exists as Implicit directory or not
    */
-  public static boolean isImplicitDirectory(Path path, AzureBlobFileSystem fs) throws IOException {
+  public static boolean isImplicitDirectory(Path path, AzureBlobFileSystem fs) throws Exception {
     path = new Path(fs.makeQualified(path).toUri().getPath());
     if (fs.getAbfsStore().getPrefixMode() == PrefixMode.BLOB) {
       List<BlobProperty> blobProperties = fs.getAbfsStore()
@@ -59,8 +60,10 @@ public class BlobDirectoryStateHelper {
             Mockito.mock(TracingContext.class)
         );
       }
-      catch (AzureBlobFileSystemException ex)      {
-        return true;
+      catch (AbfsRestOperationException ex) {
+        if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+          return true;
+        }
       }
       return false;
     }
@@ -77,10 +80,13 @@ public class BlobDirectoryStateHelper {
         );
         return !status.isDirectory();
       }
-      catch (IOException ex) {
-        return true;
+      catch (AbfsRestOperationException ex) {
+        if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+          return true;
+        }
       }
     }
+    return false;
   }
 
   /**
