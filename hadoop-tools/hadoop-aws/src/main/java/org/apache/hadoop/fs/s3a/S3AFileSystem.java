@@ -2601,6 +2601,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * Given a possibly null duration tracker factory, return a non-null
+   * one for use in tracking durations -either that or the FS tracker
+   * itself.
+   *
+   * @param factory factory.
+   * @return a non-null factory.
+   */
+  protected DurationTrackerFactory nonNullDurationTrackerFactory(
+      DurationTrackerFactory factory) {
+    return factory != null
+        ? factory
+        : getDurationTrackerFactory();
+  }
+
+  /**
    * Request object metadata; increments counters in the process.
    * Retry policy: retry untranslated.
    * This method is used in some external applications and so
@@ -2958,20 +2973,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * <i>Important: this call will close any input stream in the request.</i>
    * @param putObjectRequest the request
    * @param putOptions put object options
+   * @param durationTrackerFactory factory for duration tracking
    * @return the upload initiated
    * @throws AmazonClientException on problems
    */
   @VisibleForTesting
   @Retries.OnceRaw("For PUT; post-PUT actions are RetryExceptionsSwallowed")
   PutObjectResult putObjectDirect(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
+      PutObjectOptions putOptions,
+      DurationTrackerFactory durationTrackerFactory)
       throws AmazonClientException {
     long len = getPutRequestLength(putObjectRequest);
     LOG.debug("PUT {} bytes to {}", len, putObjectRequest.getKey());
     incrementPutStartStatistics(len);
     try {
       PutObjectResult result = trackDurationOfSupplier(
-          getDurationTrackerFactory(),
+          nonNullDurationTrackerFactory(durationTrackerFactory),
           OBJECT_PUT_REQUESTS.getSymbol(), () ->
               s3.putObject(putObjectRequest));
       incrementPutCompletedStatistics(true, len);
@@ -3010,16 +3027,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    *
    * Retry Policy: none.
    * @param request request
+   * @param durationTrackerFactory duration tracker factory for operation
    * @return the result of the operation.
    * @throws AmazonClientException on problems
    */
   @Retries.OnceRaw
-  UploadPartResult uploadPart(UploadPartRequest request)
+  UploadPartResult uploadPart(UploadPartRequest request,
+      final DurationTrackerFactory durationTrackerFactory)
       throws AmazonClientException {
     long len = request.getPartSize();
     incrementPutStartStatistics(len);
     try {
-      UploadPartResult uploadPartResult = s3.uploadPart(request);
+      UploadPartResult uploadPartResult = trackDurationOfSupplier(
+          nonNullDurationTrackerFactory(durationTrackerFactory),
+          MULTIPART_UPLOAD_PART_PUT.getSymbol(), () ->
+              s3.uploadPart(request));
       incrementPutCompletedStatistics(true, len);
       return uploadPartResult;
     } catch (AmazonClientException e) {
@@ -4432,8 +4454,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws IOException {
     invoker.retry("PUT 0-byte object ", objectName,
          true, () ->
-            putObjectDirect(getRequestFactory()
-                .newDirectoryMarkerRequest(objectName), putOptions));
+            putObjectDirect(getRequestFactory().newDirectoryMarkerRequest(objectName),
+                putOptions,
+                getDurationTrackerFactory()));
     incrementPutProgressStatistics(objectName, 0);
     instrumentation.directoryCreated();
   }

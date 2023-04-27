@@ -52,6 +52,7 @@ import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.select.SelectBinding;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.util.DurationInfo;
@@ -564,36 +565,19 @@ public class WriteOperationHelper implements WriteOperations {
    * file, from the content length of the header.
    * @param putObjectRequest the request
    * @param putOptions put object options
+   * @param durationTrackerFactory factory for duration tracking
    * @return the upload initiated
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
   public PutObjectResult putObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
+      PutObjectOptions putOptions,
+      DurationTrackerFactory durationTrackerFactory)
       throws IOException {
     return retry("Writing Object",
         putObjectRequest.getKey(), true,
         withinAuditSpan(getAuditSpan(), () ->
-            owner.putObjectDirect(putObjectRequest, putOptions)));
-  }
-
-  /**
-   * PUT an object.
-   *
-   * @param putObjectRequest the request
-   * @param putOptions put object options
-   *
-   * @throws IOException on problems
-   */
-  @Retries.RetryTranslated
-  public void uploadObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
-      throws IOException {
-
-    retry("Writing Object",
-        putObjectRequest.getKey(), true,
-        withinAuditSpan(getAuditSpan(), () ->
-            owner.putObjectDirect(putObjectRequest, putOptions)));
+            owner.putObjectDirect(putObjectRequest, putOptions, durationTrackerFactory)));
   }
 
   /**
@@ -650,18 +634,20 @@ public class WriteOperationHelper implements WriteOperations {
   /**
    * Upload part of a multi-partition file.
    * @param request request
+   * @param durationTrackerFactory duration tracker factory for operation
    * @return the result of the operation.
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  public UploadPartResult uploadPart(UploadPartRequest request)
+  public UploadPartResult uploadPart(UploadPartRequest request,
+      final DurationTrackerFactory durationTrackerFactory)
       throws IOException {
     return retry("upload part #" + request.getPartNumber()
             + " upload ID " + request.getUploadId(),
         request.getKey(),
         true,
         withinAuditSpan(getAuditSpan(),
-            () -> owner.uploadPart(request)));
+            () -> owner.uploadPart(request, durationTrackerFactory)));
   }
 
   /**
