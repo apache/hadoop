@@ -369,16 +369,6 @@ public class AbfsConfiguration{
     return (shouldRedirectRename() || shouldRedirectDelete());
   }
 
-  @VisibleForTesting
-  public void setRedirectRename(boolean redirectRename) {
-    this.redirectRename = redirectRename;
-  }
-
-  @VisibleForTesting
-  public void setRedirectDelete(boolean redirectDelete) {
-    this.redirectDelete = redirectDelete;
-  }
-
   public Trilean getIsNamespaceEnabledAccount() {
     return Trilean.getTrilean(isNamespaceEnabledAccount);
   }

@@ -383,7 +383,6 @@ public class AzureBlobFileSystem extends FileSystem
     if (getIsNamespaceEnabled(context)) {
       return false;
     }
-
     switch (type) {
       case DELETE:
         return abfsStore.getAbfsConfiguration().shouldRedirectDelete();
@@ -615,13 +614,13 @@ public class AzureBlobFileSystem extends FileSystem
       LOG.debug("Rename redirected for the given src {} and the given destination {}", src, dst);
       Path wasbSrc = src;
       Path wasbDest = dst;
-      if (src.toString().contains(FileSystemUriSchemes.ABFS_SCHEME)
-              || src.toString().contains(FileSystemUriSchemes.ABFS_SECURE_SCHEME)) {
+      if (FileSystemUriSchemes.ABFS_SCHEME.equalsIgnoreCase(src.toUri().getScheme())
+              || FileSystemUriSchemes.ABFS_SECURE_SCHEME.equalsIgnoreCase(src.toUri().getScheme())) {
         wasbSrc = new Path(abfsUrlToWasbUrl(src.toString(),
                 abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
       }
-      if (dst.toString().contains(FileSystemUriSchemes.ABFS_SCHEME)
-              || dst.toString().contains(FileSystemUriSchemes.ABFS_SECURE_SCHEME)) {
+      if (FileSystemUriSchemes.ABFS_SCHEME.equalsIgnoreCase(dst.toUri().getScheme())
+              || FileSystemUriSchemes.ABFS_SECURE_SCHEME.equalsIgnoreCase(dst.toUri().getScheme())) {
         wasbDest = new Path(abfsUrlToWasbUrl(dst.toString(),
                 abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
       }
@@ -796,8 +795,8 @@ public class AzureBlobFileSystem extends FileSystem
     if (shouldRedirect(FSOperationType.DELETE, tracingContext)) {
       LOG.debug("Delete redirected for the given path {} ", qualifiedPath);
       Path wasbPath = f;
-      if (wasbPath.toString().contains(FileSystemUriSchemes.ABFS_SCHEME)
-              || wasbPath.toString().contains(FileSystemUriSchemes.ABFS_SECURE_SCHEME)) {
+      if (FileSystemUriSchemes.ABFS_SCHEME.equalsIgnoreCase(wasbPath.toUri().getScheme())
+              || FileSystemUriSchemes.ABFS_SECURE_SCHEME.equalsIgnoreCase(wasbPath.toUri().getScheme())) {
         wasbPath = new Path(abfsUrlToWasbUrl(wasbPath.toString(),
                 abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
       }

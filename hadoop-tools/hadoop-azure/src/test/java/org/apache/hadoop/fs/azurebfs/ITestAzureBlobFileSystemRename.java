@@ -30,6 +30,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
@@ -52,6 +54,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_REDIRECT_RENAME;
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicityUtils.SUFFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_ABORTED;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COPY_STATUS_FAILED;
@@ -112,6 +115,28 @@ public class ITestAzureBlobFileSystemRename extends
     FileStatus status = fileStatus[0];
     assertEquals("Wrong filename in " + status,
         filename, status.getPath().getName());
+  }
+
+  @Test
+  public void testRenameFileUnderDirRedirection() throws Exception {
+    Configuration configuration = getRawConfiguration();
+
+    // Set redirect to wasb rename true and assert rename.
+    configuration.setBoolean(FS_AZURE_REDIRECT_RENAME, true);
+    AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+    Path sourceDir = makeQualified(new Path("/testSrc"));
+    assertMkdirs(fs1, sourceDir);
+    String filename = "file1";
+    Path file1 = new Path(sourceDir, filename);
+    touch(file1);
+
+    Path destDir = makeQualified(new Path("/testDst"));
+    assertRenameOutcome(fs1, sourceDir, destDir, true);
+    FileStatus[] fileStatus = fs1.listStatus(destDir);
+    assertNotNull("Null file status", fileStatus);
+    FileStatus status = fileStatus[0];
+    assertEquals("Wrong filename in " + status,
+            filename, status.getPath().getName());
   }
 
   @Test
