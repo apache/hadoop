@@ -123,6 +123,7 @@ public final class ConfigurationKeys {
    */
   public static final String FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE = "fs.azure.enable.conditional.create.overwrite";
   public static final String FS_AZURE_ENABLE_MKDIR_OVERWRITE = "fs.azure.enable.mkdir.overwrite";
+  public static final String FS_AZURE_ENABLE_BLOB_MKDIR_OVERWRITE = "fs.azure.enable.blob.mkdir.overwrite";
   /** Provides a config to provide comma separated path prefixes on which Appendblob based files are created
    *  Default is empty. **/
   public static final String FS_AZURE_APPEND_BLOB_KEY = "fs.azure.appendblob.directories";
