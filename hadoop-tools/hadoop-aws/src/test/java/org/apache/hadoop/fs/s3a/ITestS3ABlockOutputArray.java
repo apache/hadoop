@@ -114,10 +114,11 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
          S3ADataBlocks.DataBlock dataBlock =
            diskBlockFactory.create("spanId", s3Key, 1, blockSize, null);
     ) {
+      String tmpDir = getConfiguration().get("hadoop.tmp.dir");
       boolean created = Arrays.stream(
-        Objects.requireNonNull(new File(getConfiguration().get("hadoop.tmp.dir")).listFiles()))
+        Objects.requireNonNull(new File(tmpDir).listFiles()))
           .anyMatch(f -> f.getName().contains("very_long_s3_key"));
-      assertTrue(created);
+      assertTrue(String.format("tmp file should have been created locally in %s", tmpDir), created);
       LOG.info(dataBlock.toString()); // block file name/location can be viewed in failsafe-report
     }
   }
