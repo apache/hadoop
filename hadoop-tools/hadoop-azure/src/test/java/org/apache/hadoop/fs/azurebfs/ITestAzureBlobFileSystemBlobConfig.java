@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.HashMap;
 
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -33,6 +34,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_BLOB_ENDPOINT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_MKDIRS_FALLBACK_TO_DFS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DNS_PREFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.WASB_DNS_PREFIX;
 
@@ -58,7 +60,8 @@ public class ITestAzureBlobFileSystemBlobConfig
       throws AzureBlobFileSystemException {
     Mockito.verify(client, Mockito.times(1))
         .createPath(Mockito.anyString(), Mockito.anyBoolean(),
-            Mockito.anyBoolean(), Mockito.nullable(String.class), Mockito.nullable(String.class),
+            Mockito.anyBoolean(), Mockito.nullable(String.class),
+            Mockito.nullable(String.class),
             Mockito.anyBoolean(), Mockito.nullable(String.class),
             Mockito.any(TracingContext.class));
   }
@@ -107,6 +110,117 @@ public class ITestAzureBlobFileSystemBlobConfig
     verifyCreatePathBlobExecution(client);
   }
 
+  @Test
+  public void testBlobEndpointWithMkdirsOnDFS() throws Exception {
+    AzureBlobFileSystem fs = createFileSystemForEndpointConfigPair(
+        FS_AZURE_MKDIRS_FALLBACK_TO_DFS, true, false);
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    fs.getAbfsStore().setClient(client);
+    int[] dirCreatedOverDFSExecCount = new int[1];
+    dirCreatedOverDFSExecCount[0] = 0;
+    int[] fileCreatedOverDFSExecCount = new int[1];
+    fileCreatedOverDFSExecCount[0] = 0;
+    checkDirAndFileCreationOnDFS(client, dirCreatedOverDFSExecCount,
+        fileCreatedOverDFSExecCount);
+    fs.mkdirs(new Path("/tmp"));
+    fs.create(new Path("/file"));
+    verifyCreatePathBlobExecution(client);
+    Assert.assertTrue(dirCreatedOverDFSExecCount[0] == 1);
+  }
+
+  @Test
+  public void testBlobEndpointWithMkdirsOnDfsNoOverride() throws Exception {
+    AzureBlobFileSystem fs = createFileSystemForEndpointConfigPair(
+        FS_AZURE_MKDIRS_FALLBACK_TO_DFS, false, false);
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    fs.getAbfsStore().setClient(client);
+    int[] dirCreatedOverBlobExecCount = new int[1];
+    dirCreatedOverBlobExecCount[0] = 0;
+    int[] fileCreatedOverBlobExecCount = new int[1];
+    fileCreatedOverBlobExecCount[0] = 0;
+
+    checkDirAndFileCreationOnBlob(client, dirCreatedOverBlobExecCount,
+        fileCreatedOverBlobExecCount);
+
+    fs.mkdirs(new Path("/tmp"));
+    fs.create(new Path("/file"));
+    Assert.assertTrue(dirCreatedOverBlobExecCount[0] == 1);
+    Assert.assertTrue(fileCreatedOverBlobExecCount[0] == 1);
+  }
+
+  private void checkDirAndFileCreationOnBlob(final AbfsClient client,
+      final int[] dirCreatedOverBlobExecCount,
+      final int[] fileCreatedOverBlobExecCount)
+      throws AzureBlobFileSystemException {
+    Mockito.doAnswer(answer -> {
+          if (!(Boolean) answer.getArgument(1)) {
+            dirCreatedOverBlobExecCount[0]++;
+          } else {
+            fileCreatedOverBlobExecCount[0]++;
+          }
+          return answer.callRealMethod();
+        }).when(client)
+        .createPathBlob(Mockito.anyString(), Mockito.anyBoolean(),
+            Mockito.anyBoolean(), Mockito.nullable(
+                HashMap.class), Mockito.nullable(String.class),
+            Mockito.any(TracingContext.class));
+  }
+
+  @Test
+  public void testDFSEndpointWithMkdirsOnDFS() throws Exception {
+    AzureBlobFileSystem fs = createFileSystemForEndpointConfigPair(
+        FS_AZURE_MKDIRS_FALLBACK_TO_DFS, true, true);
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    fs.getAbfsStore().setClient(client);
+    int[] dirCreatedOverDFSExecCount = new int[1];
+    dirCreatedOverDFSExecCount[0] = 0;
+    int[] fileCreatedOverDFSExecCount = new int[1];
+    fileCreatedOverDFSExecCount[0] = 0;
+    checkDirAndFileCreationOnDFS(client, dirCreatedOverDFSExecCount,
+        fileCreatedOverDFSExecCount);
+    fs.mkdirs(new Path("/tmp"));
+    fs.create(new Path("/file"));
+    Assert.assertTrue(dirCreatedOverDFSExecCount[0] == 1);
+    Assert.assertTrue(fileCreatedOverDFSExecCount[0] == 1);
+  }
+
+  @Test
+  public void testDFSEndpointWithMkdirsOnDFSNoOverride() throws Exception {
+    AzureBlobFileSystem fs = createFileSystemForEndpointConfigPair(
+        FS_AZURE_MKDIRS_FALLBACK_TO_DFS, false, true);
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    fs.getAbfsStore().setClient(client);
+    int[] dirCreatedOverDFSExecCount = new int[1];
+    dirCreatedOverDFSExecCount[0] = 0;
+    int[] fileCreatedOverDFSExecCount = new int[1];
+    fileCreatedOverDFSExecCount[0] = 0;
+    checkDirAndFileCreationOnDFS(client, dirCreatedOverDFSExecCount, fileCreatedOverDFSExecCount);
+    fs.mkdirs(new Path("/tmp"));
+    fs.create(new Path("/file"));
+    Assert.assertTrue(dirCreatedOverDFSExecCount[0] == 1);
+    Assert.assertTrue(fileCreatedOverDFSExecCount[0] == 1);
+  }
+
+  private void checkDirAndFileCreationOnDFS(final AbfsClient client,
+      final int[] dirCreatedOverDFSExecCount,
+      final int[] fileCreatedOverDFSExecCount)
+      throws AzureBlobFileSystemException {
+    Mockito.doAnswer(answer -> {
+          if (!(Boolean) answer.getArgument(1)) {
+            dirCreatedOverDFSExecCount[0]++;
+          } else {
+            fileCreatedOverDFSExecCount[0]++;
+          }
+          return answer.callRealMethod();
+        })
+        .when(client)
+        .createPath(Mockito.anyString(), Mockito.anyBoolean(),
+            Mockito.anyBoolean(), Mockito.nullable(String.class),
+            Mockito.nullable(String.class), Mockito.anyBoolean(),
+            Mockito.nullable(String.class), Mockito.any(TracingContext.class));
+  }
+
+
   private void verifyCreatePathBlobExecution(final AbfsClient client)
       throws AzureBlobFileSystemException {
     Mockito.verify(client, Mockito.times(1))
@@ -124,7 +238,7 @@ public class ITestAzureBlobFileSystemBlobConfig
         fs.getIsNamespaceEnabled(Mockito.mock(TracingContext.class)));
     Configuration configuration = Mockito.spy(getRawConfiguration());
     fixEndpointAsPerTest(configuration, dfsEndpoint);
-    if(configVal != null) {
+    if (configVal != null) {
       getRawConfiguration().set(configName, configVal.toString());
     }
     return (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration());
