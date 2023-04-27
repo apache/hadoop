@@ -303,8 +303,7 @@ public class FSImageFormatPBSnapshot {
      */
     private List<INode> loadDeletedList(final List<INodeReference> refList,
         InputStream in, INodeDirectory dir, List<Long> deletedNodes,
-        List<Integer> deletedRefNodes)
-        throws IOException {
+        List<Integer> deletedRefNodes) {
       List<INode> dlist = new ArrayList<INode>(deletedRefNodes.size()
           + deletedNodes.size());
       // load non-reference inodes
@@ -485,7 +484,7 @@ public class FSImageFormatPBSnapshot {
     }
 
     private INodeReferenceSection.INodeReference.Builder buildINodeReference(
-        final INodeReference ref, final long refIndex) throws IOException {
+        final INodeReference ref, final long refIndex) {
       INodeReferenceSection.INodeReference.Builder rb =
           INodeReferenceSection.INodeReference.newBuilder().
             setReferredId(ref.getId());

@@ -1285,7 +1285,7 @@ public class FSImage implements Closeable {
    * Rename FSImage with the specific txid
    */
   private void renameCheckpoint(long txid, NameNodeFile fromNnf,
-      NameNodeFile toNnf, boolean renameMD5) throws IOException {
+      NameNodeFile toNnf, boolean renameMD5) {
     ArrayList<StorageDirectory> al = null;
 
     for (StorageDirectory sd : storage.dirIterable(NameNodeDirType.IMAGE)) {

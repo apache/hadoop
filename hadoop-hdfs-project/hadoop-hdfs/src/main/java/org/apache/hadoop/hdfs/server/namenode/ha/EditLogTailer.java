@@ -609,7 +609,7 @@ public class EditLogTailer {
       throw new IOException("Cannot find any valid remote NN to service request!");
     }
 
-    private NamenodeProtocol getActiveNodeProxy() throws IOException {
+    private NamenodeProtocol getActiveNodeProxy() {
       if (cachedActiveProxy == null) {
         while (true) {
           // if we have reached the max loop count, quit by returning null

@@ -408,8 +408,7 @@ public class BackupNode extends NameNode {
   }
 
   // TODO: move to a common with DataNode util class
-  private static NamespaceInfo handshake(NamenodeProtocol namenode)
-  throws IOException, SocketTimeoutException {
+  private static NamespaceInfo handshake(NamenodeProtocol namenode) throws IOException {
     NamespaceInfo nsInfo;
     nsInfo = namenode.versionRequest();  // throws SocketTimeoutException 
     String errorMsg = null;

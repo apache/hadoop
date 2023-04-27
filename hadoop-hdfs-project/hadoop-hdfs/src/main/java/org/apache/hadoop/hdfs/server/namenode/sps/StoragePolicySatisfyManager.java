@@ -240,8 +240,6 @@ public class StoragePolicySatisfyManager {
 
   /**
    * Removes the SPS path id from the list of sps paths.
-   *
-   * @throws IOException
    */
   private void clearPathIds(){
     synchronized (pathsToBeTraversed) {

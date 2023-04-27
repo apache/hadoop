@@ -132,8 +132,7 @@ class FSDirRenameOp {
 
   // if destination is a directory, append source child's name, else return
   // iip as-is.
-  private static INodesInPath dstForRenameTo(
-      INodesInPath srcIIP, INodesInPath dstIIP) throws IOException {
+  private static INodesInPath dstForRenameTo(INodesInPath srcIIP, INodesInPath dstIIP) {
     INode dstINode = dstIIP.getLastINode();
     if (dstINode != null && dstINode.isDirectory()) {
       byte[] childName = srcIIP.getLastLocalName();

@@ -601,7 +601,7 @@ public class SecondaryNameNode implements Runnable,
    * @exception Exception if the filesystem does not exist.
    * @return 0 on success, non zero on error.
    */
-  private int processStartupCommand(CommandLineOpts opts) throws Exception {
+  private int processStartupCommand(CommandLineOpts opts) {
     if (opts.getCommand() == null) {
       return 0;
     }
@@ -1053,7 +1053,7 @@ public class SecondaryNameNode implements Runnable,
       }
     }
 
-    void deleteTempEdits() throws IOException {
+    void deleteTempEdits() {
       FilenameFilter filter = new FilenameFilter() {
         @Override
         public boolean accept(File dir, String name) {

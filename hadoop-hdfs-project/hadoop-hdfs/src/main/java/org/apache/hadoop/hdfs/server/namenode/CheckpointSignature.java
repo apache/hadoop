@@ -114,7 +114,7 @@ public class CheckpointSignature extends StorageInfo
          + blockpoolID ;
   }
 
-  boolean storageVersionMatches(StorageInfo si) throws IOException {
+  boolean storageVersionMatches(StorageInfo si) {
     return (layoutVersion == si.layoutVersion) && (cTime == si.cTime);
   }
 

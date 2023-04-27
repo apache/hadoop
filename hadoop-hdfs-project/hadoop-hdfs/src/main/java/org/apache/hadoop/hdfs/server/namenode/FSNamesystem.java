@@ -247,7 +247,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
-import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
@@ -2339,8 +2338,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    *         false if client needs to wait for block recovery.
    */
   boolean truncate(String src, long newLength, String clientName,
-      String clientMachine, long mtime) throws IOException,
-      UnresolvedLinkException {
+      String clientMachine, long mtime) throws IOException {
 
     final String operationName = "truncate";
     requireEffectiveLayoutVersionForFeature(Feature.TRUNCATE);
@@ -2548,8 +2546,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     logAuditEvent(true, operationName, src, null, auditStat);
   }
 
-  private void validateStoragePolicySatisfy()
-      throws UnsupportedActionException, IOException {
+  private void validateStoragePolicySatisfy() throws IOException {
     // checks sps status
     boolean disabled = (blockManager.getSPSManager() == null);
     if (disabled) {
@@ -2655,8 +2652,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   CryptoProtocolVersion chooseProtocolVersion(
       EncryptionZone zone, CryptoProtocolVersion[] supportedVersions)
-      throws UnknownCryptoProtocolVersionException, UnresolvedLinkException,
-        SnapshotAccessControlException {
+      throws UnknownCryptoProtocolVersionException {
     Preconditions.checkNotNull(zone);
     Preconditions.checkNotNull(supportedVersions);
     // Right now, we only support a single protocol version,
@@ -8049,8 +8045,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws AccessControlException  if the caller is not the superuser.
    * @throws UnresolvedLinkException if the path can't be resolved.
    */
-  EncryptionZone getEZForPath(final String srcArg)
-    throws AccessControlException, UnresolvedLinkException, IOException {
+  EncryptionZone getEZForPath(final String srcArg) throws IOException {
     final String operationName = "getEZForPath";
     FileStatus resultingStat = null;
     EncryptionZone encryptionZone;
@@ -8367,9 +8362,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws UnresolvedLinkException if the path can't be resolved.
    * @throws SafeModeException       if the Namenode is in safe mode.
    */
-  void unsetErasureCodingPolicy(final String srcArg,
-      final boolean logRetryCache) throws IOException,
-      UnresolvedLinkException, SafeModeException, AccessControlException {
+  void unsetErasureCodingPolicy(final String srcArg, final boolean logRetryCache)
+      throws IOException, SafeModeException, AccessControlException {
     final String operationName = "unsetErasureCodingPolicy";
     checkOperation(OperationCategory.WRITE);
     checkErasureCodingSupported(operationName);
@@ -8435,8 +8429,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Get the erasure coding policy information for specified path.
    */
-  ErasureCodingPolicy getErasureCodingPolicy(String src)
-      throws AccessControlException, UnresolvedLinkException, IOException {
+  ErasureCodingPolicy getErasureCodingPolicy(String src) throws IOException {
     final String operationName = "getErasureCodingPolicy";
     boolean success = false;
     checkOperation(OperationCategory.READ);

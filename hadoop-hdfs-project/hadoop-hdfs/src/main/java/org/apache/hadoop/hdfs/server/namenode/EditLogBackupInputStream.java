@@ -63,7 +63,7 @@ class EditLogBackupInputStream extends EditLogInputStream {
     }
   }
 
-  EditLogBackupInputStream(String name) throws IOException {
+  EditLogBackupInputStream(String name) {
     address = name;
     inner = new ByteBufferInputStream();
     in = null;

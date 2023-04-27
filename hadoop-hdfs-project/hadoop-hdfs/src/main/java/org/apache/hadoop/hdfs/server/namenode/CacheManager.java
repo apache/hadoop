@@ -531,8 +531,7 @@ public class CacheManager {
    * Adds a directive, skipping most error checking. This should only be called
    * internally in special scenarios like edit log replay.
    */
-  CacheDirectiveInfo addDirectiveFromEditLog(CacheDirectiveInfo directive)
-      throws InvalidRequestException {
+  CacheDirectiveInfo addDirectiveFromEditLog(CacheDirectiveInfo directive) {
     long id = directive.getId();
     CacheDirective entry = new CacheDirective(directive);
     CachePool pool = cachePools.get(directive.getPool());

@@ -89,8 +89,7 @@ public final class MetaRecoveryContext  {
 
   public static void editLogLoaderPrompt(String prompt,
         MetaRecoveryContext recovery, String contStr)
-        throws IOException, RequestStopException
-  {
+        throws IOException {
     if (recovery == null) {
       throw new IOException(prompt);
     }

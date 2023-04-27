@@ -22,13 +22,11 @@ import java.util.Set;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -70,7 +68,7 @@ final class FSDirTruncateOp {
       final long newLength, final String clientName,
       final String clientMachine, final long mtime,
       final BlocksMapUpdateInfo toRemoveBlocks, final FSPermissionChecker pc)
-      throws IOException, UnresolvedLinkException {
+      throws IOException {
     assert fsn.hasWriteLock();
 
     FSDirectory fsd = fsn.getFSDirectory();
@@ -173,8 +171,7 @@ final class FSDirTruncateOp {
       final INodesInPath iip,
       final String clientName, final String clientMachine,
       final long newLength, final long mtime, final Block truncateBlock)
-      throws UnresolvedLinkException, QuotaExceededException,
-      SnapshotAccessControlException, IOException {
+      throws IOException {
     assert fsn.hasWriteLock();
 
     FSDirectory fsd = fsn.getFSDirectory();

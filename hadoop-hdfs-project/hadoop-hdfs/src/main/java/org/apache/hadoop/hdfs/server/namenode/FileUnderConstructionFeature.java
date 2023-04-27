@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
@@ -53,10 +51,8 @@ public class FileUnderConstructionFeature implements INode.Feature {
    *
    * @param lastBlockLength
    *          The length of the last block reported from client
-   * @throws IOException
    */
-  void updateLengthOfLastBlock(INodeFile f, long lastBlockLength)
-      throws IOException {
+  void updateLengthOfLastBlock(INodeFile f, long lastBlockLength) {
     BlockInfo lastBlock = f.getLastBlock();
     assert (lastBlock != null) : "The last block for path "
         + f.getFullPathName() + " is null when updating its length";

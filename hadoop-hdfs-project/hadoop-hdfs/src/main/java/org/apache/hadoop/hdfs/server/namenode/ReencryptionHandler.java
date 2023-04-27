@@ -696,14 +696,10 @@ public class ReencryptionHandler implements Runnable {
     /**
      * Submit the current batch to the thread pool.
      *
-     * @param zoneId
-     *          Id of the EZ INode
-     * @throws IOException
-     * @throws InterruptedException
+     * @param zoneId  Id of the EZ INode
      */
     @Override
-    protected void submitCurrentBatch(final Long zoneId) throws IOException,
-        InterruptedException {
+    protected void submitCurrentBatch(final Long zoneId) {
       if (currentBatch.isEmpty()) {
         return;
       }

@@ -148,8 +148,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
     this.maxOpSize = DFSConfigKeys.DFS_NAMENODE_MAX_OP_SIZE_DEFAULT;
   }
 
-  private void init(boolean verifyLayoutVersion)
-      throws LogHeaderCorruptException, IOException {
+  private void init(boolean verifyLayoutVersion) throws IOException {
     Preconditions.checkState(state == State.UNINIT);
     BufferedInputStream bin = null;
     InputStream fStream = null;
@@ -374,7 +373,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
    */
   @VisibleForTesting
   static int readLogVersion(DataInputStream in, boolean verifyLayoutVersion)
-      throws IOException, LogHeaderCorruptException {
+      throws IOException {
     int logVersion;
     try {
       logVersion = in.readInt();

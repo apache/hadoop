@@ -272,8 +272,7 @@ public class FSDirAttrOp {
 
   static boolean unprotectedSetPermission(
       FSDirectory fsd, INodesInPath iip, FsPermission permissions)
-      throws FileNotFoundException, UnresolvedLinkException,
-             QuotaExceededException, SnapshotAccessControlException {
+      throws FileNotFoundException {
     assert fsd.hasWriteLock();
     final INode inode = FSDirectory.resolveLastINode(iip);
     int snapshotId = iip.getLatestSnapshotId();
@@ -284,8 +283,7 @@ public class FSDirAttrOp {
 
   static boolean unprotectedSetOwner(
       FSDirectory fsd, INodesInPath iip, String username, String groupname)
-      throws FileNotFoundException, UnresolvedLinkException,
-      QuotaExceededException, SnapshotAccessControlException {
+      throws FileNotFoundException {
     assert fsd.hasWriteLock();
     final INode inode = FSDirectory.resolveLastINode(iip);
     long oldPerm = inode.getPermissionLong();
@@ -383,8 +381,7 @@ public class FSDirAttrOp {
 
   static BlockInfo[] unprotectedSetReplication(
       FSDirectory fsd, INodesInPath iip, short replication)
-      throws QuotaExceededException, UnresolvedLinkException,
-      SnapshotAccessControlException, UnsupportedActionException {
+      throws QuotaExceededException {
     assert fsd.hasWriteLock();
 
     final BlockManager bm = fsd.getBlockManager();

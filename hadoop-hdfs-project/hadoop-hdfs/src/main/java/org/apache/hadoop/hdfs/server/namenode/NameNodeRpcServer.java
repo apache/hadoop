@@ -76,8 +76,6 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.ha.HAServiceStatus;
-import org.apache.hadoop.ha.HealthCheckFailedException;
-import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceProtocolService;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolPB;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
@@ -772,7 +770,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
-      throws InvalidToken, IOException {
+      throws IOException {
     checkNNStartup();
     return namesystem.renewDelegationToken(token);
   }
@@ -1827,15 +1825,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // HAServiceProtocol
-  public synchronized void monitorHealth() throws HealthCheckFailedException,
-      AccessControlException, IOException {
+  public synchronized void monitorHealth() throws IOException {
     checkNNStartup();
     nn.monitorHealth();
   }
   
   @Override // HAServiceProtocol
   public synchronized void transitionToActive(StateChangeRequestInfo req) 
-      throws ServiceFailedException, AccessControlException, IOException {
+      throws IOException {
     checkNNStartup();
     nn.checkHaStateChange(req);
     nn.transitionToActive();
@@ -1843,7 +1840,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // HAServiceProtocol
   public synchronized void transitionToStandby(StateChangeRequestInfo req)
-      throws ServiceFailedException, AccessControlException, IOException {
+      throws IOException {
     checkNNStartup();
     // This is to eliminate any race condition between manual transition of
     // namenode into Observer, and ZKFC auto failover election, when the
@@ -1862,15 +1859,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // HAServiceProtocol
   public synchronized void transitionToObserver(StateChangeRequestInfo req)
-      throws ServiceFailedException, AccessControlException, IOException {
+      throws IOException {
     checkNNStartup();
     nn.checkHaStateChange(req);
     nn.transitionToObserver();
   }
 
   @Override // HAServiceProtocol
-  public synchronized HAServiceStatus getServiceStatus() 
-      throws AccessControlException, ServiceFailedException, IOException {
+  public synchronized HAServiceStatus getServiceStatus() throws IOException {
     checkNNStartup();
     return nn.getServiceStatus();
   }
