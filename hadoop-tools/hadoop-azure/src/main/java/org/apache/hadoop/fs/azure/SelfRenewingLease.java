@@ -28,6 +28,7 @@ import com.microsoft.azure.storage.AccessCondition;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlob;
 
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.microsoft.azure.storage.StorageErrorCodeStrings.LEASE_ALREADY_PRESENT;
@@ -69,7 +70,7 @@ public class SelfRenewingLease {
   static final int LEASE_ACQUIRE_RETRY_INTERVAL = 2000;
 
   public SelfRenewingLease(CloudBlobWrapper blobWrapper, boolean throwIfPresent)
-      throws StorageException {
+      throws StorageException, IOException {
 
     this.leaseFreed = false;
     this.blobWrapper = blobWrapper;
@@ -119,7 +120,7 @@ public class SelfRenewingLease {
    * Free the lease and stop the keep-alive thread.
    * @throws StorageException Thrown when fail to free the lease.
    */
-  public void free() throws StorageException {
+  public void free() throws StorageException, IOException {
     AccessCondition accessCondition = AccessCondition.generateEmptyCondition();
     accessCondition.setLeaseID(leaseID);
     try {
@@ -137,6 +138,8 @@ public class SelfRenewingLease {
             + " on " +  blobWrapper.getStorageUri());
         throw(e);
       }
+    } catch (IOException e) {
+      throw e;
     } finally {
 
       // Even if releasing the lease fails (e.g. because the file was deleted),
@@ -156,7 +159,7 @@ public class SelfRenewingLease {
     return leaseID;
   }
 
-  public CloudBlob getCloudBlob() {
+  public CloudBlob getCloudBlob() throws IOException {
     return blobWrapper.getBlob();
   }
 
@@ -192,7 +195,7 @@ public class SelfRenewingLease {
             LOG.info("Renewed lease " + leaseID + " on "
                 + getCloudBlob().getUri());
           }
-        } catch (StorageException e) {
+        } catch (StorageException | IOException e) {
           if (!leaseFreed) {
 
             // Free the lease so we don't leave this thread running forever.
@@ -200,10 +203,14 @@ public class SelfRenewingLease {
 
             // Normally leases should be freed and there should be no
             // exceptions, so log a warning.
-            LOG.warn("Attempt to renew lease " + leaseID + " on "
-                + getCloudBlob().getUri()
-                + " failed, but lease not yet freed. Reason: " +
-                e.getMessage());
+            try {
+              LOG.warn("Attempt to renew lease " + leaseID + " on "
+                  + getCloudBlob().getUri()
+                  + " failed, but lease not yet freed. Reason: " +
+                  e.getMessage());
+            } catch (IOException ex) {
+              ex.printStackTrace();
+            }
           }
         }
       }
