@@ -21,13 +21,18 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -42,6 +47,9 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.mockito.Mockito;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.anyString;
 
 /**
@@ -211,6 +219,7 @@ public class ITestAzureBlobFileSystemAppend extends
    */
   @Test
   public void testCreateEmptyBlob() throws IOException {
+    Assume.assumeTrue(getFileSystem().getAbfsStore().getPrefixMode() == PrefixMode.BLOB);
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     Mockito.doReturn(store).when(fs).getAbfsStore();
@@ -229,6 +238,7 @@ public class ITestAzureBlobFileSystemAppend extends
    */
   @Test
   public void testCreateNonEmptyBlob() throws IOException {
+    Assume.assumeTrue(getFileSystem().getAbfsStore().getPrefixMode() == PrefixMode.BLOB);
     AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     Mockito.doReturn(store).when(fs).getAbfsStore();
@@ -246,5 +256,166 @@ public class ITestAzureBlobFileSystemAppend extends
     Mockito.verify(testClient, Mockito.times(1))
             .getBlockList(Mockito.any(String.class),
                     Mockito.any(TracingContext.class));
+  }
+
+  /**
+   * Verify that if getBlockList throws exception append should fail.
+   */
+  @Test
+  public void testValidateGetBlockList() throws Exception {
+    Assume.assumeTrue(getFileSystem().getAbfsStore().getPrefixMode() == PrefixMode.BLOB);
+    AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    Mockito.doReturn(store).when(fs).getAbfsStore();
+    AbfsClient client = store.getClient();
+    AbfsClient testClient = Mockito.spy(TestAbfsClient.createTestClientFromCurrentContext(
+            client,
+            fs.getAbfsStore().getAbfsConfiguration()));
+    store.setClient(testClient);
+
+    AzureBlobFileSystemException exception = Mockito.mock(AzureBlobFileSystemException.class);
+    // Throw exception when getBlockList is called
+    Mockito.doThrow(exception).when(testClient)
+            .getBlockList(Mockito.any(), Mockito.any(TracingContext.class));
+
+    // Create a non-empty file
+    FSDataOutputStream outputStream = fs.create(TEST_FILE_PATH);
+    outputStream.write(10);
+    outputStream.hsync();
+    outputStream.close();
+
+    intercept(AzureBlobFileSystemException.class, () -> fs.getAbfsStore()
+            .openFileForWrite(TEST_FILE_PATH, null, false, getTestTracingContext(fs, true)));
+  }
+
+  /**
+   * Verify that parallel write with same offset from different output streams will not throw exception.
+   **/
+  @Test
+  public void testParallelWriteSameOffsetDifferentOutputStreams() throws Exception {
+    Configuration configuration = getRawConfiguration();
+    configuration.set(FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE, "false");
+    FileSystem fs = FileSystem.newInstance(configuration);
+    ExecutorService executorService = Executors.newFixedThreadPool(5);
+    List<Future<?>> futures = new ArrayList<>();
+
+    final byte[] b = new byte[8 * ONE_MB];
+    new Random().nextBytes(b);
+
+    // Create three output streams
+    FSDataOutputStream out1 = fs.create(TEST_FILE_PATH);
+    FSDataOutputStream out2 = fs.append(TEST_FILE_PATH);
+    FSDataOutputStream out3 = fs.append(TEST_FILE_PATH);
+
+    // Submit tasks to write to each output stream with the same offset
+    futures.add(executorService.submit(() -> {
+      try {
+        out1.write(b, 10, 200);
+        //out1.hsync();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }));
+
+    futures.add(executorService.submit(() -> {
+      try {
+        out2.write(b, 10, 200);
+        //out2.hsync();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }));
+
+    futures.add(executorService.submit(() -> {
+      try {
+        out3.write(b, 10, 200);
+        //out3.hsync();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }));
+
+    int exceptionCaught = 0;
+    for (Future<?> future : futures) {
+      try {
+        future.get(); // wait for the task to complete and handle any exceptions thrown by the lambda expression
+      } catch (ExecutionException e) {
+        Throwable cause = e.getCause();
+        if (cause instanceof RuntimeException) {
+          exceptionCaught++;
+        } else {
+          System.err.println("Unexpected exception caught: " + cause);
+        }
+      } catch (InterruptedException e) {
+        // handle interruption
+      }
+    }
+    assertEquals(exceptionCaught, 0);
+  }
+
+
+  /**
+   * Verify that parallel write for different content length will not throw exception.
+   **/
+  @Test
+  public void testParallelWriteDifferentContentLength() throws Exception {
+    Configuration configuration = getRawConfiguration();
+    configuration.set(FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE, "false");
+    FileSystem fs = FileSystem.newInstance(configuration);
+    ExecutorService executorService = Executors.newFixedThreadPool(5);
+    List<Future<?>> futures = new ArrayList<>();
+
+    // Create three output streams with different content length
+    FSDataOutputStream out1 = fs.create(TEST_FILE_PATH);
+    final byte[] b1 = new byte[8 * ONE_MB];
+    new Random().nextBytes(b1);
+
+    FSDataOutputStream out2 = fs.append(TEST_FILE_PATH);
+    FSDataOutputStream out3 = fs.append(TEST_FILE_PATH);
+
+    // Submit tasks to write to each output stream
+    futures.add(executorService.submit(() -> {
+      try {
+        out1.write(b1, 10, 200);
+        //out1.hsync();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }));
+
+    futures.add(executorService.submit(() -> {
+      try {
+        out2.write(b1, 20, 300);
+        //out2.hsync();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }));
+
+    futures.add(executorService.submit(() -> {
+      try {
+        out3.write(b1, 30, 400);
+        //out3.hsync();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }));
+
+    int exceptionCaught = 0;
+    for (Future<?> future : futures) {
+      try {
+        future.get(); // wait for the task to complete and handle any exceptions thrown by the lambda expression
+      } catch (ExecutionException e) {
+        Throwable cause = e.getCause();
+        if (cause instanceof RuntimeException) {
+          exceptionCaught++;
+        } else {
+          System.err.println("Unexpected exception caught: " + cause);
+        }
+      } catch (InterruptedException e) {
+        // handle interruption
+      }
+    }
+    assertEquals(exceptionCaught, 0);
   }
 }
