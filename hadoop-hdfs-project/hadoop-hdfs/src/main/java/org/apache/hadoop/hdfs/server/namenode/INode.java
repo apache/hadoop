@@ -49,6 +49,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.
@@ -1016,6 +1017,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     /** Used to collect quota usage delta */
     private final QuotaDelta quotaDelta;
 
+    private Snapshot snapshotToBeDeleted = null;
+
     /**
      * @param bsps
      *      block storage policy suite to calculate intended storage type
@@ -1037,6 +1040,36 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
       this.quotaDelta = new QuotaDelta();
     }
 
+    /**
+     * Set the snapshot to be deleted
+     * for {@link FSEditLogOpCodes#OP_DELETE_SNAPSHOT}.
+     *
+     * @param snapshot the snapshot to be deleted
+     */
+    public void setSnapshotToBeDeleted(Snapshot snapshot) {
+      this.snapshotToBeDeleted = Objects.requireNonNull(
+          snapshot, "snapshot == null");
+    }
+
+    /**
+     * For {@link FSEditLogOpCodes#OP_DELETE_SNAPSHOT},
+     * return the snapshot to be deleted.
+     * For other ops, return {@link Snapshot#CURRENT_STATE_ID}.
+     */
+    public int getSnapshotIdToBeDeleted() {
+      return Snapshot.getSnapshotId(snapshotToBeDeleted);
+    }
+
+    public int getSnapshotIdToBeDeleted(int snapshotId, INode inode) {
+      final int snapshotIdToBeDeleted = getSnapshotIdToBeDeleted();
+      if (snapshotId != snapshotIdToBeDeleted) {
+        LOG.warn("Snapshot changed: current = {}, original = {}, inode: {}",
+            Snapshot.getSnapshotString(snapshotId), snapshotToBeDeleted,
+            inode.toDetailString());
+      }
+      return snapshotIdToBeDeleted;
+    }
+
     public BlockStoragePolicySuite storagePolicySuite() {
       return bsps;
     }
@@ -1054,8 +1087,11 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
      * removedUCFiles but a new quotaDelta.
      */
     public ReclaimContext getCopy() {
-      return new ReclaimContext(bsps, collectedBlocks, removedINodes,
+      final ReclaimContext that = new ReclaimContext(
+          bsps, collectedBlocks, removedINodes,
           removedUCFiles);
+      that.snapshotToBeDeleted = this.snapshotToBeDeleted;
+      return that;
     }
   }
 
