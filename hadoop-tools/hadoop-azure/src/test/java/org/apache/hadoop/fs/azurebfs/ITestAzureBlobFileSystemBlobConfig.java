@@ -29,12 +29,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
+import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_BLOB_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_MKDIRS_FALLBACK_TO_DFS;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_REDIRECT_DELETE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DNS_PREFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.WASB_DNS_PREFIX;
 
@@ -199,6 +202,34 @@ public class ITestAzureBlobFileSystemBlobConfig
     fs.create(new Path("/file"));
     Assert.assertTrue(dirCreatedOverDFSExecCount[0] == 1);
     Assert.assertTrue(fileCreatedOverDFSExecCount[0] == 1);
+  }
+
+  @Test
+  public void testBlobEndpointNoDeleteWasbRedirect() throws Exception {
+    AzureBlobFileSystem fs = Mockito.spy(createFileSystemForEndpointConfigPair(
+        FS_AZURE_REDIRECT_DELETE, false, false));
+    Assert.assertNull(fs.getNativeFs());
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    Mockito.doReturn(store).when(fs).getAbfsStore();
+    store.setClient(client);
+
+    Boolean[] isDeleteOverNativeFS = new Boolean[1];
+    isDeleteOverNativeFS[0] = false;
+    Boolean[] isDeleteOverDFSEndpoint = new Boolean[1];
+    isDeleteOverDFSEndpoint[0] = false;
+
+
+    Mockito.doAnswer(answer -> {
+      isDeleteOverDFSEndpoint[0] = true;
+      return answer.callRealMethod();
+    }).when(client).deletePath(Mockito.any(String.class), Mockito.anyBoolean(), Mockito.nullable(String.class), Mockito.any(TracingContext.class));
+
+
+    fs.create(new Path("/file"));
+    fs.delete(new Path("/file"), true);
+
+    Assert.assertTrue(isDeleteOverDFSEndpoint[0]);
   }
 
   private void checkDirAndFileCreationOnDFS(final AbfsClient client,
