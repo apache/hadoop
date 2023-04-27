@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_FIXED_TOKEN;
 
-public class ITestAzcopyHelper {
+public class AzcopyHelper {
 
     File hadoopAzureDir;
     String azcopyDirPath;
@@ -41,7 +41,7 @@ public class ITestAzcopyHelper {
     private Configuration configuration;
     private PrefixMode mode;
 
-    public ITestAzcopyHelper(String accountName, String fileSystemName, Configuration configuration ,PrefixMode mode) throws Exception {
+    public AzcopyHelper(String accountName, String fileSystemName, Configuration configuration ,PrefixMode mode) throws Exception {
       this.accountName = accountName;
       this.fileSystemName = fileSystemName;
       this.configuration = configuration;

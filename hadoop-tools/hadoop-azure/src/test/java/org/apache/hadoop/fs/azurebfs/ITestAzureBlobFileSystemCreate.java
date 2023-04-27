@@ -32,11 +32,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -68,7 +65,6 @@ import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_BLOB_MKDIR_OVERWRITE;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_META_HDI_ISFOLDER;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -117,7 +113,8 @@ public class ITestAzureBlobFileSystemCreate extends
     intercept(IOException.class, () -> fs.mkdirs(new Path("a/b/c/d/e")));
 
     // Asserting directory created still exists as explicit.
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/d"), fs));
+    Assert.assertTrue(
+        BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/d"), fs));
   }
 
   /**
@@ -131,7 +128,7 @@ public class ITestAzureBlobFileSystemCreate extends
     intercept(IOException.class, () -> fs.create(new Path("a/b/c")));
 
     // Asserting that directory still exists
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c"), fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/c"), fs));
   }
 
   /**
@@ -190,9 +187,11 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(new Path("a/b/c/e"));
 
     //Asserting that directories created as explicit
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b"), fs));
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c/d"), fs));
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c/e"), fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b"), fs));
+    Assert.assertTrue(
+        BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/c/d"), fs));
+    Assert.assertTrue(
+        BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/c/e"), fs));
   }
 
   /**
@@ -206,7 +205,7 @@ public class ITestAzureBlobFileSystemCreate extends
     intercept(IOException.class, () -> fs.create(new Path("a/b")));
 
     //Asserting that directories created as explicit
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c"), fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/c"), fs));
   }
 
   /**
@@ -221,9 +220,10 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(new Path("a/b/c/d/e"));
 
     //Asserting that directories created as explicit
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/"), fs));
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c"), fs));
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c/d/e"), fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/"), fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/c"), fs));
+    Assert.assertTrue(
+        BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/c/d/e"), fs));
   }
 
   /*
@@ -288,7 +288,7 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(new Path("a/b/c"));
 
     //Asserting that directories created as explicit
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c"), fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/c"), fs));
   }
 
   /**
@@ -313,7 +313,7 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(path);
 
     // Asserting that the directory created by mkdir exists as explicit.
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(path, fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(path, fs));
   }
 
   /**
@@ -337,7 +337,7 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(path);
 
     // Asserting that the directory created by mkdir exists as explicit.
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(path, fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(path, fs));
   }
 
   /**
@@ -363,7 +363,7 @@ public class ITestAzureBlobFileSystemCreate extends
     }
 
     // Asserting that the directory created by mkdir exists as explicit.
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(path, fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(path, fs));
   }
 
   /**
@@ -379,7 +379,7 @@ public class ITestAzureBlobFileSystemCreate extends
     fs1.mkdirs(new Path("a/b/c"));
 
     //Asserting that directories created as explicit
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c"), fs1));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/c"), fs1));
   }
 
   /**
@@ -394,7 +394,7 @@ public class ITestAzureBlobFileSystemCreate extends
     final Path path = new Path("dir1/dir2");
 
     // Creating implicit directory to be used as parent
-    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+    AzcopyHelper azcopyHelper = new AzcopyHelper(
         getAccountName(),
         getFileSystemName(),
         getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration(),
@@ -406,10 +406,10 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(path);
 
     // Asserting that path created by azcopy becomes explicit.
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(implicitPath, fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(implicitPath, fs));
 
     // Asserting that the directory created by mkdir exists as explicit.
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(path, fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(path, fs));
   }
 
   /**
@@ -424,7 +424,7 @@ public class ITestAzureBlobFileSystemCreate extends
     final Path path = new Path("dir1/dir2");
 
     // Creating implicit directory to be used as parent
-    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+    AzcopyHelper azcopyHelper = new AzcopyHelper(
         getAccountName(),
         getFileSystemName(),
         getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration(),
@@ -439,10 +439,10 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(path);
 
     // Asserting that path created by azcopy becomes explicit.
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(implicitPath, fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(implicitPath, fs));
 
     // Asserting that the directory created by mkdir exists as explicit.
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(path, fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(path, fs));
   }
 
   /**
@@ -460,7 +460,7 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(explicitPath);
 
     // Creating implicit directory on the path
-    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+    AzcopyHelper azcopyHelper = new AzcopyHelper(
         getAccountName(),
         getFileSystemName(),
         getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration(),
@@ -472,10 +472,10 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(path);
 
     // Asserting that the directory created by mkdir exists as explicit.
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(explicitPath, fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(explicitPath, fs));
 
     // Asserting that the directory created by mkdir exists as explicit.
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(path, fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(path, fs));
   }
 
   /**
@@ -490,7 +490,7 @@ public class ITestAzureBlobFileSystemCreate extends
     final Path path = new Path("dir1/dir2");
 
     // Creating implicit directory to be used as parent
-    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+    AzcopyHelper azcopyHelper = new AzcopyHelper(
         getAccountName(),
         getFileSystemName(),
         getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration(),
@@ -506,10 +506,10 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(path);
 
     // Asserting that path created by azcopy becomes explicit.
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(implicitPath, fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(implicitPath, fs));
 
     // Asserting that the directory created by mkdir exists as explicit.
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(path, fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(path, fs));
   }
 
   /**
@@ -524,7 +524,7 @@ public class ITestAzureBlobFileSystemCreate extends
     final Path path = new Path("dir1/dir2");
 
     // Creating implicit directory to be used as parent
-    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+    AzcopyHelper azcopyHelper = new AzcopyHelper(
         getAccountName(),
         getFileSystemName(),
         getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration(),
@@ -542,7 +542,7 @@ public class ITestAzureBlobFileSystemCreate extends
     });
 
     // Asserting that path created by azcopy becomes explicit.
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(implicitPath, fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(implicitPath, fs));
 
     // Asserting that the file still exists at path.
     Assert.assertFalse(
@@ -564,7 +564,7 @@ public class ITestAzureBlobFileSystemCreate extends
     final AzureBlobFileSystem fs = getFileSystem();
     final Path implicitPath = new Path("a/b/c");
 
-    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+    AzcopyHelper azcopyHelper = new AzcopyHelper(
         getAccountName(),
         getFileSystemName(),
         getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration(),
@@ -580,10 +580,11 @@ public class ITestAzureBlobFileSystemCreate extends
 
     fs.mkdirs(new Path("a/b/c/d"));
 
-    Assert.assertTrue(ITestAbfsTestHelper.isImplicit(new Path("a"), fs));
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b"), fs));
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c"), fs));
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c/d"), fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isImplicitDirectory(new Path("a"), fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b"), fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/c"), fs));
+    Assert.assertTrue(
+        BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/c/d"), fs));
   }
 
   /**
@@ -597,7 +598,7 @@ public class ITestAzureBlobFileSystemCreate extends
     final AzureBlobFileSystem fs = getFileSystem();
     final Path implicitPath = new Path("a/b/c");
 
-    ITestAzcopyHelper azcopyHelper = new ITestAzcopyHelper(
+    AzcopyHelper azcopyHelper = new AzcopyHelper(
         getAccountName(),
         getFileSystemName(),
         getFileSystem().getAbfsStore().getAbfsConfiguration().getRawConfiguration(),
@@ -616,12 +617,13 @@ public class ITestAzureBlobFileSystemCreate extends
 
     fs.mkdirs(new Path("a/b/c/d"));
 
-    Assert.assertTrue(ITestAbfsTestHelper.isImplicit(new Path("a/b"), fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isImplicitDirectory(new Path("a/b"), fs));
 
     // Asserting that the directory created by mkdir exists as explicit.
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a"), fs));
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c"), fs));
-    Assert.assertTrue(ITestAbfsTestHelper.isExplicit(new Path("a/b/c/d"), fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a"), fs));
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/c"), fs));
+    Assert.assertTrue(
+        BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/c/d"), fs));
   }
 
   @Test
