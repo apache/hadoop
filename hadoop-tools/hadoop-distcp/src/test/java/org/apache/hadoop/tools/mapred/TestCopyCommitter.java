@@ -19,8 +19,6 @@
 package org.apache.hadoop.tools.mapred;
 
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
