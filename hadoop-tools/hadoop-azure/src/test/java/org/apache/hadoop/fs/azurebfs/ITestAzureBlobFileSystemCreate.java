@@ -295,7 +295,7 @@ public class ITestAzureBlobFileSystemCreate extends
   @Test
   public void testCPKOverBlob() throws Exception {
     Assume.assumeTrue(getFileSystem().getAbfsStore().getPrefixMode() == PrefixMode.BLOB);
-    Configuration configuration = getRawConfiguration();
+    Configuration configuration = Mockito.spy(getRawConfiguration());
     configuration.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + getAccountName(), "abcd");
     intercept(InvalidConfigurationValueException.class, () -> (AzureBlobFileSystem) FileSystem.newInstance(configuration));
   }
@@ -306,7 +306,7 @@ public class ITestAzureBlobFileSystemCreate extends
   @Test
   public void testCPKOverBlobEmptyKey() throws Exception {
     Assume.assumeTrue(getFileSystem().getAbfsStore().getPrefixMode() == PrefixMode.BLOB);
-    Configuration configuration = getRawConfiguration();
+    Configuration configuration = Mockito.spy(getRawConfiguration());
     configuration.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + getAccountName(), "");
     intercept(InvalidConfigurationValueException.class, () -> (AzureBlobFileSystem) FileSystem.newInstance(configuration));
   }
@@ -317,7 +317,7 @@ public class ITestAzureBlobFileSystemCreate extends
   @Test
   public void testCPKOverBlobNullKey() throws Exception {
     Assume.assumeTrue(getFileSystem().getAbfsStore().getPrefixMode() == PrefixMode.BLOB);
-    Configuration configuration = getRawConfiguration();
+    Configuration configuration = Mockito.spy(getRawConfiguration());
     AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
   }
 
