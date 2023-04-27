@@ -20,12 +20,18 @@ public class ITestAzureBlobFileSystemBlobConfig extends AbstractAbfsIntegrationT
 
   @Test
   public void test() throws Exception {
-    testForBlobEndpointConfig(false, false);
+    createFileSystemForEndpointConfigPair(FS_AZURE_ENABLE_BLOB_ENDPOINT, false, false);
   }
 
-  private void testForBlobEndpointConfig(Boolean configVal, Boolean dfsEndpoint) throws Exception {
+  private void createFileSystemForEndpointConfigPair(String configName, Boolean configVal, Boolean dfsEndpoint) throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     Assume.assumeFalse(fs.getIsNamespaceEnabled(Mockito.mock(TracingContext.class)));
+    fixEndpointAsPerTest(dfsEndpoint);
+    getRawConfiguration().set(configName, configVal.toString());
+    return (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration());
+  }
+
+  private void fixEndpointAsPerTest(final Boolean dfsEndpoint) {
     if(dfsEndpoint) {
       String url = getTestUrl();
       if(url.contains(WASB_DNS_PREFIX)) {
@@ -39,9 +45,5 @@ public class ITestAzureBlobFileSystemBlobConfig extends AbstractAbfsIntegrationT
         getRawConfiguration().set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, url);
       }
     }
-    getRawConfiguration().set(FS_AZURE_ENABLE_BLOB_ENDPOINT, configVal.toString());
-    fs = (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration());
-    int a =1;
-    a++;
   }
 }
