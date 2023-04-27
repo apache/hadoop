@@ -158,7 +158,11 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
 
   /**
    * Access the RM database(s) from Admin CLI
+   * @param request - Database access request
+   * @return Database access response
    */
-  public DatabaseAccessResponse accessDatabase(DatabaseAccessRequest request)
+  @Private
+  @Idempotent
+  DatabaseAccessResponse accessDatabase(DatabaseAccessRequest request)
       throws IOException, YarnException;
 }

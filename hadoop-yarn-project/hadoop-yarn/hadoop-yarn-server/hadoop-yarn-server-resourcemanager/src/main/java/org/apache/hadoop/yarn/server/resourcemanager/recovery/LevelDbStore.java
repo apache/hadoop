@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
 import java.io.File;
 import java.io.IOException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.LeveldbConfigurationStore;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.fusesource.leveldbjni.internal.NativeDB;
@@ -35,11 +35,10 @@ import org.iq80.leveldb.Options;
  *    1. Refactor LeveldbRMStateStore and LeveldbConfigurationStore to use this
  *    2. Evaluate moving to https://github.com/dain/leveldb which has an iterator API with prefix key support
  */
-public class
-LevelDbStore implements KVStore {
+public class LevelDbStore implements KVStore {
 
-  public static final Log LOG =
-      LogFactory.getLog(LeveldbRMStateStore.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(LeveldbRMStateStore.class);
 
   private DB db;
   private final String dbPath;

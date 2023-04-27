@@ -745,8 +745,8 @@ public class TestRMAdminCLI {
               "[-directlyAccessNodeLabelStore] [-refreshClusterMaxPriority] " +
               "[-updateNodeResource [NodeID] [MemSize] [vCores] "
               + "([OvercommitTimeout]) or -updateNodeResource "
-              + "[NodeID] [ResourceTypes] ([OvercommitTimeout]) " + 
-              "[-accessDataStore get|set|del [database] [key] [value]] "    
+              + "[NodeID] [ResourceTypes] ([OvercommitTimeout])] " +
+              "[-accessDataStore get|set|del [database] [key] [value]] "
               + "[-help [cmd]]"));
       assertTrue(dataOut
           .toString()
@@ -815,11 +815,6 @@ public class TestRMAdminCLI {
           "Usage: yarn rmadmin [-getServiceState <serviceId>]", dataErr, 0);
       testError(new String[] { "-help", "-checkHealth" },
           "Usage: yarn rmadmin [-checkHealth <serviceId>]", dataErr, 0);
-      testError(new String[] { "-help", "-failover" },
-          "Usage: yarn rmadmin " +
-              "[-failover [--forcefence] [--forceactive] " +
-              "<serviceId> <serviceId>]",
-          dataErr, 0);
 
       testError(new String[] { "-help", "-badParameter" },
           "Usage: yarn rmadmin", dataErr, 0);

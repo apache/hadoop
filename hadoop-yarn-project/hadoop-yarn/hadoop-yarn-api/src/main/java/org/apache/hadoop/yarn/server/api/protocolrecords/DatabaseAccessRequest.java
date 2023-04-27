@@ -31,6 +31,10 @@ public abstract class DatabaseAccessRequest {
    *
    * @param operation - get / set / del
    * @param database - unique identifier for the database to query
+   * @param key - key to query
+   * @param value - value to set
+   *              
+   * @return DatabaseAccessRequest
    *
    * Can add dataStore later if required to access other datastores like ZK / mysql etc
    */
