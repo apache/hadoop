@@ -757,10 +757,10 @@ public class TestRMHA {
 
     DataOutputStream output = null;
     final File confFile =
-        new File("target/test-classes/"+YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+         new File("target/test-classes/"+YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
     final File backupConfFile = new File(
-        "target/test-classes/" + YarnConfiguration.YARN_SITE_CONFIGURATION_FILE
-            + ".backup." + UUID.randomUUID());
+         "target/test-classes/" + YarnConfiguration.YARN_SITE_CONFIGURATION_FILE
+         + ".backup." + UUID.randomUUID());
     boolean hasRenamed = false;
     try {
       if (confFile.exists()) {
@@ -838,6 +838,9 @@ public class TestRMHA {
         } else {
           backupConfFile.renameTo(confFile);
         }
+      }
+      if (rm != null) {
+        rm.stop();
       }
     }
   }
