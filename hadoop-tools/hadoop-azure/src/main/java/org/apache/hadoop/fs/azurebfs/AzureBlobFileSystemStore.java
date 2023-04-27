@@ -995,12 +995,18 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           throws IOException {
     try (AbfsPerfInfo perfInfo = startTracking("createDirectory", "createPath")) {
       if (!abfsConfiguration.shouldMkdirFallbackToDfs() && getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
-        checkParentChainForFile(path, tracingContext);
+        ArrayList<Path> keysToCreateAsFolder = new ArrayList<>();
+        checkParentChainForFile(path, tracingContext, keysToCreateAsFolder);
+        boolean blobOverwrite = abfsConfiguration.isEnabledBlobMkdirOverwrite();
 
         HashMap<String, String> metadata = new HashMap<>();
         metadata.put(X_MS_META_HDI_ISFOLDER, TRUE);
-        createFile(path, statistics, true,
+        createFile(path, statistics, blobOverwrite,
                 permission, umask, tracingContext, metadata);
+        for (Path pathToCreate: keysToCreateAsFolder) {
+            createFile(pathToCreate, statistics, blobOverwrite,
+                    permission, umask, tracingContext, metadata);
+        }
         return;
       }
       boolean isNamespaceEnabled = getIsNamespaceEnabled(tracingContext);
@@ -1028,34 +1034,19 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param path path to check the hierarchy for.
    * @param tracingContext the tracingcontext.
    */
-  private void checkParentChainForFile(Path path, TracingContext tracingContext) throws IOException {
-    if (directoryExists(path, tracingContext)) {
+  private void checkParentChainForFile(Path path, TracingContext tracingContext,
+                                       List<Path> keysToCreateAsFolder) throws IOException {
+    if (checkPathIsDirectory(path, tracingContext)) {
       return;
     }
     Path current = path.getParent();
-    Path parent = current.getParent();
-
-    while (parent != null) {
-      if (directoryExists(current, tracingContext)) {
+    while (current != null && !current.isRoot()) {
+      if (checkPathIsDirectory(current, tracingContext)) {
         break;
       }
-      current = parent;
-      parent = current.getParent();
+      keysToCreateAsFolder.add(current);
+      current = current.getParent();
     }
-  }
-
-  /**
-   * Returns true if path is directory.
-   * @param path path to verify.
-   * @param tracingContext the tracingContext.
-   * @return true or false.
-   * @throws IOException
-   */
-  private boolean directoryExists(Path path, TracingContext tracingContext) throws IOException {
-    if (getListBlobs(path, null, tracingContext, 2, true).size() > 0) {
-      return true;
-    }
-    return checkPathIsDirectory(path, tracingContext);
   }
 
   /**
