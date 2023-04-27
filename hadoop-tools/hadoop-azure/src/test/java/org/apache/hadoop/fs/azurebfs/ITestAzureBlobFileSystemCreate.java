@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
