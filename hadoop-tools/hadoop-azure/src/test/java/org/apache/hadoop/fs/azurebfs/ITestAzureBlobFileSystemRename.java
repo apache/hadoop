@@ -119,7 +119,7 @@ public class ITestAzureBlobFileSystemRename extends
 
   @Test
   public void testRenameFileUnderDirRedirection() throws Exception {
-    Configuration configuration = getRawConfiguration();
+    Configuration configuration = Mockito.spy(getRawConfiguration());
 
     // Set redirect to wasb rename true and assert rename.
     configuration.setBoolean(FS_AZURE_REDIRECT_RENAME, true);

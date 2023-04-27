@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.mockito.Mockito;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
@@ -124,7 +125,7 @@ public class ITestAzureBlobFileSystemDelete extends
   public void testEnsureFileIsDeletedWithRedirection() throws Exception {
 
     // Set redirect to wasb delete as true and assert deletion.
-    Configuration configuration = getRawConfiguration();
+    Configuration configuration = Mockito.spy(getRawConfiguration());
     configuration.setBoolean(FS_AZURE_REDIRECT_DELETE, true);
     AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
 
