@@ -167,6 +167,7 @@ public class ITestAzureBlobFileSystemAppend extends
   public void testRecreateAppendAndFlush() throws IOException {
     final AzureBlobFileSystem fs = getFileSystem();
     Assume.assumeTrue(fs.getAbfsStore().getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB);
+    Assume.assumeTrue(!fs.getAbfsStore().getAbfsConfiguration().shouldIngressFallbackToDfs());
     fs.create(TEST_FILE_PATH);
     FSDataOutputStream outputStream = fs.append(TEST_FILE_PATH);
     outputStream.write(10);

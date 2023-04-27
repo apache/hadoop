@@ -143,8 +143,10 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     fs.mkdirs(testFilePath.getParent());
     PrefixMode prefixMode = getPrefixMode(fs);
     try (FSDataOutputStream out = fs.create(testFilePath)) {
+      AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
       LambdaTestUtils.intercept(IOException.class, isHNSEnabled ? ERR_PARALLEL_ACCESS_DETECTED
-              : prefixMode == PrefixMode.BLOB ? ERR_NO_LEASE_ID_SPECIFIED_BLOB : ERR_NO_LEASE_ID_SPECIFIED, () -> {
+              : prefixMode == PrefixMode.BLOB && !abfsConfiguration.shouldIngressFallbackToDfs() ? ERR_NO_LEASE_ID_SPECIFIED_BLOB
+              : ERR_NO_LEASE_ID_SPECIFIED, () -> {
         try (FSDataOutputStream out2 = fs.create(testFilePath)) {
         }
         return "Expected second create on infinite lease dir to fail";
@@ -228,14 +230,15 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     fs.breakLease(testFilePath);
     fs.registerListener(null);
     PrefixMode prefixMode = getPrefixMode(fs);
-    LambdaTestUtils.intercept(IOException.class, prefixMode == PrefixMode.BLOB
+    AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
+    LambdaTestUtils.intercept(IOException.class, prefixMode == PrefixMode.BLOB && !abfsConfiguration.shouldIngressFallbackToDfs()
             ? ERR_LEASE_EXPIRED : ERR_LEASE_EXPIRED_DFS, () -> {
       out.write(1);
       out.hsync();
       return "Expected exception on write after lease break but got " + out;
     });
 
-    LambdaTestUtils.intercept(IOException.class, prefixMode == PrefixMode.BLOB
+    LambdaTestUtils.intercept(IOException.class, prefixMode == PrefixMode.BLOB && !abfsConfiguration.shouldIngressFallbackToDfs()
             ? ERR_LEASE_EXPIRED : ERR_LEASE_EXPIRED_DFS, () -> {
       out.close();
       return "Expected exception on close after lease break but got " + out;
@@ -263,7 +266,8 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
 
     fs.breakLease(testFilePath);
     PrefixMode prefixMode = getPrefixMode(fs);
-    LambdaTestUtils.intercept(IOException.class, prefixMode == PrefixMode.BLOB
+    AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
+    LambdaTestUtils.intercept(IOException.class, prefixMode == PrefixMode.BLOB && !abfsConfiguration.shouldIngressFallbackToDfs()
             ? ERR_LEASE_EXPIRED : ERR_LEASE_EXPIRED_DFS, () -> {
       out.close();
       return "Expected exception on close after lease break but got " + out;
