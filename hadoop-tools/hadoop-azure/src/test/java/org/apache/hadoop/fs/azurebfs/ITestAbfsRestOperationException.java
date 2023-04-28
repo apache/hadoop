@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.mockito.Mockito;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
@@ -98,7 +99,7 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
   public void testWithDifferentCustomTokenFetchRetry(int numOfRetries) throws Exception {
     AzureBlobFileSystem fs = this.getFileSystem();
 
-    Configuration config = new Configuration(this.getRawConfiguration());
+    Configuration config = Mockito.spy(new Configuration(this.getRawConfiguration()));
     String accountName = config.get("fs.azure.abfs.account.name");
     // Setup to configure custom token provider
     config.set("fs.azure.account.auth.type", "Custom");
@@ -128,7 +129,7 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
 
   @Test
   public void testAuthFailException() throws Exception {
-    Configuration config = new Configuration(getRawConfiguration());
+    Configuration config = Mockito.spy(new Configuration(getRawConfiguration()));
     String accountName = config
         .get(FS_AZURE_ABFS_ACCOUNT_NAME);
     // Setup to configure custom token provider
