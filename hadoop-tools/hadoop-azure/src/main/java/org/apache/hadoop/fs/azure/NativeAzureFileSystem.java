@@ -443,7 +443,7 @@ public class NativeAzureFileSystem extends FileSystem {
      * failure.
      * @throws IOException Thrown when fail to renaming.
      */
-    public void execute() throws IOException {
+    public void execute(BlobMaterialization srcBlobMaterialization) throws IOException {
 
       AzureFileSystemThreadTask task = new AzureFileSystemThreadTask() {
         @Override
@@ -460,8 +460,9 @@ public class NativeAzureFileSystem extends FileSystem {
 
       // Rename the source folder 0-byte root file itself.
       FileMetadata srcMetadata2 = this.getSourceMetadata();
-      if (srcMetadata2.getBlobMaterialization() ==
-          BlobMaterialization.Explicit) {
+      if (srcBlobMaterialization == BlobMaterialization.Explicit &&
+              srcMetadata2.getBlobMaterialization() ==
+                      BlobMaterialization.Explicit) {
 
         // It already has a lease on it from the "prepare" phase so there's no
         // need to get one now. Pass in existing lease to allow file delete.
@@ -762,7 +763,7 @@ public class NativeAzureFileSystem extends FileSystem {
   /**
    * The default number of threads to be used for rename operation.
    */
-  public static final int DEFAULT_AZURE_RENAME_THREADS = 0;
+  public static final int DEFAULT_AZURE_RENAME_THREADS = 5;
 
   /**
    * The configuration property to set number of threads to be used for delete operation.
@@ -772,7 +773,7 @@ public class NativeAzureFileSystem extends FileSystem {
   /**
    * The default number of threads to be used for delete operation.
    */
-  public static final int DEFAULT_AZURE_DELETE_THREADS = 0;
+  public static final int DEFAULT_AZURE_DELETE_THREADS = 5;
 
   /**
    * The number of threads to be used for delete operation after reading user configuration.
@@ -1420,14 +1421,18 @@ public class NativeAzureFileSystem extends FileSystem {
         instrumentation);
     }
 
-    store.initialize(uri, conf, instrumentation);
+    try {
+      store.initialize(uri, conf, instrumentation);
+    } catch (URISyntaxException e) {
+      e.printStackTrace();
+    }
     setConf(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.workingDir = new Path("/user", UserGroupInformation.getCurrentUser()
         .getShortUserName()).makeQualified(getUri(), getWorkingDirectory());
 
-    this.appendSupportEnabled = conf.getBoolean(APPEND_SUPPORT_ENABLE_PROPERTY_NAME, false);
+    this.appendSupportEnabled = conf.getBoolean(APPEND_SUPPORT_ENABLE_PROPERTY_NAME, true);
     LOG.debug("NativeAzureFileSystem. Initializing.");
     LOG.debug("  blockSize  = {}", store.getHadoopBlockSize());
 
@@ -2264,7 +2269,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // corresponding directory blob a) and that would implicitly delete
       // the directory as well, which is not correct.
 
-      if (parentPath.getParent() != null) {// Not root
+      if (parentPath != null && parentPath.getParent() != null) {// Not root
         String parentKey = pathToKey(parentPath);
 
         FileMetadata parentMetadata = null;
@@ -2339,7 +2344,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // The path specifies a folder. Recursively delete all entries under the
       // folder.
       LOG.debug("Directory Delete encountered: {}", f);
-      if (parentPath.getParent() != null) {
+      if (parentPath != null && parentPath.getParent() != null) {
         String parentKey = pathToKey(parentPath);
         FileMetadata parentMetadata = null;
 
@@ -3274,9 +3279,13 @@ public class NativeAzureFileSystem extends FileSystem {
           "rename", absoluteDstPath);
       }
     }
-    FileMetadata srcMetadata = null;
+    FileMetadata srcMetadata;
+    BlobMaterialization srcBlobMaterialization = null;
     try {
       srcMetadata = store.retrieveMetadata(srcKey);
+      if (srcMetadata != null){
+        srcBlobMaterialization = srcMetadata.getBlobMaterialization();
+      }
     } catch (IOException ex) {
       Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
 
@@ -3334,7 +3343,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // operation to HBase log file folders, where atomic rename is required.
       // In the future, we could generalize it easily to all folders.
       renamePending = prepareAtomicFolderRename(srcKey, dstKey);
-      renamePending.execute();
+      renamePending.execute(srcBlobMaterialization);
 
       LOG.debug("Renamed {} to {} successfully.", src, dst);
       renamePending.cleanup();
