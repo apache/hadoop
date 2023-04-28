@@ -27,11 +27,12 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.Path;
+
 import java.util.HashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -188,7 +189,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
 
   /**
-   * Test create on implicit directory with explicit parent
+   * Test create on implicit directory with explicit parent.
    * @throws Exception
    */
   @Test
