@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.junit.Assert;
 
@@ -56,6 +57,8 @@ public class TestSignalContainer {
     rm.start();
 
     MockNM nm1 = rm.registerNode("h1:1234", 5000);
+
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 5);
 
     RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
 

@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 
@@ -155,6 +157,7 @@ public class TestApplicationACLs extends ParameterizedSchedulerTestBase {
         UserGroupInformation.createUserForTesting(SUPER_USER,
             new String[] { SUPER_GROUP });
         resourceManager.start();
+        CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(resourceManager, 6);
       };
     }.start();
     int waitCount = 0;

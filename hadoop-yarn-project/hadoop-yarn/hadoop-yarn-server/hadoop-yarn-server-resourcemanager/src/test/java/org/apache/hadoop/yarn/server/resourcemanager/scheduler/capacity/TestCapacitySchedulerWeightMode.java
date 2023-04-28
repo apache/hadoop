@@ -507,6 +507,8 @@ public class TestCapacitySchedulerWeightMode {
     MockNM nm4 = rm1.registerNode("h4:1234", 2048);
     MockNM nm5 = rm1.registerNode("h5:1234", 2048);
 
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 2);
+
     ContainerId containerId;
 
     // launch an app to queue a1 (label = x), and check all container will
@@ -610,6 +612,5 @@ public class TestCapacitySchedulerWeightMode {
         capacityOrWeightString.contains("normalizedWeight"));
     Assert.assertEquals(!shouldContainWeight,
         capacityOrWeightString.contains("capacity"));
-
   }
 }

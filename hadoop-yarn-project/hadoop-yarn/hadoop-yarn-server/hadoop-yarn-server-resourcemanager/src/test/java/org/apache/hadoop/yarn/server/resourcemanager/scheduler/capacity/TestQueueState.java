@@ -244,6 +244,7 @@ public class TestQueueState {
     MockRM rm = new MockRM(newConf, newMemStore);
     rm.start();
     MockNM nm = rm.registerNode("h1:1234", 204800);
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 200);
 
     // submit an app, AM is running on nm1
     MockRMAppSubmissionData data =

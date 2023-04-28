@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.Application;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -236,5 +237,24 @@ public final class CapacitySchedulerTestUtilities {
   public static void checkNodeResourceUsage(int expected, NodeManager node) {
     Assert.assertEquals(expected, node.getUsed().getMemorySize());
     node.checkResourceUsage();
+  }
+
+  public static CapacityScheduler getCapacityScheduler(MockRM rm, int memoryGb) {
+    return getCapacityScheduler(rm, memoryGb, 16);
+  }
+
+  public static CapacityScheduler getCapacityScheduler(MockRM rm, int memoryGb, int cores) {
+    if(!(rm.getResourceScheduler() instanceof CapacityScheduler)) {
+      return null;
+    }
+    NullRMNodeLabelsManager mgr = (NullRMNodeLabelsManager) rm.getRMContext().getNodeLabelManager();
+    CapacitySchedulerQueueCapacityHandler queueController =
+        new CapacitySchedulerQueueCapacityHandler(mgr);
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    Resource clusterResource = Resource.newInstance(memoryGb * GB, cores);
+    mgr.setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, clusterResource);
+    queueController.updateRoot(cs.getQueue("root"), clusterResource);
+    queueController.updateChildren(clusterResource, cs.getQueue("root"));
+    return cs;
   }
 }

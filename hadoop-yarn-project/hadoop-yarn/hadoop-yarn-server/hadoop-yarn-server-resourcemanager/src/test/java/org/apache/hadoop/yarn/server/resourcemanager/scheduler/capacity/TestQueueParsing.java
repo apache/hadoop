@@ -1173,6 +1173,7 @@ public class TestQueueParsing {
           return nodeLabelManager;
         }
       };
+      CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 6);
     } finally {
       IOUtils.closeStream(rm);
     }

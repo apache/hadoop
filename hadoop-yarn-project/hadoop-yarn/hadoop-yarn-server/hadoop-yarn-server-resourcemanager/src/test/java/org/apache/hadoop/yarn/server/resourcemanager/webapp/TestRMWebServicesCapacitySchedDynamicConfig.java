@@ -31,10 +31,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueTemplate;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
@@ -173,6 +175,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     autoQueueHandler = cs.getCapacitySchedulerQueueManager();
     rm.registerNode("h1:1234", nodeMemory); // label = x
+    cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, nodeMemory / 1024, nodeMemory / 1024);
   }
 
   private void createQueue(String queuePath) throws YarnException,
@@ -324,5 +327,6 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     //Therefore CS will think there's only the default queue there.
     ((CapacityScheduler) rm.getResourceScheduler()).reinitialize(conf,
         rm.getRMContext(), true);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 0,0);
   }
 }

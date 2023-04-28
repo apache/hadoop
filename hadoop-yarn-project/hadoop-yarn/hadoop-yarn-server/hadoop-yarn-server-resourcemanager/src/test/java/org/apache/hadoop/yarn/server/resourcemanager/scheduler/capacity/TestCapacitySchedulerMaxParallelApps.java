@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -156,6 +157,7 @@ public class TestCapacitySchedulerMaxParallelApps {
     nm1 = rm.registerNode("h1:1234", 4096, 8);
     rm.registerNode("h2:1234", 4096, 8);
     rm.registerNode("h3:1234", 4096, 8);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 12,24);
 
     rm.drainEvents();
 

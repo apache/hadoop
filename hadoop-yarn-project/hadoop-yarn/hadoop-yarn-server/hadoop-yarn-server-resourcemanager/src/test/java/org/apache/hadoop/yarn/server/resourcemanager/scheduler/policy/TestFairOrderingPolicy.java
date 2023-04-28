@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.junit.Assert;
@@ -176,7 +177,7 @@ public class TestFairOrderingPolicy {
     MockRM rm = new MockRM(csConf);
     rm.start();
 
-    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 8);
 
     // Get LeafQueue
     LeafQueue lq = (LeafQueue) cs.getQueue("default");

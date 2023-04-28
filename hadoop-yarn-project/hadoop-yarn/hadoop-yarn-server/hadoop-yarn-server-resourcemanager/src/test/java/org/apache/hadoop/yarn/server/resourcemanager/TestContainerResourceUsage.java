@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -46,6 +47,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
+
 import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Assert;
@@ -77,6 +81,7 @@ public class TestContainerResourceUsage {
     MockNM nm =
         new MockNM("127.0.0.1:1234", 15120, rm.getResourceTrackerService());
     nm.registerNode();
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 16);
 
     RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm);
 
@@ -146,6 +151,7 @@ public class TestContainerResourceUsage {
     MockNM nm =
         new MockNM("127.0.0.1:1234", 65536, rm0.getResourceTrackerService());
     nm.registerNode();
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm0, 66);
 
     RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm0);
 
@@ -266,6 +272,8 @@ public class TestContainerResourceUsage {
       throws Exception {
     MockRM rm = new MockRM(conf);
     rm.start();
+
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 8);
 
     MockRMAppSubmissionData data =
         MockRMAppSubmissionData.Builder.createWithMemory(200, rm)

@@ -23,8 +23,11 @@ import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -72,7 +75,7 @@ public class TestCapacitySchedulerAmbiguousLeafs {
     conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
 
     MockRM rm = new MockRM(conf);
-    CapacityScheduler cs = (CapacityScheduler)rm.getResourceScheduler();
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 20);
     CapacitySchedulerConfiguration schedulerConf = cs.getConfiguration();
 
     schedulerConf.setQueues(ROOT, new String[] {"a", "b", "default"});
@@ -103,8 +106,7 @@ public class TestCapacitySchedulerAmbiguousLeafs {
     schedulerConf.setOverrideWithQueueMappings(true);
 
     rm.start();
-    cs.reinitialize(schedulerConf, rm.getRMContext());
-
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 16,16);
 
     ApplicationId id = submitApplication(rm, "root.a.unique");
     rm.waitForState(id, RMAppState.ACCEPTED);

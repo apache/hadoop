@@ -21,6 +21,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.resourcetypes.ResourceTypesTestHelper;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -453,6 +455,7 @@ public abstract class ApplicationMasterServiceTestBase {
       MockRM rm = new MockRM(entry.getKey());
       rm.start();
       MockNM nm1 = rm.registerNode(DEFAULT_HOST + ":" + DEFAULT_PORT, 6 * GB);
+      CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 6);
       RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
       //Wait to make sure the attempt has the right state
       //TODO explore a better way than sleeping for a while (YARN-4929)
@@ -507,6 +510,8 @@ public abstract class ApplicationMasterServiceTestBase {
 
     // Register node1
     MockNM nm1 = rm.registerNode(DEFAULT_HOST + ":" + DEFAULT_PORT, 6 * GB);
+
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 6);
 
     RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
 

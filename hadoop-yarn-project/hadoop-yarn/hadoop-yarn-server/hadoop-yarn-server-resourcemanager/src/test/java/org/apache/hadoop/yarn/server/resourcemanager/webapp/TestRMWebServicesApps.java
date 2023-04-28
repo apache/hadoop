@@ -43,11 +43,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -1991,6 +1993,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
 
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 2);
     //YARN-11114 - Finished apps can only be queried with exactly the
     // same queue name that the app is submitted to.
     //As the queue is 'root.default'  and the query is 'default' here,
@@ -2059,6 +2062,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
 
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 2);
     RMApp finishedApp1 = MockRMAppSubmitter.submit(rm,
         MockRMAppSubmissionData.Builder
             .createWithMemory(CONTAINER_MB, rm)

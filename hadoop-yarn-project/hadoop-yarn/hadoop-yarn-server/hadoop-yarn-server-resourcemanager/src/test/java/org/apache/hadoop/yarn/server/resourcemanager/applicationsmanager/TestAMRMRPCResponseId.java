@@ -31,8 +31,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -77,6 +81,7 @@ public class TestAMRMRPCResponseId {
   public void testARRMResponseId() throws Exception {
 
     MockNM nm1 = rm.registerNode("h1:1234", 5000);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 5);
 
     RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
 

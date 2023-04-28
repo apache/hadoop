@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
@@ -135,7 +136,7 @@ public class TestCapacitySchedulerNodes {
         ResourceScheduler.class);
     MockRM rm = new MockRM(conf);
     rm.start();
-    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 4);
 
     String host = "127.0.0.1";
     RMNode node =
@@ -148,8 +149,9 @@ public class TestCapacitySchedulerNodes {
     cs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(), null,
         Collections.<ContainerId>emptyList(),
         Collections.singletonList(host), null, NULL_UPDATE_REQUESTS);
-    Assert.assertTrue(cs.getApplicationAttempt(appAttemptId)
-        .isPlaceBlacklisted(host));
+    FiCaSchedulerApp applicationAttempt = cs.getApplicationAttempt(appAttemptId);
+    Assert.assertNotNull(applicationAttempt);
+    Assert.assertTrue(applicationAttempt.isPlaceBlacklisted(host));
     cs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(), null,
         Collections.<ContainerId>emptyList(), null,
         Collections.singletonList(host), NULL_UPDATE_REQUESTS);
@@ -364,12 +366,10 @@ public class TestCapacitySchedulerNodes {
     MockNM nm2 = rm.registerNode("127.0.0.1:1235", 10240, 10);
 
     am.allocate(ResourceRequest.ANY, 2048, 1, null);
-
     CapacityScheduler scheduler =
-        (CapacityScheduler) rm.getRMContext().getScheduler();
-    FiCaSchedulerNode node =
-        (FiCaSchedulerNode)
-            scheduler.getNodeTracker().getNode(nm2.getNodeId());
+        CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 20, 20);
+
+    FiCaSchedulerNode node = scheduler.getNodeTracker().getNode(nm2.getNodeId());
     scheduler.handle(new NodeRemovedSchedulerEvent(
         rm.getRMContext().getRMNodes().get(nm2.getNodeId())));
     // schedulerNode is removed, try allocate a container

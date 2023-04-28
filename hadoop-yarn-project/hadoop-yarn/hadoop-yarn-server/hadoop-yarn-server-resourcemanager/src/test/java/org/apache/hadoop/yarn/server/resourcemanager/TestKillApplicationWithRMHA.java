@@ -34,10 +34,13 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -61,6 +64,7 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
     nm1.registerNode();
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 16);
 
     // Submit the application
     MockRMAppSubmissionData data =
@@ -158,6 +162,7 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
     MockNM nm1 = new MockNM("127.0.0.1:1234", 15120,
         rm1.getResourceTrackerService());
     nm1.registerNode();
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 16);
 
     // create app and launch the AM
     RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);

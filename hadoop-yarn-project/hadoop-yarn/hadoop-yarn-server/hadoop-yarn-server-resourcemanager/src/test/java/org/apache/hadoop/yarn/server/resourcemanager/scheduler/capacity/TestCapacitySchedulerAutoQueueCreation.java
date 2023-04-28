@@ -844,6 +844,8 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       // add new NM.
       newMockRM.registerNode("127.0.0.3:1234", 125 * GB, 20);
+      CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(newMockRM, 141,68);
+
 
       // There will be change in effective resource when nodes are added
       // since we deal with percentages

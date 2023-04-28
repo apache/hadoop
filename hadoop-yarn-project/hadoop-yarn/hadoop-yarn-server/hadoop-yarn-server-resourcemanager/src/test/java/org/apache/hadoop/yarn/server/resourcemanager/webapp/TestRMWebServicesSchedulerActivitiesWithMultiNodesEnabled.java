@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.Activi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.AllocationState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.ResourceUsageMultiNodeLookupPolicy;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -166,6 +167,8 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
         rm.getResourceTrackerService());
     nm.registerNode();
 
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 2);
+
     try {
       RMApp app1 = MockRMAppSubmitter.submit(rm,
           MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
@@ -191,7 +194,6 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       //Trigger scheduling for this app
-      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
       RMNode rmNode = rm.getRMContext().getRMNodes().get(nm.getNodeId());
       cs.handle(new NodeUpdateSchedulerEvent(rmNode));
 
@@ -225,6 +227,8 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
         rm.getResourceTrackerService());
     nm.registerNode();
 
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 8);
+
     try {
       //Trigger recording for multi-nodes without params
       WebResource r = resource();
@@ -234,7 +238,6 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       //Trigger scheduling for this app
-      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
       RMNode rmNode = rm.getRMContext().getRMNodes().get(nm.getNodeId());
       cs.handle(new NodeUpdateSchedulerEvent(rmNode));
 
@@ -264,6 +267,8 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * 1024);
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 2 * 1024);
 
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 6);
+
     try {
       RMApp app1 = MockRMAppSubmitter.submit(rm,
           MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
@@ -288,7 +293,6 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
           json.getJSONObject(FN_APP_ACT_ROOT).getString(FN_ACT_DIAGNOSTIC));
 
       //Trigger scheduling for this app
-      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
       RMNode rmNode = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
       cs.handle(new NodeUpdateSchedulerEvent(rmNode));
 
@@ -325,12 +329,13 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
   @Test (timeout=30000)
   public void testInsufficientResourceDiagnostic() throws Exception {
     rm.start();
-    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * 1024);
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 2 * 1024);
     MockNM nm3 = rm.registerNode("127.0.0.3:1234", 2 * 1024);
     MockNM nm4 = rm.registerNode("127.0.0.4:1234", 2 * 1024);
+
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 10);
 
     try {
       RMApp app1 = MockRMAppSubmitter.submit(rm,
@@ -411,12 +416,13 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
   @Test (timeout=30000)
   public void testAppInsufficientResourceDiagnostic() throws Exception {
     rm.start();
-    CapacityScheduler cs = (CapacityScheduler)rm.getResourceScheduler();
 
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * 1024);
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 2 * 1024);
     MockNM nm3 = rm.registerNode("127.0.0.3:1234", 2 * 1024);
     MockNM nm4 = rm.registerNode("127.0.0.4:1234", 2 * 1024);
+
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 10);
 
     try {
       RMApp app1 = MockRMAppSubmitter.submit(rm,
@@ -490,12 +496,13 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
   @Test (timeout=30000)
   public void testGroupByDiagnostics() throws Exception {
     rm.start();
-    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * 1024);
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 2 * 1024);
     MockNM nm3 = rm.registerNode("127.0.0.3:1234", 2 * 1024);
     MockNM nm4 = rm.registerNode("127.0.0.4:1234", 2 * 1024);
+
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 10);
 
     try {
       RMApp app1 = MockRMAppSubmitter.submit(rm,
@@ -576,12 +583,13 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
   @Test (timeout=30000)
   public void testAppGroupByDiagnostics() throws Exception {
     rm.start();
-    CapacityScheduler cs = (CapacityScheduler)rm.getResourceScheduler();
 
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * 1024);
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 2 * 1024);
     MockNM nm3 = rm.registerNode("127.0.0.3:1234", 2 * 1024);
     MockNM nm4 = rm.registerNode("127.0.0.4:1234", 2 * 1024);
+
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 10);
 
     try {
       RMApp app1 = MockRMAppSubmitter.submit(rm,

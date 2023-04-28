@@ -126,6 +126,8 @@ public class TestCapacitySchedulerMultiNodesWithPreemption {
     MockNM nm3 = rm.registerNode("127.0.0.3:1234", 3 * GB, 2);
     nms[2] = nm3;
 
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 6, 6);
+
     MultiNodeSortingManager<SchedulerNode> mns = rm.getRMContext()
         .getMultiNodeSortingManager();
     MultiNodeSorter<SchedulerNode> sorter = mns
@@ -221,7 +223,6 @@ public class TestCapacitySchedulerMultiNodesWithPreemption {
 
     // Validate if Reservation happened
     // Reservation will happen on last node in the iterator - Node3
-    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     ApplicationAttemptId app2AttemptId = app2.getCurrentAppAttempt()
         .getAppAttemptId();
     FiCaSchedulerApp schedulerApp = cs.getApplicationAttempt(app2AttemptId);

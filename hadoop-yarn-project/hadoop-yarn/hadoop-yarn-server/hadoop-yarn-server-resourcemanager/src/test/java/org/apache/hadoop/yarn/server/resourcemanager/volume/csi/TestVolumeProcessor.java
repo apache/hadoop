@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.lifecycle.Volume;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.lifecycle.VolumeState;
 import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.processor.VolumeAMSProcessor;
@@ -124,6 +125,7 @@ public class TestVolumeProcessor {
       mockNMS[i] = rm.registerNode("192.168.0." + i + ":1234", 10 * GB);
       rmNodes[i] = rm.getRMContext().getRMNodes().get(mockNMS[i].getNodeId());
     }
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 40);
   }
 
   @After

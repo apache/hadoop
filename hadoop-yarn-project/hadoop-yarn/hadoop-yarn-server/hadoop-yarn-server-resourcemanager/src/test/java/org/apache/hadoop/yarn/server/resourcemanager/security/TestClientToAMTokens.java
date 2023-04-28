@@ -62,6 +62,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMWithCustomAMLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.ParameterizedSchedulerTestBase;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -221,6 +223,7 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
 
     // Set up a node.
     MockNM nm1 = rm.registerNode("localhost:1234", 3072);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 3);
     nm1.nodeHeartbeat(true);
     rm.drainEvents();
     
@@ -451,6 +454,7 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
 
     // Set up a node.
     MockNM nm1 = rm.registerNode("localhost:1234", 3072);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 3);
     nm1.nodeHeartbeat(true);
     rm.drainEvents();
 

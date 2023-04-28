@@ -310,7 +310,7 @@ public class TestApplicationLimits {
         isEqualTo(amResourceLimit);
     assertThat(queue.getUserAMResourceLimit()).isEqualTo(
         Resource.newInstance(80*GB, 1));
-    
+
     // Assert in metrics
     assertThat(queue.getMetrics().getAMResourceLimitMB()).isEqualTo(
         amResourceLimit.getMemorySize());
@@ -809,6 +809,8 @@ public class TestApplicationLimits {
     MockNM nm2 = rm.registerNode("h2:1234", 4096);
     MockNM nm3 = rm.registerNode("h3:1234", 4096);
 
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 4);
+
     // Submit application to queue c where the default partition capacity is
     // zero
     RMApp app1 = MockRMAppSubmitter.submit(rm,
@@ -851,7 +853,8 @@ public class TestApplicationLimits {
     assertEquals(RMAppState.FAILED, app3.getState());
     assertEquals(
         "org.apache.hadoop.security.AccessControlException: "
-            + "Queue root.a.a1 already has 1 applications, cannot accept "
+            + "Queue root.a.a1 already has 1 applications, "
+            + "what is more than the max 1, so cannot accept "
             + "submission of application: " + app3.getApplicationId(),
         app3.getDiagnostics().toString());
 

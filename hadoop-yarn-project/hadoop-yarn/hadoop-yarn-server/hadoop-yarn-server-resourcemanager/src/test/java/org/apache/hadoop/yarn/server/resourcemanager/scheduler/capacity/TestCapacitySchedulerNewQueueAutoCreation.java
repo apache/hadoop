@@ -117,6 +117,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     cs.start();
     autoQueueHandler = cs.getCapacitySchedulerQueueManager();
     mockRM.registerNode("h1:1234", MAX_MEMORY * GB); // label = x
+    CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, MAX_MEMORY);
   }
 
   /*
@@ -138,6 +139,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // - e-auto (w=1)
     //   - e1-auto (w=1)
     MockNM nm1 = mockRM.registerNode("h1:1234", 1200 * GB); // label = x
+    cs = CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 2400);
 
     createQueue("root.c-auto");
 

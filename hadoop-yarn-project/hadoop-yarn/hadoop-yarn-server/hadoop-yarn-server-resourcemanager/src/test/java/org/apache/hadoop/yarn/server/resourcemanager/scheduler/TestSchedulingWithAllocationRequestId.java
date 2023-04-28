@@ -31,8 +31,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ParameterizedSchedulerTestBase;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.junit.Assert;
 import org.junit.Test;
@@ -74,6 +77,8 @@ public class TestSchedulingWithAllocationRequestId
 
       MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * GB);
       MockNM nm2 = rm.registerNode("127.0.0.2:5678", 4 * GB);
+
+      CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 8);
       RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
       // kick the scheduling
       nm1.nodeHeartbeat(true);
@@ -116,6 +121,7 @@ public class TestSchedulingWithAllocationRequestId
 
       MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * GB);
       MockNM nm2 = rm.registerNode("127.0.0.2:5678", 4 * GB);
+      CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 8);
       RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
       // kick the scheduling
       nm1.nodeHeartbeat(true);
@@ -175,6 +181,8 @@ public class TestSchedulingWithAllocationRequestId
       MockNM nm2 =
           new MockNM(host1 + ":2351", 8 * GB, rm.getResourceTrackerService());
       nm2.registerNode();
+
+      CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 16);
 
       // submit 1st app
       MockRMAppSubmissionData data1 =

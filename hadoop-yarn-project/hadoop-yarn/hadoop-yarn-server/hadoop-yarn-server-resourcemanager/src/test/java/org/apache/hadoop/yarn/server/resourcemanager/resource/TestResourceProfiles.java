@@ -29,6 +29,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -163,6 +166,7 @@ public class TestResourceProfiles {
     MockRM rm = new MockRM(conf);
     rm.start();
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * 1024);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 6);
     RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
@@ -176,6 +180,7 @@ public class TestResourceProfiles {
     rm = new MockRM(conf);
     rm.start();
     nm1 = rm.registerNode("127.0.0.1:1234", 6 * 1024);
+     cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 6);
     app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
     nm1.nodeHeartbeat(true);
     attempt1 = app1.getCurrentAppAttempt();
