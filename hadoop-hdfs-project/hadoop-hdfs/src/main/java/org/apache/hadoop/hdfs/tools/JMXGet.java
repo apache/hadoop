@@ -247,33 +247,27 @@ public class JMXGet {
   private static CommandLine parseArgs(Options opts, String... args)
   throws IllegalArgumentException {
 
-    OptionBuilder.withArgName("NameNode|DataNode");
-    OptionBuilder.hasArg();
-    OptionBuilder.withDescription("specify jmx service (NameNode by default)");
-    Option jmx_service = OptionBuilder.create("service");
+    Option jmx_service = Option.builder("service")
+        .argName("NameNode|DataNode").hasArg()
+        .desc("specify jmx service (NameNode by default)").build();
 
-    OptionBuilder.withArgName("mbean server");
-    OptionBuilder.hasArg();
-    OptionBuilder
-    .withDescription("specify mbean server (localhost by default)");
-    Option jmx_server = OptionBuilder.create("server");
+    Option jmx_server = Option.builder("server")
+        .argName("mbean server").hasArg()
+        .desc("specify mbean server (localhost by default)").build();
 
-    OptionBuilder.withDescription("print help");
-    Option jmx_help = OptionBuilder.create("help");
+    Option jmx_help = Option.builder("help").desc("print help").build();
 
-    OptionBuilder.withArgName("mbean server port");
-    OptionBuilder.hasArg();
-    OptionBuilder.withDescription("specify mbean server port, "
-        + "if missing - it will try to connect to MBean Server in the same VM");
-    Option jmx_port = OptionBuilder.create("port");
+    Option jmx_port = Option.builder("port")
+        .argName("mbean server port")
+        .hasArg().desc("specify mbean server port, "
+        + "if missing - it will try to connect to MBean Server in the same VM").build();
 
-    OptionBuilder.withArgName("VM's connector url");
-    OptionBuilder.hasArg();
-    OptionBuilder.withDescription("connect to the VM on the same machine;"
+    Option jmx_localVM = Option.builder("localVM")
+        .argName("VM's connector url").hasArg()
+        .desc("connect to the VM on the same machine;"
         + "\n use:\n jstat -J-Djstat.showUnsupported=true -snap <vmpid> | "
         + "grep sun.management.JMXConnectorServer.address\n "
-        + "to find the url");
-    Option jmx_localVM = OptionBuilder.create("localVM");
+        + "to find the url").build();
 
     opts.addOption(jmx_server);
     opts.addOption(jmx_help);
