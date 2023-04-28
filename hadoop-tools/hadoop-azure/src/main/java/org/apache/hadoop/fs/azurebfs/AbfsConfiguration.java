@@ -352,6 +352,28 @@ public class AbfsConfiguration{
     }
   }
 
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_REDIRECT_RENAME,
+          DefaultValue = DEFAULT_FS_AZURE_REDIRECT_RENAME)
+  private boolean redirectRename;
+
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_REDIRECT_DELETE,
+          DefaultValue = DEFAULT_FS_AZURE_REDIRECT_DELETE)
+  private boolean redirectDelete;
+
+  public boolean shouldRedirectRename() {
+    return this.redirectRename;
+  }
+
+  public boolean shouldRedirectDelete() {
+    return this.redirectDelete;
+  }
+
+  public boolean isRedirection() {
+    return (shouldRedirectRename() || shouldRedirectDelete());
+  }
+
   public Trilean getIsNamespaceEnabledAccount() {
     return Trilean.getTrilean(isNamespaceEnabledAccount);
   }
@@ -362,6 +384,33 @@ public class AbfsConfiguration{
 
   public void setPrefixMode(final PrefixMode prefixMode) {
     this.prefixMode = prefixMode;
+  }
+
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_ENABLE_BLOB_ENDPOINT,
+          DefaultValue = DEFAULT_FS_AZURE_ENABLE_BLOBENDPOINT)
+  private boolean enableBlobEndpoint;
+
+  public boolean shouldEnableBlobEndPoint() {
+    return this.enableBlobEndpoint;
+  }
+
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_MKDIRS_FALLBACK_TO_DFS,
+          DefaultValue = DEFAULT_FS_AZURE_MKDIRS_FALLBACK_TO_DFS)
+  private boolean mkdirFallbackToDfs;
+
+  @BooleanConfigurationValidatorAnnotation(
+          ConfigurationKey = FS_AZURE_INGRESS_FALLBACK_TO_DFS,
+          DefaultValue = DEFAULT_FS_AZURE_INGRESS_FALLBACK_TO_DFS)
+  private boolean ingressFallbackToDfs;
+
+  public boolean shouldMkdirFallbackToDfs() {
+    return mkdirFallbackToDfs;
+  }
+
+  public boolean shouldIngressFallbackToDfs() {
+    return ingressFallbackToDfs;
   }
 
   /**
@@ -759,7 +808,7 @@ public class AbfsConfiguration{
   }
 
   public String getCustomUserAgentPrefix() {
-    return this.userAgentId;
+    return "abfsdriverV2.1";
   }
 
   public String getClusterName() {

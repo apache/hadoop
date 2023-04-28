@@ -58,7 +58,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
-import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.enums.BlobCopyProgress;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.fs.azurebfs.services.BlobList;
@@ -671,6 +671,26 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   /**
+   * Gets the property for the container(filesystem) over Blob Endpoint.
+   *
+   * @param tracingContext object of TracingContext required for tracing server calls.
+   * @return BlobProperty for the given path
+   * @throws AzureBlobFileSystemException exception thrown from
+   * {@link AbfsClient#getBlobProperty(Path, TracingContext)} call
+   */
+  BlobProperty getContainerProperty(TracingContext tracingContext) throws AzureBlobFileSystemException {
+    AbfsRestOperation op = client.getContainerProperty(tracingContext);
+    BlobProperty blobProperty = new BlobProperty();
+
+    final AbfsHttpOperation opResult = op.getResult();
+
+    blobProperty.setIsDirectory(true);
+    blobProperty.setPath(new Path("/"));
+
+    return blobProperty;
+  }
+
+  /**
    * Get the list of a blob on a give path, or blob starting with the given prefix.
    *
    * @param sourceDirBlobPath path from where the list of blob is required.
@@ -758,6 +778,31 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return client.createPathBlob(path, isFile, overwrite, metadata, eTag, tracingContext);
   }
 
+  private AbfsRestOperation createFileOrMarker(boolean isNormalBlob, String relativePath, boolean isNamespaceEnabled,
+                                               boolean overwrite, HashMap<String, String> metadata, TracingContext tracingContext,
+                                               FsPermission permission, FsPermission umask, boolean isAppendBlob, String eTag) throws AzureBlobFileSystemException {
+    AbfsRestOperation op;
+    if (!isNormalBlob) {
+      // Marker blob creation flow.
+      if (getPrefixMode() == PrefixMode.DFS || abfsConfiguration.shouldMkdirFallbackToDfs()) {
+        // Marker blob creation is not possible with dfs endpoint.
+        throw new InvalidConfigurationValueException("Incorrect flow for create directory for dfs is hit " + relativePath);
+      } else {
+        op = createPathBlob(relativePath, false, overwrite, metadata, eTag, tracingContext);
+      }
+    } else {
+      // Normal blob creation flow. If config for fallback is not enabled and prefix mode is blob got to blob, else go to dfs.
+      if (getPrefixMode() == PrefixMode.BLOB && !abfsConfiguration.shouldIngressFallbackToDfs()) {
+        op = createPathBlob(relativePath, true, overwrite, metadata, eTag, tracingContext);
+      } else {
+        op = createPath(relativePath, true, overwrite, isNamespaceEnabled ? getOctalNotation(permission) : null,
+                isNamespaceEnabled ? getOctalNotation(umask) : null, isAppendBlob, eTag, tracingContext);
+      }
+    }
+    return op;
+  }
+
+  // Fallback plan : default to v1 create flow which will hit dfs endpoint. Config to enable: "fs.azure.ingress.fallback.to.dfs".
   public OutputStream createFile(final Path path, final FileSystem.Statistics statistics, final boolean overwrite,
       final FsPermission permission, final FsPermission umask,
       TracingContext tracingContext, HashMap<String, String> metadata) throws IOException {
@@ -790,21 +835,18 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       if (triggerConditionalCreateOverwrite) {
         op = conditionalCreateOverwriteFile(relativePath,
             statistics,
-            isNamespaceEnabled ? getOctalNotation(permission) : null,
-            isNamespaceEnabled ? getOctalNotation(umask) : null,
+            isNamespaceEnabled,
+            permission,
+            umask,
             isAppendBlob,
             metadata,
             tracingContext
         );
 
       } else {
-        if (getPrefixMode() == PrefixMode.BLOB) {
-          boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
-          op = createPathBlob(relativePath, isNormalBlob, overwrite, metadata, null, tracingContext);
-        } else {
-          op = createPath(relativePath, true, overwrite, isNamespaceEnabled ? getOctalNotation(permission) : null,
-                  isNamespaceEnabled ? getOctalNotation(umask) : null, isAppendBlob, null, tracingContext);
-        }
+        boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
+        op = createFileOrMarker(isNormalBlob, relativePath, isNamespaceEnabled, overwrite, metadata,
+                tracingContext, permission, umask, isAppendBlob, null);
       }
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
 
@@ -857,8 +899,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    */
   private AbfsRestOperation conditionalCreateOverwriteFile(final String relativePath,
       final FileSystem.Statistics statistics,
-      final String permission,
-      final String umask,
+      boolean isNamespaceEnabled,
+      final FsPermission permission,
+      final FsPermission umask,
       final boolean isAppendBlob,
       HashMap<String, String> metadata,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
@@ -868,13 +911,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // Trigger a create with overwrite=false first so that eTag fetch can be
       // avoided for cases when no pre-existing file is present (major portion
       // of create file traffic falls into the case of no pre-existing file).
-      if (getPrefixMode() == PrefixMode.BLOB) {
-        boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
-        op = createPathBlob(relativePath, isNormalBlob, false, metadata, null, tracingContext);
-      } else {
-        op = createPath(relativePath, true, false, permission, umask, isAppendBlob, null, tracingContext);
-      }
-
+      boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
+      op = createFileOrMarker(isNormalBlob, relativePath, isNamespaceEnabled, false, metadata,
+              tracingContext, permission, umask, isAppendBlob, null);
     } catch (AbfsRestOperationException e) {
       if (e.getStatusCode() == HTTP_CONFLICT) {
         // File pre-exists, fetch eTag
@@ -897,12 +936,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
         try {
           // overwrite only if eTag matches with the file properties fetched before.
-          if (getPrefixMode() == PrefixMode.BLOB) {
-            boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
-            op = createPathBlob(relativePath, isNormalBlob, true, metadata, eTag, tracingContext);
-          } else {
-            op = createPath(relativePath, true, true, permission, umask, isAppendBlob, eTag, tracingContext);
-          }
+          boolean isNormalBlob = !checkIsBlobOrMarker(metadata);
+          op = createFileOrMarker(isNormalBlob, relativePath, isNamespaceEnabled, true, metadata,
+                  tracingContext, permission, umask, isAppendBlob, eTag);
         } catch (AbfsRestOperationException ex) {
           if (ex.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {
             // Is a parallel access case, as file with eTag was just queried
@@ -978,7 +1014,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final FsPermission umask, TracingContext tracingContext)
           throws IOException {
     try (AbfsPerfInfo perfInfo = startTracking("createDirectory", "createPath")) {
-      if (getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
+      if (!abfsConfiguration.shouldMkdirFallbackToDfs() && getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
         ArrayList<Path> keysToCreateAsFolder = new ArrayList<>();
         checkParentChainForFile(path, tracingContext, keysToCreateAsFolder);
         boolean blobOverwrite = abfsConfiguration.isEnabledBlobMkdirOverwrite();
@@ -987,7 +1023,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         metadata.put(X_MS_META_HDI_ISFOLDER, TRUE);
         createFile(path, statistics, blobOverwrite,
                 permission, umask, tracingContext, metadata);
-
         for (Path pathToCreate: keysToCreateAsFolder) {
             createFile(pathToCreate, statistics, blobOverwrite,
                     permission, umask, tracingContext, metadata);
@@ -1303,7 +1338,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         if (isAtomicRenameKey(source.toUri().getPath())) {
           LOG.debug("source dir {} is an atomicRenameKey",
               source.toUri().getPath());
-          renameAtomicityUtils.preRename(srcBlobProperties);
+          renameAtomicityUtils.preRename(srcBlobProperties, isCreateOperationOnBlobEndpoint());
         } else {
           LOG.debug("source dir {} is not an atomicRenameKey",
               source.toUri().getPath());
@@ -1380,6 +1415,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         }
       }
     } while (shouldContinue);
+  }
+
+  private Boolean isCreateOperationOnBlobEndpoint() {
+    return getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB
+        && !getAbfsConfiguration().shouldIngressFallbackToDfs();
   }
 
   /**

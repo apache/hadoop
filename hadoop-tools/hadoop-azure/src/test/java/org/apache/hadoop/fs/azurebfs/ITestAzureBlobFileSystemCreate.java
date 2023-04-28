@@ -35,11 +35,18 @@ import org.apache.hadoop.fs.Path;
 
 import java.util.HashMap;
 import java.util.concurrent.Callable;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.test.LambdaTestUtils;
+
+import org.junit.Assume;
+
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -64,6 +71,7 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_BLOB_MKDIR_OVERWRITE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_META_HDI_ISFOLDER;
@@ -494,7 +502,8 @@ public class ITestAzureBlobFileSystemCreate extends
     final Path path = new Path("/");
     fs.setWorkingDirectory(new Path("/"));
     fs.mkdirs(path);
-    // Todo: Add assert after fixing getBlobProperties on root @anujmodi2011
+
+    assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(path, fs));
   }
 
   /**
@@ -518,23 +527,29 @@ public class ITestAzureBlobFileSystemCreate extends
     final AzureBlobFileSystem fs = getFileSystem();
     final Path path = new Path("/dir1");
 
-    ExecutorService es;
-    es = Executors.newFixedThreadPool(3);
-    List<Future<Void>> tasks = new ArrayList<>();
+    ExecutorService es = Executors.newFixedThreadPool(3);
+
+    List<CompletableFuture<Void>> tasks = new ArrayList<>();
+
     for (int i = 0; i < 3; i++) {
-      Callable<Void> callable = new Callable<Void>() {
-        @Override
-        public Void call() throws Exception {
+      CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+        try {
           fs.mkdirs(path);
-          return null;
+        } catch (IOException e) {
+          throw new CompletionException(e);
         }
-      };
-      tasks.add(es.submit(callable));
+      }, es);
+      tasks.add(future);
     }
 
-    // Asserting that the directory created by mkdir exists as explicit.
+    // Wait for all the tasks to complete
+    CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).join();
+
+    // Assert that the directory created by mkdir exists as explicit
     assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(path, fs));
+
   }
+
 
   /**
    * Creation of directory with overwrite set to false should not fail according to DFS code.
@@ -734,6 +749,38 @@ public class ITestAzureBlobFileSystemCreate extends
             Mockito.mock(TracingContext.class)
         ).getIsDirectory()
     );
+  }
+
+  /**
+   * Test to validate that if prefix mode is BLOB and client encryption key is not null, exception is thrown.
+   */
+  @Test
+  public void testCPKOverBlob() throws Exception {
+    Assume.assumeTrue(getFileSystem().getAbfsStore().getPrefixMode() == PrefixMode.BLOB);
+    Configuration configuration = Mockito.spy(getRawConfiguration());
+    configuration.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + getAccountName(), "abcd");
+    intercept(InvalidConfigurationValueException.class, () -> (AzureBlobFileSystem) FileSystem.newInstance(configuration));
+  }
+
+  /**
+   * Test to validate that if prefix mode is BLOB and even if client encryption key empty, exception is thrown.
+   */
+  @Test
+  public void testCPKOverBlobEmptyKey() throws Exception {
+    Assume.assumeTrue(getFileSystem().getAbfsStore().getPrefixMode() == PrefixMode.BLOB);
+    Configuration configuration = Mockito.spy(getRawConfiguration());
+    configuration.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + getAccountName(), "");
+    intercept(InvalidConfigurationValueException.class, () -> (AzureBlobFileSystem) FileSystem.newInstance(configuration));
+  }
+
+  /**
+   * Test to validate that if prefix mode is BLOB and if client encryption key is not set, no exception is thrown.
+   */
+  @Test
+  public void testCPKOverBlobNullKey() throws Exception {
+    Assume.assumeTrue(getFileSystem().getAbfsStore().getPrefixMode() == PrefixMode.BLOB);
+    Configuration configuration = Mockito.spy(getRawConfiguration());
+    AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
   }
 
   /**

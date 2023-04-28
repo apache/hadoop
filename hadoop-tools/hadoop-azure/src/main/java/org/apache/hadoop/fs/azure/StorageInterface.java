@@ -29,6 +29,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 
 import com.microsoft.azure.storage.AccessCondition;
 import com.microsoft.azure.storage.CloudStorageAccount;
@@ -150,6 +151,9 @@ abstract class StorageInterface {
   public abstract CloudBlobContainerWrapper getContainerReference(String name)
       throws URISyntaxException, StorageException;
 
+  public abstract CloudBlobContainerWrapper getContainerReference(String name, AccessTokenProvider tokenProvider)
+      throws URISyntaxException, StorageException;
+
   /**
    * A thin wrapper over the
    * {@link com.microsoft.azure.storage.blob.CloudBlobDirectory} class
@@ -206,7 +210,7 @@ abstract class StorageInterface {
     public abstract Iterable<ListBlobItem> listBlobs(String prefix,
         boolean useFlatBlobListing, EnumSet<BlobListingDetails> listingDetails,
         BlobRequestOptions options, OperationContext opContext)
-        throws URISyntaxException, StorageException;
+        throws URISyntaxException, StorageException, IOException;
   }
 
   /**
@@ -221,7 +225,7 @@ abstract class StorageInterface {
      * 
      * @return A <code>String</code> that represents the name of the container.
      */
-    public abstract String getName();
+    public abstract String getName() throws IOException;
 
     /**
      * Returns a value that indicates whether the container exists, using the
@@ -240,7 +244,7 @@ abstract class StorageInterface {
      *           If a storage service error occurred.
      */
     public abstract boolean exists(OperationContext opContext)
-        throws StorageException;
+        throws StorageException, IOException;
 
     /**
      * Returns the metadata for the container.
@@ -248,7 +252,7 @@ abstract class StorageInterface {
      * @return A <code>java.util.HashMap</code> object that represents the
      *         metadata for the container.
      */
-    public abstract HashMap<String, String> getMetadata();
+    public abstract HashMap<String, String> getMetadata() throws IOException;
 
     /**
      * Sets the metadata for the container.
@@ -257,7 +261,8 @@ abstract class StorageInterface {
      *          A <code>java.util.HashMap</code> object that represents the
      *          metadata being assigned to the container.
      */
-    public abstract void setMetadata(HashMap<String, String> metadata);
+    public abstract void setMetadata(HashMap<String, String> metadata)
+        throws IOException;
 
     /**
      * Downloads the container's attributes, which consist of metadata and
@@ -273,7 +278,7 @@ abstract class StorageInterface {
      *           If a storage service error occurred.
      */
     public abstract void downloadAttributes(OperationContext opContext)
-        throws StorageException;
+        throws StorageException, IOException;
 
     /**
      * Uploads the container's metadata using the specified operation context.
@@ -288,7 +293,7 @@ abstract class StorageInterface {
      *           If a storage service error occurred.
      */
     public abstract void uploadMetadata(OperationContext opContext)
-        throws StorageException;
+        throws StorageException, IOException;
 
     /**
      * Creates the container using the specified operation context.
@@ -303,7 +308,7 @@ abstract class StorageInterface {
      *           If a storage service error occurred.
      */
     public abstract void create(OperationContext opContext)
-        throws StorageException;
+        throws StorageException, IOException;
 
     /**
      * Returns a wrapper for a CloudBlobDirectory.
@@ -319,7 +324,12 @@ abstract class StorageInterface {
      *           If URI syntax exception occurred.
      */
     public abstract CloudBlobDirectoryWrapper getDirectoryReference(
-        String relativePath) throws URISyntaxException, StorageException;
+        String relativePath)
+        throws URISyntaxException, StorageException, IOException;
+
+    public abstract CloudBlobDirectoryWrapper getDirectoryReference(
+        String relativePath, AccessTokenProvider tokenProvider)
+        throws URISyntaxException, StorageException, IOException;
 
     /**
      * Returns a wrapper for a CloudBlockBlob.
@@ -335,7 +345,12 @@ abstract class StorageInterface {
      *           If URI syntax exception occurred.
      */
     public abstract CloudBlobWrapper getBlockBlobReference(
-        String relativePath) throws URISyntaxException, StorageException;
+        String relativePath)
+        throws URISyntaxException, StorageException, IOException;
+
+    public abstract CloudBlobWrapper getBlockBlobReference(
+        String relativePath, AccessTokenProvider tokenProvider)
+        throws URISyntaxException, StorageException, IOException;
   
     /**
      * Returns a wrapper for a CloudPageBlob.
@@ -350,7 +365,10 @@ abstract class StorageInterface {
      *             If URI syntax exception occurred.            
      */
     public abstract CloudBlobWrapper getPageBlobReference(String relativePath)
-        throws URISyntaxException, StorageException;
+        throws URISyntaxException, StorageException, IOException;
+
+    public abstract CloudBlobWrapper getPageBlobReference(String relativePath, AccessTokenProvider tokenProvider)
+        throws URISyntaxException, StorageException, IOException;
   }
   
   
@@ -374,7 +392,7 @@ abstract class StorageInterface {
      * @return A <code>java.util.HashMap</code> object that represents the
      *         metadata for the blob.
      */
-    HashMap<String, String> getMetadata();
+    HashMap<String, String> getMetadata() throws IOException;
 
     /**
      * Sets the metadata for the blob.
@@ -383,7 +401,7 @@ abstract class StorageInterface {
      *          A <code>java.util.HashMap</code> object that contains the
      *          metadata being assigned to the blob.
      */
-    void setMetadata(HashMap<String, String> metadata);
+    void setMetadata(HashMap<String, String> metadata) throws IOException;
 
     /**
      * Copies an existing blob's contents, properties, and metadata to this instance of the <code>CloudBlob</code>
@@ -407,7 +425,7 @@ abstract class StorageInterface {
      */
     public abstract void startCopyFromBlob(CloudBlobWrapper sourceBlob,
         BlobRequestOptions options, OperationContext opContext, boolean overwriteDestination)
-        throws StorageException, URISyntaxException;
+        throws StorageException, URISyntaxException, IOException;
     
     /**
      * Returns the blob's copy state.
@@ -415,7 +433,7 @@ abstract class StorageInterface {
      * @return A {@link CopyState} object that represents the copy state of the
      *         blob.
      */
-    CopyState getCopyState();
+    CopyState getCopyState() throws IOException;
 
     /**
      * Downloads a range of bytes from the blob to the given byte buffer, using the specified request options and
@@ -466,7 +484,7 @@ abstract class StorageInterface {
      *           If a storage service error occurred.
      */
     void delete(OperationContext opContext, SelfRenewingLease lease)
-        throws StorageException;
+        throws StorageException, IOException;
 
     /**
      * Checks to see if the blob exists, using the specified operation context.
@@ -484,7 +502,7 @@ abstract class StorageInterface {
      *           If a storage service error occurred.
      */
     boolean exists(OperationContext opContext)
-        throws StorageException;
+        throws StorageException, IOException;
 
     /**
      * Populates a blob's properties and metadata using the specified operation
@@ -505,7 +523,7 @@ abstract class StorageInterface {
      *           If a storage service error occurred.
      */
     void downloadAttributes(OperationContext opContext)
-        throws StorageException;
+        throws StorageException, IOException;
 
     /**
      * Returns the blob's properties.
@@ -513,7 +531,7 @@ abstract class StorageInterface {
      * @return A {@link BlobProperties} object that represents the properties of
      *         the blob.
      */
-    BlobProperties getProperties();
+    BlobProperties getProperties() throws IOException;
 
     /**
      * Opens a blob input stream to download the blob using the specified
@@ -535,7 +553,7 @@ abstract class StorageInterface {
      *           If a storage service error occurred.
      */
     InputStream openInputStream(BlobRequestOptions options,
-        OperationContext opContext) throws StorageException;
+        OperationContext opContext) throws StorageException, IOException;
 
     /**
      * Uploads the blob's metadata to the storage service using the specified
@@ -551,7 +569,7 @@ abstract class StorageInterface {
      *           If a storage service error occurred.
      */
     void uploadMetadata(OperationContext opContext)
-        throws StorageException;
+        throws StorageException, IOException;
 
     /**
      * Uploads the blob's metadata to the storage service using the specified
@@ -575,20 +593,20 @@ abstract class StorageInterface {
      *           If a storage service error occurred.
      */
     void uploadMetadata(AccessCondition accessCondition, BlobRequestOptions options,
-        OperationContext opContext) throws StorageException;
+        OperationContext opContext) throws StorageException, IOException;
 
     void uploadProperties(OperationContext opContext,
         SelfRenewingLease lease)
-        throws StorageException;
+        throws StorageException, IOException;
 
-    SelfRenewingLease acquireLease() throws StorageException;
+    SelfRenewingLease acquireLease() throws StorageException, IOException;
 
     /**
      * Gets the minimum read block size to use with this Blob.
      *
      * @return The minimum block size, in bytes, for reading from a block blob.
      */
-    int getStreamMinimumReadSizeInBytes();
+    int getStreamMinimumReadSizeInBytes() throws IOException;
 
     /**
      * Sets the minimum read block size to use with this Blob.
@@ -599,7 +617,7 @@ abstract class StorageInterface {
      *          bytes to 64 MB, inclusive.
      */
     void setStreamMinimumReadSizeInBytes(
-        int minimumReadSizeBytes);
+        int minimumReadSizeBytes) throws IOException;
 
     /**
      * Sets the write block size to use with this Blob.
@@ -613,9 +631,9 @@ abstract class StorageInterface {
      *           If <code>writeBlockSizeInBytes</code> is less than 1 MB or
      *           greater than 4 MB.
      */
-    void setWriteBlockSizeInBytes(int writeBlockSizeBytes);
+    void setWriteBlockSizeInBytes(int writeBlockSizeBytes) throws IOException;
 
-    CloudBlob getBlob();
+    CloudBlob getBlob() throws IOException;
   }
 
   /**
@@ -641,7 +659,7 @@ abstract class StorageInterface {
      */
     OutputStream openOutputStream(
         BlobRequestOptions options,
-        OperationContext opContext) throws StorageException;
+        OperationContext opContext) throws StorageException, IOException;
 
     /**
      *
@@ -730,7 +748,7 @@ abstract class StorageInterface {
      *             If a storage service error occurred.
      */
     void create(final long length, BlobRequestOptions options,
-            OperationContext opContext) throws StorageException;
+            OperationContext opContext) throws StorageException, IOException;
     
 
     /**
@@ -785,9 +803,9 @@ abstract class StorageInterface {
      */
 
     ArrayList<PageRange> downloadPageRanges(BlobRequestOptions options,
-            OperationContext opContext) throws StorageException;
+            OperationContext opContext) throws StorageException, IOException;
     
     void uploadMetadata(OperationContext opContext)
-        throws StorageException; 
+        throws StorageException, IOException;
   }
 }
