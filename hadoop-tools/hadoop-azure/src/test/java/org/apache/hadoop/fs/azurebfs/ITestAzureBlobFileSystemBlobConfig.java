@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.io.IOException;
 import java.util.HashMap;
 
 import org.junit.Assert;
@@ -29,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
@@ -209,27 +209,125 @@ public class ITestAzureBlobFileSystemBlobConfig
     AzureBlobFileSystem fs = Mockito.spy(createFileSystemForEndpointConfigPair(
         FS_AZURE_REDIRECT_DELETE, false, false));
     Assert.assertNull(fs.getNativeFs());
+    NativeAzureFileSystem nativeAzureFileSystem = null;
     AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
     AbfsClient client = Mockito.spy(fs.getAbfsClient());
-    Mockito.doReturn(store).when(fs).getAbfsStore();
-    store.setClient(client);
+    assignStoreMocksToFs(fs, nativeAzureFileSystem, store, client);
 
     Boolean[] isDeleteOverNativeFS = new Boolean[1];
     isDeleteOverNativeFS[0] = false;
     Boolean[] isDeleteOverDFSEndpoint = new Boolean[1];
     isDeleteOverDFSEndpoint[0] = false;
 
-
-    Mockito.doAnswer(answer -> {
-      isDeleteOverDFSEndpoint[0] = true;
-      return answer.callRealMethod();
-    }).when(client).deletePath(Mockito.any(String.class), Mockito.anyBoolean(), Mockito.nullable(String.class), Mockito.any(TracingContext.class));
-
+    countDeleteOverAbfsAndWasb(nativeAzureFileSystem, client, isDeleteOverNativeFS,
+        isDeleteOverDFSEndpoint);
 
     fs.create(new Path("/file"));
     fs.delete(new Path("/file"), true);
 
     Assert.assertTrue(isDeleteOverDFSEndpoint[0]);
+    Assert.assertFalse(isDeleteOverNativeFS[0]);
+  }
+
+  @Test
+  public void testBlobEndpointWithDeleteWasbRedirect() throws Exception {
+    AzureBlobFileSystem fs = Mockito.spy(createFileSystemForEndpointConfigPair(
+        FS_AZURE_REDIRECT_DELETE, true, false));
+    Assert.assertNotNull(fs.getNativeFs());
+    NativeAzureFileSystem nativeAzureFileSystem = Mockito.spy(fs.getNativeFs());
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    assignStoreMocksToFs(fs, nativeAzureFileSystem, store, client);
+
+    Boolean[] isDeleteOverNativeFS = new Boolean[1];
+    isDeleteOverNativeFS[0] = false;
+    Boolean[] isDeleteOverDFSEndpoint = new Boolean[1];
+    isDeleteOverDFSEndpoint[0] = false;
+
+    countDeleteOverAbfsAndWasb(nativeAzureFileSystem, client, isDeleteOverNativeFS,
+        isDeleteOverDFSEndpoint);
+
+    fs.create(new Path("/file"));
+    fs.delete(new Path("/file"), true);
+
+    Assert.assertFalse(isDeleteOverDFSEndpoint[0]);
+    Assert.assertTrue(isDeleteOverNativeFS[0]);
+  }
+
+  @Test
+  public void testDfsEndpointWithDeleteWasbRedirect() throws Exception {
+    AzureBlobFileSystem fs = Mockito.spy(createFileSystemForEndpointConfigPair(
+        FS_AZURE_REDIRECT_DELETE, true, true));
+    Assert.assertNotNull(fs.getNativeFs());
+    NativeAzureFileSystem nativeAzureFileSystem = Mockito.spy(fs.getNativeFs());
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    assignStoreMocksToFs(fs, nativeAzureFileSystem, store, client);
+
+    Boolean[] isDeleteOverNativeFS = new Boolean[1];
+    isDeleteOverNativeFS[0] = false;
+    Boolean[] isDeleteOverDFSEndpoint = new Boolean[1];
+    isDeleteOverDFSEndpoint[0] = false;
+
+    countDeleteOverAbfsAndWasb(nativeAzureFileSystem, client, isDeleteOverNativeFS,
+        isDeleteOverDFSEndpoint);
+
+    fs.create(new Path("/file"));
+    fs.delete(new Path("/file"), true);
+
+    Assert.assertFalse(isDeleteOverDFSEndpoint[0]);
+    Assert.assertTrue(isDeleteOverNativeFS[0]);
+  }
+
+  @Test
+  public void testDfsEndpointNoDeleteWasbRedirect() throws Exception {
+    AzureBlobFileSystem fs = Mockito.spy(createFileSystemForEndpointConfigPair(
+        FS_AZURE_REDIRECT_DELETE, false, true));
+    Assert.assertNull(fs.getNativeFs());
+    NativeAzureFileSystem nativeAzureFileSystem = null;
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    assignStoreMocksToFs(fs, nativeAzureFileSystem, store, client);
+
+    Boolean[] isDeleteOverNativeFS = new Boolean[1];
+    isDeleteOverNativeFS[0] = false;
+    Boolean[] isDeleteOverDFSEndpoint = new Boolean[1];
+    isDeleteOverDFSEndpoint[0] = false;
+
+    countDeleteOverAbfsAndWasb(nativeAzureFileSystem, client, isDeleteOverNativeFS,
+        isDeleteOverDFSEndpoint);
+
+    fs.create(new Path("/file"));
+    fs.delete(new Path("/file"), true);
+
+    Assert.assertTrue(isDeleteOverDFSEndpoint[0]);
+    Assert.assertFalse(isDeleteOverNativeFS[0]);
+  }
+
+  private void countDeleteOverAbfsAndWasb(final NativeAzureFileSystem nativeAzureFileSystem,
+      final AbfsClient client,
+      final Boolean[] isDeleteOverNativeFS,
+      final Boolean[] isDeleteOverDFSEndpoint) throws IOException {
+    Mockito.doAnswer(answer -> {
+      isDeleteOverDFSEndpoint[0] = true;
+      return answer.callRealMethod();
+    }).when(client).deletePath(Mockito.any(String.class), Mockito.anyBoolean(), Mockito.nullable(String.class), Mockito.any(TracingContext.class));
+
+    if(nativeAzureFileSystem != null) {
+      Mockito.doAnswer(answer -> {
+        isDeleteOverNativeFS[0] = true;
+        return answer.callRealMethod();
+      }).when(nativeAzureFileSystem).delete(Mockito.any(Path.class), Mockito.anyBoolean());
+    }
+  }
+
+  private void assignStoreMocksToFs(final AzureBlobFileSystem fs,
+      final NativeAzureFileSystem nativeAzureFileSystem,
+      final AzureBlobFileSystemStore store,
+      final AbfsClient client) {
+    Mockito.doReturn(store).when(fs).getAbfsStore();
+    store.setClient(client);
+    Mockito.doReturn(nativeAzureFileSystem).when(fs).getNativeFs();
   }
 
   private void checkDirAndFileCreationOnDFS(final AbfsClient client,
