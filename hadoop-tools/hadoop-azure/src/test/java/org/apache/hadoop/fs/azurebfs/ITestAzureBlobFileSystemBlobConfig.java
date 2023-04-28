@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Random;
 
 import org.junit.Assert;
 import org.junit.Assume;
@@ -28,17 +29,22 @@ import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_BLOB_ENDPOINT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INGRESS_FALLBACK_TO_DFS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_MKDIRS_FALLBACK_TO_DFS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_REDIRECT_DELETE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_REDIRECT_RENAME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DNS_PREFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.WASB_DNS_PREFIX;
 
@@ -411,6 +417,163 @@ public class ITestAzureBlobFileSystemBlobConfig
     Assert.assertFalse(isRenameOverBlobEndpoint[0]);
     Assert.assertTrue(isRenameOverDFSEndpoint[0]);
     Assert.assertFalse(isRenameOverNativeFS[0]);
+  }
+
+  @Test
+  public void testBlobEndpointIngressRedirectToDfs() throws Exception {
+    AzureBlobFileSystem fs = Mockito.spy(createFileSystemForEndpointConfigPair(
+        FS_AZURE_INGRESS_FALLBACK_TO_DFS, true, false));
+
+    NativeAzureFileSystem nativeAzureFileSystem = Mockito.spy(fs.getNativeFs());
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    assignStoreMocksToFs(fs, nativeAzureFileSystem, store, client);
+
+    int[] createOverBlob = new int[1];
+    createOverBlob[0] = 0;
+    int[] createOverDfs = new int[1];
+    createOverDfs[0] = 0;
+    int[] appendOverBlob = new int[1];
+    appendOverBlob[0] = 0;
+    int[] appendOverDfs = new int[1];
+    appendOverDfs[0] = 0;
+    int[] flushOverBlob = new int[1];
+    flushOverBlob[0] = 0;
+    int[] flushOverDfs = new int[1];
+    flushOverDfs[0] = 0;
+
+    countIngressOverDfsAndBlob(client, createOverBlob, createOverDfs, appendOverBlob,
+        appendOverDfs,
+        flushOverBlob, flushOverDfs);
+
+    FSDataOutputStream outputStream = fs.create(new Path("/file"));
+    byte[] bytes = new byte[ONE_MB * 4];
+    new Random().nextBytes(bytes);
+    outputStream.write(bytes);
+    outputStream.close();
+
+    Assert.assertTrue(createOverDfs[0] == 1);
+    Assert.assertTrue(appendOverDfs[0] == 1);
+    Assert.assertTrue(flushOverDfs[0] == 1);
+  }
+
+  @Test
+  public void testBlobEndpointNoIngressRedirectToDfs() throws Exception {
+    AzureBlobFileSystem fs = Mockito.spy(createFileSystemForEndpointConfigPair(
+        FS_AZURE_INGRESS_FALLBACK_TO_DFS, false, false));
+
+    NativeAzureFileSystem nativeAzureFileSystem = Mockito.spy(fs.getNativeFs());
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    assignStoreMocksToFs(fs, nativeAzureFileSystem, store, client);
+
+    int[] createOverBlob = new int[1];
+    createOverBlob[0] = 0;
+    int[] createOverDfs = new int[1];
+    createOverDfs[0] = 0;
+    int[] appendOverBlob = new int[1];
+    appendOverBlob[0] = 0;
+    int[] appendOverDfs = new int[1];
+    appendOverDfs[0] = 0;
+    int[] flushOverBlob = new int[1];
+    flushOverBlob[0] = 0;
+    int[] flushOverDfs = new int[1];
+    flushOverDfs[0] = 0;
+
+    countIngressOverDfsAndBlob(client, createOverBlob, createOverDfs, appendOverBlob,
+        appendOverDfs,
+        flushOverBlob, flushOverDfs);
+
+    FSDataOutputStream outputStream = fs.create(new Path("/file"));
+    byte[] bytes = new byte[ONE_MB * 4];
+    new Random().nextBytes(bytes);
+    outputStream.write(bytes);
+    outputStream.close();
+
+    Assert.assertTrue(createOverBlob[0] == 1);
+    Assert.assertTrue(appendOverBlob[0] == 1);
+    Assert.assertTrue(flushOverBlob[0] == 1);
+  }
+
+  @Test
+  public void testDfsEndpointNoIngressRedirectToDfs() throws Exception {
+    AzureBlobFileSystem fs = Mockito.spy(createFileSystemForEndpointConfigPair(
+        FS_AZURE_INGRESS_FALLBACK_TO_DFS, true, true));
+
+    NativeAzureFileSystem nativeAzureFileSystem = Mockito.spy(fs.getNativeFs());
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    assignStoreMocksToFs(fs, nativeAzureFileSystem, store, client);
+
+    int[] createOverBlob = new int[1];
+    createOverBlob[0] = 0;
+    int[] createOverDfs = new int[1];
+    createOverDfs[0] = 0;
+    int[] appendOverBlob = new int[1];
+    appendOverBlob[0] = 0;
+    int[] appendOverDfs = new int[1];
+    appendOverDfs[0] = 0;
+    int[] flushOverBlob = new int[1];
+    flushOverBlob[0] = 0;
+    int[] flushOverDfs = new int[1];
+    flushOverDfs[0] = 0;
+
+    countIngressOverDfsAndBlob(client, createOverBlob, createOverDfs, appendOverBlob,
+        appendOverDfs,
+        flushOverBlob, flushOverDfs);
+
+    FSDataOutputStream outputStream = fs.create(new Path("/file"));
+    byte[] bytes = new byte[ONE_MB * 4];
+    new Random().nextBytes(bytes);
+    outputStream.write(bytes);
+    outputStream.close();
+
+    Assert.assertTrue(createOverDfs[0] == 1);
+    Assert.assertTrue(appendOverDfs[0] == 1);
+    Assert.assertTrue(flushOverDfs[0] == 1);
+  }
+
+  private void countIngressOverDfsAndBlob(final AbfsClient client,
+      final int[] createOverBlob,
+      final int[] createOverDfs,
+      final int[] appendOverBlob,
+      final int[] appendOverDfs,
+      final int[] flushOverBlob,
+      final int[] flushOverDfs) throws IOException {
+    Mockito.doAnswer(answer -> {
+      createOverDfs[0]++;
+      return answer.callRealMethod();
+    }).when(client).createPath(Mockito.anyString(), Mockito.anyBoolean(),
+        Mockito.anyBoolean(), Mockito.nullable(String.class), Mockito.nullable(String.class),
+        Mockito.anyBoolean(), Mockito.nullable(String.class), Mockito.any(TracingContext.class));
+    Mockito.doAnswer(answer -> {
+      createOverBlob[0]++;
+      return answer.callRealMethod();
+    }).when(client).createPathBlob(Mockito.anyString(), Mockito.anyBoolean(),
+        Mockito.anyBoolean(), Mockito.nullable(HashMap.class), Mockito.nullable(String.class), Mockito.any(TracingContext.class));
+
+    Mockito.doAnswer(answer -> {
+      appendOverDfs[0]++;
+      return answer.callRealMethod();
+    }).when(client).append(Mockito.anyString(), Mockito.any(byte[].class), Mockito.any(
+        AppendRequestParameters.class), Mockito.nullable(String.class), Mockito.any(TracingContext.class));
+    Mockito.doAnswer(answer -> {
+      appendOverBlob[0]++;
+      return answer.callRealMethod();
+    }).when(client).append(Mockito.anyString(), Mockito.anyString(), Mockito.any(byte[].class), Mockito.any(
+        AppendRequestParameters.class), Mockito.nullable(String.class), Mockito.any(TracingContext.class), Mockito.nullable(String.class));
+
+    Mockito.doAnswer(answer -> {
+      flushOverDfs[0]++;
+      return answer.callRealMethod();
+    }).when(client).flush(Mockito.anyString(), Mockito.anyLong(), Mockito.anyBoolean(),
+        Mockito.anyBoolean(), Mockito.nullable(String.class),
+        Mockito.nullable(String.class), Mockito.any(TracingContext.class));
+    Mockito.doAnswer(answer -> {
+      flushOverBlob[0]++;
+      return answer.callRealMethod();
+    }).when(client).flush(Mockito.any(byte[].class), Mockito.anyString(),
+        Mockito.anyBoolean(), Mockito.nullable(String.class),Mockito.nullable(String.class),Mockito.nullable(String.class), Mockito.any(TracingContext.class));
   }
 
   private void countRenameOverDfsBlobAndWasb(final NativeAzureFileSystem nativeAzureFileSystem,
