@@ -227,16 +227,16 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameImplicitDirectoryContainingImplicitDirectory()
       throws Exception {
     explicitImplicitDirectoryRenameTest(
-        true,
-        false,
-        false,
-        true,
-        false,
-        true,
-        false,
-        false,
-        false,
-        true
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/false,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/false,
+        /*isDstFile*/false,
+        /*shouldRenamePass*/true
     );
   }
 
@@ -244,16 +244,16 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameExplicitDirectoryContainingExplicitDirectoryInImplicitSrcParent()
       throws Exception {
     explicitImplicitDirectoryRenameTest(
-        false,
-        true,
-        true,
-        true,
-        false,
-        true,
-        false,
-        false,
-        false,
-        true
+        /*srcParentExplicit*/false,
+        /*srcExplicit*/true,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/false,
+        /*isDstFile*/false,
+        /*shouldRenamePass*/true
     );
   }
 
@@ -261,16 +261,16 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameExplicitDirectoryContainingImplicitDirectoryInImplicitSrcParent()
       throws Exception {
     explicitImplicitDirectoryRenameTest(
-        false,
-        true,
-        false,
-        true,
-        false,
-        true,
-        false,
-        false,
-        false,
-        true
+        /*srcParentExplicit*/false,
+        /*srcExplicit*/true,
+        /*srcSubDirExplicit*/false,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/false,
+        /*isDstFile*/false,
+        /*shouldRenamePass*/true
     );
   }
 
@@ -278,16 +278,16 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameImplicitDirectoryContainingExplicitDirectoryInImplicitSrcParent()
       throws Exception {
     explicitImplicitDirectoryRenameTest(
-        false,
-        false,
-        true,
-        true,
-        false,
-        true,
-        false,
-        false,
-        false,
-        true
+        /*srcParentExplicit*/false,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/false,
+        /*isDstFile*/false,
+        /*shouldRenamePass*/true
     );
   }
 
@@ -295,32 +295,32 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameImplicitDirectoryContainingImplicitDirectoryInImplicitSrcParent()
       throws Exception {
     explicitImplicitDirectoryRenameTest(
-        false,
-        false,
-        false,
-        true,
-        false,
-        true,
-        false,
-        false,
-        false,
-        true
+        /*srcParentExplicit*/false,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/false,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/false,
+        /*isDstFile*/false,
+        /*shouldRenamePass*/true
     );
   }
 
   @Test
   public void testRenameDirectoryWhereDstParentDoesntExist() throws Exception {
     explicitImplicitDirectoryRenameTest(
-        true,
-        true,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/true,
+        /*srcSubDirExplicit*/false,
+        /*dstParentExplicit*/false,
+        /*dstExplicit*/false,
+        /*dstParentExists*/false,
+        /*isDstParentFile*/false,
+        /*dstExist*/false,
+        /*isDstFile*/false,
+        /*shouldRenamePass*/false
     );
   }
 
@@ -328,16 +328,16 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameImplicitDirectoryWhereDstParentDoesntExist()
       throws Exception {
     explicitImplicitDirectoryRenameTest(
-        true,
-        false,
-        true,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/false,
+        /*dstExplicit*/false,
+        /*dstParentExists*/false,
+        /*isDstParentFile*/false,
+        /*dstExist*/false,
+        /*isDstFile*/false,
+        /*shouldRenamePass*/false
     );
   }
 
@@ -345,16 +345,16 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameImplicitDirectoryToNonExistentDstWithImplicitParent()
       throws Exception {
     explicitImplicitDirectoryRenameTest(
-        true,
-        false,
-        true,
-        false,
-        false,
-        true,
-        false,
-        false,
-        false,
-        true
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/false,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/false,
+        /*isDstFile*/false,
+        /*shouldRenamePass*/true
     );
   }
 
@@ -362,68 +362,68 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameImplicitDirectoryToNonExistentDstWithParentIsFile()
       throws Exception {
     explicitImplicitDirectoryRenameTest(
-        true,
-        false,
-        true,
-        false,
-        false,
-        true,
-        true,
-        false,
-        false,
-        false
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/false,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/true,
+        /*dstExist*/false,
+        /*isDstFile*/false,
+        /*shouldRenamePass*/false
     );
   }
 
   @Test
   public void testRenameExplicitDirectoryToFileDst() throws Exception {
     explicitImplicitDirectoryRenameTest(
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        false,
-        true,
-        true,
-        false
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/true,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/true,
+        /*shouldRenamePass*/false
     );
   }
 
   @Test
   public void testRenameimplicitDirectoryToFileDst() throws Exception {
     explicitImplicitDirectoryRenameTest(
-        true,
-        false,
-        true,
-        true,
-        false,
-        true,
-        false,
-        true,
-        true,
-        false
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/true,
+        /*shouldRenamePass*/false
     );
   }
 
   @Test
   public void testDirectoryIntoSameNameDestination() throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        "src",
-        null,
-        null,
-        true, true
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/true,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/true,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/"src",
+        /*dstSubFileName*/null,
+        /*dstSubDirName*/null,
+        /*isSubDirExplicit*/true, /*shouldRenamePass*/true
     );
   }
 
@@ -431,20 +431,20 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameDirectoryToSameNameImplicitDirectoryDestination()
       throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        "src",
-        null,
-        null,
-        true, true
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/true,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/"src",
+        /*dstSubFileName*/null,
+        /*dstSubDirName*/null,
+        /*isSubDirExplicit*/true, /*shouldRenamePass*/true
     );
   }
 
@@ -452,20 +452,20 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameDirectoryToImplicitDirectoryDestinationHavingSameNameSubDir()
       throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        null,
-        null,
-        "src",
-        true, false
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/true,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/null,
+        /*dstSubFileName*/null,
+        /*dstSubDirName*/"src",
+        /*isSubDirExplicit*/true, /*shouldRenamePass*/false
     );
   }
 
@@ -473,20 +473,20 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameDirectoryToImplicitDirectoryDestinationHavingSameNameSubFile()
       throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        null,
-        "src",
-        null,
-        true, false
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/true,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/null,
+        /*dstSubFileName*/"src",
+        /*dstSubDirName*/null,
+        /*isSubDirExplicit*/true, /*shouldRenamePass*/false
     );
   }
 
@@ -494,60 +494,60 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameDirectoryToImplicitDirectoryDestinationHavingSameNameImplicitSubDir()
       throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        null,
-        null,
-        "src",
-        false, false
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/true,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/null,
+        /*dstSubFileName*/null,
+        /*dstSubDirName*/"src",
+        /*isSubDirExplicit*/false, /*shouldRenamePass*/false
     );
   }
 
   @Test
   public void testImplicitDirectoryIntoSameNameDestination() throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        false,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        "src",
-        null,
-        null,
-        true, true
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/true,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/"src",
+        /*dstSubFileName*/null,
+        /*dstSubDirName*/null,
+        /*isSubDirExplicit*/true, /*shouldRenamePass*/true
     );
   }
 
   @Test
   public void testImplicitDirectoryIntoExplicitDestination() throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        false,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        null,
-        null,
-        null,
-        true, true
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/true,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/null,
+        /*dstSubFileName*/null,
+        /*dstSubDirName*/null,
+        /*isSubDirExplicit*/true, /*shouldRenamePass*/true
     );
   }
 
@@ -555,20 +555,20 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameImplicitDirectoryToExplicitDirectoryDestinationHavingSameNameSubDir()
       throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        false,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        null,
-        null,
-        "src",
-        true, false
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/true,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/null,
+        /*dstSubFileName*/null,
+        /*dstSubDirName*/"src",
+        /*isSubDirExplicit*/true, /*shouldRenamePass*/false
     );
   }
 
@@ -576,20 +576,20 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameImplicitDirectoryToExplicitDirectoryDestinationHavingSameNameSubFile()
       throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        false,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        null,
-        "src",
-        null,
-        true, false
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/true,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/null,
+        /*dstSubFileName*/"src",
+        /*dstSubDirName*/null,
+        /*isSubDirExplicit*/true, /*shouldRenamePass*/false
     );
   }
 
@@ -597,20 +597,20 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameImplicitDirectoryToExplicitDirectoryDestinationHavingSameNameImplicitSubDir()
       throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        false,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        null,
-        null,
-        "src",
-        false, false
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/true,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/null,
+        /*dstSubFileName*/null,
+        /*dstSubDirName*/"src",
+        /*isSubDirExplicit*/false, /*shouldRenamePass*/false
     );
   }
 
@@ -618,40 +618,40 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testImplicitDirectoryIntoSameNameImplicitDestination()
       throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        false,
-        true,
-        true,
-        false,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        "src",
-        null,
-        null,
-        true, true
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/"src",
+        /*dstSubFileName*/null,
+        /*dstSubDirName*/null,
+        /*isSubDirExplicit*/true, /*shouldRenamePass*/true
     );
   }
 
   @Test
   public void testImplicitDirectoryIntoImplicitDestination() throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        false,
-        true,
-        true,
-        false,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        null,
-        null,
-        null,
-        true, true
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/null,
+        /*dstSubFileName*/null,
+        /*dstSubDirName*/null,
+        /*isSubDirExplicit*/true, /*shouldRenamePass*/true
     );
   }
 
@@ -659,20 +659,20 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameImplicitDirectoryToImplicitDirectoryDestinationHavingSameNameSubDir()
       throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        false,
-        true,
-        true,
-        false,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        null,
-        null,
-        "src",
-        true, false
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/null,
+        /*dstSubFileName*/null,
+        /*dstSubDirName*/"src",
+        /*isSubDirExplicit*/true, /*shouldRenamePass*/false
     );
   }
 
@@ -680,20 +680,20 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameImplicitDirectoryToImplicitDirectoryDestinationHavingSameNameSubFile()
       throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        false,
-        true,
-        true,
-        false,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        null,
-        "src",
-        null,
-        true, false
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/null,
+        /*dstSubFileName*/"src",
+        /*dstSubDirName*/null,
+        /*isSubDirExplicit*/true, /*shouldRenamePass*/false
     );
   }
 
@@ -701,20 +701,20 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameImplicitDirectoryToImplicitDirectoryDestinationHavingSameNameImplicitSubDir()
       throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        false,
-        true,
-        true,
-        false,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        null,
-        null,
-        "src",
-        false, false
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/null,
+        /*dstSubFileName*/null,
+        /*dstSubDirName*/"src",
+        /*isSubDirExplicit*/false, /*shouldRenamePass*/false
     );
   }
 
@@ -722,20 +722,20 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameExplicitSrcWithImplicitSubDirToImplicitDstWithExplicitSubDir()
     throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        true,
-        false,
-        false,
-        true,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        null,
-        null,
-        null,
-        true, true
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/true,
+        /*srcSubDirExplicit*/false,
+        /*dstParentExplicit*/false,
+        /*dstExplicit*/true,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/null,
+        /*dstSubFileName*/null,
+        /*dstSubDirName*/null,
+        /*isSubDirExplicit*/true, /*shouldRenamePass*/true
     );
   }
 
@@ -743,20 +743,20 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameExplicitSrcWithImplicitSubDirToImplicitDstWithImplicitSubDir()
       throws Exception {
     explicitImplicitDirectoryRenameTestWithDestPathNames(
-        true,
-        true,
-        false,
-        false,
-        true,
-        true,
-        false,
-        true,
-        false,
-        "src",
-        null,
-        null,
-        null,
-        false, true
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/true,
+        /*srcSubDirExplicit*/false,
+        /*dstParentExplicit*/false,
+        /*dstExplicit*/true,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/true,
+        /*isDstFile*/false,
+        /*srcName*/"src",
+        /*dstName*/null,
+        /*dstSubFileName*/null,
+        /*dstSubDirName*/null,
+        /*isSubDirExplicit*/false, /*shouldRenamePass*/true
     );
   }
 
