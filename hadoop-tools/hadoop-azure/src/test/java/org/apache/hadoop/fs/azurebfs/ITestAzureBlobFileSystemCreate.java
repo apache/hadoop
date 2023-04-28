@@ -27,8 +27,11 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.fs.azurebfs.services.*;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.CreateFlag;
 import java.util.HashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -46,6 +49,10 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperationDetectedException;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.mockito.Mockito;
@@ -106,6 +113,8 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(new Path("a/b/d"));
     intercept(IOException.class, () -> fs.mkdirs(new Path("a/b/c/d/e")));
 
+    assertTrue(fs.exists(new Path("a/b/c")));
+    assertTrue(fs.exists(new Path("a/b/d")));
     // Asserting directory created still exists as explicit.
     assertTrue(
         BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/d"), fs));
@@ -119,9 +128,10 @@ public class ITestAzureBlobFileSystemCreate extends
   public void testCreateDirectoryAndFile() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     fs.mkdirs(new Path("a/b/c"));
+    assertTrue(fs.exists(new Path("a/b/c")));
     intercept(IOException.class, () -> fs.create(new Path("a/b/c")));
 
-    // Asserting that directory still exists
+    // Asserting that directory still exists as explicit
     assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/c"), fs));
   }
 
@@ -134,6 +144,7 @@ public class ITestAzureBlobFileSystemCreate extends
     final AzureBlobFileSystem fs = getFileSystem();
     fs.create(new Path("a/b/c"));
     fs.create(new Path("a/b/c"));
+    assertTrue(fs.exists(new Path("a/b/c")));
   }
 
   /**
@@ -144,6 +155,7 @@ public class ITestAzureBlobFileSystemCreate extends
   public void testCreateSameFileWithOverwriteFalse() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     fs.create(new Path("a/b/c"));
+    assertTrue(fs.exists(new Path("a/b/c")));
     intercept(IOException.class, () -> fs.create(new Path("a/b/c"), false));
   }
 
@@ -155,8 +167,25 @@ public class ITestAzureBlobFileSystemCreate extends
   public void testCreateSubPath() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     fs.create(new Path("a/b/c"));
+    assertTrue(fs.exists(new Path("a/b/c")));
     intercept(IOException.class, () -> fs.create(new Path("a/b")));
   }
+
+  /**
+   * Creating path with parent explicit.
+   */
+  @Test
+  public void testCreatePathParentExplicit() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.mkdirs(new Path("a/b/c"));
+    assertTrue(fs.exists(new Path("a/b/c")));
+    fs.create(new Path("a/b/c/d"));
+    assertTrue(fs.exists(new Path("a/b/c/d")));
+
+    // asserting that parent stays explicit
+    assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/c"), fs));
+  }
+
 
   /**
    * Test create on implicit directory with explicit parent
@@ -315,6 +344,10 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(new Path("a/b/c/d"));
     fs.mkdirs(new Path("a/b/c/e"));
 
+    assertTrue(fs.exists(new Path("a/b")));
+    assertTrue(fs.exists(new Path("a/b/c/d")));
+    assertTrue(fs.exists(new Path("a/b/c/e")));
+
     //Asserting that directories created as explicit
     assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b"), fs));
     assertTrue(
@@ -331,6 +364,7 @@ public class ITestAzureBlobFileSystemCreate extends
   public void testMkdirsCreateSubPath() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     fs.mkdirs(new Path("a/b/c"));
+    assertTrue(fs.exists(new Path("a/b/c")));
     intercept(IOException.class, () -> fs.create(new Path("a/b")));
 
     //Asserting that directories created as explicit
@@ -347,6 +381,10 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(new Path("a"));
     fs.mkdirs(new Path("a/b/c"));
     fs.mkdirs(new Path("a/b/c/d/e"));
+
+    assertTrue(fs.exists(new Path("a")));
+    assertTrue(fs.exists(new Path("a/b/c")));
+    assertTrue(fs.exists(new Path("a/b/c/d/e")));
 
     //Asserting that directories created as explicit
     assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/"), fs));
@@ -416,6 +454,7 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.mkdirs(new Path("a/b/c"));
     fs.mkdirs(new Path("a/b/c"));
 
+    assertTrue(fs.exists(new Path("a/b/c")));
     //Asserting that directories created as explicit
     assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/c"), fs));
   }
@@ -501,15 +540,28 @@ public class ITestAzureBlobFileSystemCreate extends
    * @throws Exception
    */
   @Test
-  public void testCreateSameDirectoryOverwriteTrue() throws Exception {
+  public void testCreateSameDirectoryOverwriteFalse() throws Exception {
     Configuration configuration = getRawConfiguration();
-    configuration.setBoolean(FS_AZURE_ENABLE_BLOB_MKDIR_OVERWRITE, true);
+    configuration.setBoolean(FS_AZURE_ENABLE_BLOB_MKDIR_OVERWRITE, false);
     AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
     fs1.mkdirs(new Path("a/b/c"));
     fs1.mkdirs(new Path("a/b/c"));
 
     //Asserting that directories created as explicit
     assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(new Path("a/b/c"), fs1));
+  }
+
+  /**
+   * Try creating directory same as an existing file.
+   */
+  @Test
+  public void testCreateDirectoryAndFileRecreation() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.mkdirs(new Path("a/b/c"));
+    fs.create(new Path("a/b/c/d"));
+    assertTrue(fs.exists(new Path("a/b/c")));
+    assertTrue(fs.exists(new Path("a/b/c/d")));
+    intercept(IOException.class, () -> fs.mkdirs(new Path("a/b/c/d")));
   }
 
   /**
