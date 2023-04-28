@@ -1638,7 +1638,7 @@ public class DistributedFileSystem extends FileSystem
    */
   @Override
   public boolean setSafeMode(SafeModeAction action)
-    throws IOException {
+      throws IOException {
     return setSafeMode(action, false);
   }
 
@@ -1653,24 +1653,34 @@ public class DistributedFileSystem extends FileSystem
    *          status
    */
   @Override
+  @SuppressWarnings("deprecation")
   public boolean setSafeMode(SafeModeAction action, boolean isChecked)
-    throws IOException {
-    return dfs.setSafeMode(convertToClientProtocolSafeModeAction(action), isChecked);
+      throws IOException {
+    return this.setSafeMode(convertToClientProtocolSafeModeAction(action), isChecked);
   }
 
+  /**
+   * Translating the {@link SafeModeAction} into {@link HdfsConstants.SafeModeAction} 
+   * that is used by {@link DFSClient#setSafeMode(HdfsConstants.SafeModeAction, boolean)}
+   * 
+   * @param action any supported action listed in {@link SafeModeAction}
+   * @return the converted {@link HdfsConstants.SafeModeAction}
+   * @throws UnsupportedOperationException if the provided {@link SafeModeAction} cannot be
+   *           translated
+   */
   private static HdfsConstants.SafeModeAction convertToClientProtocolSafeModeAction(
-    SafeModeAction action) {
+      SafeModeAction action) {
     switch (action) {
-      case ENTER:
-        return HdfsConstants.SafeModeAction.SAFEMODE_ENTER;
-      case LEAVE:
-        return HdfsConstants.SafeModeAction.SAFEMODE_LEAVE;
-      case FORCE_EXIT:
-        return HdfsConstants.SafeModeAction.SAFEMODE_FORCE_EXIT;
-      case GET:
-        return HdfsConstants.SafeModeAction.SAFEMODE_GET;
-      default:
-        throw new UnsupportedOperationException("Unsupported safe mode action " + action);
+    case ENTER:
+      return HdfsConstants.SafeModeAction.SAFEMODE_ENTER;
+    case LEAVE:
+      return HdfsConstants.SafeModeAction.SAFEMODE_LEAVE;
+    case FORCE_EXIT:
+      return HdfsConstants.SafeModeAction.SAFEMODE_FORCE_EXIT;
+    case GET:
+      return HdfsConstants.SafeModeAction.SAFEMODE_GET;
+    default:
+      throw new UnsupportedOperationException("Unsupported safe mode action " + action);
     }
   }
 

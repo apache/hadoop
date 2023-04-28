@@ -14,12 +14,12 @@
 
 # <a name="SafeMode"></a> interface `SafeMode`
 
-The `SafeMode` interface provides a way to perform safe mode actions and obtain the 
+The `SafeMode` interface provides a way to perform safe mode actions and obtain the
 status after such actions performed to the `FileSystem`.
 
-This is admin only interface, should be implemented accordingly when necessary to 
-Filesystem that support safe mode, e.g. `DistributedFileSystem` (HDFS) and 
-`ViewDistributedFileSystem`. 
+This is admin only interface, should be implemented accordingly when necessary to
+Filesystem that support safe mode, e.g. `DistributedFileSystem` (HDFS) and
+`ViewDistributedFileSystem`.
 
 ```java
 public interface SafeMode {
@@ -33,13 +33,13 @@ public interface SafeMode {
 The goals of this interface is allow any file system implementation to share the
 same concept of safe mode with the following actions and states
 
-Safe mode actions 
-1. `GET`, get the safe mode status of the file system
+Safe mode actions
+1. `GET`, get the safe mode status of the file system.
 1. `ENTER`, enter the safe mode for the file system.
 1. `LEAVE`, exit safe mode for the file system gracefully.
 1. `FORCE_EXIT`, exit safe mode for the file system even if there is any ongoing data process.
 
 Safe mode states
-1. `ON`, when safe mode is on
-1. `OFF`, when safe mode is off, usually it's the result of safe mode actions 
+1. `ON`, when safe mode is on.
+1. `OFF`, when safe mode is off, usually it's the result of safe mode actions
 with `GET`, `LEAVE`, `FORCE_EXIT`

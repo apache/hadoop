@@ -29,9 +29,8 @@ public interface SafeMode {
    * Enter, leave, or get safe mode.
    *
    * @param action One of {@link SafeModeAction} LEAVE, ENTER, GET, FORCE_EXIT.
+   * @throws IOException if set safe mode fails to proceed.
    * @return true if the action is successfully accepted, otherwise false means rejected.
-   * @throws IOException                   if set safe mode fails to proceed.
-   * @throws UnsupportedOperationException if this feature is not supported by this filesystem.
    */
   default boolean setSafeMode(SafeModeAction action) throws IOException {
     return setSafeMode(action, false);
@@ -43,9 +42,8 @@ public interface SafeMode {
    * @param action    One of {@link SafeModeAction} LEAVE, ENTER, GET, FORCE_EXIT.
    * @param isChecked If true check only for Active metadata node / NameNode's status,
    *                  else check first metadata node / NameNode's status.
+   * @throws IOException if set safe mode fails to proceed.
    * @return true if the action is successfully accepted, otherwise false means rejected.
-   * @throws IOException                   if set safe mode fails to proceed, or
-   * @throws UnsupportedOperationException if safe mode is not supported by this filesystem.
    */
   boolean setSafeMode(SafeModeAction action, boolean isChecked) throws IOException;
 

@@ -18,18 +18,21 @@
 
 package org.apache.hadoop.fs.contract;
 
-import static org.apache.hadoop.fs.CommonPathCapabilities.LEASE_RECOVERABLE;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LeaseRecoverable;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.LambdaTestUtils;
+
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.CommonPathCapabilities.LEASE_RECOVERABLE;
+
 public abstract class AbstractContractLeaseRecoveryTest extends
-  AbstractFSContractTestBase {
+    AbstractFSContractTestBase {
 
   @Test
   public void testLeaseRecovery() throws Throwable {
@@ -39,12 +42,12 @@ public abstract class AbstractContractLeaseRecoveryTest extends
     LeaseRecoverable leaseRecoverableFs = verifyAndGetLeaseRecoverableInstance(fs, path);
 
     Assertions.assertThat(leaseRecoverableFs.recoverLease(path))
-      .describedAs("Issuing lease recovery on a closed file must be successful")
-      .isTrue();
+        .describedAs("Issuing lease recovery on a closed file must be successful")
+        .isTrue();
 
     Assertions.assertThat(leaseRecoverableFs.isFileClosed(path))
-      .describedAs("Get the isFileClose status on a closed file must be successful")
-      .isTrue();
+        .describedAs("Get the isFileClose status on a closed file must be successful")
+        .isTrue();
   }
 
   @Test
@@ -53,15 +56,11 @@ public abstract class AbstractContractLeaseRecoveryTest extends
     final FileSystem fs = getFileSystem();
     LeaseRecoverable leaseRecoverableFs = verifyAndGetLeaseRecoverableInstance(fs, path);
 
-    Assertions.assertThatThrownBy(() -> leaseRecoverableFs.recoverLease(path))
-      .describedAs("Issuing lease recovery on a non exist file must throw exception")
-      .hasMessageContaining("File does not exist")
-      .isInstanceOf(FileNotFoundException.class);
+    LambdaTestUtils.intercept(FileNotFoundException.class, "File does not exist",
+        () -> leaseRecoverableFs.recoverLease(path));
 
-    Assertions.assertThatThrownBy(() ->leaseRecoverableFs.isFileClosed(path))
-      .describedAs("Get the isFileClose status on non exist file must throw exception")
-      .hasMessageContaining("File does not exist")
-      .isInstanceOf(FileNotFoundException.class);
+    LambdaTestUtils.intercept(FileNotFoundException.class, "File does not exist",
+        () -> leaseRecoverableFs.isFileClosed(path));
   }
 
   @Test
@@ -71,28 +70,21 @@ public abstract class AbstractContractLeaseRecoveryTest extends
     LeaseRecoverable leaseRecoverableFs = verifyAndGetLeaseRecoverableInstance(fs, path);
     final Path parentDirectory = path.getParent();
 
-    Assertions.assertThatThrownBy(() -> leaseRecoverableFs.recoverLease(parentDirectory))
-      .describedAs("Issuing lease recovery on a directory must throw exception")
-      .hasMessageContaining("Path is not a file")
-      .isInstanceOf(FileNotFoundException.class);
+    LambdaTestUtils.intercept(FileNotFoundException.class, "Path is not a file",
+        () -> leaseRecoverableFs.recoverLease(parentDirectory));
 
-    Assertions.assertThatThrownBy(() ->leaseRecoverableFs.isFileClosed(parentDirectory))
-      .describedAs("Get the isFileClose status on a directory must throw exception")
-      .hasMessageContaining("Path is not a file")
-      .isInstanceOf(FileNotFoundException.class);
+    LambdaTestUtils.intercept(FileNotFoundException.class, "Path is not a file",
+        () -> leaseRecoverableFs.isFileClosed(parentDirectory));
   }
 
   private LeaseRecoverable verifyAndGetLeaseRecoverableInstance(FileSystem fs, Path path)
-    throws IOException {
+      throws IOException {
     Assertions.assertThat(fs.hasPathCapability(path, LEASE_RECOVERABLE))
-      .describedAs("path capability %s of %s",
-        LEASE_RECOVERABLE, path)
-      .isTrue();
-    Assertions.assertThat(fs instanceof LeaseRecoverable)
-      .describedAs("File system %s must be an instance of %s",
-        fs, LeaseRecoverable.class.getClass())
-      .isTrue();
-    // lease recovery function test
+        .describedAs("path capability %s of %s", LEASE_RECOVERABLE, path)
+        .isTrue();
+    Assertions.assertThat(fs)
+        .describedAs("filesystem %s", fs)
+        .isInstanceOf(LeaseRecoverable.class);
     return (LeaseRecoverable) fs;
   }
 }

@@ -19,15 +19,16 @@
 package org.apache.hadoop.fs.contract.hdfs;
 
 import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractLeaseRecoveryTest;
-import org.apache.hadoop.fs.contract.AbstractContractMkdirTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 /**
- * Test lease recovery on HDFS
+ * Test lease recovery on HDFS.
  */
 public class TestHDFSContractLeaseRecovery extends AbstractContractLeaseRecoveryTest {
 

@@ -23,19 +23,19 @@ package org.apache.hadoop.fs;
  */
 public enum SafeModeAction {
   /**
-   * Starting entering into safe mode
+   * Starting entering into safe mode.
    */
   ENTER,
   /**
-   * Gracefully exit from safe mode
+   * Gracefully exit from safe mode.
    */
   LEAVE,
   /**
-   * Force Exit from safe mode
+   * Force Exit from safe mode.
    */
   FORCE_EXIT,
   /**
-   * Get the status of the safe mode
+   * Get the status of the safe mode.
    */
   GET;
 }

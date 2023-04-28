@@ -28,12 +28,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.SafeMode;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.CommonPathCapabilities.LEASE_RECOVERABLE;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
   
@@ -81,11 +81,12 @@ public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
   public void testFileSystemCapabilities() throws Exception {
     final Path p = new Path("testFileSystemCapabilities");
     final boolean leaseRecovery = fs.hasPathCapability(p, LEASE_RECOVERABLE);
-    Assertions.assertThat(leaseRecovery)
+    assertThat(leaseRecovery)
       .describedAs("path capabilities %s=%s in %s",
         LEASE_RECOVERABLE, leaseRecovery, fs)
-      .isTrue();
-    // we should not have enter safe mode when checking it.
-    Assertions.assertThat(fs instanceof SafeMode).isTrue();
+        .isTrue();
+    assertThat(fs)
+      .describedAs("filesystem %s", fs)
+        .isInstanceOf(SafeMode.class);
   }
 }

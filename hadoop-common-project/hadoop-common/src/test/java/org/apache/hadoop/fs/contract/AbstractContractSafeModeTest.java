@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.contract;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.SafeMode;
 import org.apache.hadoop.fs.SafeModeAction;
+
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -31,27 +32,26 @@ public abstract class AbstractContractSafeModeTest extends AbstractFSContractTes
     final FileSystem fs = getFileSystem();
     SafeMode fsWithSafeMode = verifyAndGetSafeModeInstance(fs);
     Assertions.assertThat(fsWithSafeMode.setSafeMode(SafeModeAction.GET))
-      .describedAs("Getting the status of safe mode before entering should be off.")
-      .isFalse();
+        .describedAs("Getting the status of safe mode before entering should be off.")
+        .isFalse();
     Assertions.assertThat(fsWithSafeMode.setSafeMode(SafeModeAction.ENTER))
-      .describedAs("Entering Safe mode and safe mode turns on.")
-      .isTrue();
+        .describedAs("Entering Safe mode and safe mode turns on.")
+        .isTrue();
     Assertions.assertThat(fsWithSafeMode.setSafeMode(SafeModeAction.GET))
       .describedAs("Getting the status of safe mode after entering, safe mode should be on.")
       .isTrue();
     Assertions.assertThat(fsWithSafeMode.setSafeMode(SafeModeAction.LEAVE))
-      .describedAs("Leaving safe mode, and safe mode switches off.")
-      .isFalse();
+        .describedAs("Leaving safe mode, and safe mode switches off.")
+        .isFalse();
     Assertions.assertThat(fsWithSafeMode.setSafeMode(SafeModeAction.FORCE_EXIT))
-      .describedAs("Force exist safe mode at any time, safe mode should always switches off.")
-      .isFalse();
+        .describedAs("Force exist safe mode at any time, safe mode should always switches off.")
+        .isFalse();
   }
 
   private SafeMode verifyAndGetSafeModeInstance(FileSystem fs) {
-    Assertions.assertThat(fs instanceof SafeMode)
-      .describedAs("File system %s must be an instance of %s",
-        fs, SafeMode.class.getClass())
-      .isTrue();
+    Assertions.assertThat(fs)
+        .describedAs("File system %s must be an instance of %s", fs, SafeMode.class.getClass())
+        .isInstanceOf(SafeMode.class);
     return (SafeMode) fs;
   }
 }
