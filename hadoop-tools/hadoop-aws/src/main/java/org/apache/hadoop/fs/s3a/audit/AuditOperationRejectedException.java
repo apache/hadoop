@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,22 +16,18 @@
  * limitations under the License.
  */
 
--- Script to drop all the tables from the Federation StateStore in MySQL
+package org.apache.hadoop.fs.s3a.audit;
 
-USE FederationStateStore
+/**
+ * The auditor has rejected the operation as forbidden/unavailable.
+ */
+public class AuditOperationRejectedException extends AuditFailureException {
 
-DROP TABLE applicationsHomeSubCluster;
+  public AuditOperationRejectedException(final String message, final Throwable t) {
+    super(message, t);
+  }
 
-DROP TABLE membership;
-
-DROP TABLE policies;
-
-DROP TABLE reservationsHomeSubCluster;
-
-DROP TABLE masterKeys;
-
-DROP TABLE delegationTokens;
-
-DROP TABLE sequenceTable;
-
-DROP TABLE versions;
+  public AuditOperationRejectedException(final String message) {
+    super(message);
+  }
+}
