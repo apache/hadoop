@@ -830,6 +830,13 @@ public class ITestAzureBlobFileSystemCreate extends
         (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
             config);
 
+    int validatePathOrSubPathDoesNotExistConn = 0;
+    if (fs.getAbfsStore().getPrefixMode() == PrefixMode.BLOB) {
+      validatePathOrSubPathDoesNotExistConn = 2;
+      // in case parent of path is not root,
+      // has to be incremented by 1 to account for an mkdirs call
+    }
+
     long totalConnectionMadeBeforeTest = fs.getInstrumentationMap()
         .get(CONNECTIONS_MADE.getStatName());
 
@@ -842,7 +849,11 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.create(nonOverwriteFile, false);
 
     // One request to server to create path should be issued
-    createRequestCount++;
+    // two calls added for -
+    // 1. getFileStatus
+    // 2. actual create call
+    createRequestCount+=2;
+    createRequestCount+=validatePathOrSubPathDoesNotExistConn;
 
     assertAbfsStatistics(
         CONNECTIONS_MADE,
@@ -858,6 +869,9 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.registerListener(null);
 
     // One request to server to create path should be issued
+    // Only single tryGetFileStatus should happen
+    // validating path or subpath exists is not reached
+    // createFile call is never reached
     createRequestCount++;
 
     assertAbfsStatistics(
@@ -873,7 +887,9 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.create(overwriteFilePath, true);
 
     // One request to server to create path should be issued
+    // Single increment for actual create call
     createRequestCount++;
+    createRequestCount+=validatePathOrSubPathDoesNotExistConn;
 
     assertAbfsStatistics(
         CONNECTIONS_MADE,
@@ -896,6 +912,7 @@ public class ITestAzureBlobFileSystemCreate extends
     } else {
       createRequestCount++;
     }
+    createRequestCount+=validatePathOrSubPathDoesNotExistConn;
 
     assertAbfsStatistics(
         CONNECTIONS_MADE,
