@@ -656,6 +656,7 @@ class BlockSender implements java.io.Closeable {
             throw new DiskFileCorruptException("A disk IO error occurred", e);
           }
           String causeMessage = e.getCause() != null ? e.getCause().getMessage() : "";
+          causeMessage = causeMessage != null ? causeMessage : "";
           if (!ioem.startsWith("Broken pipe")
               && !ioem.startsWith("Connection reset")
               && !causeMessage.startsWith("Broken pipe")
