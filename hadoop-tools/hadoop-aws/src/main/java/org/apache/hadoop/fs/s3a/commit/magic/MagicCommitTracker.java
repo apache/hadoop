@@ -185,7 +185,7 @@ public class MagicCommitTracker extends PutTracker {
   private void upload(PutObjectRequest request) throws IOException {
     trackDurationOfInvocation(trackerStatistics,
         COMMITTER_MAGIC_MARKER_PUT.getSymbol(), () ->
-            writer.uploadObject(request, PutObjectOptions.keepingDirs()));
+            writer.putObject(request, PutObjectOptions.keepingDirs(), null));
   }
 
   @Override
