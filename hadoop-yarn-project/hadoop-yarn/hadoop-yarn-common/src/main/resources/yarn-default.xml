@@ -5137,14 +5137,6 @@
   </property>
 
   <property>
-    <name>yarn.router.subcluster.heartbeat.expiration.time</name>
-    <value>30m</value>
-    <description>
-      subCluster heartbeat timeout. Default is 30mins.
-    </description>
-  </property>
-
-  <property>
     <name>yarn.router.asc-interceptor-max-size</name>
     <value>1MB</value>
     <description>
