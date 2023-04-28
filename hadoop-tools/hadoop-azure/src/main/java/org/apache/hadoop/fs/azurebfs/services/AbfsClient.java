@@ -1267,7 +1267,7 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation getContainerProperty(TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESTYPE, CONTAINER);
-    appendSASTokenToQuery("", SASTokenProvider.GET_BLOB_PROPERTIES_OPERATION, abfsUriQueryBuilder);
+    appendSASTokenToQuery("", SASTokenProvider.GET_CONTAINER_PROPERTIES_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
 
