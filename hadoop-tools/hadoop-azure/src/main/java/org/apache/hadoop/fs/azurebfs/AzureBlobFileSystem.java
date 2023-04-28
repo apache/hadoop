@@ -455,7 +455,7 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     try {
-      OutputStream outputStream = getAbfsStore().createFile(qualifiedPath,statistics, fileOverwrite,
+      OutputStream outputStream = getAbfsStore().createFile(qualifiedPath, statistics, fileOverwrite,
           permission == null ? FsPermission.getFileDefault() : permission,
           FsPermission.getUMask(getConf()), tracingContext, null);
       statIncrement(FILES_CREATED);
@@ -527,7 +527,7 @@ public class AzureBlobFileSystem extends FileSystem
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.APPEND, tracingHeaderFormat,
           listener);
-      OutputStream outputStream = abfsStore
+      OutputStream outputStream = getAbfsStore()
           .openFileForWrite(qualifiedPath, statistics, false, tracingContext);
       return new FSDataOutputStream(outputStream, statistics);
     } catch(AzureBlobFileSystemException ex) {

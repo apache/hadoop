@@ -229,7 +229,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    *
    * @param eTag eTag.
    */
-  public void setETag(String eTag) {
+  void setETag(String eTag) {
     lock.lock();
     try {
       this.eTag = eTag;
@@ -243,7 +243,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    *
    * @return eTag.
    */
-  String getETag() {
+  @VisibleForTesting
+  public String getETag() {
     lock.lock();
     try {
       return eTag;
@@ -990,5 +991,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     sb.append(outputStreamStatistics.toString());
     sb.append("}");
     return sb.toString();
+  }
+
+  @VisibleForTesting
+  public String getLeaseId() {
+    return leaseId;
   }
 }
