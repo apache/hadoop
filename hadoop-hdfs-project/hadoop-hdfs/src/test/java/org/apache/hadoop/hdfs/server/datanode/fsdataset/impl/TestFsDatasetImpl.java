@@ -1957,9 +1957,9 @@ public class TestFsDatasetImpl {
       // Mock local block file not found when disk with some exception.
       fsdataset.invalidateMissingBlock(bpid, replicaInfo);
 
-      // assert local block file wouldn't be deleted from disk.
+      // Assert local block file wouldn't be deleted from disk.
       assertTrue(blockFile.exists());
-      // assert block info would be removed from ReplicaMap.
+      // Assert block info would be removed from ReplicaMap.
       assertEquals("null",
           fsdataset.getReplicaString(bpid, replicaInfo.getBlockId()));
       BlockManager blockManager = cluster.getNameNode().
@@ -1967,7 +1967,7 @@ public class TestFsDatasetImpl {
       GenericTestUtils.waitFor(() ->
           blockManager.getLowRedundancyBlocksCount() == 1, 100, 5000);
 
-      // mock local block file found when disk back to normal
+      // Mock local block file found when disk back to normal.
       FsVolumeSpi.ScanInfo info = new FsVolumeSpi.ScanInfo(
           replicaInfo.getBlockId(), blockFile.getParentFile().getAbsoluteFile(),
           blockFile.getName(), metaFile.getName(), replicaInfo.getVolume());
