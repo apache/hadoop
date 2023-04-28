@@ -27,14 +27,13 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -354,23 +353,28 @@ public class ITestAzureBlobFileSystemCreate extends
     final AzureBlobFileSystem fs = getFileSystem();
     final Path path = new Path("/dir1");
 
-    ExecutorService es;
-    es = Executors.newFixedThreadPool(3);
-    List<Future<Void>> tasks = new ArrayList<>();
+    ExecutorService es = Executors.newFixedThreadPool(3);
+
+    List<CompletableFuture<Void>> tasks = new ArrayList<>();
+
     for (int i = 0; i < 3; i++) {
-      Callable<Void> callable = new Callable<Void>() {
-        @Override
-        public Void call() throws Exception {
+      CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+        try {
           fs.mkdirs(path);
-          return null;
+        } catch (IOException e) {
+          throw new CompletionException(e);
         }
-      };
-      tasks.add(es.submit(callable));
+      }, es);
+      tasks.add(future);
     }
 
-    // Asserting that the directory created by mkdir exists as explicit.
+    // Wait for all the tasks to complete
+    CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).join();
+
+    // Assert that the directory created by mkdir exists as explicit
     Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(path, fs));
   }
+
 
   /**
    * Creation of directory with overwrite set to false should not fail according to DFS code.
