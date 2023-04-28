@@ -19,14 +19,17 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
 
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
@@ -125,6 +128,7 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
     createAzCopyFile(new Path("/file"));
     createAzCopyDirectory(new Path("/dst"));
     fs.mkdirs(new Path("/dst/dir"));
+    deleteBlobPath(fs, new Path("/dst"));
     intercept(AbfsRestOperationException.class, () -> {
       fs.getAbfsStore()
           .getBlobProperty(new Path("/dst"),
@@ -206,16 +210,16 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
   public void testRenameImplicitDirectoryContainingExplicitDirectory()
       throws Exception {
     explicitImplicitDirectoryRenameTest(
-        true,
-        false,
-        true,
-        true,
-        false,
-        true,
-        false,
-        false,
-        false,
-        true
+        /*srcParentExplicit*/true,
+        /*srcExplicit*/false,
+        /*srcSubDirExplicit*/true,
+        /*dstParentExplicit*/true,
+        /*dstExplicit*/false,
+        /*dstParentExists*/true,
+        /*isDstParentFile*/false,
+        /*dstExist*/false,
+        /*isDstFile*/false,
+        /*shouldRenamePass*/true
     );
   }
 
@@ -819,7 +823,7 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
         dstExist, isDstFile, fs, dstParent, dst, dstSubFileName, dstSubDirName,
         isSubDirExplicit);
 
-    if (dstParentExists && !isDstParentFile && !dstParentExplicit) {
+    if (dstParentExists && !isDstParentFile && !dstParentExplicit && !dstExplicit) {
       intercept(AbfsRestOperationException.class, () -> {
         fs.getAbfsStore()
             .getBlobProperty(dstParent, Mockito.mock(TracingContext.class));
@@ -843,12 +847,21 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
 
     if (srcExplicit) {
       fs.mkdirs(src);
+      if(!srcParentExplicit) {
+        deleteBlobPath(fs, srcParent);
+      }
     } else {
       createAzCopyDirectory(src);
     }
     createAzCopyFile(new Path(src, "subFile"));
     if (srcSubDirExplicit) {
       fs.mkdirs(new Path(src, "subDir"));
+      if(!srcParentExplicit) {
+        deleteBlobPath(fs, srcParent);
+      }
+      if(!srcExplicit) {
+        deleteBlobPath(fs, src);
+      }
     } else {
       Path srcSubDir = new Path(src, "subDir");
       createAzCopyDirectory(srcSubDir);
@@ -869,6 +882,18 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
         fs.getAbfsStore()
             .getBlobProperty(src, Mockito.mock(TracingContext.class));
       });
+    }
+  }
+
+  private void deleteBlobPath(final AzureBlobFileSystem fs, final Path srcParent)
+      throws AzureBlobFileSystemException {
+    try {
+      fs.getAbfsClient()
+          .deleteBlobPath(srcParent, Mockito.mock(TracingContext.class));
+    } catch (AbfsRestOperationException ex) {
+      if(ex.getStatusCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+        throw ex;
+      }
     }
   }
 
@@ -898,6 +923,9 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
       if (!isDstFile) {
         if (dstExplicit) {
           fs.mkdirs(dst);
+          if(!dstParentExplicit) {
+            deleteBlobPath(fs, dstParent);
+          }
         } else {
           createAzCopyDirectory(dst);
         }
@@ -907,6 +935,12 @@ public class ITestAzureBlobFileSystemExplictImplicitRename
         if (subDirName != null) {
           if (isSubDirExplicit) {
             fs.mkdirs(new Path(dst, subDirName));
+            if(!dstParentExplicit) {
+              deleteBlobPath(fs, dstParent);
+            }
+            if(!dstExplicit) {
+              deleteBlobPath(fs, dst);
+            }
           } else {
             createAzCopyDirectory(new Path(dst, subDirName));
           }
