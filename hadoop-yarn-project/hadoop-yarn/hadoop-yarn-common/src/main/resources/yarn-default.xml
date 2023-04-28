@@ -5066,6 +5066,16 @@
   </property>
 
   <property>
+    <name>yarn.nodemanager.dispatcher.metric.enable</name>
+    <value>false</value>
+    <description>
+      Yarn NodeManager enables Dispatcher Metric.
+      if true, will enable dispatcher metric; if false, will not enable dispatcher metric;
+      Default is false.
+    </description>
+  </property>
+
+  <property>
     <name>yarn.router.interceptor.user-thread-pool.minimum-pool-size</name>
     <value>5</value>
     <description>
@@ -5182,6 +5192,22 @@
     </description>
     <name>yarn.router.scheduled.executor.threads</name>
     <value>1</value>
+  </property>
+
+  <property>
+    <description>
+      Number of Retries while trying to make root directory for node store.
+    </description>
+    <name>yarn.resourcemanager.nodestore-rootdir.num-retries</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+      Interval in ms between retries while trying to make root directory for node store.
+    </description>
+    <name>yarn.resourcemanager.nodestore-rootdir.retry-interval-ms</name>
+    <value>1000</value>
   </property>
 
 </configuration>

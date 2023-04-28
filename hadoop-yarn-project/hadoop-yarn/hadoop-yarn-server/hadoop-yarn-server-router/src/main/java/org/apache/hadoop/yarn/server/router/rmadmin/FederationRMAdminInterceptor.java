@@ -28,6 +28,7 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -60,9 +61,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriori
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
@@ -76,10 +77,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.Collection;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.Collection;
+import java.util.Set;
 import java.util.Date;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
@@ -87,6 +89,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class FederationRMAdminInterceptor extends AbstractRMAdminRequestInterceptor {
 
@@ -120,14 +123,14 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     this.adminRMProxies = new ConcurrentHashMap<>();
     routerMetrics = RouterMetrics.getMetrics();
 
-    this.heartbeatExpirationMillis =
-        this.conf.getTimeDuration(YarnConfiguration.ROUTER_SUBCLUSTER_EXPIRATION_TIME,
+    this.heartbeatExpirationMillis = this.conf.getTimeDuration(
+        YarnConfiguration.ROUTER_SUBCLUSTER_EXPIRATION_TIME,
         YarnConfiguration.DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME, TimeUnit.MINUTES);
   }
 
   @VisibleForTesting
   protected ResourceManagerAdministrationProtocol getAdminRMProxyForSubCluster(
-      SubClusterId subClusterId) throws YarnException {
+      SubClusterId subClusterId) throws Exception {
 
     if (adminRMProxies.containsKey(subClusterId)) {
       return adminRMProxies.get(subClusterId);
@@ -387,59 +390,339 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
   @Override
   public RefreshAdminAclsResponse refreshAdminAcls(RefreshAdminAclsRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrRefreshAdminAclsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshAdminAcls request.", null);
+    }
+
+    // call refreshAdminAcls of activeSubClusters.
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[] {RefreshAdminAclsRequest.class}, new Object[] {request});
+      String subClusterId = request.getSubClusterId();
+      Collection<RefreshAdminAclsResponse> refreshAdminAclsResps =
+          remoteMethod.invokeConcurrent(this, RefreshAdminAclsResponse.class, subClusterId);
+      if (CollectionUtils.isNotEmpty(refreshAdminAclsResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRefreshAdminAclsRetrieved(stopTime - startTime);
+        return RefreshAdminAclsResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRefreshAdminAclsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshAdminAcls due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrRefreshAdminAclsFailedRetrieved();
+    throw new YarnException("Unable to refreshAdminAcls.");
   }
 
   @Override
   public RefreshServiceAclsResponse refreshServiceAcls(RefreshServiceAclsRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrRefreshServiceAclsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshServiceAcls request.", null);
+    }
+
+    // call refreshAdminAcls of activeSubClusters.
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{RefreshServiceAclsRequest.class}, new Object[]{request});
+      String subClusterId = request.getSubClusterId();
+      Collection<RefreshServiceAclsResponse> refreshServiceAclsResps =
+          remoteMethod.invokeConcurrent(this, RefreshServiceAclsResponse.class, subClusterId);
+      if (CollectionUtils.isNotEmpty(refreshServiceAclsResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRefreshServiceAclsRetrieved(stopTime - startTime);
+        return RefreshServiceAclsResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRefreshServiceAclsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshAdminAcls due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrRefreshServiceAclsFailedRetrieved();
+    throw new YarnException("Unable to refreshServiceAcls.");
   }
 
   @Override
   public UpdateNodeResourceResponse updateNodeResource(UpdateNodeResourceRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrUpdateNodeResourceFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing UpdateNodeResource request.", null);
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrUpdateNodeResourceFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing UpdateNodeResource SubClusterId.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{UpdateNodeResourceRequest.class}, new Object[]{request});
+      Collection<UpdateNodeResourceResponse> updateNodeResourceResps =
+          remoteMethod.invokeConcurrent(this, UpdateNodeResourceResponse.class, subClusterId);
+      if (CollectionUtils.isNotEmpty(updateNodeResourceResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededUpdateNodeResourceRetrieved(stopTime - startTime);
+        return UpdateNodeResourceResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrUpdateNodeResourceFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to updateNodeResource due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrUpdateNodeResourceFailedRetrieved();
+    throw new YarnException("Unable to updateNodeResource.");
   }
 
   @Override
   public RefreshNodesResourcesResponse refreshNodesResources(RefreshNodesResourcesRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrRefreshNodesResourcesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshNodesResources request.", null);
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrRefreshNodesResourcesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshNodesResources SubClusterId.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{RefreshNodesResourcesRequest.class}, new Object[]{request});
+      Collection<RefreshNodesResourcesResponse> refreshNodesResourcesResps =
+          remoteMethod.invokeConcurrent(this, RefreshNodesResourcesResponse.class, subClusterId);
+      if (CollectionUtils.isNotEmpty(refreshNodesResourcesResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRefreshNodesResourcesRetrieved(stopTime - startTime);
+        return RefreshNodesResourcesResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRefreshNodesResourcesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshNodesResources due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrRefreshNodesResourcesFailedRetrieved();
+    throw new YarnException("Unable to refreshNodesResources.");
   }
 
   @Override
   public AddToClusterNodeLabelsResponse addToClusterNodeLabels(
-      AddToClusterNodeLabelsRequest request)
-      throws YarnException, IOException {
-    throw new NotImplementedException();
+      AddToClusterNodeLabelsRequest request) throws YarnException, IOException {
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing AddToClusterNodeLabels request.", null);
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing AddToClusterNodeLabels SubClusterId.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{AddToClusterNodeLabelsRequest.class}, new Object[]{request});
+      Collection<AddToClusterNodeLabelsResponse> addToClusterNodeLabelsResps =
+          remoteMethod.invokeConcurrent(this, AddToClusterNodeLabelsResponse.class, subClusterId);
+      if (CollectionUtils.isNotEmpty(addToClusterNodeLabelsResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededAddToClusterNodeLabelsRetrieved(stopTime - startTime);
+        return AddToClusterNodeLabelsResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to addToClusterNodeLabels due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrAddToClusterNodeLabelsFailedRetrieved();
+    throw new YarnException("Unable to addToClusterNodeLabels.");
   }
 
   @Override
   public RemoveFromClusterNodeLabelsResponse removeFromClusterNodeLabels(
       RemoveFromClusterNodeLabelsRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RemoveFromClusterNodeLabels request.", null);
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RemoveFromClusterNodeLabels SubClusterId.",
+          null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{RemoveFromClusterNodeLabelsRequest.class}, new Object[]{request});
+      Collection<RemoveFromClusterNodeLabelsResponse> refreshNodesResourcesResps =
+          remoteMethod.invokeConcurrent(this, RemoveFromClusterNodeLabelsResponse.class,
+          subClusterId);
+      if (CollectionUtils.isNotEmpty(refreshNodesResourcesResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRemoveFromClusterNodeLabelsRetrieved(stopTime - startTime);
+        return RemoveFromClusterNodeLabelsResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to removeFromClusterNodeLabels due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrRemoveFromClusterNodeLabelsFailedRetrieved();
+    throw new YarnException("Unable to removeFromClusterNodeLabels.");
   }
 
   @Override
   public ReplaceLabelsOnNodeResponse replaceLabelsOnNode(ReplaceLabelsOnNodeRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing ReplaceLabelsOnNode request.", null);
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing ReplaceLabelsOnNode SubClusterId.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{ReplaceLabelsOnNodeRequest.class}, new Object[]{request});
+      Collection<ReplaceLabelsOnNodeResponse> replaceLabelsOnNodeResps =
+          remoteMethod.invokeConcurrent(this, ReplaceLabelsOnNodeResponse.class, subClusterId);
+      if (CollectionUtils.isNotEmpty(replaceLabelsOnNodeResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRemoveFromClusterNodeLabelsRetrieved(stopTime - startTime);
+        return ReplaceLabelsOnNodeResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to replaceLabelsOnNode due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrReplaceLabelsOnNodeFailedRetrieved();
+    throw new YarnException("Unable to replaceLabelsOnNode.");
   }
 
   @Override
   public CheckForDecommissioningNodesResponse checkForDecommissioningNodes(
-      CheckForDecommissioningNodesRequest checkForDecommissioningNodesRequest)
-      throws YarnException, IOException {
-    throw new NotImplementedException();
+      CheckForDecommissioningNodesRequest request) throws YarnException, IOException {
+
+    // Parameter check
+    if (request == null) {
+      RouterServerUtil.logAndThrowException("Missing checkForDecommissioningNodes request.", null);
+      routerMetrics.incrCheckForDecommissioningNodesFailedRetrieved();
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrCheckForDecommissioningNodesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing checkForDecommissioningNodes SubClusterId.",
+          null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{CheckForDecommissioningNodesRequest.class}, new Object[]{request});
+
+      Collection<CheckForDecommissioningNodesResponse> responses =
+          remoteMethod.invokeConcurrent(this, CheckForDecommissioningNodesResponse.class,
+          subClusterId);
+
+      if (CollectionUtils.isNotEmpty(responses)) {
+        // We selected a subCluster, the list is not empty and size=1.
+        List<CheckForDecommissioningNodesResponse> collects =
+            responses.stream().collect(Collectors.toList());
+        if (!collects.isEmpty() && collects.size() == 1) {
+          CheckForDecommissioningNodesResponse response = collects.get(0);
+          long stopTime = clock.getTime();
+          routerMetrics.succeededCheckForDecommissioningNodesRetrieved((stopTime - startTime));
+          Set<NodeId> nodes = response.getDecommissioningNodes();
+          return CheckForDecommissioningNodesResponse.newInstance(nodes);
+        }
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrCheckForDecommissioningNodesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to checkForDecommissioningNodes due to exception " + e.getMessage());
+    }
+
+    routerMetrics.incrCheckForDecommissioningNodesFailedRetrieved();
+    throw new YarnException("Unable to checkForDecommissioningNodes.");
   }
 
   @Override
   public RefreshClusterMaxPriorityResponse refreshClusterMaxPriority(
-      RefreshClusterMaxPriorityRequest request)
-      throws YarnException, IOException {
-    throw new NotImplementedException();
+      RefreshClusterMaxPriorityRequest request) throws YarnException, IOException {
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrRefreshClusterMaxPriorityFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshClusterMaxPriority request.", null);
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrRefreshClusterMaxPriorityFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshClusterMaxPriority SubClusterId.",
+          null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{RefreshClusterMaxPriorityRequest.class}, new Object[]{request});
+      Collection<RefreshClusterMaxPriorityResponse> refreshClusterMaxPriorityResps =
+          remoteMethod.invokeConcurrent(this, RefreshClusterMaxPriorityResponse.class,
+          subClusterId);
+      if (CollectionUtils.isNotEmpty(refreshClusterMaxPriorityResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRefreshClusterMaxPriorityRetrieved(stopTime - startTime);
+        return RefreshClusterMaxPriorityResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRefreshClusterMaxPriorityFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshClusterMaxPriority due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrRefreshClusterMaxPriorityFailedRetrieved();
+    throw new YarnException("Unable to refreshClusterMaxPriority.");
   }
 
   @Override
@@ -447,6 +730,21 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       NodesToAttributesMappingRequest request)
       throws YarnException, IOException {
     throw new NotImplementedException();
+  }
+
+  @Override
+  public String[] getGroupsForUser(String user) throws IOException {
+    return new String[0];
+  }
+
+  @VisibleForTesting
+  public FederationStateStoreFacade getFederationFacade() {
+    return federationFacade;
+  }
+
+  @VisibleForTesting
+  public ThreadPoolExecutor getExecutorService() {
+    return executorService;
   }
 
   /**
@@ -462,8 +760,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
    * @throws YarnException exceptions from yarn servers.
    */
   @Override
-  public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request)
-      throws YarnException {
+  public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request) throws YarnException, IOException {
 
     if (request == null) {
       routerMetrics.incrDeregisterSubClusterFailedRetrieved();
@@ -494,7 +791,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     } catch (Exception e) {
       routerMetrics.incrDeregisterSubClusterFailedRetrieved();
       RouterServerUtil.logAndThrowException(e,
-          "Unable to deregisterSubCluster due to exception. " + e.getMessage());
+              "Unable to deregisterSubCluster due to exception. " + e.getMessage());
     }
 
     routerMetrics.incrDeregisterSubClusterFailedRetrieved();
@@ -520,7 +817,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       Date lastHeartBeatDate = new Date(lastHeartBeat);
 
       deregisterSubClusters = DeregisterSubClusters.newInstance(
-          reqSubClusterId, "UNKNOWN", lastHeartBeatDate.toString(), "", subClusterState.name());
+              reqSubClusterId, "UNKNOWN", lastHeartBeatDate.toString(), "", subClusterState.name());
 
       // Step2. Deregister subCluster.
       if (subClusterState.isUsable()) {
@@ -530,7 +827,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         long heartBearTimeInterval = Time.now() - lastHeartBeat;
         if (heartBearTimeInterval - heartbeatExpirationMillis < 0) {
           boolean deregisterSubClusterFlag =
-              federationFacade.deregisterSubCluster(subClusterId, SubClusterState.SC_LOST);
+                  federationFacade.deregisterSubCluster(subClusterId, SubClusterState.SC_LOST);
           if (deregisterSubClusterFlag) {
             deregisterSubClusters.setDeregisterState("SUCCESS");
             deregisterSubClusters.setSubClusterState("SC_LOST");
@@ -545,29 +842,14 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         deregisterSubClusters.setInformation("Heartbeat Time < 30 minutes. " +
             "DeregisterSubCluster does not need to be executed");
         LOG.warn("SubCluster {} in State {} does not need to update state.",
-            subClusterId, subClusterState);
+                subClusterId, subClusterState);
       }
       return deregisterSubClusters;
     } catch (YarnException e) {
       LOG.error("SubCluster {} DeregisterSubCluster Failed", reqSubClusterId, e);
       deregisterSubClusters = DeregisterSubClusters.newInstance(
-          reqSubClusterId, "FAILED", "UNKNOWN", e.getMessage(), "UNKNOWN");
+              reqSubClusterId, "FAILED", "UNKNOWN", e.getMessage(), "UNKNOWN");
       return deregisterSubClusters;
     }
-  }
-
-  @Override
-  public String[] getGroupsForUser(String user) throws IOException {
-    return new String[0];
-  }
-
-  @VisibleForTesting
-  public FederationStateStoreFacade getFederationFacade() {
-    return federationFacade;
-  }
-
-  @VisibleForTesting
-  public ThreadPoolExecutor getExecutorService() {
-    return executorService;
   }
 }

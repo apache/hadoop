@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.Random;
+import java.util.Collection;
 
 import javax.cache.Cache;
 import javax.cache.CacheManager;
@@ -93,6 +94,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterResponse;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -813,6 +815,24 @@ public final class FederationStateStoreFacade {
   }
 
   /**
+   * The Router Supports Store RMDelegationTokenIdentifier{@link RMDelegationTokenIdentifier}.
+   *
+   * @param identifier delegation tokens from the RM.
+   * @param renewDate renewDate.
+   * @param tokenInfo tokenInfo.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
+  public void storeNewToken(RMDelegationTokenIdentifier identifier,
+      long renewDate, String tokenInfo) throws YarnException, IOException {
+    LOG.info("storing RMDelegation token with sequence number: {}.",
+        identifier.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate, tokenInfo);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    stateStore.storeNewToken(request);
+  }
+
+  /**
    * The Router Supports Update RMDelegationTokenIdentifier{@link RMDelegationTokenIdentifier}.
    *
    * @param identifier delegation tokens from the RM
@@ -825,6 +845,24 @@ public final class FederationStateStoreFacade {
     LOG.info("updating RMDelegation token with sequence number: {}.",
         identifier.getSequenceNumber());
     RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    stateStore.updateStoredToken(request);
+  }
+
+  /**
+   * The Router Supports Update RMDelegationTokenIdentifier{@link RMDelegationTokenIdentifier}.
+   *
+   * @param identifier delegation tokens from the RM
+   * @param renewDate renewDate
+   * @param tokenInfo tokenInfo.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
+  public void updateStoredToken(RMDelegationTokenIdentifier identifier,
+      long renewDate, String tokenInfo) throws YarnException, IOException {
+    LOG.info("updating RMDelegation token with sequence number: {}.",
+        identifier.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate, tokenInfo);
     RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     stateStore.updateStoredToken(request);
   }
@@ -1175,5 +1213,24 @@ public final class FederationStateStoreFacade {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Get active subclusters.
+   *
+   * @return We will return a list of active subclusters as a Collection.
+   */
+  public Collection<SubClusterInfo> getActiveSubClusters()
+      throws NotFoundException {
+    try {
+      Map<SubClusterId, SubClusterInfo> subClusterMap = getSubClusters(true);
+      if (MapUtils.isEmpty(subClusterMap)) {
+        throw new NotFoundException("Not Found SubClusters.");
+      }
+      return subClusterMap.values();
+    } catch (Exception e) {
+      LOG.error("getActiveSubClusters failed.", e);
+      return null;
+    }
   }
 }
