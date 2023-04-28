@@ -657,7 +657,7 @@ public class AzureBlobFileSystem extends FileSystem
                 abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
       }
       try {
-        return nativeFs.rename(wasbSrc, wasbDest);
+        return getNativeFs().rename(wasbSrc, wasbDest);
       } catch (IOException e) {
         LOG.debug("Rename redirection failed for the given src {} and the given destination {}", src, dst);
         throw e;
@@ -833,7 +833,7 @@ public class AzureBlobFileSystem extends FileSystem
                 abfsStore.getAbfsConfiguration().isHttpsAlwaysUsed()));
       }
       try {
-        return nativeFs.delete(wasbPath, recursive);
+        return getNativeFs().delete(wasbPath, recursive);
       } catch (IOException e) {
         LOG.debug("Delete redirection failed for the given path {} ", qualifiedPath);
         throw e;
@@ -849,7 +849,7 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     try {
-      abfsStore.delete(qualifiedPath, recursive, tracingContext);
+      getAbfsStore().delete(qualifiedPath, recursive, tracingContext);
       return true;
     } catch (AzureBlobFileSystemException ex) {
       checkException(f, ex, AzureServiceErrorCode.PATH_NOT_FOUND);
@@ -1914,6 +1914,11 @@ public class AzureBlobFileSystem extends FileSystem
   boolean getIsNamespaceEnabled(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     return abfsStore.getIsNamespaceEnabled(tracingContext);
+  }
+
+  @VisibleForTesting
+  NativeAzureFileSystem getNativeFs() {
+    return nativeFs;
   }
 
   /**

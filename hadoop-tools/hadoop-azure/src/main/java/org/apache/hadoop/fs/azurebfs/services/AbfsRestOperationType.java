@@ -44,6 +44,7 @@ public enum AbfsRestOperationType {
     LeasePath,
     PutBlob,
     GetBlobProperties,
+    GetContainerProperties,
     PutBlock,
     PutBlockList,
     GetBlockList,

@@ -43,6 +43,7 @@ public interface SASTokenProvider {
   String GET_BLOCK_LIST = "get-block-list";
   String GET_PROPERTIES_OPERATION = "get-properties";
   String GET_BLOB_PROPERTIES_OPERATION = "get-blob-properties";
+  String GET_CONTAINER_PROPERTIES_OPERATION = "get-container-properties";
   String LIST_OPERATION = "list";
   String LIST_BLOB_OPERATION = "list-blob";
   String COPY_BLOB_DESTINATION = "copy-blob-dst";
