@@ -21,7 +21,9 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
@@ -43,6 +45,8 @@ import org.apache.hadoop.classification.VisibleForTesting;
 public class QueueCLI extends YarnCLI {
   public static final String QUEUE = "queue";
 
+  public static final String ALLTAG = "all";
+
   public static void main(String[] args) throws Exception {
     QueueCLI cli = new QueueCLI();
     cli.setSysOutPrintStream(System.out);
@@ -60,6 +64,11 @@ public class QueueCLI extends YarnCLI {
         "List queue information about given queue.");
     opts.addOption(HELP_CMD, false, "Displays help for all commands.");
     opts.getOption(STATUS_CMD).setArgName("Queue Name");
+    opts.addOption(LIST_CMD, true,
+         "All child queues are displayed according to the parent queue. " +
+         "If the value is all, all queues are displayed.");
+    opts.getOption(LIST_CMD).setArgName("Parent Queue Name");
+
 
     CommandLine cliParser = null;
     try {
@@ -79,6 +88,12 @@ public class QueueCLI extends YarnCLI {
     } else if (cliParser.hasOption(HELP_CMD)) {
       printUsage(opts);
       return 0;
+    } else if (cliParser.hasOption(LIST_CMD)) {
+      if (args.length != 2) {
+        printUsage(opts);
+        return -1;
+      }
+      return listChildQueues(cliParser.getOptionValue(LIST_CMD));
     } else {
       syserr.println("Invalid Command Usage : ");
       printUsage(opts);
@@ -97,7 +112,7 @@ public class QueueCLI extends YarnCLI {
   }
   
   /**
-   * Lists the Queue Information matching the given queue name
+   * Lists the Queue Information matching the given queue name.
    * 
    * @param queueName
    * @throws YarnException
@@ -120,6 +135,40 @@ public class QueueCLI extends YarnCLI {
     }
     writer.flush();
     return rc;
+  }
+
+  /**
+   * List information about all child queues based on the parent queue.
+   * @param parentQueueName The name of the payment queue.
+   * @return The status code of execution.
+   * @throws IOException failed or interrupted I/O operations.
+   * @throws YarnException exceptions from yarn servers.
+   */
+  private int listChildQueues(String parentQueueName) throws IOException, YarnException {
+    int exitCode;
+    PrintWriter writer = new PrintWriter(new OutputStreamWriter(
+        sysout, Charset.forName(StandardCharsets.UTF_8.name())));
+    if (parentQueueName.equalsIgnoreCase(ALLTAG)) {
+      List<QueueInfo> queueInfos = client.getAllQueues();
+      if (queueInfos != null) {
+        printQueueInfos(writer, queueInfos);
+        exitCode = 0;
+      } else {
+        writer.println("Cannot get any queues from RM,please check.");
+        exitCode = -1;
+      }
+    } else {
+      List<QueueInfo> childQueueInfos = client.getChildQueueInfos(parentQueueName);
+      if (childQueueInfos != null) {
+        printQueueInfos(writer, childQueueInfos);
+        exitCode = 0;
+      } else {
+        writer.println("Cannot get any queues under " + parentQueueName + " from RM,please check.");
+        exitCode = -1;
+      }
+    }
+    writer.flush();
+    return exitCode;
   }
 
   private void printQueueInfo(PrintWriter writer, QueueInfo queueInfo) {
@@ -169,6 +218,31 @@ public class QueueCLI extends YarnCLI {
     if (intraQueuePreemption != null) {
       writer.print("\tIntra-queue Preemption : ");
       writer.println(intraQueuePreemption ? "disabled" : "enabled");
+    }
+  }
+
+  private void printQueueInfos(PrintWriter writer, List<QueueInfo> queueInfos) {
+    writer.print(queueInfos.size() + " queues were found : \n");
+    writer.print("Queue Name\tQueue Path\tState\tCapacity\tCurrent Capacity" +
+        "\tMaximum Capacity\tWeight\tMaximum Parallel Apps\n");
+    for (QueueInfo queueInfo : queueInfos) {
+      writer.print(queueInfo.getQueueName());
+      writer.print("\t");
+      writer.print(queueInfo.getQueuePath());
+      writer.print("\t");
+      writer.print(queueInfo.getQueueState());
+      DecimalFormat df = new DecimalFormat("#.00");
+      writer.print("\t");
+      writer.print(df.format(queueInfo.getCapacity() * 100) + "%");
+      writer.print("\t");
+      writer.print(df.format(queueInfo.getCurrentCapacity() * 100) + "%");
+      writer.print("\t");
+      writer.print(df.format(queueInfo.getMaximumCapacity() * 100) + "%");
+      writer.print("\t");
+      writer.print(df.format(queueInfo.getWeight()));
+      writer.print("\t");
+      writer.print(queueInfo.getMaxParallelApps());
+      writer.print("\n");
     }
   }
 }
