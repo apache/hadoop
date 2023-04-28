@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_BLOB_ENDPOINT;
@@ -55,6 +54,13 @@ public class ITestAzureBlobFileSystemBlobConfig
     super();
   }
 
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    Assume.assumeFalse(getFileSystem().getIsNamespaceEnabled(
+        Mockito.mock(TracingContext.class)));
+  }
+
   @Test
   public void testDfsEndpointWhenBlobEndpointConfigIsDisabled()
       throws Exception {
@@ -63,10 +69,10 @@ public class ITestAzureBlobFileSystemBlobConfig
     AbfsClient client = Mockito.spy(fs.getAbfsClient());
     fs.getAbfsStore().setClient(client);
     fs.create(new Path("/tmp"));
-    veriCreatePathExecution(client);
+    verifyCreatePathExecution(client);
   }
 
-  private void veriCreatePathExecution(final AbfsClient client)
+  private void verifyCreatePathExecution(final AbfsClient client)
       throws AzureBlobFileSystemException {
     Mockito.verify(client, Mockito.times(1))
         .createPath(Mockito.anyString(), Mockito.anyBoolean(),
