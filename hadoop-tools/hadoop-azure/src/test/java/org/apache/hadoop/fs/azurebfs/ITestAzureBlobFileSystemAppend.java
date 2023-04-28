@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
@@ -30,6 +31,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
@@ -295,7 +297,7 @@ public class ITestAzureBlobFileSystemAppend extends
   public void testParallelWriteSameOffsetDifferentOutputStreams() throws Exception {
     Configuration configuration = getRawConfiguration();
     configuration.set(FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE, "false");
-    FileSystem fs = FileSystem.newInstance(configuration);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
     ExecutorService executorService = Executors.newFixedThreadPool(5);
     List<Future<?>> futures = new ArrayList<>();
 
@@ -311,7 +313,6 @@ public class ITestAzureBlobFileSystemAppend extends
     futures.add(executorService.submit(() -> {
       try {
         out1.write(b, 10, 200);
-        //out1.hsync();
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -320,7 +321,6 @@ public class ITestAzureBlobFileSystemAppend extends
     futures.add(executorService.submit(() -> {
       try {
         out2.write(b, 10, 200);
-        //out2.hsync();
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -329,7 +329,6 @@ public class ITestAzureBlobFileSystemAppend extends
     futures.add(executorService.submit(() -> {
       try {
         out3.write(b, 10, 200);
-        //out3.hsync();
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -377,7 +376,6 @@ public class ITestAzureBlobFileSystemAppend extends
     futures.add(executorService.submit(() -> {
       try {
         out1.write(b1, 10, 200);
-        //out1.hsync();
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -386,7 +384,6 @@ public class ITestAzureBlobFileSystemAppend extends
     futures.add(executorService.submit(() -> {
       try {
         out2.write(b1, 20, 300);
-        //out2.hsync();
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -395,7 +392,6 @@ public class ITestAzureBlobFileSystemAppend extends
     futures.add(executorService.submit(() -> {
       try {
         out3.write(b1, 30, 400);
-        //out3.hsync();
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -417,5 +413,85 @@ public class ITestAzureBlobFileSystemAppend extends
       }
     }
     assertEquals(exceptionCaught, 0);
+  }
+
+  /**
+   * Verify that parallel write for different content length will not throw exception.
+   **/
+  @Test
+  public void testParallelWritOutputStreamClose() throws Exception {
+    Configuration configuration = getRawConfiguration();
+    configuration.set(FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE, "false");
+    FileSystem fs = FileSystem.newInstance(configuration);
+    ExecutorService executorService = Executors.newFixedThreadPool(5);
+    List<Future<?>> futures = new ArrayList<>();
+
+    // Create three output streams with different content length
+    FSDataOutputStream out1 = fs.create(TEST_FILE_PATH);
+    final byte[] b1 = new byte[8 * ONE_MB];
+    new Random().nextBytes(b1);
+
+    FSDataOutputStream out2 = fs.append(TEST_FILE_PATH);
+
+    // Submit tasks to write to each output stream
+    futures.add(executorService.submit(() -> {
+      try {
+        out1.write(b1, 0, 200);
+        out1.close();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }));
+
+    futures.add(executorService.submit(() -> {
+      try {
+        out2.write(b1, 100, 400);
+        out2.hsync();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }));
+
+    int exceptionCaught = 0;
+    for (Future<?> future : futures) {
+      try {
+        future.get(); // wait for the task to complete and handle any exceptions thrown by the lambda expression
+      } catch (ExecutionException e) {
+        Throwable cause = e.getCause();
+        if (cause instanceof RuntimeException) {
+          exceptionCaught++;
+        } else {
+          System.err.println("Unexpected exception caught: " + cause);
+        }
+      } catch (InterruptedException e) {
+        // handle interruption
+      }
+    }
+
+    // Validate that the data written in the buffer is the same as what was read
+    final byte[] readBuffer = new byte[8 * ONE_MB];
+    int result;
+    FSDataInputStream inputStream = fs.open(TEST_FILE_PATH);
+    inputStream.seek(0);
+    result = inputStream.read(readBuffer, 0, 4 * ONE_MB);
+    assertEquals(result, 200); // Verify that the number of bytes read matches the number of bytes written
+    assertArrayEquals(Arrays.copyOfRange(readBuffer, 0, result), Arrays.copyOfRange(b1, 0, result)); // Verify that the data read matches the original data written
+
+    assertEquals(exceptionCaught, 1);
+  }
+
+  /**
+   * Verify that once flushed etag changes.
+   **/
+  @Test
+  public void testEtagMismatch() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    FSDataOutputStream out1 = fs.create(TEST_FILE_PATH);
+    FSDataOutputStream out2 = fs.create(TEST_FILE_PATH);
+
+    out2.write(10);
+    out2.hsync();
+    out1.write(10);
+    intercept(IOException.class, () -> out1.hsync());
   }
 }
