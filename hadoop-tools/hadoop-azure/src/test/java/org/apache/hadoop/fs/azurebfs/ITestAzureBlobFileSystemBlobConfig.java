@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_BLOB_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_MKDIRS_FALLBACK_TO_DFS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_REDIRECT_DELETE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_REDIRECT_RENAME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DNS_PREFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.WASB_DNS_PREFIX;
 
@@ -302,6 +303,136 @@ public class ITestAzureBlobFileSystemBlobConfig
 
     Assert.assertTrue(isDeleteOverDFSEndpoint[0]);
     Assert.assertFalse(isDeleteOverNativeFS[0]);
+  }
+
+  @Test
+  public void testBlobEndpointForNoRenameRedirectToWasb() throws Exception {
+    AzureBlobFileSystem fs = Mockito.spy(createFileSystemForEndpointConfigPair(
+        FS_AZURE_REDIRECT_RENAME, false, false));
+
+    NativeAzureFileSystem nativeAzureFileSystem = Mockito.spy(fs.getNativeFs());
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    assignStoreMocksToFs(fs, nativeAzureFileSystem, store, client);
+
+    Boolean[] isRenameOverNativeFS = new Boolean[1];
+    isRenameOverNativeFS[0] = false;
+    Boolean[] isRenameOverDFSEndpoint = new Boolean[1];
+    isRenameOverDFSEndpoint[0] = false;
+    Boolean[] isRenameOverBlobEndpoint = new Boolean[1];
+    isRenameOverBlobEndpoint[0] = false;
+
+    countRenameOverDfsBlobAndWasb(nativeAzureFileSystem, client, isRenameOverNativeFS,
+        isRenameOverDFSEndpoint, isRenameOverBlobEndpoint);
+
+    fs.create(new Path("/file1"));
+    fs.rename(new Path("/file1"), new Path("/file2"));
+    Assert.assertTrue(isRenameOverBlobEndpoint[0]);
+    Assert.assertFalse(isRenameOverDFSEndpoint[0]);
+    Assert.assertFalse(isRenameOverNativeFS[0]);
+  }
+
+  @Test
+  public void testBlobEndpointForRenameRedirectToWasb() throws Exception {
+    AzureBlobFileSystem fs = Mockito.spy(createFileSystemForEndpointConfigPair(
+        FS_AZURE_REDIRECT_RENAME, true, false));
+
+    NativeAzureFileSystem nativeAzureFileSystem = Mockito.spy(fs.getNativeFs());
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    assignStoreMocksToFs(fs, nativeAzureFileSystem, store, client);
+
+    Boolean[] isRenameOverNativeFS = new Boolean[1];
+    isRenameOverNativeFS[0] = false;
+    Boolean[] isRenameOverDFSEndpoint = new Boolean[1];
+    isRenameOverDFSEndpoint[0] = false;
+    Boolean[] isRenameOverBlobEndpoint = new Boolean[1];
+    isRenameOverBlobEndpoint[0] = false;
+
+    countRenameOverDfsBlobAndWasb(nativeAzureFileSystem, client, isRenameOverNativeFS,
+        isRenameOverDFSEndpoint, isRenameOverBlobEndpoint);
+
+    fs.create(new Path("/file1"));
+    fs.rename(new Path("/file1"), new Path("/file2"));
+    Assert.assertFalse(isRenameOverBlobEndpoint[0]);
+    Assert.assertFalse(isRenameOverDFSEndpoint[0]);
+    Assert.assertTrue(isRenameOverNativeFS[0]);
+  }
+
+  @Test
+  public void testDfsEndpointForRenameRedirectToWasb() throws Exception {
+    AzureBlobFileSystem fs = Mockito.spy(createFileSystemForEndpointConfigPair(
+        FS_AZURE_REDIRECT_RENAME, true, true));
+
+    NativeAzureFileSystem nativeAzureFileSystem = Mockito.spy(fs.getNativeFs());
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    assignStoreMocksToFs(fs, nativeAzureFileSystem, store, client);
+
+    Boolean[] isRenameOverNativeFS = new Boolean[1];
+    isRenameOverNativeFS[0] = false;
+    Boolean[] isRenameOverDFSEndpoint = new Boolean[1];
+    isRenameOverDFSEndpoint[0] = false;
+    Boolean[] isRenameOverBlobEndpoint = new Boolean[1];
+    isRenameOverBlobEndpoint[0] = false;
+
+    countRenameOverDfsBlobAndWasb(nativeAzureFileSystem, client, isRenameOverNativeFS,
+        isRenameOverDFSEndpoint, isRenameOverBlobEndpoint);
+
+    fs.create(new Path("/file1"));
+    fs.rename(new Path("/file1"), new Path("/file2"));
+    Assert.assertFalse(isRenameOverBlobEndpoint[0]);
+    Assert.assertFalse(isRenameOverDFSEndpoint[0]);
+    Assert.assertTrue(isRenameOverNativeFS[0]);
+  }
+
+  @Test
+  public void testDfsEndpointForNoRenameRedirectToWasb() throws Exception {
+    AzureBlobFileSystem fs = Mockito.spy(createFileSystemForEndpointConfigPair(
+        FS_AZURE_REDIRECT_RENAME, false, true));
+
+    NativeAzureFileSystem nativeAzureFileSystem = Mockito.spy(fs.getNativeFs());
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    assignStoreMocksToFs(fs, nativeAzureFileSystem, store, client);
+
+    Boolean[] isRenameOverNativeFS = new Boolean[1];
+    isRenameOverNativeFS[0] = false;
+    Boolean[] isRenameOverDFSEndpoint = new Boolean[1];
+    isRenameOverDFSEndpoint[0] = false;
+    Boolean[] isRenameOverBlobEndpoint = new Boolean[1];
+    isRenameOverBlobEndpoint[0] = false;
+
+    countRenameOverDfsBlobAndWasb(nativeAzureFileSystem, client, isRenameOverNativeFS,
+        isRenameOverDFSEndpoint, isRenameOverBlobEndpoint);
+
+    fs.create(new Path("/file1"));
+    fs.rename(new Path("/file1"), new Path("/file2"));
+    Assert.assertFalse(isRenameOverBlobEndpoint[0]);
+    Assert.assertTrue(isRenameOverDFSEndpoint[0]);
+    Assert.assertFalse(isRenameOverNativeFS[0]);
+  }
+
+  private void countRenameOverDfsBlobAndWasb(final NativeAzureFileSystem nativeAzureFileSystem,
+      final AbfsClient client,
+      final Boolean[] isRenameOverNativeFS,
+      final Boolean[] isRenameOverDFSEndpoint,
+      final Boolean[] isRenameOverBlobEndpoint) throws IOException {
+    if(nativeAzureFileSystem != null) {
+      Mockito.doAnswer(answer -> {
+        isRenameOverNativeFS[0] = true;
+        return answer.callRealMethod();
+      }).when(nativeAzureFileSystem).rename(Mockito.any(Path.class), Mockito.any(Path.class));
+    }
+    Mockito.doAnswer(answer -> {
+      isRenameOverDFSEndpoint[0] = true;
+      return answer.callRealMethod();
+    }).when(client).renamePath(Mockito.anyString(), Mockito.anyString(),
+        Mockito.nullable(String.class), Mockito.any(TracingContext.class));
+    Mockito.doAnswer(answer -> {
+      isRenameOverBlobEndpoint[0] = true;
+      return answer.callRealMethod();
+    }).when(client).copyBlob(Mockito.any(Path.class), Mockito.any(Path.class), Mockito.any(TracingContext.class));
   }
 
   private void countDeleteOverAbfsAndWasb(final NativeAzureFileSystem nativeAzureFileSystem,
