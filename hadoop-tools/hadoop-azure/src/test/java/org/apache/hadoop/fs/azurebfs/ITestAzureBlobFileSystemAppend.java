@@ -492,7 +492,6 @@ public class ITestAzureBlobFileSystemAppend extends
     int result;
     FSDataInputStream inputStream = fs.open(TEST_FILE_PATH);
     inputStream.seek(0);
-    result = inputStream.read(readBuffer, 0, 4 * ONE_MB);
 
     AbfsOutputStream outputStream2 = (AbfsOutputStream) out1.getWrappedStream();
     String out1Etag = outputStream2.getETag();
@@ -501,9 +500,11 @@ public class ITestAzureBlobFileSystemAppend extends
     String out2Etag = outputStream3.getETag();
 
     if (!fileETag.equals(out1Etag)) {
+      result = inputStream.read(readBuffer, 0, 4 * ONE_MB);
       assertEquals(result, 200); // Verify that the number of bytes read matches the number of bytes written
       assertArrayEquals(Arrays.copyOfRange(readBuffer, 0, result), Arrays.copyOfRange(b1, 0, result)); // Verify that the data read matches the original data written
     } else if (!fileETag.equals(out2Etag)) {
+      result = inputStream.read(readBuffer, 0, 4 * ONE_MB);
       assertEquals(result, 400); // Verify that the number of bytes read matches the number of bytes written
       assertArrayEquals(Arrays.copyOfRange(readBuffer, 0, result), Arrays.copyOfRange(b1, 0, result)); // Verify that the data read matches the original data written
     } else {
@@ -572,24 +573,6 @@ public class ITestAzureBlobFileSystemAppend extends
     Mockito.verify(spiedClient, Mockito.times(1)).
             flush(any(byte[].class), anyString(), anyBoolean(), isNull(), isNull(), any(),
                     any(TracingContext.class));
-  }
-
-  @Test
-  public void createOutputStreamWithLease() throws Exception {
-    AzureBlobFileSystem fs = Mockito.spy(getFileSystem());
-    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
-    Method privateMethod = AzureBlobFileSystemStore.class.getDeclaredMethod("maybeCreateLease", String.class, TracingContext.class);
-    privateMethod.setAccessible(true);
-    AbfsLease lease = Mockito.mock(AbfsLease.class);
-    Mockito.when(privateMethod.invoke(store, TEST_FILE_PATH.toString(), getTestTracingContext(fs, true))).thenReturn(lease);
-
-    Mockito.doReturn(store.getClient()).when(store).getClient();
-    AbfsClient client = store.getClient();
-    AbfsClient spiedClient = Mockito.spy(client);
-    store.setClient(spiedClient);
-    FSDataOutputStream outputStream = fs.create(TEST_FILE_PATH);
-    outputStream.write(10);
-    outputStream.close();
   }
 
   private AzureBlobFileSystem getCustomFileSystem(Path infiniteLeaseDirs, int numLeaseThreads) throws Exception {

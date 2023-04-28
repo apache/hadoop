@@ -993,6 +993,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     return sb.toString();
   }
 
+  @VisibleForTesting
   public String getLeaseId() {
     return leaseId;
   }
