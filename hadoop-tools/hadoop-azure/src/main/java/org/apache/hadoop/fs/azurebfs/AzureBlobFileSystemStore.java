@@ -141,6 +141,7 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.http.client.utils.URIBuilder;
 
+import static java.net.HttpURLConnection.HTTP_OK;
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicityUtils.SUFFIX;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
@@ -651,20 +652,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws AzureBlobFileSystemException exception thrown from
    * {@link AbfsClient#getBlobProperty(Path, TracingContext)} call
    */
-  BlobProperty getBlobProperty(Path blobPath, TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    AbfsRestOperation op;
+  BlobProperty getBlobProperty(Path blobPath,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
+    AbfsRestOperation op = client.getBlobProperty(blobPath, tracingContext);
     BlobProperty blobProperty = new BlobProperty();
-
-    if (blobPath.isRoot()) {
-      op = client.getContainerProperty(tracingContext);
-    }
-    else {
-      op = client.getBlobProperty(blobPath, tracingContext);
-    }
-
     final AbfsHttpOperation opResult = op.getResult();
-
     blobProperty.setIsDirectory(opResult
         .getResponseHeader(X_MS_META_HDI_ISFOLDER) != null);
     blobProperty.setUrl(op.getUrl().toString());
@@ -676,11 +668,26 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     blobProperty.setCopyStatus(opResult.getResponseHeader(X_MS_COPY_STATUS));
     blobProperty.setContentLength(
         Long.parseLong(opResult.getResponseHeader(CONTENT_LENGTH)));
+    return blobProperty;
+  }
 
-    if (blobPath.isRoot()) {
-      blobProperty.setContentLength(0L);
-      blobProperty.setIsDirectory(true);
-    }
+  /**
+   * Gets the property for the contai(filesystem) over Blob Endpoint.
+   *
+   * @param tracingContext object of TracingContext required for tracing server calls.
+   * @return BlobProperty for the given path
+   * @throws AzureBlobFileSystemException exception thrown from
+   * {@link AbfsClient#getBlobProperty(Path, TracingContext)} call
+   */
+  BlobProperty getContainerProperty(TracingContext tracingContext) throws AzureBlobFileSystemException {
+    AbfsRestOperation op = client.getContainerProperty(tracingContext);
+    BlobProperty blobProperty = new BlobProperty();
+
+    final AbfsHttpOperation opResult = op.getResult();
+
+    blobProperty.setIsDirectory(true);
+    blobProperty.setPath(new Path("/"));
+
     return blobProperty;
   }
 

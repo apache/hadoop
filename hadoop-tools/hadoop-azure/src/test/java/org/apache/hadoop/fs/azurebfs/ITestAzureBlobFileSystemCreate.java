@@ -329,16 +329,8 @@ public class ITestAzureBlobFileSystemCreate extends
     final Path path = new Path("/");
     fs.setWorkingDirectory(new Path("/"));
     fs.mkdirs(path);
-    if (fs.getAbfsStore().getPrefixMode() == PrefixMode.BLOB) {
-      Assert.assertTrue(fs.getAbfsStore()
-          .getBlobProperty(path, Mockito.mock(TracingContext.class))
-          .getIsDirectory());
-    }
-    else {
-      Assert.assertTrue(fs.getAbfsStore()
-          .getFileStatus(path, Mockito.mock(TracingContext.class))
-          .isDirectory());
-    }
+
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(path, fs));
   }
 
   /**

@@ -93,13 +93,38 @@ public class BlobDirectoryStateHelper {
    * To assert that a path exists as explicit directory
    * For PrefixMode Blob: GetBlobProperties on path should succeed and marker should be present
    * For PrefixMode DFS: GetFileStatus on path should succeed and marker should be present
+   * For Root on Blob: GetContainerProperty
    * @param path to be checked
    * @param fs AzureBlobFileSystem for API calls
    * @return boolean whether the path exists as Implicit directory or not
    */
   public static boolean isExplicitDirectory(Path path, AzureBlobFileSystem fs) {
     path = new Path(fs.makeQualified(path).toUri().getPath());
-    if (fs.getAbfsStore().getPrefixMode() == PrefixMode.BLOB) {
+
+    if (fs.getAbfsStore().getPrefixMode() == PrefixMode.DFS) {
+      FileStatus status;
+      try {
+        status = fs.getAbfsStore()
+            .getFileStatus(path, Mockito.mock(TracingContext.class));
+      }
+      catch (IOException ex) {
+        return false;
+      }
+      return status.isDirectory();
+    }
+
+    else if (path.isRoot()) {
+      BlobProperty prop;
+      try {
+        prop = fs.getAbfsStore().getContainerProperty(Mockito.mock(TracingContext.class));
+      }
+      catch(AzureBlobFileSystemException ex) {
+        return false;
+      }
+      return prop.getIsDirectory();
+    }
+
+    else {
       BlobProperty prop;
       try {
         prop = fs.getAbfsStore().getBlobProperty(
@@ -111,17 +136,6 @@ public class BlobDirectoryStateHelper {
         return false;
       }
       return prop.getIsDirectory();
-    }
-    else {
-      FileStatus status;
-      try {
-        status = fs.getAbfsStore()
-            .getFileStatus(path, Mockito.mock(TracingContext.class));
-      }
-      catch (IOException ex) {
-        return false;
-      }
-      return status.isDirectory();
     }
   }
 }
