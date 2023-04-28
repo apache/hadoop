@@ -569,6 +569,11 @@ public class TestRouterMetrics {
       metrics.incrGetBulkActivitiesFailedRetrieved();
     }
 
+    public void getDeregisterSubClusterFailed() {
+      LOG.info("Mocked: failed deregisterSubCluster call");
+      metrics.incrDeregisterSubClusterFailedRetrieved();
+    }
+
     public void getSchedulerConfigurationFailed() {
       LOG.info("Mocked: failed getSchedulerConfiguration call");
       metrics.incrGetSchedulerConfigurationFailedRetrieved();
@@ -597,16 +602,6 @@ public class TestRouterMetrics {
     public void getRefreshNodesResourcesFailed() {
       LOG.info("Mocked: failed refreshNodesResources call");
       metrics.incrRefreshNodesResourcesFailedRetrieved();
-    }
-
-    public void getCheckForDecommissioningNodesFailed() {
-      LOG.info("Mocked: failed checkForDecommissioningNodes call");
-      metrics.incrCheckForDecommissioningNodesFailedRetrieved();
-    }
-
-    public void getRefreshClusterMaxPriorityFailed() {
-      LOG.info("Mocked: failed refreshClusterMaxPriority call");
-      metrics.incrRefreshClusterMaxPriorityFailedRetrieved();
     }
   }
 
@@ -874,6 +869,11 @@ public class TestRouterMetrics {
       metrics.succeededGetBulkActivitiesRetrieved(duration);
     }
 
+    public void getDeregisterSubClusterRetrieved(long duration) {
+      LOG.info("Mocked: successful DeregisterSubCluster call with duration {}", duration);
+      metrics.succeededDeregisterSubClusterRetrieved(duration);
+    }
+
     public void addToClusterNodeLabelsRetrieved(long duration) {
       LOG.info("Mocked: successful AddToClusterNodeLabels call with duration {}", duration);
       metrics.succeededAddToClusterNodeLabelsRetrieved(duration);
@@ -907,18 +907,6 @@ public class TestRouterMetrics {
     public void getRefreshNodesResourcesRetrieved(long duration) {
       LOG.info("Mocked: successful RefreshNodesResourcesRetrieved call with duration {}", duration);
       metrics.succeededRefreshNodesResourcesRetrieved(duration);
-    }
-
-    public void getCheckForDecommissioningNodesRetrieved(long duration) {
-      LOG.info("Mocked: successful CheckForDecommissioningNodesRetrieved call with duration {}",
-          duration);
-      metrics.succeededCheckForDecommissioningNodesRetrieved(duration);
-    }
-
-    public void getRefreshClusterMaxPriorityRetrieved(long duration) {
-      LOG.info("Mocked: successful RefreshClusterMaxPriority call with duration {}",
-          duration);
-      metrics.succeededRefreshClusterMaxPriorityRetrieved(duration);
     }
   }
 
@@ -1917,6 +1905,29 @@ public class TestRouterMetrics {
   }
 
   @Test
+  public void testDeregisterSubClusterRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededDeregisterSubClusterRetrieved();
+    goodSubCluster.getDeregisterSubClusterRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededDeregisterSubClusterRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededDeregisterSubClusterRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getDeregisterSubClusterRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededDeregisterSubClusterRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededDeregisterSubClusterRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testDeregisterSubClusterRetrievedFailed() {
+    long totalBadBefore = metrics.getDeregisterSubClusterFailedRetrieved();
+    badSubCluster.getDeregisterSubClusterFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getDeregisterSubClusterFailedRetrieved());
+  }
+
+  @Test
   public void testAddToClusterNodeLabelsRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededAddToClusterNodeLabelsRetrieved();
     goodSubCluster.addToClusterNodeLabelsRetrieved(150);
@@ -2063,50 +2074,5 @@ public class TestRouterMetrics {
         metrics.getNumSucceededRefreshNodesResourcesRetrieved());
     Assert.assertEquals(225,
         metrics.getLatencySucceededRefreshNodesResourcesRetrieved(), ASSERT_DOUBLE_DELTA);
-  }
-
-  @Test
-  public void testCheckForDecommissioningNodesFailedRetrieved() {
-    long totalBadBefore = metrics.getCheckForDecommissioningNodesFailedRetrieved();
-    badSubCluster.getCheckForDecommissioningNodesFailed();
-    Assert.assertEquals(totalBadBefore + 1,
-        metrics.getCheckForDecommissioningNodesFailedRetrieved());
-  }
-
-  @Test
-  public void testCheckForDecommissioningNodesRetrieved() {
-    long totalGoodBefore = metrics.getNumSucceededCheckForDecommissioningNodesRetrieved();
-    goodSubCluster.getCheckForDecommissioningNodesRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
-        metrics.getNumSucceededCheckForDecommissioningNodesRetrieved());
-    Assert.assertEquals(150,
-        metrics.getLatencySucceededCheckForDecommissioningNodesRetrieved(), ASSERT_DOUBLE_DELTA);
-    goodSubCluster.getCheckForDecommissioningNodesRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
-        metrics.getNumSucceededCheckForDecommissioningNodesRetrieved());
-    Assert.assertEquals(225,
-        metrics.getLatencySucceededCheckForDecommissioningNodesRetrieved(), ASSERT_DOUBLE_DELTA);
-  }
-
-  @Test
-  public void testRefreshClusterMaxPriorityFailedRetrieved() {
-    long totalBadBefore = metrics.getRefreshClusterMaxPriorityFailedRetrieved();
-    badSubCluster.getRefreshClusterMaxPriorityFailed();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getRefreshClusterMaxPriorityFailedRetrieved());
-  }
-
-  @Test
-  public void testRefreshClusterMaxPriorityRetrieved() {
-    long totalGoodBefore = metrics.getNumSucceededRefreshClusterMaxPriorityRetrieved();
-    goodSubCluster.getRefreshClusterMaxPriorityRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
-        metrics.getNumSucceededRefreshClusterMaxPriorityRetrieved());
-    Assert.assertEquals(150,
-        metrics.getLatencySucceededRefreshClusterMaxPriorityRetrieved(), ASSERT_DOUBLE_DELTA);
-    goodSubCluster.getRefreshClusterMaxPriorityRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
-        metrics.getNumSucceededRefreshClusterMaxPriorityRetrieved());
-    Assert.assertEquals(225,
-        metrics.getLatencySucceededRefreshClusterMaxPriorityRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 }

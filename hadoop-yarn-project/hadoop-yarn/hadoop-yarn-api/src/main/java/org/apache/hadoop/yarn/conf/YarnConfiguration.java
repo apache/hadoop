@@ -217,16 +217,6 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_RM_APPLICATION_MAX_TAG_LENGTH = 100;
 
-  public static final String NODE_STORE_ROOT_DIR_NUM_RETRIES =
-      RM_PREFIX + "nodestore-rootdir.num-retries";
-
-  public static final int NODE_STORE_ROOT_DIR_NUM_DEFAULT_RETRIES = 1000;
-
-  public static final String NODE_STORE_ROOT_DIR_RETRY_INTERVAL =
-      RM_PREFIX + "nodestore-rootdir.retry-interval-ms";
-
-  public static final int NODE_STORE_ROOT_DIR_RETRY_DEFAULT_INTERVAL = 1000;
-
   public static final String RM_APPLICATION_MASTER_SERVICE_PROCESSORS =
       RM_PREFIX + "application-master-service.processors";
 
@@ -3080,10 +3070,6 @@ public class YarnConfiguration extends Configuration {
       + "amrmproxy.ha.enable";
   public static final boolean DEFAULT_AMRM_PROXY_HA_ENABLED = false;
 
-  // Enable NM Dispatcher Metric default False.
-  public static final String NM_DISPATCHER_METRIC_ENABLED = NM_PREFIX + "dispatcher.metric.enable";
-  public static final boolean DEFAULT_NM_DISPATCHER_METRIC_ENABLED = false;
-
   /**
    * Default platform-agnostic CLASSPATH for YARN applications. A
    * comma-separated list of CLASSPATH entries. The parameter expansion marker
@@ -4264,13 +4250,6 @@ public class YarnConfiguration extends Configuration {
           + "DefaultRequestInterceptorREST";
 
   /**
-   * ApplicationSubmissionContextInterceptor configurations.
-   **/
-  public static final String ROUTER_ASC_INTERCEPTOR_MAX_SIZE =
-      ROUTER_PREFIX + "asc-interceptor-max-size";
-  public static final String DEFAULT_ROUTER_ASC_INTERCEPTOR_MAX_SIZE = "1MB";
-
-  /**
    * The interceptor class used in FederationInterceptorREST should return
    * partial AppReports.
    */
@@ -4320,17 +4299,17 @@ public class YarnConfiguration extends Configuration {
       ROUTER_PREFIX + "interceptor.allow-partial-result.enable";
   public static final boolean DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED = false;
 
+  /** Subcluster timeout allowed by Router.  **/
+  public static final String ROUTER_SUBCLUSTER_EXPIRATION_TIME =
+      ROUTER_PREFIX + "subcluster.heartbeat.expiration.time";
+  public static final long DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME =
+      TimeUnit.MINUTES.toMillis(30);
+
   /** Router SubCluster Cleaner Thread Clean Interval Time. **/
   public static final String ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME =
       ROUTER_PREFIX + "subcluster.cleaner.interval.time";
   public static final long DEFAULT_ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME =
       TimeUnit.SECONDS.toMillis(60);
-
-  /** Router SubCluster Timeout Allowed by Router. **/
-  public static final String ROUTER_SUBCLUSTER_EXPIRATION_TIME =
-      ROUTER_PREFIX + "subcluster.heartbeat.expiration.time";
-  public static final long DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME =
-      TimeUnit.MINUTES.toMillis(30);
 
   /** Router Thread Pool Schedule Thread Number. **/
   public static final String ROUTER_SCHEDULED_EXECUTOR_THREADS =
