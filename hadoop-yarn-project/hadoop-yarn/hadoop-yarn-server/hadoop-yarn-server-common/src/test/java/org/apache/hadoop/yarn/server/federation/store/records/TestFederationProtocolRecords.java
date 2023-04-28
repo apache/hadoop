@@ -20,6 +20,14 @@ package org.apache.hadoop.yarn.server.federation.store.records;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.BasePBImplRecordsTest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.URL;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.AddApplicationHomeSubClusterRequestProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.AddApplicationHomeSubClusterResponseProto;
@@ -120,6 +128,14 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
     generateByNewInstance(RouterMasterKey.class);
     generateByNewInstance(YARNDelegationTokenIdentifier.class);
     generateByNewInstance(RouterStoreToken.class);
+    generateByNewInstance(Priority.class);
+    generateByNewInstance(URL.class);
+    generateByNewInstance(Resource.class);
+    generateByNewInstance(ContainerRetryContext.class);
+    generateByNewInstance(LocalResource.class);
+    generateByNewInstance(ContainerLaunchContext.class);
+    generateByNewInstance(LogAggregationContext.class);
+    generateByNewInstance(ApplicationSubmissionContext.class);
     generateByNewInstance(ReservationId.class);
   }
 

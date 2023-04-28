@@ -126,6 +126,7 @@ message UpdateApplicationHomeSubClusterResponseProto {
 
 message GetApplicationHomeSubClusterRequestProto {
   optional ApplicationIdProto application_id = 1;
+  optional bool contains_app_submission_context = 2 [default = false];
 }
 
 message GetApplicationHomeSubClusterResponseProto {
