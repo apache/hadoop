@@ -35,7 +35,6 @@ public class AzcopyHelper {
 
     File hadoopAzureDir;
     String azcopyDirPath;
-
     private String accountName;
     private String fileSystemName;
     private Configuration configuration;
@@ -137,18 +136,18 @@ public class AzcopyHelper {
         String configuredFixedToken = configuration.get(FS_AZURE_SAS_FIXED_TOKEN, null);
         if (configuredFixedToken != null) {
             if (isFile) {
-                createFileCreationScript(azcopyDirPath, "createFile.sh", azcopyDirPath, configuredFixedToken, url);
+                createFileCreationScript(azcopyDirPath, "createFile" + Thread.currentThread().getName() + ".sh", azcopyDirPath, configuredFixedToken, url);
             } else {
-                createFolderCreationScript(azcopyDirPath, "createFolder.sh", azcopyDirPath, configuredFixedToken, url);
+                createFolderCreationScript(azcopyDirPath, "createFolder" + Thread.currentThread().getName() + ".sh", azcopyDirPath, configuredFixedToken, url);
             }
         } else {
             throw new Exception("The SAS token provided is null");
         }
         String path;
         if (isFile) {
-            path = azcopyDirPath + "/createFile.sh";
+            path = azcopyDirPath + "/createFile" + Thread.currentThread().getName() + ".sh";
         } else {
-            path = azcopyDirPath + "/createFolder.sh";
+            path = azcopyDirPath + "/createFolder" + Thread.currentThread().getName() + ".sh";
         }
         try {
             ProcessBuilder pb = new ProcessBuilder(path);

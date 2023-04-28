@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
@@ -53,7 +54,6 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationTestUtil;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_REDIRECT_RENAME;
@@ -69,6 +69,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test rename operation.
@@ -1333,7 +1334,7 @@ public class ITestAzureBlobFileSystemRename extends
     fs.getAbfsStore()
         .getClient()
         .deleteBlobPath(new Path("/test1"), Mockito.mock(TracingContext.class));
-    LambdaTestUtils.intercept(AbfsRestOperationException.class, () -> {
+    intercept(AbfsRestOperationException.class, () -> {
       fs.getAbfsStore().getBlobProperty(new Path("/test1"),
               Mockito.mock(TracingContext.class));
     });
@@ -1485,9 +1486,66 @@ public class ITestAzureBlobFileSystemRename extends
     fileSystem.create(new Path(srcFile));
 
 
-    LambdaTestUtils.intercept(FileNotFoundException.class, () -> {
+    intercept(FileNotFoundException.class, () -> {
       fileSystem.rename(new Path(srcFile), new Path(dstFile));
     });
     Assert.assertFalse(fileSystem.exists(new Path(dstFile)));
+  }
+
+  @Test
+  public void testParallelCopy() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
+    fs.create(new Path("/src"));
+    boolean[] dstBlobAlreadyThereExceptionReceived = new boolean[1];
+    dstBlobAlreadyThereExceptionReceived[0] = false;
+    AtomicInteger threadsCompleted = new AtomicInteger(0);
+    new Thread(() -> {
+      parallelCopyRunnable(fs, dstBlobAlreadyThereExceptionReceived,
+          threadsCompleted);
+    }).start();
+    new Thread(() -> {
+      parallelCopyRunnable(fs, dstBlobAlreadyThereExceptionReceived,
+          threadsCompleted);
+    }).start();
+    while (threadsCompleted.get() < 2) ;
+    Assert.assertTrue(dstBlobAlreadyThereExceptionReceived[0]);
+  }
+
+  private void parallelCopyRunnable(final AzureBlobFileSystem fs,
+      final boolean[] dstBlobAlreadyThereExceptionReceived,
+      final AtomicInteger threadsCompleted) {
+    try {
+      fs.getAbfsClient().copyBlob(new Path("/src"),
+          new Path("/dst"), Mockito.mock(TracingContext.class));
+    } catch (AbfsRestOperationException ex) {
+      if (ex.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+        dstBlobAlreadyThereExceptionReceived[0] = true;
+      }
+    } catch (
+        AzureBlobFileSystemException e) {
+    }
+    threadsCompleted.incrementAndGet();
+  }
+
+  @Test
+  public void testCopyAfterSourceHasBeenDeleted() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
+    fs.create(new Path("/src"));
+    fs.getAbfsStore()
+        .getClient()
+        .deleteBlobPath(new Path("/src"), Mockito.mock(TracingContext.class));
+    Boolean srcBlobNotFoundExReceived = false;
+    try {
+      fs.getAbfsStore()
+          .copyBlob(new Path("/src"), new Path("/dst"),
+              Mockito.mock(TracingContext.class));
+    } catch (AbfsRestOperationException ex) {
+      if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+        srcBlobNotFoundExReceived = true;
+      }
+    }
+    Assert.assertTrue(srcBlobNotFoundExReceived);
   }
 }
