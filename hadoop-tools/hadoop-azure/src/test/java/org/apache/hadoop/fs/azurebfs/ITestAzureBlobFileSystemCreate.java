@@ -329,7 +329,8 @@ public class ITestAzureBlobFileSystemCreate extends
     final Path path = new Path("/");
     fs.setWorkingDirectory(new Path("/"));
     fs.mkdirs(path);
-    // Todo: Add assert after fixing getBlobProperties on root @anujmodi2011
+
+    Assert.assertTrue(BlobDirectoryStateHelper.isExplicitDirectory(path, fs));
   }
 
   /**

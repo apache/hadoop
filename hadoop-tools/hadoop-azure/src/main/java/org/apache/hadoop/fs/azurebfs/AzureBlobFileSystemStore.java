@@ -671,6 +671,26 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   /**
+   * Gets the property for the container(filesystem) over Blob Endpoint.
+   *
+   * @param tracingContext object of TracingContext required for tracing server calls.
+   * @return BlobProperty for the given path
+   * @throws AzureBlobFileSystemException exception thrown from
+   * {@link AbfsClient#getBlobProperty(Path, TracingContext)} call
+   */
+  BlobProperty getContainerProperty(TracingContext tracingContext) throws AzureBlobFileSystemException {
+    AbfsRestOperation op = client.getContainerProperty(tracingContext);
+    BlobProperty blobProperty = new BlobProperty();
+
+    final AbfsHttpOperation opResult = op.getResult();
+
+    blobProperty.setIsDirectory(true);
+    blobProperty.setPath(new Path("/"));
+
+    return blobProperty;
+  }
+
+  /**
    * Get the list of a blob on a give path, or blob starting with the given prefix.
    *
    * @param sourceDirBlobPath path from where the list of blob is required.
