@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -45,7 +46,6 @@ import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -170,7 +170,7 @@ public class TestDataNodeRollingUpgrade {
 
   private void startRollingUpgrade() throws Exception {
     LOG.info("Starting rolling upgrade");
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     final DFSAdmin dfsadmin = new DFSAdmin(conf);
     TestRollingUpgrade.runCmd(dfsadmin, true, "-rollingUpgrade", "prepare");
     triggerHeartBeats();

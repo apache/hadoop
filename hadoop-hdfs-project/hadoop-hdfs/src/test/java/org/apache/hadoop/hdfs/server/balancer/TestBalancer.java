@@ -83,6 +83,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -1527,9 +1528,9 @@ public class TestBalancer {
     // Run balancer
     final BalancerParameters p = BalancerParameters.DEFAULT;
 
-    fs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.rollingUpgrade(HdfsConstants.RollingUpgradeAction.PREPARE);
-    fs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
 
     // Rolling upgrade should abort the balancer
     assertEquals(ExitStatus.UNFINALIZED_UPGRADE.getExitCode(),
