@@ -614,7 +614,10 @@ class S3ABlockOutputStream extends OutputStream implements
           try {
             // the putObject call automatically closes the input
             // stream afterwards.
-            return writeOperationHelper.putObject(putObjectRequest, builder.putOptions);
+            return writeOperationHelper.putObject(
+                putObjectRequest,
+                builder.putOptions,
+                statistics);
           } finally {
             cleanupWithLogger(LOG, uploadData, block);
           }
@@ -897,7 +900,7 @@ class S3ABlockOutputStream extends OutputStream implements
             try {
               LOG.debug("Uploading part {} for id '{}'",
                   currentPartNumber, uploadId);
-              PartETag partETag = writeOperationHelper.uploadPart(request)
+              PartETag partETag = writeOperationHelper.uploadPart(request, statistics)
                   .getPartETag();
               LOG.debug("Completed upload of {} to part {}",
                   block, partETag.getETag());

@@ -38,6 +38,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -1744,6 +1745,58 @@ public class TestYarnCLI {
     pw.println("\tPreemption : " + "enabled");
     pw.println("\tIntra-queue Preemption : " + "enabled");
     pw.close();
+    String queueInfoStr = baos.toString("UTF-8");
+    Assert.assertEquals(queueInfoStr, sysOutStream.toString());
+  }
+
+  @Test
+  public void testGetQueueInfos() throws Exception {
+    QueueCLI cli = createAndGetQueueCLI();
+    Set<String> nodeLabels = new HashSet<String>();
+    nodeLabels.add("GPU");
+    nodeLabels.add("JDK_7");
+    List<QueueInfo> queueInfos = new ArrayList<>();
+    QueueInfo queueInfo = QueueInfo.newInstance("queueA", "root.queueA", 0.4f, 0.8f, 0.5f,
+        null, null, QueueState.RUNNING, nodeLabels, "GPU", null, false, -1.0f, 10, null, false);
+    queueInfos.add(queueInfo);
+    QueueInfo queueInfo1 = QueueInfo.newInstance("queueB", "root.queueB", 0.4f, 0.8f, 0.5f,
+        null, null, QueueState.RUNNING, nodeLabels, "GPU", null, false, -1.0f, 10, null, false);
+    queueInfos.add(queueInfo1);
+    QueueInfo queueInfo2 = QueueInfo.newInstance("queueC", "root.queueC", 0.4f, 0.8f, 0.5f,
+        null, null, QueueState.RUNNING, nodeLabels, "GPU", null, false, -1.0f, 10, null, false);
+    queueInfos.add(queueInfo2);
+    QueueInfo queueInfo3 = QueueInfo.newInstance("queueD", "root.queueD", 0.4f, 0.8f, 0.5f,
+        null, null, QueueState.RUNNING, nodeLabels, "GPU", null, false, -1.0f, 10, null, false);
+    queueInfos.add(queueInfo3);
+    when(client.getAllQueues()).thenReturn(queueInfos);
+    int result = cli.run(new String[] {"-list", "all"});
+    Assert.assertEquals(0, result);
+    verify(client).getAllQueues();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter writer = new PrintWriter(baos);
+    writer.print(queueInfos.size() + " queues were found : \n");
+    writer.print("Queue Name\tQueue Path\tState\tCapacity\tCurrent Capacity\t" +
+        "Maximum Capacity\tWeight\tMaximum Parallel Apps\n");
+    for (QueueInfo queueInfoe : queueInfos) {
+      writer.print(queueInfoe.getQueueName());
+      writer.print("\t");
+      writer.print(queueInfoe.getQueuePath());
+      writer.print("\t");
+      writer.print(queueInfoe.getQueueState());
+      DecimalFormat df = new DecimalFormat("#.00");
+      writer.print("\t");
+      writer.print(df.format(queueInfoe.getCapacity() * 100) + "%");
+      writer.print("\t");
+      writer.print(df.format(queueInfoe.getCurrentCapacity() * 100) + "%");
+      writer.print("\t");
+      writer.print(df.format(queueInfoe.getMaximumCapacity() * 100) + "%");
+      writer.print("\t");
+      writer.print(df.format(queueInfoe.getWeight()));
+      writer.print("\t");
+      writer.print(queueInfoe.getMaxParallelApps());
+      writer.print("\n");
+    }
+    writer.close();
     String queueInfoStr = baos.toString("UTF-8");
     Assert.assertEquals(queueInfoStr, sysOutStream.toString());
   }

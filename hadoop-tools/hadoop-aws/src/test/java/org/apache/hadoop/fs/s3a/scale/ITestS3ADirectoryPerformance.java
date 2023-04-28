@@ -260,7 +260,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
             .newPutObjectRequest(fs.pathToKey(file), om,
                 null, new FailingInputStream());
         futures.add(submit(executorService, () ->
-            writeOperationHelper.putObject(put, PutObjectOptions.keepingDirs())));
+            writeOperationHelper.putObject(put, PutObjectOptions.keepingDirs(), null)));
       }
       LOG.info("Waiting for PUTs to complete");
       waitForCompletion(futures);

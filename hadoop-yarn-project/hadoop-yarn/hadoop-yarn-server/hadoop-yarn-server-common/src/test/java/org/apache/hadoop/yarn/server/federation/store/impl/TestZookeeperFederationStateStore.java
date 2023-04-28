@@ -278,48 +278,4 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     assertNotNull(zkRouterStoreToken);
     assertEquals(token, zkRouterStoreToken);
   }
-
-  @Test
-  public void testGetCurrentVersion() {
-    ZookeeperFederationStateStore zkFederationStateStore =
-        ZookeeperFederationStateStore.class.cast(this.getStateStore());
-    Version version = zkFederationStateStore.getCurrentVersion();
-    assertEquals(1, version.getMajorVersion());
-    assertEquals(1, version.getMinorVersion());
-  }
-
-  @Test
-  public void testStoreVersion() throws Exception {
-    ZookeeperFederationStateStore zkFederationStateStore =
-        ZookeeperFederationStateStore.class.cast(this.getStateStore());
-    zkFederationStateStore.storeVersion();
-    Version version = zkFederationStateStore.loadVersion();
-    assertEquals(1, version.getMajorVersion());
-    assertEquals(1, version.getMinorVersion());
-  }
-
-  @Test
-  public void testLoadVersion() throws Exception {
-    ZookeeperFederationStateStore zkFederationStateStore =
-        ZookeeperFederationStateStore.class.cast(this.getStateStore());
-    // We don't store version, loadversion directly will get a null value.
-    Version version = zkFederationStateStore.loadVersion();
-    assertNull(version);
-
-    // After storing the version information, we will get the accurate version information.
-    zkFederationStateStore.storeVersion();
-    Version version1 = zkFederationStateStore.loadVersion();
-    assertEquals(1, version1.getMajorVersion());
-    assertEquals(1, version1.getMinorVersion());
-  }
-
-  @Test
-  public void testCheckVersion() throws Exception {
-    ZookeeperFederationStateStore zkFederationStateStore =
-        ZookeeperFederationStateStore.class.cast(this.getStateStore());
-    zkFederationStateStore.checkVersion();
-    Version version = zkFederationStateStore.loadVersion();
-    assertEquals(1, version.getMajorVersion());
-    assertEquals(1, version.getMinorVersion());
-  }
 }

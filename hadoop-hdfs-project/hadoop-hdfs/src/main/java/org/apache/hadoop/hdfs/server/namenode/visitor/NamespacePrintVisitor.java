@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode.visitor;
 
 import org.apache.hadoop.util.Preconditions;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.DirectoryWithQuotaFeature;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -29,7 +28,6 @@ import org.apache.hadoop.hdfs.server.namenode.INodeSymlink;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import java.io.PrintWriter;
@@ -63,7 +61,7 @@ public final class NamespacePrintVisitor implements NamespaceVisitor {
   }
 
   private final PrintWriter out;
-  private final StringBuffer prefix = new StringBuffer();
+  private final StringBuilder prefix = new StringBuilder();
 
   private NamespacePrintVisitor(PrintWriter out) {
     this.out = out;
@@ -74,39 +72,12 @@ public final class NamespacePrintVisitor implements NamespaceVisitor {
   }
 
   private void printINode(INode iNode, int snapshot) {
-    out.print(prefix);
-    out.print(" ");
-    final String name = iNode.getLocalName();
-    out.print(name != null && name.isEmpty()? "/": name);
-    out.print("   (");
-    out.print(iNode.getObjectString());
-    out.print("), ");
-    out.print(iNode.getParentString());
-    out.print(", " + iNode.getPermissionStatus(snapshot));
+    iNode.dumpINode(out, prefix, snapshot);
   }
 
   @Override
   public void visitFile(INodeFile file, int snapshot) {
-    printINode(file, snapshot);
-
-    out.print(", fileSize=" + file.computeFileSize(snapshot));
-    // print only the first block, if it exists
-    out.print(", blocks=");
-    final BlockInfo[] blocks = file.getBlocks();
-    out.print(blocks.length == 0 ? null: blocks[0]);
-    out.println();
-
-    final FileWithSnapshotFeature snapshotFeature
-        = file.getFileWithSnapshotFeature();
-    if (snapshotFeature != null) {
-      if (prefix.length() >= 2) {
-        prefix.setLength(prefix.length() - 2);
-        prefix.append("  ");
-      }
-      out.print(prefix);
-      out.print(snapshotFeature);
-    }
-    out.println();
+    file.dumpINodeFile(out, prefix, snapshot);
   }
 
   @Override

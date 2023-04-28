@@ -969,3 +969,74 @@ AS BEGIN
     END CATCH
 END;
 GO
+
+IF OBJECT_ID ( '[sp_storeVersion]', 'P' ) IS NOT NULL
+    DROP PROCEDURE [sp_storeVersion];
+GO
+
+CREATE PROCEDURE [dbo].[sp_storeVersion]
+    @fedVersion_IN VARBINARY(1024),
+    @versionComment_IN VARCHAR(255),
+    @rowCount_OUT BIGINT OUTPUT
+AS BEGIN
+    DECLARE @errorMessage nvarchar(4000)
+
+    BEGIN TRY
+        BEGIN TRAN
+
+            DELETE FROM [dbo].[versions];
+            INSERT INTO [dbo].[versions] (
+                [fedVersion],
+                [versionComment])
+            VALUES (
+                @fedVersion_IN,
+                @versionComment_IN);
+            SELECT @rowCount_OUT = @@ROWCOUNT;
+        COMMIT TRAN
+    END TRY
+
+    BEGIN CATCH
+        ROLLBACK TRAN
+
+        SET @errorMessage = dbo.func_FormatErrorMessage(ERROR_MESSAGE(), ERROR_LINE())
+
+        /*  raise error and terminate the execution */
+        RAISERROR(@errorMessage, --- Error Message
+            1, -- Severity
+            -1 -- State
+        ) WITH log
+    END CATCH
+END;
+GO
+
+IF OBJECT_ID ( '[sp_getVersion]', 'P' ) IS NOT NULL
+    DROP PROCEDURE [sp_getVersion];
+GO
+
+CREATE PROCEDURE [dbo].[sp_getVersion]
+    @fedVersion_OUT VARCHAR(1024) OUTPUT,
+    @versionComment_OUT VARCHAR(255) OUTPUT
+AS BEGIN
+    DECLARE @errorMessage nvarchar(4000)
+
+    BEGIN TRY
+
+        SELECT @fedVersion_OUT = [fedVersion],
+               @versionComment_OUT = [versionComment]
+        FROM [dbo].[versions]
+        LIMIT 1;
+
+    END TRY
+
+    BEGIN CATCH
+
+        SET @errorMessage = dbo.func_FormatErrorMessage(ERROR_MESSAGE(), ERROR_LINE())
+
+        /*  raise error and terminate the execution */
+        RAISERROR(@errorMessage, --- Error Message
+            1, -- Severity
+            -1 -- State
+        ) WITH log
+    END CATCH
+END;
+GO

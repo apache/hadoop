@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,22 +16,26 @@
  * limitations under the License.
  */
 
--- Script to drop all the tables from the Federation StateStore in MySQL
+package org.apache.hadoop.fs.s3a.api;
 
-USE FederationStateStore
+import org.apache.hadoop.fs.PathIOException;
 
-DROP TABLE applicationsHomeSubCluster;
+/**
+ * An operation is unsupported.
+ */
+public class UnsupportedRequestException extends PathIOException {
 
-DROP TABLE membership;
+  public UnsupportedRequestException(final String path, final Throwable cause) {
+    super(path, cause);
+  }
 
-DROP TABLE policies;
+  public UnsupportedRequestException(final String path, final String error) {
+    super(path, error);
+  }
 
-DROP TABLE reservationsHomeSubCluster;
-
-DROP TABLE masterKeys;
-
-DROP TABLE delegationTokens;
-
-DROP TABLE sequenceTable;
-
-DROP TABLE versions;
+  public UnsupportedRequestException(final String path,
+      final String error,
+      final Throwable cause) {
+    super(path, error, cause);
+  }
+}

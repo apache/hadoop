@@ -74,3 +74,9 @@ CREATE TABLE sequenceTable (
    nextVal bigint(20) NOT NULL,
    CONSTRAINT pk_sequenceName PRIMARY KEY (sequenceName)
 );
+
+CREATE TABLE versions (
+   fedVersion varbinary(1024) NOT NULL,
+   versionComment VARCHAR(255),
+   CONSTRAINT pk_fedVersion PRIMARY KEY (fedVersion)
+);

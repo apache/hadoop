@@ -122,12 +122,14 @@ message UpdateNodeLabelsResponseProto {
 }
 
 message CheckForDecommissioningNodesRequestProto {
+  optional string sub_cluster_id = 1;
 }
 message CheckForDecommissioningNodesResponseProto {
   repeated NodeIdProto decommissioningNodes = 1;
 }
 
 message RefreshClusterMaxPriorityRequestProto {
+  optional string sub_cluster_id = 1;
 }
 message RefreshClusterMaxPriorityResponseProto {
 }
