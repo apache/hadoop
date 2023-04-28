@@ -1495,6 +1495,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testParallelCopy() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
     fs.create(new Path("/src"));
     boolean[] dstBlobAlreadyThereExceptionReceived = new boolean[1];
     dstBlobAlreadyThereExceptionReceived[0] = false;
@@ -1530,6 +1531,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testCopyAfterSourceHasBeenDeleted() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
+    assumeNonHnsAccountBlobEndpoint(fs);
     fs.create(new Path("/src"));
     fs.getAbfsStore()
         .getClient()
