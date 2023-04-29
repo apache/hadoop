@@ -308,7 +308,7 @@ public class ITestAzureBlobFileSystemCreate extends
   /**
    * Tests create file when the parent is an existing file
    * should fail but parent directory should change to explicit
-   * @throws Exception
+   * @throws Exception FileAlreadyExists for blob and IOException for dfs.
    */
   @Test
   public void testCreateFileParentFile() throws Exception {
@@ -321,7 +321,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
     String childName = "/testParentFile/testChildFile";
     Path child = new Path(childName);
-    FileAlreadyExistsException e = intercept(FileAlreadyExistsException.class, () ->
+    IOException e = intercept(IOException.class, () ->
             fs.create(child, false));
 
     assertFalse("Parent Path should be a file.",
