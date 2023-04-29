@@ -321,7 +321,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
     String childName = "/testParentFile/testChildFile";
     Path child = new Path(childName);
-    FileAlreadyExistsException e = intercept(FileAlreadyExistsException.class, () ->
+    IOException e = intercept(IOException.class, () ->
             fs.create(child, false));
 
     assertFalse("Parent Path should be a file.",
