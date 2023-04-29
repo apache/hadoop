@@ -1749,8 +1749,7 @@ public class HttpFSFileSystem extends FileSystem
     Map<String, String> params = new HashMap<>();
     params.put(OP_PARAM, Operation.GETFILELINKSTATUS.toString());
     HttpURLConnection conn =
-        getConnection(Operation.GETFILELINKSTATUS.getMethod(),
-            params, f, true);
+        getConnection(Operation.GETFILELINKSTATUS.getMethod(), params, f, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     HdfsFileStatus status = JsonUtilClient.toFileStatus(json, true);

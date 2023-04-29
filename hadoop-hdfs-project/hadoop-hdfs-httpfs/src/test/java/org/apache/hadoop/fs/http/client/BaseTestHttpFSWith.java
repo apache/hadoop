@@ -2067,17 +2067,15 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     }
     FileSystem fs = FileSystem.get(getProxiedFSConf());
 
-    Path file = new Path(getProxiedFSTestDir() +
-        "/httpFSTest", "file");
-    Path linkToFile =
-        new Path(getProxiedFSTestDir() +
-            "/httpFSTest", "linkToFile");
+    Path root = new Path(getProxiedFSTestDir(), "httpFSTest");
+    Path file = new Path(root, "file");
+    Path linkToFile = new Path(root, "linkToFile");
 
     OutputStream os = fs.create(file);
     os.write(1);
     fs.createSymlink(file, linkToFile, false);
 
-    fs = this.getHttpFSFileSystem();;
+    fs = this.getHttpFSFileSystem();
 
     assertFalse(fs.getFileLinkStatus(file).isSymlink());
     assertTrue(fs.getFileLinkStatus(linkToFile).isSymlink());
