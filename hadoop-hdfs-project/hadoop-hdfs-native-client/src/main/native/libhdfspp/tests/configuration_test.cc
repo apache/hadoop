@@ -107,6 +107,7 @@ TEST(ConfigurationTest, TestBasicOperations) {
   }
 }
 
+
 TEST(ConfigurationTest, TestCompactValues) {
   {
     std::stringstream stream;
