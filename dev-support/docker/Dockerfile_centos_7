@@ -81,6 +81,7 @@ ENV SPOTBUGS_HOME /opt/spotbugs
 ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
+
 ######
 # Install packages
 ######
