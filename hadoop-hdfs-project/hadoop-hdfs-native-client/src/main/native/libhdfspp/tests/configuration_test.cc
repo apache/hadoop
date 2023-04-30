@@ -28,7 +28,6 @@
 
 using ::testing::_;
 
-
 using namespace hdfs;
 
 namespace hdfs {
