@@ -575,6 +575,8 @@ function shadedclient_rebuild
 
   big_console_header "Checking client artifacts on ${repostatus} with shaded clients"
 
+  extra="-Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true"
+
   if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
     if load_hadoop_version; then
       export HADOOP_HOME="${SOURCEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-SNAPSHOT"
@@ -587,14 +589,11 @@ function shadedclient_rebuild
                  -Dcmake.prefix.path=${VCPKG_INSTALLED_PACKAGES}
                  -Dwindows.cmake.toolchain.file=${CMAKE_TOOLCHAIN_FILE}
                  -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off
-                 -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142"
+                 -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142 ${extra}"
   fi
 
   echo_and_redirect "${logfile}" \
-    "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am \
-      "${modules[@]}" \
-      -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true \
-      "${extra}"
+    "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am "${modules[@]}" "${extra}"
 
   big_console_header "Checking client artifacts on ${repostatus} with non-shaded clients"
 
