@@ -37,8 +37,7 @@ public interface FederationStateStore extends
     FederationPolicyStore, FederationReservationHomeSubClusterStore,
     FederationDelegationTokenStateStore {
 
-  public static final Logger LOG =
-      LoggerFactory.getLogger(FederationStateStore.class);
+  Logger LOG = LoggerFactory.getLogger(FederationStateStore.class);
 
   /**
    * Initialize the FederationStore.

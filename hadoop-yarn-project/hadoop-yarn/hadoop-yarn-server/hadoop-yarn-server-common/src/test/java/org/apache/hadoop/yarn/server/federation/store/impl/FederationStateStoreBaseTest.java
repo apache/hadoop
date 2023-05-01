@@ -26,7 +26,6 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.TimeZone;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
