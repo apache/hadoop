@@ -19,7 +19,6 @@
 package org.apache.hadoop.conf;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.ReflectionUtils;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -40,7 +39,6 @@ import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -94,8 +92,8 @@ public abstract class TestConfigurationFieldsBase {
   private static final Logger LOG_XML = LoggerFactory.getLogger(
       "org.apache.hadoop.conf.TestConfigurationFieldsBase.xml");
   private static final String VALID_PROP_REGEX = "^[A-Za-z][A-Za-z0-9_-]+(\\.[A-Za-z%s0-9_-]+)+$";
-  private static Pattern VALID_PROPERTIES_PATTERN = Pattern.compile(VALID_PROP_REGEX);
-  
+  private static final Pattern validPropertiesPattern = Pattern.compile(VALID_PROP_REGEX);
+
   /**
    * Member variable for storing xml filename.
    */
@@ -199,7 +197,7 @@ public abstract class TestConfigurationFieldsBase {
 
     Map<String, String> validConfigProperties = new HashMap<>();
 
-   
+
     // Iterate through class member variables
     String value;
     Set<String> fieldsNotPassedRegex = new HashSet<>();
@@ -261,7 +259,7 @@ public abstract class TestConfigurationFieldsBase {
       }
       // Positive Filter: Look only for property values.  Expect it to look
       //                  something like: blah.blah2(.blah3.blah4...)
-      Matcher m = VALID_PROPERTIES_PATTERN.matcher(value);
+      Matcher m = validPropertiesPattern.matcher(value);
       if (!m.find()) {
         LOG_CONFIG.debug("  Passes Regex: false");
         fieldsNotPassedRegex.add(f.getName());
