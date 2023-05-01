@@ -50,8 +50,8 @@ public class TestFederationCache {
   @Parameterized.Parameters
   public static Collection<String[]> getParameters() {
     return Arrays.asList(
-        new String[][] { { "org.apache.hadoop.yarn.server.federation.cache.FederationGuavaCache" },
-        { "org.apache.hadoop.yarn.server.federation.cache.FederationJCache" } });
+        new String[][] { {"org.apache.hadoop.yarn.server.federation.cache.FederationGuavaCache"},
+        {"org.apache.hadoop.yarn.server.federation.cache.FederationJCache"} });
   }
 
   private final long clusterTs = System.currentTimeMillis();
@@ -91,11 +91,11 @@ public class TestFederationCache {
   @Test
   public void testGetSubCluster() throws YarnException {
     for (int i = 0; i < numSubClusters; i++) {
-        SubClusterId subClusterId =
-            SubClusterId.newInstance(FederationStateStoreTestUtil.SC_PREFIX + i);
-        SubClusterInfo expectedSubCluster = stateStoreTestUtil.querySubClusterInfo(subClusterId);
-        SubClusterInfo cachedSubCluster = facade.getSubCluster(subClusterId);
-        assertEquals(expectedSubCluster, cachedSubCluster);
+      SubClusterId subClusterId =
+          SubClusterId.newInstance(FederationStateStoreTestUtil.SC_PREFIX + i);
+      SubClusterInfo expectedSubCluster = stateStoreTestUtil.querySubClusterInfo(subClusterId);
+      SubClusterInfo cachedSubCluster = facade.getSubCluster(subClusterId);
+      assertEquals(expectedSubCluster, cachedSubCluster);
     }
   }
 
@@ -104,19 +104,19 @@ public class TestFederationCache {
     Map<String, SubClusterPolicyConfiguration> queuePolicies =
         facade.getPoliciesConfigurations();
     for (String queue : queuePolicies.keySet()) {
-        SubClusterPolicyConfiguration expectedPC = stateStoreTestUtil.queryPolicyConfiguration(queue);
-        SubClusterPolicyConfiguration cachedPC = queuePolicies.get(queue);
-        assertEquals(expectedPC, cachedPC);
+      SubClusterPolicyConfiguration expectedPC = stateStoreTestUtil.queryPolicyConfiguration(queue);
+      SubClusterPolicyConfiguration cachedPC = queuePolicies.get(queue);
+      assertEquals(expectedPC, cachedPC);
     }
   }
 
   @Test
   public void testGetHomeSubClusterForApp() throws YarnException {
     for (int i = 0; i < numApps; i++) {
-       ApplicationId appId = ApplicationId.newInstance(clusterTs, i);
-       SubClusterId expectedSC = stateStoreTestUtil.queryApplicationHomeSC(appId);
-       SubClusterId cachedPC = facade.getApplicationHomeSubCluster(appId);
-       assertEquals(expectedSC, cachedPC);
+      ApplicationId appId = ApplicationId.newInstance(clusterTs, i);
+      SubClusterId expectedSC = stateStoreTestUtil.queryApplicationHomeSC(appId);
+      SubClusterId cachedPC = facade.getApplicationHomeSubCluster(appId);
+      assertEquals(expectedSC, cachedPC);
     }
   }
 }
