@@ -49,9 +49,9 @@ public class TestFederationCache {
 
   @Parameterized.Parameters
   public static Collection<String[]> getParameters() {
-    return Arrays.asList(
-        new String[][] { {"org.apache.hadoop.yarn.server.federation.cache.FederationGuavaCache"},
-        {"org.apache.hadoop.yarn.server.federation.cache.FederationJCache"} });
+    String federationGuavaCacheClass = FederationGuavaCache.class.getName();
+    String federationJCacheClass = FederationJCache.class.getName();
+    return Arrays.asList(new String[][] {{federationGuavaCacheClass}, {federationJCacheClass}});
   }
 
   private final long clusterTs = System.currentTimeMillis();
