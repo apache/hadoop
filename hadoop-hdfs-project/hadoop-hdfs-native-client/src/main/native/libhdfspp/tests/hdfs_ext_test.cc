@@ -772,4 +772,5 @@ int main(int argc, char *argv[]) {
   google::protobuf::ShutdownProtobufLibrary();
 
   return exit_code;
+
 }
