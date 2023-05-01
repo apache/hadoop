@@ -28,7 +28,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 /**
- * Test safe mode interface on HDFS
+ * Test safe mode interface on HDFS.
  */
 public class TestHDFSContractSafeMode extends AbstractContractSafeModeTest {
 

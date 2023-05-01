@@ -1647,10 +1647,10 @@ public class DistributedFileSystem extends FileSystem
    *
    * @param action
    *          One of SafeModeAction.ENTER, SafeModeAction.LEAVE and
-   *          SafeModeAction.GET
+   *          SafeModeAction.GET.
    * @param isChecked
    *          If true check only for Active NNs status, else check first NN's
-   *          status
+   *          status.
    */
   @Override
   @SuppressWarnings("deprecation")
@@ -1661,12 +1661,12 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * Translating the {@link SafeModeAction} into {@link HdfsConstants.SafeModeAction} 
-   * that is used by {@link DFSClient#setSafeMode(HdfsConstants.SafeModeAction, boolean)}
+   * that is used by {@link DFSClient#setSafeMode(HdfsConstants.SafeModeAction, boolean)}.
    * 
-   * @param action any supported action listed in {@link SafeModeAction}
-   * @return the converted {@link HdfsConstants.SafeModeAction}
+   * @param action any supported action listed in {@link SafeModeAction}.
+   * @return the converted {@link HdfsConstants.SafeModeAction}.
    * @throws UnsupportedOperationException if the provided {@link SafeModeAction} cannot be
-   *           translated
+   *           translated.
    */
   private static HdfsConstants.SafeModeAction convertToClientProtocolSafeModeAction(
       SafeModeAction action) {
@@ -1688,9 +1688,9 @@ public class DistributedFileSystem extends FileSystem
    * Enter, leave or get safe mode.
    *
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setSafeMode(
-   *    HdfsConstants.SafeModeAction,boolean)
+   *    HdfsConstants.SafeModeAction,boolean).
    *
-   * @deprecated please instead use {@link #setSafeMode(SafeModeAction)}
+   * @deprecated please instead use {@link #setSafeMode(SafeModeAction)}.
    */
   @Deprecated
   public boolean setSafeMode(HdfsConstants.SafeModeAction action)
@@ -1703,15 +1703,15 @@ public class DistributedFileSystem extends FileSystem
    *
    * @param action
    *          One of SafeModeAction.ENTER, SafeModeAction.LEAVE and
-   *          SafeModeAction.GET
+   *          SafeModeAction.GET.
    * @param isChecked
    *          If true check only for Active NNs status, else check first NN's
-   *          status
+   *          status.
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setSafeMode(HdfsConstants.SafeModeAction,
-   *        boolean)
+   *        boolean).
    *
    * @deprecated please instead use
-   *               {@link DistributedFileSystem#setSafeMode(SafeModeAction, boolean)}
+   *               {@link DistributedFileSystem#setSafeMode(SafeModeAction, boolean)}.
    */
   @Deprecated
   public boolean setSafeMode(HdfsConstants.SafeModeAction action,
@@ -1750,7 +1750,7 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
-   * enable/disable/check restoreFaileStorage
+   * enable/disable/check restoreFaileStorage.
    *
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#restoreFailedStorage(String arg)
    */

@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
+import org.apache.hadoop.fs.LeaseRecoverable;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.SafeMode;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -80,13 +81,13 @@ public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
   @Test
   public void testFileSystemCapabilities() throws Exception {
     final Path p = new Path("testFileSystemCapabilities");
-    final boolean leaseRecovery = fs.hasPathCapability(p, LEASE_RECOVERABLE);
-    assertThat(leaseRecovery)
-      .describedAs("path capabilities %s=%s in %s",
-        LEASE_RECOVERABLE, leaseRecovery, fs)
-        .isTrue();
-    assertThat(fs)
-      .describedAs("filesystem %s", fs)
-        .isInstanceOf(SafeMode.class);
+    // ViewFileSystem does not support LeaseRecoverable and SafeMode.
+    if (fs instanceof DistributedFileSystem) {
+      final boolean leaseRecovery = fs.hasPathCapability(p, LEASE_RECOVERABLE);
+      assertThat(leaseRecovery).describedAs("path capabilities %s=%s in %s", LEASE_RECOVERABLE,
+          leaseRecovery, fs).isTrue();
+      assertThat(fs).describedAs("filesystem %s", fs).isInstanceOf(LeaseRecoverable.class);
+      assertThat(fs).describedAs("filesystem %s", fs).isInstanceOf(SafeMode.class);
+    }
   }
 }
