@@ -132,8 +132,11 @@ public final class FederationStateStoreFacade {
           SubClusterResolver.class);
       this.subclusterResolver.load();
 
-      federationCache = new FederationJCache();
-      federationCache.initCache(config, stateStore);
+      this.federationCache = createInstance(conf,
+          YarnConfiguration.FEDERATION_FACADE_CACHE_CLASS,
+          YarnConfiguration.DEFAULT_FEDERATION_FACADE_CACHE_CLASS,
+          FederationCache.class);
+      this.federationCache.initCache(config, stateStore);
 
     } catch (YarnException ex) {
       LOG.error("Failed to initialize the FederationStateStoreFacade object", ex);

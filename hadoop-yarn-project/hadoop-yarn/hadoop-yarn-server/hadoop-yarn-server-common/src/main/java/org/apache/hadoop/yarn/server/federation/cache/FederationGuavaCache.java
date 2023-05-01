@@ -71,9 +71,10 @@ public class FederationGuavaCache extends FederationCache {
   }
 
   @Override
-  public Map<SubClusterId, SubClusterInfo> getSubClusters(boolean filterInactiveSubClusters) throws YarnException {
+  public Map<SubClusterId, SubClusterInfo> getSubClusters(boolean filterInactiveSubClusters)
+      throws YarnException {
     final String cacheKey = buildCacheKey(className, GET_SUBCLUSTERS_CACHEID,
-       Boolean.toString(filterInactiveSubClusters));
+        Boolean.toString(filterInactiveSubClusters));
     CacheRequest<String, ?> cacheRequest = cache.getIfPresent(cacheKey);
     if (cacheRequest == null) {
       cacheRequest = buildGetSubClustersCacheRequest(className, filterInactiveSubClusters);
@@ -96,7 +97,7 @@ public class FederationGuavaCache extends FederationCache {
   @Override
   public SubClusterId getApplicationHomeSubCluster(ApplicationId appId) throws Exception {
     final String cacheKey = buildCacheKey(className, GET_APPLICATION_HOME_SUBCLUSTER_CACHEID,
-       appId.toString());
+        appId.toString());
     CacheRequest<String, ?> cacheRequest = cache.getIfPresent(cacheKey);
     if (cacheRequest == null) {
       cacheRequest = buildGetApplicationHomeSubClusterRequest(className, appId);
@@ -110,7 +111,7 @@ public class FederationGuavaCache extends FederationCache {
   @Override
   public void removeSubCluster(boolean flushCache) {
     final String cacheKey = buildCacheKey(className, GET_SUBCLUSTERS_CACHEID,
-       Boolean.toString(flushCache));
+        Boolean.toString(flushCache));
     cache.invalidate(cacheKey);
   }
 }
