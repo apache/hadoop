@@ -247,10 +247,10 @@ public class OpenFileSupport {
       fileLength = fileStatus.getLen();
     }
     // determine start and end of file.
-    long splitStart = options.getLong(FS_OPTION_OPENFILE_SPLIT_START, 0);
+    long splitStart = getLong(options, FS_OPTION_OPENFILE_SPLIT_START, 0);
 
     // split end
-    long splitEnd = options.getLong(FS_OPTION_OPENFILE_SPLIT_END,
+    long splitEnd = getLong(options, FS_OPTION_OPENFILE_SPLIT_END,
         LENGTH_UNKNOWN);
     if (splitStart > 0 && splitStart > splitEnd) {
       LOG.warn("Split start {} is greater than split end {}, resetting",
@@ -259,7 +259,7 @@ public class OpenFileSupport {
     }
 
     // read end is the open file value
-    fileLength = options.getLong(FS_OPTION_OPENFILE_LENGTH, fileLength);
+    fileLength = getLong(options, FS_OPTION_OPENFILE_LENGTH, fileLength);
 
     // if the read end has come from options, use that
     // in creating a file status
@@ -281,7 +281,7 @@ public class OpenFileSupport {
         .withS3Select(isSelect)
         .withSql(sql)
         .withAsyncDrainThreshold(
-            options.getLong(ASYNC_DRAIN_THRESHOLD,
+            getLong(options, ASYNC_DRAIN_THRESHOLD,
                 defaultReadAhead))
         .withBufferSize(
             options.getInt(FS_OPTION_OPENFILE_BUFFER_SIZE, defaultBufferSize))
@@ -290,12 +290,33 @@ public class OpenFileSupport {
         .withInputPolicy(
             S3AInputPolicy.getFirstSupportedPolicy(policies, defaultInputPolicy))
         .withReadAheadRange(
-            options.getLong(READAHEAD_RANGE, defaultReadAhead))
+            getLong(options, READAHEAD_RANGE, defaultReadAhead))
         .withSplitStart(splitStart)
         .withSplitEnd(splitEnd)
         .withStatus(fileStatus)
         .build();
 
+  }
+
+  /**
+   * Get a long value with resilience to unparseable values.
+   * @param options options to scan
+   * @param key key to log
+   * @param defVal default value
+   * @return long value
+   */
+  private long getLong(Configuration options, String key, long defVal) {
+    final String v = options.getTrimmed(key, "");
+    if (v.isEmpty()) {
+      return defVal;
+    }
+    try {
+      return options.getLong(key, defVal);
+    } catch (NumberFormatException e) {
+      // not a long,
+      LOG.debug("Not a long in {}: {}", key, v);
+      return defVal;
+    }
   }
 
   /**
