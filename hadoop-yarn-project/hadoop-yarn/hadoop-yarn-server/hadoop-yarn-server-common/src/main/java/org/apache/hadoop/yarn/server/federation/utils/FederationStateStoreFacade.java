@@ -133,7 +133,6 @@ public final class FederationStateStoreFacade {
 
       // We check the configuration of Cache,
       // if the configuration is null, set it to FederationJCache
-
       this.federationCache = createInstance(conf,
           YarnConfiguration.FEDERATION_FACADE_CACHE_CLASS,
           YarnConfiguration.DEFAULT_FEDERATION_FACADE_CACHE_CLASS,
