@@ -581,7 +581,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     NodeAttribute nodeAttribute = NodeAttribute.newInstance(NodeAttribute.PREFIX_CENTRALIZED, "x",
         NodeAttributeType.STRING, "dfasdf");
     List<NodeAttribute> nodeAttributeList = Collections.singletonList(nodeAttribute);
-    NodeToAttributes nodeToAttributes = NodeToAttributes.newInstance("127.0.0.1", nodeAttributeList);
+    NodeToAttributes nodeToAttributes =
+        NodeToAttributes.newInstance("127.0.0.1", nodeAttributeList);
     List<NodeToAttributes> nodeToAttributesList = Collections.singletonList(nodeToAttributes);
     NodesToAttributesMappingRequest request = NodesToAttributesMappingRequest.newInstance(
         AttributeMappingOperationType.ADD, nodeToAttributesList, true, "SC-1");
