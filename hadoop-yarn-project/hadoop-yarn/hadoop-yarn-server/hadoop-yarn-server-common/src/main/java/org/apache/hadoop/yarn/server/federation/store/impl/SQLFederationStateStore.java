@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -243,12 +244,16 @@ public class SQLFederationStateStore implements FederationStateStore {
         YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_SQL_MINIMUMIDLE);
     dataSourcePoolName = conf.get(YarnConfiguration.FEDERATION_STATESTORE_POOL_NAME,
         YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_POOL_NAME);
-    maxLifeTime = conf.getLong(YarnConfiguration.FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME,
-        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME);
-    idleTimeout = conf.getLong(YarnConfiguration.FEDERATION_STATESTORE_CONN_IDLE_TIMEOUT_TIME,
-        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CONN_IDLE_TIMEOUT_TIME);
-    connectionTimeout = conf.getLong(YarnConfiguration.FEDERATION_STATESTORE_CONNECTION_TIMEOUT,
-        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CONNECTION_TIMEOUT_TIME);
+    maxLifeTime = conf.getTimeDuration(YarnConfiguration.FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME,TimeUnit.MILLISECONDS);
+    idleTimeout = conf.getTimeDuration(
+        YarnConfiguration.FEDERATION_STATESTORE_CONN_IDLE_TIMEOUT_TIME,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CONN_IDLE_TIMEOUT_TIME,
+        TimeUnit.MILLISECONDS);
+    connectionTimeout = conf.getTimeDuration(
+        YarnConfiguration.FEDERATION_STATESTORE_CONNECTION_TIMEOUT,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CONNECTION_TIMEOUT_TIME,
+        TimeUnit.MILLISECONDS);
 
     // An helper method avoids to assign a null value to these property
     userName = conf.get(YarnConfiguration.FEDERATION_STATESTORE_SQL_USERNAME);
@@ -2030,5 +2035,10 @@ public class SQLFederationStateStore implements FederationStateStore {
         LOG.error("close connection error.", e);
       }
     }
+  }
+
+  @VisibleForTesting
+  public HikariDataSource getDataSource() {
+    return dataSource;
   }
 }

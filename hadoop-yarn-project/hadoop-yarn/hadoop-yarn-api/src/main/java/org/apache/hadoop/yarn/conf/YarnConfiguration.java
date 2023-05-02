@@ -4105,7 +4105,7 @@ public class YarnConfiguration extends Configuration {
       FEDERATION_STATESTORE_SQL_PREFIX + "conn-time-out";
 
   public static final long DEFAULT_FEDERATION_STATESTORE_CONNECTION_TIMEOUT_TIME =
-      TimeUnit.MINUTES.toMillis(10);
+      TimeUnit.SECONDS.toMillis(10);
 
   public static final String FEDERATION_STATESTORE_MAX_APPLICATIONS =
       FEDERATION_PREFIX + "state-store.max-applications";
