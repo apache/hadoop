@@ -1660,9 +1660,9 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
-   * Translating the {@link SafeModeAction} into {@link HdfsConstants.SafeModeAction} 
+   * Translating the {@link SafeModeAction} into {@link HdfsConstants.SafeModeAction}
    * that is used by {@link DFSClient#setSafeMode(HdfsConstants.SafeModeAction, boolean)}.
-   * 
+   *
    * @param action any supported action listed in {@link SafeModeAction}.
    * @return the converted {@link HdfsConstants.SafeModeAction}.
    * @throws UnsupportedOperationException if the provided {@link SafeModeAction} cannot be
@@ -1687,8 +1687,8 @@ public class DistributedFileSystem extends FileSystem
   /**
    * Enter, leave or get safe mode.
    *
-   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setSafeMode(
-   *    HdfsConstants.SafeModeAction,boolean).
+   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setSafeMode(HdfsConstants.SafeModeAction,
+   * boolean)
    *
    * @deprecated please instead use {@link #setSafeMode(SafeModeAction)}.
    */
@@ -1707,8 +1707,9 @@ public class DistributedFileSystem extends FileSystem
    * @param isChecked
    *          If true check only for Active NNs status, else check first NN's
    *          status.
+   *
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setSafeMode(HdfsConstants.SafeModeAction,
-   *        boolean).
+   * boolean)
    *
    * @deprecated please instead use
    *               {@link DistributedFileSystem#setSafeMode(SafeModeAction, boolean)}.

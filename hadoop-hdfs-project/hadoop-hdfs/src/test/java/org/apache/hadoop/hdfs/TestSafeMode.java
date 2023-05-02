@@ -595,7 +595,7 @@ public class TestSafeMode {
       }
 
 
-      dfs.setSafeMode(SafeModeAction.LEAVE);      
+      dfs.setSafeMode(SafeModeAction.LEAVE);
       assertFalse("Should not be in safemode", namenode.isInSafeMode());
       checkGetBlockLocationsWorks(fs, file1);
 
