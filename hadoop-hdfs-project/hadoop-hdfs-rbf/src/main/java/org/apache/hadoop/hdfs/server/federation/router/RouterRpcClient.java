@@ -1629,7 +1629,7 @@ public class RouterRpcClient {
         // Throw StandByException,
         // Clients could fail over and try another router.
         if (rpcMonitor != null) {
-          rpcMonitor.getRPCMetrics().incrProxyOpPermitRejected();
+          rpcMonitor.proxyOpPermitRejected(nsId);
         }
         incrRejectedPermitForNs(nsId);
         LOG.debug("Permit denied for ugi: {} for method: {}",
@@ -1638,6 +1638,9 @@ public class RouterRpcClient {
             "Router " + router.getRouterId() +
                 " is overloaded for NS: " + nsId;
         throw new StandbyException(msg);
+      }
+      if (rpcMonitor != null) {
+        rpcMonitor.proxyOpPermitAccepted(nsId);
       }
       incrAcceptedPermitForNs(nsId);
     }

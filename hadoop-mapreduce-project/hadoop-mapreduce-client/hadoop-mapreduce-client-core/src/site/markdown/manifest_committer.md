@@ -371,11 +371,11 @@ any reports saved to a report directory.
 ## <a name="summaries"></a> Collecting Job Summaries `mapreduce.manifest.committer.summary.report.directory`
 
 The committer can be configured to save the `_SUCCESS` summary files to a report directory,
-irrespective of whether the job succeed or failed, by setting a fileystem path in
+irrespective of whether the job succeed or failed, by setting a filesystem path in
 the option `mapreduce.manifest.committer.summary.report.directory`.
 
 The path does not have to be on the same
-store/filesystem as the destination of work. For example, a local fileystem could be used.
+store/filesystem as the destination of work. For example, a local filesystem could be used.
 
 XML
 

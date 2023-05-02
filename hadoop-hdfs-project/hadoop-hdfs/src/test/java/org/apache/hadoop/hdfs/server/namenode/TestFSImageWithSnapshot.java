@@ -196,10 +196,8 @@ public class TestFSImageWithSnapshot {
     cluster.waitActive();
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
-    
-    INodeDirectory rootNode = fsn.dir.getINode4Write(root.toString())
-        .asDirectory();
-    assertTrue("The children list of root should be empty", 
+    final INodeDirectory rootNode = fsn.dir.getRoot();
+    assertTrue("The children list of root should be empty",
         rootNode.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
     // one snapshot on root: s1
     DiffList<DirectoryDiff> diffList = rootNode.getDiffs().asList();

@@ -120,3 +120,11 @@ GO
 IF OBJECT_ID ('[sp_deleteDelegationToken]', 'P') IS NOT NULL
   DROP PROCEDURE [sp_deleteDelegationToken];
 GO
+
+IF OBJECT_ID ('[sp_storeVersion]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_storeVersion];
+GO
+
+IF OBJECT_ID ('[sp_getVersion]', 'P') IS NOT NULL
+  DROP PROCEDURE [sp_getVersion];
+GO

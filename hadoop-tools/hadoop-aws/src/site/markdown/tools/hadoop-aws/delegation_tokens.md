@@ -832,7 +832,7 @@ This tests marshalling and unmarshalling of tokens identifiers.
 
 Tests the lifecycle of session tokens.
 
-#### Integration Test `ITestSessionDelegationInFileystem`.
+#### Integration Test `ITestSessionDelegationInFilesystem`
 
 This collects DTs from one filesystem, and uses that to create a new FS instance and
 then perform filesystem operations. A miniKDC is instantiated.
@@ -841,7 +841,7 @@ then perform filesystem operations. A miniKDC is instantiated.
 the second instance is picking up the DT information.
 * `UserGroupInformation.reset()` can be used to reset user secrets after every test
 case (e.g. teardown), so that issued DTs from one test case do not contaminate the next.
-* It's subclass, `ITestRoleDelegationInFileystem` adds a check that the current credentials
+* It's subclass, `ITestRoleDelegationInFilesystem` adds a check that the current credentials
 in the DT cannot be used to access data on other buckets —that is, the active
 session really is restricted to the target bucket.
 

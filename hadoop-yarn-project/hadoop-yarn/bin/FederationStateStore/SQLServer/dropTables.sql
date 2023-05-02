@@ -52,3 +52,7 @@ GO
 IF OBJECT_ID ( '[sequenceTable]', 'U' ) IS NOT NULL
   DROP TABLE [sequenceTable];
 GO
+
+IF OBJECT_ID ( '[versions]', 'U' ) IS NOT NULL
+  DROP TABLE [versions];
+GO

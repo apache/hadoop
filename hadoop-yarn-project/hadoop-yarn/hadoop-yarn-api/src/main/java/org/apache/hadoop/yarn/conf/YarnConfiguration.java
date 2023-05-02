@@ -217,6 +217,16 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_RM_APPLICATION_MAX_TAG_LENGTH = 100;
 
+  public static final String NODE_STORE_ROOT_DIR_NUM_RETRIES =
+      RM_PREFIX + "nodestore-rootdir.num-retries";
+
+  public static final int NODE_STORE_ROOT_DIR_NUM_DEFAULT_RETRIES = 1000;
+
+  public static final String NODE_STORE_ROOT_DIR_RETRY_INTERVAL =
+      RM_PREFIX + "nodestore-rootdir.retry-interval-ms";
+
+  public static final int NODE_STORE_ROOT_DIR_RETRY_DEFAULT_INTERVAL = 1000;
+
   public static final String RM_APPLICATION_MASTER_SERVICE_PROCESSORS =
       RM_PREFIX + "application-master-service.processors";
 
@@ -3069,6 +3079,10 @@ public class YarnConfiguration extends Configuration {
   public static final String AMRM_PROXY_HA_ENABLED = NM_PREFIX
       + "amrmproxy.ha.enable";
   public static final boolean DEFAULT_AMRM_PROXY_HA_ENABLED = false;
+
+  // Enable NM Dispatcher Metric default False.
+  public static final String NM_DISPATCHER_METRIC_ENABLED = NM_PREFIX + "dispatcher.metric.enable";
+  public static final boolean DEFAULT_NM_DISPATCHER_METRIC_ENABLED = false;
 
   /**
    * Default platform-agnostic CLASSPATH for YARN applications. A
