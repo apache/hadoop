@@ -21,13 +21,13 @@ package org.apache.hadoop.fs.contract;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LeaseRecoverable;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.LambdaTestUtils;
-
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
 
 import static org.apache.hadoop.fs.CommonPathCapabilities.LEASE_RECOVERABLE;
 

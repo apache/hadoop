@@ -33,13 +33,13 @@ public interface SafeMode {
 The goals of this interface is allow any file system implementation to share the
 same concept of safe mode with the following actions and states
 
-Safe mode actions
+### Safe mode actions
 1. `GET`, get the safe mode status of the file system.
 1. `ENTER`, enter the safe mode for the file system.
 1. `LEAVE`, exit safe mode for the file system gracefully.
 1. `FORCE_EXIT`, exit safe mode for the file system even if there is any ongoing data process.
 
-Safe mode states
-1. `ON`, when safe mode is on.
-1. `OFF`, when safe mode is off, usually it's the result of safe mode actions
-with `GET`, `LEAVE`, `FORCE_EXIT`
+### Safe mode states
+1. return true, when safe mode is on.
+1. return false, when safe mode is off, usually it's the result of safe mode actions
+with `GET`, `LEAVE`, `FORCE_EXIT`.
