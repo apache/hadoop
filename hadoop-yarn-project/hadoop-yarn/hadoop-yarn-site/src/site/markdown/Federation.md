@@ -321,15 +321,15 @@ We currently provide two Cache implementations: `JCache` and `GuavaCache`.
 
 > JCache
 
-  We used `geronimo-jcache`,`geronimo-jcache` is an implementation of the Java Caching API (JSR-107) specification provided by the Apache Geronimo project. 
-  It defines a standardized implementation of the JCache API, allowing developers to use the same API to access different caching implementations.
-  In YARN Federation we use a combination of `geronimo-jcache` and `Ehcache`. 
-  If we want to use JCache, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationJCache`.
+We used `geronimo-jcache`,`geronimo-jcache` is an implementation of the Java Caching API (JSR-107) specification provided by the Apache Geronimo project.
+It defines a standardized implementation of the JCache API, allowing developers to use the same API to access different caching implementations.
+In YARN Federation we use a combination of `geronimo-jcache` and `Ehcache`.
+If we want to use JCache, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationJCache`.
 
 > GuavaCache
 
-  This is a Cache implemented based on the Guava framework. 
-  If we want to use it, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationGuavaCache`.
+This is a Cache implemented based on the Guava framework.
+If we want to use it, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationGuavaCache`.
 
 ###ON NMs:
 
