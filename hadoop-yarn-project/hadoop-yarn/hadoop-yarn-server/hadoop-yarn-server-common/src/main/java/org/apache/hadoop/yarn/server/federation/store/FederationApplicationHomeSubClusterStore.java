@@ -117,4 +117,5 @@ public interface FederationApplicationHomeSubClusterStore {
    */
   DeleteApplicationHomeSubClusterResponse deleteApplicationHomeSubCluster(
       DeleteApplicationHomeSubClusterRequest request) throws YarnException;
+
 }

@@ -65,6 +65,18 @@ public abstract class ApplicationHomeSubCluster {
     return appMapping;
   }
 
+  @Private
+  @Unstable
+  public static ApplicationHomeSubCluster newInstance(ApplicationId appId, long createTime,
+      SubClusterId homeSubCluster, ApplicationSubmissionContext appSubmissionContext) {
+    ApplicationHomeSubCluster appMapping = Records.newRecord(ApplicationHomeSubCluster.class);
+    appMapping.setApplicationId(appId);
+    appMapping.setHomeSubCluster(homeSubCluster);
+    appMapping.setApplicationSubmissionContext(appSubmissionContext);
+    appMapping.setCreateTime(createTime);
+    return appMapping;
+  }
+
   /**
    * Get the {@link ApplicationId} representing the unique identifier of the
    * application.
@@ -172,7 +184,8 @@ public abstract class ApplicationHomeSubCluster {
         append(this.getApplicationId()).
         append(this.getHomeSubCluster()).
         append(this.getCreateTime()).
-        append(this.getApplicationSubmissionContext()).toHashCode();
+        append(this.getApplicationSubmissionContext())
+        .toHashCode();
   }
 
   @Override
@@ -183,7 +196,7 @@ public abstract class ApplicationHomeSubCluster {
         .append("HomeSubCluster: ").append(getHomeSubCluster()).append(", ")
         .append("CreateTime: ").append(getCreateTime()).append(", ")
         .append("ApplicationSubmissionContext: ").append(getApplicationSubmissionContext())
-        .append(", ").append("]");
+        .append("]");
     return sb.toString();
   }
 }
