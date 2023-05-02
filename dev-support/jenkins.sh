@@ -48,7 +48,7 @@ is_platform_change() {
   declare in_path
   in_path="${SOURCEDIR}"/"${1}"
 
-  for path in "${SOURCEDIR}"/dev-support/docker/Dockerfile* "${SOURCEDIR}"/dev-support/docker/pkg-resolver/*.json; do
+  for path in "${DOCKERFILE}" "${SOURCEDIR}"/dev-support/docker/pkg-resolver/*.json; do
     if [ "${in_path}" == "${path}" ]; then
       echo "Found C/C++ platform related changes in ${in_path}"
       return 0
