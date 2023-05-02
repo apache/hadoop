@@ -21,8 +21,7 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 
 /**
- * Whether the given Path of the FileSystem has the capability to performance
- * lease recovery.
+ * Whether the given Path of the FileSystem has the capability to perform lease recovery.
  */
 public interface LeaseRecoverable {
 
