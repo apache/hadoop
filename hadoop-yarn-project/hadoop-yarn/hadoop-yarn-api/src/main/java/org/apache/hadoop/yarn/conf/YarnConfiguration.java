@@ -4015,7 +4015,7 @@ public class YarnConfiguration extends Configuration {
           + "DefaultSubClusterResolverImpl";
 
   public static final String FEDERATION_FACADE_CACHE_CLASS =
-      FEDERATION_PREFIX + "facade.cache.class";
+      FEDERATION_PREFIX + "cache.class";
   public static final String DEFAULT_FEDERATION_FACADE_CACHE_CLASS =
       "org.apache.hadoop.yarn.server.federation.cache.FederationJCache";
 
