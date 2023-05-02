@@ -44,11 +44,13 @@ import static org.apache.hadoop.util.Preconditions.checkNotNull;
  * with option support.
  *
  * <code>
- *   .opt("foofs:option.a", true)
- *   .opt("foofs:option.b", "value")
+ *   .opt("fs.s3a.open.option.caching", true)
+ *   .opt("fs.option.openfile.read.policy", "random, adaptive")
  *   .opt("fs.s3a.open.option.etag", "9fe4c37c25b")
- *   .must("foofs:cache", true)
- *   .must("barfs:cache-size", 256 * 1024 * 1024)
+ *   .optLong("fs.option.openfile.length", 1_500_000_000_000)
+ *   .must("fs.option.openfile.buffer.size", 256_000)
+ *   .mustLong("fs.option.openfile.split.start", 256_000_000)
+ *   .mustLong("fs.option.openfile.split.end", 512_000_000)
  *   .build();
  * </code>
  *
@@ -64,6 +66,7 @@ import static org.apache.hadoop.util.Preconditions.checkNotNull;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
+@SuppressWarnings({"deprecation", "unused"})
 public abstract class
     AbstractFSBuilderImpl<S, B extends FSBuilder<S, B>>
     implements FSBuilder<S, B> {
