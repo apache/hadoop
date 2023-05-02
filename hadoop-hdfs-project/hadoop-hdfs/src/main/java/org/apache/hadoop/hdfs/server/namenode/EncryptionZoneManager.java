@@ -29,8 +29,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
@@ -113,32 +111,10 @@ public class EncryptionZoneManager {
       return keyName;
     }
 
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) {
-        return true;
-      }
-      if (!(o instanceof EncryptionZoneInt)) {
-        return false;
-      }
-
-      EncryptionZoneInt b = (EncryptionZoneInt)o;
-      return new EqualsBuilder()
-          .append(inodeId, b.getINodeId())
-          .append(suite, b.getSuite())
-          .append(version, b.getVersion())
-          .append(keyName, b.getKeyName())
-          .isEquals();
-    }
-
-    @Override
-    public int hashCode() {
-      return new HashCodeBuilder().
-          append(inodeId).
-          append(suite).
-          append(version).
-          append(keyName).
-          toHashCode();
+    public boolean isEqualTo(EncryptionZoneInt other) {
+      return suite == other.getSuite() &&
+          version == other.getVersion() &&
+          keyName.equals(other.getKeyName());
     }
   }
 
@@ -496,7 +472,7 @@ public class EncryptionZoneManager {
     }
 
     if (srcInEZ) {
-      if (!srcParentEZI.equals(dstParentEZI)) {
+      if (!srcParentEZI.isEqualTo(dstParentEZI)) {
         final String srcEZPath = getFullPathName(srcParentEZI.getINodeId());
         final String dstEZPath = getFullPathName(dstParentEZI.getINodeId());
         final StringBuilder sb = new StringBuilder(srcIIP.getPath());
@@ -510,6 +486,13 @@ public class EncryptionZoneManager {
       checkMoveValidityForReencryption(dstIIP.getPath(),
           dstParentEZI.getINodeId());
     }
+  }
+
+  // removing an EZ xattr requires an ancestor to be using the same key.
+  boolean checkRemoveXAttrValidity(INodesInPath iip) throws IOException {
+    EncryptionZoneInt nodeEZI = encryptionZones.get(iip.getLastINode().getId());
+    EncryptionZoneInt parentEZI = getParentEncryptionZoneForPath(iip);
+    return parentEZI != null && nodeEZI.isEqualTo(parentEZI);
   }
 
   private void checkMoveValidityForReencryption(final String pathName,
@@ -535,12 +518,12 @@ public class EncryptionZoneManager {
       throws IOException {
     assert dir.hasWriteLock();
 
+    INode srcINode = srcIIP.getLastINode();
     // Check if src is a valid path for new EZ creation
-    if (srcIIP.getLastINode() == null) {
+    if (srcINode == null) {
       throw new FileNotFoundException("cannot find " + srcIIP.getPath());
     }
 
-    INode srcINode = srcIIP.getLastINode();
     if (!srcINode.isDirectory()) {
       throw new IOException("Attempt to create an encryption zone for a file.");
     }

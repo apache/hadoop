@@ -247,7 +247,7 @@
     </test>
 
     <test>
-      <description>Test failure of renaming file cross EZ's</description>
+      <description>Test success of renaming file cross EZ's with the same key</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /src</command>
         <command>-fs NAMENODE -mkdir /dst</command>
@@ -258,7 +258,7 @@
         <command>-fs NAMENODE -mv /src/subdir /dst</command>-
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rmdir /src/subdir</command>
+        <command>-fs NAMENODE -rmdir /dst/subdir</command>
         <command>-fs NAMENODE -rmdir /src/.Trash</command>
         <command>-fs NAMENODE -rmdir /src</command>
         <command>-fs NAMENODE -rmdir /dst/.Trash</command>
@@ -267,7 +267,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>/src/subdir can't be moved from encryption zone /src to encryption zone /dst.</expected-output>
+          <expected-output></expected-output>
         </comparator>
       </comparators>
     </test>

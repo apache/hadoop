@@ -31,16 +31,20 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
 import java.io.File;
+import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -208,6 +212,80 @@ public class TestNestedEncryptionZones {
     assertTrue("File not in trash : " + topTrashFile, fs.exists(topTrashFile));
     assertTrue(
         "File not in trash : " + nestedTrashFile, fs.exists(nestedTrashFile));
+  }
+
+  @Test(timeout = 60000)
+  public void testRenameBetweenEncryptionZones() throws Exception {
+    String key1 = TOP_EZ_KEY;
+    String key2 = NESTED_EZ_KEY;
+    Path top = new Path("/dir");
+    Path ez1 = new Path(top, "ez1");
+    Path ez2 = new Path(top, "ez2");
+    Path ez3 = new Path(top, "ez3");
+    Path p = new Path(ez1, "file");
+    fs.mkdirs(ez1, FsPermission.getDirDefault());
+    fs.mkdirs(ez2, FsPermission.getDirDefault());
+    fs.mkdirs(ez3, FsPermission.getDirDefault());
+    fs.createEncryptionZone(ez1, key1);
+    fs.createEncryptionZone(ez2, key2);
+    fs.createEncryptionZone(ez3, key1);
+    fs.create(p).close();
+
+    // cannot rename between 2 EZs with different keys.
+    try {
+      fs.rename(p, new Path(ez2, "file"));
+    } catch (RemoteException re) {
+      Assert.assertEquals(
+          p + " can't be moved from encryption zone " + ez1 +
+              " to encryption zone " + ez2 + ".",
+          re.getMessage().split("\n")[0]);
+    }
+    // can rename between 2 EZs with the same key.
+    Assert.assertTrue(fs.rename(p, new Path(ez3, "file")));
+  }
+
+  @Test(timeout = 60000)
+  public void testRemoveEncryptionZoneWithAncestorKey() throws Exception {
+    removeEZDirUnderAncestor(TOP_EZ_KEY);
+  }
+
+  @Test(timeout = 60000)
+  public void testRemoveEncryptionZoneWithNoAncestorKey() throws Exception {
+    removeEZDirUnderAncestor(null);
+  }
+
+  private void removeEZDirUnderAncestor(String parentKey) throws Exception {
+    String[] dirs = new String[]{"/dir", "ez1", "ez2"};
+    String[] ezKeys = new String[]{parentKey, TOP_EZ_KEY, NESTED_EZ_KEY};
+    Path[] pathArr = new Path[3];
+
+    // initialize the directories.
+    for (int i = 0; i < dirs.length; i++) {
+      pathArr[i] = (i == 0 ? new Path(dirs[i]) : new Path(pathArr[0], dirs[i]));
+      fs.mkdirs(pathArr[i], FsPermission.getDirDefault());
+      if (ezKeys[i] == null) { // skip creating encryption zone.
+        continue;
+      }
+      fs.createEncryptionZone(pathArr[i], ezKeys[i]);
+    }
+
+    // try to remove the EZ.
+    // can't remove EZ when no ancestor shares same key.
+    for (int i = 1; i < dirs.length; i++) {
+      removeEZ(pathArr[i], !ezKeys[i].equals(parentKey));
+    }
+  }
+
+  private void removeEZ(Path p, boolean expectFailure) throws IOException {
+    Path rawp = new Path(rawDir.toString() + p);
+    try {
+      fs.removeXAttr(rawp, HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE);
+      Assert.assertFalse("didn't fail as expected", expectFailure);
+    } catch (RemoteException re) {
+      Assert.assertEquals(
+          "The encryption zone xattr should never be deleted.",
+          re.getMessage().split("\n")[0]);
+    }
   }
 
   private void renameChildrenOfEZ() throws Exception{
