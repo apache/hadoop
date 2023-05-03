@@ -192,7 +192,8 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
       throws IOException;
 
   /**
-   * List in-progress multipart uploads under a path
+   * List in-progress multipart uploads under a path: limited to the first
+   * few hundred.
    * @param prefix prefix for uploads to list
    * @return a list of in-progress multipart uploads
    * @throws IOException on problems
