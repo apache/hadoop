@@ -57,6 +57,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.tools.DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH;
 import static org.apache.hadoop.tools.DistCpConstants.CONF_LABEL_TARGET_WORK_PATH;
 import static org.apache.hadoop.tools.util.TestDistCpUtils.*;
+import static org.hamcrest.CoreMatchers.containsString;
 
 public class TestCopyCommitter {
   private static final Logger LOG = LoggerFactory.getLogger(TestCopyCommitter.class);
@@ -570,7 +571,7 @@ public class TestCopyCommitter {
                 fs, new Path(sourceBase + srcFilename), null,
                 fs, new Path(targetBase + srcFilename),
                 sourceCurrStatus.getLen()));
-        assertTrue(log.getOutput().contains("Checksum not equal"));
+        assertThat(log.getOutput(), containsString("Checksum not equal"));
       } catch(IOException exception) {
         if (skipCrc) {
           LOG.error("Unexpected exception is found", exception);
