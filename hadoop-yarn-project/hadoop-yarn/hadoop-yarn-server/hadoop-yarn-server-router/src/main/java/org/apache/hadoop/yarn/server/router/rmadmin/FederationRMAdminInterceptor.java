@@ -820,9 +820,11 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
    * The request contains the id of to deregister sub-cluster.
    * @return Response from deregisterSubCluster.
    * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
    */
   @Override
-  public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request) throws YarnException, IOException {
+  public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request)
+      throws YarnException, IOException {
 
     if (request == null) {
       routerMetrics.incrDeregisterSubClusterFailedRetrieved();
