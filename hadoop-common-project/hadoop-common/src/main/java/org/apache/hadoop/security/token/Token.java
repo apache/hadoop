@@ -136,6 +136,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
         while (tokenIdentifiers.hasNext()) {
           try {
             TokenIdentifier id = tokenIdentifiers.next();
+            LOG.debug("Added {}:{} into tokenKindMap", id.getKind(), id.getClass());
             tokenKindMap.put(id.getKind(), id.getClass());
           } catch (ServiceConfigurationError | LinkageError e) {
             // failure to load a token implementation

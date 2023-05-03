@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.router.rmadmin;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
@@ -83,6 +82,7 @@ import java.util.Map;
 import java.util.Collection;
 import java.util.Set;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.BlockingQueue;
@@ -727,14 +727,76 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
   @Override
   public NodesToAttributesMappingResponse mapAttributesToNodes(
-      NodesToAttributesMappingRequest request)
-      throws YarnException, IOException {
-    throw new NotImplementedException();
+      NodesToAttributesMappingRequest request) throws YarnException, IOException {
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrMapAttributesToNodesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing mapAttributesToNodes request.", null);
+    }
+
+    String subClusterId = request.getSubClusterId();
+    if (StringUtils.isBlank(subClusterId)) {
+      routerMetrics.incrMapAttributesToNodesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing mapAttributesToNodes SubClusterId.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{NodesToAttributesMappingRequest.class}, new Object[]{request});
+      Collection<NodesToAttributesMappingResponse> mapAttributesToNodesResps =
+          remoteMethod.invokeConcurrent(this, NodesToAttributesMappingResponse.class,
+          subClusterId);
+      if (CollectionUtils.isNotEmpty(mapAttributesToNodesResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededMapAttributesToNodesRetrieved(stopTime - startTime);
+        return NodesToAttributesMappingResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrMapAttributesToNodesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to mapAttributesToNodes due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrMapAttributesToNodesFailedRetrieved();
+    throw new YarnException("Unable to mapAttributesToNodes.");
   }
 
   @Override
   public String[] getGroupsForUser(String user) throws IOException {
-    return new String[0];
+    // parameter verification.
+    if (StringUtils.isBlank(user)) {
+      routerMetrics.incrGetGroupsForUserFailedRetrieved();
+      RouterServerUtil.logAndThrowIOException("Missing getGroupsForUser user.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[]{String.class}, new Object[]{user});
+      Collection<String[]> getGroupsForUserResps =
+          remoteMethod.invokeConcurrent(this, String[].class, null);
+      if (CollectionUtils.isNotEmpty(getGroupsForUserResps)) {
+        long stopTime = clock.getTime();
+        Set<String> groups = new HashSet<>();
+        for (String[] groupArr : getGroupsForUserResps) {
+          if (groupArr != null && groupArr.length > 0) {
+            for (String group : groupArr) {
+              groups.add(group);
+            }
+          }
+        }
+        routerMetrics.succeededGetGroupsForUsersRetrieved(stopTime - startTime);
+        return groups.toArray(new String[]{});
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrGetGroupsForUserFailedRetrieved();
+      RouterServerUtil.logAndThrowIOException(e,
+          "Unable to getGroupsForUser due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrGetGroupsForUserFailedRetrieved();
+    throw new IOException("Unable to getGroupsForUser.");
   }
 
   @VisibleForTesting

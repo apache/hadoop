@@ -819,6 +819,13 @@ public class MockRM extends ResourceManager {
         }
         return recordFactory.newRecordInstance(RefreshServiceAclsResponse.class);
       }
+
+      public String[] getGroupsForUser(String user) throws IOException {
+        if ("admin".equals(user)) {
+          return new String[]{"admin"};
+        }
+        return new String[]{};
+      }
     };
   }
 

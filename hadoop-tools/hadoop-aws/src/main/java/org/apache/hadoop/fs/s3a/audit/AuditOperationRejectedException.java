@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,29 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.federation.metrics;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+package org.apache.hadoop.fs.s3a.audit;
 
 /**
- * JMX interface for the RPC server of Nameservice.
+ * The auditor has rejected the operation as forbidden/unavailable.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
-public interface NameserviceRPCMBean {
+public class AuditOperationRejectedException extends AuditFailureException {
 
-  long getProxyOps();
+  public AuditOperationRejectedException(final String message, final Throwable t) {
+    super(message, t);
+  }
 
-  double getProxyAvg();
-
-  long getProxyOpFailureCommunicate();
-
-  long getProxyOpFailureStandby();
-
-  long getProxyOpNoNamenodes();
-
-  long getProxyOpPermitRejected();
-
-  long getProxyOpPermitAccepted();
+  public AuditOperationRejectedException(final String message) {
+    super(message);
+  }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,29 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.federation.metrics;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+package org.apache.hadoop.fs.s3a.api;
+
+import org.apache.hadoop.fs.PathIOException;
 
 /**
- * JMX interface for the RPC server of Nameservice.
+ * An operation is unsupported.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
-public interface NameserviceRPCMBean {
+public class UnsupportedRequestException extends PathIOException {
 
-  long getProxyOps();
+  public UnsupportedRequestException(final String path, final Throwable cause) {
+    super(path, cause);
+  }
 
-  double getProxyAvg();
+  public UnsupportedRequestException(final String path, final String error) {
+    super(path, error);
+  }
 
-  long getProxyOpFailureCommunicate();
-
-  long getProxyOpFailureStandby();
-
-  long getProxyOpNoNamenodes();
-
-  long getProxyOpPermitRejected();
-
-  long getProxyOpPermitAccepted();
+  public UnsupportedRequestException(final String path,
+      final String error,
+      final Throwable cause) {
+    super(path, error, cause);
+  }
 }
