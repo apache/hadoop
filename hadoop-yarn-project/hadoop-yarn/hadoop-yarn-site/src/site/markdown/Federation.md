@@ -316,7 +316,7 @@ To enable cross-origin support (CORS) for the Yarn Router, please set the follow
 
 Cache:
 
-Cache is not enabled by default. When we set the `yarn.federation.cache-ttl.secs` parameter and its value is greater than 0, Cache will be enabled. 
+Cache is not enabled by default. When we set the `yarn.federation.cache-ttl.secs` parameter and its value is greater than 0, Cache will be enabled.
 We currently provide two Cache implementations: `JCache` and `GuavaCache`.
 
 > JCache
