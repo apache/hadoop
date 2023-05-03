@@ -58,6 +58,7 @@ import static org.apache.hadoop.tools.DistCpConstants.CONF_LABEL_TARGET_FINAL_PA
 import static org.apache.hadoop.tools.DistCpConstants.CONF_LABEL_TARGET_WORK_PATH;
 import static org.apache.hadoop.tools.util.TestDistCpUtils.*;
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class TestCopyCommitter {
   private static final Logger LOG = LoggerFactory.getLogger(TestCopyCommitter.class);
