@@ -123,4 +123,11 @@ public final class CommonPathCapabilities {
    */
   public static final String FS_XATTRS = "fs.capability.paths.xattrs";
 
+  /**
+   * Does this Filesystem support lease recovery operations such as
+   * {@link LeaseRecoverable#recoverLease(Path)} and {@link LeaseRecoverable#isFileClosed(Path)}}?
+   * Value: {@value}.
+   */
+  public static final String LEASE_RECOVERABLE = "fs.capability.lease.recoverable";
+
 }

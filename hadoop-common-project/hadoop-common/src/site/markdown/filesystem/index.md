@@ -38,3 +38,7 @@ HDFS as these are commonly expected by Hadoop client applications.
 2. [Testing with the Filesystem specification](testing.html)
 2. [Extending the specification and its tests](extending.html)
 1. [Uploading a file using Multiple Parts](multipartuploader.html)
+1. [openFile()](openfile.html)
+1. [SafeMode](safemode.html)
+1. [LeaseRecoverable](leaserecoverable.html)
+
