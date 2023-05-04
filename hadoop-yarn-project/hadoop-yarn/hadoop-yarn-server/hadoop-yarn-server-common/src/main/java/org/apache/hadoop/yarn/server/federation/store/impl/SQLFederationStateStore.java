@@ -245,7 +245,7 @@ public class SQLFederationStateStore implements FederationStateStore {
     dataSourcePoolName = conf.get(YarnConfiguration.FEDERATION_STATESTORE_POOL_NAME,
         YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_POOL_NAME);
     maxLifeTime = conf.getTimeDuration(YarnConfiguration.FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME,
-        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME,TimeUnit.MILLISECONDS);
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME, TimeUnit.MILLISECONDS);
     idleTimeout = conf.getTimeDuration(
         YarnConfiguration.FEDERATION_STATESTORE_CONN_IDLE_TIMEOUT_TIME,
         YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CONN_IDLE_TIMEOUT_TIME,
