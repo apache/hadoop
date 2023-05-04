@@ -111,7 +111,7 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
     try (S3ADataBlocks.BlockFactory diskBlockFactory =
            new S3ADataBlocks.DiskBlockFactory(getFileSystem());
          S3ADataBlocks.DataBlock dataBlock =
-            diskBlockFactory.create("spanId", s3Key, 1, blockSize, null);
+             diskBlockFactory.create("spanId", s3Key, 1, blockSize, null);
     ) {
       String tmpDir = getConfiguration().get("hadoop.tmp.dir");
       boolean created = Arrays.stream(
