@@ -38,7 +38,9 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -833,13 +835,16 @@ public final class FederationStateStoreFacade {
    * @param applicationId applicationId, is the id of the application.
    * @param subClusterId homeSubClusterId, this is selected by strategy.
    * @param retryCount number of retries.
+   * @param appSubmissionContext appSubmissionContext.
    * @throws YarnException yarn exception.
    */
   public void addOrUpdateApplicationHomeSubCluster(ApplicationId applicationId,
-      SubClusterId subClusterId, int retryCount) throws YarnException {
+      SubClusterId subClusterId, int retryCount, ApplicationSubmissionContext appSubmissionContext)
+      throws YarnException {
     Boolean exists = existsApplicationHomeSubCluster(applicationId);
     ApplicationHomeSubCluster appHomeSubCluster =
-        ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
+        ApplicationHomeSubCluster.newInstance(applicationId, Time.now(),
+        subClusterId, appSubmissionContext);
     if (!exists || retryCount == 0) {
       // persist the mapping of applicationId and the subClusterId which has
       // been selected as its home.

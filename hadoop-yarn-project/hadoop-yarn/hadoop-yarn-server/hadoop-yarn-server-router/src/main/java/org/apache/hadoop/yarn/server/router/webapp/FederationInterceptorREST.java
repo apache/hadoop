@@ -560,7 +560,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       // Step2. We Store the mapping relationship
       // between Application and HomeSubCluster in stateStore.
       federationFacade.addOrUpdateApplicationHomeSubCluster(
-          applicationId, subClusterId, retryCount);
+          applicationId, subClusterId, retryCount, context);
 
       // Step3. We get subClusterInfo based on subClusterId.
       SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
