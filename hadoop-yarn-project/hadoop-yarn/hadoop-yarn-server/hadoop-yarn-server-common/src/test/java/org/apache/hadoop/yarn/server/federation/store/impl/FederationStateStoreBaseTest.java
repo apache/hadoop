@@ -31,8 +31,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
@@ -384,7 +383,6 @@ public abstract class FederationStateStoreBaseTest {
     Assert.assertEquals(subClusterId,
         result.getApplicationHomeSubCluster().getHomeSubCluster());
   }
-
   @Test
   public void testGetApplicationHomeSubClusterUnknownApp() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(1, 1);
@@ -653,6 +651,16 @@ public abstract class FederationStateStoreBaseTest {
         ApplicationHomeSubCluster.newInstance(appId, subClusterId);
     AddApplicationHomeSubClusterRequest request =
         AddApplicationHomeSubClusterRequest.newInstance(ahsc);
+    stateStore.addApplicationHomeSubCluster(request);
+  }
+
+  void addApplicationHomeSC(ApplicationId appId, SubClusterId subClusterId,
+      ApplicationSubmissionContext submissionContext) throws YarnException {
+    long createTime = Time.now();
+    ApplicationHomeSubCluster ahsc = ApplicationHomeSubCluster.newInstance(
+        appId, createTime, subClusterId, submissionContext);
+    AddApplicationHomeSubClusterRequest request =
+         AddApplicationHomeSubClusterRequest.newInstance(ahsc);
     stateStore.addApplicationHomeSubCluster(request);
   }
 
