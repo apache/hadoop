@@ -33,7 +33,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -93,7 +92,7 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
   @Test
   public void testDiskBlockCreate() throws IOException {
     String s3Key = // 1024 char
-      "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
+        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
         "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
         "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
         "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
@@ -112,11 +111,11 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
     try (S3ADataBlocks.BlockFactory diskBlockFactory =
            new S3ADataBlocks.DiskBlockFactory(getFileSystem());
          S3ADataBlocks.DataBlock dataBlock =
-           diskBlockFactory.create("spanId", s3Key, 1, blockSize, null);
+            diskBlockFactory.create("spanId", s3Key, 1, blockSize, null);
     ) {
       String tmpDir = getConfiguration().get("hadoop.tmp.dir");
       boolean created = Arrays.stream(
-        Objects.requireNonNull(new File(tmpDir).listFiles()))
+          Objects.requireNonNull(new File(tmpDir).listFiles()))
           .anyMatch(f -> f.getName().contains("very_long_s3_key"));
       assertTrue(String.format("tmp file should have been created locally in %s", tmpDir), created);
       LOG.info(dataBlock.toString()); // block file name/location can be viewed in failsafe-report
