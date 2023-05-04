@@ -192,11 +192,11 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
       throws IOException;
 
   /**
-   * Abort multipart uploads under a path: limited to the first
+   * List in-progress multipart uploads under a path: limited to the first
    * few hundred.
-   * @param prefix prefix for uploads to abort
-   * @return a count of aborts
-   * @throws IOException trouble; FileNotFoundExceptions are swallowed.
+   * @param prefix prefix for uploads to list
+   * @return a list of in-progress multipart uploads
+   * @throws IOException on problems
    */
   List<MultipartUpload> listMultipartUploads(String prefix)
       throws IOException;
