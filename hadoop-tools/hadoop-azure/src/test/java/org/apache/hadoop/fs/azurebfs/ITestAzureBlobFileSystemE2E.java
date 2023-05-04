@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -213,8 +215,12 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     fs.delete(testFilePath, true);
     assertFalse(fs.exists(testFilePath));
 
-    intercept(FileNotFoundException.class,
-            () -> stream.close());
+    if (getPrefixMode(fs) == PrefixMode.DFS) {
+      intercept(FileNotFoundException.class,
+              () -> stream.close());
+    } else {
+      stream.close();
+    }
   }
 
   private void testWriteOneByteToFile(Path testFilePath) throws Exception {

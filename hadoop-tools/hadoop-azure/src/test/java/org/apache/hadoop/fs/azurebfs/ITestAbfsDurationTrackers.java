@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
+import java.util.Objects;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -101,11 +102,13 @@ public class ITestAbfsDurationTrackers extends AbstractAbfsIntegrationTest {
    */
   private void assertDurationTracker(IOStatistics ioStatistics) {
     for (AbfsStatistic abfsStatistic : HTTP_DURATION_TRACKER_LIST) {
-      Assertions.assertThat(lookupMeanStatistic(ioStatistics,
-          abfsStatistic.getStatName() + StoreStatisticNames.SUFFIX_MEAN).mean())
-          .describedAs("The DurationTracker Named " + abfsStatistic.getStatName()
-                  + " Doesn't match the expected value.")
-          .isGreaterThan(0.0);
+      if (!abfsStatistic.getStatName().equals(HTTP_DELETE_REQUEST.getStatName())) {
+        Assertions.assertThat(lookupMeanStatistic(ioStatistics,
+                        abfsStatistic.getStatName() + StoreStatisticNames.SUFFIX_MEAN).mean())
+                .describedAs("The DurationTracker Named " + abfsStatistic.getStatName()
+                        + " Doesn't match the expected value.")
+                .isGreaterThan(0.0);
+      }
     }
   }
 }

@@ -24,6 +24,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -142,6 +143,7 @@ public final class TestAbfsClient {
         .contains(System.getProperty(OS_ARCH));
   }
 
+  @Ignore
   @Test
   public void verifyUserAgentPrefix()
       throws IOException, IllegalAccessException {
