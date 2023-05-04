@@ -48,10 +48,8 @@ import static org.junit.Assert.assertEquals;
 public class TestFederationCache {
 
   @Parameterized.Parameters
-  public static Collection<String[]> getParameters() {
-    String federationGuavaCacheClass = FederationGuavaCache.class.getName();
-    String federationJCacheClass = FederationJCache.class.getName();
-    return Arrays.asList(new String[][] {{federationGuavaCacheClass}, {federationJCacheClass}});
+  public static Collection<Class[]> getParameters() {
+    return Arrays.asList(new Class[][] {{FederationGuavaCache.class}, {FederationJCache.class}});
   }
 
   private final long clusterTs = System.currentTimeMillis();
@@ -64,10 +62,11 @@ public class TestFederationCache {
   private FederationStateStoreTestUtil stateStoreTestUtil;
   private FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
 
-  public TestFederationCache(String cacheClassName) {
+  public TestFederationCache(Class cacheClassName) {
     conf = new Configuration();
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 1);
-    conf.set(YarnConfiguration.FEDERATION_FACADE_CACHE_CLASS, cacheClassName);
+    conf.setClass(YarnConfiguration.FEDERATION_FACADE_CACHE_CLASS,
+        cacheClassName, FederationCache.class);
   }
 
   @Before
