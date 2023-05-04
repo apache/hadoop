@@ -69,9 +69,9 @@ public abstract class AbstractFSNodeStore<M> {
     int maxRetries = conf.getInt(YarnConfiguration.NODE_STORE_ROOT_DIR_NUM_RETRIES,
         YarnConfiguration.NODE_STORE_ROOT_DIR_NUM_DEFAULT_RETRIES);
     int retryCount = 0;
-    boolean success = fs.mkdirs(fsWorkingPath);
+    boolean success = false;
 
-    while (!success && retryCount < maxRetries) {
+    while (!success && retryCount <= maxRetries) {
       try {
         if (!fs.exists(fsWorkingPath)) {
           success = fs.mkdirs(fsWorkingPath);
@@ -80,7 +80,7 @@ public abstract class AbstractFSNodeStore<M> {
         }
       } catch (IOException e) {
         retryCount++;
-        if (retryCount >= maxRetries) {
+        if (retryCount > maxRetries) {
           throw e;
         }
         try {
