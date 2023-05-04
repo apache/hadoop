@@ -28,8 +28,12 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
-import org.apache.hadoop.yarn.server.federation.store.records.*;
-import org.junit.Assert;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretManagerState;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -111,11 +115,11 @@ public class TestMemoryFederationStateStore extends FederationStateStoreBaseTest
     GetApplicationHomeSubClusterResponse result =
         memoryStateStore.getApplicationHomeSubCluster(getRequest);
 
-    Assert.assertEquals(appId,
+    assertEquals(appId,
         result.getApplicationHomeSubCluster().getApplicationId());
-    Assert.assertEquals(subClusterId,
+    assertEquals(subClusterId,
         result.getApplicationHomeSubCluster().getHomeSubCluster());
-    Assert.assertEquals(context,
+    assertEquals(context,
         result.getApplicationHomeSubCluster().getApplicationSubmissionContext());
   }
 }
