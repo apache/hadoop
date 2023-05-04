@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.impl.FSBuilderSupport;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
@@ -246,12 +247,14 @@ public class OpenFileSupport {
       // set the end of the read to the file length
       fileLength = fileStatus.getLen();
     }
+    FSBuilderSupport builderSupport = new FSBuilderSupport(options);
     // determine start and end of file.
-    long splitStart = getLong(options, FS_OPTION_OPENFILE_SPLIT_START, 0);
+    long splitStart = builderSupport.getPositiveLong(FS_OPTION_OPENFILE_SPLIT_START, 0);
 
     // split end
-    long splitEnd = getLong(options, FS_OPTION_OPENFILE_SPLIT_END,
-        LENGTH_UNKNOWN);
+    long splitEnd = builderSupport.getLong(
+        FS_OPTION_OPENFILE_SPLIT_END, LENGTH_UNKNOWN);
+
     if (splitStart > 0 && splitStart > splitEnd) {
       LOG.warn("Split start {} is greater than split end {}, resetting",
           splitStart, splitEnd);
@@ -259,7 +262,7 @@ public class OpenFileSupport {
     }
 
     // read end is the open file value
-    fileLength = getLong(options, FS_OPTION_OPENFILE_LENGTH, fileLength);
+    fileLength = builderSupport.getPositiveLong( FS_OPTION_OPENFILE_LENGTH, fileLength);
 
     // if the read end has come from options, use that
     // in creating a file status
@@ -281,42 +284,22 @@ public class OpenFileSupport {
         .withS3Select(isSelect)
         .withSql(sql)
         .withAsyncDrainThreshold(
-            getLong(options, ASYNC_DRAIN_THRESHOLD,
+            builderSupport.getPositiveLong(ASYNC_DRAIN_THRESHOLD,
                 defaultReadAhead))
         .withBufferSize(
-            options.getInt(FS_OPTION_OPENFILE_BUFFER_SIZE, defaultBufferSize))
+            (int)builderSupport.getPositiveLong(
+                FS_OPTION_OPENFILE_BUFFER_SIZE, defaultBufferSize))
         .withChangePolicy(changePolicy)
         .withFileLength(fileLength)
         .withInputPolicy(
             S3AInputPolicy.getFirstSupportedPolicy(policies, defaultInputPolicy))
         .withReadAheadRange(
-            getLong(options, READAHEAD_RANGE, defaultReadAhead))
+            builderSupport.getPositiveLong(READAHEAD_RANGE, defaultReadAhead))
         .withSplitStart(splitStart)
         .withSplitEnd(splitEnd)
         .withStatus(fileStatus)
         .build();
 
-  }
-
-  /**
-   * Get a long value with resilience to unparseable values.
-   * @param options options to scan
-   * @param key key to log
-   * @param defVal default value
-   * @return long value
-   */
-  private long getLong(Configuration options, String key, long defVal) {
-    final String v = options.getTrimmed(key, "");
-    if (v.isEmpty()) {
-      return defVal;
-    }
-    try {
-      return options.getLong(key, defVal);
-    } catch (NumberFormatException e) {
-      // not a long,
-      LOG.debug("Not a long in {}: {}", key, v);
-      return defVal;
-    }
   }
 
   /**

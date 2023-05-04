@@ -141,7 +141,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
             fs.openFile(testFile)
                 .must(FS_OPTION_OPENFILE_READ_POLICY,
                     FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)
-                .opt(FS_OPTION_OPENFILE_LENGTH, shortLen)
+                .mustLong(FS_OPTION_OPENFILE_LENGTH, shortLen)
                 .build()
                 .get(),
         always(NO_HEAD_OR_LIST),
@@ -183,7 +183,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
             fs.openFile(testFile)
                 .must(FS_OPTION_OPENFILE_READ_POLICY,
                     FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)
-                .must(FS_OPTION_OPENFILE_LENGTH, longLen)
+                .mustLong(FS_OPTION_OPENFILE_LENGTH, longLen)
                 .build()
                 .get(),
         always(NO_HEAD_OR_LIST));

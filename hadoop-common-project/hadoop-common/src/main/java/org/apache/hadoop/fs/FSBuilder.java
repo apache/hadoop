@@ -101,6 +101,7 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @see #opt(String, String)
    * @deprecated use {@link #optDouble(String, double)}
    */
+  @Deprecated
   B opt(@Nonnull String key, float value);
 
   /**
@@ -124,7 +125,7 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @see #opt(String, String)
    * @deprecated use {@link #optDouble(String, double)}
    */
-
+  @Deprecated
   B opt(@Nonnull String key, double value);
 
   /**
@@ -145,6 +146,7 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @return generic type B.
    * @see #opt(String, String)
    */
+  @Deprecated
   B optLong(@Nonnull String key, long value);
 
   /**
@@ -155,6 +157,7 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @return generic type B.
    * @see #opt(String, String)
    */
+  @Deprecated
   B optDouble(@Nonnull String key, double value);
 
   /**
@@ -198,6 +201,7 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @return generic type B.
    * @deprecated use {@link #mustDouble(String, double)} to set floating point.
    */
+  @Deprecated
   B must(@Nonnull String key, float value);
 
   /**
@@ -208,6 +212,7 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @return generic type B.
    * @see #must(String, String)
    */
+  @Deprecated
   B must(@Nonnull String key, long value);
 
   /**
@@ -219,6 +224,7 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @return generic type B.
    * @see #must(String, String)
    */
+  @Deprecated
   B must(@Nonnull String key, double value);
 
   /**
