@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.UUID;
 
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -123,7 +124,11 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
     fs.mkdirs(dirPath);
 
     // One request to server
-    mkdirRequestCount++;
+    if (getPrefixMode(fs) == PrefixMode.BLOB) {
+      mkdirRequestCount += 2;
+    } else {
+      mkdirRequestCount++;
+    }
 
     assertAbfsStatistics(
         CONNECTIONS_MADE,
@@ -135,7 +140,11 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
     fs.mkdirs(dirPath);
 
     // One request to server
-    mkdirRequestCount++;
+    if (getPrefixMode(fs) == PrefixMode.BLOB) {
+      mkdirRequestCount += 3;
+    } else {
+      mkdirRequestCount++;
+    }
 
     assertAbfsStatistics(
         CONNECTIONS_MADE,

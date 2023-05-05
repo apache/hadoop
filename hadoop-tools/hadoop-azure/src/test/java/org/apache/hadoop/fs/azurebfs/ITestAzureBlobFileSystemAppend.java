@@ -439,6 +439,8 @@ public class ITestAzureBlobFileSystemAppend extends
     String fileETag = outputStream1.getETag();
     final byte[] b1 = new byte[8 * ONE_MB];
     new Random().nextBytes(b1);
+    final byte[] b2 = new byte[8 * ONE_MB];
+    new Random().nextBytes(b2);
 
     FSDataOutputStream out2 = fs.append(TEST_FILE_PATH);
 
@@ -454,7 +456,7 @@ public class ITestAzureBlobFileSystemAppend extends
 
     futures.add(executorService.submit(() -> {
       try {
-        out2.write(b1, 0, 400);
+        out2.write(b2, 0, 400);
         out2.hsync();
       } catch (IOException e) {
         throw new RuntimeException(e);
@@ -498,7 +500,7 @@ public class ITestAzureBlobFileSystemAppend extends
     } else if (!fileETag.equals(out2Etag)) {
       result = inputStream.read(readBuffer, 0, 4 * ONE_MB);
       assertEquals(result, 400); // Verify that the number of bytes read matches the number of bytes written
-      assertArrayEquals(Arrays.copyOfRange(readBuffer, 0, result), Arrays.copyOfRange(b1, 0, result)); // Verify that the data read matches the original data written
+      assertArrayEquals(Arrays.copyOfRange(readBuffer, 0, result), Arrays.copyOfRange(b2, 0, result)); // Verify that the data read matches the original data written
     } else {
       fail("Neither out1 nor out2 was flushed successfully.");
     }
