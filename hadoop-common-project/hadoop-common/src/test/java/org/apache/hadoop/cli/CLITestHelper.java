@@ -461,5 +461,4 @@ public class CLITestHelper {
       charString += s;
     }
   }
-
 }
