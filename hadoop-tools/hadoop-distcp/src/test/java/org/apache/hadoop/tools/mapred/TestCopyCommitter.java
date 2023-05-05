@@ -19,6 +19,7 @@
 package org.apache.hadoop.tools.mapred;
 
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -57,8 +58,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.tools.DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH;
 import static org.apache.hadoop.tools.DistCpConstants.CONF_LABEL_TARGET_WORK_PATH;
 import static org.apache.hadoop.tools.util.TestDistCpUtils.*;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class TestCopyCommitter {
   private static final Logger LOG = LoggerFactory.getLogger(TestCopyCommitter.class);
@@ -572,7 +571,7 @@ public class TestCopyCommitter {
                 fs, new Path(sourceBase + srcFilename), null,
                 fs, new Path(targetBase + srcFilename),
                 sourceCurrStatus.getLen()));
-        assertThat(log.getOutput(), containsString("Checksum not equal"));
+        Assertions.assertThat(log.getOutput()).contains("Checksum not equal");
       } catch(IOException exception) {
         if (skipCrc) {
           LOG.error("Unexpected exception is found", exception);
