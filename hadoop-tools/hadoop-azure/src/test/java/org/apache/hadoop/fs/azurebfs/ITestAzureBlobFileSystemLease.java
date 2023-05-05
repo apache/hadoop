@@ -127,7 +127,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
         getCustomFileSystem(testFilePath.getParent().getParent(), 1);
     fs.mkdirs(testFilePath.getParent().getParent());
 
-    FSDataOutputStream out = fs.create(testFilePath);
+    FSDataOutputStream out = fs.create(testFilePath.getParent());
     Assert.assertTrue("Output stream should have lease",
         ((AbfsOutputStream) out.getWrappedStream()).hasLease());
     out.close();
