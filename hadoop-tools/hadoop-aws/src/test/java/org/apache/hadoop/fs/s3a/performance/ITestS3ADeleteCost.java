@@ -36,8 +36,11 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Tristate;
+import org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 
+import static org.apache.hadoop.fs.audit.AuditConstants.DELETE_KEYS_SIZE;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
@@ -181,6 +184,8 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
 
   @Test
   public void testDirMarkersSubdir() throws Throwable {
+    LogCapturer logCapturer =
+        LogCapturer.captureLogs(LoggerFactory.getLogger(LoggingAuditor.class));
     describe("verify cost of deep subdir creation");
 
     Path methodPath = methodPath();
@@ -220,9 +225,9 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     LOG.info("About to delete {}", parent);
     // now delete the deep tree.
     verifyMetrics(() -> {
-      fs.delete(parent, true);
-      return "deleting parent dir " + parent + " " + getMetricSummary();
-    },
+          fs.delete(parent, true);
+          return "deleting parent dir " + parent + " " + getMetricSummary();
+        },
 
         // keeping: the parent dir marker needs deletion alongside
         // the subdir one.
@@ -230,6 +235,22 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
 
         // deleting: only the marker at the bottom needs deleting
         withWhenDeleting(OBJECT_DELETE_OBJECTS, 1));
+
+    if (isKeepingMarkers()) {
+      String output = logCapturer.getOutput();
+      String[] logs = output.split("\\n");
+      assertTrue("Num of files to delete should be " + dirsCreated,
+          logs[logs.length - 1].contains(DELETE_KEYS_SIZE + "=" + dirsCreated));
+    }
+
+    if (isDeleting()) {
+      String output = logCapturer.getOutput();
+      String[] logs = output.split("\\n");
+      assertTrue("Num of files to delete should be 1",
+          logs[logs.length - 1].contains(DELETE_KEYS_SIZE + "=1"));
+    }
+
+    logCapturer.stopCapturing();
 
     // followup with list calls to make sure all is clear.
     verifyNoListing(parent);

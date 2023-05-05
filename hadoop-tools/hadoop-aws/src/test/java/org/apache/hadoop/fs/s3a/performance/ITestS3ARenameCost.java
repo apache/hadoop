@@ -27,12 +27,14 @@ import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 
+import static org.apache.hadoop.fs.audit.AuditConstants.DELETE_KEYS_SIZE;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
@@ -44,9 +46,6 @@ import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
  */
 @RunWith(Parameterized.class)
 public class ITestS3ARenameCost extends AbstractS3ACostTest {
-
-  private static final Logger LOG =
-      LoggerFactory.getLogger(ITestS3ARenameCost.class);
 
   /**
    * Parameterization.
@@ -92,6 +91,9 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
     Path destDir = dir(new Path(destBaseDir, "a/b/c/d"));
     Path destFilePath = new Path(destDir, "dest.txt");
 
+    LogCapturer logCapturer =
+        LogCapturer.captureLogs(LoggerFactory.getLogger(LoggingAuditor.class));
+
     // rename the source file to the destination file.
     // this tests file rename, not dir rename
     // as srcFile2 exists, the parent dir of srcFilePath must not be created.
@@ -123,6 +125,22 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
             directoriesInPath),
         withWhenDeleting(OBJECT_DELETE_OBJECTS,
             directoriesInPath + 1));
+
+    if (isKeepingMarkers()) {
+      String output = logCapturer.getOutput();
+      String[] logs = output.split("\\n");
+      assertTrue("Num of files to delete should be 1",
+          logs[logs.length - 1].contains(DELETE_KEYS_SIZE + "=1"));
+    }
+
+    if (isDeleting()) {
+      String output = logCapturer.getOutput();
+      String[] logs = output.split("\\n");
+      assertTrue("Num of files to delete should be " + directoriesInPath,
+          logs[logs.length - 1].contains(DELETE_KEYS_SIZE + "=" + directoriesInPath));
+    }
+
+    logCapturer.stopCapturing();
 
     assertIsFile(destFilePath);
     assertIsDirectory(srcDir);
