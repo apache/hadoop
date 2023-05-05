@@ -77,6 +77,17 @@ public abstract class ApplicationHomeSubCluster {
     return appMapping;
   }
 
+  @Private
+  @Unstable
+  public static ApplicationHomeSubCluster newInstance(ApplicationId appId,
+      SubClusterId homeSubCluster, ApplicationSubmissionContext appSubmissionContext) {
+    ApplicationHomeSubCluster appMapping = Records.newRecord(ApplicationHomeSubCluster.class);
+    appMapping.setApplicationId(appId);
+    appMapping.setHomeSubCluster(homeSubCluster);
+    appMapping.setApplicationSubmissionContext(appSubmissionContext);
+    return appMapping;
+  }
+
   /**
    * Get the {@link ApplicationId} representing the unique identifier of the
    * application.
