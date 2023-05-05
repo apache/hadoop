@@ -5193,4 +5193,13 @@
     <value>1000</value>
   </property>
 
+  <property>
+    <description>
+      Specifies the class name of the cache implementation in YARN FederationCache.
+      By default, this property is org.apache.hadoop.yarn.server.federation.cache.FederationJCache.
+    </description>
+    <name>yarn.federation.cache.class</name>
+    <value>org.apache.hadoop.yarn.server.federation.cache.FederationJCache</value>
+  </property>
+
 </configuration>

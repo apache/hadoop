@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.cache.FederationCache;
-import org.apache.hadoop.yarn.server.federation.cache.FederationJCache;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
@@ -132,8 +131,13 @@ public final class FederationStateStoreFacade {
           SubClusterResolver.class);
       this.subclusterResolver.load();
 
-      federationCache = new FederationJCache();
-      federationCache.initCache(config, stateStore);
+      // We check the configuration of Cache,
+      // if the configuration is null, set it to FederationJCache
+      this.federationCache = createInstance(conf,
+          YarnConfiguration.FEDERATION_FACADE_CACHE_CLASS,
+          YarnConfiguration.DEFAULT_FEDERATION_FACADE_CACHE_CLASS,
+          FederationCache.class);
+      this.federationCache.initCache(config, stateStore);
 
     } catch (YarnException ex) {
       LOG.error("Failed to initialize the FederationStateStoreFacade object", ex);
