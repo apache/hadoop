@@ -225,9 +225,9 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     LOG.info("About to delete {}", parent);
     // now delete the deep tree.
     verifyMetrics(() -> {
-          fs.delete(parent, true);
-          return "deleting parent dir " + parent + " " + getMetricSummary();
-        },
+      fs.delete(parent, true);
+      return "deleting parent dir " + parent + " " + getMetricSummary();
+    },
 
         // keeping: the parent dir marker needs deletion alongside
         // the subdir one.
