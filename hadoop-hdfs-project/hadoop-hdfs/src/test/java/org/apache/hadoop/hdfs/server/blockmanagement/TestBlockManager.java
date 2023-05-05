@@ -2077,9 +2077,8 @@ public class TestBlockManager {
   @Test
   public void testBlockReportAfterDataNodeRestart() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    try (final MiniDFSCluster cluster =
-             new MiniDFSCluster.Builder(conf).numDataNodes(3)
-                 .storagesPerDatanode(1).build()) {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+           .numDataNodes(3).storagesPerDatanode(1).build()) {
       cluster.waitActive();
       BlockManager blockManager = cluster.getNamesystem().getBlockManager();
       DistributedFileSystem fs = cluster.getFileSystem();
