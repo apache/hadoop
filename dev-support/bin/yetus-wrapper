@@ -172,7 +172,12 @@ if [[ -n "${GPGBIN}" && ! "${HADOOP_SKIP_YETUS_VERIFICATION}" = true ]]; then
 fi
 
 if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
-  UNZIP_FAILURE=$(gunzip -c "${TARBALL}.gz" | tar xpf - 2>&1)
+  gunzip -c "${TARBALL}.gz" | tar xpf -
+
+  # One of the entries in the Yetus tarball unzips a symlink qbt.sh.
+  # The symlink creation fails on Windows, unless this CI is run as Admin or Developer mode is
+  # enabled.
+  # Thus, we create the qbt.sh symlink ourselves and move it to the target.
   YETUS_PRECOMMIT_DIR="${YETUS_PREFIX}-${HADOOP_YETUS_VERSION}/lib/precommit"
   ln -s "${YETUS_PRECOMMIT_DIR}/test-patch.sh" qbt.sh
   mv qbt.sh "${YETUS_PRECOMMIT_DIR}"
