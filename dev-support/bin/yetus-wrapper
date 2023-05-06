@@ -171,7 +171,12 @@ if [[ -n "${GPGBIN}" && ! "${HADOOP_SKIP_YETUS_VERIFICATION}" = true ]]; then
    fi
 fi
 
-if ! (gunzip -c "${TARBALL}.gz" | tar xpf -); then
+if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
+  UNZIP_FAILURE=$(gunzip -c "${TARBALL}.gz" | tar xpf - 2>&1)
+  YETUS_PRECOMMIT_DIR="${YETUS_PREFIX}-${HADOOP_YETUS_VERSION}/lib/precommit"
+  ln -s "${YETUS_PRECOMMIT_DIR}/test-patch.sh" qbt.sh
+  mv qbt.sh "${YETUS_PRECOMMIT_DIR}"
+elif ! (gunzip -c "${TARBALL}.gz" | tar xpf -); then
   yetus_error "ERROR: ${TARBALL}.gz is corrupt. Investigate and then remove ${HADOOP_PATCHPROCESS} to try again."
   exit 1
 fi
