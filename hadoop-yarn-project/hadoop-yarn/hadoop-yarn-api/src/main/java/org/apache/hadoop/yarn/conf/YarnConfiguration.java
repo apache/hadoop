@@ -4014,6 +4014,11 @@ public class YarnConfiguration extends Configuration {
       "org.apache.hadoop.yarn.server.federation.resolver."
           + "DefaultSubClusterResolverImpl";
 
+  public static final String FEDERATION_FACADE_CACHE_CLASS =
+      FEDERATION_PREFIX + "cache.class";
+  public static final String DEFAULT_FEDERATION_FACADE_CACHE_CLASS =
+      "org.apache.hadoop.yarn.server.federation.cache.FederationJCache";
+
   // the maximum wait time for the first async heartbeat response
   public static final String FEDERATION_AMRMPROXY_HB_MAX_WAIT_MS =
       FEDERATION_PREFIX + "amrmproxy.hb.maximum.wait.ms";

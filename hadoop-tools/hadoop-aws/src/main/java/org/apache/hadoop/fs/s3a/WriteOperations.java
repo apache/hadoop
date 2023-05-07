@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
@@ -192,11 +193,11 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
       throws IOException;
 
   /**
-   * Abort multipart uploads under a path: limited to the first
+   * List in-progress multipart uploads under a path: limited to the first
    * few hundred.
-   * @param prefix prefix for uploads to abort
-   * @return a count of aborts
-   * @throws IOException trouble; FileNotFoundExceptions are swallowed.
+   * @param prefix prefix for uploads to list
+   * @return a list of in-progress multipart uploads
+   * @throws IOException on problems
    */
   List<MultipartUpload> listMultipartUploads(String prefix)
       throws IOException;
@@ -304,6 +305,12 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @return the configuration.
    */
   Configuration getConf();
+
+  /**
+   * Get the audit span this object was created with.
+   * @return the audit span
+   */
+  AuditSpan getAuditSpan();
 
   /**
    * Create a S3 Select request for the destination path.

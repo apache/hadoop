@@ -26,6 +26,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -33,7 +34,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
@@ -121,7 +121,7 @@ public class TestOfflineImageViewerWithStripedBlocks {
 
   private void testFileSize(int numBytes) throws IOException,
       UnresolvedLinkException, SnapshotAccessControlException {
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
     File orgFsimage = null;
     Path file = new Path("/eczone/striped");
     FSDataOutputStream out = fs.create(file, true);
@@ -130,7 +130,7 @@ public class TestOfflineImageViewerWithStripedBlocks {
     out.close();
 
     // Write results to the fsimage file
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
+    fs.setSafeMode(SafeModeAction.ENTER, false);
     fs.saveNamespace();
 
     // Determine location of fsimage file

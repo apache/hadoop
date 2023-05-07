@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -61,6 +62,29 @@ public abstract class ApplicationHomeSubCluster {
     appMapping.setApplicationId(appId);
     appMapping.setHomeSubCluster(homeSubCluster);
     appMapping.setCreateTime(createTime);
+    return appMapping;
+  }
+
+  @Private
+  @Unstable
+  public static ApplicationHomeSubCluster newInstance(ApplicationId appId, long createTime,
+      SubClusterId homeSubCluster, ApplicationSubmissionContext appSubmissionContext) {
+    ApplicationHomeSubCluster appMapping = Records.newRecord(ApplicationHomeSubCluster.class);
+    appMapping.setApplicationId(appId);
+    appMapping.setHomeSubCluster(homeSubCluster);
+    appMapping.setApplicationSubmissionContext(appSubmissionContext);
+    appMapping.setCreateTime(createTime);
+    return appMapping;
+  }
+
+  @Private
+  @Unstable
+  public static ApplicationHomeSubCluster newInstance(ApplicationId appId,
+      SubClusterId homeSubCluster, ApplicationSubmissionContext appSubmissionContext) {
+    ApplicationHomeSubCluster appMapping = Records.newRecord(ApplicationHomeSubCluster.class);
+    appMapping.setApplicationId(appId);
+    appMapping.setHomeSubCluster(homeSubCluster);
+    appMapping.setApplicationSubmissionContext(appSubmissionContext);
     return appMapping;
   }
 
@@ -123,6 +147,24 @@ public abstract class ApplicationHomeSubCluster {
   public abstract void setCreateTime(long time);
 
 
+  /**
+   * Set Application Submission Context.
+   *
+   * @param context Application Submission Context.
+   */
+  @Private
+  @Unstable
+  public abstract void setApplicationSubmissionContext(ApplicationSubmissionContext context);
+
+  /**
+   * Get Application Submission Context.
+   *
+   * @return Application Submission Context.
+   */
+  @Private
+  @Unstable
+  public abstract ApplicationSubmissionContext getApplicationSubmissionContext();
+
   @Override
   public boolean equals(Object obj) {
 
@@ -139,6 +181,8 @@ public abstract class ApplicationHomeSubCluster {
       return new EqualsBuilder()
           .append(this.getApplicationId(), other.getApplicationId())
           .append(this.getHomeSubCluster(), other.getHomeSubCluster())
+          .append(this.getApplicationSubmissionContext(),
+          other.getApplicationSubmissionContext())
           .isEquals();
     }
 
@@ -150,7 +194,9 @@ public abstract class ApplicationHomeSubCluster {
     return new HashCodeBuilder().
         append(this.getApplicationId()).
         append(this.getHomeSubCluster()).
-        append(this.getCreateTime()).toHashCode();
+        append(this.getCreateTime()).
+        append(this.getApplicationSubmissionContext())
+        .toHashCode();
   }
 
   @Override
@@ -160,6 +206,7 @@ public abstract class ApplicationHomeSubCluster {
         .append("ApplicationId: ").append(getApplicationId()).append(", ")
         .append("HomeSubCluster: ").append(getHomeSubCluster()).append(", ")
         .append("CreateTime: ").append(getCreateTime()).append(", ")
+        .append("ApplicationSubmissionContext: ").append(getApplicationSubmissionContext())
         .append("]");
     return sb.toString();
   }
