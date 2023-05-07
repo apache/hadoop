@@ -39,7 +39,6 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
@@ -247,33 +246,33 @@ public class JMXGet {
   private static CommandLine parseArgs(Options opts, String... args)
   throws IllegalArgumentException {
 
-    Option jmx_service = Option.builder("service")
+    Option jmxService = Option.builder("service")
         .argName("NameNode|DataNode").hasArg()
         .desc("specify jmx service (NameNode by default)").build();
 
-    Option jmx_server = Option.builder("server")
+    Option jmxServer = Option.builder("server")
         .argName("mbean server").hasArg()
         .desc("specify mbean server (localhost by default)").build();
 
-    Option jmx_help = Option.builder("help").desc("print help").build();
+    Option jmxHelp = Option.builder("help").desc("print help").build();
 
-    Option jmx_port = Option.builder("port")
+    Option jmxPort = Option.builder("port")
         .argName("mbean server port")
         .hasArg().desc("specify mbean server port, "
         + "if missing - it will try to connect to MBean Server in the same VM").build();
 
-    Option jmx_localVM = Option.builder("localVM")
+    Option jmxLocalVM = Option.builder("localVM")
         .argName("VM's connector url").hasArg()
         .desc("connect to the VM on the same machine;"
         + "\n use:\n jstat -J-Djstat.showUnsupported=true -snap <vmpid> | "
         + "grep sun.management.JMXConnectorServer.address\n "
         + "to find the url").build();
 
-    opts.addOption(jmx_server);
-    opts.addOption(jmx_help);
-    opts.addOption(jmx_service);
-    opts.addOption(jmx_port);
-    opts.addOption(jmx_localVM);
+    opts.addOption(jmxServer);
+    opts.addOption(jmxHelp);
+    opts.addOption(jmxService);
+    opts.addOption(jmxPort);
+    opts.addOption(jmxLocalVM);
 
     CommandLine commandLine = null;
     CommandLineParser parser = new GnuParser();

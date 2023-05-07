@@ -345,12 +345,14 @@ public class Submitter extends Configured implements Tool {
     
     void addOption(String longName, boolean required, String description, 
                    String paramName) {
-      Option option = Option.builder(longName).argName(paramName).hasArg().desc(description).required(required).build();
+      Option option = Option.builder(longName).argName(paramName)
+          .hasArg().desc(description).required(required).build();
       options.addOption(option);
     }
     
     void addArgument(String name, boolean required, String description) {
-      Option option = Option.builder().argName(name).hasArg().desc(description).required(required).build();
+      Option option = Option.builder().argName(name)
+          .hasArg().desc(description).required(required).build();
       options.addOption(option);
 
     }

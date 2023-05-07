@@ -91,75 +91,75 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
     private Options buildOptions() {
       Options opts = new Options();
       opts.addOption(
-        Option.builder("s")
-        .longOpt("serverThreads")
-        .hasArg(true)
-        .argName("numthreads")
-        .desc("number of server threads (handlers) to run (or 0 to not run server)")
-        .build());
+          Option.builder("s")
+          .longOpt("serverThreads")
+          .hasArg(true)
+          .argName("numthreads")
+          .desc("number of server threads (handlers) to run (or 0 to not run server)")
+          .build());
 
       opts.addOption(
-        Option.builder("r")
-        .longOpt("serverReaderThreads")
-        .hasArg(true)
-        .argName("threads")
-        .desc("number of server reader threads to run")
-        .build());
+          Option.builder("r")
+          .longOpt("serverReaderThreads")
+          .hasArg(true)
+          .argName("threads")
+          .desc("number of server reader threads to run")
+          .build());
 
       opts.addOption(
-        Option.builder("c")
-        .longOpt("clientThreads")
-        .hasArg(true)
-        .argName("numthreads")
-        .desc("number of client threads to run (or 0 to not run client)")
-        .build());
+          Option.builder("c")
+          .longOpt("clientThreads")
+          .hasArg(true)
+          .argName("numthreads")
+          .desc("number of client threads to run (or 0 to not run client)")
+          .build());
 
       opts.addOption(
-        Option.builder("m")
-        .longOpt("messageSize")
-        .hasArg(true)
-        .argName("bytes")
-        .desc("size of call parameter in bytes")
-        .build());
+          Option.builder("m")
+          .longOpt("messageSize")
+          .hasArg(true)
+          .argName("bytes")
+          .desc("size of call parameter in bytes")
+          .build());
 
       opts.addOption(
-        Option.builder("t")
-        .longOpt("time")
-        .hasArg(true)
-        .argName("seconds")
-        .desc("number of seconds to run clients for")
-        .build());
+          Option.builder("t")
+          .longOpt("time")
+          .hasArg(true)
+          .argName("seconds")
+          .desc("number of seconds to run clients for")
+          .build());
 
       opts.addOption(
-        Option.builder("p")
-         .longOpt("port")
-         .hasArg(true)
-         .argName("port")
-         .desc("port to listen or connect on")
-         .build());
+          Option.builder("p")
+          .longOpt("port")
+          .hasArg(true)
+          .argName("port")
+          .desc("port to listen or connect on")
+          .build());
 
       opts.addOption(
-        Option.builder("h")
-         .longOpt("host")
-         .hasArg(true)
-         .argName("addr")
-         .desc("host to listen or connect on")
-         .build());
+          Option.builder("h")
+          .longOpt("host")
+          .hasArg(true)
+          .argName("addr")
+          .desc("host to listen or connect on")
+          .build());
       
       opts.addOption(
-        Option.builder("e")
-         .longOpt("engine")
-         .hasArg(true)
-         .argName("protobuf")
-         .desc("engine to use")
-         .build());
+          Option.builder("e")
+          .longOpt("engine")
+          .hasArg(true)
+          .argName("protobuf")
+          .desc("engine to use")
+          .build());
       
       opts.addOption(
-        Option.builder("?")
-         .longOpt("help")
-         .hasArg(false)
-         .desc("show this screen")
-         .build());
+          Option.builder("?")
+          .longOpt("help")
+          .hasArg(false)
+          .desc("show this screen")
+          .build());
 
       return opts;
     }

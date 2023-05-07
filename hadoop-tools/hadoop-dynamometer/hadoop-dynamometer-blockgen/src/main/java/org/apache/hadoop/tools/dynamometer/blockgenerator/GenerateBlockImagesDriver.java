@@ -65,7 +65,8 @@ public class GenerateBlockImagesDriver extends Configured implements Tool {
   public int run(String[] args) throws Exception {
     Options options = new Options();
     options.addOption("h", "help", false, "Shows this message");
-    options.addOption(Option.builder(FSIMAGE_INPUT_PATH_ARG).argName("Input path of the XML fsImage")
+    options.addOption(Option.builder(FSIMAGE_INPUT_PATH_ARG)
+        .argName("Input path of the XML fsImage")
         .hasArg().required(true)
         .desc("Input path to the Hadoop fsImage XML file (required)")
         .build());
