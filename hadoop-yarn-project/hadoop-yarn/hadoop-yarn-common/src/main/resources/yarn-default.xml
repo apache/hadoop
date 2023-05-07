@@ -5230,6 +5230,7 @@
       that a client will wait for a connection from the pool.</description>
     <name>yarn.federation.state-store.sql.conn-time-out</name>
     <value>10s</value>
+  </property>
 
   <property>
     <description>
