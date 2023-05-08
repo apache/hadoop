@@ -47,6 +47,7 @@ public class HdfsUtils {
    * @param uri the HDFS URI.  Note that the URI path is ignored.
    * @return true if HDFS is healthy; false, otherwise.
    */
+  @SuppressWarnings("deprecation")
   public static boolean isHealthy(URI uri) {
     //check scheme
     final String scheme = uri.getScheme();

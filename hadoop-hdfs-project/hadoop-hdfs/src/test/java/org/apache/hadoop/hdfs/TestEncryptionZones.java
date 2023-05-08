@@ -66,13 +66,13 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -569,9 +569,9 @@ public class TestEncryptionZones {
       assertZonePresent(null, zonePath.toString());
     }
 
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
     cluster.restartNameNode(true);
     assertNumZones(numZones);
     assertEquals("Unexpected number of encryption zones!", numZones, cluster
@@ -604,9 +604,9 @@ public class TestEncryptionZones {
 
     // Verify rootDir ez is present after restarting the NameNode
     // and saving/loading from fsimage.
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
     cluster.restartNameNode(true);
     assertNumZones(numZones);
     assertZonePresent(null, rootDir.toString());
@@ -1199,9 +1199,9 @@ public class TestEncryptionZones {
         fs.getSnapshotDiffReport(snapshottable, "snap1", "");
     System.out.println(report);
     Assert.assertEquals(0, report.getDiffList().size());
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.setSafeMode(SafeModeAction.ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    fs.setSafeMode(SafeModeAction.LEAVE);
     cluster.restartNameNode(true);
     report =
         fs.getSnapshotDiffReport(snapshottable, "snap1", "");
@@ -1716,7 +1716,7 @@ public class TestEncryptionZones {
     fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
     dfsAdmin.createEncryptionZone(zone1, TEST_KEY, NO_TRASH);
     DFSTestUtil.createFile(fs, zone1File, len, (short) 1, 0xFEED);
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
+    fs.setSafeMode(SafeModeAction.ENTER, false);
     fs.saveNamespace();
 
     File originalFsimage = FSImageTestUtil.findLatestImageFile(FSImageTestUtil
