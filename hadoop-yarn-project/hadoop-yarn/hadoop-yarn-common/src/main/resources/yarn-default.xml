@@ -5194,6 +5194,45 @@
   </property>
 
   <property>
+    <description>The property controls the minimum number of idle connections that
+      HikariCP tries to maintain in the pool.</description>
+    <name>yarn.federation.state-store.sql.minimum-idle</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+      Specifies the name of the connection pool used by the FederationSQLStateStore.
+    </description>
+    <name>yarn.federation.state-store.sql.pool-name</name>
+    <value>YARN-Federation-DataBasePool</value>
+  </property>
+
+  <property>
+    <description>
+      This property controls the maximum lifetime of a connection in the pool.
+    </description>
+    <name>yarn.federation.state-store.sql.max-life-time</name>
+    <value>30m</value>
+  </property>
+
+  <property>
+    <description>
+      This property controls the maximum amount of time
+      that a connection is allowed to sit idle in the pool.
+    </description>
+    <name>yarn.federation.state-store.sql.idle-time-out</name>
+    <value>10m</value>
+  </property>
+
+  <property>
+    <description>Set the maximum amount of time
+      that a client will wait for a connection from the pool.</description>
+    <name>yarn.federation.state-store.sql.conn-time-out</name>
+    <value>10s</value>
+  </property>
+
+  <property>
     <description>
       Specifies the class name of the cache implementation in YARN FederationCache.
       By default, this property is org.apache.hadoop.yarn.server.federation.cache.FederationJCache.
