@@ -429,13 +429,13 @@ public class ITestAzureBlobFileSystemAppend extends
   @Test
   public void testParallelWriteOutputStreamClose() throws Exception {
     Assume.assumeTrue(getFileSystem().getAbfsStore().getPrefixMode() == PrefixMode.BLOB);
+    final Path SECONDARY_FILE_PATH = new Path("secondarytestfile");
     Configuration configuration = getRawConfiguration();
-    configuration.set(FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE, "false");
     FileSystem fs = FileSystem.newInstance(configuration);
     ExecutorService executorService = Executors.newFixedThreadPool(5);
     List<Future<?>> futures = new ArrayList<>();
 
-    FSDataOutputStream out1 = fs.create(TEST_FILE_PATH);
+    FSDataOutputStream out1 = fs.create(SECONDARY_FILE_PATH);
     AbfsOutputStream outputStream1 = (AbfsOutputStream) out1.getWrappedStream();
     AtomicReference<String> fileETag = new AtomicReference<>(outputStream1.getETag());
     final byte[] b1 = new byte[8 * ONE_MB];
@@ -443,7 +443,7 @@ public class ITestAzureBlobFileSystemAppend extends
     final byte[] b2 = new byte[8 * ONE_MB];
     new Random().nextBytes(b2);
 
-    FSDataOutputStream out2 = fs.append(TEST_FILE_PATH);
+    FSDataOutputStream out2 = fs.append(SECONDARY_FILE_PATH);
 
     // Submit tasks to write to each output stream
     futures.add(executorService.submit(() -> {
@@ -485,7 +485,7 @@ public class ITestAzureBlobFileSystemAppend extends
     // Validate that the data written in the buffer is the same as what was read
     final byte[] readBuffer = new byte[8 * ONE_MB];
     int result;
-    FSDataInputStream inputStream = fs.open(TEST_FILE_PATH);
+    FSDataInputStream inputStream = fs.open(SECONDARY_FILE_PATH);
     inputStream.seek(0);
 
     AbfsOutputStream outputStream2 = (AbfsOutputStream) out1.getWrappedStream();

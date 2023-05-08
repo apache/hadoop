@@ -574,8 +574,8 @@
                     <exclude>**/azurebfs/services/ITestReadBufferManager.java</exclude>
                     <exclude>**/azurebfs/ITestAbfsMsiTokenProvider.java</exclude>
                     <exclude>**/azurebfs/ITestAbfsRestOperationException.java</exclude>
+                    <exclude>**/azurebfs/ITestAzureBlobFileSystemAppend.java</exclude>
                   </excludes>
-
                 </configuration>
               </execution>
               <execution>
@@ -617,6 +617,7 @@
                     <include>**/azurebfs/services/ITestReadBufferManager.java</include>
                     <include>**/azurebfs/ITestAbfsMsiTokenProvider.java</include>
                     <include>**/azurebfs/ITestAbfsRestOperationException.java</include>
+                    <include>**/azurebfs/ITestAzureBlobFileSystemAppend.java</include>
                   </includes>
                 </configuration>
               </execution>
