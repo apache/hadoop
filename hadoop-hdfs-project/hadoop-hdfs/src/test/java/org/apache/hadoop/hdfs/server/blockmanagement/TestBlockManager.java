@@ -2093,9 +2093,9 @@ public class TestBlockManager {
       blockManager.setInitializedReplQueues(false);
 
       // Delete the replica on the first datanode.
-      File dnDir =
-          datanodes.get(0).getFSDataset().getVolumeList().get(0)
-              .getCurrentDir();
+      DataNode dn = datanodes.get(0);
+      int dnIpcPort = dn.getIpcPort();
+      File dnDir = dn.getFSDataset().getVolumeList().get(0).getCurrentDir();
       String[] children = FileUtil.list(dnDir);
       for (String s : children) {
         if (!s.equals("VERSION")) {
@@ -2113,7 +2113,8 @@ public class TestBlockManager {
       cluster.restartDataNode(0, true);
 
       // Wait for the block report to be processed.
-      Thread.sleep(5000);
+      cluster.waitDatanodeFullyStarted(cluster.getDataNode(dnIpcPort), 10000);
+      cluster.waitFirstBRCompleted(0, 10000);
 
       // The replica num should be 2.
       locs = fs.getFileBlockLocations(stat, 0, stat.getLen());
