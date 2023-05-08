@@ -565,8 +565,10 @@ public class FederationClientInterceptor
 
       // Step2. We Store the mapping relationship
       // between Application and HomeSubCluster in stateStore.
+      ApplicationSubmissionContext trimmedAppSubmissionContext =
+          RouterServerUtil.getTrimmedAppSubmissionContext(appSubmissionContext);
       federationFacade.addOrUpdateApplicationHomeSubCluster(
-          applicationId, subClusterId, retryCount);
+          applicationId, subClusterId, retryCount, trimmedAppSubmissionContext);
 
       // Step3. SubmitApplication to the subCluster
       ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
