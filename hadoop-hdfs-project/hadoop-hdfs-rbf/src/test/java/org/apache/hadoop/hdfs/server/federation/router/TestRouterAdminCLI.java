@@ -1897,6 +1897,27 @@ public class TestRouterAdminCLI {
             "/testAddMultiMountPoints-01", "ns02", "/dest02"};
     // multiple inputs with same mount
     assertNotEquals(0, ToolRunner.run(admin, argv));
+
+    argv =
+        new String[] {"-addAll", "/testAddMultiMountPoints-01", "ns01", "/dest01,/dest02", ",",
+            "/testAddMultiMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant"};
+    // multiple dest entries
+    assertNotEquals(0, ToolRunner.run(admin, argv));
+
+    argv =
+        new String[] {"-addAll", "/testAddMultiMountPoints-01", "ns01", "/dest01", ",",
+            "/testAddMultiMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant"};
+    // success
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    argv =
+        new String[] {"-addAll", "/testAddMultiMountPoints-01", "ns01", "/dest01", ",",
+            "/testAddMultiMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant"};
+    // mount points were already added
+    assertNotEquals(0, ToolRunner.run(admin, argv));
   }
 
   private void addMountTable(String src, String nsId, String dst)

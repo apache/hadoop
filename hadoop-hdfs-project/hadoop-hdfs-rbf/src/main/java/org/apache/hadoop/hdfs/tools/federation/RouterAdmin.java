@@ -536,7 +536,18 @@ public class RouterAdmin extends Configured implements Tool {
     // Mandatory parameters
     String mount = parameters[i++];
     String[] nss = parameters[i++].split(",");
-    String dest = parameters[i++];
+    String destination = parameters[i++];
+
+    if (isMultipleAdd) {
+      String[] destinations = destination.split(",");
+      if (nss.length != destinations.length && destinations.length > 1) {
+        String message =
+            "Invalid namespaces and destinations. The number of destinations " + destinations.length
+                + " is not matched with the number of namespaces " + nss.length;
+        System.err.println(message);
+        return null;
+      }
+    }
 
     // Optional parameters
     boolean readOnly = false;
@@ -594,7 +605,7 @@ public class RouterAdmin extends Configured implements Tool {
     AddMountAttributes addMountAttributes = new AddMountAttributes();
     addMountAttributes.setMount(mount);
     addMountAttributes.setNss(nss);
-    addMountAttributes.setDest(dest);
+    addMountAttributes.setDest(destination);
     addMountAttributes.setReadonly(readOnly);
     addMountAttributes.setFaultTolerant(faultTolerant);
     addMountAttributes.setOrder(order);
