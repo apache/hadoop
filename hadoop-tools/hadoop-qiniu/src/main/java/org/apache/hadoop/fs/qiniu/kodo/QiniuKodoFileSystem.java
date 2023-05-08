@@ -539,7 +539,6 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         long putTime = file.putTime / 10000;
         boolean isDir = QiniuKodoUtils.isKeyDir(file.key);
-
         return new FileStatus(
                 file.fsize, // 文件大小
                 isDir,
@@ -547,7 +546,11 @@ public class QiniuKodoFileSystem extends FileSystem {
                 fsConfig.download.blockSize,
                 putTime, // modification time
                 putTime, // access time
-                isDir ? new FsPermission(461) : null,   // permission
+                FsPermission.createImmutable(
+                        isDir
+                        ? (short) 0777 // rwxrwxrwx
+                        : (short) 0666 // rw-rw-rw-
+                ),   // permission
                 username,   // owner
                 username,   // group
                 null,   // symlink
