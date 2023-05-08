@@ -106,7 +106,7 @@ public class AddMountAttributes {
   /**
    * Retrieve mount table object with all attributes derived from this object.
    *
-   * @return Mount table object with updated attributes.
+   * @return MountTable object with updated attributes.
    * @throws IOException If mount table instantiation fails.
    */
   public MountTable getMountTableEntryWithAttributes() throws IOException {
@@ -120,7 +120,7 @@ public class AddMountAttributes {
    *
    * @param existingEntry Existing mount table entry. If null, new mount table object is created,
    * otherwise the existing mount table object is updated.
-   * @return Mount table object with updated attributes.
+   * @return MountTable object with updated attributes.
    * @throws IOException If mount table instantiation fails.
    */
   public MountTable getNewOrUpdatedMountTableEntryWithAttributes(MountTable existingEntry)
@@ -144,7 +144,7 @@ public class AddMountAttributes {
    * Create a new mount table object from the given mount point and update its attributes.
    *
    * @param mountSrc mount point src.
-   * @return Mount table object with updated attributes.
+   * @return MountTable object with updated attributes.
    * @throws IOException If mount table instantiation fails.
    */
   private MountTable getMountTableForAddRequest(String mountSrc) throws IOException {

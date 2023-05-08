@@ -23,11 +23,13 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
@@ -492,11 +494,17 @@ public class RouterAdmin extends Configured implements Tool {
    */
   private boolean addAllMount(String[] parameters, int i) throws IOException {
     List<AddMountAttributes> addMountAttributesList = new ArrayList<>();
+    Set<String> mounts = new HashSet<>();
     while (i < parameters.length) {
       AddMountAttributes addMountAttributes = getAddMountAttributes(parameters, i, true);
       if (addMountAttributes == null) {
         return false;
       }
+      if (mounts.contains(addMountAttributes.getMount())) {
+        System.err.println("Multiple inputs for mount: " + addMountAttributes.getMount());
+        return false;
+      }
+      mounts.add(addMountAttributes.getMount());
       i = addMountAttributes.getParamIndex();
       addMountAttributesList.add(addMountAttributes);
     }

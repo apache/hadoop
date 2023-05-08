@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createNamenodeReport;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -1847,7 +1848,7 @@ public class TestRouterAdminCLI {
   }
 
   @Test
-  public void testAddMultipleMountPoints() throws Exception {
+  public void testAddMultipleMountPointsSuccess() throws Exception {
     String[] argv =
         new String[] {"-addAll", "/testAddMultipleMountPoints-01", "ns01", "/dest01", ",",
             "/testAddMultipleMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
@@ -1855,35 +1856,47 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin, argv));
 
     stateStore.loadCache(MountTableStoreImpl.class, true);
-    GetMountTableEntriesRequest request = GetMountTableEntriesRequest
-        .newInstance("/testAddMultipleMountPoints-01");
-    GetMountTableEntriesResponse response = client.getMountTableManager()
-        .getMountTableEntries(request);
+
+    validateMountEntry("/testAddMultipleMountPoints-01", 1, new String[] {"/dest01"},
+        new String[] {"ns01"});
+    validateMountEntry("/testAddMultipleMountPoints-02", 2, new String[] {"/dest02", "/dest02"},
+        new String[] {"ns02", "ns03"});
+    validateMountEntry("/testAddMultipleMountPoints-03", 1, new String[] {"/dest03"},
+        new String[] {"ns03"});
+  }
+
+  private static void validateMountEntry(String mountName, int numDest, String[] dest, String[] nss)
+      throws IOException {
+    GetMountTableEntriesRequest request = GetMountTableEntriesRequest.newInstance(mountName);
+    GetMountTableEntriesResponse response =
+        client.getMountTableManager().getMountTableEntries(request);
     assertEquals(1, response.getEntries().size());
     List<RemoteLocation> destinations = response.getEntries().get(0).getDestinations();
-    assertEquals(1, destinations.size());
-    assertEquals("/testAddMultipleMountPoints-01", destinations.get(0).getSrc());
-    assertEquals("/dest01", destinations.get(0).getDest());
-    assertEquals("ns01", destinations.get(0).getNameserviceId());
+    assertEquals(numDest, destinations.size());
+    for (int i = 0; i < numDest; i++) {
+      assertEquals(mountName, destinations.get(i).getSrc());
+      assertEquals(dest[i], destinations.get(i).getDest());
+      assertEquals(nss[i], destinations.get(i).getNameserviceId());
+    }
+  }
 
-    request = GetMountTableEntriesRequest.newInstance("/testAddMultipleMountPoints-02");
-    response = client.getMountTableManager().getMountTableEntries(request);
-    destinations = response.getEntries().get(0).getDestinations();
-    assertEquals(2, destinations.size());
-    assertEquals("/testAddMultipleMountPoints-02", destinations.get(0).getSrc());
-    assertEquals("/dest02", destinations.get(0).getDest());
-    assertEquals("ns02", destinations.get(0).getNameserviceId());
-    assertEquals("/testAddMultipleMountPoints-02", destinations.get(1).getSrc());
-    assertEquals("/dest02", destinations.get(1).getDest());
-    assertEquals("ns03", destinations.get(1).getNameserviceId());
+  @Test
+  public void testAddMultipleMountPointsFailure() throws Exception {
+    String[] argv =
+        new String[] {"-addAll", "/testAddMultiMountPoints-01", "ns01", ",", "/dest01", ",",
+            "/testAddMultiMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant", ",", "/testAddMultiMountPoints-03", "ns03", "/dest03", ",",
+            "/testAddMultiMountPoints-01", "ns02", "/dest02"};
+    // syntax issue
+    assertNotEquals(0, ToolRunner.run(admin, argv));
 
-    request = GetMountTableEntriesRequest.newInstance("/testAddMultipleMountPoints-03");
-    response = client.getMountTableManager().getMountTableEntries(request);
-    destinations = response.getEntries().get(0).getDestinations();
-    assertEquals(1, destinations.size());
-    assertEquals("/testAddMultipleMountPoints-03", destinations.get(0).getSrc());
-    assertEquals("/dest03", destinations.get(0).getDest());
-    assertEquals("ns03", destinations.get(0).getNameserviceId());
+    argv =
+        new String[] {"-addAll", "/testAddMultiMountPoints-01", "ns01", "/dest01", ",",
+            "/testAddMultiMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
+            "-faulttolerant", ",", "/testAddMultiMountPoints-03", "ns03", "/dest03", ",",
+            "/testAddMultiMountPoints-01", "ns02", "/dest02"};
+    // multiple inputs with same mount
+    assertNotEquals(0, ToolRunner.run(admin, argv));
   }
 
   private void addMountTable(String src, String nsId, String dst)
