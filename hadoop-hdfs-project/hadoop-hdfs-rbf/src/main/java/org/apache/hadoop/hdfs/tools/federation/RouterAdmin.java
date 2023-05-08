@@ -500,11 +500,10 @@ public class RouterAdmin extends Configured implements Tool {
       if (addMountAttributes == null) {
         return false;
       }
-      if (mounts.contains(addMountAttributes.getMount())) {
+      if (!mounts.add(addMountAttributes.getMount())) {
         System.err.println("Multiple inputs for mount: " + addMountAttributes.getMount());
         return false;
       }
-      mounts.add(addMountAttributes.getMount());
       i = addMountAttributes.getParamIndex();
       addMountAttributesList.add(addMountAttributes);
     }
