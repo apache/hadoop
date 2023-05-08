@@ -72,6 +72,7 @@ import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.MultipartUploaderBuilder;
@@ -2176,6 +2177,19 @@ public class WebHdfsFileSystem extends FileSystem
       throw new FileNotFoundException("File does not exist: " + f);
     }
     return status.makeQualified(getUri(), f);
+  }
+
+  @Override
+  public FsStatus getStatus(Path f) throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_STATUS);
+    final GetOpParam.Op op = GetOpParam.Op.GETSTATUS;
+    return new FsPathResponseRunner<FsStatus>(op, f) {
+      @Override
+      FsStatus decodeResponse(Map<?, ?> json) {
+        return JsonUtilClient.toFsStatus(json);
+      }
+    }.run();
   }
 
   @VisibleForTesting

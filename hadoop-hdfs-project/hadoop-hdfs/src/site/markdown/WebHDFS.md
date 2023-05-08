@@ -60,6 +60,7 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`GETSERVERDEFAULTS`](#Get_Server_Defaults) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getServerDefaults)
     * [`GETLINKTARGET`](#Get_Link_Target) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTarget)
     * [`GETFILELINKSTATUS`](#Get_File_Link_Status) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileLinkStatus)
+    * [`GETSTATUS`](#Get_Status) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getStatus)
 *   HTTP PUT
     * [`CREATE`](#Create_and_Write_to_a_File) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).create)
     * [`MKDIRS`](#Make_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).mkdirs)
@@ -1189,6 +1190,28 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTa
         }
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileLinkInfo
+
+### Get Status
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETSTATUS"
+
+  The client receives a response with a [`FsStatus` JSON object](#FsStatus_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {
+            "FsStatus": {
+                "used": 0,
+                "remaining": 0,
+                "capacity":0
+            }
+        }
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getStatus
 
 Storage Policy Operations
 -------------------------
@@ -3138,6 +3161,17 @@ var blockLocationProperties =
     "keyProviderUri": "",
     "blockSize": 134217728,
     "bytesPerChecksum": 512
+  }
+}
+```
+### FsStatus JSON Schema
+
+```json
+{
+  "FsStatus": {
+    "used": 0,
+    "remaining": 0,
+    "capacity": 0
   }
 }
 ```

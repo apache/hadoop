@@ -88,6 +88,7 @@ import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -2250,6 +2251,35 @@ public class TestWebHDFS {
       webHdfs.createSymlink(file, linkToFile, false);
       assertFalse(webHdfs.getFileLinkStatus(file).isSymlink());
       assertTrue(webHdfs.getFileLinkStatus(linkToFile).isSymlink());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testFsStatus() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(1)
+          .build();
+      cluster.waitActive();
+
+      final WebHdfsFileSystem webHdfs =
+          WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+              WebHdfsConstants.WEBHDFS_SCHEME);
+
+      final String PATH = "/foo";
+      OutputStream os = webHdfs.create(new Path(PATH));
+      os.write(new byte[1024]);
+
+      FsStatus fsStatus = webHdfs.getStatus(new Path("/"));
+      Assert.assertNotNull(fsStatus);
+
+      //used, free and capacity are non-negative longs
+      Assert.assertTrue(fsStatus.getUsed() >= 0);
+      Assert.assertTrue(fsStatus.getRemaining() >= 0);
+      Assert.assertTrue(fsStatus.getCapacity() >= 0);
     } finally {
       cluster.shutdown();
     }

@@ -73,6 +73,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
@@ -1396,6 +1397,13 @@ public class NamenodeWebHdfsMethods {
       final String js = JsonUtil.toJsonString(status, true);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
+    case GETSTATUS: {
+      long[] states = cp.getStats();
+      FsStatus status = new FsStatus(getStateAtIndex(states, 0),
+          getStateAtIndex(states, 1), getStateAtIndex(states, 2));
+      final String js = JsonUtil.toJsonString(status);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
@@ -1533,6 +1541,10 @@ public class NamenodeWebHdfsMethods {
         out.flush();
       }
     };
+  }
+
+  private long getStateAtIndex(long[] states, int index) {
+    return states.length > index ? states[index] : -1;
   }
 
   /** Handle HTTP DELETE request for the root. */
