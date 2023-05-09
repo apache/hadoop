@@ -34,7 +34,7 @@ import java.util.function.Function;
 
 public class QiniuKodoClient implements IQiniuKodoClient {
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoClient.class);
-    
+
     private final String bucket;
 
     private final Auth auth;
@@ -90,7 +90,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             configuration.resumableUploadAPIVersion = Configuration.ResumableUploadAPIVersion.V1;
         }
         configuration.resumableUploadMaxConcurrentTaskCount = fsConfig.upload.maxConcurrentTasks;
-        configuration.useHttpsDomains = fsConfig.upload.useHttps;
+        configuration.useHttpsDomains = fsConfig.useHttps;
         configuration.accUpHostFirst = fsConfig.upload.accUpHostFirst;
         configuration.useDefaultUpHostIfNone = fsConfig.upload.useDefaultUpHostIfNone;
         configuration.proxy = buildQiniuProxyConfiguration(fsConfig);
@@ -297,8 +297,6 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      */
     @Override
     public List<FileInfo> listStatus(String prefixKey, boolean useDirectory) throws IOException {
-        LOG.info("key: {}, useDirectory: {}", prefixKey, useDirectory);
-
         ListProducerConfig listConfig = fsConfig.client.list;
         // 最终结果
         List<FileInfo> retFiles = new ArrayList<>();

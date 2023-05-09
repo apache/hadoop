@@ -58,6 +58,9 @@ download:
     blockSize: 65536  # 随机读取策略模式下的单次请求块大小
     maxBlocks: 100       # 随机读取策略模式下的内存缓存块数
 
+# 对于文件上传，文件管理相关API, 是否使用https，默认为false
+useHttps: false
+
 # 文件上传相关设置
 upload:
   # 使用 AutoRegion 时，如果从区域信息得到上传 host 失败，使用默认的上传域名上传，
@@ -67,7 +70,6 @@ upload:
   sign:
     # 上传签名过期时间，单位为秒，默认设置为7天，即7*24*3600
     expires: 604800
-  useHttps: false
   accUpHostFirst: false
   maxConcurrentTasks: 1
   v2:
