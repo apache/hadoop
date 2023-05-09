@@ -179,7 +179,6 @@ public class IPCLoggerChannel implements AsyncLogger {
     this.nameServiceId = nameServiceId;
     this.addr = addr;
     this.updatedAddr = addr.getAddress();
-    
     this.queueSizeLimitBytes = 1024 * 1024 * conf.getInt(
         DFSConfigKeys.DFS_QJOURNAL_QUEUE_SIZE_LIMIT_KEY,
         DFSConfigKeys.DFS_QJOURNAL_QUEUE_SIZE_LIMIT_DEFAULT);
