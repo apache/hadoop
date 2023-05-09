@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractOpenTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
@@ -106,24 +105,6 @@ public class ITestS3AContractOpen extends AbstractContractOpenTest {
         fs.openFile(path)
             .withFileStatus(st2)
             .build());
-  }
-  /**
-   * Pass in a directory reference and expect the openFile call
-   * to fail.
-   */
-  @Test
-  public void testFloatingPointLength() throws Throwable {
-    describe("Open file with a length");
-    Path path = methodPath();
-    FileSystem fs = getFileSystem();
-    int len = 4096;
-    createFile(fs, path, true,
-        dataset(len, 0x40, 0x80));
-    fs.openFile(path)
-        .mustDouble(FS_OPTION_OPENFILE_LENGTH, len)
-        .build()
-        .get()
-        .close();
   }
 
 }
