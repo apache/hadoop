@@ -16,6 +16,7 @@ import org.apache.hadoop.fs.qiniu.kodo.upload.QiniuKodoOutputStream;
 import org.apache.hadoop.fs.qiniu.kodo.util.QiniuKodoUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
+import org.apache.log4j.PropertyConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,8 +46,8 @@ public class QiniuKodoFileSystem extends FileSystem {
     public void initialize(URI name, Configuration conf) throws IOException {
         super.initialize(name, conf);
         setConf(conf);
-
         this.fsConfig = new QiniuKodoFsConfig(getConf());
+        setLog4jConfig(fsConfig);
 
         String bucket = name.getHost();
         this.uri = URI.create(name.getScheme() + "://" + name.getAuthority());
@@ -68,6 +69,21 @@ public class QiniuKodoFileSystem extends FileSystem {
                 fsConfig.download.random.blockSize,
                 fsConfig.download.random.maxBlocks
         );
+    }
+
+    private static void setLog4jConfig(QiniuKodoFsConfig fsConfig) {
+        // 首先加载resources中的日志配置文件
+
+        // 如果用户在配置文件中指定了log4j配置文件，则载入用户指定的配置文件
+        if (fsConfig.logger.log4jConfigFile != null) {
+            PropertyConfigurator.configure(fsConfig.logger.log4jConfigFile);
+        } else {
+            // 如果用户没有指定log4j配置文件，则尝试使用用户指定的日志级别
+            String logLevel = fsConfig.logger.logLevel;
+            Properties props = new Properties();
+            props.setProperty("log4j.rootLogger", String.format("%s, console", logLevel));
+            PropertyConfigurator.configure(props);
+        }
     }
 
     private volatile boolean makeSureWorkdirCreatedFlag = false;
@@ -548,8 +564,8 @@ public class QiniuKodoFileSystem extends FileSystem {
                 putTime, // access time
                 FsPermission.createImmutable(
                         isDir
-                        ? (short) 0777 // rwxrwxrwx
-                        : (short) 0666 // rw-rw-rw-
+                                ? (short) 0777 // rwxrwxrwx
+                                : (short) 0666 // rw-rw-rw-
                 ),   // permission
                 username,   // owner
                 username,   // group
