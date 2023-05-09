@@ -326,5 +326,4 @@ public class MemoryRMStateStore extends RMStateStore {
   @Override
   public void removeApplication(ApplicationId removeAppId) throws Exception {
   }
-
 }

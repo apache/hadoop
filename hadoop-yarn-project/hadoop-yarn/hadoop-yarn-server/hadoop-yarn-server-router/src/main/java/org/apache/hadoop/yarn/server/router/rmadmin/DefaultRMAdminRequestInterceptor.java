@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.router.rmadmin;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
-
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -32,6 +32,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsR
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
@@ -58,8 +60,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceReque
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Extends the {@link AbstractRMAdminRequestInterceptor} class and provides an
@@ -221,5 +221,10 @@ public class DefaultRMAdminRequestInterceptor
       NodesToAttributesMappingRequest request)
       throws YarnException, IOException {
     return rmAdminProxy.mapAttributesToNodes(request);
+  }
+
+  @Override
+  public DatabaseAccessResponse accessDatabase(DatabaseAccessRequest request) throws IOException, YarnException {
+    return rmAdminProxy.accessDatabase(request);
   }
 }

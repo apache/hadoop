@@ -62,9 +62,12 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DBRecord;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
@@ -90,7 +93,7 @@ import static org.apache.hadoop.yarn.client.util.YarnClientUtils.NO_LABEL_ERR_MS
 @Unstable
 public class RMAdminCLI extends HAAdmin {
 
-  private final RecordFactory recordFactory = 
+  private final RecordFactory recordFactory =
     RecordFactoryProvider.getRecordFactory(null);
   static CommonNodeLabelsManager localNodeLabelsManager = null;
   private static final String NO_MAPPING_ERR_MSG =
@@ -166,6 +169,23 @@ public class RMAdminCLI extends HAAdmin {
                   + " \n\t\tor\n\t\t[NodeID] [resourcetypes] "
                   + "([OvercommitTimeout]). ",
                   "Update resource on specific node."))
+          .put("-accessDataStore",
+              new UsageInfo("get|set|del [database] [key] [value]",
+                  "Access the underlying levelDB data store through CRUD APIs.\n\t\t"
+                      + "'key' should be a complete key which will return / update / delete 1 or 0 records. \n\t\t"
+                      + "'value' is optional & ignored for get & del calls. It is mandatory for set calls\n\t\t"
+                      + "If 'database' is 'yarn-rm-state'"
+                      + " it will provide access to apps, app attempts, delegation tokens, master keys, reservations, AM RM tokens.\n\t\t\t"
+                      + "'key' for this database is 'RMAppRoot/<appId>', RMAppRoot/<appId>/<attemptID>, ReservationSystemRoot/<plan>/<reservationID>,"
+                      + " RMDTSecretManagerRoot/RMDelegationToken_<tokenNo>, RMDTSecretManagerRoot/DelegationKey_<MasterKeyNo>,"
+                      + " RMDTSecretManagerRoot/RMDTSequentialNumber, AMRMTokenSecretManagerRoot."
+                      + " Additional metadata keys are 'RMVersionNode', 'EpochNode' \n\t\t\t"
+                      + "Most of the values for these keys are binary data & hence get / set will not provide any useful info. But keys can be deleted.\n\t\t"
+                      + "If 'database' is 'yarn-conf-store' "
+                      + " it will provide access to the scheduler conf & its related internal keys.\n\t\t\t"
+                      + "'key' for this database is the config name which is seen in /scheduler-conf or scheduler xml file."
+                      + " Additional metadata keys are 'version', 'log'"
+              ))
           .build();
 
   public RMAdminCLI() {
@@ -286,7 +306,8 @@ public class RMAdminCLI extends HAAdmin {
         + " [-refreshClusterMaxPriority]"
         + " [-updateNodeResource [NodeID] [MemSize] [vCores]"
         + " ([OvercommitTimeout]) or -updateNodeResource [NodeID] "
-        + "[ResourceTypes] ([OvercommitTimeout])]");
+        + "[ResourceTypes] ([OvercommitTimeout])]"
+        +  " [-accessDataStore get|set|del [database] [key] [value]]");
     if (isHAEnabled) {
       appendHAUsage(summary);
     }
@@ -329,7 +350,7 @@ public class RMAdminCLI extends HAAdmin {
     ToolRunner.printGenericCommandUsage(System.err);
 
   }
-  
+
   protected ResourceManagerAdministrationProtocol createAdminProtocol()
       throws IOException {
     // Get the current configuration
@@ -341,7 +362,7 @@ public class RMAdminCLI extends HAAdmin {
   private int refreshQueues() throws IOException, YarnException {
     // Refresh the queue properties
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
-    RefreshQueuesRequest request = 
+    RefreshQueuesRequest request =
       recordFactory.newRecordInstance(RefreshQueuesRequest.class);
     adminProtocol.refreshQueues(request);
     return 0;
@@ -433,35 +454,35 @@ public class RMAdminCLI extends HAAdmin {
       YarnException {
     // Refresh the user-to-groups mappings
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
-    RefreshUserToGroupsMappingsRequest request = 
+    RefreshUserToGroupsMappingsRequest request =
       recordFactory.newRecordInstance(RefreshUserToGroupsMappingsRequest.class);
     adminProtocol.refreshUserToGroupsMappings(request);
     return 0;
   }
-  
+
   private int refreshSuperUserGroupsConfiguration() throws IOException,
       YarnException {
     // Refresh the super-user groups
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
-    RefreshSuperUserGroupsConfigurationRequest request = 
+    RefreshSuperUserGroupsConfigurationRequest request =
       recordFactory.newRecordInstance(RefreshSuperUserGroupsConfigurationRequest.class);
     adminProtocol.refreshSuperUserGroupsConfiguration(request);
     return 0;
   }
-  
+
   private int refreshAdminAcls() throws IOException, YarnException {
     // Refresh the admin acls
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
-    RefreshAdminAclsRequest request = 
+    RefreshAdminAclsRequest request =
       recordFactory.newRecordInstance(RefreshAdminAclsRequest.class);
     adminProtocol.refreshAdminAcls(request);
     return 0;
   }
-  
+
   private int refreshServiceAcls() throws IOException, YarnException {
     // Refresh the service acls
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
-    RefreshServiceAclsRequest request = 
+    RefreshServiceAclsRequest request =
       recordFactory.newRecordInstance(RefreshServiceAclsRequest.class);
     adminProtocol.refreshServiceAcls(request);
     return 0;
@@ -505,7 +526,7 @@ public class RMAdminCLI extends HAAdmin {
     if (usernames.length == 0) {
       usernames = new String[] { UserGroupInformation.getCurrentUser().getUserName() };
     }
-    
+
     for (String username : usernames) {
       StringBuilder sb = new StringBuilder();
       sb.append(username + " :");
@@ -515,10 +536,10 @@ public class RMAdminCLI extends HAAdmin {
       }
       System.out.println(sb);
     }
-    
+
     return 0;
   }
-  
+
   // Make it protected to make unit test can change it.
   protected static synchronized CommonNodeLabelsManager
       getNodeLabelManagerInstance(Configuration conf) {
@@ -607,7 +628,7 @@ public class RMAdminCLI extends HAAdmin {
 
     return 0;
   }
-  
+
   private Map<NodeId, Set<String>> buildNodeLabelsMapFromStr(String args) {
     Map<NodeId, Set<String>> map = new HashMap<NodeId, Set<String>>();
 
@@ -644,7 +665,7 @@ public class RMAdminCLI extends HAAdmin {
           map.get(nodeId).add(splits[i].trim());
         }
       }
-      
+
       int nLabels = map.get(nodeId).size();
       Preconditions.checkArgument(nLabels <= 1, "%s labels specified on host=%s"
           + ", please note that we do not support specifying multiple"
@@ -778,6 +799,8 @@ public class RMAdminCLI extends HAAdmin {
         exitCode = handleRemoveFromClusterNodeLabels(args, cmd, isHAEnabled);
       } else if ("-replaceLabelsOnNode".equals(cmd)) {
         exitCode = handleReplaceLabelsOnNodes(args, cmd, isHAEnabled);
+      } else if ("-accessDataStore".equals(cmd)) {
+        exitCode = handleDBAccess(args, cmd);
       } else {
         exitCode = -1;
         System.err.println(cmd.substring(1) + ": Unknown command");
@@ -787,6 +810,7 @@ public class RMAdminCLI extends HAAdmin {
     } catch (IllegalArgumentException arge) {
       exitCode = -1;
       System.err.println(cmd.substring(1) + ": " + arge.getLocalizedMessage());
+      arge.printStackTrace();
       printUsage(cmd, isHAEnabled);
     } catch (RemoteException e) {
       //
@@ -796,16 +820,16 @@ public class RMAdminCLI extends HAAdmin {
       try {
         String[] content;
         content = e.getLocalizedMessage().split("\n");
-        System.err.println(cmd.substring(1) + ": "
-                           + content[0]);
+        System.err.println(cmd.substring(1) + ": " + content[0]);
+        e.printStackTrace();
       } catch (Exception ex) {
-        System.err.println(cmd.substring(1) + ": "
-                           + ex.getLocalizedMessage());
+        System.err.println(cmd.substring(1) + ": " + ex.getLocalizedMessage());
+        ex.printStackTrace();
       }
     } catch (Exception e) {
       exitCode = -1;
-      System.err.println(cmd.substring(1) + ": "
-                         + e.getLocalizedMessage());
+      System.err.println(cmd.substring(1) + ": " + e.getLocalizedMessage());
+      e.printStackTrace();
     }
     if (null != localNodeLabelsManager) {
       localNodeLabelsManager.stop();
@@ -954,6 +978,61 @@ public class RMAdminCLI extends HAAdmin {
       }
     }
     return resource;
+  }
+
+  private int handleDBAccess(String[] args, String cmd)
+      throws IOException, YarnException {
+    boolean invalidParam = false;
+    String operation = null;
+    String database = null;
+    String key = null;
+    String value = null;
+
+    if (args.length < 4) {
+      invalidParam = true;
+    } else {
+      operation = args[1];
+      if (operation.equals("set")) {
+        if (args.length != 5 || StringUtils.isEmpty(args[4])) {
+          invalidParam = true;
+        } else {
+          value = args[4];
+        }
+      } else if (operation.equals("get") || operation.equals("del")) {
+        if (args.length != 4) {
+          invalidParam = true;
+        }
+      } else {
+        invalidParam = true;
+      }
+
+      database = args[2];
+      key = args[3];
+      if (StringUtils.isEmpty(key) || StringUtils.isEmpty(database)) {
+        invalidParam = true;
+      }
+    }
+
+    if (invalidParam) {
+      System.err.println("Number of parameters specified for accessDataStore is wrong. " + Arrays.toString(args));
+      StringBuilder helpMsg = new StringBuilder();
+      buildHelpMsg(cmd, helpMsg);
+      System.out.println(helpMsg);
+      return -1;
+    }
+    return accessDB(operation, database, key, value);
+  }
+
+  private int accessDB(String operation, String database, String key, String value)
+      throws IOException, YarnException {
+    ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
+    DatabaseAccessRequest request = DatabaseAccessRequest.newInstance(operation, database, key, value);
+    DatabaseAccessResponse response = adminProtocol.accessDatabase(request);
+    List<DBRecord> records = response.getRecords();
+    for(DBRecord record : records) {
+      System.out.println(record.getKey() + " = " + record.getValue());
+    }
+    return 0;
   }
 
   private int validateTimeout(String strTimeout) {

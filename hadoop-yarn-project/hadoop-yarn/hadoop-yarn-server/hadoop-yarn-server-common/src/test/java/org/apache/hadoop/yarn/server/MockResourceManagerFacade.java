@@ -144,6 +144,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsR
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
@@ -902,6 +904,12 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     validateRunning();
 
     return RefreshClusterMaxPriorityResponse.newInstance();
+  }
+
+  @Override
+  public DatabaseAccessResponse accessDatabase(DatabaseAccessRequest request)
+      throws IOException {
+    return null;
   }
 
   @Override

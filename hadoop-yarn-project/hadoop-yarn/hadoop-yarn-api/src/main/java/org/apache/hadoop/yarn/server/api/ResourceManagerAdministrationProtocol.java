@@ -34,6 +34,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappin
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
@@ -62,7 +64,7 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
 
   @Private
   @Idempotent
-  public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request) 
+  public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request)
   throws StandbyException, YarnException, IOException;
 
   @Private
@@ -72,7 +74,7 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
 
   @Private
   @Idempotent
-  public RefreshSuperUserGroupsConfigurationResponse 
+  public RefreshSuperUserGroupsConfigurationResponse
   refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
   throws StandbyException, YarnException, IOException;
@@ -94,16 +96,16 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   public RefreshServiceAclsResponse refreshServiceAcls(
       RefreshServiceAclsRequest request)
   throws YarnException, IOException;
-  
+
   /**
    * <p>The interface used by admin to update nodes' resources to the
    * <code>ResourceManager</code> </p>.
-   * 
-   * <p>The admin client is required to provide details such as a map from 
-   * {@link NodeId} to {@link ResourceOption} required to update resources on 
+   *
+   * <p>The admin client is required to provide details such as a map from
+   * {@link NodeId} to {@link ResourceOption} required to update resources on
    * a list of <code>RMNode</code> in <code>ResourceManager</code> etc.
    * via the {@link UpdateNodeResourceRequest}.</p>
-   * 
+   *
    * @param request request to update resource for a node in cluster.
    * @return (empty) response on accepting update.
    * @throws YarnException exceptions from yarn servers.
@@ -124,17 +126,17 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   @Idempotent
   public AddToClusterNodeLabelsResponse addToClusterNodeLabels(
       AddToClusterNodeLabelsRequest request) throws YarnException, IOException;
-   
+
   @Private
   @Idempotent
   public RemoveFromClusterNodeLabelsResponse removeFromClusterNodeLabels(
       RemoveFromClusterNodeLabelsRequest request) throws YarnException, IOException;
-  
+
   @Private
   @Idempotent
   public ReplaceLabelsOnNodeResponse replaceLabelsOnNode(
       ReplaceLabelsOnNodeRequest request) throws YarnException, IOException;
-  
+
   @Private
   @Idempotent
   public CheckForDecommissioningNodesResponse checkForDecommissioningNodes(
@@ -153,4 +155,14 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   NodesToAttributesMappingResponse mapAttributesToNodes(
       NodesToAttributesMappingRequest request) throws YarnException,
       IOException;
+
+  /**
+   * Access the RM database(s) from Admin CLI
+   * @param request - Database access request
+   * @return Database access response
+   */
+  @Private
+  @Idempotent
+  DatabaseAccessResponse accessDatabase(DatabaseAccessRequest request)
+      throws IOException, YarnException;
 }

@@ -21,16 +21,17 @@ package org.apache.hadoop.yarn.server.api.impl.pb.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.AddToClusterNodeLabelsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.CheckForDecommissioningNodesRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.DatabaseAccessRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.GetGroupsForUserRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.GetGroupsForUserResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.NodesToAttributesMappingRequestProto;
@@ -51,6 +52,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsR
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
@@ -79,6 +82,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNod
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNodeLabelsResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.CheckForDecommissioningNodesRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.CheckForDecommissioningNodesResponsePBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DatabaseAccessRequestPBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DatabaseAccessResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodesToAttributesMappingRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodesToAttributesMappingResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RefreshAdminAclsRequestPBImpl;
@@ -104,16 +109,14 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.ReplaceLabelsOn
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.UpdateNodeResourceRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.UpdateNodeResourceResponsePBImpl;
 
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
-
 @Private
 public class ResourceManagerAdministrationProtocolPBClientImpl implements ResourceManagerAdministrationProtocol, Closeable {
 
   private ResourceManagerAdministrationProtocolPB proxy;
-  
-  public ResourceManagerAdministrationProtocolPBClientImpl(long clientVersion, InetSocketAddress addr, 
+
+  public ResourceManagerAdministrationProtocolPBClientImpl(long clientVersion, InetSocketAddress addr,
       Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, ResourceManagerAdministrationProtocolPB.class, 
+    RPC.setProtocolEngine(conf, ResourceManagerAdministrationProtocolPB.class,
         ProtobufRpcEngine2.class);
     proxy = (ResourceManagerAdministrationProtocolPB)RPC.getProxy(
         ResourceManagerAdministrationProtocolPB.class, clientVersion, addr, conf);
@@ -129,7 +132,7 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
   @Override
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request)
       throws YarnException, IOException {
-    RefreshQueuesRequestProto requestProto = 
+    RefreshQueuesRequestProto requestProto =
       ((RefreshQueuesRequestPBImpl)request).getProto();
     try {
       return new RefreshQueuesResponsePBImpl(
@@ -143,7 +146,7 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
   @Override
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
   throws YarnException, IOException {
-    RefreshNodesRequestProto requestProto = 
+    RefreshNodesRequestProto requestProto =
       ((RefreshNodesRequestPBImpl)request).getProto();
     try {
       return new RefreshNodesResponsePBImpl(
@@ -158,7 +161,7 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
   public RefreshSuperUserGroupsConfigurationResponse refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
       throws YarnException, IOException {
-    RefreshSuperUserGroupsConfigurationRequestProto requestProto = 
+    RefreshSuperUserGroupsConfigurationRequestProto requestProto =
       ((RefreshSuperUserGroupsConfigurationRequestPBImpl)request).getProto();
     try {
       return new RefreshSuperUserGroupsConfigurationResponsePBImpl(
@@ -173,7 +176,7 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
       RefreshUserToGroupsMappingsRequest request) throws YarnException,
       IOException {
-    RefreshUserToGroupsMappingsRequestProto requestProto = 
+    RefreshUserToGroupsMappingsRequestProto requestProto =
       ((RefreshUserToGroupsMappingsRequestPBImpl)request).getProto();
     try {
       return new RefreshUserToGroupsMappingsResponsePBImpl(
@@ -187,7 +190,7 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
   @Override
   public RefreshAdminAclsResponse refreshAdminAcls(
       RefreshAdminAclsRequest request) throws YarnException, IOException {
-    RefreshAdminAclsRequestProto requestProto = 
+    RefreshAdminAclsRequestProto requestProto =
       ((RefreshAdminAclsRequestPBImpl)request).getProto();
     try {
       return new RefreshAdminAclsResponsePBImpl(
@@ -202,7 +205,7 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
   public RefreshServiceAclsResponse refreshServiceAcls(
       RefreshServiceAclsRequest request) throws YarnException,
       IOException {
-    RefreshServiceAclsRequestProto requestProto = 
+    RefreshServiceAclsRequestProto requestProto =
         ((RefreshServiceAclsRequestPBImpl)request).getProto();
     try {
       return new RefreshServiceAclsResponsePBImpl(proxy.refreshServiceAcls(
@@ -215,7 +218,7 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
 
   @Override
   public String[] getGroupsForUser(String user) throws IOException {
-    GetGroupsForUserRequestProto requestProto = 
+    GetGroupsForUserRequestProto requestProto =
         GetGroupsForUserRequestProto.newBuilder().setUser(user).build();
     try {
       GetGroupsForUserResponseProto responseProto =
@@ -338,6 +341,18 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
     try {
       return new NodesToAttributesMappingResponsePBImpl(
           proxy.mapAttributesToNodes(null, requestProto));
+    } catch (ServiceException e) {
+      RPCUtil.unwrapAndThrowException(e);
+      return null;
+    }
+  }
+
+  @Override
+  public DatabaseAccessResponse accessDatabase(DatabaseAccessRequest request)
+      throws IOException, YarnException {
+    DatabaseAccessRequestProto requestProto = ((DatabaseAccessRequestPBImpl) request).getProto();
+    try {
+      return new DatabaseAccessResponsePBImpl(proxy.accessDatabase(null, requestProto));
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);
       return null;

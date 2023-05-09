@@ -1756,6 +1756,8 @@ public class ResourceManager extends CompositeService
         } else if (argv[0].equals("-remove-application-from-state-store")
             && argv.length == 2) {
           removeApplication(conf, argv[1]);
+        } else if (argv[0].equals("-safe-mode")) {
+          ResourceManager.startRMInSafeMode();
         } else {
           printUsage(System.err);
         }
@@ -1771,6 +1773,34 @@ public class ResourceManager extends CompositeService
       LOG.error(FATAL, "Error starting ResourceManager", t);
       System.exit(-1);
     }
+  }
+
+  /**
+   * When RM fails to function regularly / start,
+   * we want RM to start with basic functionality which can be used to correct & start it
+   * Possible applicable scenarios
+   *  1. DB Corruption - In case of embedded DB, its required to bring up RM to access the DB
+   *  In safe mode, basic DB ops like CRUD are made accessible through CLI via AdminService
+   *
+   *  This has been tested with LevelDB as RMStateStore & YarnConfigurationStore
+   */
+  static ResourceManager startRMInSafeMode() {
+
+    Configuration conf = new YarnConfiguration();
+
+    ResourceManager resourceManager = new ResourceManager();
+    RMContextImpl rmContext = new RMContextImpl();
+    rmContext.setResourceManager(resourceManager);
+    resourceManager.rmContext = rmContext;
+
+    AdminService adminService = resourceManager.createAdminService();
+    adminService.init(conf);
+    adminService.start();
+
+    resourceManager.adminService = adminService;
+    resourceManager.addService(adminService);
+
+    return resourceManager;
   }
 
   /**

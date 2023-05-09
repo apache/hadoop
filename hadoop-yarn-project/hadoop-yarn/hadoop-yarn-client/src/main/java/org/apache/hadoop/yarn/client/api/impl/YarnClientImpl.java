@@ -29,10 +29,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -105,8 +105,8 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
-import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
 import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -147,10 +147,9 @@ import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketException;
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
-
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 @Private
 @Unstable
@@ -337,20 +336,20 @@ public class YarnClientImpl extends YarnClient {
 
     int pollCount = 0;
     long startTime = System.currentTimeMillis();
-    EnumSet<YarnApplicationState> waitingStates = 
+    EnumSet<YarnApplicationState> waitingStates =
                                  EnumSet.of(YarnApplicationState.NEW,
                                  YarnApplicationState.NEW_SAVING,
                                  YarnApplicationState.SUBMITTED);
-    EnumSet<YarnApplicationState> failToSubmitStates = 
+    EnumSet<YarnApplicationState> failToSubmitStates =
                                   EnumSet.of(YarnApplicationState.FAILED,
-                                  YarnApplicationState.KILLED);		
+                                  YarnApplicationState.KILLED);
     while (true) {
       try {
         ApplicationReport appReport = getApplicationReport(applicationId);
         YarnApplicationState state = appReport.getYarnApplicationState();
         if (!waitingStates.contains(state)) {
           if(failToSubmitStates.contains(state)) {
-            throw new YarnException("Failed to submit " + applicationId + 
+            throw new YarnException("Failed to submit " + applicationId +
                 " to YARN : " + appReport.getDiagnostics());
           }
           LOG.info("Submitted application {}", applicationId);

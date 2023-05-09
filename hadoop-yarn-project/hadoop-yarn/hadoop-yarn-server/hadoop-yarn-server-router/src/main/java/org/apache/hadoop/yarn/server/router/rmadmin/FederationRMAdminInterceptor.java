@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DatabaseAccessResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
@@ -747,6 +749,11 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     routerMetrics.incrMapAttributesToNodesFailedRetrieved();
     throw new YarnException("Unable to mapAttributesToNodes.");
+  }
+
+  @Override
+  public DatabaseAccessResponse accessDatabase(DatabaseAccessRequest request) {
+    throw new NotImplementedException();
   }
 
   @Override
