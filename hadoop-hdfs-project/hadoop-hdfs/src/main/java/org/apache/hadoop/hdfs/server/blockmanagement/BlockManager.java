@@ -2913,7 +2913,7 @@ public class BlockManager implements BlockStatsMXBean {
         return !node.hasStaleStorages();
       }
 
-      if (storageInfo.getBlockReportCount() == 0) {
+      if (!storageInfo.hasReceivedBlockReport()) {
         // The first block report can be processed a lot more efficiently than
         // ordinary block reports.  This shortens restart times.
         blockLog.info("BLOCK* processReport 0x{} with lease ID 0x{}: Processing first "
