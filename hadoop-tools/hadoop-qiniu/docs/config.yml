@@ -29,6 +29,7 @@ download:
   # 文件下载块大小，默认为4MB，若启用了磁盘缓存，则修改该值可能会清空磁盘缓存
   blockSize: 4194304
   # 下载域名，字符串类型，可自行绑定cdn域名
+  # 若配置了该配置项，则下载走该域名，否则走默认源站域名
   domain: null
 
   # 下载签名相关
@@ -79,26 +80,26 @@ upload:
   bufferSize: 16777216
 
 # 区域与私有云相关设置
-custom_region:
+customRegion:
   id: custom1
 
   # 私有云ID自定义配置，子命名空间均为用户自定义region id
   custom:
     custom1:
-      rsHost:
-      rsfHost:
-      apiHost:
-      iovipHost:
-      accUpHosts: [ ]
-      srcUpHosts: [ ]
+      # 中心域名服务器，若配置了该字段，则优先该服务进行域名查询，可无需配置后续的相关域名字段
+      ucServer: 'https://uc.qiniuapi.com' # 中心域名服务器
 
-    custom2:
-      rsHost:
-      rsfHost:
-      apiHost:
-      iovipHost:
-      accUpHosts: [ ]
-      srcUpHosts: [ ]
+      rsHost: 'rs.qiniuapi.com'      # 对象管理域名
+      rsfHost: 'rsf.qiniuapi.com'    # 对象列举域名
+      apiHost: 'api.qiniuapi.com'    # 计量查询域名
+      iovipHost: 'iovip.qiniuio.com' # 源站下载域名
+
+      # 用于上传
+      accUpHosts: [ 'upload.qiniup.com' ] # 加速上传
+      srcUpHosts: [ 'up.qiniup.com' ] # 源站上传
+
+      # 默认源站域名，在hadoop中用于对象的下载
+      ioSrcHost: 'kodo-cn-east-1.qiniucs.com'
 
 # 客户端模拟文件系统相关设置
 client:
