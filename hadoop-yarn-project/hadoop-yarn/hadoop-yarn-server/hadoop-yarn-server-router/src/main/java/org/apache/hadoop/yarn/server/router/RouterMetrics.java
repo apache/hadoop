@@ -147,6 +147,8 @@ public final class RouterMetrics {
   private MutableGaugeInt numRefreshSuperUserGroupsConfigurationFailedRetrieved;
   @Metric("# of refreshUserToGroupsMappings failed to be retrieved")
   private MutableGaugeInt numRefreshUserToGroupsMappingsFailedRetrieved;
+  @Metric("# of deregisterSubCluster failed to be retrieved")
+  private MutableGaugeInt numDeregisterSubClusterFailedRetrieved;
   @Metric("# of refreshAdminAcls failed to be retrieved")
   private MutableGaugeInt numRefreshAdminAclsFailedRetrieved;
   @Metric("# of refreshServiceAcls failed to be retrieved")
@@ -291,6 +293,8 @@ public final class RouterMetrics {
   private MutableRate totalSucceededReplaceLabelsOnNodeRetrieved;
   @Metric("Total number of successful Retrieved GetSchedulerInfo and latency(ms)")
   private MutableRate totalSucceededGetSchedulerInfoRetrieved;
+  @Metric("Total number of successful Retrieved DeregisterSubCluster and latency(ms)")
+  private MutableRate totalSucceededDeregisterSubClusterRetrieved;
   @Metric("Total number of successful Retrieved RefreshAdminAcls and latency(ms)")
   private MutableRate totalSucceededRefreshAdminAclsRetrieved;
   @Metric("Total number of successful Retrieved RefreshServiceAcls and latency(ms)")
@@ -376,6 +380,7 @@ public final class RouterMetrics {
   private MutableQuantiles getSchedulerInfoRetrievedLatency;
   private MutableQuantiles refreshSuperUserGroupsConfLatency;
   private MutableQuantiles refreshUserToGroupsMappingsLatency;
+  private MutableQuantiles refreshDeregisterSubClusterLatency;
   private MutableQuantiles refreshAdminAclsLatency;
   private MutableQuantiles refreshServiceAclsLatency;
   private MutableQuantiles replaceLabelsOnNodesLatency;
@@ -583,6 +588,9 @@ public final class RouterMetrics {
 
     refreshUserToGroupsMappingsLatency = registry.newQuantiles("refreshUserToGroupsMappingsLatency",
         "latency of refresh user to groups mappings timeouts", "ops", "latency", 10);
+
+    refreshDeregisterSubClusterLatency = registry.newQuantiles("refreshDeregisterSubClusterLatency",
+        "latency of deregister subcluster timeouts", "ops", "latency", 10);
 
     refreshAdminAclsLatency = registry.newQuantiles("refreshAdminAclsLatency",
         "latency of refresh admin acls timeouts", "ops", "latency", 10);
@@ -906,6 +914,11 @@ public final class RouterMetrics {
   @VisibleForTesting
   public long getNumSucceededGetSchedulerInfoRetrieved() {
     return totalSucceededGetSchedulerInfoRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededDeregisterSubClusterRetrieved() {
+    return totalSucceededDeregisterSubClusterRetrieved.lastStat().numSamples();
   }
 
   @VisibleForTesting
@@ -1249,6 +1262,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededDeregisterSubClusterRetrieved() {
+    return totalSucceededDeregisterSubClusterRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededRefreshAdminAclsRetrieved() {
     return totalSucceededRefreshAdminAclsRetrieved.lastStat().mean();
   }
@@ -1537,6 +1555,10 @@ public final class RouterMetrics {
 
   public int getNumRefreshUserToGroupsMappingsFailedRetrieved() {
     return numRefreshUserToGroupsMappingsFailedRetrieved.value();
+  }
+
+  public int getDeregisterSubClusterFailedRetrieved() {
+    return numDeregisterSubClusterFailedRetrieved.value();
   }
 
   public int getNumRefreshAdminAclsFailedRetrieved() {
@@ -1886,6 +1908,11 @@ public final class RouterMetrics {
     getSchedulerInfoRetrievedLatency.add(duration);
   }
 
+  public void succeededDeregisterSubClusterRetrieved(long duration) {
+    totalSucceededDeregisterSubClusterRetrieved.add(duration);
+    refreshDeregisterSubClusterLatency.add(duration);
+  }
+
   public void succeededRefreshAdminAclsRetrieved(long duration) {
     totalSucceededRefreshAdminAclsRetrieved.add(duration);
     refreshAdminAclsLatency.add(duration);
@@ -2158,6 +2185,10 @@ public final class RouterMetrics {
 
   public void incrRefreshUserToGroupsMappingsFailedRetrieved() {
     numRefreshUserToGroupsMappingsFailedRetrieved.incr();
+  }
+
+  public void incrDeregisterSubClusterFailedRetrieved() {
+    numDeregisterSubClusterFailedRetrieved.incr();
   }
 
   public void incrRefreshAdminAclsFailedRetrieved() {

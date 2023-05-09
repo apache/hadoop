@@ -161,6 +161,15 @@ message NodesToAttributesMappingRequestProto {
 
 message NodesToAttributesMappingResponseProto {
 }
+
+message DeregisterSubClusterRequestProto {
+  optional string subClusterId = 1;
+}
+
+message DeregisterSubClusterResponseProto {
+  repeated DeregisterSubClustersProto deregisterSubClusters = 1;
+}
+
 //////////////////////////////////////////////////////////////////
 ///////////// RM Failover related records ////////////////////////
 //////////////////////////////////////////////////////////////////
