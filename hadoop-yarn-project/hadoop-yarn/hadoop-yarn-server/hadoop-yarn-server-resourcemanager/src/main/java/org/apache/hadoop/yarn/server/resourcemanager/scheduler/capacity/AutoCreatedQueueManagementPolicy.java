@@ -30,14 +30,14 @@ public interface AutoCreatedQueueManagementPolicy {
    * @param parentQueue parent queue
    * @throws IOException an I/O exception has occurred.
    */
-  void init(ParentQueue parentQueue) throws IOException;
+  void init(AbstractParentQueue parentQueue) throws IOException;
 
   /**
    * Reinitialize policy state ( if required ).
    * @param parentQueue parent queue
    * @throws IOException an I/O exception has occurred.
    */
-  void reinitialize(ParentQueue parentQueue) throws IOException;
+  void reinitialize(AbstractParentQueue parentQueue) throws IOException;
 
   /**
    * Get initial template for the specified leaf queue.
