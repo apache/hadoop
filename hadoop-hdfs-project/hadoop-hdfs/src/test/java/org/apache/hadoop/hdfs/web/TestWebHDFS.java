@@ -2269,8 +2269,8 @@ public class TestWebHDFS {
           WebHdfsTestUtil.getWebHdfsFileSystem(conf,
               WebHdfsConstants.WEBHDFS_SCHEME);
 
-      final String PATH = "/foo";
-      OutputStream os = webHdfs.create(new Path(PATH));
+      final String path = "/foo";
+      OutputStream os = webHdfs.create(new Path(path));
       os.write(new byte[1024]);
 
       FsStatus fsStatus = webHdfs.getStatus(new Path("/"));
