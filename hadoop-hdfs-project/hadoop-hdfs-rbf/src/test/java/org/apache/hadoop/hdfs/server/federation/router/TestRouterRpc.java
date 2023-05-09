@@ -72,8 +72,8 @@ import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -1011,27 +1011,27 @@ public class TestRouterRpc {
   @Test
   public void testProxySetSafemode() throws Exception {
     boolean routerSafemode =
-        routerProtocol.setSafeMode(SafeModeAction.SAFEMODE_GET, false);
+        routerProtocol.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_GET, false);
     boolean nnSafemode =
-        nnProtocol.setSafeMode(SafeModeAction.SAFEMODE_GET, false);
+        nnProtocol.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_GET, false);
     assertEquals(nnSafemode, routerSafemode);
 
     routerSafemode =
-        routerProtocol.setSafeMode(SafeModeAction.SAFEMODE_GET, true);
+        routerProtocol.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_GET, true);
     nnSafemode =
-        nnProtocol.setSafeMode(SafeModeAction.SAFEMODE_GET, true);
+        nnProtocol.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_GET, true);
     assertEquals(nnSafemode, routerSafemode);
 
     assertFalse(routerProtocol.setSafeMode(
-        SafeModeAction.SAFEMODE_GET, false));
+        HdfsConstants.SafeModeAction.SAFEMODE_GET, false));
     assertTrue(routerProtocol.setSafeMode(
-        SafeModeAction.SAFEMODE_ENTER, false));
+        HdfsConstants.SafeModeAction.SAFEMODE_ENTER, false));
     assertTrue(routerProtocol.setSafeMode(
-        SafeModeAction.SAFEMODE_GET, false));
+        HdfsConstants.SafeModeAction.SAFEMODE_GET, false));
     assertFalse(routerProtocol.setSafeMode(
-        SafeModeAction.SAFEMODE_LEAVE, false));
+        HdfsConstants.SafeModeAction.SAFEMODE_LEAVE, false));
     assertFalse(routerProtocol.setSafeMode(
-        SafeModeAction.SAFEMODE_GET, false));
+        HdfsConstants.SafeModeAction.SAFEMODE_GET, false));
   }
 
   @Test

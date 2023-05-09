@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -40,7 +41,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -166,9 +166,9 @@ public class TestSnapshotDeletion {
         .getNumSnapshottableDirs());
     assertEquals(0, cluster.getNamesystem().getSnapshotManager()
         .getSnapshottableDirs().length);
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     cluster.restartNameNode(0);
   }
 
@@ -1141,10 +1141,10 @@ public class TestSnapshotDeletion {
     hdfs.allowSnapshot(foo);
 
     hdfs.createSnapshot(foo, snapshotName);
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
 
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
     hdfs.deleteSnapshot(foo, snapshotName);
     hdfs.delete(bar, true);
     hdfs.delete(foo, true);
@@ -1185,9 +1185,9 @@ public class TestSnapshotDeletion {
     hdfs.deleteSnapshot(st, "s1");
     hdfs.deleteSnapshot(st, "s2");
 
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.restartNameNodes();
   }
@@ -1270,9 +1270,9 @@ public class TestSnapshotDeletion {
     exception.expectMessage(error);
     hdfs.concat(dest, files);
 
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.restartNameNodes();
   }
@@ -1307,9 +1307,9 @@ public class TestSnapshotDeletion {
 
     hdfs.deleteSnapshot(st, "s1");
 
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.restartNameNodes();
   }
@@ -1351,9 +1351,9 @@ public class TestSnapshotDeletion {
 
     hdfs.deleteSnapshot(st, "s1");
 
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.setSafeMode(SafeModeAction.ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
 
     cluster.restartNameNodes();
   }
