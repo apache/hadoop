@@ -25,6 +25,55 @@ references to `FSDataInputStream` and its subclasses.
 It is used to initate a (potentially asynchronous) operation to open an existing
 file for reading.
 
+
+## <a name="History"></a> History
+
+### Hadoop 3.3.0: API introduced
+
+[HADOOP-15229](https://issues.apache.org/jira/browse/HADOOP-15229)
+_Add FileSystem builder-based openFile() API to match createFile()_
+
+* No `opt(String key, long value)` method was available.
+* the `withFileStatus(status)` call required a non-null parameter.
+* Sole Filesystem to process options and file status was S3A;
+* Only the s3a specific options were the S3 select and `fs.s3a.experimental.input.fadvise`
+* S3A Filesystem raised `IllegalArgumentException` if a file status was passed in
+  and the path of the filestatus did not match the path of the `openFile(path)` call.
+
+This is the baseline implementation. To write code guaranteed to compile against this version,
+use the `opt(String, String)` and `must(String, String)` methods, converting numbers to
+string explicitly.
+
+```java
+fs.open("s3a://bucket/file")
+  .opt("fs.option.openfile.length", Long.toString(length))
+  .build().get()
+```
+
+### Hadoop 3.3.5: standardization and expansion
+
+[HADOOP-16202](https://issues.apache.org/jira/browse/HADOOP-16202)
+_Enhance openFile() for better read performance against object stores_
+
+* `withFileStatus(null)` required to be accepted (and ignored)
+* only the filename part of any supplied FileStatus path must match the
+  filename passed in on `openFile(path)`.
+* An `opt(String key, long value)` option was added. *This is now deprecated as it
+caused regression
+* Standard `fs.option.openfile` options defined.
+* S3A FS to use openfile length option, seek start/end options not _yet_ used.
+* Azure ABFS connector takes a supplied `VersionedFileStatus` and omits any
+  HEAD probe for the object.
+
+### Hadoop 3.3.6: API change to address operator overload bugs.
+
+new `optLong()`, `optDouble()`, `mustLong()` and `mustDouble()` builder methods.
+
+* See [HADOOP-18724](https://issues.apache.org/jira/browse/HADOOP-18724) _Open file fails with NumberFormatException for S3AFileSystem_,
+  which was somehow caused by the overloaded `opt(long)`.
+* Specification updated to declare that unparseable numbers MUST be treated as "unset" and the default
+  value used instead.
+
 ## Invariants
 
 The `FutureDataInputStreamBuilder` interface does not require parameters or
@@ -167,7 +216,8 @@ a feature which is recognized but not supported in the specific
 
 Parsing of numeric values SHOULD trim any string and if the value
 cannot be parsed as a number, downgrade to any default value supplied.
-This is to address [HADOOP-18724](https://issues.apache.org/jira/browse/HADOOP-18724) _Open file fails with NumberFormatException for S3AFileSystem_, which was cause by the overloaded `opt()`
+This is to address [HADOOP-18724](https://issues.apache.org/jira/browse/HADOOP-18724)
+_Open file fails with NumberFormatException for S3AFileSystem_, which was cause by the overloaded `opt()`
 builder parameter binding to `opt(String, double)` rather than `opt(String, long)` when a long
 value was passed in.
 
@@ -355,7 +405,7 @@ _Futher reading_
 * [Linux fadvise()](https://linux.die.net/man/2/fadvise).
 * [Windows `CreateFile()`](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea#caching-behavior)
 
-#### <a name="read.policy."></a> Read Policy `adaptive`
+#### <a name="read.policy.adaptive"></a> Read Policy `adaptive`
 
 Try to adapt the seek policy to the read pattern of the application.
 
@@ -698,42 +748,3 @@ public T load(FileSystem fs,
  }
 }
 ```
-
-## <a name="History"></a> History
-
-### Hadoop 3.3.0: API introduced 
-
-[HADOOP-15229](https://issues.apache.org/jira/browse/HADOOP-15229)
-_Add FileSystem builder-based openFile() API to match createFile()_
-
-* No `opt(String key, long value)` method was available.
-* the `withFileStatus(status)` call required a non-null parameter.
-* Sole Filesystem to process options and file status was S3A;
-* Only the s3a specific options were the S3 select and `fs.s3a.experimental.input.fadvise`
-* S3A Filesystem raised `IllegalArgumentException` if a file status was passed in
-  and the path of the filestatus did not match the path of the `openFile(path)` call.
-
-
-### Hadoop 3.3.5: standardization and expansion
-
-[HADOOP-16202](https://issues.apache.org/jira/browse/HADOOP-16202)
-_Enhance openFile() for better read performance against object stores_
-
-* `withFileStatus(null)` required to be accepted (and ignored)
-* only the filename part of any supplied FileStatus path must match the 
-  `openFile(path)`.
-* An `opt(String key, long value)` option was added. *This is now deprecated as it
-caused regressions.
-* Standard openfile options defined.
-* S3A FS to use openfile length option, seek start/end not yet used.
-* Azure ABFS connector takes a supplied `VersionedFileStatus` and omits any
-  HEAD probe for the object.
-
-### Hadoop 3.3.6: API change to address operator overload bugs.
-
-new `optLong()`, `optDouble()`, `mustLong()` and `mustDouble()` builder methods.
-
-* See [HADOOP-18724](https://issues.apache.org/jira/browse/HADOOP-18724) _Open file fails with NumberFormatException for S3AFileSystem_, which was cause by the overloaded `opt()`
-* Specification updated to declare that unparseable numbers should be treated as "unset" and the default
-  value used.
-

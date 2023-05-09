@@ -83,7 +83,7 @@ public class FSBuilderSupport {
       return options.getLong(key, defVal);
     } catch (NumberFormatException e) {
       final String msg = String.format(
-          "The option %s has a value \"%s\" which is not a long integer; using the default value %s",
+          "The option %s value \"%s\" is not a long integer; using the default value %s",
           key, v, defVal);
       // not a long,
       LOG_PARSE_ERROR.warn(msg);

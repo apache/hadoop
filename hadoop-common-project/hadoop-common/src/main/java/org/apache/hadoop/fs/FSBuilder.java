@@ -110,7 +110,7 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @param key key.
    * @param value value.
    * @return generic type B.
-   * @see #opt(String, String)
+   * @deprecated use  {@link #optLong(String, long)} where possible.
    */
   B opt(@Nonnull String key, long value);
 
@@ -193,8 +193,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
   B must(@Nonnull String key, int value);
 
   /**
-   * Set mandatory long option, despite passing in a floating
-   * point value.
+   * This parameter is converted to a long and passed
+   * to {@link #mustLong(String, long)} -all
+   * decimal precision is lost.
    *
    * @param key key.
    * @param value value.

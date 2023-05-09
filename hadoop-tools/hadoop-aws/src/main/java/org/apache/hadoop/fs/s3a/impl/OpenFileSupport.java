@@ -262,7 +262,7 @@ public class OpenFileSupport {
     }
 
     // read end is the open file value
-    fileLength = builderSupport.getPositiveLong( FS_OPTION_OPENFILE_LENGTH, fileLength);
+    fileLength = builderSupport.getPositiveLong(FS_OPTION_OPENFILE_LENGTH, fileLength);
 
     // if the read end has come from options, use that
     // in creating a file status
