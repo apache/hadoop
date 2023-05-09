@@ -305,6 +305,8 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234",
         ResourceTypesTestHelper.newResource(10 * GB, 4, nameToValues));
 
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 20, 8, nameToValues);
+
     nameToValues.clear();
     // Register NM2 with 10GB memory, 4 CPU and 0 GPU
     rm.registerNode("127.0.0.1:1235",
@@ -460,6 +462,8 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
 
     SchedulerEvent addAppEvent =
         new AppAddedSchedulerEvent(appId, "a", "user1");
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 20, 20,
+        Collections.singletonMap("res_1", "80"));
     cs.handle(addAppEvent);
     SchedulerEvent addAttemptEvent =
         new AppAttemptAddedSchedulerEvent(appAttemptId, false);

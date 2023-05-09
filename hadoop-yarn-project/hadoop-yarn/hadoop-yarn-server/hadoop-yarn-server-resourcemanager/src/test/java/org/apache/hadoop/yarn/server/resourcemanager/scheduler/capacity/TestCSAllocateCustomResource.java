@@ -103,7 +103,6 @@ public class TestCSAllocateCustomResource {
    * Test containers request custom resource.
    * */
   @Test
-  @Ignore //TODO fix it
   public void testCapacitySchedulerJobWhenConfigureCustomResourceType()
       throws Exception {
     // reset resource types

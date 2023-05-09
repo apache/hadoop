@@ -144,6 +144,9 @@ public class MockRM extends ResourceManager {
       boolean useRealElector) {
     this(conf, store, true, useRealElector);
   }
+  public MockRM(ResourceManager resourceManager) {
+    this(resourceManager.getConfig(), resourceManager.getRMContext().getStateStore(), true, false);
+  }
 
   public MockRM(Configuration conf, RMStateStore store,
       boolean useNullRMNodeLabelsManager, boolean useRealElector) {

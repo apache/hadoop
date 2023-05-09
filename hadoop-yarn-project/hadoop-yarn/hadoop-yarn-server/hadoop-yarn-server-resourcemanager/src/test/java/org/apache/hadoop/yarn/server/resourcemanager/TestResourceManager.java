@@ -65,7 +65,7 @@ public class TestResourceManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestResourceManager.class);
 
-  private ResourceManager resourceManager = null;
+  private MockRM resourceManager = null;
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -76,7 +76,7 @@ public class TestResourceManager {
     YarnConfiguration conf = new YarnConfiguration();
     UserGroupInformation.setConfiguration(conf);
     DefaultMetricsSystem.setMiniClusterMode(true);
-    resourceManager = new ResourceManager();
+    resourceManager = new MockRM();
     resourceManager.init(conf);
     resourceManager.getRMContext().getContainerTokenSecretManager().rollMasterKey();
     resourceManager.getRMContext().getNMTokenSecretManager().rollMasterKey();
@@ -103,6 +103,8 @@ public class TestResourceManager {
         new NodeAddedSchedulerEvent(resourceManager.getRMContext()
             .getRMNodes().get(nm.getNodeId()));
     resourceManager.getResourceScheduler().handle(nodeAddEvent1);
+    CapacitySchedulerTestUtilities
+        .getCapacityScheduler(resourceManager, capability.getMemory());
     return nm;
   }
 
@@ -302,7 +304,7 @@ public class TestResourceManager {
             AuthenticationFilterInitializer.class.getName() + ", "
                 + this.getClass().getName() };
     for (String filterInitializer : filterInitializers) {
-      resourceManager = new ResourceManager() {
+      resourceManager = new MockRM() {
         @Override
         protected void doSecureLogin() throws IOException {
           // Skip the login.
@@ -341,7 +343,7 @@ public class TestResourceManager {
     String[] simpleFilterInitializers =
         { "", StaticUserWebFilter.class.getName() };
     for (String filterInitializer : simpleFilterInitializers) {
-      resourceManager = new ResourceManager();
+      resourceManager = new MockRM();
       Configuration conf = new YarnConfiguration();
       conf.set(filterInitializerConfKey, filterInitializer);
       try {

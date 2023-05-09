@@ -56,6 +56,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsMan
 import org.junit.Assert;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfAmbiguousQueue;
@@ -240,10 +243,16 @@ public final class CapacitySchedulerTestUtilities {
   }
 
   public static CapacityScheduler getCapacityScheduler(MockRM rm, int memoryGb) {
-    return getCapacityScheduler(rm, memoryGb, 16);
+    return getCapacityScheduler(rm, memoryGb, 16, Collections.emptyMap());
   }
 
   public static CapacityScheduler getCapacityScheduler(MockRM rm, int memoryGb, int cores) {
+    return getCapacityScheduler(rm, memoryGb, cores, Collections.emptyMap());
+  }
+
+  public static CapacityScheduler getCapacityScheduler(
+      MockRM rm, int memoryGb, int cores, Map<String, String> nameToValues
+  ) {
     if(!(rm.getResourceScheduler() instanceof CapacityScheduler)) {
       return null;
     }
@@ -251,7 +260,11 @@ public final class CapacitySchedulerTestUtilities {
     CapacitySchedulerQueueCapacityHandler queueController =
         new CapacitySchedulerQueueCapacityHandler(mgr);
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
-    Resource clusterResource = Resource.newInstance(memoryGb * GB, cores);
+    Map<String, Long> others = new HashMap<>(nameToValues.size());
+    for (Map.Entry<String, String> nameToValue : nameToValues.entrySet()) {
+      others.put(nameToValue.getKey(), Long.valueOf(nameToValue.getValue()));
+    }
+    Resource clusterResource = Resource.newInstance(memoryGb * GB, cores, others);
     mgr.setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, clusterResource);
     queueController.updateRoot(cs.getQueue("root"), clusterResource);
     queueController.updateChildren(clusterResource, cs.getQueue("root"));
