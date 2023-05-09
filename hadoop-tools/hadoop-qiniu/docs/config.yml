@@ -144,3 +144,6 @@ client:
     singleRequestLimit: 1000  # 单次列举请求最大拉取列表限制，默认1000条
     bufferSize: 100   # 生产者队列大小
     offerTimeout: 10  # 当生产者队列满后的自旋重试的等待时间
+
+logger:
+  level: "INFO" # 日志级别调整，默认为INFO

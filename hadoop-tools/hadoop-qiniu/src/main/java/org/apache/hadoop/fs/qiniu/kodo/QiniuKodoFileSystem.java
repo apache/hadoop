@@ -16,7 +16,11 @@ import org.apache.hadoop.fs.qiniu.kodo.upload.QiniuKodoOutputStream;
 import org.apache.hadoop.fs.qiniu.kodo.util.QiniuKodoUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
+import org.apache.log4j.lf5.LogLevel;
+import org.apache.log4j.lf5.LogLevelFormatException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +49,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     @Override
     public void initialize(URI name, Configuration conf) throws IOException {
         super.initialize(name, conf);
+        LOG.debug("initialize QiniuKodoFileSystem with uri: {}", name);
         setConf(conf);
         this.fsConfig = new QiniuKodoFsConfig(getConf());
         setLog4jConfig(fsConfig);
@@ -72,17 +77,9 @@ public class QiniuKodoFileSystem extends FileSystem {
     }
 
     private static void setLog4jConfig(QiniuKodoFsConfig fsConfig) {
-        // 首先加载resources中的日志配置文件
-
-        // 如果用户在配置文件中指定了log4j配置文件，则载入用户指定的配置文件
-        if (fsConfig.logger.log4jConfigFile != null) {
-            PropertyConfigurator.configure(fsConfig.logger.log4jConfigFile);
-        } else {
-            // 如果用户没有指定log4j配置文件，则尝试使用用户指定的日志级别
-            String logLevel = fsConfig.logger.logLevel;
-            Properties props = new Properties();
-            props.setProperty("log4j.rootLogger", String.format("%s, console", logLevel));
-            PropertyConfigurator.configure(props);
+        org.apache.log4j.Logger rootLogger = LogManager.getRootLogger();
+        if (fsConfig.logger.level != null) {
+            rootLogger.setLevel(Level.toLevel(fsConfig.logger.level));
         }
     }
 
