@@ -88,6 +88,8 @@ public final class DistCpConstants {
   public static final String CONF_LABEL_DIRECT_WRITE = "distcp.direct.write";
   public static final String CONF_LABEL_UPDATE_ROOT =
           "distcp.update.root.attributes";
+  public static final String CONF_LABEL_CHUNK_CONCAT_THREAD_POOL_SIZE =
+      "distcp.chunk.concat.thread.pool.size";
 
   /* Total bytes to be copied. Updated by copylisting. Unfiltered count */
   public static final String CONF_LABEL_TOTAL_BYTES_TO_BE_COPIED = "mapred.total.bytes.expected";
