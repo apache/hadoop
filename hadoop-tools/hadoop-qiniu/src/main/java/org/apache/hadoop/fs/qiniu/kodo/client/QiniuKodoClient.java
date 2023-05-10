@@ -12,6 +12,7 @@ import com.qiniu.util.Auth;
 import com.qiniu.util.StringMap;
 import com.qiniu.util.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.BatchOperationConsumer;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.ListingProducer;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.BatchOperator;
@@ -250,7 +251,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         return Arrays.asList(listing.items);
     }
 
-    public Iterator<FileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException {
+    public RemoteIterator<FileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException {
         ListProducerConfig listConfig = fsConfig.client.list;
         // 消息队列
         BlockingQueue<FileInfo> fileInfoQueue = new LinkedBlockingQueue<>(listConfig.bufferSize);
@@ -265,19 +266,39 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
         // 生产者线程
         Future<Exception> future = service.submit(producer);
-
-        return new Iterator<FileInfo>() {
+        return new RemoteIterator<FileInfo>() {
             @Override
-            public boolean hasNext() {
-                if (!fileInfoQueue.isEmpty()) {
-                    return true;
+            public boolean hasNext() throws IOException {
+                while (true) {
+                    // 如果队列不为空，返回 true 表示有下一个
+                    if (!fileInfoQueue.isEmpty()) {
+                        return true;
+                    }
+
+                    // 若已完成且队列为空，表示没有下一个了
+                    if (future.isDone() && fileInfoQueue.isEmpty()) {
+                        try {
+                            Exception e = future.get();
+                            // 若生产者线程抛出异常，这里抛出IOException
+                            if (e != null) {
+                                throw new IOException(e);
+                            }
+                        } catch (InterruptedException | ExecutionException e) {
+                            throw new IOException(e);
+                        }
+                        return false;
+                    }
+                    // 若未完成，且队列为空，则等待一段时间
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        return false;
+                    }
                 }
-                // 生产缓冲区队列为空，且生产任务完成，则没有下一个了，返回false
-                return !future.isDone();
             }
 
             @Override
-            public FileInfo next() {
+            public FileInfo next() throws IOException {
                 if (!hasNext()) {
                     return null;
                 }
@@ -285,7 +306,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
                 try {
                     return fileInfoQueue.poll(Long.MAX_VALUE, TimeUnit.SECONDS);
                 } catch (InterruptedException e) {
-                    return null;
+                    throw new IOException(e);
                 }
             }
         };

@@ -390,7 +390,8 @@ public class QiniuKodoFileSystem extends FileSystem {
     public RemoteIterator<FileStatus> listStatusIterator(Path path) throws IOException {
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         key = QiniuKodoUtils.keyToDirKey(key);
-        Iterator<FileInfo> it = kodoClient.listStatusIterator(key, true);
+
+        RemoteIterator<FileInfo> it = kodoClient.listStatusIterator(key, true);
         return new RemoteIterator<FileStatus>() {
             @Override
             public boolean hasNext() throws IOException {
@@ -548,7 +549,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     private FileStatus fileInfoToFileStatus(FileInfo file) {
         if (file == null) return null;
 
-        LOG.debug("file conv, key:" + file.key);
+        LOG.debug("file stat, key:" + file.key);
 
         long putTime = file.putTime / 10000;
         boolean isDir = QiniuKodoUtils.isKeyDir(file.key);

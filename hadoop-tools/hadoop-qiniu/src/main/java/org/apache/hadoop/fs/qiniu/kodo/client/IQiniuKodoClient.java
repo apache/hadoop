@@ -2,6 +2,7 @@ package org.apache.hadoop.fs.qiniu.kodo.client;
 
 import com.qiniu.http.Response;
 import com.qiniu.storage.model.FileInfo;
+import org.apache.hadoop.fs.RemoteIterator;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,7 +24,7 @@ public interface IQiniuKodoClient {
 
     List<FileInfo> listStatus(String key, boolean useDirectory) throws IOException;
 
-    Iterator<FileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException;
+    RemoteIterator<FileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException;
 
     boolean copyKey(String oldKey, String newKey) throws IOException;
 

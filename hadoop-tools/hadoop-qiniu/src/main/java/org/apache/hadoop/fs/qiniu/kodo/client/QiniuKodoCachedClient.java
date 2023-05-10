@@ -2,6 +2,7 @@ package org.apache.hadoop.fs.qiniu.kodo.client;
 
 import com.qiniu.http.Response;
 import com.qiniu.storage.model.FileInfo;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.qiniu.kodo.util.LRUCache;
 import org.apache.hadoop.fs.qiniu.kodo.util.QiniuKodoUtils;
 
@@ -149,7 +150,7 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
     }
 
     @Override
-    public Iterator<FileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException {
+    public RemoteIterator<FileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException {
         return source.listStatusIterator(prefixKey, useDirectory);
     }
 }
