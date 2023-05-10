@@ -2180,11 +2180,11 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
-  public FsStatus getStatus(Path f) throws IOException {
+  public FsStatus getStatus(Path path) throws IOException {
     statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.GET_STATUS);
     final GetOpParam.Op op = GetOpParam.Op.GETSTATUS;
-    return new FsPathResponseRunner<FsStatus>(op, f) {
+    return new FsPathResponseRunner<FsStatus>(op, path) {
       @Override
       FsStatus decodeResponse(Map<?, ?> json) {
         return JsonUtilClient.toFsStatus(json);

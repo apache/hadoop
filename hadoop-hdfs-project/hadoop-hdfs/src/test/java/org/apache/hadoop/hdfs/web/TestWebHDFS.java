@@ -2260,26 +2260,31 @@ public class TestWebHDFS {
   public void testFsStatus() throws Exception {
     final Configuration conf = WebHdfsTestUtil.createConf();
     try {
-      cluster = new MiniDFSCluster.Builder(conf)
-          .numDataNodes(1)
-          .build();
+      cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
 
       final WebHdfsFileSystem webHdfs =
           WebHdfsTestUtil.getWebHdfsFileSystem(conf,
               WebHdfsConstants.WEBHDFS_SCHEME);
 
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+
       final String path = "/foo";
       OutputStream os = webHdfs.create(new Path(path));
       os.write(new byte[1024]);
 
-      FsStatus fsStatus = webHdfs.getStatus(new Path("/"));
-      Assert.assertNotNull(fsStatus);
+      FsStatus webHdfsFsStatus = webHdfs.getStatus(new Path("/"));
+      Assert.assertNotNull(webHdfsFsStatus);
 
-      //used, free and capacity are non-negative longs
-      Assert.assertTrue(fsStatus.getUsed() >= 0);
-      Assert.assertTrue(fsStatus.getRemaining() >= 0);
-      Assert.assertTrue(fsStatus.getCapacity() >= 0);
+      FsStatus dfsFsStatus = dfs.getStatus(new Path("/"));
+      Assert.assertNotNull(dfsFsStatus);
+
+      //Validate used free and capacity are the same as DistributedFileSystem
+      Assert.assertEquals(webHdfsFsStatus.getUsed(), dfsFsStatus.getUsed());
+      Assert.assertEquals(webHdfsFsStatus.getRemaining(),
+          dfsFsStatus.getRemaining());
+      Assert.assertEquals(webHdfsFsStatus.getCapacity(),
+          dfsFsStatus.getCapacity());
     } finally {
       cluster.shutdown();
     }

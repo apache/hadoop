@@ -1205,9 +1205,9 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileLi
 
         {
             "FsStatus": {
-                "used": 0,
-                "remaining": 0,
-                "capacity":0
+                "used": 29229154304,
+                "remaining": 292893392896,
+                "capacity":322122547200
             }
         }
 
@@ -3169,9 +3169,9 @@ var blockLocationProperties =
 ```json
 {
   "FsStatus": {
-    "used": 0,
-    "remaining": 0,
-    "capacity": 0
+    "used": 29229154304,
+    "remaining": 292893392896,
+    "capacity": 322122547200
   }
 }
 ```

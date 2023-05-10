@@ -77,6 +77,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -1399,8 +1400,10 @@ public class NamenodeWebHdfsMethods {
     }
     case GETSTATUS: {
       long[] states = cp.getStats();
-      FsStatus status = new FsStatus(getStateAtIndex(states, 0),
-          getStateAtIndex(states, 1), getStateAtIndex(states, 2));
+      FsStatus status = new FsStatus(
+          DFSClient.getStateAtIndex(states, 0),
+          DFSClient.getStateAtIndex(states, 1),
+          DFSClient.getStateAtIndex(states, 2));
       final String js = JsonUtil.toJsonString(status);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
@@ -1543,9 +1546,6 @@ public class NamenodeWebHdfsMethods {
     };
   }
 
-  private long getStateAtIndex(long[] states, int index) {
-    return states.length > index ? states[index] : -1;
-  }
 
   /** Handle HTTP DELETE request for the root. */
   @DELETE

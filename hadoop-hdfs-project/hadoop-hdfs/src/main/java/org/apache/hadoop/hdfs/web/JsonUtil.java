@@ -727,13 +727,11 @@ public class JsonUtil {
     return m;
   }
 
-  public static String toJsonString(FsStatus status)
-      throws IOException {
+  public static String toJsonString(FsStatus status) {
     return toJsonString(FsStatus.class, toJsonMap(status));
   }
 
-  public static Map<String, Object> toJsonMap(FsStatus status)
-      throws IOException {
+  public static Map<String, Object> toJsonMap(FsStatus status) {
     if (status == null) {
       return null;
     }
