@@ -549,7 +549,7 @@ public class HttpFSServer {
     case GETFILELINKSTATUS: {
       FSOperations.FSFileLinkStatus command =
           new FSOperations.FSFileLinkStatus(path);
-      Map js = fsExecute(user, command);
+      @SuppressWarnings("rawtypes") Map js = fsExecute(user, command);
       AUDIT_LOG.info("[{}]", path);
       response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       break;

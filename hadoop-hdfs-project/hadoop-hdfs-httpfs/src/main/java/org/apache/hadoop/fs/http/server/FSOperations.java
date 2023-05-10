@@ -2271,9 +2271,10 @@ public final class FSOperations {
    * system operation.
    */
   @InterfaceAudience.Private
+  @SuppressWarnings("rawtypes")
   public static class FSFileLinkStatus
       implements FileSystemAccess.FileSystemExecutor<Map> {
-    private Path path;
+    final private Path path;
 
     /**
      * Creates a linkFile-status executor.

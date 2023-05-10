@@ -2062,7 +2062,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
 
   private void testGetFileLinkStatus() throws Exception {
     if (isLocalFS()) {
-      // do not test the the symlink for local FS.
+      // do not test the symlink for local FS.
       return;
     }
     FileSystem fs = FileSystem.get(getProxiedFSConf());

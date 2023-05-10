@@ -1745,15 +1745,15 @@ public class HttpFSFileSystem extends FileSystem
   }
 
   @Override
-  public FileStatus getFileLinkStatus(final Path f) throws IOException {
+  public FileStatus getFileLinkStatus(final Path path) throws IOException {
     Map<String, String> params = new HashMap<>();
     params.put(OP_PARAM, Operation.GETFILELINKSTATUS.toString());
     HttpURLConnection conn =
-        getConnection(Operation.GETFILELINKSTATUS.getMethod(), params, f, true);
+        getConnection(Operation.GETFILELINKSTATUS.getMethod(), params, path, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     HdfsFileStatus status = JsonUtilClient.toFileStatus(json, true);
-    return status.makeQualified(getUri(), f);
+    return status.makeQualified(getUri(), path);
   }
 
   @VisibleForTesting
