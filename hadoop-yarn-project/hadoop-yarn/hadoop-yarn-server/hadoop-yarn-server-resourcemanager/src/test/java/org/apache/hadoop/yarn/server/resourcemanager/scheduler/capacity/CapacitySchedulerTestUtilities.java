@@ -54,7 +54,6 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.junit.Assert;
-import org.junit.platform.commons.util.CollectionUtils;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -269,11 +268,11 @@ public final class CapacitySchedulerTestUtilities {
     Resource clusterResource = Resource.newInstance(memoryGb * GB, cores, others);
     mgr.setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, clusterResource);
     queueController.updateRoot(cs.getQueue("root"), clusterResource);
-    magic(queueController, clusterResource, cs.getQueue("root"));
+    updateChildren(queueController, clusterResource, cs.getQueue("root"));
     return cs;
   }
 
-  private static void magic(
+  public static void updateChildren(
       CapacitySchedulerQueueCapacityHandler queueController,
       Resource clusterResource,
       CSQueue queue
@@ -284,7 +283,7 @@ public final class CapacitySchedulerTestUtilities {
       return;
     }
     for (CSQueue child : childs) {
-      magic(queueController, clusterResource, child);
+      updateChildren(queueController, clusterResource, child);
     }
   }
 }

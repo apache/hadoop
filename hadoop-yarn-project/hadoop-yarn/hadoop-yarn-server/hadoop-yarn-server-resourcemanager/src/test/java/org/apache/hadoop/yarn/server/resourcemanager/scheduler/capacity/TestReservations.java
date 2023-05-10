@@ -35,7 +35,6 @@ import java.util.Map;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import org.junit.Ignore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -79,7 +78,6 @@ import org.mockito.Mockito;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils.toSchedulerKey;
 
-@Ignore //TODO fixit
 public class TestReservations {
 
   private static final Logger LOG =
@@ -1292,6 +1290,13 @@ public class TestReservations {
     app_0.updateResourceRequests(Collections.singletonList(TestUtils
         .createResourceRequest(ResourceRequest.ANY, 5 * GB, 2, true,
             priorityReduce, recordFactory)));
+
+
+    CapacitySchedulerQueueCapacityHandler queueController =
+        new CapacitySchedulerQueueCapacityHandler(rmContext.getNodeLabelManager());
+    Resource clusterResource2 = Resource.newInstance(1000, 1000);
+    queueController.updateRoot(cs.getQueue("root"), clusterResource2);
+    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource2, cs.getQueue("root"));
 
     // Start testing...
     // Only AM
