@@ -1215,7 +1215,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     ALLOW_SNAPSHOT, DISALLOW_SNAPSHOT, DISALLOW_SNAPSHOT_EXCEPTION,
     FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST,
     GET_SNAPSHOT_LIST, GET_SERVERDEFAULTS, CHECKACCESS, SETECPOLICY,
-    SATISFYSTORAGEPOLICY, GET_SNAPSHOT_DIFF_LISTING, GETFILEBLOCKLOCATIONS
+    SATISFYSTORAGEPOLICY, GET_SNAPSHOT_DIFF_LISTING, GETFILEBLOCKLOCATIONS,
+    GETFILELINKSTATUS
   }
 
   private void operation(Operation op) throws Exception {
@@ -1357,6 +1358,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case GETFILEBLOCKLOCATIONS:
       testGetFileBlockLocations();
+      break;
+    case GETFILELINKSTATUS:
+      testGetFileLinkStatus();
       break;
     }
 
@@ -2054,6 +2058,27 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
         fs.delete(path, true);
       }
     }
+  }
+
+  private void testGetFileLinkStatus() throws Exception {
+    if (isLocalFS()) {
+      // do not test the symlink for local FS.
+      return;
+    }
+    FileSystem fs = FileSystem.get(getProxiedFSConf());
+
+    Path root = new Path(getProxiedFSTestDir(), "httpFSTest");
+    Path file = new Path(root, "file");
+    Path linkToFile = new Path(root, "linkToFile");
+
+    OutputStream os = fs.create(file);
+    os.write(1);
+    fs.createSymlink(file, linkToFile, false);
+
+    fs = this.getHttpFSFileSystem();
+
+    assertFalse(fs.getFileLinkStatus(file).isSymlink());
+    assertTrue(fs.getFileLinkStatus(linkToFile).isSymlink());
   }
 
   private void assertHttpFsReportListingWithDfsClient(SnapshotDiffReportListing diffReportListing,

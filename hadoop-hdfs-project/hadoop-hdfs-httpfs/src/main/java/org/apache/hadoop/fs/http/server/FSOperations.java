@@ -2265,4 +2265,39 @@ public final class FSOperations {
           "because the file system is not DistributedFileSystem.");
     }
   }
+
+  /**
+   * Executor that performs a linkFile-status FileSystemAccess files
+   * system operation.
+   */
+  @InterfaceAudience.Private
+  @SuppressWarnings("rawtypes")
+  public static class FSFileLinkStatus
+      implements FileSystemAccess.FileSystemExecutor<Map> {
+    final private Path path;
+
+    /**
+     * Creates a linkFile-status executor.
+     *
+     * @param path the path to retrieve the status.
+     */
+    public FSFileLinkStatus(String path) {
+      this.path = new Path(path);
+    }
+
+    /**
+     * Executes the filesystem getFileLinkStatus operation and returns the
+     * result in a JSON Map.
+     *
+     * @param fs filesystem instance to use.
+     * @return a Map object (JSON friendly) with the file status.
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Map execute(FileSystem fs) throws IOException {
+      FileStatus status = fs.getFileLinkStatus(path);
+      HttpFSServerWebApp.get().getMetrics().incrOpsStat();
+      return toJson(status);
+    }
+  }
 }
