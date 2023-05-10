@@ -133,24 +133,21 @@ else (ISAL_LIBRARY)
     ENDIF(REQUIRE_ISAL)
 endif (ISAL_LIBRARY)
 
-# Build with PMDK library if -Drequire.pmdk option is specified.
-if(REQUIRE_PMDK)
-    set(STORED_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
-    hadoop_set_find_shared_library_version("1")
-    find_library(PMDK_LIBRARY
-        NAMES pmem
-        PATHS ${CUSTOM_PMDK_LIB} /usr/lib /usr/lib64)
-    set(CMAKE_FIND_LIBRARY_SUFFIXES ${STORED_CMAKE_FIND_LIBRARY_SUFFIXES})
-
-    if(PMDK_LIBRARY)
-        GET_FILENAME_COMPONENT(HADOOP_PMDK_LIBRARY ${PMDK_LIBRARY} REALPATH)
-        set(PMDK_SOURCE_FILES ${SRC}/io/nativeio/pmdk_load.c)
-    else(PMDK_LIBRARY)
+#Require PMDK
+set(STORED_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+hadoop_set_find_shared_library_version("1")
+find_library(PMDK_LIBRARY
+    NAMES pmem
+    PATHS ${CUSTOM_PMDK_LIB} /usr/lib /usr/lib64)
+set(CMAKE_FIND_LIBRARY_SUFFIXES ${STORED_CMAKE_FIND_LIBRARY_SUFFIXES})
+if(PMDK_LIBRARY)
+    GET_FILENAME_COMPONENT(HADOOP_PMDK_LIBRARY ${PMDK_LIBRARY} NAME)
+    set(PMDK_SOURCE_FILES ${SRC}/io/nativeio/pmdk_load.c)
+else(PMDK_LIBRARY)
+    if(REQUIRE_PMDK)
         MESSAGE(FATAL_ERROR "The required PMDK library is NOT found. PMDK_LIBRARY=${PMDK_LIBRARY}")
-    endif(PMDK_LIBRARY)
-else(REQUIRE_PMDK)
-    MESSAGE(STATUS "Build without PMDK support.")
-endif(REQUIRE_PMDK)
+    endif(REQUIRE_PMDK)
+endif(PMDK_LIBRARY)
 
 # Build hardware CRC32 acceleration, if supported on the platform.
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^i.86$" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64")

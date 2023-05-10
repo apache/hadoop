@@ -1639,12 +1639,12 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_pm
 
 JNIEXPORT jstring JNICALL Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_getPmdkLibPath
   (JNIEnv * env, jclass thisClass) {
-    jstring libpath = NULL;
-
-    #ifdef HADOOP_PMDK_LIBRARY
-      libpath = (*env)->NewStringUTF(env, HADOOP_PMDK_LIBRARY);
-    #endif
-    return libpath;
+    if (pmdkLoader == NULL) {
+      THROW(env, "java/lang/UnsatisfiedLinkError",
+                               "Unavailable: library not loaded yet");
+      return (jstring)NULL;
+    }
+    return (*env)->NewStringUTF(env, pmdkLoader->libname);
   }
 
 #ifdef __cplusplus
