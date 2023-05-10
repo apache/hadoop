@@ -363,7 +363,9 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
         Long.toString(ts));
   }
 
-  private void compareCommonHeaders(Map<String, String> params, String path1, String path2,
+  private void compareCommonHeaders(Map<String, String> params,
+      String path1,
+      String path2,
       AuditSpan span) throws IOException {
     assertMapContains(params, PARAM_PRINCIPAL,
         UserGroupInformation.getCurrentUser().getUserName());
