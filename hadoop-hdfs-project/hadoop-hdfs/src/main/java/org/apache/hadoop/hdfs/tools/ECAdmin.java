@@ -65,30 +65,7 @@ public class ECAdmin extends Configured implements Tool {
 
   @Override
   public int run(String[] args) throws Exception {
-    if (args.length == 0) {
-      AdminHelper.printUsage(false, NAME, COMMANDS);
-      ToolRunner.printGenericCommandUsage(System.err);
-      return 1;
-    }
-    final AdminHelper.Command command = AdminHelper.determineCommand(args[0],
-        COMMANDS);
-    if (command == null) {
-      System.err.println("Can't understand command '" + args[0] + "'");
-      if (!args[0].startsWith("-")) {
-        System.err.println("Command names must start with dashes.");
-      }
-      AdminHelper.printUsage(false, NAME, COMMANDS);
-      ToolRunner.printGenericCommandUsage(System.err);
-      return 1;
-    }
-    final List<String> argsList = new LinkedList<>();
-    argsList.addAll(Arrays.asList(args).subList(1, args.length));
-    try {
-      return command.run(getConf(), argsList);
-    } catch (IllegalArgumentException e) {
-      System.err.println(AdminHelper.prettifyException(e));
-      return -1;
-    }
+    return AdminHelper.runCommand(NAME, getConf(), args, COMMANDS);
   }
 
   /** Command to list the set of enabled erasure coding policies. */

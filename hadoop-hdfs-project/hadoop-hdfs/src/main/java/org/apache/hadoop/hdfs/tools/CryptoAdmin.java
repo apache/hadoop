@@ -56,32 +56,7 @@ public class CryptoAdmin extends Configured implements Tool {
 
   @Override
   public int run(String[] args) throws IOException {
-    if (args.length == 0) {
-      AdminHelper.printUsage(false, "crypto", COMMANDS);
-      ToolRunner.printGenericCommandUsage(System.err);
-      return 1;
-    }
-    final AdminHelper.Command command = AdminHelper.determineCommand(args[0],
-        COMMANDS);
-    if (command == null) {
-      System.err.println("Can't understand command '" + args[0] + "'");
-      if (!args[0].startsWith("-")) {
-        System.err.println("Command names must start with dashes.");
-      }
-      AdminHelper.printUsage(false, "crypto", COMMANDS);
-      ToolRunner.printGenericCommandUsage(System.err);
-      return 1;
-    }
-    final List<String> argsList = new LinkedList<String>();
-    for (int j = 1; j < args.length; j++) {
-      argsList.add(args[j]);
-    }
-    try {
-      return command.run(getConf(), argsList);
-    } catch (IllegalArgumentException e) {
-      System.err.println(prettifyException(e));
-      return -1;
-    }
+    return AdminHelper.runCommand("crypto", getConf(), args, COMMANDS);
   }
 
   public static void main(String[] argsArray) throws Exception {

@@ -63,32 +63,7 @@ public class CacheAdmin extends Configured implements Tool {
 
   @Override
   public int run(String[] args) throws IOException {
-    if (args.length == 0) {
-      AdminHelper.printUsage(false, "cacheadmin", COMMANDS);
-      ToolRunner.printGenericCommandUsage(System.err);
-      return 1;
-    }
-    AdminHelper.Command command = AdminHelper.determineCommand(args[0],
-        COMMANDS);
-    if (command == null) {
-      System.err.println("Can't understand command '" + args[0] + "'");
-      if (!args[0].startsWith("-")) {
-        System.err.println("Command names must start with dashes.");
-      }
-      AdminHelper.printUsage(false, "cacheadmin", COMMANDS);
-      ToolRunner.printGenericCommandUsage(System.err);
-      return 1;
-    }
-    List<String> argsList = new LinkedList<String>();
-    for (int j = 1; j < args.length; j++) {
-      argsList.add(args[j]);
-    }
-    try {
-      return command.run(getConf(), argsList);
-    } catch (IllegalArgumentException e) {
-      System.err.println(AdminHelper.prettifyException(e));
-      return -1;
-    }
+    return AdminHelper.runCommand("cacheadmin", getConf(), args, COMMANDS);
   }
 
   public static void main(String[] argsArray) throws Exception {
