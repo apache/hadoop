@@ -67,7 +67,7 @@ public class SubClusterCleaner implements Runnable {
         long lastHeartBeatTime = subClusterInfo.getLastHeartBeat();
 
         // We Only Check SubClusters in NEW and RUNNING states
-        if (!subClusterState.isUnusable()) {
+        if (subClusterState.isUsable()) {
           long heartBeatInterval = now.getTime() - lastHeartBeatTime;
           try {
             // HeartBeat Interval Exceeds Expiration Time
