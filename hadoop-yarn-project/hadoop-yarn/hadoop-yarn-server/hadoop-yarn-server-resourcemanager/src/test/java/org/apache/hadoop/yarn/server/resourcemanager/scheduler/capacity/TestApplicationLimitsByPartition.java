@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.setQueueHandler;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.updateChildren;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -45,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -157,6 +159,8 @@ public class TestApplicationLimitsByPartition {
     rm1.registerNode("h2:1234", 10 * GB); // label = y
     MockNM nm3 = rm1.registerNode("h3:1234", 10 * GB); // label = <empty>
 
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 30);
+
     // Submit app1 with 1Gb AM resource to Queue A1 for label X
     MockRMAppSubmissionData data5 =
         MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
@@ -209,6 +213,8 @@ public class TestApplicationLimitsByPartition {
     Assert.assertTrue("AM diagnostics not set properly",
         pendingApp.getDiagnostics().toString().contains(
             CSAMContainerLaunchDiagnosticsConstants.QUEUE_AM_RESOURCE_LIMIT_EXCEED));
+
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 10);
 
     // Now verify the same test case in Queue C1 where label is not configured.
     // Submit an app to Queue C1 with empty label
@@ -648,6 +654,8 @@ public class TestApplicationLimitsByPartition {
     rm1.registerNode("h4:1234", 10 * GB); // label = z
     MockNM nm5 = rm1.registerNode("h5:1234", 10 * GB); // label = <empty>
 
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 50);
+
     // Submit app1 with 2Gb AM resource to Queue A1 for label Y
     MockRMAppSubmissionData data4 =
         MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
@@ -700,6 +708,8 @@ public class TestApplicationLimitsByPartition {
     Assert.assertEquals(2, leafQueue.getNumActiveApplications());
     Assert.assertEquals(1, leafQueue.getNumPendingApplications());
 
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 10);
+
     // Submit app3 with 1Gb AM resource to Queue B1 (no_label)
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(GB, rm1)
@@ -737,7 +747,7 @@ public class TestApplicationLimitsByPartition {
      *  AM resource percent config for queue B1 -> 0.15
      *        ==> 1Gb is max-am-resource-limit
      *
-     *  Only one app will be activated and all othe will be pending.
+     *  Only one app will be activated and all other will be pending.
      */
     Assert.assertEquals(1, leafQueue.getNumActiveApplications());
     Assert.assertEquals(1, leafQueue.getNumPendingApplications());
@@ -784,8 +794,7 @@ public class TestApplicationLimitsByPartition {
 
     // Setup nodelabels
     queueManager.reinitConfiguredNodeLabels(csConf);
-    setQueueHandler(csContext);
-    csContext.getCapacitySchedulerQueueManager().reinitConfiguredNodeLabels(csConf);
+    queueManager = setQueueHandler(csContext);
 
     mgr.activateNode(NodeId.newInstance("h0", 0),
         Resource.newInstance(160 * GB, 16)); // default Label
@@ -793,6 +802,7 @@ public class TestApplicationLimitsByPartition {
         Resource.newInstance(160 * GB, 16)); // label x
     mgr.activateNode(NodeId.newInstance("h2", 0),
         Resource.newInstance(160 * GB, 16)); // label y
+
 
     // Say cluster has 100 nodes of 16G each
     Resource clusterResource = Resources.createResource(160 * GB);
@@ -806,6 +816,11 @@ public class TestApplicationLimitsByPartition {
     queueManager.setRootQueue(rootQueue);
     rootQueue.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+
+    CapacitySchedulerQueueCapacityHandler queueController =
+        new CapacitySchedulerQueueCapacityHandler(mgr);
+    queueController.updateRoot(rootQueue, clusterResource);
+    updateChildren(queueController, clusterResource, rootQueue);
 
     // Manipulate queue 'a'
     LeafQueue queue = TestLeafQueue.stubLeafQueue((LeafQueue) queues.get("b2"));
@@ -863,6 +878,7 @@ public class TestApplicationLimitsByPartition {
     //head room = queue capacity = 50 % 90% 160 GB * 0.25 (UL)
     Resource expectedHeadroom =
         Resources.createResource((int) (0.5 * 0.9 * 160 * 0.25) * GB, 1);
+    queueManager.setRootQueue(rootQueue);
     assertEquals(expectedHeadroom, app_0_0.getHeadroom());
 
     // Submit second application from user_0, check headroom
@@ -980,6 +996,9 @@ public class TestApplicationLimitsByPartition {
     // Effective AM limit after normalized to minimum resource 2048,7
 
     rm.registerNode("127.0.0.1:1234", clusterResource);
+
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 16, 64,
+        Collections.singletonMap("gpu", "0"));
 
     String userName = "user_0";
     ResourceScheduler scheduler = rm.getRMContext().getScheduler();

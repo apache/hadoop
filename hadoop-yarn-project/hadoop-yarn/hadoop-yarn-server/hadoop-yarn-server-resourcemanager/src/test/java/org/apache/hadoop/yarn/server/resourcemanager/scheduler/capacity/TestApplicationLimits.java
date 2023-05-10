@@ -31,7 +31,9 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -99,6 +101,8 @@ public class TestApplicationLimits {
   RMContext rmContext = null;
   private CapacitySchedulerContext csContext;
 
+  CapacitySchedulerQueueCapacityHandler queueController;
+
   @Before
   public void setUp() throws IOException {
     CapacitySchedulerConfiguration csConf = 
@@ -144,6 +148,11 @@ public class TestApplicationLimits {
     // Some default values
     doReturn(100).when(queue).getMaxApplications();
     doReturn(25).when(queue).getMaxApplicationsPerUser();
+
+
+    queueController = new CapacitySchedulerQueueCapacityHandler(rmContext.getNodeLabelManager());
+    queueController.updateRoot(root, clusterResource);
+    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, root);
   }
   
   private static final String A = "a";
@@ -304,7 +313,10 @@ public class TestApplicationLimits {
     		" aMResourceLimit=" + queue.getAMResourceLimit() + 
     		" UserAMResourceLimit=" + 
     		queue.getUserAMResourceLimit());
-    
+
+    queueController.updateRoot(root, clusterResource);
+    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, root);
+
     Resource amResourceLimit = Resource.newInstance(160 * GB, 1);
     assertThat(queue.calculateAndGetAMResourceLimit()).
         isEqualTo(amResourceLimit);
@@ -322,8 +334,8 @@ public class TestApplicationLimits {
     
     // Add some nodes to the cluster & test new limits
     clusterResource = Resources.createResource(120 * 16 * GB);
-    root.updateClusterResource(clusterResource, new ResourceLimits(
-        clusterResource));
+    queueController.updateRoot(root, clusterResource);
+    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, root);
 
     assertThat(queue.calculateAndGetAMResourceLimit()).isEqualTo(
         Resource.newInstance(192 * GB, 1));
@@ -364,8 +376,8 @@ public class TestApplicationLimits {
         queues, queues, TestUtils.spyHook);
     clusterResource = Resources.createResource(100 * 16 * GB);
     queueManager.setRootQueue(root);
-    root.updateClusterResource(clusterResource, new ResourceLimits(
-        clusterResource));
+    queueController.updateRoot(root, clusterResource);
+    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, root);
 
     queue = (LeafQueue)queues.get(A);
 
@@ -389,6 +401,8 @@ public class TestApplicationLimits {
         queues, queues, TestUtils.spyHook);
     root.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
+    queueController.updateRoot(root, clusterResource);
+    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, root);
 
     queue = (LeafQueue)queues.get(A);
     assertEquals(9999, (int)csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
@@ -594,6 +608,8 @@ public class TestApplicationLimits {
     queueManager.setRootQueue(rootQueue);
     rootQueue.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    queueController.updateRoot(root, clusterResource);
+    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, root);
 
     ResourceUsage queueCapacities = rootQueue.getQueueResourceUsage();
     when(csContext.getClusterResourceUsage())
@@ -705,6 +721,8 @@ public class TestApplicationLimits {
     clusterResource = Resources.createResource(90*16*GB);
     rootQueue.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    queueController.updateRoot(root, clusterResource);
+    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, root);
 
     // Any change is cluster resource needs to enforce user-limit recomputation.
     // In existing code, LeafQueue#updateClusterResource handled this. However

@@ -73,11 +73,12 @@ public final class CapacitySchedulerTestUtilities {
   private CapacitySchedulerTestUtilities() {
   }
 
-  public static void setQueueHandler(CapacitySchedulerContext cs) {
+  public static CapacitySchedulerQueueManager setQueueHandler(CapacitySchedulerContext cs) {
     CapacitySchedulerQueueManager queueManager = new CapacitySchedulerQueueManager(
         cs.getConfiguration(), cs.getRMContext().getNodeLabelManager(),
         new AppPriorityACLsManager(cs.getConfiguration()));
     when(cs.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
+    return queueManager;
   }
 
   @SuppressWarnings("unchecked")

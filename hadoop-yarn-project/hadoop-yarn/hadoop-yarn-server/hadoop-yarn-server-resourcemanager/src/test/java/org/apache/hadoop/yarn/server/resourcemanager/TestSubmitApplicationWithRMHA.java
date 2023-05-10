@@ -29,6 +29,8 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
+
 import org.junit.Test;
 
 
@@ -43,6 +45,9 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
           throws Exception {
     // start two RMs, and transit rm1 to active, rm2 to standby
     startRMs();
+
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 15, 8);
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm2, 15, 8);
 
     // get a new applicationId from rm1
     ApplicationId appId = rm1.getNewAppId().getApplicationId();

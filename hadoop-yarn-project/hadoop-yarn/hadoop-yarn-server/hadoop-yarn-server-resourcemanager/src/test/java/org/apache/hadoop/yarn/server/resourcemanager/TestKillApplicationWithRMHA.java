@@ -64,7 +64,9 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
     nm1.registerNode();
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 16);
+
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 15, 8);
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm2, 15, 8);
 
     // Submit the application
     MockRMAppSubmissionData data =
@@ -109,6 +111,9 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
         rm1.getResourceTrackerService());
     nm1.registerNode();
 
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 15, 8);
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm2, 15, 8);
+
     // create app and launch the AM
     RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     MockAM am0 = launchAM(app0, rm1, nm1);
@@ -131,6 +136,9 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
     MockNM nm1 = new MockNM("127.0.0.1:1234", 15120,
         rm1.getResourceTrackerService());
     nm1.registerNode();
+
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 15, 8);
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm2, 15, 8);
 
     // create app and launch the AM
     RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);
@@ -162,7 +170,9 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
     MockNM nm1 = new MockNM("127.0.0.1:1234", 15120,
         rm1.getResourceTrackerService());
     nm1.registerNode();
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 16);
+
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 15, 8);
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm2, 15, 8);
 
     // create app and launch the AM
     RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);
