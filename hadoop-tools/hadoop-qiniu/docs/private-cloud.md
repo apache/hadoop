@@ -24,7 +24,7 @@
         <name>fs.qiniu.customRegion.custom.z0.rsHost</name>
         <value>rs-z0.qiniuapi.com</value>
         <description>
-            配置对象管理RS域名，注意不要添加http(s)://前缀
+            配置对象管理RS域名，注意不要添加http(s)://前缀，是否启用https请使用配置项fs.qiniu.useHttps
         </description>
     </property>
 
@@ -32,7 +32,7 @@
         <name>fs.qiniu.customRegion.custom.z0.rsfHost</name>
         <value>rsf-z0.qiniuapi.com</value>
         <description>
-            配置对象列举RSF域名，注意不要添加http(s)://前缀
+            配置对象列举RSF域名，注意不要添加http(s)://前缀，是否启用https请使用配置项fs.qiniu.useHttps
         </description>
     </property>
 
@@ -40,7 +40,7 @@
         <name>fs.qiniu.customRegion.custom.z0.apiHost</name>
         <value>api.qiniuapi.com</value>
         <description>
-            配置API域名，注意不要添加http(s)://前缀
+            配置API域名，注意不要添加http(s)://前缀，是否启用https请使用配置项fs.qiniu.useHttps
         </description>
     </property>
 
@@ -48,7 +48,7 @@
         <name>fs.qiniu.customRegion.custom.z0.iovipHost</name>
         <value>iovip.qiniuio.com</value>
         <description>
-            配置源站下载iovip域名，注意不要添加http(s)://前缀
+            配置源站下载iovip域名，注意不要添加http(s)://前缀，是否启用https请使用配置项fs.qiniu.useHttps
         </description>
     </property>
 
@@ -56,7 +56,7 @@
         <name>fs.qiniu.customRegion.custom.z0.srcUpHosts</name>
         <value>up.qiniup.com</value>
         <description>
-            配置源站上传域名，注意不要添加http(s)://前缀
+            配置源站上传域名，注意不要添加http(s)://前缀，是否启用https请使用配置项fs.qiniu.useHttps
             若有多个域名配置，以英文逗号分隔
         </description>
     </property>
@@ -64,7 +64,7 @@
         <name>fs.qiniu.customRegion.custom.z0.accUpHosts</name>
         <value>upload.qiniup.com</value>
         <description>
-            配置加速上传域名，注意不要添加http(s)://前缀
+            配置加速上传域名，注意不要添加http(s)://前缀，是否启用https请使用配置项fs.qiniu.useHttps
             若有多个域名配置，以英文逗号分隔
         </description>
     </property>
@@ -73,8 +73,8 @@
         <value>bucketname.kodo-cn-east-1.qiniucs.com</value>
         <description>
             配置默认源站域名，将用于下载文件，注意不要添加http(s)://前缀，
-            https选项在fs.qiniu.download.useHttps中配置，
-            还可使用fs.qiniu.download.domain配置覆盖默认源站下载域名，
+            是否使用https选项请在fs.qiniu.download.useHttps中配置，
+            可选使用fs.qiniu.download.domain配置覆盖默认源站下载域名，
             覆盖后下载文件将不走该配置项的默认源站域名
         </description>
     </property>
