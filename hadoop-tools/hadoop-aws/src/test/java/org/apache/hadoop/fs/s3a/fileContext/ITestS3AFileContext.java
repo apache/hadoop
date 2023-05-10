@@ -13,11 +13,34 @@
  */
 package org.apache.hadoop.fs.s3a.fileContext;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import org.junit.Test;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.TestFileContext;
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Implementation of TestFileContext for S3a.
  */
-public class ITestS3AFileContext extends TestFileContext{
+public class ITestS3AFileContext extends TestFileContext {
 
+  @Test
+  public void testScheme()
+      throws URISyntaxException, UnsupportedFileSystemException {
+    Configuration conf = new Configuration();
+    URI uri = new URI("s3://mybucket/path");
+    conf.set("fs.AbstractFileSystem.s3.impl",
+        "org.apache.hadoop.fs.s3a.S3A");
+    FileContext fc = FileContext.getFileContext(uri, conf);
+    assertEquals("s3", fc.getDefaultFileSystem().getUri().getScheme());
+    Path path = fc.makeQualified(new Path("tmp/path"));
+    assertEquals("s3", path.toUri().getScheme());
+  }
 }

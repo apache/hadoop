@@ -148,7 +148,7 @@ public abstract class RemoteNode implements Comparable<RemoteNode> {
 
   /**
    * Set Node Partition.
-   * @param nodePartition
+   * @param nodePartition node Partition.
    */
   @Private
   @Unstable

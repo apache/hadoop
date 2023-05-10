@@ -21,6 +21,6 @@
  * to timeline authentication filters and abstract delegation token service for
  * ATSv1 and ATSv2.
  */
-@InterfaceAudience.Private
+@Private
 package org.apache.hadoop.yarn.server.timeline.security;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;

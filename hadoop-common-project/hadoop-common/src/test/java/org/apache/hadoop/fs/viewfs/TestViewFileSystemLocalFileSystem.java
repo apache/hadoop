@@ -25,8 +25,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -39,7 +37,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 
@@ -51,8 +50,8 @@ import org.junit.Test;
  */
 
 public class TestViewFileSystemLocalFileSystem extends ViewFileSystemBaseTest {
-  private static final Log LOG =
-      LogFactory.getLog(TestViewFileSystemLocalFileSystem.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestViewFileSystemLocalFileSystem.class);
 
   @Override
   @Before

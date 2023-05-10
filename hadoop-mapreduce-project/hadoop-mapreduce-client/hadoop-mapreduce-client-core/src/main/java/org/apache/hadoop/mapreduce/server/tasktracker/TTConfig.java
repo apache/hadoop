@@ -29,6 +29,12 @@ import org.apache.hadoop.mapreduce.MRConfig;
 @InterfaceStability.Evolving
 public interface TTConfig extends MRConfig {
 
+  /**
+   *  @deprecated Use
+   *  {@link org.apache.hadoop.mapreduce.MRJobConfig#SHUFFLE_INDEX_CACHE}
+   *  instead
+   */
+  @Deprecated
   public static final String TT_INDEX_CACHE = 
     "mapreduce.tasktracker.indexcache.mb";
   public static final String TT_MAP_SLOTS = 

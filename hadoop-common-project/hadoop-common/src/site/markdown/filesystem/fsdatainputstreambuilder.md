@@ -167,7 +167,7 @@ rather than just any FS-specific subclass implemented by the implementation
 custom subclasses.
 
 This is critical to ensure safe use of the feature: directory listing/
-status serialization/deserialization can result result in the `withFileStatus()`
+status serialization/deserialization can result in the `withFileStatus()`
 argument not being the custom subclass returned by the Filesystem instance's
 own `getFileStatus()`, `listFiles()`, `listLocatedStatus()` calls, etc.
 

@@ -1007,7 +1007,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
               .checkAccess(callerUGI, QueueACL.SUBMIT_APPLICATIONS, queue)) {
         usernameUsedForPlacement = userNameFromAppTag;
       } else {
-        LOG.warn("User '{}' from application tag does not have access to " +
+        LOG.warn("Proxy user '{}' from application tag does not have access to " +
                 " queue '{}'. " + "The placement is done for user '{}'",
                 userNameFromAppTag, queue, user);
       }

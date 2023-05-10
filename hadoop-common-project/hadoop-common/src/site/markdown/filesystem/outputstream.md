@@ -980,7 +980,7 @@ throw `UnsupportedOperationException`.
 ### `StreamCapabilities`
 
 Implementors of filesystem clients SHOULD implement the `StreamCapabilities`
-interface and its `hasCapabilities()` method to to declare whether or not
+interface and its `hasCapabilities()` method to declare whether or not
 an output streams offer the visibility and durability guarantees of `Syncable`.
 
 Implementors of `StreamCapabilities.hasCapabilities()` MUST NOT declare that

@@ -39,8 +39,8 @@ module.exports = function(defaults) {
     }
   });
 
-  app.import("bower_components/datatables/media/css/jquery.dataTables.min.css");
-  app.import("bower_components/datatables/media/js/jquery.dataTables.min.js");
+  app.import("bower_components/datatables.net-dt/css/jquery.dataTables.min.css");
+  app.import("bower_components/datatables.net/js/jquery.dataTables.min.js");
   app.import("bower_components/momentjs/min/moment.min.js");
   app.import("bower_components/moment-timezone/builds/moment-timezone-with-data-10-year-range.min.js");
   app.import("bower_components/select2/dist/css/select2.min.css");

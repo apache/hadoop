@@ -217,6 +217,16 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_RM_APPLICATION_MAX_TAG_LENGTH = 100;
 
+  public static final String NODE_STORE_ROOT_DIR_NUM_RETRIES =
+      RM_PREFIX + "nodestore-rootdir.num-retries";
+
+  public static final int NODE_STORE_ROOT_DIR_NUM_DEFAULT_RETRIES = 1000;
+
+  public static final String NODE_STORE_ROOT_DIR_RETRY_INTERVAL =
+      RM_PREFIX + "nodestore-rootdir.retry-interval-ms";
+
+  public static final int NODE_STORE_ROOT_DIR_RETRY_DEFAULT_INTERVAL = 1000;
+
   public static final String RM_APPLICATION_MASTER_SERVICE_PROCESSORS =
       RM_PREFIX + "application-master-service.processors";
 
@@ -3070,6 +3080,10 @@ public class YarnConfiguration extends Configuration {
       + "amrmproxy.ha.enable";
   public static final boolean DEFAULT_AMRM_PROXY_HA_ENABLED = false;
 
+  // Enable NM Dispatcher Metric default False.
+  public static final String NM_DISPATCHER_METRIC_ENABLED = NM_PREFIX + "dispatcher.metric.enable";
+  public static final boolean DEFAULT_NM_DISPATCHER_METRIC_ENABLED = false;
+
   /**
    * Default platform-agnostic CLASSPATH for YARN applications. A
    * comma-separated list of CLASSPATH entries. The parameter expansion marker
@@ -4000,6 +4014,11 @@ public class YarnConfiguration extends Configuration {
       "org.apache.hadoop.yarn.server.federation.resolver."
           + "DefaultSubClusterResolverImpl";
 
+  public static final String FEDERATION_FACADE_CACHE_CLASS =
+      FEDERATION_PREFIX + "cache.class";
+  public static final String DEFAULT_FEDERATION_FACADE_CACHE_CLASS =
+      "org.apache.hadoop.yarn.server.federation.cache.FederationJCache";
+
   // the maximum wait time for the first async heartbeat response
   public static final String FEDERATION_AMRMPROXY_HB_MAX_WAIT_MS =
       FEDERATION_PREFIX + "amrmproxy.hb.maximum.wait.ms";
@@ -4055,6 +4074,43 @@ public class YarnConfiguration extends Configuration {
       FEDERATION_STATESTORE_SQL_PREFIX + "max-connections";
 
   public static final int DEFAULT_FEDERATION_STATESTORE_SQL_MAXCONNECTIONS = 1;
+
+  /** Database connection pool minimum number of connections. **/
+  public static final String FEDERATION_STATESTORE_SQL_MINIMUMIDLE =
+      FEDERATION_STATESTORE_SQL_PREFIX + "minimum-idle";
+
+  /** The default value of the minimum number of connections in the database connection pool. **/
+  public static final int DEFAULT_FEDERATION_STATESTORE_SQL_MINIMUMIDLE = 1;
+
+  /** The name of the database connection pool. **/
+  public static final String FEDERATION_STATESTORE_POOL_NAME =
+      FEDERATION_STATESTORE_SQL_PREFIX + "pool-name";
+
+  /** The default name of the database connection pool. **/
+  public static final String DEFAULT_FEDERATION_STATESTORE_POOL_NAME =
+      "YARN-Federation-DataBasePool";
+
+  /** The maximum lifetime of a database connection. **/
+  public static final String FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME =
+      FEDERATION_STATESTORE_SQL_PREFIX + "max-life-time";
+
+  /** Database connection maximum lifetime. **/
+  public static final long DEFAULT_FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME =
+      TimeUnit.MINUTES.toMillis(30);
+
+  /** Database connection idle timeout time. **/
+  public static final String FEDERATION_STATESTORE_CONN_IDLE_TIMEOUT_TIME =
+      FEDERATION_STATESTORE_SQL_PREFIX + "idle-time-out";
+
+  public static final long DEFAULT_FEDERATION_STATESTORE_CONN_IDLE_TIMEOUT_TIME =
+      TimeUnit.MINUTES.toMillis(10);
+
+  /** Database connection timeout time. **/
+  public static final String FEDERATION_STATESTORE_CONNECTION_TIMEOUT =
+      FEDERATION_STATESTORE_SQL_PREFIX + "conn-time-out";
+
+  public static final long DEFAULT_FEDERATION_STATESTORE_CONNECTION_TIMEOUT_TIME =
+      TimeUnit.SECONDS.toMillis(10);
 
   public static final String FEDERATION_STATESTORE_MAX_APPLICATIONS =
       FEDERATION_PREFIX + "state-store.max-applications";
@@ -4118,6 +4174,14 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY = 3;
 
   /**
+   * GetNewApplication and SubmitApplication request retry interval time.
+   */
+  public static final String ROUTER_CLIENTRM_SUBMIT_INTERVAL_TIME =
+      ROUTER_PREFIX + "submit.interval.time";
+  public static final long DEFAULT_CLIENTRM_SUBMIT_INTERVAL_TIME =
+      TimeUnit.MILLISECONDS.toMillis(10);
+
+  /**
    * The interceptor class used in FederationClientInterceptor should return
    * partial ApplicationReports.
    */
@@ -4128,10 +4192,86 @@ public class YarnConfiguration extends Configuration {
 
   public static final String ROUTER_WEBAPP_PREFIX = ROUTER_PREFIX + "webapp.";
 
+  /**
+   * This configurable that controls the thread pool size of the threadpool of the interceptor.
+   * The corePoolSize(minimumPoolSize) and maximumPoolSize of the thread pool
+   * are controlled by this configurable.
+   * In order to control the thread pool more accurately, this parameter is deprecated.
+   *
+   * corePoolSize(minimumPoolSize) use
+   * {@link YarnConfiguration#ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE}
+   *
+   * maximumPoolSize use
+   * {@link YarnConfiguration#ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE}
+   *
+   * This configurable will be deprecated.
+   */
   public static final String ROUTER_USER_CLIENT_THREADS_SIZE =
       ROUTER_PREFIX + "interceptor.user.threadpool-size";
 
+  /**
+   * The default value is 5.
+   * which means that the corePoolSize(minimumPoolSize) and maximumPoolSize
+   * of the thread pool are both 5s.
+   *
+   * corePoolSize(minimumPoolSize) default value use
+   * {@link YarnConfiguration#DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE}
+   *
+   * maximumPoolSize default value use
+   * {@link YarnConfiguration#DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE}
+   */
   public static final int DEFAULT_ROUTER_USER_CLIENT_THREADS_SIZE = 5;
+
+  /**
+   * This configurable is used to set the corePoolSize(minimumPoolSize)
+   * of the thread pool of the interceptor.
+   *
+   * corePoolSize the number of threads to keep in the pool, even if they are idle.
+   */
+  public static final String ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE =
+      ROUTER_PREFIX + "interceptor.user-thread-pool.minimum-pool-size";
+
+  /**
+   * This configuration is used to set the default value of corePoolSize (minimumPoolSize)
+   * of the thread pool of the interceptor.
+   *
+   * Default is 5.
+   */
+  public static final int DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE = 5;
+
+  /**
+   * This configurable is used to set the maximumPoolSize of the thread pool of the interceptor.
+   *
+   * maximumPoolSize the maximum number of threads to allow in the pool.
+   */
+  public static final String ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE =
+      ROUTER_PREFIX + "interceptor.user-thread-pool.maximum-pool-size";
+
+  /**
+   * This configuration is used to set the default value of maximumPoolSize
+   * of the thread pool of the interceptor.
+   *
+   * Default is 5.
+   */
+  public static final int DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE = 5;
+
+  /**
+   * This configurable is used to set the keepAliveTime of the thread pool of the interceptor.
+   *
+   * keepAliveTime when the number of threads is greater than the core,
+   * this is the maximum time that excess idle threads will wait for new tasks before terminating.
+   */
+  public static final String ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME =
+      ROUTER_PREFIX + "interceptor.user-thread-pool.keep-alive-time";
+
+  /**
+   * This configurable is used to set the default time of keepAliveTime
+   * of the thread pool of the interceptor.
+   *
+   * the default value is 0s.
+   */
+  public static final long DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME =
+      TimeUnit.SECONDS.toMillis(0); // 0s
 
   /** The address of the Router web application. */
   public static final String ROUTER_WEBAPP_ADDRESS =
@@ -4164,6 +4304,13 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_ROUTER_WEBAPP_DEFAULT_INTERCEPTOR_CLASS =
       "org.apache.hadoop.yarn.server.router.webapp."
           + "DefaultRequestInterceptorREST";
+
+  /**
+   * ApplicationSubmissionContextInterceptor configurations.
+   **/
+  public static final String ROUTER_ASC_INTERCEPTOR_MAX_SIZE =
+      ROUTER_PREFIX + "asc-interceptor-max-size";
+  public static final String DEFAULT_ROUTER_ASC_INTERCEPTOR_MAX_SIZE = "1MB";
 
   /**
    * The interceptor class used in FederationInterceptorREST should return
@@ -4209,6 +4356,33 @@ public class YarnConfiguration extends Configuration {
   public static final String ROUTER_WEBAPP_ENABLE_CORS_FILTER =
       ROUTER_PREFIX + "webapp.cross-origin.enabled";
   public static final boolean DEFAULT_ROUTER_WEBAPP_ENABLE_CORS_FILTER = false;
+
+  /** Router Interceptor Allow Partial Result Enable. **/
+  public static final String ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED =
+      ROUTER_PREFIX + "interceptor.allow-partial-result.enable";
+  public static final boolean DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED = false;
+
+  /** Router SubCluster Cleaner Thread Clean Interval Time. **/
+  public static final String ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME =
+      ROUTER_PREFIX + "subcluster.cleaner.interval.time";
+  public static final long DEFAULT_ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME =
+      TimeUnit.SECONDS.toMillis(60);
+
+  /** Router SubCluster Timeout Allowed by Router. **/
+  public static final String ROUTER_SUBCLUSTER_EXPIRATION_TIME =
+      ROUTER_PREFIX + "subcluster.heartbeat.expiration.time";
+  public static final long DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME =
+      TimeUnit.MINUTES.toMillis(30);
+
+  /** Router Thread Pool Schedule Thread Number. **/
+  public static final String ROUTER_SCHEDULED_EXECUTOR_THREADS =
+      ROUTER_PREFIX + "scheduled.executor.threads";
+  public static final int DEFAULT_ROUTER_SCHEDULED_EXECUTOR_THREADS = 1;
+
+  /** Enable DeregisterSubCluster, enabled by default. **/
+  public static final String ROUTER_DEREGISTER_SUBCLUSTER_ENABLED =
+      ROUTER_PREFIX + "deregister.subcluster.enabled";
+  public static final boolean DEFAULT_ROUTER_DEREGISTER_SUBCLUSTER_ENABLED = true;
 
   ////////////////////////////////
   // CSI Volume configs

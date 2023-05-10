@@ -708,12 +708,12 @@ public class Balancer {
 
   Result newResult(ExitStatus exitStatus, long bytesLeftToMove, long bytesBeingMoved) {
     return new Result(exitStatus, bytesLeftToMove, bytesBeingMoved,
-        dispatcher.getBytesMoved(), dispatcher.getBblocksMoved());
+        dispatcher.getBytesMoved(), dispatcher.getBlocksMoved());
   }
 
   Result newResult(ExitStatus exitStatus) {
     return new Result(exitStatus, -1, -1, dispatcher.getBytesMoved(),
-        dispatcher.getBblocksMoved());
+        dispatcher.getBlocksMoved());
   }
 
   /** Run an iteration for all datanodes. */

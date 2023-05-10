@@ -131,7 +131,7 @@ public class RemoteMethod {
   /**
    * Get the represented java method.
    *
-   * @return Method
+   * @return {@link Method}
    * @throws IOException If the method cannot be found.
    */
   public Method getMethod() throws IOException {

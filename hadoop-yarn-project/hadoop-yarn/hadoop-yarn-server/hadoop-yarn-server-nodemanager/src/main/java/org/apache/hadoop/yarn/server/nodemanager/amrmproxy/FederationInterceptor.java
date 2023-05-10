@@ -1877,7 +1877,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     Set<SubClusterId> timeOutScs = getTimedOutSCs(true);
     SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
     if (timeOutScs.contains(subClusterId) ||
-        subClusterInfo == null || subClusterInfo.getState().isUnusable()) {
+        subClusterInfo == null || !subClusterInfo.getState().isUsable()) {
       return false;
     }
     return true;

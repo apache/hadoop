@@ -91,8 +91,7 @@ of the desirable properties of balance, optimal cluster utilization and global i
 
 This part of the federation system is part of future work in [YARN-5597](https://issues.apache.org/jira/browse/YARN-5597).
 
-
-###Federation State-Store
+### Federation State-Store
 The Federation State defines the additional state that needs to be maintained to loosely couple multiple individual sub-clusters into a single large federated cluster. This includes the following information:
 
 ####Sub-cluster Membership
@@ -255,10 +254,30 @@ Optional:
 
 These are extra configurations that should appear in the **conf/yarn-site.xml** at each Router.
 
-| Property | Example | Description |
-|:---- |:---- |:---- |
-|`yarn.router.bind-host` | `0.0.0.0` | Host IP to bind the router to.  The actual address the server will bind to. If this optional address is set, the RPC and webapp servers will bind to this address and the port specified in yarn.router.*.address respectively. This is most useful for making Router listen to all interfaces by setting to 0.0.0.0. |
-| `yarn.router.clientrm.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor` | A comma-separated list of interceptor classes to be run at the router when interfacing with the client. The last step of this pipeline must be the Federation Client Interceptor. |
+| Property                                          | Example                                                                     | Description                                                                                                                                                                                                                                                                                                           |
+|:--------------------------------------------------|:----------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `yarn.router.bind-host`                           | `0.0.0.0`                                                                   | Host IP to bind the router to.  The actual address the server will bind to. If this optional address is set, the RPC and webapp servers will bind to this address and the port specified in yarn.router.*.address respectively. This is most useful for making Router listen to all interfaces by setting to 0.0.0.0. |
+| `yarn.router.clientrm.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor` | A comma-separated list of interceptor classes to be run at the router when interfacing with the client. The last step of this pipeline must be the Federation Client Interceptor.                                                                                                                                     |
+
+> Enable ApplicationSubmissionContextInterceptor
+
+- If the `FederationStateStore` is configured with `Zookpeer` storage, the app information will be stored in `Zookpeer`. If the size of the app information exceeds `1MB`, `Zookpeer` may fail. `ApplicationSubmissionContextInterceptor` will check the size of `ApplicationSubmissionContext`, if the size exceeds the limit(default 1MB), an exception will be thrown.
+  - The size of the ApplicationSubmissionContext of the application application_123456789_0001 is above the limit. Size = 1.02 MB.
+
+- The required configuration is as follows:
+
+```
+<property>
+  <name>yarn.router.clientrm.interceptor-class.pipeline</name>
+  <value>org.apache.hadoop.yarn.server.router.clientrm.PassThroughClientRequestInterceptor,
+         org.apache.hadoop.yarn.server.router.clientrm.ApplicationSubmissionContextInterceptor,
+         org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor</value>
+</property>
+<property>
+  <name>yarn.router.asc-interceptor-max-size</name>
+  <value>1MB</value>
+</property>
+```
 
 Optional:
 
@@ -270,8 +289,10 @@ Optional:
 |`yarn.router.admin.address` | `0.0.0.0:8052` | Admin address at the router. |
 |`yarn.router.webapp.https.address` | `0.0.0.0:8091` | Secure webapp address at the router. |
 |`yarn.router.submit.retry` | `3` | The number of retries in the router before we give up. |
+|`yarn.router.submit.interval.time` | `10ms` | The interval between two retry, the default value is 10ms. |
 |`yarn.federation.statestore.max-connections` | `10` | This is the maximum number of parallel connections each Router makes to the state-store. |
 |`yarn.federation.cache-ttl.secs` | `60` | The Router caches informations, and this is the time to leave before the cache is invalidated. |
+|`yarn.federation.cache.class` | `org.apache.hadoop.yarn.server.federation.cache.FederationJCache` | The Router caches informations, We can configure the Cache implementation and the default implementation is FederationJCache.|
 |`yarn.router.webapp.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.router.webapp.FederationInterceptorREST` | A comma-separated list of interceptor classes to be run at the router when interfacing with the client via REST interface. The last step of this pipeline must be the Federation Interceptor REST. |
 
 Security:
@@ -293,6 +314,22 @@ To enable cross-origin support (CORS) for the Yarn Router, please set the follow
 | `hadoop.http.filter.initializers`         | `org.apache.hadoop.security.HttpCrossOriginFilterInitializer` | Optional. Set the filter to HttpCrossOriginFilterInitializer, Configure this parameter in core-site.xml. |
 | `yarn.router.webapp.cross-origin.enabled` | `true`                                                       | Optional. Enable/disable CORS filter.Configure this parameter in yarn-site.xml. |
 
+Cache:
+
+Cache is not enabled by default. When we set the `yarn.federation.cache-ttl.secs` parameter and its value is greater than 0, Cache will be enabled.
+We currently provide two Cache implementations: `JCache` and `GuavaCache`.
+
+> JCache
+
+We used `geronimo-jcache`,`geronimo-jcache` is an implementation of the Java Caching API (JSR-107) specification provided by the Apache Geronimo project.
+It defines a standardized implementation of the JCache API, allowing developers to use the same API to access different caching implementations.
+In YARN Federation we use a combination of `geronimo-jcache` and `Ehcache`.
+If we want to use JCache, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationJCache`.
+
+> GuavaCache
+
+This is a Cache implemented based on the Guava framework.
+If we want to use it, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationGuavaCache`.
 
 ###ON NMs:
 

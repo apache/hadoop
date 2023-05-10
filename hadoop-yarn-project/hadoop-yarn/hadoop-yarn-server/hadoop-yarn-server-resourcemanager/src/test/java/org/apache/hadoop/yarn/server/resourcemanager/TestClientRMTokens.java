@@ -77,6 +77,7 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -570,9 +571,9 @@ public class TestClientRMTokens {
 
   private static ResourceScheduler createMockScheduler(Configuration conf) {
     ResourceScheduler mockSched = mock(ResourceScheduler.class);
-    doReturn(BuilderUtils.newResource(512, 0)).when(mockSched)
+    doReturn(Resources.createResource(512)).when(mockSched)
         .getMinimumResourceCapability();
-    doReturn(BuilderUtils.newResource(5120, 0)).when(mockSched)
+    doReturn(Resources.createResource(5120)).when(mockSched)
         .getMaximumResourceCapability();
     return mockSched;
   }

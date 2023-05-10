@@ -190,7 +190,7 @@ public class TestDFSRename {
       Path path = new Path("/test");
       dfs.mkdirs(path);
       GenericTestUtils.LogCapturer auditLog =
-          GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+          GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
       dfs.rename(path, new Path("/dir1"),
           new Rename[] {Rename.OVERWRITE, Rename.TO_TRASH});
       String auditOut = auditLog.getOutput();

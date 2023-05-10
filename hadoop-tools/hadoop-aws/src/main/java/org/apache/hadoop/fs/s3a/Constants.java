@@ -212,6 +212,8 @@ public final class Constants {
   public static final String PROXY_PASSWORD = "fs.s3a.proxy.password";
   public static final String PROXY_DOMAIN = "fs.s3a.proxy.domain";
   public static final String PROXY_WORKSTATION = "fs.s3a.proxy.workstation";
+  /** Is the proxy secured(proxyProtocol = HTTPS)? */
+  public static final String PROXY_SECURED = "fs.s3a.proxy.ssl.enabled";
 
   /**
    * Number of times the AWS client library should retry errors before
@@ -249,12 +251,12 @@ public final class Constants {
   public static final boolean EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT =
       true;
 
-  // seconds until we give up trying to establish a connection to s3
+  // milliseconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT =
       "fs.s3a.connection.establish.timeout";
   public static final int DEFAULT_ESTABLISH_TIMEOUT = 50000;
 
-  // seconds until we give up on a connection to s3
+  // milliseconds until we give up on a connection to s3
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
   public static final int DEFAULT_SOCKET_TIMEOUT = 200000;
 
@@ -1253,4 +1255,25 @@ public final class Constants {
    */
   public static final String PREFETCH_BLOCK_COUNT_KEY = "fs.s3a.prefetch.block.count";
   public static final int PREFETCH_BLOCK_DEFAULT_COUNT = 8;
+
+  /**
+   * Option to enable or disable the multipart uploads.
+   * Value: {@value}.
+   * <p>
+   * Default is {@link #DEFAULT_MULTIPART_UPLOAD_ENABLED}.
+   */
+  public static final String MULTIPART_UPLOADS_ENABLED = "fs.s3a.multipart.uploads.enabled";
+
+  /**
+   * Default value for multipart uploads.
+   * {@value}
+   */
+  public static final boolean DEFAULT_MULTIPART_UPLOAD_ENABLED = true;
+
+  /**
+   * Stream supports multipart uploads to the given path.
+   */
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_MULTIPART_UPLOAD_ENABLED =
+      "fs.s3a.capability.multipart.uploads.enabled";
+
 }

@@ -47,7 +47,6 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -217,8 +216,8 @@ class Display extends FsCommand {
 
   protected class TextRecordInputStream extends InputStream {
     SequenceFile.Reader r;
-    Writable key;
-    Writable val;
+    Object key;
+    Object val;
 
     DataInputBuffer inbuf;
     DataOutputBuffer outbuf;
@@ -228,10 +227,8 @@ class Display extends FsCommand {
       final Configuration lconf = getConf();
       r = new SequenceFile.Reader(lconf, 
           SequenceFile.Reader.file(fpath));
-      key = ReflectionUtils.newInstance(
-          r.getKeyClass().asSubclass(Writable.class), lconf);
-      val = ReflectionUtils.newInstance(
-          r.getValueClass().asSubclass(Writable.class), lconf);
+      key = ReflectionUtils.newInstance(r.getKeyClass(), lconf);
+      val = ReflectionUtils.newInstance(r.getValueClass(), lconf);
       inbuf = new DataInputBuffer();
       outbuf = new DataOutputBuffer();
     }
@@ -240,8 +237,11 @@ class Display extends FsCommand {
     public int read() throws IOException {
       int ret;
       if (null == inbuf || -1 == (ret = inbuf.read())) {
-        if (!r.next(key, val)) {
+        key = r.next(key);
+        if (key == null) {
           return -1;
+        } else {
+          val = r.getCurrentValue(val);
         }
         byte[] tmp = key.toString().getBytes(StandardCharsets.UTF_8);
         outbuf.write(tmp, 0, tmp.length);

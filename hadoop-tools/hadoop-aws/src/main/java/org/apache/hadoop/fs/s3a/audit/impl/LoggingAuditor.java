@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.amazonaws.AmazonWebServiceRequest;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +35,9 @@ import org.apache.hadoop.fs.audit.AuditConstants;
 import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer;
 import org.apache.hadoop.fs.s3a.audit.AuditFailureException;
+import org.apache.hadoop.fs.s3a.audit.AuditOperationRejectedException;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -44,6 +47,9 @@ import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_THREAD0;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_TIMESTAMP;
 import static org.apache.hadoop.fs.audit.CommonAuditContext.currentAuditContext;
 import static org.apache.hadoop.fs.audit.CommonAuditContext.currentThreadID;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MULTIPART_UPLOAD_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_UPLOADS_ENABLED;
+import static org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer.isRequestMultipartIO;
 import static org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer.isRequestNotAlwaysInSpan;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.OUTSIDE_SPAN;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_ENABLED;
@@ -111,6 +117,20 @@ public class LoggingAuditor
   private Collection<String> filters;
 
   /**
+   * Does the S3A FS instance being audited have multipart upload enabled?
+   * If not: fail if a multipart upload is initiated.
+   */
+  private boolean isMultipartUploadEnabled;
+
+  /**
+   * Log for warning of problems getting the range of GetObjectRequest
+   * will only log of a problem once per process instance.
+   * This is to avoid logs being flooded with errors.
+   */
+  private static final LogExactlyOnce WARN_INCORRECT_RANGE =
+      new LogExactlyOnce(LOG);
+
+  /**
    * Create the auditor.
    * The UGI current user is used to provide the principal;
    * this will be cached and provided in the referrer header.
@@ -154,6 +174,8 @@ public class LoggingAuditor
     final CommonAuditContext currentContext = currentAuditContext();
     warningSpan = new WarningSpan(OUTSIDE_SPAN,
         currentContext, createSpanID(), null, null);
+    isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
+              DEFAULT_MULTIPART_UPLOAD_ENABLED);
   }
 
   @Override
@@ -163,6 +185,7 @@ public class LoggingAuditor
     sb.append("ID='").append(getAuditorId()).append('\'');
     sb.append(", headerEnabled=").append(headerEnabled);
     sb.append(", rejectOutOfSpan=").append(rejectOutOfSpan);
+    sb.append(", isMultipartUploadEnabled=").append(isMultipartUploadEnabled);
     sb.append('}');
     return sb.toString();
   }
@@ -229,6 +252,26 @@ public class LoggingAuditor
   private class LoggingAuditSpan extends AbstractAuditSpanImpl {
 
     private final HttpReferrerAuditHeader referrer;
+
+    /**
+     * Attach Range of data for GetObject Request.
+     * @param request given get object request
+     */
+    private void attachRangeFromRequest(AmazonWebServiceRequest request) {
+      if (request instanceof GetObjectRequest) {
+        long[] rangeValue = ((GetObjectRequest) request).getRange();
+        if (rangeValue == null || rangeValue.length == 0) {
+          return;
+        }
+        if (rangeValue.length != 2) {
+          WARN_INCORRECT_RANGE.warn("Expected range to contain 0 or 2 elements."
+              + " Got {} elements. Ignoring.", rangeValue.length);
+          return;
+        }
+        String combinedRangeValue = String.format("%d-%d", rangeValue[0], rangeValue[1]);
+        referrer.set(AuditConstants.PARAM_RANGE, combinedRangeValue);
+      }
+    }
 
     private final String description;
 
@@ -314,6 +357,8 @@ public class LoggingAuditor
     @Override
     public <T extends AmazonWebServiceRequest> T beforeExecution(
         final T request) {
+      // attach range for GetObject requests
+      attachRangeFromRequest(request);
       // build the referrer header
       final String header = referrer.buildHttpReferrer();
       // update the outer class's field.
@@ -331,6 +376,12 @@ public class LoggingAuditor
             analyzer.analyze(request),
             header);
       }
+      // now see if the request is actually a blocked multipart request
+      if (!isMultipartUploadEnabled && isRequestMultipartIO(request)) {
+        throw new AuditOperationRejectedException("Multipart IO request "
+            + request + " rejected " + header);
+      }
+
       return request;
     }
 

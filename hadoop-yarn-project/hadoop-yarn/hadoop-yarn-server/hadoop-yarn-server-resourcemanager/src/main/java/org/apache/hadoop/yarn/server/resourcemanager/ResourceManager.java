@@ -1657,6 +1657,7 @@ public class ResourceManager extends CompositeService
 
   /**
    * Create RMDelegatedNodeLabelsUpdater based on configuration.
+   * @return RMDelegatedNodeLabelsUpdater.
    */
   protected RMDelegatedNodeLabelsUpdater createRMDelegatedNodeLabelsUpdater() {
     if (conf.getBoolean(YarnConfiguration.NODE_LABELS_ENABLED,
@@ -1813,9 +1814,9 @@ public class ResourceManager extends CompositeService
   }
 
   /**
-   * Retrieve RM bind address from configuration
+   * Retrieve RM bind address from configuration.
    * 
-   * @param conf
+   * @param conf Configuration.
    * @return InetSocketAddress
    */
   public static InetSocketAddress getBindAddress(Configuration conf) {
@@ -1826,8 +1827,8 @@ public class ResourceManager extends CompositeService
   /**
    * Deletes the RMStateStore
    *
-   * @param conf
-   * @throws Exception
+   * @param conf Configuration.
+   * @throws Exception error occur.
    */
   @VisibleForTesting
   static void deleteRMStateStore(Configuration conf) throws Exception {

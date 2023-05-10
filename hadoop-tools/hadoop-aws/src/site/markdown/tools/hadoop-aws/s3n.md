@@ -29,7 +29,7 @@ the S3A connector**
 - - -
 
 
-## <a name="migrating"></a> How to migrate to to the S3A client
+## <a name="migrating"></a> How to migrate to the S3A client
 
 1. Keep the `hadoop-aws` JAR on your classpath.
 

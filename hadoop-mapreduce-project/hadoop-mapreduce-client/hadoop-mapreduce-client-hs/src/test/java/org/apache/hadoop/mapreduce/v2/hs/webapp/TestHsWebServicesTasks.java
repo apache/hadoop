@@ -43,6 +43,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryContext;
 import org.apache.hadoop.mapreduce.v2.hs.MockHistoryContext;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
@@ -199,7 +200,7 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       String xml = response.getEntity(String.class);
-      DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+      DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
       DocumentBuilder db = dbf.newDocumentBuilder();
       InputSource is = new InputSource();
       is.setCharacterStream(new StringReader(xml));
@@ -546,7 +547,7 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
         assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
             response.getType().toString());
         String xml = response.getEntity(String.class);
-        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
         DocumentBuilder db = dbf.newDocumentBuilder();
         InputSource is = new InputSource();
         is.setCharacterStream(new StringReader(xml));
@@ -726,7 +727,7 @@ public class TestHsWebServicesTasks extends JerseyTestBase {
         assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
             response.getType().toString());
         String xml = response.getEntity(String.class);
-        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
         DocumentBuilder db = dbf.newDocumentBuilder();
         InputSource is = new InputSource();
         is.setCharacterStream(new StringReader(xml));

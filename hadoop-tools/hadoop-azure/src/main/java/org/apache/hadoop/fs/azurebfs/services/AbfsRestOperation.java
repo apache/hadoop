@@ -28,6 +28,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -37,6 +38,8 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
+
 /**
  * The AbfsRestOperation for Rest AbfsClient.
  */
@@ -45,6 +48,8 @@ public class AbfsRestOperation {
   private final AbfsRestOperationType operationType;
   // Blob FS client, which has the credentials, retry policy, and logs.
   private final AbfsClient client;
+  // Return intercept instance
+  private final AbfsThrottlingIntercept intercept;
   // the HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE)
   private final String method;
   // full URL including query parameters
@@ -70,6 +75,12 @@ public class AbfsRestOperation {
 
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
+
+  /**
+   * This variable contains the reason of last API call within the same
+   * AbfsRestOperation object.
+   */
+  private String failureReason;
 
   /**
    * Checks if there is non-null HTTP response.
@@ -145,6 +156,7 @@ public class AbfsRestOperation {
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
+    this.intercept = client.getIntercept();
   }
 
   /**
@@ -205,7 +217,7 @@ public class AbfsRestOperation {
   private void completeExecute(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     // see if we have latency reports from the previous requests
-    String latencyHeader = this.client.getAbfsPerfTracker().getClientLatency();
+    String latencyHeader = getClientLatency();
     if (latencyHeader != null && !latencyHeader.isEmpty()) {
       AbfsHttpHeader httpHeader =
               new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_ABFS_CLIENT_LATENCY, latencyHeader);
@@ -226,12 +238,27 @@ public class AbfsRestOperation {
       }
     }
 
-    if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
+    int status = result.getStatusCode();
+    /*
+      If even after exhausting all retries, the http status code has an
+      invalid value it qualifies for InvalidAbfsRestOperationException.
+      All http status code less than 1xx range are considered as invalid
+      status codes.
+     */
+    if (status < HTTP_CONTINUE) {
+      throw new InvalidAbfsRestOperationException(null, retryCount);
+    }
+
+    if (status >= HttpURLConnection.HTTP_BAD_REQUEST) {
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),
           result.getStorageErrorMessage(), null, result);
     }
-
     LOG.trace("{} REST operation complete", operationType);
+  }
+
+  @VisibleForTesting
+  String getClientLatency() {
+    return client.getAbfsPerfTracker().getClientLatency();
   }
 
   /**
@@ -241,33 +268,16 @@ public class AbfsRestOperation {
    */
   private boolean executeHttpOperation(final int retryCount,
     TracingContext tracingContext) throws AzureBlobFileSystemException {
-    AbfsHttpOperation httpOperation = null;
+    AbfsHttpOperation httpOperation;
+
     try {
       // initialize the HTTP request and open the connection
-      httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
+      httpOperation = createHttpOperation();
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
-      tracingContext.constructHeader(httpOperation);
+      tracingContext.constructHeader(httpOperation, failureReason);
 
-      switch(client.getAuthType()) {
-        case Custom:
-        case OAuth:
-          LOG.debug("Authenticating request with OAuth2 access token");
-          httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
-              client.getAccessToken());
-          break;
-        case SAS:
-          // do nothing; the SAS token should already be appended to the query string
-          httpOperation.setMaskForSAS(); //mask sig/oid from url for logs
-          break;
-        case SharedKey:
-          // sign the HTTP request
-          LOG.debug("Signing request with shared key");
-          // sign the HTTP request
-          client.getSharedKeyCredentials().signRequest(
-              httpOperation.getConnection(),
-              hasRequestBody ? bufferLength : 0);
-          break;
-      }
+      signRequest(httpOperation, hasRequestBody ? bufferLength : 0);
+
     } catch (IOException e) {
       LOG.debug("Auth failure: {}, {}", method, url);
       throw new AbfsRestOperationException(-1, null,
@@ -278,8 +288,7 @@ public class AbfsRestOperation {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
-      AbfsClientThrottlingIntercept.sendingRequest(operationType, abfsCounters);
-
+      intercept.sendingRequest(operationType, abfsCounters);
       if (hasRequestBody) {
         // HttpUrlConnection requires
         httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
@@ -300,10 +309,11 @@ public class AbfsRestOperation {
     } catch (UnknownHostException ex) {
       String hostname = null;
       hostname = httpOperation.getHost();
+      failureReason = RetryReason.getAbbreviation(ex, null, null);
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
-        throw new InvalidAbfsRestOperationException(ex);
+        throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
       return false;
     } catch (IOException ex) {
@@ -311,24 +321,81 @@ public class AbfsRestOperation {
         LOG.debug("HttpRequestFailure: {}, {}", httpOperation, ex);
       }
 
+      failureReason = RetryReason.getAbbreviation(ex, -1, "");
+
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
-        throw new InvalidAbfsRestOperationException(ex);
+        throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
 
       return false;
     } finally {
-      AbfsClientThrottlingIntercept.updateMetrics(operationType, httpOperation);
+      int status = httpOperation.getStatusCode();
+      /*
+        A status less than 300 (2xx range) or greater than or equal
+        to 500 (5xx range) should contribute to throttling metrics being updated.
+        Less than 200 or greater than or equal to 500 show failed operations. 2xx
+        range contributes to successful operations. 3xx range is for redirects
+        and 4xx range is for user errors. These should not be a part of
+        throttling backoff computation.
+       */
+      boolean updateMetricsResponseCode = (status < HttpURLConnection.HTTP_MULT_CHOICE
+              || status >= HttpURLConnection.HTTP_INTERNAL_ERROR);
+      if (updateMetricsResponseCode) {
+        intercept.updateMetrics(operationType, httpOperation);
+      }
     }
 
     LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
 
     if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {
+      int status = httpOperation.getStatusCode();
+      failureReason = RetryReason.getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
       return false;
     }
 
     result = httpOperation;
 
     return true;
+  }
+
+  /**
+   * Sign an operation.
+   * @param httpOperation operation to sign
+   * @param bytesToSign how many bytes to sign for shared key auth.
+   * @throws IOException failure
+   */
+  @VisibleForTesting
+  public void signRequest(final AbfsHttpOperation httpOperation, int bytesToSign) throws IOException {
+    switch(client.getAuthType()) {
+      case Custom:
+      case OAuth:
+        LOG.debug("Authenticating request with OAuth2 access token");
+        httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+            client.getAccessToken());
+        break;
+      case SAS:
+        // do nothing; the SAS token should already be appended to the query string
+        httpOperation.setMaskForSAS(); //mask sig/oid from url for logs
+        break;
+      case SharedKey:
+      default:
+        // sign the HTTP request
+        LOG.debug("Signing request with shared key");
+        // sign the HTTP request
+        client.getSharedKeyCredentials().signRequest(
+            httpOperation.getConnection(),
+            bytesToSign);
+        break;
+    }
+  }
+
+  /**
+   * Creates new object of {@link AbfsHttpOperation} with the url, method, and
+   * requestHeaders fields of the AbfsRestOperation object.
+   */
+  @VisibleForTesting
+  AbfsHttpOperation createHttpOperation() throws IOException {
+    return new AbfsHttpOperation(url, method, requestHeaders);
   }
 
   /**

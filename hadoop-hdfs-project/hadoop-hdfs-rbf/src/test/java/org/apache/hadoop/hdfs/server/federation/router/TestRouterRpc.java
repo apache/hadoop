@@ -39,6 +39,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.URISyntaxException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -65,6 +66,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -98,7 +100,6 @@ import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
@@ -218,6 +219,14 @@ public class TestRouterRpc {
     cluster.setIndependentDNs();
 
     Configuration conf = new Configuration();
+    // Setup proxy users.
+    conf.set("hadoop.proxyuser.testRealUser.groups", "*");
+    conf.set("hadoop.proxyuser.testRealUser.hosts", "*");
+    String loginUser = UserGroupInformation.getLoginUser().getUserName();
+    conf.set(String.format("hadoop.proxyuser.%s.groups", loginUser), "*");
+    conf.set(String.format("hadoop.proxyuser.%s.hosts", loginUser), "*");
+    // Enable IP proxy users.
+    conf.set(DFSConfigKeys.DFS_NAMENODE_IP_PROXY_USERS, "placeholder");
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 5);
     cluster.addNamenodeOverrides(conf);
     // Start NNs and DNs and wait until ready
@@ -1423,27 +1432,27 @@ public class TestRouterRpc {
   @Test
   public void testProxySetSafemode() throws Exception {
     boolean routerSafemode =
-        routerProtocol.setSafeMode(SafeModeAction.SAFEMODE_GET, false);
+        routerProtocol.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_GET, false);
     boolean nnSafemode =
-        nnProtocol.setSafeMode(SafeModeAction.SAFEMODE_GET, false);
+        nnProtocol.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_GET, false);
     assertEquals(nnSafemode, routerSafemode);
 
     routerSafemode =
-        routerProtocol.setSafeMode(SafeModeAction.SAFEMODE_GET, true);
+        routerProtocol.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_GET, true);
     nnSafemode =
-        nnProtocol.setSafeMode(SafeModeAction.SAFEMODE_GET, true);
+        nnProtocol.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_GET, true);
     assertEquals(nnSafemode, routerSafemode);
 
     assertFalse(routerProtocol.setSafeMode(
-        SafeModeAction.SAFEMODE_GET, false));
+        HdfsConstants.SafeModeAction.SAFEMODE_GET, false));
     assertTrue(routerProtocol.setSafeMode(
-        SafeModeAction.SAFEMODE_ENTER, false));
+        HdfsConstants.SafeModeAction.SAFEMODE_ENTER, false));
     assertTrue(routerProtocol.setSafeMode(
-        SafeModeAction.SAFEMODE_GET, false));
+        HdfsConstants.SafeModeAction.SAFEMODE_GET, false));
     assertFalse(routerProtocol.setSafeMode(
-        SafeModeAction.SAFEMODE_LEAVE, false));
+        HdfsConstants.SafeModeAction.SAFEMODE_LEAVE, false));
     assertFalse(routerProtocol.setSafeMode(
-        SafeModeAction.SAFEMODE_GET, false));
+        HdfsConstants.SafeModeAction.SAFEMODE_GET, false));
   }
 
   @Test
@@ -1788,18 +1797,18 @@ public class TestRouterRpc {
   @Test
   public void testSaveNamespace() throws IOException {
     cluster.getCluster().getFileSystem(0)
-        .setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+        .setSafeMode(SafeModeAction.ENTER);
     cluster.getCluster().getFileSystem(1)
-        .setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+        .setSafeMode(SafeModeAction.ENTER);
 
     Boolean saveNamespace = routerProtocol.saveNamespace(0, 0);
 
     assertTrue(saveNamespace);
 
     cluster.getCluster().getFileSystem(0)
-        .setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+        .setSafeMode(SafeModeAction.LEAVE);
     cluster.getCluster().getFileSystem(1)
-        .setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+        .setSafeMode(SafeModeAction.LEAVE);
   }
 
   /*
@@ -2054,7 +2063,7 @@ public class TestRouterRpc {
   @Test
   public void testMkdirsWithCallerContext() throws IOException {
     GenericTestUtils.LogCapturer auditlog =
-        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
     // Current callerContext is null
     assertNull(CallerContext.getCurrent());
@@ -2078,6 +2087,38 @@ public class TestRouterRpc {
   }
 
   @Test
+  public void testRealUserPropagationInCallerContext()
+      throws IOException, InterruptedException {
+    GenericTestUtils.LogCapturer auditlog =
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
+
+    // Current callerContext is null
+    assertNull(CallerContext.getCurrent());
+
+    UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
+    UserGroupInformation realUser = UserGroupInformation
+        .createUserForTesting("testRealUser", new String[]{"group"});
+    UserGroupInformation proxyUser = UserGroupInformation
+        .createProxyUser("testProxyUser", realUser);
+    FileSystem proxyFs = proxyUser.doAs(
+        (PrivilegedExceptionAction<FileSystem>) () -> router.getFileSystem());
+    proxyFs.listStatus(new Path("/"));
+
+
+    final String logOutput = auditlog.getOutput();
+    // Login user, which is used as the router's user, is different from the realUser.
+    assertNotEquals(loginUser.getUserName(), realUser.getUserName());
+    // Login user is used in the audit log's ugi field.
+    assertTrue("The login user is the proxyUser in the UGI field",
+         logOutput.contains(String.format("ugi=%s (auth:PROXY) via %s (auth:SIMPLE)",
+             proxyUser.getUserName(),
+             loginUser.getUserName())));
+    // Real user is added to the caller context.
+    assertTrue("The audit log should contain the real user.",
+        logOutput.contains(String.format("realUser:%s", realUser.getUserName())));
+  }
+
+  @Test
   public void testSetBalancerBandwidth() throws Exception {
     long defaultBandwidth =
         DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_DEFAULT;
@@ -2092,7 +2133,7 @@ public class TestRouterRpc {
   @Test
   public void testAddClientIpPortToCallerContext() throws IOException {
     GenericTestUtils.LogCapturer auditLog =
-        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
     // 1. ClientIp and ClientPort are not set on the client.
     // Set client context.
@@ -2127,7 +2168,7 @@ public class TestRouterRpc {
   @Test
   public void testAddClientIdAndCallIdToCallerContext() throws IOException {
     GenericTestUtils.LogCapturer auditLog =
-        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
     // 1. ClientId and ClientCallId are not set on the client.
     // Set client context.

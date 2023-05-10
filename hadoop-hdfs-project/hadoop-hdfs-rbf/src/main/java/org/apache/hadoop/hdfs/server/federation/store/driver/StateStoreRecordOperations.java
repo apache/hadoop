@@ -56,7 +56,7 @@ public interface StateStoreRecordOperations {
    * @param clazz Class of record to fetch.
    * @param query Query to filter results.
    * @return A single record matching the query. Null if there are no matching
-   *         records or more than one matching record in the store.
+   *         records.
    * @throws IOException If multiple records match or if the data store cannot
    *           be queried.
    */

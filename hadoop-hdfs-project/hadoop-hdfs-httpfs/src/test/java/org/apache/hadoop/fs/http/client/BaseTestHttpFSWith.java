@@ -19,8 +19,10 @@
 package org.apache.hadoop.fs.http.client;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
@@ -73,6 +75,10 @@ import org.apache.hadoop.test.TestHdfsHelper;
 import org.apache.hadoop.test.TestJetty;
 import org.apache.hadoop.test.TestJettyHelper;
 import org.apache.hadoop.util.Lists;
+
+import org.json.simple.JSONObject;
+import org.json.simple.parser.ContainerFactory;
+import org.json.simple.parser.JSONParser;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
@@ -101,11 +107,11 @@ import java.util.regex.Pattern;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(value = Parameterized.class)
 public abstract class BaseTestHttpFSWith extends HFSTestCase {
-
   protected abstract Path getProxiedFSTestDir();
 
   protected abstract String getProxiedFSURI();
@@ -191,7 +197,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
 
   protected void testGet() throws Exception {
     FileSystem fs = getHttpFSFileSystem();
-    Assert.assertNotNull(fs);
+    assertNotNull(fs);
     URI uri = new URI(getScheme() + "://" +
                       TestJettyHelper.getJettyURL().toURI().getAuthority());
     assertEquals(fs.getUri(), uri);
@@ -297,7 +303,15 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       AppendTestUtil.checkFullFile(fs, file, newLength, data, file.toString());
 
       fs.close();
+      assertPathCapabilityForTruncate(file);
     }
+  }
+
+  private void assertPathCapabilityForTruncate(Path file) throws Exception {
+    FileSystem fs = this.getHttpFSFileSystem();
+    assertTrue("HttpFS/WebHdfs/SWebHdfs support truncate",
+        fs.hasPathCapability(file, CommonPathCapabilities.FS_TRUNCATE));
+    fs.close();
   }
 
   private void testConcat() throws Exception {
@@ -1201,7 +1215,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     ALLOW_SNAPSHOT, DISALLOW_SNAPSHOT, DISALLOW_SNAPSHOT_EXCEPTION,
     FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST,
     GET_SNAPSHOT_LIST, GET_SERVERDEFAULTS, CHECKACCESS, SETECPOLICY,
-    SATISFYSTORAGEPOLICY, GET_SNAPSHOT_DIFF_LISTING
+    SATISFYSTORAGEPOLICY, GET_SNAPSHOT_DIFF_LISTING, GETFILEBLOCKLOCATIONS
   }
 
   private void operation(Operation op) throws Exception {
@@ -1340,6 +1354,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case GET_SNAPSHOT_DIFF_LISTING:
       testGetSnapshotDiffListing();
+      break;
+    case GETFILEBLOCKLOCATIONS:
+      testGetFileBlockLocations();
       break;
     }
 
@@ -1956,6 +1973,37 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
         Assert.fail(fs.getClass().getSimpleName() + " doesn't support access");
       }
       dfs.delete(path1, true);
+    }
+  }
+
+  private void testGetFileBlockLocations() throws Exception {
+    BlockLocation[] blockLocations;
+    Path testFile;
+    if (!this.isLocalFS()) {
+      FileSystem fs = this.getHttpFSFileSystem();
+      testFile = new Path(getProxiedFSTestDir(), "singleBlock.txt");
+      DFSTestUtil.createFile(fs, testFile, 1, (short) 1, 0L);
+      if (fs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+        blockLocations = httpFS.getFileBlockLocations(testFile, 0, 1);
+        assertNotNull(blockLocations);
+
+        // verify HttpFSFileSystem.toBlockLocations()
+        String jsonString = JsonUtil.toJsonString(blockLocations);
+        JSONParser parser = new JSONParser();
+        JSONObject jsonObject = (JSONObject) parser.parse(jsonString, (ContainerFactory) null);
+        BlockLocation[] deserializedLocation = HttpFSFileSystem.toBlockLocations(jsonObject);
+        assertEquals(blockLocations.length, deserializedLocation.length);
+        for (int i = 0; i < blockLocations.length; i++) {
+          assertEquals(blockLocations[i].toString(), deserializedLocation[i].toString());
+        }
+      } else if (fs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+        blockLocations = webHdfsFileSystem.getFileBlockLocations(testFile, 0, 1);
+        assertNotNull(blockLocations);
+      } else {
+        Assert.fail(fs.getClass().getSimpleName() + " doesn't support access");
+      }
     }
   }
 

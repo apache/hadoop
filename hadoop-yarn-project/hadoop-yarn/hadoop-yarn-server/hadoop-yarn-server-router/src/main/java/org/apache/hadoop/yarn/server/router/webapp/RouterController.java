@@ -56,4 +56,9 @@ public class RouterController extends Controller {
     setTitle("Nodes");
     render(NodesPage.class);
   }
+
+  public void nodeLabels() {
+    setTitle("Node Labels");
+    render(NodeLabelsPage.class);
+  }
 }

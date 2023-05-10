@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -46,6 +47,7 @@ import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_OP;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_PATH;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_PATH2;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_PRINCIPAL;
+import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_RANGE;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_THREAD0;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_THREAD1;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_TIMESTAMP;
@@ -115,6 +117,7 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
     assertThat(span.getTimestamp())
         .describedAs("Timestamp of " + span)
         .isEqualTo(ts);
+    assertMapNotContains(params, PARAM_RANGE);
 
     assertMapContains(params, PARAM_TIMESTAMP,
         Long.toString(ts));
@@ -307,6 +310,44 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
     expectStrippedField("\"UA\"", "UA");
     expectStrippedField("\"\"\"\"", "");
     expectStrippedField("\"\"\"b\"", "b");
+  }
+
+  /**
+   * Verify that correct range is getting published in header.
+   */
+  @Test
+  public void testGetObjectRange() throws Throwable {
+    AuditSpan span = span();
+    GetObjectRequest request = get(getObjectRequest -> getObjectRequest.setRange(100, 200));
+    Map<String, String> headers
+            = request.getCustomRequestHeaders();
+    assertThat(headers)
+            .describedAs("Custom headers")
+            .containsKey(HEADER_REFERRER);
+    String header = headers.get(HEADER_REFERRER);
+    LOG.info("Header is {}", header);
+    Map<String, String> params
+            = HttpReferrerAuditHeader.extractQueryParameters(header);
+    assertMapContains(params, PARAM_RANGE, "100-200");
+  }
+
+  /**
+   * Verify that no range is getting added to the header in request without range.
+   */
+  @Test
+  public void testGetObjectWithoutRange() throws Throwable {
+    AuditSpan span = span();
+    GetObjectRequest request = get(getObjectRequest -> {});
+    Map<String, String> headers
+        = request.getCustomRequestHeaders();
+    assertThat(headers)
+        .describedAs("Custom headers")
+        .containsKey(HEADER_REFERRER);
+    String header = headers.get(HEADER_REFERRER);
+    LOG.info("Header is {}", header);
+    Map<String, String> params
+        = HttpReferrerAuditHeader.extractQueryParameters(header);
+    assertMapNotContains(params, PARAM_RANGE);
   }
 
   /**

@@ -172,7 +172,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 120000)
   public void testFSRMStateStore() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     MiniDFSCluster cluster =

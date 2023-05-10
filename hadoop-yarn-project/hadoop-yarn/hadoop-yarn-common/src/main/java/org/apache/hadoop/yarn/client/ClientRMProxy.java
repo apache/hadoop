@@ -65,7 +65,7 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
    * @param protocol Client protocol for which proxy is being requested.
    * @param <T> Type of proxy.
    * @return Proxy to the ResourceManager for the specified client protocol.
-   * @throws IOException
+   * @throws IOException io error occur.
    */
   public static <T> T createRMProxy(final Configuration configuration,
       final Class<T> protocol) throws IOException {

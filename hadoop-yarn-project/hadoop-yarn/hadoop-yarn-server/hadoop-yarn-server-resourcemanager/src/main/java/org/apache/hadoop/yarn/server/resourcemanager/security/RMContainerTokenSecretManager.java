@@ -193,6 +193,7 @@ public class RMContainerTokenSecretManager extends
    * @param containerType Container Type
    * @param execType Execution Type
    * @param allocationRequestId allocationRequestId
+   * @param allocationTags allocation Tags
    * @return the container-token
    */
   public Token createContainerToken(ContainerId containerId,

@@ -199,6 +199,7 @@ import org.apache.hadoop.yarn.util.UTCClock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 
@@ -405,22 +406,11 @@ public class ClientRMService extends AbstractService implements
       throw new ApplicationNotFoundException("Invalid application id: null");
     }
 
-    UserGroupInformation callerUGI;
-    try {
-      callerUGI = UserGroupInformation.getCurrentUser();
-    } catch (IOException ie) {
-      LOG.info("Error getting UGI ", ie);
-      throw RPCUtil.getRemoteException(ie);
-    }
+    UserGroupInformation callerUGI = getCallerUgi(applicationId,
+        AuditConstants.GET_APP_REPORT);
 
-    RMApp application = this.rmContext.getRMApps().get(applicationId);
-    if (application == null) {
-      // If the RM doesn't have the application, throw
-      // ApplicationNotFoundException and let client to handle.
-      throw new ApplicationNotFoundException("Application with id '"
-          + applicationId + "' doesn't exist in RM. Please check "
-          + "that the job submission was successful.");
-    }
+    RMApp application = verifyUserAccessForRMApp(applicationId, callerUGI,
+        AuditConstants.GET_APP_REPORT, ApplicationAccessType.VIEW_APP, false);
 
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
         ApplicationAccessType.VIEW_APP, application);
@@ -860,12 +850,14 @@ public class ClientRMService extends AbstractService implements
         .newRecordInstance(YarnClusterMetrics.class);
     ymetrics.setNumNodeManagers(this.rmContext.getRMNodes().size());
     ClusterMetrics clusterMetrics = ClusterMetrics.getMetrics();
+    ymetrics.setNumDecommissioningNodeManagers(clusterMetrics.getNumDecommissioningNMs());
     ymetrics.setNumDecommissionedNodeManagers(clusterMetrics
       .getNumDecommisionedNMs());
     ymetrics.setNumActiveNodeManagers(clusterMetrics.getNumActiveNMs());
     ymetrics.setNumLostNodeManagers(clusterMetrics.getNumLostNMs());
     ymetrics.setNumUnhealthyNodeManagers(clusterMetrics.getUnhealthyNMs());
     ymetrics.setNumRebootedNodeManagers(clusterMetrics.getNumRebootedNMs());
+    ymetrics.setNumShutdownNodeManagers(clusterMetrics.getNumShutdownNMs());
     response.setClusterMetrics(ymetrics);
     return response;
   }
@@ -878,13 +870,8 @@ public class ClientRMService extends AbstractService implements
   @Override
   public GetApplicationsResponse getApplications(GetApplicationsRequest request)
       throws YarnException {
-    UserGroupInformation callerUGI;
-    try {
-      callerUGI = UserGroupInformation.getCurrentUser();
-    } catch (IOException ie) {
-      LOG.info("Error getting UGI ", ie);
-      throw RPCUtil.getRemoteException(ie);
-    }
+    UserGroupInformation callerUGI = getCallerUgi(null,
+        AuditConstants.GET_APPLICATIONS_REQUEST);
 
     Set<String> applicationTypes = getLowerCasedAppTypes(request);
     EnumSet<YarnApplicationState> applicationStates =
@@ -1046,13 +1033,8 @@ public class ClientRMService extends AbstractService implements
   @Override
   public GetQueueInfoResponse getQueueInfo(GetQueueInfoRequest request)
       throws YarnException {
-    UserGroupInformation callerUGI;
-    try {
-      callerUGI = UserGroupInformation.getCurrentUser();
-    } catch (IOException ie) {
-      LOG.info("Error getting UGI ", ie);
-      throw RPCUtil.getRemoteException(ie);
-    }
+    UserGroupInformation callerUGI = getCallerUgi(null,
+        AuditConstants.GET_QUEUE_INFO_REQUEST);
 
     GetQueueInfoResponse response =
       recordFactory.newRecordInstance(GetQueueInfoResponse.class);
@@ -1105,7 +1087,7 @@ public class ClientRMService extends AbstractService implements
   private NodeReport createNodeReports(RMNode rmNode) {
     SchedulerNodeReport schedulerNodeReport = 
         scheduler.getNodeReport(rmNode.getNodeID());
-    Resource used = BuilderUtils.newResource(0, 0);
+    Resource used = Resources.createResource(0);
     int numContainers = 0;
     if (schedulerNodeReport != null) {
       used = schedulerNodeReport.getUsedResource();
@@ -1718,16 +1700,10 @@ public class ClientRMService extends AbstractService implements
       SignalContainerRequest request) throws YarnException, IOException {
     ContainerId containerId = request.getContainerId();
 
-    UserGroupInformation callerUGI;
-    try {
-      callerUGI = UserGroupInformation.getCurrentUser();
-    } catch (IOException ie) {
-      LOG.info("Error getting UGI ", ie);
-      throw RPCUtil.getRemoteException(ie);
-    }
-
     ApplicationId applicationId = containerId.getApplicationAttemptId().
         getApplicationId();
+    UserGroupInformation callerUGI = getCallerUgi(applicationId,
+        AuditConstants.SIGNAL_CONTAINER);
     RMApp application = this.rmContext.getRMApps().get(applicationId);
     if (application == null) {
       RMAuditLogger.logFailure(callerUGI.getUserName(),

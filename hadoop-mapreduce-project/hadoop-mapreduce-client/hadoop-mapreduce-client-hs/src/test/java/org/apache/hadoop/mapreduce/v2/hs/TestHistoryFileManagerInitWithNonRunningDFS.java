@@ -22,10 +22,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
@@ -60,7 +60,7 @@ public class TestHistoryFileManagerInitWithNonRunningDFS {
     try {
       // set up a cluster with its name node in safe mode
       dfsCluster.getFileSystem().setSafeMode(
-          HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+          SafeModeAction.ENTER);
       Assert.assertTrue(dfsCluster.getFileSystem().isInSafeMode());
 
       HistoryFileManager hfm = new HistoryFileManager();

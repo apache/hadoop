@@ -18,57 +18,64 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsRequestProto;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
 
-@RunWith(Parameterized.class)
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+
 public class TestGetApplicationsRequestPBImpl {
-  @Parameter
   @SuppressWarnings("checkstyle:visibilitymodifier")
   public GetApplicationsRequestPBImpl impl;
 
-  @Test
-  public void testAppTagsLowerCaseConversionDefault() {
-    impl.setApplicationTags(Sets.newHashSet("ABcd", "efgH"));
-    impl.getApplicationTags().forEach(s ->
-        assertEquals(s, s.toLowerCase()));
+  @MethodSource("data")
+  @ParameterizedTest
+  void testAppTagsLowerCaseConversionDefault(
+      GetApplicationsRequestPBImpl applicationsRequestPBImpl) {
+    initTestGetApplicationsRequestPBImpl(applicationsRequestPBImpl);
+    applicationsRequestPBImpl.setApplicationTags(Sets.newHashSet("ABcd", "efgH"));
+    applicationsRequestPBImpl.getApplicationTags().forEach(s -> assertEquals(s, s.toLowerCase()));
   }
 
-  @Test
-  public void testAppTagsLowerCaseConversionDisabled() {
+  @MethodSource("data")
+  @ParameterizedTest
+  void testAppTagsLowerCaseConversionDisabled(
+      GetApplicationsRequestPBImpl applicationsRequestPBImpl) {
+    initTestGetApplicationsRequestPBImpl(applicationsRequestPBImpl);
     GetApplicationsRequestPBImpl.setForceLowerCaseTags(false);
-    impl.setApplicationTags(Sets.newHashSet("ABcd", "efgH"));
-    impl.getApplicationTags().forEach(s ->
-        assertNotEquals(s, s.toLowerCase()));
+    applicationsRequestPBImpl.setApplicationTags(Sets.newHashSet("ABcd", "efgH"));
+    applicationsRequestPBImpl.getApplicationTags()
+        .forEach(s -> assertNotEquals(s, s.toLowerCase()));
   }
 
-  @Test
-  public void testAppTagsLowerCaseConversionEnabled() {
+  @MethodSource("data")
+  @ParameterizedTest
+  void testAppTagsLowerCaseConversionEnabled(
+      GetApplicationsRequestPBImpl applicationsRequestPBImpl) {
+    initTestGetApplicationsRequestPBImpl(applicationsRequestPBImpl);
     GetApplicationsRequestPBImpl.setForceLowerCaseTags(true);
-    impl.setApplicationTags(Sets.newHashSet("ABcd", "efgH"));
-    impl.getApplicationTags().forEach(s ->
-        assertEquals(s, s.toLowerCase()));
+    applicationsRequestPBImpl.setApplicationTags(Sets.newHashSet("ABcd", "efgH"));
+    applicationsRequestPBImpl.getApplicationTags().forEach(s -> assertEquals(s, s.toLowerCase()));
   }
 
-  @Parameters
   public static Collection<Object[]> data() {
     List<Object[]> list = new ArrayList<>();
-    list.add(new Object[] {new GetApplicationsRequestPBImpl()});
-    list.add(new Object[] {new GetApplicationsRequestPBImpl(
+    list.add(new Object[]{new GetApplicationsRequestPBImpl()});
+    list.add(new Object[]{new GetApplicationsRequestPBImpl(
         GetApplicationsRequestProto.newBuilder().build())});
 
     return list;
+  }
+
+  public void initTestGetApplicationsRequestPBImpl(
+      GetApplicationsRequestPBImpl applicationsRequestPBImpl) {
+    this.impl = impl;
   }
 }

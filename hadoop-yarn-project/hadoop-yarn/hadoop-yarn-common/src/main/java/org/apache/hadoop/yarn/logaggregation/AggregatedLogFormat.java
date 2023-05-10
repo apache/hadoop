@@ -919,6 +919,7 @@ public class AggregatedLogFormat {
      * @param logUploadedTime the log uploaded time stamp
      * @param logType the given log type
      * @throws IOException if we can not read the container logs
+     * @return If logType contains fileType, return 1, otherwise return 0.
      */
     public static int readContainerLogsForALogType(
         DataInputStream valueStream, PrintStream out, long logUploadedTime,
@@ -934,7 +935,9 @@ public class AggregatedLogFormat {
      * @param out the output print stream
      * @param logUploadedTime the log uploaded time stamp
      * @param logType the given log type
+     * @param bytes log bytes.
      * @throws IOException if we can not read the container logs
+     * @return If logType contains fileType, return 1, otherwise return 0.
      */
     public static int readContainerLogsForALogType(
         DataInputStream valueStream, PrintStream out, long logUploadedTime,

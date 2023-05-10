@@ -158,6 +158,22 @@ public class NodesToAttributesMappingRequestPBImpl
   }
 
   @Override
+  public String getSubClusterId() {
+    NodesToAttributesMappingRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasSubClusterId()) ? p.getSubClusterId() : null;
+  }
+
+  @Override
+  public void setSubClusterId(String subClusterId) {
+    maybeInitBuilder();
+    if (subClusterId == null) {
+      builder.clearSubClusterId();
+      return;
+    }
+    builder.setSubClusterId(subClusterId);
+  }
+
+  @Override
   public int hashCode() {
     return getProto().hashCode();
   }

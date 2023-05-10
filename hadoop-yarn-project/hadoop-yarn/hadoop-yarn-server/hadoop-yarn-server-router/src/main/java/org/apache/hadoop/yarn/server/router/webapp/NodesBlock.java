@@ -116,6 +116,7 @@ public class NodesBlock extends RouterBlock {
         .genericForward(webAddress, null, NodesInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.NODES, null, null, conf,
         client);
+    client.destroy();
     return nodes;
   }
 

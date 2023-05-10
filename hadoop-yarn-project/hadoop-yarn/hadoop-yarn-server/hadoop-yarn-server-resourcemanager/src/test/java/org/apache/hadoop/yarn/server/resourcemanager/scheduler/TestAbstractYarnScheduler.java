@@ -84,7 +84,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import org.junit.Assert;
@@ -1048,7 +1047,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
       // Register node1
       String hostname1 = "localhost1";
-      Resource capability = BuilderUtils.newResource(4096, 4);
+      Resource capability = Resources.createResource(4096, 4);
       RecordFactory recordFactory =
           RecordFactoryProvider.getRecordFactory(null);
 
@@ -1068,7 +1067,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       Assert.assertEquals("Initial cluster resources don't match", capability,
           clusterResource);
 
-      Resource newCapability = BuilderUtils.newResource(1024, 1);
+      Resource newCapability = Resources.createResource(1024);
       RegisterNodeManagerRequest request2 =
           recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);
       request2.setNodeId(nodeId1);

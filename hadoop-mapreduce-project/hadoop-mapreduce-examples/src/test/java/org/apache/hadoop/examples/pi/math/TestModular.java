@@ -21,8 +21,9 @@ import java.math.BigInteger;
 import java.util.Random;
 
 import org.apache.hadoop.examples.pi.Util.Timer;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestModular{
   private static final Random RANDOM = new Random();
@@ -52,13 +53,13 @@ public class TestModular{
   }
 
   @Test
-  public void testDiv() {
-    for(long n = 2; n < 100; n++)
-      for(long r = 1; r < n; r++) {
+  void testDiv() {
+    for (long n = 2; n < 100; n++)
+      for (long r = 1; r < n; r++) {
         final long a = div(0, r, n);
-        final long b = (long)((r*1.0/n) * (1L << DIV_VALID_BIT));
+        final long b = (long) ((r * 1.0 / n) * (1L << DIV_VALID_BIT));
         final String s = String.format("r=%d, n=%d, a=%X, b=%X", r, n, a, b);
-        Assert.assertEquals(s, b, a);
+        assertEquals(b, a, s);
       }
   }
 
@@ -151,9 +152,8 @@ public class TestModular{
         final long answer = rn[i][j][1];
         final long s = square_slow(r, n);
         if (s != answer) {
-          Assert.assertEquals(
-              "r=" + r + ", n=" + n + ", answer=" + answer + " but s=" + s,
-              answer, s);
+          assertEquals(
+              answer, s, "r=" + r + ", n=" + n + ", answer=" + answer + " but s=" + s);
         }
       }
     }
@@ -168,9 +168,8 @@ public class TestModular{
         final long answer = rn[i][j][1];
         final long s = square(r, n, r2p64);
         if (s != answer) {
-          Assert.assertEquals(
-              "r=" + r + ", n=" + n + ", answer=" + answer + " but s=" + s,
-              answer, s);
+          assertEquals(
+              answer, s, "r=" + r + ", n=" + n + ", answer=" + answer + " but s=" + s);
         }
       }
     }
@@ -185,9 +184,8 @@ public class TestModular{
         final BigInteger R = BigInteger.valueOf(r);
         final long s = R.multiply(R).mod(N).longValue();
         if (s != answer) {
-          Assert.assertEquals(
-              "r=" + r + ", n=" + n + ", answer=" + answer + " but s=" + s,
-              answer, s);
+          assertEquals(
+              answer, s, "r=" + r + ", n=" + n + ", answer=" + answer + " but s=" + s);
         }
       }
     }
@@ -202,9 +200,8 @@ public class TestModular{
         final BigInteger R = BigInteger.valueOf(r);
         final long s = R.modPow(TWO, N).longValue();
         if (s != answer) {
-          Assert.assertEquals(
-              "r=" + r + ", n=" + n + ", answer=" + answer + " but s=" + s,
-              answer, s);
+          assertEquals(
+              answer, s, "r=" + r + ", n=" + n + ", answer=" + answer + " but s=" + s);
         }
       }
     }
@@ -299,9 +296,8 @@ public class TestModular{
         final long answer = en[i][j][1];
         final long s = Modular.mod(e, n);
         if (s != answer) {
-          Assert.assertEquals(
-              "e=" + e + ", n=" + n + ", answer=" + answer + " but s=" + s,
-              answer, s);
+          assertEquals(
+              answer, s, "e=" + e + ", n=" + n + ", answer=" + answer + " but s=" + s);
         }
       }
     }
@@ -316,9 +312,8 @@ public class TestModular{
         final long answer = en[i][j][1];
         final long s = m2.mod(e);
         if (s != answer) {
-          Assert.assertEquals(
-              "e=" + e + ", n=" + n + ", answer=" + answer + " but s=" + s,
-              answer, s);
+          assertEquals(
+              answer, s, "e=" + e + ", n=" + n + ", answer=" + answer + " but s=" + s);
         }
       }
     }
@@ -332,9 +327,8 @@ public class TestModular{
         final long answer = en[i][j][1];
         final long s = m2.mod2(e);
         if (s != answer) {
-          Assert.assertEquals(
-              "e=" + e + ", n=" + n + ", answer=" + answer + " but s=" + s,
-              answer, s);
+          assertEquals(
+              answer, s, "e=" + e + ", n=" + n + ", answer=" + answer + " but s=" + s);
         }
       }
     }
@@ -348,9 +342,8 @@ public class TestModular{
         final long answer = en[i][j][1];
         final long s = TWO.modPow(BigInteger.valueOf(e), N).longValue();
         if (s != answer) {
-          Assert.assertEquals(
-              "e=" + e + ", n=" + n + ", answer=" + answer + " but s=" + s,
-              answer, s);
+          assertEquals(
+              answer, s, "e=" + e + ", n=" + n + ", answer=" + answer + " but s=" + s);
         }
       }
     }

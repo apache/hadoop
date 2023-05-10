@@ -738,7 +738,7 @@ at org.apache.hadoop.mapreduce.lib.input.LineRecordReader.nextKeyValue(LineRecor
 ```
 
 The underlying problem is that the gzip decompressor is automatically enabled
-when the the source file ends with the ".gz" extension. Because S3 Select
+when the source file ends with the ".gz" extension. Because S3 Select
 returns decompressed data, the codec fails.
 
 The workaround here is to declare that the job should add the "Passthrough Codec"

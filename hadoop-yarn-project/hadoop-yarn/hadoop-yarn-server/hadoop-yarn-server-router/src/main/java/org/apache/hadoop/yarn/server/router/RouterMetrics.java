@@ -107,6 +107,80 @@ public final class RouterMetrics {
   private MutableGaugeInt numDeleteReservationFailedRetrieved;
   @Metric("# of listReservation failed to be retrieved")
   private MutableGaugeInt numListReservationFailedRetrieved;
+  @Metric("# of getAppActivities failed to be retrieved")
+  private MutableGaugeInt numGetAppActivitiesFailedRetrieved;
+  @Metric("# of getAppStatistics failed to be retrieved")
+  private MutableGaugeInt numGetAppStatisticsFailedRetrieved;
+  @Metric("# of getAppPriority failed to be retrieved")
+  private MutableGaugeInt numGetAppPriorityFailedRetrieved;
+  @Metric("# of getAppQueue failed to be retrieved")
+  private MutableGaugeInt numGetAppQueueFailedRetrieved;
+  @Metric("# of updateAppQueue failed to be retrieved")
+  private MutableGaugeInt numUpdateAppQueueFailedRetrieved;
+  @Metric("# of getAppTimeout failed to be retrieved")
+  private MutableGaugeInt numGetAppTimeoutFailedRetrieved;
+  @Metric("# of getAppTimeouts failed to be retrieved")
+  private MutableGaugeInt numGetAppTimeoutsFailedRetrieved;
+  @Metric("# of refreshQueues failed to be retrieved")
+  private MutableGaugeInt numRefreshQueuesFailedRetrieved;
+  @Metric("# of getRMNodeLabels failed to be retrieved")
+  private MutableGaugeInt numGetRMNodeLabelsFailedRetrieved;
+  @Metric("# of checkUserAccessToQueue failed to be retrieved")
+  private MutableGaugeInt numCheckUserAccessToQueueFailedRetrieved;
+  @Metric("# of refreshNodes failed to be retrieved")
+  private MutableGaugeInt numRefreshNodesFailedRetrieved;
+  @Metric("# of getDelegationToken failed to be retrieved")
+  private MutableGaugeInt numGetDelegationTokenFailedRetrieved;
+  @Metric("# of renewDelegationToken failed to be retrieved")
+  private MutableGaugeInt numRenewDelegationTokenFailedRetrieved;
+  @Metric("# of renewDelegationToken failed to be retrieved")
+  private MutableGaugeInt numCancelDelegationTokenFailedRetrieved;
+  @Metric("# of dumpSchedulerLogs failed to be retrieved")
+  private MutableGaugeInt numDumpSchedulerLogsFailedRetrieved;
+  @Metric("# of getActivities failed to be retrieved")
+  private MutableGaugeInt numGetActivitiesFailedRetrieved;
+  @Metric("# of getBulkActivities failed to be retrieved")
+  private MutableGaugeInt numGetBulkActivitiesFailedRetrieved;
+  @Metric("# of getSchedulerInfo failed to be retrieved")
+  private MutableGaugeInt numGetSchedulerInfoFailedRetrieved;
+  @Metric("# of refreshSuperUserGroupsConfiguration failed to be retrieved")
+  private MutableGaugeInt numRefreshSuperUserGroupsConfigurationFailedRetrieved;
+  @Metric("# of refreshUserToGroupsMappings failed to be retrieved")
+  private MutableGaugeInt numRefreshUserToGroupsMappingsFailedRetrieved;
+  @Metric("# of deregisterSubCluster failed to be retrieved")
+  private MutableGaugeInt numDeregisterSubClusterFailedRetrieved;
+  @Metric("# of refreshAdminAcls failed to be retrieved")
+  private MutableGaugeInt numRefreshAdminAclsFailedRetrieved;
+  @Metric("# of refreshServiceAcls failed to be retrieved")
+  private MutableGaugeInt numRefreshServiceAclsFailedRetrieved;
+  @Metric("# of replaceLabelsOnNodes failed to be retrieved")
+  private MutableGaugeInt numReplaceLabelsOnNodesFailedRetrieved;
+  @Metric("# of replaceLabelsOnNode failed to be retrieved")
+  private MutableGaugeInt numReplaceLabelsOnNodeFailedRetrieved;
+  @Metric("# of addToClusterNodeLabels failed to be retrieved")
+  private MutableGaugeInt numAddToClusterNodeLabelsFailedRetrieved;
+  @Metric("# of removeFromClusterNodeLabels failed to be retrieved")
+  private MutableGaugeInt numRemoveFromClusterNodeLabelsFailedRetrieved;
+  @Metric("# of numUpdateSchedulerConfiguration failed to be retrieved")
+  private MutableGaugeInt numUpdateSchedulerConfigurationFailedRetrieved;
+  @Metric("# of numGetSchedulerConfiguration failed to be retrieved")
+  private MutableGaugeInt numGetSchedulerConfigurationFailedRetrieved;
+  @Metric("# of getClusterInfo failed to be retrieved")
+  private MutableGaugeInt numGetClusterInfoFailedRetrieved;
+  @Metric("# of getClusterUserInfo failed to be retrieved")
+  private MutableGaugeInt numGetClusterUserInfoFailedRetrieved;
+  @Metric("# of updateNodeResource failed to be retrieved")
+  private MutableGaugeInt numUpdateNodeResourceFailedRetrieved;
+  @Metric("# of refreshNodesResources failed to be retrieved")
+  private MutableGaugeInt numRefreshNodesResourcesFailedRetrieved;
+  @Metric("# of checkForDecommissioningNodes failed to be retrieved")
+  private MutableGaugeInt numCheckForDecommissioningNodesFailedRetrieved;
+  @Metric("# of refreshClusterMaxPriority failed to be retrieved")
+  private MutableGaugeInt numRefreshClusterMaxPriorityFailedRetrieved;
+  @Metric("# of mapAttributesToNodes failed to be retrieved")
+  private MutableGaugeInt numMapAttributesToNodesFailedRetrieved;
+  @Metric("# of getGroupsForUser failed to be retrieved")
+  private MutableGaugeInt numGetGroupsForUserFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -175,6 +249,80 @@ public final class RouterMetrics {
   private MutableRate totalSucceededDeleteReservationRetrieved;
   @Metric("Total number of successful Retrieved ListReservation and latency(ms)")
   private MutableRate totalSucceededListReservationRetrieved;
+  @Metric("Total number of successful Retrieved GetAppActivities and latency(ms)")
+  private MutableRate totalSucceededGetAppActivitiesRetrieved;
+  @Metric("Total number of successful Retrieved GetAppStatistics and latency(ms)")
+  private MutableRate totalSucceededGetAppStatisticsRetrieved;
+  @Metric("Total number of successful Retrieved GetAppPriority and latency(ms)")
+  private MutableRate totalSucceededGetAppPriorityRetrieved;
+  @Metric("Total number of successful Retrieved GetAppQueue and latency(ms)")
+  private MutableRate totalSucceededGetAppQueueRetrieved;
+  @Metric("Total number of successful Retrieved UpdateAppQueue and latency(ms)")
+  private MutableRate totalSucceededUpdateAppQueueRetrieved;
+  @Metric("Total number of successful Retrieved GetAppTimeout and latency(ms)")
+  private MutableRate totalSucceededGetAppTimeoutRetrieved;
+  @Metric("Total number of successful Retrieved GetAppTimeouts and latency(ms)")
+  private MutableRate totalSucceededGetAppTimeoutsRetrieved;
+  @Metric("Total number of successful Retrieved RefreshQueues and latency(ms)")
+  private MutableRate totalSucceededRefreshQueuesRetrieved;
+  @Metric("Total number of successful Retrieved GetRMNodeLabels and latency(ms)")
+  private MutableRate totalSucceededGetRMNodeLabelsRetrieved;
+  @Metric("Total number of successful Retrieved CheckUserAccessToQueue and latency(ms)")
+  private MutableRate totalSucceededCheckUserAccessToQueueRetrieved;
+  @Metric("Total number of successful Retrieved RefreshNodes and latency(ms)")
+  private MutableRate totalSucceededRefreshNodesRetrieved;
+  @Metric("Total number of successful Retrieved GetDelegationToken and latency(ms)")
+  private MutableRate totalSucceededGetDelegationTokenRetrieved;
+  @Metric("Total number of successful Retrieved RenewDelegationToken and latency(ms)")
+  private MutableRate totalSucceededRenewDelegationTokenRetrieved;
+  @Metric("Total number of successful Retrieved CancelDelegationToken and latency(ms)")
+  private MutableRate totalSucceededCancelDelegationTokenRetrieved;
+  @Metric("Total number of successful Retrieved DumpSchedulerLogs and latency(ms)")
+  private MutableRate totalSucceededDumpSchedulerLogsRetrieved;
+  @Metric("Total number of successful Retrieved GetActivities and latency(ms)")
+  private MutableRate totalSucceededGetActivitiesRetrieved;
+  @Metric("Total number of successful Retrieved GetBulkActivities and latency(ms)")
+  private MutableRate totalSucceededGetBulkActivitiesRetrieved;
+  @Metric("Total number of successful Retrieved RefreshSuperUserGroupsConfig and latency(ms)")
+  private MutableRate totalSucceededRefreshSuperUserGroupsConfigurationRetrieved;
+  @Metric("Total number of successful Retrieved RefreshUserToGroupsMappings and latency(ms)")
+  private MutableRate totalSucceededRefreshUserToGroupsMappingsRetrieved;
+  @Metric("Total number of successful Retrieved ReplaceLabelsOnNodes and latency(ms)")
+  private MutableRate totalSucceededReplaceLabelsOnNodesRetrieved;
+  @Metric("Total number of successful Retrieved ReplaceLabelsOnNode and latency(ms)")
+  private MutableRate totalSucceededReplaceLabelsOnNodeRetrieved;
+  @Metric("Total number of successful Retrieved GetSchedulerInfo and latency(ms)")
+  private MutableRate totalSucceededGetSchedulerInfoRetrieved;
+  @Metric("Total number of successful Retrieved DeregisterSubCluster and latency(ms)")
+  private MutableRate totalSucceededDeregisterSubClusterRetrieved;
+  @Metric("Total number of successful Retrieved RefreshAdminAcls and latency(ms)")
+  private MutableRate totalSucceededRefreshAdminAclsRetrieved;
+  @Metric("Total number of successful Retrieved RefreshServiceAcls and latency(ms)")
+  private MutableRate totalSucceededRefreshServiceAclsRetrieved;
+  @Metric("Total number of successful Retrieved AddToClusterNodeLabels and latency(ms)")
+  private MutableRate totalSucceededAddToClusterNodeLabelsRetrieved;
+  @Metric("Total number of successful Retrieved RemoveFromClusterNodeLabels and latency(ms)")
+  private MutableRate totalSucceededRemoveFromClusterNodeLabelsRetrieved;
+  @Metric("Total number of successful Retrieved updateSchedulerConfiguration and latency(ms)")
+  private MutableRate totalSucceededUpdateSchedulerConfigurationRetrieved;
+  @Metric("Total number of successful Retrieved getSchedulerConfiguration and latency(ms)")
+  private MutableRate totalSucceededGetSchedulerConfigurationRetrieved;
+  @Metric("Total number of successful Retrieved GetClusterInfoRetrieved and latency(ms)")
+  private MutableRate totalSucceededGetClusterInfoRetrieved;
+  @Metric("Total number of successful Retrieved GetClusterUserInfoRetrieved and latency(ms)")
+  private MutableRate totalSucceededGetClusterUserInfoRetrieved;
+  @Metric("Total number of successful Retrieved UpdateNodeResource and latency(ms)")
+  private MutableRate totalSucceededUpdateNodeResourceRetrieved;
+  @Metric("Total number of successful Retrieved RefreshNodesResources and latency(ms)")
+  private MutableRate totalSucceededRefreshNodesResourcesRetrieved;
+  @Metric("Total number of successful Retrieved CheckForDecommissioningNodes and latency(ms)")
+  private MutableRate totalSucceededCheckForDecommissioningNodesRetrieved;
+  @Metric("Total number of successful Retrieved RefreshClusterMaxPriority and latency(ms)")
+  private MutableRate totalSucceededRefreshClusterMaxPriorityRetrieved;
+  @Metric("Total number of successful Retrieved MapAttributesToNodes and latency(ms)")
+  private MutableRate totalSucceededMapAttributesToNodesRetrieved;
+  @Metric("Total number of successful Retrieved GetGroupsForUser and latency(ms)")
+  private MutableRate totalSucceededGetGroupsForUsersRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -212,10 +360,48 @@ public final class RouterMetrics {
   private MutableQuantiles updateReservationLatency;
   private MutableQuantiles deleteReservationLatency;
   private MutableQuantiles listReservationLatency;
+  private MutableQuantiles getAppActivitiesLatency;
+  private MutableQuantiles getAppStatisticsLatency;
+  private MutableQuantiles getAppPriorityLatency;
+  private MutableQuantiles getAppQueueLatency;
+  private MutableQuantiles getUpdateQueueLatency;
+  private MutableQuantiles getAppTimeoutLatency;
+  private MutableQuantiles getAppTimeoutsLatency;
+  private MutableQuantiles refreshQueuesLatency;
+  private MutableQuantiles getRMNodeLabelsLatency;
+  private MutableQuantiles checkUserAccessToQueueLatency;
+  private MutableQuantiles refreshNodesLatency;
+  private MutableQuantiles getDelegationTokenLatency;
+  private MutableQuantiles renewDelegationTokenLatency;
+  private MutableQuantiles cancelDelegationTokenLatency;
+  private MutableQuantiles dumpSchedulerLogsLatency;
+  private MutableQuantiles getActivitiesLatency;
+  private MutableQuantiles getBulkActivitiesLatency;
+  private MutableQuantiles getSchedulerInfoRetrievedLatency;
+  private MutableQuantiles refreshSuperUserGroupsConfLatency;
+  private MutableQuantiles refreshUserToGroupsMappingsLatency;
+  private MutableQuantiles refreshDeregisterSubClusterLatency;
+  private MutableQuantiles refreshAdminAclsLatency;
+  private MutableQuantiles refreshServiceAclsLatency;
+  private MutableQuantiles replaceLabelsOnNodesLatency;
+  private MutableQuantiles replaceLabelsOnNodeLatency;
+  private MutableQuantiles addToClusterNodeLabelsLatency;
+  private MutableQuantiles removeFromClusterNodeLabelsLatency;
+  private MutableQuantiles updateSchedulerConfigLatency;
+  private MutableQuantiles getSchedulerConfigurationLatency;
+  private MutableQuantiles getClusterInfoLatency;
+  private MutableQuantiles getClusterUserInfoLatency;
+  private MutableQuantiles updateNodeResourceLatency;
+  private MutableQuantiles refreshNodesResourcesLatency;
+  private MutableQuantiles checkForDecommissioningNodesLatency;
+  private MutableQuantiles refreshClusterMaxPriorityLatency;
+  private MutableQuantiles mapAttributesToNodesLatency;
+  private MutableQuantiles getGroupsForUserLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
 
+  @SuppressWarnings("checkstyle:MethodLength")
   private RouterMetrics() {
     registry = new MetricsRegistry(RECORD_INFO);
     registry.tag(RECORD_INFO, "Router");
@@ -342,6 +528,118 @@ public final class RouterMetrics {
     listReservationLatency =
         registry.newQuantiles("listReservationLatency",
             "latency of list reservation timeouts", "ops", "latency", 10);
+
+    getAppActivitiesLatency = registry.newQuantiles("getAppActivitiesLatency",
+         "latency of get app activities timeouts", "ops", "latency", 10);
+
+    getAppStatisticsLatency = registry.newQuantiles("getAppStatisticsLatency",
+         "latency of get app statistics timeouts", "ops", "latency", 10);
+
+    getAppPriorityLatency = registry.newQuantiles("getAppPriorityLatency",
+         "latency of get app priority timeouts", "ops", "latency", 10);
+
+    getAppQueueLatency = registry.newQuantiles("getAppQueueLatency",
+         "latency of get app queue timeouts", "ops", "latency", 10);
+
+    getUpdateQueueLatency = registry.newQuantiles("getUpdateQueueLatency",
+        "latency of update app queue timeouts", "ops", "latency", 10);
+
+    getAppTimeoutLatency = registry.newQuantiles("getAppTimeoutLatency",
+        "latency of get apptimeout timeouts", "ops", "latency", 10);
+
+    getAppTimeoutsLatency = registry.newQuantiles("getAppTimeoutsLatency",
+         "latency of get apptimeouts timeouts", "ops", "latency", 10);
+
+    refreshQueuesLatency = registry.newQuantiles("refreshQueuesLatency",
+         "latency of get refresh queues timeouts", "ops", "latency", 10);
+
+    getRMNodeLabelsLatency = registry.newQuantiles("getRMNodeLabelsLatency",
+        "latency of get rmnodelabels timeouts", "ops", "latency", 10);
+
+    checkUserAccessToQueueLatency = registry.newQuantiles("checkUserAccessToQueueLatency",
+        "latency of get apptimeouts timeouts", "ops", "latency", 10);
+
+    refreshNodesLatency = registry.newQuantiles("refreshNodesLatency",
+        "latency of get refresh nodes timeouts", "ops", "latency", 10);
+
+    getDelegationTokenLatency = registry.newQuantiles("getDelegationTokenLatency",
+        "latency of get delegation token timeouts", "ops", "latency", 10);
+
+    renewDelegationTokenLatency = registry.newQuantiles("renewDelegationTokenLatency",
+       "latency of renew delegation token timeouts", "ops", "latency", 10);
+
+    cancelDelegationTokenLatency = registry.newQuantiles("cancelDelegationTokenLatency",
+        "latency of cancel delegation token timeouts", "ops", "latency", 10);
+
+    dumpSchedulerLogsLatency = registry.newQuantiles("dumpSchedulerLogsLatency",
+        "latency of dump scheduler logs timeouts", "ops", "latency", 10);
+
+    getActivitiesLatency = registry.newQuantiles("getActivitiesLatency",
+        "latency of get activities timeouts", "ops", "latency", 10);
+
+    getBulkActivitiesLatency = registry.newQuantiles("getBulkActivitiesLatency",
+         "latency of get bulk activities timeouts", "ops", "latency", 10);
+
+    getSchedulerInfoRetrievedLatency = registry.newQuantiles("getSchedulerInfoRetrievedLatency",
+        "latency of get scheduler info timeouts", "ops", "latency", 10);
+
+    refreshSuperUserGroupsConfLatency = registry.newQuantiles("refreshSuperUserGroupsConfLatency",
+        "latency of refresh superuser groups configuration timeouts", "ops", "latency", 10);
+
+    refreshUserToGroupsMappingsLatency = registry.newQuantiles("refreshUserToGroupsMappingsLatency",
+        "latency of refresh user to groups mappings timeouts", "ops", "latency", 10);
+
+    refreshDeregisterSubClusterLatency = registry.newQuantiles("refreshDeregisterSubClusterLatency",
+        "latency of deregister subcluster timeouts", "ops", "latency", 10);
+
+    refreshAdminAclsLatency = registry.newQuantiles("refreshAdminAclsLatency",
+        "latency of refresh admin acls timeouts", "ops", "latency", 10);
+
+    refreshServiceAclsLatency = registry.newQuantiles("refreshServiceAclsLatency",
+        "latency of refresh service acls timeouts", "ops", "latency", 10);
+
+    replaceLabelsOnNodesLatency = registry.newQuantiles("replaceLabelsOnNodesLatency",
+        "latency of replace labels on nodes timeouts", "ops", "latency", 10);
+
+    replaceLabelsOnNodeLatency = registry.newQuantiles("replaceLabelsOnNodeLatency",
+        "latency of replace labels on node timeouts", "ops", "latency", 10);
+
+    addToClusterNodeLabelsLatency = registry.newQuantiles("addToClusterNodeLabelsLatency",
+        "latency of add cluster nodelabels timeouts", "ops", "latency", 10);
+
+    removeFromClusterNodeLabelsLatency = registry.newQuantiles("removeFromClusterNodeLabelsLatency",
+        "latency of remove cluster nodelabels timeouts", "ops", "latency", 10);
+
+    updateSchedulerConfigLatency = registry.newQuantiles("updateSchedulerConfigurationLatency",
+        "latency of update scheduler configuration timeouts", "ops", "latency", 10);
+
+    getSchedulerConfigurationLatency = registry.newQuantiles("getSchedulerConfigurationLatency",
+        "latency of get scheduler configuration timeouts", "ops", "latency", 10);
+
+    getClusterInfoLatency = registry.newQuantiles("getClusterInfoLatency",
+        "latency of get cluster info timeouts", "ops", "latency", 10);
+
+    getClusterUserInfoLatency = registry.newQuantiles("getClusterUserInfoLatency",
+        "latency of get cluster user info timeouts", "ops", "latency", 10);
+
+    updateNodeResourceLatency = registry.newQuantiles("updateNodeResourceLatency",
+        "latency of update node resource timeouts", "ops", "latency", 10);
+
+    refreshNodesResourcesLatency = registry.newQuantiles("refreshNodesResourcesLatency",
+        "latency of refresh nodes resources timeouts", "ops", "latency", 10);
+
+    checkForDecommissioningNodesLatency = registry.newQuantiles(
+        "checkForDecommissioningNodesLatency", "latency of check for decommissioningnodes timeouts",
+        "ops", "latency", 10);
+
+    refreshClusterMaxPriorityLatency = registry.newQuantiles("refreshClusterMaxPriorityLatency",
+        "latency of refresh cluster max priority timeouts", "ops", "latency", 10);
+
+    mapAttributesToNodesLatency = registry.newQuantiles("mapAttributesToNodesLatency",
+        "latency of map attributes to nodes timeouts", "ops", "latency", 10);
+
+    getGroupsForUserLatency = registry.newQuantiles("getGroupsForUserLatency",
+        "latency of get groups for user timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -529,6 +827,186 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededGetAppActivitiesRetrieved() {
+    return totalSucceededGetAppActivitiesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetAppStatisticsRetrieved() {
+    return totalSucceededGetAppStatisticsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetAppPriorityRetrieved() {
+    return totalSucceededGetAppPriorityRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetAppQueueRetrieved() {
+    return totalSucceededGetAppQueueRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededUpdateAppQueueRetrieved() {
+    return totalSucceededUpdateAppQueueRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetAppTimeoutRetrieved() {
+    return totalSucceededGetAppTimeoutRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetAppTimeoutsRetrieved() {
+    return totalSucceededGetAppTimeoutsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededRefreshQueuesRetrieved() {
+    return totalSucceededRefreshQueuesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededRefreshNodesRetrieved() {
+    return totalSucceededRefreshNodesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetRMNodeLabelsRetrieved() {
+    return totalSucceededGetRMNodeLabelsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededCheckUserAccessToQueueRetrieved() {
+    return totalSucceededCheckUserAccessToQueueRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetDelegationTokenRetrieved() {
+    return totalSucceededGetDelegationTokenRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededRenewDelegationTokenRetrieved() {
+    return totalSucceededRenewDelegationTokenRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededCancelDelegationTokenRetrieved() {
+    return totalSucceededCancelDelegationTokenRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededDumpSchedulerLogsRetrieved() {
+    return totalSucceededDumpSchedulerLogsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetActivitiesRetrieved() {
+    return totalSucceededGetActivitiesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetBulkActivitiesRetrieved() {
+    return totalSucceededGetBulkActivitiesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetSchedulerInfoRetrieved() {
+    return totalSucceededGetSchedulerInfoRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededDeregisterSubClusterRetrieved() {
+    return totalSucceededDeregisterSubClusterRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededRefreshAdminAclsRetrieved() {
+    return totalSucceededRefreshAdminAclsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededRefreshServiceAclsRetrieved() {
+    return totalSucceededRefreshServiceAclsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededAddToClusterNodeLabelsRetrieved() {
+    return totalSucceededAddToClusterNodeLabelsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededRemoveFromClusterNodeLabelsRetrieved() {
+    return totalSucceededRemoveFromClusterNodeLabelsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededUpdateSchedulerConfigurationRetrieved() {
+    return totalSucceededUpdateSchedulerConfigurationRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetSchedulerConfigurationRetrieved() {
+    return totalSucceededGetSchedulerConfigurationRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetClusterInfoRetrieved() {
+    return totalSucceededGetClusterInfoRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetClusterUserInfoRetrieved() {
+    return totalSucceededGetClusterUserInfoRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededUpdateNodeResourceRetrieved() {
+    return totalSucceededUpdateNodeResourceRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededRefreshNodesResourcesRetrieved() {
+    return totalSucceededRefreshNodesResourcesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededCheckForDecommissioningNodesRetrieved() {
+    return totalSucceededCheckForDecommissioningNodesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededRefreshClusterMaxPriorityRetrieved() {
+    return totalSucceededRefreshClusterMaxPriorityRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededMapAttributesToNodesRetrieved() {
+    return totalSucceededMapAttributesToNodesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetGroupsForUsersRetrieved() {
+    return totalSucceededGetGroupsForUsersRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededRefreshSuperUserGroupsConfigurationRetrieved() {
+    return totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededReplaceLabelsOnNodesRetrieved() {
+    return totalSucceededReplaceLabelsOnNodesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededReplaceLabelsOnNodeRetrieved() {
+    return totalSucceededReplaceLabelsOnNodeRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededAppsCreated() {
     return totalSucceededAppsCreated.lastStat().mean();
   }
@@ -694,6 +1172,186 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededGetAppActivitiesRetrieved() {
+    return totalSucceededGetAppActivitiesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetAppStatisticsRetrieved() {
+    return totalSucceededGetAppStatisticsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetAppPriorityRetrieved() {
+    return totalSucceededGetAppPriorityRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetAppQueueRetrieved() {
+    return totalSucceededGetAppQueueRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededUpdateAppQueueRetrieved() {
+    return totalSucceededUpdateAppQueueRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetAppTimeoutRetrieved() {
+    return totalSucceededGetAppTimeoutRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetAppTimeoutsRetrieved() {
+    return totalSucceededGetAppTimeoutsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededRefreshQueuesRetrieved() {
+    return totalSucceededRefreshQueuesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededRefreshNodesRetrieved() {
+    return totalSucceededRefreshNodesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetRMNodeLabelsRetrieved() {
+    return totalSucceededGetRMNodeLabelsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededCheckUserAccessToQueueRetrieved() {
+    return totalSucceededCheckUserAccessToQueueRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetDelegationTokenRetrieved() {
+    return totalSucceededGetDelegationTokenRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededRenewDelegationTokenRetrieved() {
+    return totalSucceededRenewDelegationTokenRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededCancelDelegationTokenRetrieved() {
+    return totalSucceededCancelDelegationTokenRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededDumpSchedulerLogsRetrieved() {
+    return totalSucceededDumpSchedulerLogsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetActivitiesRetrieved() {
+    return totalSucceededGetActivitiesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetBulkActivitiesRetrieved() {
+    return totalSucceededGetBulkActivitiesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetSchedulerInfoRetrieved() {
+    return totalSucceededGetSchedulerInfoRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededDeregisterSubClusterRetrieved() {
+    return totalSucceededDeregisterSubClusterRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededRefreshAdminAclsRetrieved() {
+    return totalSucceededRefreshAdminAclsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededRefreshServiceAclsRetrieved() {
+    return totalSucceededRefreshServiceAclsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededAddToClusterNodeLabelsRetrieved() {
+    return totalSucceededAddToClusterNodeLabelsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededRemoveFromClusterNodeLabelsRetrieved() {
+    return totalSucceededRemoveFromClusterNodeLabelsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededUpdateSchedulerConfigurationRetrieved() {
+    return totalSucceededUpdateSchedulerConfigurationRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetSchedulerConfigurationRetrieved() {
+    return totalSucceededGetSchedulerConfigurationRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetClusterInfoRetrieved() {
+    return totalSucceededGetClusterInfoRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetClusterUserInfoRetrieved() {
+    return totalSucceededGetClusterUserInfoRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededUpdateNodeResourceRetrieved() {
+    return totalSucceededUpdateNodeResourceRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededRefreshNodesResourcesRetrieved() {
+    return totalSucceededRefreshNodesResourcesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededCheckForDecommissioningNodesRetrieved() {
+    return totalSucceededCheckForDecommissioningNodesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededRefreshClusterMaxPriorityRetrieved() {
+    return totalSucceededRefreshClusterMaxPriorityRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededMapAttributesToNodesRetrieved() {
+    return totalSucceededMapAttributesToNodesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetGroupsForUsersRetrieved() {
+    return totalSucceededGetGroupsForUsersRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededRefreshSuperUserGroupsConfigurationRetrieved() {
+    return totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededReplaceLabelsOnNodesRetrieved() {
+    return totalSucceededReplaceLabelsOnNodesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededReplaceLabelsOnNodeRetrieved() {
+    return totalSucceededReplaceLabelsOnNodeRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public int getAppsFailedCreated() {
     return numAppsFailedCreated.value();
   }
@@ -844,6 +1502,155 @@ public final class RouterMetrics {
 
   public int getListReservationFailedRetrieved() {
     return numListReservationFailedRetrieved.value();
+  }
+
+  public int getAppActivitiesFailedRetrieved() {
+    return numGetAppActivitiesFailedRetrieved.value();
+  }
+
+  public int getAppStatisticsFailedRetrieved() {
+    return numGetAppStatisticsFailedRetrieved.value();
+  }
+
+  public int getAppPriorityFailedRetrieved() {
+    return numGetAppPriorityFailedRetrieved.value();
+  }
+
+  public int getAppQueueFailedRetrieved() {
+    return numGetAppQueueFailedRetrieved.value();
+  }
+
+  public int getUpdateAppQueueFailedRetrieved() {
+    return numUpdateAppQueueFailedRetrieved.value();
+  }
+
+  public int getAppTimeoutFailedRetrieved() {
+    return numGetAppTimeoutFailedRetrieved.value();
+  }
+
+  public int getAppTimeoutsFailedRetrieved() {
+    return numGetAppTimeoutsFailedRetrieved.value();
+  }
+
+
+  public int getRefreshQueuesFailedRetrieved() {
+    return numRefreshQueuesFailedRetrieved.value();
+  }
+
+  public int getRMNodeLabelsFailedRetrieved() {
+    return numGetRMNodeLabelsFailedRetrieved.value();
+  }
+
+  public int getCheckUserAccessToQueueFailedRetrieved() {
+    return numCheckUserAccessToQueueFailedRetrieved.value();
+  }
+
+  public int getNumRefreshNodesFailedRetrieved() {
+    return numRefreshNodesFailedRetrieved.value();
+  }
+
+  public int getNumRefreshSuperUserGroupsConfigurationFailedRetrieved() {
+    return numRefreshSuperUserGroupsConfigurationFailedRetrieved.value();
+  }
+
+  public int getNumRefreshUserToGroupsMappingsFailedRetrieved() {
+    return numRefreshUserToGroupsMappingsFailedRetrieved.value();
+  }
+
+  public int getDeregisterSubClusterFailedRetrieved() {
+    return numDeregisterSubClusterFailedRetrieved.value();
+  }
+
+  public int getNumRefreshAdminAclsFailedRetrieved() {
+    return numRefreshAdminAclsFailedRetrieved.value();
+  }
+
+  public int getNumRefreshServiceAclsFailedRetrieved() {
+    return numRefreshServiceAclsFailedRetrieved.value();
+  }
+
+  public int getNumReplaceLabelsOnNodesFailedRetrieved() {
+    return numReplaceLabelsOnNodesFailedRetrieved.value();
+  }
+
+  public int getNumReplaceLabelsOnNodeFailedRetrieved() {
+    return numReplaceLabelsOnNodeFailedRetrieved.value();
+  }
+
+  public int getNumAddToClusterNodeLabelsFailedRetrieved() {
+    return numAddToClusterNodeLabelsFailedRetrieved.value();
+  }
+
+  public int getNumRemoveFromClusterNodeLabelsFailedRetrieved() {
+    return numRemoveFromClusterNodeLabelsFailedRetrieved.value();
+  }
+
+  public int getUpdateSchedulerConfigurationFailedRetrieved() {
+    return numUpdateSchedulerConfigurationFailedRetrieved.value();
+  }
+
+  public int getSchedulerConfigurationFailedRetrieved() {
+    return numGetSchedulerConfigurationFailedRetrieved.value();
+  }
+
+  public int getClusterInfoFailedRetrieved() {
+    return numGetClusterInfoFailedRetrieved.value();
+  }
+
+  public int getClusterUserInfoFailedRetrieved() {
+    return numGetClusterUserInfoFailedRetrieved.value();
+  }
+
+  public int getUpdateNodeResourceFailedRetrieved() {
+    return numUpdateNodeResourceFailedRetrieved.value();
+  }
+
+  public int getRefreshNodesResourcesFailedRetrieved() {
+    return numRefreshNodesResourcesFailedRetrieved.value();
+  }
+
+  public int getCheckForDecommissioningNodesFailedRetrieved() {
+    return numCheckForDecommissioningNodesFailedRetrieved.value();
+  }
+
+  public int getRefreshClusterMaxPriorityFailedRetrieved() {
+    return numRefreshClusterMaxPriorityFailedRetrieved.value();
+  }
+
+  public int getMapAttributesToNodesFailedRetrieved() {
+    return numMapAttributesToNodesFailedRetrieved.value();
+  }
+
+  public int getGroupsForUserFailedRetrieved() {
+    return numGetGroupsForUserFailedRetrieved.value();
+  }
+
+  public int getDelegationTokenFailedRetrieved() {
+    return numGetDelegationTokenFailedRetrieved.value();
+  }
+
+  public int getRenewDelegationTokenFailedRetrieved() {
+    return numRenewDelegationTokenFailedRetrieved.value();
+  }
+
+  public int getCancelDelegationTokenFailedRetrieved() {
+    return numCancelDelegationTokenFailedRetrieved.value();
+  }
+
+  public int getDumpSchedulerLogsFailedRetrieved() {
+    return numDumpSchedulerLogsFailedRetrieved.value();
+  }
+
+  public int getActivitiesFailedRetrieved() {
+    return numGetActivitiesFailedRetrieved.value();
+  }
+
+  public int getBulkActivitiesFailedRetrieved(){
+    return numGetBulkActivitiesFailedRetrieved.value();
+  }
+
+  public int getSchedulerInfoFailedRetrieved() {
+    return numGetSchedulerInfoFailedRetrieved.value();
   }
 
   public void succeededAppsCreated(long duration) {
@@ -1011,6 +1818,191 @@ public final class RouterMetrics {
     listReservationLatency.add(duration);
   }
 
+  public void succeededGetAppActivitiesRetrieved(long duration) {
+    totalSucceededGetAppActivitiesRetrieved.add(duration);
+    getAppActivitiesLatency.add(duration);
+  }
+
+  public void succeededGetAppStatisticsRetrieved(long duration) {
+    totalSucceededGetAppStatisticsRetrieved.add(duration);
+    getAppStatisticsLatency.add(duration);
+  }
+
+  public void succeededGetAppPriorityRetrieved(long duration) {
+    totalSucceededGetAppPriorityRetrieved.add(duration);
+    getAppPriorityLatency.add(duration);
+  }
+
+  public void succeededGetAppQueueRetrieved(long duration) {
+    totalSucceededGetAppQueueRetrieved.add(duration);
+    getAppQueueLatency.add(duration);
+  }
+
+  public void succeededUpdateAppQueueRetrieved(long duration) {
+    totalSucceededUpdateAppQueueRetrieved.add(duration);
+    getUpdateQueueLatency.add(duration);
+  }
+
+  public void succeededGetAppTimeoutRetrieved(long duration) {
+    totalSucceededGetAppTimeoutRetrieved.add(duration);
+    getAppTimeoutLatency.add(duration);
+  }
+
+  public void succeededGetAppTimeoutsRetrieved(long duration) {
+    totalSucceededGetAppTimeoutsRetrieved.add(duration);
+    getAppTimeoutsLatency.add(duration);
+  }
+
+  public void succeededRefreshQueuesRetrieved(long duration) {
+    totalSucceededRefreshQueuesRetrieved.add(duration);
+    refreshQueuesLatency.add(duration);
+  }
+
+  public void succeededRefreshNodesRetrieved(long duration) {
+    totalSucceededRefreshNodesRetrieved.add(duration);
+    refreshNodesLatency.add(duration);
+  }
+
+  public void succeededGetRMNodeLabelsRetrieved(long duration) {
+    totalSucceededGetRMNodeLabelsRetrieved.add(duration);
+    getRMNodeLabelsLatency.add(duration);
+  }
+
+  public void succeededCheckUserAccessToQueueRetrieved(long duration) {
+    totalSucceededCheckUserAccessToQueueRetrieved.add(duration);
+    checkUserAccessToQueueLatency.add(duration);
+  }
+
+  public void succeededGetDelegationTokenRetrieved(long duration) {
+    totalSucceededGetDelegationTokenRetrieved.add(duration);
+    getDelegationTokenLatency.add(duration);
+  }
+
+  public void succeededRenewDelegationTokenRetrieved(long duration) {
+    totalSucceededRenewDelegationTokenRetrieved.add(duration);
+    renewDelegationTokenLatency.add(duration);
+  }
+
+  public void succeededCancelDelegationTokenRetrieved(long duration) {
+    totalSucceededCancelDelegationTokenRetrieved.add(duration);
+    cancelDelegationTokenLatency.add(duration);
+  }
+
+  public void succeededDumpSchedulerLogsRetrieved(long duration) {
+    totalSucceededDumpSchedulerLogsRetrieved.add(duration);
+    dumpSchedulerLogsLatency.add(duration);
+  }
+
+  public void succeededGetActivitiesLatencyRetrieved(long duration) {
+    totalSucceededGetActivitiesRetrieved.add(duration);
+    getActivitiesLatency.add(duration);
+  }
+
+  public void succeededGetBulkActivitiesRetrieved(long duration) {
+    totalSucceededGetBulkActivitiesRetrieved.add(duration);
+    getBulkActivitiesLatency.add(duration);
+  }
+
+  public void succeededGetSchedulerInfoRetrieved(long duration) {
+    totalSucceededGetSchedulerInfoRetrieved.add(duration);
+    getSchedulerInfoRetrievedLatency.add(duration);
+  }
+
+  public void succeededDeregisterSubClusterRetrieved(long duration) {
+    totalSucceededDeregisterSubClusterRetrieved.add(duration);
+    refreshDeregisterSubClusterLatency.add(duration);
+  }
+
+  public void succeededRefreshAdminAclsRetrieved(long duration) {
+    totalSucceededRefreshAdminAclsRetrieved.add(duration);
+    refreshAdminAclsLatency.add(duration);
+  }
+
+  public void succeededRefreshServiceAclsRetrieved(long duration) {
+    totalSucceededRefreshServiceAclsRetrieved.add(duration);
+    refreshServiceAclsLatency.add(duration);
+  }
+
+  public void succeededAddToClusterNodeLabelsRetrieved(long duration) {
+    totalSucceededAddToClusterNodeLabelsRetrieved.add(duration);
+    addToClusterNodeLabelsLatency.add(duration);
+  }
+
+  public void succeededRemoveFromClusterNodeLabelsRetrieved(long duration) {
+    totalSucceededRemoveFromClusterNodeLabelsRetrieved.add(duration);
+    removeFromClusterNodeLabelsLatency.add(duration);
+  }
+
+  public void succeededUpdateSchedulerConfigurationRetrieved(long duration) {
+    totalSucceededUpdateSchedulerConfigurationRetrieved.add(duration);
+    updateSchedulerConfigLatency.add(duration);
+  }
+
+  public void succeededGetSchedulerConfigurationRetrieved(long duration) {
+    totalSucceededGetSchedulerConfigurationRetrieved.add(duration);
+    getSchedulerConfigurationLatency.add(duration);
+  }
+
+  public void succeededGetClusterInfoRetrieved(long duration) {
+    totalSucceededGetClusterInfoRetrieved.add(duration);
+    getClusterInfoLatency.add(duration);
+  }
+
+  public void succeededGetClusterUserInfoRetrieved(long duration) {
+    totalSucceededGetClusterUserInfoRetrieved.add(duration);
+    getClusterUserInfoLatency.add(duration);
+  }
+
+  public void succeededUpdateNodeResourceRetrieved(long duration) {
+    totalSucceededUpdateNodeResourceRetrieved.add(duration);
+    updateNodeResourceLatency.add(duration);
+  }
+
+  public void succeededRefreshNodesResourcesRetrieved(long duration) {
+    totalSucceededRefreshNodesResourcesRetrieved.add(duration);
+    refreshNodesResourcesLatency.add(duration);
+  }
+
+  public void succeededCheckForDecommissioningNodesRetrieved(long duration) {
+    totalSucceededCheckForDecommissioningNodesRetrieved.add(duration);
+    checkForDecommissioningNodesLatency.add(duration);
+  }
+
+  public void succeededRefreshClusterMaxPriorityRetrieved(long duration) {
+    totalSucceededRefreshClusterMaxPriorityRetrieved.add(duration);
+    refreshClusterMaxPriorityLatency.add(duration);
+  }
+
+  public void succeededMapAttributesToNodesRetrieved(long duration) {
+    totalSucceededMapAttributesToNodesRetrieved.add(duration);
+    mapAttributesToNodesLatency.add(duration);
+  }
+
+  public void succeededGetGroupsForUsersRetrieved(long duration) {
+    totalSucceededGetGroupsForUsersRetrieved.add(duration);
+    getGroupsForUserLatency.add(duration);
+  }
+
+  public void succeededRefreshSuperUserGroupsConfRetrieved(long duration) {
+    totalSucceededRefreshSuperUserGroupsConfigurationRetrieved.add(duration);
+    refreshSuperUserGroupsConfLatency.add(duration);
+  }
+
+  public void succeededRefreshUserToGroupsMappingsRetrieved(long duration) {
+    totalSucceededRefreshUserToGroupsMappingsRetrieved.add(duration);
+    refreshUserToGroupsMappingsLatency.add(duration);
+  }
+
+  public void succeededReplaceLabelsOnNodesRetrieved(long duration) {
+    totalSucceededReplaceLabelsOnNodesRetrieved.add(duration);
+    replaceLabelsOnNodesLatency.add(duration);
+  }
+
+  public void succeededReplaceLabelsOnNodeRetrieved(long duration) {
+    totalSucceededReplaceLabelsOnNodeRetrieved.add(duration);
+    replaceLabelsOnNodeLatency.add(duration);
+  }
+
   public void incrAppsFailedCreated() {
     numAppsFailedCreated.incr();
   }
@@ -1063,11 +2055,11 @@ public final class RouterMetrics {
     numGetQueueUserAclsFailedRetrieved.incr();
   }
 
-  public void incrContainerReportFailedRetrieved() {
+  public void incrGetContainerReportFailedRetrieved() {
     numGetContainerReportFailedRetrieved.incr();
   }
 
-  public void incrContainerFailedRetrieved() {
+  public void incrGetContainersFailedRetrieved() {
     numGetContainersFailedRetrieved.incr();
   }
 
@@ -1141,5 +2133,153 @@ public final class RouterMetrics {
 
   public void incrListReservationFailedRetrieved() {
     numListReservationFailedRetrieved.incr();
+  }
+
+  public void incrGetAppActivitiesFailedRetrieved() {
+    numGetAppActivitiesFailedRetrieved.incr();
+  }
+
+  public void incrGetAppStatisticsFailedRetrieved() {
+    numGetAppStatisticsFailedRetrieved.incr();
+  }
+
+  public void incrGetAppPriorityFailedRetrieved() {
+    numGetAppPriorityFailedRetrieved.incr();
+  }
+
+  public void incrGetAppQueueFailedRetrieved() {
+    numGetAppQueueFailedRetrieved.incr();
+  }
+
+  public void incrUpdateAppQueueFailedRetrieved() {
+    numUpdateAppQueueFailedRetrieved.incr();
+  }
+
+  public void incrGetAppTimeoutFailedRetrieved() {
+    numGetAppTimeoutFailedRetrieved.incr();
+  }
+
+  public void incrGetAppTimeoutsFailedRetrieved() {
+    numGetAppTimeoutsFailedRetrieved.incr();
+  }
+
+  public void incrRefreshQueuesFailedRetrieved() {
+    numRefreshQueuesFailedRetrieved.incr();
+  }
+
+  public void incrGetRMNodeLabelsFailedRetrieved() {
+    numGetRMNodeLabelsFailedRetrieved.incr();
+  }
+
+  public void incrCheckUserAccessToQueueFailedRetrieved() {
+    numCheckUserAccessToQueueFailedRetrieved.incr();
+  }
+
+  public void incrRefreshNodesFailedRetrieved() {
+    numRefreshNodesFailedRetrieved.incr();
+  }
+
+  public void incrRefreshSuperUserGroupsConfigurationFailedRetrieved() {
+    numRefreshSuperUserGroupsConfigurationFailedRetrieved.incr();
+  }
+
+  public void incrRefreshUserToGroupsMappingsFailedRetrieved() {
+    numRefreshUserToGroupsMappingsFailedRetrieved.incr();
+  }
+
+  public void incrDeregisterSubClusterFailedRetrieved() {
+    numDeregisterSubClusterFailedRetrieved.incr();
+  }
+
+  public void incrRefreshAdminAclsFailedRetrieved() {
+    numRefreshAdminAclsFailedRetrieved.incr();
+  }
+
+  public void incrRefreshServiceAclsFailedRetrieved() {
+    numRefreshServiceAclsFailedRetrieved.incr();
+  }
+
+  public void incrAddToClusterNodeLabelsFailedRetrieved() {
+    numAddToClusterNodeLabelsFailedRetrieved.incr();
+  }
+
+  public void incrRemoveFromClusterNodeLabelsFailedRetrieved() {
+    numRemoveFromClusterNodeLabelsFailedRetrieved.incr();
+  }
+
+  public void incrUpdateSchedulerConfigurationFailedRetrieved() {
+    numUpdateSchedulerConfigurationFailedRetrieved.incr();
+  }
+
+  public void incrGetSchedulerConfigurationFailedRetrieved() {
+    numGetSchedulerConfigurationFailedRetrieved.incr();
+  }
+
+  public void incrGetClusterInfoFailedRetrieved() {
+    numGetClusterInfoFailedRetrieved.incr();
+  }
+
+  public void incrGetClusterUserInfoFailedRetrieved() {
+    numGetClusterUserInfoFailedRetrieved.incr();
+  }
+
+  public void incrUpdateNodeResourceFailedRetrieved() {
+    numUpdateNodeResourceFailedRetrieved.incr();
+  }
+
+  public void incrRefreshNodesResourcesFailedRetrieved() {
+    numRefreshNodesResourcesFailedRetrieved.incr();
+  }
+
+  public void incrCheckForDecommissioningNodesFailedRetrieved() {
+    numCheckForDecommissioningNodesFailedRetrieved.incr();
+  }
+
+  public void incrRefreshClusterMaxPriorityFailedRetrieved() {
+    numRefreshClusterMaxPriorityFailedRetrieved.incr();
+  }
+
+  public void incrMapAttributesToNodesFailedRetrieved() {
+    numMapAttributesToNodesFailedRetrieved.incr();
+  }
+
+  public void incrGetGroupsForUserFailedRetrieved() {
+    numGetGroupsForUserFailedRetrieved.incr();
+  }
+
+  public void incrGetDelegationTokenFailedRetrieved() {
+    numGetDelegationTokenFailedRetrieved.incr();
+  }
+
+  public void incrRenewDelegationTokenFailedRetrieved() {
+    numRenewDelegationTokenFailedRetrieved.incr();
+  }
+
+  public void incrCancelDelegationTokenFailedRetrieved() {
+    numCancelDelegationTokenFailedRetrieved.incr();
+  }
+
+  public void incrReplaceLabelsOnNodesFailedRetrieved() {
+    numReplaceLabelsOnNodesFailedRetrieved.incr();
+  }
+
+  public void incrReplaceLabelsOnNodeFailedRetrieved() {
+    numReplaceLabelsOnNodeFailedRetrieved.incr();
+  }
+
+  public void incrDumpSchedulerLogsFailedRetrieved() {
+    numDumpSchedulerLogsFailedRetrieved.incr();
+  }
+
+  public void incrGetActivitiesFailedRetrieved() {
+    numGetActivitiesFailedRetrieved.incr();
+  }
+
+  public void incrGetBulkActivitiesFailedRetrieved() {
+    numGetBulkActivitiesFailedRetrieved.incr();
+  }
+
+  public void incrGetSchedulerInfoFailedRetrieved() {
+    numGetSchedulerInfoFailedRetrieved.incr();
   }
 }

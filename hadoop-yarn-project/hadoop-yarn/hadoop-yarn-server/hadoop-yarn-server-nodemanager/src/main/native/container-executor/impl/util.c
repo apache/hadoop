@@ -337,6 +337,16 @@ const char *get_error_message(const int error_code) {
         return "runC run failed";
       case ERROR_RUNC_REAP_LAYER_MOUNTS_FAILED:
         return "runC reap layer mounts failed";
+      case CANNOT_GET_EXECUTABLE_NAME_FROM_READLINK:
+        return "Cannot get executable name from readlink";
+      case TOO_LONG_EXECUTOR_PATH:
+        return "Too long executor path";
+      case CANNOT_GET_EXECUTABLE_NAME_FROM_KERNEL:
+        return "Cannot get executable name from kernel";
+      case CANNOT_GET_EXECUTABLE_NAME_FROM_PID:
+        return "Cannot get executable name from pid";
+      case WRONG_PATH_OF_EXECUTABLE:
+        return "Wrong path of executable";
       default:
         return "Unknown error code";
     }

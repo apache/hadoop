@@ -126,6 +126,9 @@ public final class RMWSConsts {
   /** Path for {@code RMWebServiceProtocol#getClusterNodeLabels}. */
   public static final String GET_NODE_LABELS = "/get-node-labels";
 
+  /** Path for {@code RMWebServiceProtocol#getRMNodeLabels}. */
+  public static final String GET_RM_NODE_LABELS = "/get-rm-node-labels";
+
   /** Path for {@code RMWebServiceProtocol#addToClusterNodeLabels}. */
   public static final String ADD_NODE_LABELS = "/add-node-labels";
 

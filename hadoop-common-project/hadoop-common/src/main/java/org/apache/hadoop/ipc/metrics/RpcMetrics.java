@@ -75,6 +75,8 @@ public class RpcMetrics {
           new MutableQuantiles[intervals.length];
       rpcProcessingTimeQuantiles =
           new MutableQuantiles[intervals.length];
+      rpcResponseTimeQuantiles =
+          new MutableQuantiles[intervals.length];
       deferredRpcProcessingTimeQuantiles =
           new MutableQuantiles[intervals.length];
       for (int i = 0; i < intervals.length; i++) {
@@ -89,6 +91,10 @@ public class RpcMetrics {
         rpcProcessingTimeQuantiles[i] = registry.newQuantiles(
             "rpcProcessingTime" + interval + "s",
             "rpc processing time in " + metricsTimeUnit, "ops",
+            "latency", interval);
+        rpcResponseTimeQuantiles[i] = registry.newQuantiles(
+            "rpcResponseTime" + interval + "s",
+            "rpc response time in " + metricsTimeUnit, "ops",
             "latency", interval);
         deferredRpcProcessingTimeQuantiles[i] = registry.newQuantiles(
             "deferredRpcProcessingTime" + interval + "s",
@@ -114,6 +120,8 @@ public class RpcMetrics {
   MutableQuantiles[] rpcLockWaitTimeQuantiles;
   @Metric("Processing time") MutableRate rpcProcessingTime;
   MutableQuantiles[] rpcProcessingTimeQuantiles;
+  @Metric("Response time") MutableRate rpcResponseTime;
+  MutableQuantiles[] rpcResponseTimeQuantiles;
   @Metric("Deferred Processing time") MutableRate deferredRpcProcessingTime;
   MutableQuantiles[] deferredRpcProcessingTimeQuantiles;
   @Metric("Number of authentication failures")
@@ -278,6 +286,15 @@ public class RpcMetrics {
     if (rpcQuantileEnable) {
       for (MutableQuantiles q : rpcProcessingTimeQuantiles) {
         q.add(processingTime);
+      }
+    }
+  }
+
+  public void addRpcResponseTime(long responseTime) {
+    rpcResponseTime.add(responseTime);
+    if (rpcQuantileEnable) {
+      for (MutableQuantiles q : rpcResponseTimeQuantiles) {
+        q.add(responseTime);
       }
     }
   }

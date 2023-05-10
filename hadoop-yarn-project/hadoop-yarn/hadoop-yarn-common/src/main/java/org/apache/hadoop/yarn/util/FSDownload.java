@@ -123,10 +123,13 @@ public class FSDownload implements Callable<Path> {
    * Creates the cache loader for the status loading cache. This should be used
    * to create an instance of the status cache that is passed into the
    * FSDownload constructor.
+   *
+   * @param conf configuration.
+   * @return cache loader for the status loading cache.
    */
-  public static CacheLoader<Path,Future<FileStatus>>
+  public static CacheLoader<Path, Future<FileStatus>>
       createStatusCacheLoader(final Configuration conf) {
-    return new CacheLoader<Path,Future<FileStatus>>() {
+    return new CacheLoader<Path, Future<FileStatus>>() {
       public Future<FileStatus> load(Path path) {
         try {
           FileSystem fs = path.getFileSystem(conf);
@@ -141,14 +144,19 @@ public class FSDownload implements Callable<Path> {
 
   /**
    * Returns a boolean to denote whether a cache file is visible to all (public)
-   * or not
+   * or not.
    *
+   * @param fs fileSystem.
+   * @param current current path.
+   * @param sStat file status.
+   * @param statCache stat cache.
    * @return true if the path in the current path is visible to all, false
    * otherwise
+   * @throws IOException io error occur.
    */
   @Private
   public static boolean isPublic(FileSystem fs, Path current, FileStatus sStat,
-      LoadingCache<Path,Future<FileStatus>> statCache) throws IOException {
+      LoadingCache<Path, Future<FileStatus>> statCache) throws IOException {
     current = fs.makeQualified(current);
     //the leaf level file should be readable by others
     if (!checkPublicPermsForAll(fs, sStat, FsAction.READ_EXECUTE, FsAction.READ)) {
@@ -455,7 +463,7 @@ public class FSDownload implements Callable<Path> {
    * Change to 755 or 700 for dirs, 555 or 500 for files.
    * @param fs FileSystem
    * @param path Path to modify perms for
-   * @throws IOException
+   * @throws IOException io error occur.
    * @throws InterruptedException 
    */
   private void changePermissions(FileSystem fs, final Path path)

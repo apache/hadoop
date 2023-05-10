@@ -24,13 +24,13 @@ public interface FederationActionRetry<T> {
 
   Logger LOG = LoggerFactory.getLogger(FederationActionRetry.class);
 
-  T run() throws Exception;
+  T run(int retry) throws Exception;
 
   default T runWithRetries(int retryCount, long retrySleepTime) throws Exception {
     int retry = 0;
     while (true) {
       try {
-        return run();
+        return run(retry);
       } catch (Exception e) {
         LOG.info("Exception while executing an Federation operation.", e);
         if (++retry > retryCount) {

@@ -24,7 +24,7 @@ The NFS Gateway supports NFSv3 and allows HDFS to be mounted as part of the clie
 
 * Users can browse the HDFS file system through their local file system
   on NFSv3 client compatible operating systems.
-* Users can download files from the the HDFS file system on to their
+* Users can download files from the HDFS file system on to their
   local file system.
 * Users can upload files from their local file system directly to the
   HDFS file system.
@@ -92,7 +92,7 @@ The rest of the NFS gateway configurations are optional for both secure and non-
     the super-user can do anything in that permissions checks never fail for the super-user.
     If the following property is configured, the superuser on NFS client can access any file
     on HDFS. By default, the super user is not configured in the gateway.
-    Note that, even the the superuser is configured, "nfs.exports.allowed.hosts" still takes effect.
+    Note that, even the superuser is configured, "nfs.exports.allowed.hosts" still takes effect.
     For example, the superuser will not have write access to HDFS files through the gateway if
     the NFS client host is not allowed to have write access in "nfs.exports.allowed.hosts".
 
@@ -154,7 +154,7 @@ It's strongly recommended for the users to update a few configuration properties
     the super-user can do anything in that permissions checks never fail for the super-user.
     If the following property is configured, the superuser on NFS client can access any file
     on HDFS. By default, the super user is not configured in the gateway.
-    Note that, even the the superuser is configured, "nfs.exports.allowed.hosts" still takes effect.
+    Note that, even the superuser is configured, "nfs.exports.allowed.hosts" still takes effect.
     For example, the superuser will not have write access to HDFS files through the gateway if
     the NFS client host is not allowed to have write access in "nfs.exports.allowed.hosts".
 

@@ -119,6 +119,8 @@ public final class CapacitySchedulerConfigValidator {
    *
    * @param queues existing queues
    * @param newQueues new queues
+   * @param newConf Capacity Scheduler Configuration.
+   * @throws IOException an I/O exception has occurred.
    */
   public static void validateQueueHierarchy(
       CSQueueStore queues,
@@ -170,7 +172,7 @@ public final class CapacitySchedulerConfigValidator {
 
   private static void validateParentQueueConversion(CSQueue oldQueue,
                                                     CSQueue newQueue) throws IOException {
-    if (oldQueue instanceof ParentQueue) {
+    if (oldQueue instanceof AbstractParentQueue) {
       if (!(oldQueue instanceof ManagedParentQueue) && newQueue instanceof ManagedParentQueue) {
         throw new IOException(
             "Can not convert parent queue: " + oldQueue.getQueuePath()
@@ -197,7 +199,7 @@ public final class CapacitySchedulerConfigValidator {
 
   private static void validateLeafQueueConversion(CSQueue oldQueue,
                                                   CSQueue newQueue) throws IOException {
-    if (oldQueue instanceof AbstractLeafQueue && newQueue instanceof ParentQueue) {
+    if (oldQueue instanceof AbstractLeafQueue && newQueue instanceof AbstractParentQueue) {
       if (isEitherQueueStopped(oldQueue.getState(), newQueue.getState())) {
         LOG.info("Converting the leaf queue: {} to parent queue.", oldQueue.getQueuePath());
       } else {

@@ -21,8 +21,6 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -81,6 +79,8 @@ import java.util.regex.Matcher;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_NM_RUNC_IMAGE_TAG_TO_MANIFEST_PLUGIN;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_NM_RUNC_LAYER_MOUNTS_TO_KEEP;
@@ -136,8 +136,7 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 @InterfaceStability.Unstable
 public class RuncContainerRuntime extends OCIContainerRuntime {
 
-  private static final Log LOG = LogFactory.getLog(
-      RuncContainerRuntime.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RuncContainerRuntime.class);
 
   @InterfaceAudience.Private
   private static final String RUNTIME_TYPE = "RUNC";

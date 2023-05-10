@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.slf4j.Logger;
@@ -109,6 +110,12 @@ public class StateStoreFileImpl extends StateStoreFileBaseImpl {
   }
 
   @Override
+  protected int getConcurrentFilesAccessNumThreads() {
+    return getConf().getInt(RBFConfigKeys.FEDERATION_STORE_FILE_ASYNC_THREADS,
+        RBFConfigKeys.FEDERATION_STORE_FILE_ASYNC_THREADS_DEFAULT);
+  }
+
+  @Override
   protected <T extends BaseRecord> BufferedReader getReader(String filename) {
     BufferedReader reader = null;
     try {
@@ -125,7 +132,8 @@ public class StateStoreFileImpl extends StateStoreFileBaseImpl {
   }
 
   @Override
-  protected <T extends BaseRecord> BufferedWriter getWriter(String filename) {
+  @VisibleForTesting
+  public <T extends BaseRecord> BufferedWriter getWriter(String filename) {
     BufferedWriter writer = null;
     try {
       LOG.debug("Writing file: {}", filename);
@@ -142,6 +150,7 @@ public class StateStoreFileImpl extends StateStoreFileBaseImpl {
 
   @Override
   public void close() throws Exception {
+    super.close();
     setInitialized(false);
   }
 

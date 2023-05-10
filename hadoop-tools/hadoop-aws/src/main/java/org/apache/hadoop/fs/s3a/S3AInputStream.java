@@ -1164,6 +1164,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
+  @VisibleForTesting
   public S3AInputStreamStatistics getS3AStreamStatistics() {
     return streamStatistics;
   }

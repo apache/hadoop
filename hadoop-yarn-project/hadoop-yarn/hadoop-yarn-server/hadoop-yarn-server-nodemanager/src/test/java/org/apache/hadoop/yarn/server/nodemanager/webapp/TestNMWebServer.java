@@ -53,7 +53,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreServic
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -211,7 +211,7 @@ public class TestNMWebServer {
       long currentTime = System.currentTimeMillis();
       Token containerToken =
           BuilderUtils.newContainerToken(containerId, 0, "127.0.0.1", 1234,
-              user, BuilderUtils.newResource(1024, 1), currentTime + 10000L,
+              user, Resources.createResource(1024), currentTime + 10000L,
               123, "password".getBytes(), currentTime);
       Context context = mock(Context.class);
       Container container =

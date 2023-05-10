@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
@@ -467,6 +468,10 @@ public abstract class Resource implements Comparable<Resource> {
     return getFormattedString(String.valueOf(getMemorySize()));
   }
 
+  public String toFormattedString() {
+    return getFormattedString();
+  }
+
   private String getFormattedString(String memory) {
     StringBuilder sb = new StringBuilder();
 
@@ -538,5 +543,15 @@ public abstract class Resource implements Comparable<Resource> {
     ri.setMinimumAllocation(0);
     ri.setMaximumAllocation(Long.MAX_VALUE);
     return ri;
+  }
+
+  @VisibleForTesting
+  protected void setResources(ResourceInformation[] resources) {
+    this.resources = resources;
+  }
+
+  public String getFormattedString(long memory) {
+    return getFormattedString(
+        StringUtils.byteDesc(memory * 1024 * 1024));
   }
 }

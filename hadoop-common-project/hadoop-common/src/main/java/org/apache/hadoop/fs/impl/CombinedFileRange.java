@@ -29,10 +29,10 @@ import java.util.List;
  * together into a single read for efficiency.
  */
 public class CombinedFileRange extends FileRangeImpl {
-  private ArrayList<FileRange> underlying = new ArrayList<>();
+  private List<FileRange> underlying = new ArrayList<>();
 
   public CombinedFileRange(long offset, long end, FileRange original) {
-    super(offset, (int) (end - offset));
+    super(offset, (int) (end - offset), null);
     this.underlying.add(original);
   }
 

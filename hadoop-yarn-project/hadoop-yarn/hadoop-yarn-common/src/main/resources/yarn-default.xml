@@ -2460,6 +2460,24 @@
   </property>
 
   <property>
+    <description>Provide local directory which includes the related jar file as well as all the dependencies’
+      jar file. We could specify the single jar file or use ${local_dir_to_jar}/* to load all
+      jars under the dep directory.</description>
+    <name>yarn.nodemanager.aux-services.%s.classpath</name>
+    <value>NONE</value>
+  </property>
+
+  <property>
+    <description>Normally this configuration shouldn't be manually set. The class would be loaded from customized
+      classpath if it does not belong to system-classes. By default, the package org.apache.hadoop is part of the
+      system-classes. If for example the class CustomAuxService is in the package org.apache.hadoop, it will not be
+      loaded from the customized classpath. To solve this, either the package of CustomAuxService could be changed,
+      or a separate system-classes could be configured which excludes the package org.apache.hadoop.</description>
+    <name>yarn.nodemanager.aux-services.%s.system-classes</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>No. of ms to wait between sending a SIGTERM and SIGKILL to a container</description>
     <name>yarn.nodemanager.sleep-delay-before-sigkill.ms</name>
     <value>250</value>
@@ -5045,6 +5063,191 @@
       Yarn federation state-store supports querying the maximum number of apps.
       Default is 1000.
     </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.dispatcher.metric.enable</name>
+    <value>false</value>
+    <description>
+      Yarn NodeManager enables Dispatcher Metric.
+      if true, will enable dispatcher metric; if false, will not enable dispatcher metric;
+      Default is false.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.interceptor.user-thread-pool.minimum-pool-size</name>
+    <value>5</value>
+    <description>
+      This configurable is used to set the corePoolSize(minimumPoolSize)
+      of the thread pool of the interceptor.
+      Default is 5.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.interceptor.user-thread-pool.maximum-pool-size</name>
+    <value>5</value>
+    <description>
+      This configuration is used to set the default value of maximumPoolSize
+      of the thread pool of the interceptor.
+      Default is 5.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.interceptor.user-thread-pool.keep-alive-time</name>
+    <value>0s</value>
+    <description>
+      This configurable is used to set the keepAliveTime of the thread pool of the interceptor.
+      Default is 0s.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.submit.interval.time</name>
+    <value>10ms</value>
+    <description>
+      The interval Time between calling different subCluster requests.
+      Default is 10ms.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.interceptor.allow-partial-result.enable</name>
+    <value>false</value>
+    <description>
+      This configuration represents whether to allow the interceptor to
+      return partial SubCluster results.
+      If true, we will ignore the exception to some subClusters during the calling process,
+      and return result.
+      If false, if an exception occurs in a subCluster during the calling process,
+      an exception will be thrown directly.
+      Default is false.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.submit.interval.time</name>
+    <value>10ms</value>
+    <description>
+      The interval Time between calling different subCluster requests.
+      Default is 10ms.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.asc-interceptor-max-size</name>
+    <value>1MB</value>
+    <description>
+      We define the size limit of ApplicationSubmissionContext.
+      If the size of the ApplicationSubmissionContext is larger than this value,
+      We will throw an exception. the default value is 1MB.
+    </description>
+  </property>
+
+  <property>
+    <description>
+      The number of threads to use for the Router scheduled executor service.
+    </description>
+    <name>yarn.router.subcluster.cleaner.interval.time</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+      The interval at which the subClusterCleaner runs. Default is 60s.
+    </description>
+    <name>yarn.router.subcluster.cleaner.interval.time</name>
+    <value>60s</value>
+  </property>
+
+  <property>
+    <description>
+      SubCluster heartbeat timeout. Default is 30mins.
+    </description>
+    <name>yarn.router.subcluster.heartbeat.expiration.time</name>
+    <value>30m</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to enable deregisterSubCluster. Default is true.
+    </description>
+    <name>yarn.router.deregister.subcluster.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>
+      Number of Router Scheduler Threads.
+    </description>
+    <name>yarn.router.scheduled.executor.threads</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+      Number of Retries while trying to make root directory for node store.
+    </description>
+    <name>yarn.resourcemanager.nodestore-rootdir.num-retries</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+      Interval in ms between retries while trying to make root directory for node store.
+    </description>
+    <name>yarn.resourcemanager.nodestore-rootdir.retry-interval-ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>The property controls the minimum number of idle connections that
+      HikariCP tries to maintain in the pool.</description>
+    <name>yarn.federation.state-store.sql.minimum-idle</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+      Specifies the name of the connection pool used by the FederationSQLStateStore.
+    </description>
+    <name>yarn.federation.state-store.sql.pool-name</name>
+    <value>YARN-Federation-DataBasePool</value>
+  </property>
+
+  <property>
+    <description>
+      This property controls the maximum lifetime of a connection in the pool.
+    </description>
+    <name>yarn.federation.state-store.sql.max-life-time</name>
+    <value>30m</value>
+  </property>
+
+  <property>
+    <description>
+      This property controls the maximum amount of time
+      that a connection is allowed to sit idle in the pool.
+    </description>
+    <name>yarn.federation.state-store.sql.idle-time-out</name>
+    <value>10m</value>
+  </property>
+
+  <property>
+    <description>Set the maximum amount of time
+      that a client will wait for a connection from the pool.</description>
+    <name>yarn.federation.state-store.sql.conn-time-out</name>
+    <value>10s</value>
+  </property>
+
+  <property>
+    <description>
+      Specifies the class name of the cache implementation in YARN FederationCache.
+      By default, this property is org.apache.hadoop.yarn.server.federation.cache.FederationJCache.
+    </description>
+    <name>yarn.federation.cache.class</name>
+    <value>org.apache.hadoop.yarn.server.federation.cache.FederationJCache</value>
   </property>
 
 </configuration>
