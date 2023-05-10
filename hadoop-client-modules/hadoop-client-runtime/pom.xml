@@ -251,7 +251,12 @@
                         <exclude>META-INF/versions/11/module-info.class</exclude>
                       </excludes>
                     </filter>
-
+                    <filter>
+                      <artifact>com.nimbusds:nimbus-jose-jwt</artifact>
+                      <excludes>
+                        <exclude>META-INF/versions/9/module-info.class</exclude>
+                      </excludes>
+                    </filter>
                   </filters>
                   <relocations>
                     <relocation>
@@ -461,4 +466,3 @@
   </profiles>
 
 </project>
-
