@@ -43,6 +43,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_MKDIRS_FALLBACK_TO_DFS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_REDIRECT_DELETE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_REDIRECT_RENAME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FS_AZURE_ENABLE_BLOBENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DNS_PREFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.WASB_DNS_PREFIX;
@@ -666,29 +667,29 @@ public class ITestAzureBlobFileSystemBlobConfig
     Assume.assumeFalse(
         fs.getIsNamespaceEnabled(Mockito.mock(TracingContext.class)));
     Configuration configuration = Mockito.spy(getRawConfiguration());
+    if(!FS_AZURE_ENABLE_BLOB_ENDPOINT.equalsIgnoreCase(configName)) {
+      configuration.set(FS_AZURE_ENABLE_BLOB_ENDPOINT, Boolean.toString(DEFAULT_FS_AZURE_ENABLE_BLOBENDPOINT));
+    }
     fixEndpointAsPerTest(configuration, dfsEndpoint);
     if (configVal != null) {
-      getRawConfiguration().set(configName, configVal.toString());
+      configuration.set(configName, configVal.toString());
     }
-    return (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration());
+    return (AzureBlobFileSystem) FileSystem.newInstance(configuration);
   }
 
   private void fixEndpointAsPerTest(Configuration configuration,
       final Boolean dfsEndpoint) {
     if (dfsEndpoint) {
       String url = getTestUrl();
-      if (url.contains(WASB_DNS_PREFIX)) {
-        url = url.replace(WASB_DNS_PREFIX, ABFS_DNS_PREFIX);
-        configuration.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
-            url);
-      }
+      url = url.replace(WASB_DNS_PREFIX, ABFS_DNS_PREFIX);
+      configuration.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
+          url);
     } else {
       String url = getTestUrl();
-      if (url.contains(ABFS_DNS_PREFIX)) {
-        url = url.replace(ABFS_DNS_PREFIX, WASB_DNS_PREFIX);
-        configuration.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
-            url);
-      }
+
+      url = url.replace(ABFS_DNS_PREFIX, WASB_DNS_PREFIX);
+      configuration.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
+          url);
     }
   }
 }
