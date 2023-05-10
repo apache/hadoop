@@ -70,13 +70,10 @@ public class TestCapacitySchedulerAmbiguousLeafs {
 
   @Test
   public void testAmbiguousSubmissionWithACL() throws Exception {
-    YarnConfiguration conf = new YarnConfiguration();
-    conf.set(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class.getName());
-    conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    CapacitySchedulerConfiguration schedulerConf = new CapacitySchedulerConfiguration();
 
-    MockRM rm = new MockRM(conf);
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 20);
-    CapacitySchedulerConfiguration schedulerConf = cs.getConfiguration();
+    schedulerConf.set(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class.getName());
+    schedulerConf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
 
     schedulerConf.setQueues(ROOT, new String[] {"a", "b", "default"});
     schedulerConf.setAcl(ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
@@ -105,8 +102,9 @@ public class TestCapacitySchedulerAmbiguousLeafs {
         "\"fallbackResult\" : \"skip\", \"matches\" : \"*\"}]}");
     schedulerConf.setOverrideWithQueueMappings(true);
 
+    MockRM rm = new MockRM(schedulerConf);
     rm.start();
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 16,16);
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 20);
 
     ApplicationId id = submitApplication(rm, "root.a.unique");
     rm.waitForState(id, RMAppState.ACCEPTED);

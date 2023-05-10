@@ -54,10 +54,12 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.junit.Assert;
+import org.junit.platform.commons.util.CollectionUtils;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -267,7 +269,22 @@ public final class CapacitySchedulerTestUtilities {
     Resource clusterResource = Resource.newInstance(memoryGb * GB, cores, others);
     mgr.setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, clusterResource);
     queueController.updateRoot(cs.getQueue("root"), clusterResource);
-    queueController.updateChildren(clusterResource, cs.getQueue("root"));
+    magic(queueController, clusterResource, cs.getQueue("root"));
     return cs;
+  }
+
+  private static void magic(
+      CapacitySchedulerQueueCapacityHandler queueController,
+      Resource clusterResource,
+      CSQueue queue
+  ) {
+    queueController.updateChildren(clusterResource, queue);
+    List<CSQueue> childs = queue.getChildQueues();
+    if (childs == null) {
+      return;
+    }
+    for (CSQueue child : childs) {
+      magic(queueController, clusterResource, child);
+    }
   }
 }
