@@ -20,10 +20,14 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.config.ClientConfig;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
@@ -677,5 +681,46 @@ public class TestRouterWebServiceUtil {
     Assert.assertEquals((item2.getCount() + item3.getCount()), item2Result.getCount());
     Assert.assertEquals(YarnApplicationState.FINISHED, item3Result.getState());
     Assert.assertEquals(item4.getCount(), item3Result.getCount());
+  }
+
+  @Test
+  public void testCreateJerseyClient() {
+    // Case1,  default timeout, The default timeout is 30s.
+    YarnConfiguration configuration = new YarnConfiguration();
+    Client client01 = RouterWebServiceUtil.createJerseyClient(configuration);
+    Map<String, Object> properties = client01.getProperties();
+    Object readTimeOut = properties.get(ClientConfig.PROPERTY_READ_TIMEOUT);
+    Object connectTimeOut = properties.get(ClientConfig.PROPERTY_CONNECT_TIMEOUT);
+    Assert.assertEquals(30000, readTimeOut);
+    Assert.assertEquals(30000, connectTimeOut);
+    client01.destroy();
+
+    // Case2, set a negative timeout, We'll get the default timeout(30s)
+    YarnConfiguration configuration2 = new YarnConfiguration();
+    configuration2.setLong(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,-1L);
+    configuration2.setLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,-1L);
+    Client client02 = RouterWebServiceUtil.createJerseyClient(configuration2);
+    Map<String, Object> properties02 = client02.getProperties();
+    Object readTimeOut02 = properties02.get(ClientConfig.PROPERTY_READ_TIMEOUT);
+    Object connectTimeOut02 = properties02.get(ClientConfig.PROPERTY_CONNECT_TIMEOUT);
+    Assert.assertEquals(30000, readTimeOut02);
+    Assert.assertEquals(30000, connectTimeOut02);
+    client02.destroy();
+
+    // Case3, Set the maximum value that exceeds the integer
+    // We'll get the default timeout(30s)
+    YarnConfiguration configuration3 = new YarnConfiguration();
+    long connectTimeOutLong = (long) Integer.MAX_VALUE + 1;
+    long readTimeOutLong = (long) Integer.MAX_VALUE + 1;
+
+    configuration3.setLong(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, connectTimeOutLong);
+    configuration3.setLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,readTimeOutLong);
+    Client client03 = RouterWebServiceUtil.createJerseyClient(configuration3);
+    Map<String, Object> properties03 = client03.getProperties();
+    Object readTimeOut03 = properties03.get(ClientConfig.PROPERTY_READ_TIMEOUT);
+    Object connectTimeOut03 = properties03.get(ClientConfig.PROPERTY_CONNECT_TIMEOUT);
+    Assert.assertEquals(30000, readTimeOut03);
+    Assert.assertEquals(30000, connectTimeOut03);
+    client03.destroy();
   }
 }

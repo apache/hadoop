@@ -375,17 +375,17 @@ public final class RouterWebServiceUtil {
           YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT);
       connectTimeOut = TimeUnit.MILLISECONDS.convert(
           YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
-      client.setConnectTimeout((int) connectTimeOut);
     }
+    client.setConnectTimeout((int) connectTimeOut);
 
     if (readTimeout > Integer.MAX_VALUE || readTimeout < 0) {
-      LOG.warn("Configuration {} = {} ms error. We will use the default value({} ms)",
+      LOG.warn("Configuration {} = {} ms error. We will use the default value({} ms).",
           YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, readTimeout,
           YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT);
       readTimeout = TimeUnit.MILLISECONDS.convert(
           YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT, TimeUnit.MILLISECONDS);
-      client.setReadTimeout((int) readTimeout);
     }
+    client.setReadTimeout((int) readTimeout);
 
     return client;
   }
