@@ -30,6 +30,8 @@ import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_FIXED_TOKEN;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DNS_PREFIX;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.WASB_DNS_PREFIX;
 
 public class AzcopyHelper {
 
@@ -41,7 +43,7 @@ public class AzcopyHelper {
     private PrefixMode mode;
 
     public AzcopyHelper(String accountName, String fileSystemName, Configuration configuration ,PrefixMode mode) throws Exception {
-      this.accountName = accountName;
+      this.accountName = accountName.replace(ABFS_DNS_PREFIX, WASB_DNS_PREFIX);
       this.fileSystemName = fileSystemName;
       this.configuration = configuration;
       this.mode = mode;
