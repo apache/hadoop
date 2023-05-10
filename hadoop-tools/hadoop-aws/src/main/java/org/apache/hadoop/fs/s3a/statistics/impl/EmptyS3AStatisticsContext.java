@@ -442,22 +442,22 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
       implements BlockOutputStreamStatistics {
 
     @Override
-    public void blockUploadQueued(final long blockSize) {
+    public void blockUploadQueued(final int blockSize) {
     }
 
     @Override
     public void blockUploadStarted(final Duration timeInQueue,
-        final long blockSize) {
+        final int blockSize) {
     }
 
     @Override
     public void blockUploadCompleted(final Duration timeSinceUploadStarted,
-        final long blockSize) {
+        final int blockSize) {
     }
 
     @Override
     public void blockUploadFailed(final Duration timeSinceUploadStarted,
-        final long blockSize) {
+        final int blockSize) {
     }
 
     @Override

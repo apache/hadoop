@@ -180,7 +180,7 @@ final class S3ADataBlocks {
      * @param statistics stats to work with
      * @return a new block.
      */
-    abstract DataBlock create(long index, long limit,
+    abstract DataBlock create(long index, int limit,
         BlockOutputStreamStatistics statistics)
         throws IOException;
 
@@ -258,7 +258,7 @@ final class S3ADataBlocks {
      * Return the current data size.
      * @return the size of the data
      */
-    abstract long dataSize();
+    abstract int dataSize();
 
     /**
      * Predicate to verify that the block has the capacity to write
@@ -280,7 +280,7 @@ final class S3ADataBlocks {
      * The remaining capacity in the block before it is full.
      * @return the number of bytes remaining.
      */
-    abstract long remainingCapacity();
+    abstract int remainingCapacity();
 
     /**
      * Write a series of bytes from the buffer, from the offset.
@@ -391,11 +391,9 @@ final class S3ADataBlocks {
     }
 
     @Override
-    DataBlock create(long index, long limit,
+    DataBlock create(long index, int limit,
         BlockOutputStreamStatistics statistics)
         throws IOException {
-      Preconditions.checkArgument(limit > 0,
-          "Invalid block size: %d", limit);
       return new ByteArrayBlock(0, limit, statistics);
     }
 
@@ -438,11 +436,11 @@ final class S3ADataBlocks {
     private Integer dataSize;
 
     ByteArrayBlock(long index,
-        long limit,
+        int limit,
         BlockOutputStreamStatistics statistics) {
       super(index, statistics);
-      this.limit = (limit > Integer.MAX_VALUE) ? Integer.MAX_VALUE : (int) limit;
-      buffer = new S3AByteArrayOutputStream(this.limit);
+      this.limit = limit;
+      buffer = new S3AByteArrayOutputStream(limit);
       blockAllocated();
     }
 
@@ -451,7 +449,7 @@ final class S3ADataBlocks {
      * @return the amount of data available to upload.
      */
     @Override
-    long dataSize() {
+    int dataSize() {
       return dataSize != null ? dataSize : buffer.size();
     }
 
@@ -470,14 +468,14 @@ final class S3ADataBlocks {
     }
 
     @Override
-    long remainingCapacity() {
+    int remainingCapacity() {
       return limit - dataSize();
     }
 
     @Override
     int write(byte[] b, int offset, int len) throws IOException {
       super.write(b, offset, len);
-      int written = (int) Math.min(remainingCapacity(), len);
+      int written = Math.min(remainingCapacity(), len);
       buffer.write(b, offset, written);
       return written;
     }
@@ -516,11 +514,9 @@ final class S3ADataBlocks {
     }
 
     @Override
-    ByteBufferBlock create(long index, long limit,
+    ByteBufferBlock create(long index, int limit,
         BlockOutputStreamStatistics statistics)
         throws IOException {
-      Preconditions.checkArgument(limit > 0,
-          "Invalid block size: %d", limit);
       return new ByteBufferBlock(index, limit, statistics);
     }
 
@@ -568,12 +564,11 @@ final class S3ADataBlocks {
        * @param statistics statistics to update
        */
       ByteBufferBlock(long index,
-          long bufferSize,
+          int bufferSize,
           BlockOutputStreamStatistics statistics) {
         super(index, statistics);
-        this.bufferSize = bufferSize > Integer.MAX_VALUE ?
-            Integer.MAX_VALUE : (int) bufferSize;
-        blockBuffer = requestBuffer(this.bufferSize);
+        this.bufferSize = bufferSize;
+        blockBuffer = requestBuffer(bufferSize);
         blockAllocated();
       }
 
@@ -582,7 +577,7 @@ final class S3ADataBlocks {
        * @return the amount of data available to upload.
        */
       @Override
-      long dataSize() {
+      int dataSize() {
         return dataSize != null ? dataSize : bufferCapacityUsed();
       }
 
@@ -603,7 +598,7 @@ final class S3ADataBlocks {
       }
 
       @Override
-      public long remainingCapacity() {
+      public int remainingCapacity() {
         return blockBuffer != null ? blockBuffer.remaining() : 0;
       }
 
@@ -614,7 +609,7 @@ final class S3ADataBlocks {
       @Override
       int write(byte[] b, int offset, int len) throws IOException {
         super.write(b, offset, len);
-        int written = (int) Math.min(remainingCapacity(), len);
+        int written = Math.min(remainingCapacity(), len);
         blockBuffer.put(b, offset, written);
         return written;
       }
@@ -807,18 +802,16 @@ final class S3ADataBlocks {
      * Create a temp file and a {@link DiskBlock} instance to manage it.
      *
      * @param index block index
-     * @param limit limit of the block. -1 means "no limit"
+     * @param limit limit of the block.
      * @param statistics statistics to update
      * @return the new block
      * @throws IOException IO problems
      */
     @Override
     DataBlock create(long index,
-        long limit,
+        int limit,
         BlockOutputStreamStatistics statistics)
         throws IOException {
-      Preconditions.checkArgument(limit != 0,
-          "Invalid block size: %d", limit);
       File destFile = getOwner()
           .createTmpFileForWrite(String.format("s3ablock-%04d-", index),
               limit, getOwner().getConf());
@@ -832,14 +825,14 @@ final class S3ADataBlocks {
    */
   static class DiskBlock extends DataBlock {
 
-    private long bytesWritten;
+    private int bytesWritten;
     private final File bufferFile;
-    private final long limit;
+    private final int limit;
     private BufferedOutputStream out;
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     DiskBlock(File bufferFile,
-        long limit,
+        int limit,
         long index,
         BlockOutputStreamStatistics statistics)
         throws FileNotFoundException {
@@ -851,39 +844,24 @@ final class S3ADataBlocks {
     }
 
     @Override
-    long dataSize() {
+    int dataSize() {
       return bytesWritten;
-    }
-
-    /**
-     * Does this block have unlimited space?
-     * @return true if a block with no size limit was created.
-     */
-    private boolean unlimited() {
-      return limit < 0;
     }
 
     @Override
     boolean hasCapacity(long bytes) {
-      return unlimited() || dataSize() + bytes <= limit;
+      return dataSize() + bytes <= limit;
     }
 
-    /**
-     * {@inheritDoc}.
-     * If there is no limit to capacity, return MAX_VALUE.
-     * @return capacity in the block.
-     */
     @Override
-    long remainingCapacity() {
-      return unlimited()
-          ? Integer.MAX_VALUE
-          : limit - bytesWritten;
+    int remainingCapacity() {
+      return limit - bytesWritten;
     }
 
     @Override
     int write(byte[] b, int offset, int len) throws IOException {
       super.write(b, offset, len);
-      int written = (int) Math.min(remainingCapacity(), len);
+      int written = Math.min(remainingCapacity(), len);
       out.write(b, offset, written);
       bytesWritten += written;
       return written;

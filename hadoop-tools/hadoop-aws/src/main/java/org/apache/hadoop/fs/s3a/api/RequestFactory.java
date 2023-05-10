@@ -196,11 +196,10 @@ public interface RequestFactory {
    * @param destKey destination object key
    * @param options options for the request
    * @return the request.
-   * @throws PathIOException if multipart uploads are disabled
    */
   InitiateMultipartUploadRequest newMultipartUploadRequest(
       String destKey,
-      @Nullable PutObjectOptions options) throws PathIOException;
+      @Nullable PutObjectOptions options);
 
   /**
    * Complete a multipart upload.
@@ -249,7 +248,7 @@ public interface RequestFactory {
       String destKey,
       String uploadId,
       int partNumber,
-      long size,
+      int size,
       InputStream uploadStream,
       File sourceFile,
       long offset) throws PathIOException;

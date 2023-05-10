@@ -269,6 +269,8 @@ public class WriteOperationHelper implements WriteOperations {
       String dest,
       File sourceFile,
       final PutObjectOptions options) {
+    Preconditions.checkState(sourceFile.length() < Integer.MAX_VALUE,
+        "File length is too big for a single PUT upload");
     activateAuditSpan();
     final ObjectMetadata objectMetadata =
         newObjectMetadata((int) sourceFile.length());
@@ -530,7 +532,7 @@ public class WriteOperationHelper implements WriteOperations {
       String destKey,
       String uploadId,
       int partNumber,
-      long size,
+      int size,
       InputStream uploadStream,
       File sourceFile,
       Long offset) throws IOException {

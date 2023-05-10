@@ -107,7 +107,6 @@
             <configuration>
               <forkCount>${testsThreadCount}</forkCount>
               <reuseForks>false</reuseForks>
-              <trimStackTrace>false</trimStackTrace>
               <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
               <systemPropertyVariables>
                 <testsThreadCount>${testsThreadCount}</testsThreadCount>
@@ -277,7 +276,6 @@
                   <goal>verify</goal>
                 </goals>
                 <configuration>
-                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Propagate scale parameters -->
                     <fs.s3a.scale.test.enabled>${fs.s3a.scale.test.enabled}</fs.s3a.scale.test.enabled>

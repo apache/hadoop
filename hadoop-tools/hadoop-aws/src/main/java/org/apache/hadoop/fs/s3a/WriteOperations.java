@@ -233,7 +233,7 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
       String destKey,
       String uploadId,
       int partNumber,
-      long size,
+      int size,
       InputStream uploadStream,
       File sourceFile,
       Long offset) throws IOException;
