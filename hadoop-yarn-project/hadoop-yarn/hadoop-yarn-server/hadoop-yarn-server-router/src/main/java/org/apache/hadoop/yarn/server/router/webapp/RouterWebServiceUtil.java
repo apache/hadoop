@@ -363,14 +363,30 @@ public final class RouterWebServiceUtil {
    */
   protected static Client createJerseyClient(Configuration conf) {
     Client client = Client.create();
-    client.setConnectTimeout((int) conf
-        .getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,
-            YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT,
-            TimeUnit.MILLISECONDS));
-    client.setReadTimeout((int) conf
-        .getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
-            YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT,
-            TimeUnit.MILLISECONDS));
+
+    long connectTimeOut = conf.getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
+    long readTimeout = conf.getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT, TimeUnit.MILLISECONDS);
+
+    if (connectTimeOut > Integer.MAX_VALUE || connectTimeOut < 0) {
+      LOG.warn("Configuration {} = {} ms error. We will use the default value({} ms).",
+          YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, connectTimeOut,
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT);
+      connectTimeOut = TimeUnit.MILLISECONDS.convert(
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
+      client.setConnectTimeout((int) connectTimeOut);
+    }
+
+    if (readTimeout > Integer.MAX_VALUE || readTimeout < 0) {
+      LOG.warn("Configuration {} = {} ms error. We will use the default value({} ms)",
+          YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, readTimeout,
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT);
+      readTimeout = TimeUnit.MILLISECONDS.convert(
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT, TimeUnit.MILLISECONDS);
+      client.setReadTimeout((int) readTimeout);
+    }
+
     return client;
   }
 
