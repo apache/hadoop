@@ -245,7 +245,7 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
    * @return a processed request.
    */
   protected DeleteObjectsRequest headForBulkDelete(String... keys) {
-    if (keys.length == 0) {
+    if (keys == null || keys.length == 0) {
       return null;
     }
     List<DeleteObjectsRequest.KeyVersion> keysToDelete = Arrays
