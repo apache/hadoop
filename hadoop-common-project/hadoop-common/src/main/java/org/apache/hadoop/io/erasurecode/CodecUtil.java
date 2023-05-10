@@ -79,7 +79,7 @@ public final class CodecUtil {
       IO_ERASURECODE_CODEC + "xor.rawcoders";
 
   public static final String IO_ERASURECODE_CODEC_NATIVE_ENABLED_KEY =
-      "io.erasurecode.codec.native.enabled";
+      IO_ERASURECODE_CODEC + "native.enabled";
 
   public static final boolean IO_ERASURECODE_CODEC_NATIVE_ENABLED_DEFAULT = true;
 
