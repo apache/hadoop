@@ -48,7 +48,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.metrics.CustomResourceMetricValue;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -341,7 +340,7 @@ public class QueueMetrics implements MetricsSource {
           "Metrics for queue: " + this.queueName,
           queueMetrics.tag(PARTITION_INFO, partitionJMXStr).tag(QUEUE_INFO,
               this.queueName));
-      if (!conf.getBoolean(CapacitySchedulerConfiguration.CONFIGURATION_VALIDATION, false)) {
+      if (!conf.getBoolean(YarnConfiguration.CONFIGURATION_VALIDATION, false)) {
         getQueueMetrics().put(metricName, queueMetrics);
       }
       registerPartitionMetricsCreation(metricName);

@@ -44,8 +44,8 @@ public final class CapacitySchedulerConfigValidator {
           final RMContext rmContext) throws IOException {
     // ensure that the oldConf is deep copied
     Configuration oldConf = new Configuration(oldConfParam);
-    oldConf.setBoolean(CapacitySchedulerConfiguration.CONFIGURATION_VALIDATION, true);
-    newConf.setBoolean(CapacitySchedulerConfiguration.CONFIGURATION_VALIDATION, true);
+    oldConf.setBoolean(YarnConfiguration.CONFIGURATION_VALIDATION, true);
+    newConf.setBoolean(YarnConfiguration.CONFIGURATION_VALIDATION, true);
 
     CapacityScheduler liveScheduler = (CapacityScheduler) rmContext.getScheduler();
     CapacityScheduler newCs = new CapacityScheduler();

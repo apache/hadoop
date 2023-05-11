@@ -4941,6 +4941,8 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX =
       "workflowid:";
 
+  public static final String CONFIGURATION_VALIDATION = YARN_PREFIX + "configuration-validation";
+
   public YarnConfiguration() {
     super();
   }
