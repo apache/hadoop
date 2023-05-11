@@ -421,8 +421,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     }
 
     if (data != null) {
-      data = data.replace("." + fromDnsPrefix + ".",
-          "." + toDnsPrefix + ".");
+      data = data.replace(fromDnsPrefix, toDnsPrefix);
     }
     return data;
   }
