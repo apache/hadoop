@@ -758,9 +758,9 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testCPKOverBlob() throws Exception {
-    Assume.assumeTrue(getFileSystem().getAbfsStore().getPrefixMode() == PrefixMode.BLOB);
-    Configuration configuration = Mockito.spy(getRawConfiguration());
     AzureBlobFileSystemStore abfsStore = getAbfsStore(getFileSystem());
+    Assume.assumeTrue(abfsStore.getPrefixMode() == PrefixMode.BLOB);
+    Configuration configuration = Mockito.spy(getRawConfiguration());
     String accountName = getAccountName();
     if (abfsStore.getPrefixMode() == PrefixMode.BLOB) {
       if (abfsStore.getAbfsConfiguration().shouldEnableBlobEndPoint()) {
@@ -776,9 +776,9 @@ public class ITestAzureBlobFileSystemCreate extends
    */
   @Test
   public void testCPKOverBlobEmptyKey() throws Exception {
-    Assume.assumeTrue(getFileSystem().getAbfsStore().getPrefixMode() == PrefixMode.BLOB);
-    Configuration configuration = Mockito.spy(getRawConfiguration());
     AzureBlobFileSystemStore abfsStore = getAbfsStore(getFileSystem());
+    Assume.assumeTrue(abfsStore.getPrefixMode() == PrefixMode.BLOB);
+    Configuration configuration = Mockito.spy(getRawConfiguration());
     String accountName = getAccountName();
     if (abfsStore.getPrefixMode() == PrefixMode.BLOB) {
       if (abfsStore.getAbfsConfiguration().shouldEnableBlobEndPoint()) {
