@@ -23,7 +23,6 @@ import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,8 +55,6 @@ public final class CapacitySchedulerConfigValidator {
       return true;
     } finally {
       newCs.stop();
-      QueueMetrics.clearQueueMetrics();
-      liveScheduler.resetSchedulerMetrics();
     }
   }
 
