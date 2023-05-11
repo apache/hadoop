@@ -53,21 +53,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RegisterApplicationMasterRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RegisterApplicationMasterResponsePBImpl;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerReport;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.NMToken;
-import org.apache.hadoop.yarn.api.records.PreemptionContract;
-import org.apache.hadoop.yarn.api.records.PreemptionMessage;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
-import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.client.AMRMClientUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
@@ -411,9 +397,12 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         FederationProxyProviderUtil.updateConfForFederation(config, keyScId);
 
         try {
+          ApplicationSubmissionContext originalSubmissionContext =
+              federationFacade.getApplicationSubmissionContext(applicationId);
+
           // ReAttachUAM
           this.uamPool.reAttachUAM(keyScId, config, applicationId, queue, user, homeSCId,
-              tokens, keyScId);
+              tokens, keyScId, originalSubmissionContext);
 
           // GetAMRMClientRelayer
           this.secondaryRelayers.put(keyScId, this.uamPool.getAMRMClientRelayer(keyScId));
@@ -1026,10 +1015,13 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
                 FederationProxyProviderUtil.updateConfForFederation(config,
                     subClusterId.getId());
 
+                ApplicationSubmissionContext originalSubmissionContext =
+                    federationFacade.getApplicationSubmissionContext(appId);
+
                 uamPool.reAttachUAM(subClusterId.getId(), config, appId,
                     amRegistrationResponse.getQueue(),
                     getApplicationContext().getUser(), homeSubClusterId.getId(),
-                    amrmToken, subClusterId.toString());
+                    amrmToken, subClusterId.toString(), originalSubmissionContext);
 
                 secondaryRelayers.put(subClusterId.getId(),
                     uamPool.getAMRMClientRelayer(subClusterId.getId()));
@@ -1266,11 +1258,15 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           RegisterApplicationMasterResponse uamResponse = null;
           Token<AMRMTokenIdentifier> token = null;
           try {
+            ApplicationId applicationId = attemptId.getApplicationId();
+            ApplicationSubmissionContext originalSubmissionContext =
+                federationFacade.getApplicationSubmissionContext(applicationId);
+
             // For appNameSuffix, use subClusterId of the home sub-cluster
             token = uamPool.launchUAM(subClusterId, config,
-                attemptId.getApplicationId(), amRegistrationResponse.getQueue(),
+                applicationId, amRegistrationResponse.getQueue(),
                 getApplicationContext().getUser(), homeSubClusterId.toString(),
-                true, subClusterId);
+                true, subClusterId, originalSubmissionContext);
 
             secondaryRelayers.put(subClusterId,
                 uamPool.getAMRMClientRelayer(subClusterId));

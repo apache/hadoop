@@ -989,6 +989,17 @@ public final class FederationStateStoreFacade {
     }
   }
 
+  public ApplicationSubmissionContext getApplicationSubmissionContext(ApplicationId appId)
+      throws YarnException {
+    GetApplicationHomeSubClusterResponse response = stateStore.getApplicationHomeSubCluster(
+        GetApplicationHomeSubClusterRequest.newInstance(appId));
+    ApplicationHomeSubCluster appHomeSubCluster = response.getApplicationHomeSubCluster();
+    ApplicationSubmissionContext appSubmissionContext =
+        appHomeSubCluster.getApplicationSubmissionContext();
+   return appSubmissionContext;
+  }
+
+
   @VisibleForTesting
   public FederationCache getFederationCache() {
     return federationCache;
