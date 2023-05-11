@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
-import java.util.Objects;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -102,7 +101,10 @@ public class ITestAbfsDurationTrackers extends AbstractAbfsIntegrationTest {
    */
   private void assertDurationTracker(IOStatistics ioStatistics) {
     for (AbfsStatistic abfsStatistic : HTTP_DURATION_TRACKER_LIST) {
-      if (!abfsStatistic.getStatName().equals(HTTP_DELETE_REQUEST.getStatName())) {
+      // Since delete calls go to wasb endpoint and it doesn't have implementation for abfsStatistics
+      // we are avoiding incrementing stats for it. Can be reverted when we have blob implementation for
+      // delete.
+      if (!HTTP_DELETE_REQUEST.getStatName().equals(abfsStatistic.getStatName())) {
         Assertions.assertThat(lookupMeanStatistic(ioStatistics,
                         abfsStatistic.getStatName() + StoreStatisticNames.SUFFIX_MEAN).mean())
                 .describedAs("The DurationTracker Named " + abfsStatistic.getStatName()

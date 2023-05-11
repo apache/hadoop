@@ -129,6 +129,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     // Network Stats calculation: 1 flush (with close) is send.
     // 1 flush request = 1 connection and 1 send request
     if (getPrefixMode(fs) == PrefixMode.DFS) {
+      // No network call made for flush without append in case of blob endpoint.
       expectedConnectionsMade++;
       expectedRequestsSent++;
     }

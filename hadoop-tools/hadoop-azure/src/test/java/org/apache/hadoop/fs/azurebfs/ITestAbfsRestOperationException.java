@@ -75,6 +75,7 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
       // verify its format
       String errorMessage = ex.getLocalizedMessage();
       String[] errorFields = errorMessage.split(",");
+      // Flow is different for listStatusIterator being enabled or not.
       if (!getAbfsStore(fs).getAbfsConfiguration().enableAbfsListIterator()) {
         Assert.assertEquals(6, errorFields.length);
         // Check status message, status code, HTTP Request Type and URL.

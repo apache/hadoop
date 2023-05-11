@@ -430,8 +430,7 @@ public class ITestAzureBlobFileSystemAppend extends
   public void testParallelWriteOutputStreamClose() throws Exception {
     Assume.assumeTrue(getFileSystem().getAbfsStore().getPrefixMode() == PrefixMode.BLOB);
     final Path SECONDARY_FILE_PATH = new Path("secondarytestfile");
-    Configuration configuration = getRawConfiguration();
-    FileSystem fs = FileSystem.newInstance(configuration);
+    AzureBlobFileSystem fs = getFileSystem();
     ExecutorService executorService = Executors.newFixedThreadPool(5);
     List<Future<?>> futures = new ArrayList<>();
 

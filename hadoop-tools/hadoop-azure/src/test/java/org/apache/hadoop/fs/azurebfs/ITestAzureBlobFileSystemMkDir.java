@@ -123,7 +123,7 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
     // Case 1: Dir does not pre-exist
     fs.mkdirs(dirPath);
 
-    // One request to server
+    // One request to server for dfs and 2 for blob because child calls mkdir for parent.
     if (getPrefixMode(fs) == PrefixMode.BLOB) {
       mkdirRequestCount += 2;
     } else {
@@ -139,7 +139,7 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
     // Mkdir on existing Dir path will not lead to failure
     fs.mkdirs(dirPath);
 
-    // One request to server
+    // One request to server for dfs and 3 for blob because child calls mkdir for parent.
     if (getPrefixMode(fs) == PrefixMode.BLOB) {
       mkdirRequestCount += 3;
     } else {

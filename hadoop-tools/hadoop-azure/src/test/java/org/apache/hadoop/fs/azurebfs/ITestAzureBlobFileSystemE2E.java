@@ -215,6 +215,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     fs.delete(testFilePath, true);
     assertFalse(fs.exists(testFilePath));
 
+    // No call goes to backend for empty map in case of blob endpoint.
     if (getPrefixMode(fs) == PrefixMode.DFS) {
       intercept(FileNotFoundException.class,
               () -> stream.close());

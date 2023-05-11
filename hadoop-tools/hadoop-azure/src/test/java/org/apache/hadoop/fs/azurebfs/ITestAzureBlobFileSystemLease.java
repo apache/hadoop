@@ -171,6 +171,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
       try {
         out.hsync();
       } catch (IOException e) {
+        // Etag mismatch leads to condition not met error for blob endpoint.
         if (getPrefixMode(fs) == PrefixMode.BLOB) {
           GenericTestUtils.assertExceptionContains(CONDITION_NOT_MET, e);
         } else {
@@ -178,6 +179,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
         }
       }
     } catch (IOException e) {
+      // Etag mismatch leads to condition not met error for blob endpoint.
       if (getPrefixMode(fs) == PrefixMode.BLOB) {
         GenericTestUtils.assertExceptionContains(CONDITION_NOT_MET, e);
       } else {

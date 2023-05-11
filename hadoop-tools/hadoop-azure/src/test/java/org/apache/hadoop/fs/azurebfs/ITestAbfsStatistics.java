@@ -103,6 +103,7 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     assertAbfsStatistics(AbfsStatistic.CALL_CREATE, 1, metricMap);
     assertAbfsStatistics(AbfsStatistic.CALL_CREATE_NON_RECURSIVE, 1, metricMap);
     assertAbfsStatistics(AbfsStatistic.FILES_CREATED, 1, metricMap);
+    // Child calls mkdirs for parent in case of blob.
     if (getPrefixMode(fs) == PrefixMode.BLOB) {
       assertAbfsStatistics(AbfsStatistic.DIRECTORIES_CREATED, 2, metricMap);
       assertAbfsStatistics(AbfsStatistic.CALL_MKDIRS, 2, metricMap);
@@ -136,6 +137,7 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     assertAbfsStatistics(AbfsStatistic.CALL_CREATE_NON_RECURSIVE, NUMBER_OF_OPS,
         metricMap);
     assertAbfsStatistics(AbfsStatistic.FILES_CREATED, NUMBER_OF_OPS, metricMap);
+    // Child calls mkdirs for parent in case of blob.
     if (getPrefixMode(fs) == PrefixMode.BLOB) {
       assertAbfsStatistics(AbfsStatistic.DIRECTORIES_CREATED, 2 * NUMBER_OF_OPS,
               metricMap);
@@ -182,6 +184,7 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     since directory is delete recursively op_delete is called 2 times.
     1 file is deleted, 1 listStatus() call is made.
      */
+    // Calls go to wasb for now, will need to update this once goes to blob endpoint.
     if (getPrefixMode(fs) == PrefixMode.BLOB) {
       assertAbfsStatistics(AbfsStatistic.CALL_DELETE, 1, metricMap);
       assertAbfsStatistics(AbfsStatistic.FILES_DELETED, 0, metricMap);
@@ -202,6 +205,7 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     metricMap = fs.getInstrumentationMap();
 
     //Test for directories_deleted.
+    // Calls go to wasb for now, will need to update this once goes to blob endpoint.
     if (getPrefixMode(fs) == PrefixMode.BLOB) {
       assertAbfsStatistics(AbfsStatistic.DIRECTORIES_DELETED, 0, metricMap);
     } else {
