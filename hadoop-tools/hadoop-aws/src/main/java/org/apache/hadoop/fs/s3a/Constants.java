@@ -1256,23 +1256,4 @@ public final class Constants {
    */
   public static final int DEFAULT_AWS_S3_VECTOR_ACTIVE_RANGE_READS = 4;
 
-  /**
-   * Option to enable or disable the multipart uploads.
-   * Value: {@value}.
-   * <p>
-   * Default is {@link #DEFAULT_MULTIPART_UPLOAD_ENABLED}.
-   */
-  public static final String MULTIPART_UPLOADS_ENABLED = "fs.s3a.multipart.uploads.enabled";
-
-  /**
-   * Default value for multipart uploads.
-   * {@value}
-   */
-  public static final boolean DEFAULT_MULTIPART_UPLOAD_ENABLED = true;
-
-  /**
-   * Stream supports multipart uploads to the given path.
-   */
-  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_MULTIPART_UPLOAD_ENABLED =
-      "fs.s3a.capability.multipart.uploads.enabled";
 }

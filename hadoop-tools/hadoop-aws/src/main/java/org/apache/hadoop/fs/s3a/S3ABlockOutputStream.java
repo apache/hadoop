@@ -101,7 +101,7 @@ class S3ABlockOutputStream extends OutputStream implements
   private final String key;
 
   /** Size of all blocks. */
-  private final long blockSize;
+  private final int blockSize;
 
   /** IO Statistics. */
   private final IOStatistics iostatistics;
@@ -169,9 +169,6 @@ class S3ABlockOutputStream extends OutputStream implements
   /** Thread level IOStatistics Aggregator. */
   private final IOStatisticsAggregator threadIOStatisticsAggregator;
 
-  /** Is multipart upload enabled? */
-  private final boolean isMultipartUploadEnabled;
-
   /**
    * An S3A output stream which uploads partitions in a separate pool of
    * threads; different {@link S3ADataBlocks.BlockFactory}
@@ -184,6 +181,7 @@ class S3ABlockOutputStream extends OutputStream implements
     this.builder = builder;
     this.key = builder.key;
     this.blockFactory = builder.blockFactory;
+    this.blockSize = (int) builder.blockSize;
     this.statistics = builder.statistics;
     // test instantiations may not provide statistics;
     this.iostatistics = statistics.getIOStatistics();
@@ -197,26 +195,17 @@ class S3ABlockOutputStream extends OutputStream implements
         (ProgressListener) progress
         : new ProgressableListener(progress);
     downgradeSyncableExceptions = builder.downgradeSyncableExceptions;
-
-    // look for multipart support.
-    this.isMultipartUploadEnabled = builder.isMultipartUploadEnabled;
-    // block size is infinite if multipart is disabled, so ignore
-    // what was passed in from the builder.
-    this.blockSize = isMultipartUploadEnabled
-        ? builder.blockSize
-        : -1;
-
+    // create that first block. This guarantees that an open + close sequence
+    // writes a 0-byte entry.
+    createBlockIfNeeded();
+    LOG.debug("Initialized S3ABlockOutputStream for {}" +
+        " output to {}", key, activeBlock);
     if (putTracker.initialize()) {
       LOG.debug("Put tracker requests multipart upload");
       initMultipartUpload();
     }
     this.isCSEEnabled = builder.isCSEEnabled;
     this.threadIOStatisticsAggregator = builder.ioStatisticsAggregator;
-    // create that first block. This guarantees that an open + close sequence
-    // writes a 0-byte entry.
-    createBlockIfNeeded();
-    LOG.debug("Initialized S3ABlockOutputStream for {}" +
-        " output to {}", key, activeBlock);
   }
 
   /**
@@ -331,15 +320,7 @@ class S3ABlockOutputStream extends OutputStream implements
     statistics.writeBytes(len);
     S3ADataBlocks.DataBlock block = createBlockIfNeeded();
     int written = block.write(source, offset, len);
-    if (!isMultipartUploadEnabled) {
-      // no need to check for space as multipart uploads
-      // are not available...everything is saved to a single
-      // (disk) block.
-      return;
-    }
-    // look to see if another block is needed to complete
-    // the upload or exactly a block was written.
-    int remainingCapacity = (int) block.remainingCapacity();
+    int remainingCapacity = block.remainingCapacity();
     if (written < len) {
       // not everything was written —the block has run out
       // of capacity
@@ -390,8 +371,6 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   @Retries.RetryTranslated
   private void initMultipartUpload() throws IOException {
-    Preconditions.checkState(isMultipartUploadEnabled,
-        "multipart upload is disabled");
     if (multiPartUpload == null) {
       LOG.debug("Initiating Multipart upload");
       multiPartUpload = new MultiPartUpload(key);
@@ -581,20 +560,19 @@ class S3ABlockOutputStream extends OutputStream implements
   }
 
   /**
-   * Upload the current block as a single PUT request; if the buffer is empty a
-   * 0-byte PUT will be invoked, as it is needed to create an entry at the far
-   * end.
-   * @return number of bytes uploaded. If thread was interrupted while waiting
-   * for upload to complete, returns zero with interrupted flag set on this
-   * thread.
-   * @throws IOException
-   * any problem.
+   * Upload the current block as a single PUT request; if the buffer
+   * is empty a 0-byte PUT will be invoked, as it is needed to create an
+   * entry at the far end.
+   * @throws IOException any problem.
+   * @return number of bytes uploaded. If thread was interrupted while
+   * waiting for upload to complete, returns zero with interrupted flag set
+   * on this thread.
    */
-  private long putObject() throws IOException {
+  private int putObject() throws IOException {
     LOG.debug("Executing regular upload for {}", writeOperationHelper);
 
     final S3ADataBlocks.DataBlock block = getActiveBlock();
-    long size = block.dataSize();
+    int size = block.dataSize();
     final S3ADataBlocks.BlockUploadData uploadData = block.startUpload();
     final PutObjectRequest putObjectRequest = uploadData.hasFile() ?
         writeOperationHelper.createPutObjectRequest(
@@ -641,7 +619,6 @@ class S3ABlockOutputStream extends OutputStream implements
         "S3ABlockOutputStream{");
     sb.append(writeOperationHelper.toString());
     sb.append(", blockSize=").append(blockSize);
-    sb.append(", isMultipartUploadEnabled=").append(isMultipartUploadEnabled);
     // unsynced access; risks consistency in exchange for no risk of deadlock.
     S3ADataBlocks.DataBlock block = activeBlock;
     if (block != null) {
@@ -867,7 +844,7 @@ class S3ABlockOutputStream extends OutputStream implements
       Preconditions.checkNotNull(uploadId, "Null uploadId");
       maybeRethrowUploadFailure();
       partsSubmitted++;
-      final long size = block.dataSize();
+      final int size = block.dataSize();
       bytesSubmitted += size;
       final int currentPartNumber = partETagsFutures.size() + 1;
       final UploadPartRequest request;
@@ -1043,7 +1020,7 @@ class S3ABlockOutputStream extends OutputStream implements
       ProgressEventType eventType = progressEvent.getEventType();
       long bytesTransferred = progressEvent.getBytesTransferred();
 
-      long size = block.dataSize();
+      int size = block.dataSize();
       switch (eventType) {
 
       case REQUEST_BYTE_TRANSFER_EVENT:
@@ -1157,11 +1134,6 @@ class S3ABlockOutputStream extends OutputStream implements
      * thread-level IOStatistics Aggregator.
      */
     private IOStatisticsAggregator ioStatisticsAggregator;
-
-    /**
-     * Is Multipart Uploads enabled for the given upload.
-     */
-    private boolean isMultipartUploadEnabled;
 
     private BlockOutputStreamBuilder() {
     }
@@ -1311,12 +1283,6 @@ class S3ABlockOutputStream extends OutputStream implements
     public BlockOutputStreamBuilder withIOStatisticsAggregator(
         final IOStatisticsAggregator value) {
       ioStatisticsAggregator = value;
-      return this;
-    }
-
-    public BlockOutputStreamBuilder withMultipartEnabled(
-        final boolean value) {
-      isMultipartUploadEnabled = value;
       return this;
     }
   }
