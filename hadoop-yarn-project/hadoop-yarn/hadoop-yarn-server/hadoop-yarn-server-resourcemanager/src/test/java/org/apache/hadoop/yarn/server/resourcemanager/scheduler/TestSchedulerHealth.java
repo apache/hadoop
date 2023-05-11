@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.NodeManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Application;
@@ -37,6 +38,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabels
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueCapacityHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -45,6 +47,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.junit.Assume.assumeTrue;
@@ -53,14 +57,17 @@ public class TestSchedulerHealth {
 
   private ResourceManager resourceManager;
 
+  private NullRMNodeLabelsManager nodeLabelsManager;
+
   public void setup() {
     DefaultMetricsSystem.setMiniClusterMode(true);
     resourceManager = new ResourceManager() {
       @Override
       protected RMNodeLabelsManager createNodeLabelManager() {
-        RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
-        mgr.init(getConfig());
-        return mgr;
+        nodeLabelsManager = new NullRMNodeLabelsManager();
+        nodeLabelsManager.init(getConfig());
+        nodeLabelsManager.setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, Resource.newInstance(5 * 1024, 1));
+        return nodeLabelsManager;
       }
     };
 
@@ -213,6 +220,13 @@ public class TestSchedulerHealth {
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
           Resources.createResource(5 * 1024, 1), mockNodeStatus);
 
+    CapacitySchedulerQueueCapacityHandler queueController =
+        new CapacitySchedulerQueueCapacityHandler(nodeLabelsManager);
+    CapacityScheduler cs = (CapacityScheduler) resourceManager.getResourceScheduler();
+    Resource clusterResource = Resource.newInstance(5 * 1024, 1);
+    queueController.updateRoot(cs.getQueue("root"), clusterResource);
+    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, cs.getQueue("root"));
+
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
     Priority priority_1 = Priority.newInstance(1);
@@ -296,6 +310,13 @@ public class TestSchedulerHealth {
     nodeUpdate(nm_0);
     nodeUpdate(nm_1);
 
+    CapacitySchedulerQueueCapacityHandler queueController =
+        new CapacitySchedulerQueueCapacityHandler(nodeLabelsManager);
+    CapacityScheduler cs = (CapacityScheduler) resourceManager.getResourceScheduler();
+    Resource clusterResource = Resource.newInstance(7 * 1024, 2);
+    queueController.updateRoot(cs.getQueue("root"), clusterResource);
+    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, cs.getQueue("root"));
+
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
     Priority priority_1 = Priority.newInstance(1);
@@ -326,7 +347,7 @@ public class TestSchedulerHealth {
     SchedulerHealth sh =
         ((CapacityScheduler) resourceManager.getResourceScheduler())
           .getSchedulerHealth();
-    Assert.assertEquals(1, sh.getAllocationCount().longValue());
+    Assert.assertEquals(1L, sh.getAllocationCount().longValue());
     Assert.assertEquals(Resource.newInstance(1024, 1),
       sh.getResourcesAllocated());
     Assert.assertEquals(1, sh.getAggregateAllocationCount().longValue());

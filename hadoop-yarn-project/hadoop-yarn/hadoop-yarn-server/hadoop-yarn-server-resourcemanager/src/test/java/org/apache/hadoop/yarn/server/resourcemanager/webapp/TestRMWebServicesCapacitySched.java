@@ -35,6 +35,7 @@ import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -60,6 +61,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
@@ -112,6 +114,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
         new Configuration(false)));
     GuiceServletConfig.setInjector(
         Guice.createInjector(new WebServletModule(rm)));
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 0, 0);
   }
 
   public static void setupQueueConfiguration(
@@ -244,6 +247,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
     //Start RM so that it accepts app submissions
     rm.start();
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm,0, 0);
     try {
       //Get the XML from ws/v1/cluster/scheduler
       ClientResponse response = resource().path("ws/v1/cluster/scheduler")

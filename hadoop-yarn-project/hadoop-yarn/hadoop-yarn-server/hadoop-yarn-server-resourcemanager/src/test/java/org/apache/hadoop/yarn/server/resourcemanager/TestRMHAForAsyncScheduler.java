@@ -125,6 +125,7 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
 
     // register NM, kill app2
     nm = rm1.registerNode("192.1.1.1:1234", 8192, 8);
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 8, 8);
     keepNMHeartbeat(Arrays.asList(nm), 1000);
 
     rm1.waitForState(app2.getCurrentAppAttempt().getAppAttemptId(),
