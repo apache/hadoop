@@ -294,8 +294,10 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
 
   /**
    * Insert a record with a given key into the specified table.
+   *
    * @param tableName Name of table to modify
    * @param key Primary key for the record.
+   * @param data The record value for the given record key.
    * @return True is operation is successful, false otherwise.
    */
   protected boolean insertRecord(String tableName, String key, String data) {
@@ -314,8 +316,10 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
 
   /**
    * Updates the record with a given key from the specified table.
+   *
    * @param tableName Name of table to modify
    * @param key Primary key for the record.
+   * @param data The record value for the given record key.
    * @return True is operation is successful, false otherwise.
    */
   protected boolean updateRecord(String tableName, String key, String data) {

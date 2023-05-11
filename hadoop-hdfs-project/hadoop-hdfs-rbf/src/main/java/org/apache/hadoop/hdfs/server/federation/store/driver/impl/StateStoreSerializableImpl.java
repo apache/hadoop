@@ -57,7 +57,9 @@ public abstract class StateStoreSerializableImpl extends StateStoreBaseImpl {
 
   /**
    * Serialize a record using the serializer.
+   *
    * @param record Record to serialize.
+   * @param <T> Type of the state store record.
    * @return Byte array with the serialization of the record.
    */
   protected <T extends BaseRecord> byte[] serialize(T record) {
@@ -66,7 +68,9 @@ public abstract class StateStoreSerializableImpl extends StateStoreBaseImpl {
 
   /**
    * Serialize a record using the serializer.
+   *
    * @param record Record to serialize.
+   * @param <T> Type of the state store record.
    * @return String with the serialization of the record.
    */
   protected <T extends BaseRecord> String serializeString(T record) {
@@ -75,11 +79,13 @@ public abstract class StateStoreSerializableImpl extends StateStoreBaseImpl {
 
   /**
    * Creates a record from an input data string.
+   *
    * @param data Serialized text of the record.
    * @param clazz Record class.
    * @param includeDates If dateModified and dateCreated are serialized.
-   * @return The created record.
-   * @throws IOException
+   * @param <T> Type of the state store record.
+   * @return The created record by deserializing the input text.
+   * @throws IOException If the record deserialization fails.
    */
   protected <T extends BaseRecord> T newRecord(
       String data, Class<T> clazz, boolean includeDates) throws IOException {

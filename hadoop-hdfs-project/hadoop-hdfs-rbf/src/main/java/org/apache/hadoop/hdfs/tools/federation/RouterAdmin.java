@@ -1391,7 +1391,11 @@ public class RouterAdmin extends Configured implements Tool {
 
   /**
    * Dumps the contents of the StateStore to stdout.
-   * @return true if it was successful
+   *
+   * @param conf the configuration.
+   * @param output the print output stream.
+   * @return true if it was successful.
+   * @throws IOException if the State store is not available.
    */
   public static boolean dumpStateStore(Configuration conf,
                                 PrintStream output) throws IOException {

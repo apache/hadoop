@@ -64,7 +64,9 @@ public interface RouterRpcFairnessPolicyController {
   void shutdown();
 
   /**
-   * Returns the JSON string of the available handler for each Ns.
+   * Returns the JSON string of the available handler for each name service.
+   *
+   * @return the JSON string of the available handler for each name service.
    */
   String getAvailableHandlerOnPerNs();
 }

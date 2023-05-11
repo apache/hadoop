@@ -143,8 +143,9 @@ public interface StateStoreRecordOperations {
    * Remove multiple records of a specific class that match a query. Requires
    * the getAll implementation to fetch fresh records on each call.
    *
-   * @param <T> Record class of the records.
+   * @param clazz The class to match the records with.
    * @param query Query to filter what to remove.
+   * @param <T> Record class of the records.
    * @return The number of records removed.
    * @throws IOException Throws exception if unable to query the data store.
    */
