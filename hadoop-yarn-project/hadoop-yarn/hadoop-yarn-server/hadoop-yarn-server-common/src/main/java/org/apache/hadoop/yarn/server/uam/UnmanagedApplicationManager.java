@@ -566,4 +566,9 @@ public class UnmanagedApplicationManager {
   protected boolean isHeartbeatThreadAlive() {
     return this.heartbeatHandler.isAlive();
   }
+
+  @VisibleForTesting
+  public ApplicationSubmissionContext getApplicationSubmissionContext() {
+    return applicationSubmissionContext;
+  }
 }
