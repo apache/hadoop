@@ -724,12 +724,12 @@ public class Mover {
 
     private static Options buildCliOptions() {
       Options opts = new Options();
-      Option file = OptionBuilder.withArgName("pathsFile").hasArg()
-          .withDescription("a local file containing files/dirs to migrate")
-          .create("f");
-      Option paths = OptionBuilder.withArgName("paths").hasArgs()
-          .withDescription("specify space separated files/dirs to migrate")
-          .create("p");
+      Option file = Option.builder("f").argName("pathsFile").hasArg()
+          .desc("a local file containing files/dirs to migrate")
+          .build();
+      Option paths = Option.builder("p").argName("paths").hasArgs()
+          .desc("specify space separated files/dirs to migrate")
+          .build();
       OptionGroup group = new OptionGroup();
       group.addOption(file);
       group.addOption(paths);
