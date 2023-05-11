@@ -216,6 +216,7 @@ public class WriteOperationHelper implements WriteOperations {
    * Get the audit span this object was created with.
    * @return the audit span
    */
+  @Override
   public AuditSpan getAuditSpan() {
     return auditSpan;
   }
