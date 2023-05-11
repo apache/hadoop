@@ -78,8 +78,6 @@ public class TestResourceManager {
     DefaultMetricsSystem.setMiniClusterMode(true);
     resourceManager = new MockRM();
     resourceManager.init(conf);
-    resourceManager.getRMContext().getContainerTokenSecretManager().rollMasterKey();
-    resourceManager.getRMContext().getNMTokenSecretManager().rollMasterKey();
 
     converterTestCommons = new FSConfigConverterTestCommons();
     converterTestCommons.setUp();
