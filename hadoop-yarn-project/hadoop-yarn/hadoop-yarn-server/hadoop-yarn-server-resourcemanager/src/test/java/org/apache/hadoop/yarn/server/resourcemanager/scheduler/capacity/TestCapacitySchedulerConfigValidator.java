@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
@@ -32,6 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
@@ -423,6 +425,73 @@ public class TestCapacitySchedulerConfigValidator {
     Boolean isValidConfig = CapacitySchedulerConfigValidator
             .validateCSConfiguration(oldConfig, newConfig, rmContext);
     Assert.assertTrue(isValidConfig);
+  }
+
+  @Test
+  public void testValidateDoesNotModifyTheDefaultMetricsSystem() throws Exception {
+    try {
+      YarnConfiguration conf = new YarnConfiguration(CapacitySchedulerConfigGeneratorForTest
+          .createBasicCSConfiguration());
+      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+          ResourceScheduler.class);
+      mockRM = new MockRM(conf);
+
+      cs = (CapacityScheduler) mockRM.getResourceScheduler();
+      mockRM.start();
+      cs.start();
+      RMContext rmContext = mockRM.getRMContext();
+      Configuration oldConfig = cs.getConfig();
+
+      Configuration newConfig = new Configuration(oldConfig);
+      newConfig
+          .set("yarn.scheduler.capacity.root.queues", "test1, test2, test3");
+      newConfig
+          .set("yarn.scheduler.capacity.root.test3.state", "RUNNING");
+      newConfig
+          .set("yarn.scheduler.capacity.root.test3.capacity", "30");
+      newConfig
+          .set("yarn.scheduler.capacity.root.test1.capacity", "20");
+
+      boolean isValidConfig = CapacitySchedulerConfigValidator
+          .validateCSConfiguration(oldConfig, newConfig, rmContext);
+      Assert.assertTrue(isValidConfig);
+
+      Assert.assertTrue("Original queues should be found in the cache",
+          QueueMetrics.getQueueMetrics().containsKey("root.test1"));
+      Assert.assertTrue("Original queues should be found in the cache",
+          QueueMetrics.getQueueMetrics().containsKey("root.test2"));
+      Assert.assertFalse("Validated new queue should not be in the cache",
+          QueueMetrics.getQueueMetrics().containsKey("root.test3"));
+
+      Assert.assertTrue("Original queues should be found in the cache (PartitionQueueMetrics)",
+          QueueMetrics.getQueueMetrics().containsKey("default.root.test1"));
+      Assert.assertTrue("Original queues should be found in the cache (PartitionQueueMetrics)",
+          QueueMetrics.getQueueMetrics().containsKey("default.root.test2"));
+      Assert.assertFalse("Validated new queue should not be in the cache (PartitionQueueMetrics)",
+          QueueMetrics.getQueueMetrics().containsKey("default.root.test3"));
+
+      Assert.assertNotNull("Original queues should be found in the Default Metrics System",
+          DefaultMetricsSystem.instance().getSource("QueueMetrics,q0=root,q1=test1"));
+      Assert.assertNotNull("Original queues should be found in the Default Metrics System",
+          DefaultMetricsSystem.instance().getSource("QueueMetrics,q0=root,q1=test2"));
+      Assert.assertNull("Validated new queue should not be in the Default Metrics System",
+          DefaultMetricsSystem.instance().getSource("QueueMetrics,q0=root,q1=test3"));
+
+      Assert.assertNotNull(
+          "Original queues should be found in the Default Metrics System (PartitionQueueMetrics)",
+          DefaultMetricsSystem.instance()
+              .getSource("PartitionQueueMetrics,partition=,q0=root,q1=test1"));
+      Assert.assertNotNull(
+          "Original queues should be found in the Default Metrics System (PartitionQueueMetrics)",
+          DefaultMetricsSystem.instance()
+              .getSource("PartitionQueueMetrics,partition=,q0=root,q1=test2"));
+      Assert.assertNull(
+          "Validated new queue should not be in the Default Metrics System (PartitionQueueMetrics)",
+          DefaultMetricsSystem.instance()
+              .getSource("PartitionQueueMetrics,partition=,q0=root,q1=test3"));
+    } finally {
+      mockRM.stop();
+    }
   }
 
   /**
