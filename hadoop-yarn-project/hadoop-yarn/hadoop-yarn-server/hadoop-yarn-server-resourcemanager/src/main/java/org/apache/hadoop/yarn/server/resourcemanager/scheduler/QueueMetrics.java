@@ -329,7 +329,6 @@ public class QueueMetrics implements MetricsSource {
     }
 
     String metricName = partition + METRIC_NAME_DELIMITER + this.queueName;
-
     QueueMetrics metrics = getQueueMetrics().get(metricName);
 
     if (metrics == null) {
