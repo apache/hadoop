@@ -32,7 +32,6 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeFloat;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.CSQueueMetricsForCustomResources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
@@ -298,7 +297,7 @@ public class CSQueueMetrics extends QueueMetrics {
   public synchronized static CSQueueMetrics forQueue(String queueName,
       Queue parent, boolean enableUserMetrics, Configuration conf) {
     final boolean isConfigValidation =
-        conf.getBoolean(YarnConfiguration.CONFIGURATION_VALIDATION, false);
+        conf.getBoolean(CONFIGURATION_VALIDATION, false);
 
     MetricsSystem ms = isConfigValidation
         ? new DummyMetricsSystemImpl() : DefaultMetricsSystem.instance();

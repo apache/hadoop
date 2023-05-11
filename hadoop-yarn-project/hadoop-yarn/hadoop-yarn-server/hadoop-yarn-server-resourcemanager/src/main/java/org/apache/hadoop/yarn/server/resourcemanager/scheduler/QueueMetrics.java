@@ -117,6 +117,8 @@ public class QueueMetrics implements MetricsSource {
   @Metric("Reserved CPU in virtual cores") MutableGaugeInt reservedVCores;
   @Metric("# of reserved containers") MutableGaugeInt reservedContainers;
 
+  public static final String CONFIGURATION_VALIDATION = "yarn.configuration-validation";
+
   private final MutableGaugeInt[] runningTime;
   private TimeBucketMetrics<ApplicationId> runBuckets;
 
@@ -340,7 +342,7 @@ public class QueueMetrics implements MetricsSource {
           "Metrics for queue: " + this.queueName,
           queueMetrics.tag(PARTITION_INFO, partitionJMXStr).tag(QUEUE_INFO,
               this.queueName));
-      if (!conf.getBoolean(YarnConfiguration.CONFIGURATION_VALIDATION, false)) {
+      if (!conf.getBoolean(CONFIGURATION_VALIDATION, false)) {
         getQueueMetrics().put(metricName, queueMetrics);
       }
       registerPartitionMetricsCreation(metricName);

@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,8 +45,8 @@ public final class CapacitySchedulerConfigValidator {
           final RMContext rmContext) throws IOException {
     // ensure that the oldConf is deep copied
     Configuration oldConf = new Configuration(oldConfParam);
-    oldConf.setBoolean(YarnConfiguration.CONFIGURATION_VALIDATION, true);
-    newConf.setBoolean(YarnConfiguration.CONFIGURATION_VALIDATION, true);
+    oldConf.setBoolean(QueueMetrics.CONFIGURATION_VALIDATION, true);
+    newConf.setBoolean(QueueMetrics.CONFIGURATION_VALIDATION, true);
 
     CapacityScheduler liveScheduler = (CapacityScheduler) rmContext.getScheduler();
     CapacityScheduler newCs = new CapacityScheduler();
