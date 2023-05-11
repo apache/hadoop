@@ -83,16 +83,16 @@ upload:
 
 # 区域与私有云相关设置
 customRegion:
-  id: custom1
+  id: z0
 
   # 私有云ID自定义配置，子命名空间均为用户自定义region id
   custom:
-    custom1:
+    z0:
       # 中心域名服务器，若配置了该字段，则优先该服务进行域名查询，可无需配置后续的相关域名字段
       ucServer: 'https://uc.qiniuapi.com' # 中心域名服务器
 
-      rsHost: 'rs.qiniuapi.com'      # 对象管理域名
-      rsfHost: 'rsf.qiniuapi.com'    # 对象列举域名
+      rsHost: 'rs-z0.qiniuapi.com'      # 对象管理域名
+      rsfHost: 'rsf-z0.qiniuapi.com'    # 对象列举域名
       apiHost: 'api.qiniuapi.com'    # 计量查询域名
       iovipHost: 'iovip.qiniuio.com' # 源站下载域名
 
