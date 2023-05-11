@@ -697,8 +697,8 @@ public class TestRouterWebServiceUtil {
 
     // Case2, set a negative timeout, We'll get the default timeout(30s)
     YarnConfiguration configuration2 = new YarnConfiguration();
-    configuration2.setLong(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,-1L);
-    configuration2.setLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,-1L);
+    configuration2.setLong(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, -1L);
+    configuration2.setLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, -1L);
     Client client02 = RouterWebServiceUtil.createJerseyClient(configuration2);
     Map<String, Object> properties02 = client02.getProperties();
     Object readTimeOut02 = properties02.get(ClientConfig.PROPERTY_READ_TIMEOUT);
@@ -714,7 +714,7 @@ public class TestRouterWebServiceUtil {
     long readTimeOutLong = (long) Integer.MAX_VALUE + 1;
 
     configuration3.setLong(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, connectTimeOutLong);
-    configuration3.setLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,readTimeOutLong);
+    configuration3.setLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, readTimeOutLong);
     Client client03 = RouterWebServiceUtil.createJerseyClient(configuration3);
     Map<String, Object> properties03 = client03.getProperties();
     Object readTimeOut03 = properties03.get(ClientConfig.PROPERTY_READ_TIMEOUT);
