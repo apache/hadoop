@@ -33,6 +33,8 @@ import org.apache.hadoop.hdfs.server.federation.router.RouterPermissionChecker;
 import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaUsage;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationRequest;
@@ -127,6 +129,29 @@ public class MountTableStoreImpl extends MountTableStore {
       response.setStatus(false);
       return response;
     }
+  }
+
+  @Override
+  public AddMountTableEntriesResponse addMountTableEntries(AddMountTableEntriesRequest request)
+      throws IOException {
+    List<MountTable> mountTables = request.getEntries();
+    if (mountTables == null || mountTables.size() == 0) {
+      AddMountTableEntriesResponse response = AddMountTableEntriesResponse.newInstance();
+      response.setStatus(false);
+      return response;
+    }
+    for (MountTable mountTable : mountTables) {
+      mountTable.validate();
+      final String src = mountTable.getSourcePath();
+      checkMountTablePermission(src);
+    }
+    boolean status = getDriver().putAll(mountTables, false, true);
+    AddMountTableEntriesResponse response = AddMountTableEntriesResponse.newInstance();
+    response.setStatus(status);
+    if (status) {
+      updateCacheAllRouters();
+    }
+    return response;
   }
 
   @Override
