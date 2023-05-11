@@ -148,4 +148,21 @@ public class QiniuKodoFileSystemTest {
             i++;
         }
     }
+
+    @Test
+    public void testListRoot() throws IOException {
+        Path root = new Path("/");
+        RemoteIterator<FileStatus> statuses = fs.listStatusIterator(root);
+        assertTrue(statuses.hasNext());
+    }
+
+    @Test
+    public void testLsByCommand() throws IOException {
+        CommandFactory factory = new CommandFactory(fs.getConf());
+        FsCommand.registerCommands(factory);
+        Command lsCmd = factory.getInstance("-ls");
+        String rootPath = new Path("/").makeQualified(fs.getUri(), fs.getWorkingDirectory()).toString();
+        System.out.printf(rootPath);
+        lsCmd.run(rootPath);
+    }
 }

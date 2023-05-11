@@ -318,39 +318,12 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      */
     @Override
     public List<FileInfo> listStatus(String prefixKey, boolean useDirectory) throws IOException {
-        ListProducerConfig listConfig = fsConfig.client.list;
-        // 最终结果
-        List<FileInfo> retFiles = new ArrayList<>();
-
-        // 消息队列
-        BlockingQueue<FileInfo> fileInfoQueue = new LinkedBlockingQueue<>(listConfig.bufferSize);
-
-        // 生产者
-        ListingProducer producer = new ListingProducer(
-                fileInfoQueue, bucketManager, bucket, prefixKey, false,
-                listConfig.singleRequestLimit,
-                useDirectory, listConfig.useListV2,
-                listConfig.offerTimeout
-        );
-
-        // 生产者线程
-        Future<Exception> future = service.submit(producer);
-
-        // 只要生产者未生产完毕或队列非空就不断地轮询队列
-        while (!future.isDone() || !fileInfoQueue.isEmpty()) {
-            FileInfo product = fileInfoQueue.poll();
-            // 缓冲区队列为空，等待下一次轮询
-            if (product == null) {
-                continue;
-            }
-            // 跳过自身
-            if (product.key.equals(prefixKey)) {
-                continue;
-            }
-            retFiles.add(product);
+        List<FileInfo> list = new ArrayList<>();
+        RemoteIterator<FileInfo> iterator = listStatusIterator(prefixKey, useDirectory);
+        while (iterator.hasNext()) {
+            list.add(iterator.next());
         }
-
-        return retFiles;
+        return list;
     }
 
 
