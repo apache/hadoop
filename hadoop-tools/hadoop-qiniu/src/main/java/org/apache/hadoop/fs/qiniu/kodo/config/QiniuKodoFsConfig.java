@@ -63,7 +63,7 @@ public class QiniuKodoFsConfig extends AConfigBase {
     }
 
     private boolean useHttps() {
-        return conf.getBoolean(namespace + ".useHttps", false);
+        return conf.getBoolean(namespace + ".useHttps", true);
     }
 
     private LoggerConfig logger() {
