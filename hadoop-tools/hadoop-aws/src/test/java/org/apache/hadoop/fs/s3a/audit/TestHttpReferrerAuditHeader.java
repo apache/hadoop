@@ -107,7 +107,8 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
     LOG.info("Header is {}", header);
     Map<String, String> params
         = HttpReferrerAuditHeader.extractQueryParameters(header);
-    compareCommonHeaders(params, PATH_1, PATH_2, span);
+    final String threadId = CommonAuditContext.currentThreadID();
+    compareCommonHeaders(params, PATH_1, PATH_2, threadId, span);
     assertThat(span.getTimestamp())
         .describedAs("Timestamp of " + span)
         .isEqualTo(ts);
@@ -129,7 +130,8 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
     AuditSpan span = getManager().createSpan(OPERATION, p1, p2);
     long ts = span.getTimestamp();
     Map<String, String> params = issueRequestAndExtractParameters();
-    compareCommonHeaders(params, p1, p2, span);
+    final String threadId = CommonAuditContext.currentThreadID();
+    compareCommonHeaders(params, p1, p2, threadId, span);
     assertThat(span.getTimestamp())
         .describedAs("Timestamp of " + span)
         .isEqualTo(ts);
@@ -352,7 +354,8 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
     LOG.info("Header is {}", header);
     Map<String, String> params
         = HttpReferrerAuditHeader.extractQueryParameters(header);
-    compareCommonHeaders(params, PATH_1, PATH_2, span);
+    final String threadId = CommonAuditContext.currentThreadID();
+    compareCommonHeaders(params, PATH_1, PATH_2, threadId, span);
     assertMapContains(params, DELETE_KEYS_SIZE, "3");
     assertThat(span.getTimestamp())
         .describedAs("Timestamp of " + span)
@@ -363,17 +366,28 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
         Long.toString(ts));
   }
 
-  private void compareCommonHeaders(Map<String, String> params,
-      String path1,
-      String path2,
-      AuditSpan span) throws IOException {
+  /**
+   * Utility to compare common params from the referer header.
+   *
+   * @param params map of params extracted from the header.
+   * @param path1 first path.
+   * @param path2 second path.
+   * @param threadID thread id.
+   * @param span audit span object.
+   * @throws IOException if login fails and/or current user cannot be retrieved.
+   */
+  private void compareCommonHeaders(final Map<String, String> params,
+      final String path1,
+      final String path2,
+      final String threadID,
+      final AuditSpan span) throws IOException {
     assertMapContains(params, PARAM_PRINCIPAL,
         UserGroupInformation.getCurrentUser().getUserName());
-    assertMapContains(params, PARAM_FILESYSTEM_ID, auditor.getAuditorId());
+    assertMapContains(params, PARAM_FILESYSTEM_ID,
+        auditor.getAuditorId());
     assertMapContains(params, PARAM_OP, OPERATION);
     assertMapContains(params, PARAM_PATH, path1);
     assertMapContains(params, PARAM_PATH2, path2);
-    String threadID = CommonAuditContext.currentThreadID();
     assertMapContains(params, PARAM_THREAD0, threadID);
     assertMapContains(params, PARAM_THREAD1, threadID);
     assertMapContains(params, PARAM_ID, span.getSpanId());

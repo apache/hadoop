@@ -362,7 +362,7 @@ public class LoggingAuditor
         final T request) {
       // attach range for GetObject requests
       attachRangeFromRequest(request);
-      // for delete op, attach num of files to delete
+      // for delete op, attach the number of files to delete
       attachDeleteKeySizeAttribute(request);
       // build the referrer header
       final String header = referrer.buildHttpReferrer();
