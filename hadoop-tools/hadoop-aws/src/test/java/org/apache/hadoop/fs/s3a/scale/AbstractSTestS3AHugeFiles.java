@@ -572,8 +572,8 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     byte[] readFullRes;
     IOStatistics sequentialIOStats, vectorIOStats;
     try (FSDataInputStream in = fs.openFile(hugefile)
-        .opt(FS_OPTION_OPENFILE_LENGTH, validateSize)  // lets us actually force a shorter read
-        .opt(FS_OPTION_OPENFILE_SPLIT_START, 0)
+        .optLong(FS_OPTION_OPENFILE_LENGTH, validateSize)  // lets us actually force a shorter read
+        .optLong(FS_OPTION_OPENFILE_SPLIT_START, 0)
         .opt(FS_OPTION_OPENFILE_SPLIT_END, validateSize)
         .opt(FS_OPTION_OPENFILE_READ_POLICY, "sequential")
         .opt(FS_OPTION_OPENFILE_BUFFER_SIZE, uploadBlockSize)
@@ -587,7 +587,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
 
     // now do a vector IO read
     try (FSDataInputStream in = fs.openFile(hugefile)
-        .opt(FS_OPTION_OPENFILE_LENGTH, filesize)
+        .optLong(FS_OPTION_OPENFILE_LENGTH, filesize)
         .opt(FS_OPTION_OPENFILE_READ_POLICY, "vector, random")
         .build().get();
          DurationInfo ignored = new DurationInfo(LOG, "Vector Read")) {
