@@ -21,10 +21,13 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.MetricsSink;
+import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MetricsAnnotations;
 import org.apache.hadoop.metrics2.lib.MutableGaugeFloat;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
@@ -229,9 +232,75 @@ public class CSQueueMetrics extends QueueMetrics {
     }
   }
 
+  @Metrics(context="dummymetricssystem")
+  public static class DummyMetricsSystemImpl extends MetricsSystem {
+    @Override
+    public MetricsSystem init(String prefix) {
+      return this;
+    }
+
+    @Override
+    public <T> T register(String name, String desc, T source) {
+      MetricsAnnotations.newSourceBuilder(source).build();
+      return source;
+    }
+
+    @Override
+    public void unregisterSource(String name) {
+    }
+
+    @Override
+    public MetricsSource getSource(String name) {
+      return null;
+    }
+
+    @Override
+    public <T extends MetricsSink> T register(String name, String desc, T sink) {
+      return null;
+    }
+
+    @Override
+    public void register(Callback callback) {
+    }
+
+    @Override
+    public void publishMetricsNow() {
+    }
+
+    @Override
+    public boolean shutdown() {
+      return false;
+    }
+
+    @Override
+    public void start() {
+    }
+
+    @Override
+    public void stop() {
+    }
+
+    @Override
+    public void startMetricsMBeans() {
+    }
+
+    @Override
+    public void stopMetricsMBeans() {
+    }
+
+    @Override
+    public String currentConfig() {
+      return null;
+    }
+  }
+
   public synchronized static CSQueueMetrics forQueue(String queueName,
       Queue parent, boolean enableUserMetrics, Configuration conf) {
-    MetricsSystem ms = DefaultMetricsSystem.instance();
+    final boolean isConfigValidation =
+        conf.getBoolean(CapacitySchedulerConfiguration.CONFIGURATION_VALIDATION, false);
+
+    MetricsSystem ms = isConfigValidation
+        ? new DummyMetricsSystemImpl() : DefaultMetricsSystem.instance();
     QueueMetrics metrics = getQueueMetrics().get(queueName);
     if (metrics == null) {
       metrics =
@@ -244,7 +313,10 @@ public class CSQueueMetrics extends QueueMetrics {
             ms.register(sourceName(queueName).toString(), "Metrics for queue: "
                 + queueName, metrics);
       }
-      getQueueMetrics().put(queueName, metrics);
+
+      if (!isConfigValidation) {
+        getQueueMetrics().put(queueName, metrics);
+      }
     }
 
     return (CSQueueMetrics) metrics;
