@@ -436,7 +436,7 @@ public class ITestAzureBlobFileSystemAppend extends
 
     FSDataOutputStream out1 = fs.create(SECONDARY_FILE_PATH);
     AbfsOutputStream outputStream1 = (AbfsOutputStream) out1.getWrappedStream();
-    AtomicReference<String> fileETag = new AtomicReference<>(outputStream1.getETag());
+    String fileETag = outputStream1.getETag();
     final byte[] b1 = new byte[8 * ONE_MB];
     new Random().nextBytes(b1);
     final byte[] b2 = new byte[8 * ONE_MB];
@@ -488,16 +488,16 @@ public class ITestAzureBlobFileSystemAppend extends
     inputStream.seek(0);
 
     AbfsOutputStream outputStream2 = (AbfsOutputStream) out1.getWrappedStream();
-    AtomicReference<String> out1Etag = new AtomicReference<>(outputStream2.getETag());
+    String out1Etag = outputStream2.getETag();
 
     AbfsOutputStream outputStream3 = (AbfsOutputStream) out2.getWrappedStream();
-    AtomicReference<String> out2Etag = new AtomicReference<>(outputStream3.getETag());
+    String out2Etag = outputStream3.getETag();
 
-    if (!fileETag.get().equals(out1Etag.get())) {
+    if (!fileETag.equals(out1Etag)) {
       result = inputStream.read(readBuffer, 0, 4 * ONE_MB);
       assertEquals(result, 200); // Verify that the number of bytes read matches the number of bytes written
       assertArrayEquals(Arrays.copyOfRange(readBuffer, 0, result), Arrays.copyOfRange(b1, 0, result)); // Verify that the data read matches the original data written
-    } else if (!fileETag.get().equals(out2Etag.get())) {
+    } else if (!fileETag.equals(out2Etag)) {
       result = inputStream.read(readBuffer, 0, 4 * ONE_MB);
       assertEquals(result, 400); // Verify that the number of bytes read matches the number of bytes written
       assertArrayEquals(Arrays.copyOfRange(readBuffer, 0, result), Arrays.copyOfRange(b2, 0, result)); // Verify that the data read matches the original data written
