@@ -125,6 +125,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
    * @param keepContainersAcrossApplicationAttempts keep container flag for UAM
    *          recovery.
    * @param rmName name of the YarnRM
+   * @param originalAppSubmissionContext ApplicationSubmissionContext
    * @see ApplicationSubmissionContext
    *          #setKeepContainersAcrossApplicationAttempts(boolean)
    * @return uamId for the UAM
@@ -159,7 +160,8 @@ public class UnmanagedAMPoolManager extends AbstractService {
 
     // Launch the UAM in RM
     launchUAM(appId.toString(), conf, appId, queueName, submitter,
-        appNameSuffix, keepContainersAcrossApplicationAttempts, rmName, originalAppSubmissionContext);
+        appNameSuffix, keepContainersAcrossApplicationAttempts, rmName,
+        originalAppSubmissionContext);
 
     // Register the UAM application
     registerApplicationMaster(appId.toString(), registerRequest);
@@ -180,6 +182,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
    * @param keepContainersAcrossApplicationAttempts keep container flag for UAM
    *          recovery.
    * @param rmName name of the YarnRM
+   * @param originalAppSubmissionContext AppSubmissionContext
    * @see ApplicationSubmissionContext
    *          #setKeepContainersAcrossApplicationAttempts(boolean)
    * @return UAM token
@@ -228,6 +231,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
    * @param appNameSuffix application name suffix for the UAM
    * @param uamToken UAM token
    * @param rmName name of the YarnRM
+   * @param originalAppSubmissionContext AppSubmissionContext
    * @throws YarnException if fails
    * @throws IOException if fails
    */
@@ -269,6 +273,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
    * @param appNameSuffix application name suffix
    * @param keepContainersAcrossApplicationAttempts keep container flag for UAM
    * @param rmName name of the YarnRM
+   * @param originalAppSubmissionContext ApplicationSubmissionContext
    * @return the UAM instance
    */
   @VisibleForTesting

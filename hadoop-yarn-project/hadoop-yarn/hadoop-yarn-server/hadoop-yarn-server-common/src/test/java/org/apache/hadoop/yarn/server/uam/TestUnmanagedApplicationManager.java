@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.uam;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -39,7 +40,11 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.*;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -165,7 +170,7 @@ public class TestUnmanagedApplicationManager {
     MockResourceManagerFacade rmProxy = uam.getRMProxy();
     uam = new TestableUnmanagedApplicationManager(conf,
         attemptId.getApplicationId(), null, "submitter", "appNameSuffix", true,
-        "rm", null);
+        "rm");
     uam.setRMProxy(rmProxy);
 
     reAttachUAM(null, attemptId);
@@ -435,6 +440,14 @@ public class TestUnmanagedApplicationManager {
     public TestableUnmanagedApplicationManager(Configuration conf,
         ApplicationId appId, String queueName, String submitter,
         String appNameSuffix, boolean keepContainersAcrossApplicationAttempts,
+        String rmName) {
+      this(conf, appId, queueName, submitter, appNameSuffix,
+          keepContainersAcrossApplicationAttempts, rmName, null);
+    }
+
+    public TestableUnmanagedApplicationManager(Configuration conf,
+        ApplicationId appId, String queueName, String submitter,
+        String appNameSuffix, boolean keepContainersAcrossApplicationAttempts,
         String rmName, ApplicationSubmissionContext originalApplicationSubmissionContext) {
       super(conf, appId, queueName, submitter, appNameSuffix,
           keepContainersAcrossApplicationAttempts, rmName, originalApplicationSubmissionContext);
@@ -510,7 +523,8 @@ public class TestUnmanagedApplicationManager {
         boolean keepContainersAcrossApplicationAttempts, String rmId,
         ApplicationSubmissionContext originalAppSubmissionContext) {
       return new TestableUnmanagedApplicationManager(configuration, appId, queueName, submitter,
-          appNameSuffix, keepContainersAcrossApplicationAttempts, rmId, originalAppSubmissionContext);
+          appNameSuffix, keepContainersAcrossApplicationAttempts, rmId,
+          originalAppSubmissionContext);
     }
   }
 
@@ -551,32 +565,28 @@ public class TestUnmanagedApplicationManager {
       throws IOException, YarnException, InterruptedException, TimeoutException {
     long now = Time.now();
     ApplicationId applicationId = ApplicationId.newInstance(now, 10);
-
-    Set<String> tags = new HashSet<>();
-    tags.add("1");
-    tags.add("2");
-
-    ApplicationSubmissionContext context =
-        ApplicationSubmissionContext.newInstance(applicationId, "test", "default",
-        Priority.newInstance(10), null, true, true,
-        2, Resource.newInstance(10, 2), "test");
-    context.setApplicationTags(tags);
+    ApplicationSubmissionContext appSubmissionContext = ApplicationSubmissionContext.newInstance(
+        applicationId, "test", "default", Priority.newInstance(10), null, true, true, 2,
+        Resource.newInstance(10, 2), "test");
+    Set<String> tags = Collections.singleton("1");
+    appSubmissionContext.setApplicationTags(tags);
 
     Token<AMRMTokenIdentifier> token1 = uamPool.launchUAM("SC-1", this.conf,
-        applicationId, "default", "test-user", "SC-HOME", true, "SC-1", context);
+        applicationId, "default", "test-user", "SC-HOME", true, "SC-1", appSubmissionContext);
     Assert.assertNotNull(token1);
 
-    Map<String, UnmanagedApplicationManager> unmanagedAppMasterMap =
-        uamPool.getUnmanagedAppMasterMap();
+    Map<String, UnmanagedApplicationManager> unmanagedAppMasterMap = uamPool.getUnmanagedAppMasterMap();
 
     UnmanagedApplicationManager uamApplicationManager = unmanagedAppMasterMap.get("SC-1");
     Assert.assertNotNull(uamApplicationManager);
-    ApplicationSubmissionContext appSubmissionContext = uamApplicationManager.getApplicationSubmissionContext();
+
+    ApplicationSubmissionContext appSubmissionContextByUam =
+        uamApplicationManager.getApplicationSubmissionContext();
 
     Assert.assertNotNull(appSubmissionContext);
-    Assert.assertEquals(10, appSubmissionContext.getPriority().getPriority());
-    Assert.assertEquals("test", appSubmissionContext.getApplicationType());
-    Assert.assertEquals(2, appSubmissionContext.getApplicationTags().size());
+    Assert.assertEquals(10, appSubmissionContextByUam.getPriority().getPriority());
+    Assert.assertEquals("test", appSubmissionContextByUam.getApplicationType());
+    Assert.assertEquals(1, appSubmissionContextByUam.getApplicationTags().size());
 
     uamPool.stop();
     Thread finishApplicationThread = uamPool.getFinishApplicationThread();

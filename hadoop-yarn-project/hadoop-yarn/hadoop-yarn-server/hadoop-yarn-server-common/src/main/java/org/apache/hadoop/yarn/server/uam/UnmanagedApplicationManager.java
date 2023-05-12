@@ -118,6 +118,7 @@ public class UnmanagedApplicationManager {
    * @param submitter user name of the app
    * @param appNameSuffix the app name suffix to use
    * @param rmName name of the YarnRM
+   * @param originalApplicationSubmissionContext ApplicationSubmissionContext
    * @param keepContainersAcrossApplicationAttempts keep container flag for UAM
    *          recovery. See {@link ApplicationSubmissionContext
    *          #setKeepContainersAcrossApplicationAttempts(boolean)}

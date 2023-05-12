@@ -989,14 +989,24 @@ public final class FederationStateStoreFacade {
     }
   }
 
-  public ApplicationSubmissionContext getApplicationSubmissionContext(ApplicationId appId)
-      throws YarnException {
-    GetApplicationHomeSubClusterResponse response = stateStore.getApplicationHomeSubCluster(
-        GetApplicationHomeSubClusterRequest.newInstance(appId));
-    ApplicationHomeSubCluster appHomeSubCluster = response.getApplicationHomeSubCluster();
-    ApplicationSubmissionContext appSubmissionContext =
-        appHomeSubCluster.getApplicationSubmissionContext();
-   return appSubmissionContext;
+  /**
+   * Get ApplicationSubmissionContext according to ApplicationId.
+   * We don't throw exceptions. If the application cannot be found, we return null.
+   *
+   * @param appId ApplicationId
+   * @return ApplicationSubmissionContext of ApplicationId
+   * @throws YarnException
+   */
+  public ApplicationSubmissionContext getApplicationSubmissionContext(ApplicationId appId) {
+    try {
+      GetApplicationHomeSubClusterResponse response = stateStore.getApplicationHomeSubCluster(
+          GetApplicationHomeSubClusterRequest.newInstance(appId));
+      ApplicationHomeSubCluster appHomeSubCluster = response.getApplicationHomeSubCluster();
+      return appHomeSubCluster.getApplicationSubmissionContext();
+    } catch (Exception e) {
+      LOG.error("getApplicationSubmissionContext error, applicationId = {}.", appId, e);
+      return null;
+    }
   }
 
 
