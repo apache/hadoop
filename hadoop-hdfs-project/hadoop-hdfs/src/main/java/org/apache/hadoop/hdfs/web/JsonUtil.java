@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
@@ -723,6 +724,21 @@ public class JsonUtil {
       blockLocations[i] = toJsonMap(locations[i]);
     }
     m.put(BlockLocation.class.getSimpleName(), blockLocations);
+    return m;
+  }
+
+  public static String toJsonString(FsStatus status) {
+    return toJsonString(FsStatus.class, toJsonMap(status));
+  }
+
+  public static Map<String, Object> toJsonMap(FsStatus status) {
+    if (status == null) {
+      return null;
+    }
+    final Map<String, Object> m = new HashMap<>();
+    m.put("capacity", status.getCapacity());
+    m.put("used", status.getUsed());
+    m.put("remaining", status.getRemaining());
     return m;
   }
 }
