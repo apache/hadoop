@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -28,6 +29,8 @@ import java.io.IOException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DNS_PREFIX;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.WASB_DNS_PREFIX;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 public class ITestSharedKeyAuth extends AbstractAbfsIntegrationTest {
@@ -42,7 +45,13 @@ public class ITestSharedKeyAuth extends AbstractAbfsIntegrationTest {
     Configuration config = this.getRawConfiguration();
     config.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
         true);
+    AzureBlobFileSystemStore abfsStore = getAbfsStore(getFileSystem());
     String accountName = this.getAccountName();
+    if (abfsStore.getPrefixMode() == PrefixMode.BLOB) {
+      if (abfsStore.getAbfsConfiguration().shouldEnableBlobEndPoint()) {
+        accountName = getAccountName().replace(ABFS_DNS_PREFIX, WASB_DNS_PREFIX);
+      }
+    }
     String configkKey = FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME + "." + accountName;
     // a wrong sharedKey
     String secret = "XjUjsGherkDpljuyThd7RpljhR6uhsFjhlxRpmhgD12lnj7lhfRn8kgPt5"

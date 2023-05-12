@@ -29,14 +29,14 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class FileSystemUriSchemes {
   public static final String ABFS_SCHEME = "abfs";
   public static final String ABFS_SECURE_SCHEME = "abfss";
-  public static final String ABFS_DNS_PREFIX = "dfs";
+  public static final String ABFS_DNS_PREFIX = ".dfs.";
 
   public static final String HTTP_SCHEME = "http";
   public static final String HTTPS_SCHEME = "https";
 
   public static final String WASB_SCHEME = "wasb";
   public static final String WASB_SECURE_SCHEME = "wasbs";
-  public static final String WASB_DNS_PREFIX = "blob";
+  public static final String WASB_DNS_PREFIX = ".blob.";
 
   private FileSystemUriSchemes() {}
 }
