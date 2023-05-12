@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.junit.Test;
@@ -127,8 +128,11 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     // Operation: AbfsOutputStream close.
     // Network Stats calculation: 1 flush (with close) is send.
     // 1 flush request = 1 connection and 1 send request
-    expectedConnectionsMade++;
-    expectedRequestsSent++;
+    if (getPrefixMode(fs) == PrefixMode.DFS) {
+      // No network call made for flush without append in case of blob endpoint.
+      expectedConnectionsMade++;
+      expectedRequestsSent++;
+    }
     // --------------------------------------------------------------------
 
     // Operation: Re-create the file / create overwrite scenario
@@ -181,7 +185,6 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       assertAbfsStatistics(SEND_REQUESTS, expectedRequestsSent, metricMap);
       assertAbfsStatistics(AbfsStatistic.BYTES_SENT, expectedBytesSent, metricMap);
     }
-
   }
 
   /**

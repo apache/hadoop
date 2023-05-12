@@ -75,17 +75,26 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
       // verify its format
       String errorMessage = ex.getLocalizedMessage();
       String[] errorFields = errorMessage.split(",");
-
-      Assert.assertEquals(6, errorFields.length);
-      // Check status message, status code, HTTP Request Type and URL.
-      Assert.assertEquals("Operation failed: \"The specified path does not exist.\"", errorFields[0].trim());
-      Assert.assertEquals("404", errorFields[1].trim());
-      Assert.assertEquals("GET", errorFields[2].trim());
-      Assert.assertTrue(errorFields[3].trim().startsWith("http"));
-      // Check storage error code and storage error message.
-      Assert.assertEquals("PathNotFound", errorFields[4].trim());
-      Assert.assertTrue(errorFields[5].contains("RequestId")
-              && errorFields[5].contains("Time"));
+      // Flow is different for listStatusIterator being enabled or not.
+      if (!getAbfsStore(fs).getAbfsConfiguration().enableAbfsListIterator()) {
+        Assert.assertEquals(6, errorFields.length);
+        // Check status message, status code, HTTP Request Type and URL.
+        Assert.assertEquals("Operation failed: \"The specified path does not exist.\"", errorFields[0].trim());
+        Assert.assertEquals("404", errorFields[1].trim());
+        Assert.assertEquals("GET", errorFields[2].trim());
+        Assert.assertTrue(errorFields[3].trim().startsWith("http"));
+        // Check storage error code and storage error message.
+        Assert.assertEquals("PathNotFound", errorFields[4].trim());
+        Assert.assertTrue(errorFields[5].contains("RequestId")
+                && errorFields[5].contains("Time"));
+      } else {
+        Assert.assertEquals(4, errorFields.length);
+        // Check status message, status code, HTTP Request Type and URL.
+        Assert.assertEquals("Operation failed: \"The specified path does not exist.\"", errorFields[0].trim());
+        Assert.assertEquals("404", errorFields[1].trim());
+        Assert.assertEquals("HEAD", errorFields[2].trim());
+        Assert.assertTrue(errorFields[3].trim().startsWith("http"));
+      }
     }
   }
 

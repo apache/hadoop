@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.fs.azurebfs.services.PrefixMode;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -102,9 +103,15 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     assertAbfsStatistics(AbfsStatistic.CALL_CREATE, 1, metricMap);
     assertAbfsStatistics(AbfsStatistic.CALL_CREATE_NON_RECURSIVE, 1, metricMap);
     assertAbfsStatistics(AbfsStatistic.FILES_CREATED, 1, metricMap);
-    assertAbfsStatistics(AbfsStatistic.DIRECTORIES_CREATED, 1, metricMap);
-    assertAbfsStatistics(AbfsStatistic.CALL_MKDIRS, 1, metricMap);
-    assertAbfsStatistics(AbfsStatistic.CALL_GET_FILE_STATUS, 2, metricMap);
+    // Child calls mkdirs for parent in case of blob.
+    if (getPrefixMode(fs) == PrefixMode.BLOB) {
+      assertAbfsStatistics(AbfsStatistic.DIRECTORIES_CREATED, 2, metricMap);
+      assertAbfsStatistics(AbfsStatistic.CALL_MKDIRS, 2, metricMap);
+    } else {
+      assertAbfsStatistics(AbfsStatistic.DIRECTORIES_CREATED, 1, metricMap);
+      assertAbfsStatistics(AbfsStatistic.CALL_MKDIRS, 1, metricMap);
+    }
+    assertAbfsStatistics(AbfsStatistic.CALL_GET_FILE_STATUS, 3, metricMap);
 
     //re-initialising Abfs to reset statistic values.
     fs.initialize(fs.getUri(), fs.getConf());
@@ -130,11 +137,18 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     assertAbfsStatistics(AbfsStatistic.CALL_CREATE_NON_RECURSIVE, NUMBER_OF_OPS,
         metricMap);
     assertAbfsStatistics(AbfsStatistic.FILES_CREATED, NUMBER_OF_OPS, metricMap);
-    assertAbfsStatistics(AbfsStatistic.DIRECTORIES_CREATED, NUMBER_OF_OPS,
-        metricMap);
-    assertAbfsStatistics(AbfsStatistic.CALL_MKDIRS, NUMBER_OF_OPS, metricMap);
+    // Child calls mkdirs for parent in case of blob.
+    if (getPrefixMode(fs) == PrefixMode.BLOB) {
+      assertAbfsStatistics(AbfsStatistic.DIRECTORIES_CREATED, 2 * NUMBER_OF_OPS,
+              metricMap);
+      assertAbfsStatistics(AbfsStatistic.CALL_MKDIRS, 2 * NUMBER_OF_OPS, metricMap);
+    } else {
+      assertAbfsStatistics(AbfsStatistic.DIRECTORIES_CREATED, NUMBER_OF_OPS,
+              metricMap);
+      assertAbfsStatistics(AbfsStatistic.CALL_MKDIRS, NUMBER_OF_OPS, metricMap);
+    }
     assertAbfsStatistics(AbfsStatistic.CALL_GET_FILE_STATUS,
-        1 + NUMBER_OF_OPS, metricMap);
+        1 + 2 * NUMBER_OF_OPS, metricMap);
   }
 
   /**
@@ -170,9 +184,16 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     since directory is delete recursively op_delete is called 2 times.
     1 file is deleted, 1 listStatus() call is made.
      */
-    assertAbfsStatistics(AbfsStatistic.CALL_DELETE, 2, metricMap);
-    assertAbfsStatistics(AbfsStatistic.FILES_DELETED, 1, metricMap);
-    assertAbfsStatistics(AbfsStatistic.CALL_LIST_STATUS, 1, metricMap);
+    // Calls go to wasb for now, will need to update this once goes to blob endpoint.
+    if (getPrefixMode(fs) == PrefixMode.BLOB) {
+      assertAbfsStatistics(AbfsStatistic.CALL_DELETE, 1, metricMap);
+      assertAbfsStatistics(AbfsStatistic.FILES_DELETED, 0, metricMap);
+      assertAbfsStatistics(AbfsStatistic.CALL_LIST_STATUS, 0, metricMap);
+    } else {
+      assertAbfsStatistics(AbfsStatistic.CALL_DELETE, 2, metricMap);
+      assertAbfsStatistics(AbfsStatistic.FILES_DELETED, 1, metricMap);
+      assertAbfsStatistics(AbfsStatistic.CALL_LIST_STATUS, 1, metricMap);
+    }
 
     /*
     creating a root directory and deleting it recursively to see if
@@ -184,7 +205,12 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     metricMap = fs.getInstrumentationMap();
 
     //Test for directories_deleted.
-    assertAbfsStatistics(AbfsStatistic.DIRECTORIES_DELETED, 1, metricMap);
+    // Calls go to wasb for now, will need to update this once goes to blob endpoint.
+    if (getPrefixMode(fs) == PrefixMode.BLOB) {
+      assertAbfsStatistics(AbfsStatistic.DIRECTORIES_DELETED, 0, metricMap);
+    } else {
+      assertAbfsStatistics(AbfsStatistic.DIRECTORIES_DELETED, 1, metricMap);
+    }
   }
 
   /**

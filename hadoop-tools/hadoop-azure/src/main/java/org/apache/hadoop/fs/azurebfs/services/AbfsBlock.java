@@ -33,6 +33,7 @@ public class AbfsBlock {
 
     DataBlocks.DataBlock activeBlock;
     String blockId;
+    AbfsOutputStream outputStream;
 
     /**
      * Gets the activeBlock and the blockId.
@@ -41,6 +42,7 @@ public class AbfsBlock {
      * @throws IOException
      */
     AbfsBlock(AbfsOutputStream outputStream, long offset) throws IOException {
+        this.outputStream = outputStream;
         DataBlocks.BlockFactory blockFactory = outputStream.getBlockFactory();
         long blockCount = outputStream.getBlockCount();
         int blockSize = outputStream.getBlockSize();
@@ -55,7 +57,9 @@ public class AbfsBlock {
      * @return String representing the block ID generated.
      */
     private String generateBlockId(long position) {
-        String blockId = String.format("%d", position);
+        String streamId = this.outputStream.getStreamID();
+        String streamIdHash = Integer.toString(streamId.hashCode());
+        String blockId = String.format("%d_%s", position, streamIdHash);
         byte[] blockIdByteArray = new byte[BLOCK_ID_LENGTH];
         System.arraycopy(blockId.getBytes(), 0, blockIdByteArray, 0, Math.min(BLOCK_ID_LENGTH, blockId.length()));
         return new String(Base64.encodeBase64(blockIdByteArray), StandardCharsets.UTF_8);

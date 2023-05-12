@@ -101,11 +101,16 @@ public class ITestAbfsDurationTrackers extends AbstractAbfsIntegrationTest {
    */
   private void assertDurationTracker(IOStatistics ioStatistics) {
     for (AbfsStatistic abfsStatistic : HTTP_DURATION_TRACKER_LIST) {
-      Assertions.assertThat(lookupMeanStatistic(ioStatistics,
-          abfsStatistic.getStatName() + StoreStatisticNames.SUFFIX_MEAN).mean())
-          .describedAs("The DurationTracker Named " + abfsStatistic.getStatName()
-                  + " Doesn't match the expected value.")
-          .isGreaterThan(0.0);
+      // Since delete calls go to wasb endpoint and it doesn't have implementation for abfsStatistics
+      // we are avoiding incrementing stats for it. Can be reverted when we have blob implementation for
+      // delete.
+      if (!HTTP_DELETE_REQUEST.getStatName().equals(abfsStatistic.getStatName())) {
+        Assertions.assertThat(lookupMeanStatistic(ioStatistics,
+                        abfsStatistic.getStatName() + StoreStatisticNames.SUFFIX_MEAN).mean())
+                .describedAs("The DurationTracker Named " + abfsStatistic.getStatName()
+                        + " Doesn't match the expected value.")
+                .isGreaterThan(0.0);
+      }
     }
   }
 }

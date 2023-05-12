@@ -127,7 +127,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
         getCustomFileSystem(testFilePath.getParent().getParent(), 1);
     fs.mkdirs(testFilePath.getParent().getParent());
 
-    FSDataOutputStream out = fs.create(testFilePath);
+    FSDataOutputStream out = fs.create(testFilePath.getParent());
     Assert.assertTrue("Output stream should have lease",
         ((AbfsOutputStream) out.getWrappedStream()).hasLease());
     out.close();
@@ -162,17 +162,29 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
         out2.hsync();
       } catch (IOException e) {
         if (expectException) {
-          if (fs.getAbfsStore().getPrefixMode() == PrefixMode.DFS) {
-            GenericTestUtils.assertExceptionContains(ERR_ACQUIRING_LEASE, e);
-          } else {
-            GenericTestUtils.assertExceptionContains(CONDITION_NOT_MET, e);
-          }
+          GenericTestUtils.assertExceptionContains(ERR_ACQUIRING_LEASE, e);
         } else {
           throw e;
         }
       }
       out.writeInt(1);
-      out.hsync();
+      try {
+        out.hsync();
+      } catch (IOException e) {
+        // Etag mismatch leads to condition not met error for blob endpoint.
+        if (getPrefixMode(fs) == PrefixMode.BLOB) {
+          GenericTestUtils.assertExceptionContains(CONDITION_NOT_MET, e);
+        } else {
+          throw e;
+        }
+      }
+    } catch (IOException e) {
+      // Etag mismatch leads to condition not met error for blob endpoint.
+      if (getPrefixMode(fs) == PrefixMode.BLOB) {
+        GenericTestUtils.assertExceptionContains(CONDITION_NOT_MET, e);
+      } else {
+        throw e;
+      }
     }
 
     Assert.assertTrue("Store leases were not freed", fs.getAbfsStore().areLeasesFreed());

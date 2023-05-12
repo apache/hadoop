@@ -146,11 +146,6 @@ public final class TestAbfsOutputStreamBlob {
                                 FSOperationType.WRITE, abfsConf.getTracingHeaderFormat(),
                                 null),
                         createExecutorService(abfsConf))));
-
-        LinkedHashMap<String, BlockStatus> map = Mockito.spy(new LinkedHashMap<>());
-        map.put("MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", BlockStatus.SUCCESS);
-        when(out.getMap()).thenReturn(map);
-        when(out.getMap().containsKey(any())).thenReturn(true);
         return out;
     }
 
@@ -351,10 +346,6 @@ public final class TestAbfsOutputStreamBlob {
     public void verifyWriteRequestOfBufferSizeAndHFlush() throws Exception {
         AbfsClient client = getClient();
         AbfsOutputStream out = Mockito.spy(getOutputStream(client, getConf()));
-        LinkedHashMap<String, BlockStatus> map = Mockito.spy(new LinkedHashMap<>());
-        map.put("MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", BlockStatus.SUCCESS);
-        when(out.getMap()).thenReturn(map);
-        when(out.getMap().containsKey(anyString())).thenReturn(true);
 
         final byte[] b = new byte[BUFFER_SIZE];
         new Random().nextBytes(b);

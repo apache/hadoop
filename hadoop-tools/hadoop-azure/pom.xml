@@ -575,7 +575,6 @@
                     <exclude>**/azurebfs/ITestAbfsMsiTokenProvider.java</exclude>
                     <exclude>**/azurebfs/ITestAbfsRestOperationException.java</exclude>
                   </excludes>
-
                 </configuration>
               </execution>
               <execution>
