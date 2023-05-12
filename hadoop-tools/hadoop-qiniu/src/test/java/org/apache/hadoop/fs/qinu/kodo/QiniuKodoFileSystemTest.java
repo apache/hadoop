@@ -3,6 +3,9 @@ package org.apache.hadoop.fs.qinu.kodo;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem;
+import org.apache.hadoop.fs.shell.Command;
+import org.apache.hadoop.fs.shell.CommandFactory;
+import org.apache.hadoop.fs.shell.FsCommand;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -144,5 +147,22 @@ public class QiniuKodoFileSystemTest {
             assertEquals(new Path(dir, Integer.toString(i)).makeQualified(fs.getUri(), fs.getWorkingDirectory()), status.getPath());
             i++;
         }
+    }
+
+    @Test
+    public void testListRoot() throws IOException {
+        Path root = new Path("/");
+        RemoteIterator<FileStatus> statuses = fs.listStatusIterator(root);
+        assertTrue(statuses.hasNext());
+    }
+
+    @Test
+    public void testLsByCommand() throws IOException {
+        CommandFactory factory = new CommandFactory(fs.getConf());
+        FsCommand.registerCommands(factory);
+        Command lsCmd = factory.getInstance("-ls");
+        String rootPath = new Path("/").makeQualified(fs.getUri(), fs.getWorkingDirectory()).toString();
+        System.out.printf(rootPath);
+        lsCmd.run(rootPath);
     }
 }

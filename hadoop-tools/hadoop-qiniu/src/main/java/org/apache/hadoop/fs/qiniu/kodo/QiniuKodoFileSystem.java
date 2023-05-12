@@ -16,6 +16,11 @@ import org.apache.hadoop.fs.qiniu.kodo.upload.QiniuKodoOutputStream;
 import org.apache.hadoop.fs.qiniu.kodo.util.QiniuKodoUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.PropertyConfigurator;
+import org.apache.log4j.lf5.LogLevel;
+import org.apache.log4j.lf5.LogLevelFormatException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,9 +49,10 @@ public class QiniuKodoFileSystem extends FileSystem {
     @Override
     public void initialize(URI name, Configuration conf) throws IOException {
         super.initialize(name, conf);
+        LOG.debug("initialize QiniuKodoFileSystem with uri: {}", name);
         setConf(conf);
-
         this.fsConfig = new QiniuKodoFsConfig(getConf());
+        setLog4jConfig(fsConfig);
 
         String bucket = name.getHost();
         this.uri = URI.create(name.getScheme() + "://" + name.getAuthority());
@@ -68,6 +74,13 @@ public class QiniuKodoFileSystem extends FileSystem {
                 fsConfig.download.random.blockSize,
                 fsConfig.download.random.maxBlocks
         );
+    }
+
+    private static void setLog4jConfig(QiniuKodoFsConfig fsConfig) {
+        org.apache.log4j.Logger rootLogger = LogManager.getRootLogger();
+        if (fsConfig.logger.level != null) {
+            rootLogger.setLevel(Level.toLevel(fsConfig.logger.level));
+        }
     }
 
     private volatile boolean makeSureWorkdirCreatedFlag = false;
@@ -377,7 +390,8 @@ public class QiniuKodoFileSystem extends FileSystem {
     public RemoteIterator<FileStatus> listStatusIterator(Path path) throws IOException {
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         key = QiniuKodoUtils.keyToDirKey(key);
-        Iterator<FileInfo> it = kodoClient.listStatusIterator(key, true);
+
+        RemoteIterator<FileInfo> it = kodoClient.listStatusIterator(key, true);
         return new RemoteIterator<FileStatus>() {
             @Override
             public boolean hasNext() throws IOException {
@@ -535,11 +549,10 @@ public class QiniuKodoFileSystem extends FileSystem {
     private FileStatus fileInfoToFileStatus(FileInfo file) {
         if (file == null) return null;
 
-        LOG.debug("file conv, key:" + file.key);
+        LOG.debug("file stat, key:" + file.key);
 
         long putTime = file.putTime / 10000;
         boolean isDir = QiniuKodoUtils.isKeyDir(file.key);
-
         return new FileStatus(
                 file.fsize, // 文件大小
                 isDir,
@@ -547,7 +560,11 @@ public class QiniuKodoFileSystem extends FileSystem {
                 fsConfig.download.blockSize,
                 putTime, // modification time
                 putTime, // access time
-                isDir ? new FsPermission(461) : null,   // permission
+                FsPermission.createImmutable(
+                        isDir
+                                ? (short) 0777 // rwxrwxrwx
+                                : (short) 0666 // rw-rw-rw-
+                ),   // permission
                 username,   // owner
                 username,   // group
                 null,   // symlink

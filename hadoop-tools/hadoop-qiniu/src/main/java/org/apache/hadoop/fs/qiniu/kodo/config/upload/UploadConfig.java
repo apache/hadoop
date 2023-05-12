@@ -8,7 +8,6 @@ public class UploadConfig extends AConfigBase {
     // 同一时刻最大并发上传文件数
     public final int maxConcurrentUploadFiles;
     public final int maxConcurrentTasks;
-    public final boolean useHttps;
     public final boolean accUpHostFirst;
     public final boolean useDefaultUpHostIfNone;
     public final V2Config v2;
@@ -19,7 +18,6 @@ public class UploadConfig extends AConfigBase {
         this.sign = sign();
         this.maxConcurrentUploadFiles = maxConcurrentUploadFiles();
         this.maxConcurrentTasks = maxConcurrentTasks();
-        this.useHttps = useHttps();
         this.accUpHostFirst = accUpHostFirst();
         this.useDefaultUpHostIfNone = useDefaultUpHostIfNone();
         this.v2 = v2();
@@ -49,10 +47,7 @@ public class UploadConfig extends AConfigBase {
     private int maxConcurrentTasks() {
         return conf.getInt(namespace + ".concurrentTasks", 1);
     }
-
-    private boolean useHttps() {
-        return conf.getBoolean(namespace + ".useHttps", true);
-    }
+    
 
     private boolean accUpHostFirst() {
         return conf.getBoolean(namespace + ".accUpHostFirst", true);

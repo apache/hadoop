@@ -12,6 +12,7 @@ import com.qiniu.util.Auth;
 import com.qiniu.util.StringMap;
 import com.qiniu.util.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.BatchOperationConsumer;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.ListingProducer;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.BatchOperator;
@@ -35,7 +36,6 @@ import java.util.function.Function;
 public class QiniuKodoClient implements IQiniuKodoClient {
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoClient.class);
 
-    // 仅有一个 bucket
     private final String bucket;
 
     private final Auth auth;
@@ -47,7 +47,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
     private final boolean useDownloadHttps;
 
-    private String downloadDomain;
+    private final String downloadDomain;
     private final FileSystem.Statistics statistics;
     private final boolean downloadUseSign;
     private final int downloadSignExpires;
@@ -57,15 +57,33 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     private final ExecutorService service;
     private final DownloadHttpClient downloadHttpClient;
 
-    public QiniuKodoClient(String bucket, QiniuKodoFsConfig fsConfig, FileSystem.Statistics statistics) throws QiniuException, AuthorizationException {
+    public QiniuKodoClient(
+            String bucket,
+            QiniuKodoFsConfig fsConfig,
+            FileSystem.Statistics statistics
+    ) throws QiniuException, AuthorizationException {
         this.bucket = bucket;
         this.statistics = statistics;
+
         this.fsConfig = fsConfig;
         this.auth = getAuth(fsConfig);
         this.service = Executors.newFixedThreadPool(fsConfig.client.nThread);
 
-        Configuration configuration = new Configuration();
+        Configuration configuration = buildQiniuConfiguration(fsConfig);
+        this.useDownloadHttps = fsConfig.download.useHttps;
+        this.client = new Client(configuration);
+        this.uploadManager = new UploadManager(configuration);
+        this.bucketManager = new BucketManager(auth, configuration, this.client);
+        this.downloadDomain = buildDownloadHost(fsConfig, bucketManager, bucket);
+        this.downloadUseSign = fsConfig.download.sign.enable;
+        this.downloadSignExpires = fsConfig.download.sign.expires;
+        this.uploadSignExpires = fsConfig.upload.sign.expires;
+        this.downloadHttpClient = new DownloadHttpClient(configuration, fsConfig.download.useNoCacheHeader);
+    }
 
+    private static Configuration buildQiniuConfiguration(QiniuKodoFsConfig fsConfig) throws QiniuException {
+        Configuration configuration = new Configuration();
+        configuration.region = buildRegion(fsConfig);
         if (fsConfig.upload.v2.enable) {
             configuration.resumableUploadAPIVersion = Configuration.ResumableUploadAPIVersion.V2;
             configuration.resumableUploadAPIV2BlockSize = fsConfig.upload.v2.blockSize();
@@ -73,65 +91,52 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             configuration.resumableUploadAPIVersion = Configuration.ResumableUploadAPIVersion.V1;
         }
         configuration.resumableUploadMaxConcurrentTaskCount = fsConfig.upload.maxConcurrentTasks;
-        configuration.useHttpsDomains = fsConfig.upload.useHttps;
+        configuration.useHttpsDomains = fsConfig.useHttps;
         configuration.accUpHostFirst = fsConfig.upload.accUpHostFirst;
         configuration.useDefaultUpHostIfNone = fsConfig.upload.useDefaultUpHostIfNone;
+        configuration.proxy = buildQiniuProxyConfiguration(fsConfig);
+        return configuration;
+    }
 
+    private static ProxyConfiguration buildQiniuProxyConfiguration(QiniuKodoFsConfig fsConfig) {
+        if (!fsConfig.proxy.enable) {
+            return null;
+        }
+        return new ProxyConfiguration(
+                fsConfig.proxy.hostname,
+                fsConfig.proxy.port,
+                fsConfig.proxy.username,
+                fsConfig.proxy.password,
+                fsConfig.proxy.type
+        );
+    }
 
-        // 配置七牛配置对象的 region
-        if (fsConfig.customRegion.id == null) {
-            // 没配置regionId默认当公有云处理
-            // 公有云走autoRegion
-            configuration.region = Region.autoRegion();
-        } else {
-            // 私有云走自定义Region配置
+    private static String buildDownloadHost(
+            QiniuKodoFsConfig fsConfig,
+            BucketManager bucketManager,
+            String bucket
+    ) throws QiniuException {
+        // 优先走用户显式设置的下载域名
+        if (fsConfig.download.domain != null) {
+            return fsConfig.download.domain;
+        }
+        // 当未配置下载域名时，走源站下载域名
+        return bucketManager.getDefaultIoSrcHost(bucket);
+    }
+
+    private static Region buildRegion(QiniuKodoFsConfig fsConfig) throws QiniuException {
+        if (fsConfig.customRegion.id != null) {
+            // 私有云环境
             try {
-                configuration.region = fsConfig.customRegion.getCustomRegion();
+                return fsConfig.customRegion.getCustomRegion();
             } catch (MissingConfigFieldException e) {
                 throw new QiniuException(e);
             }
+
         }
-
-        this.useDownloadHttps = fsConfig.download.useHttps;
-        configuration.useHttpsDomains = fsConfig.upload.useHttps;
-
-        if (fsConfig.proxy.enable) {
-            ProxyConfig proxyConfig = fsConfig.proxy;
-            configuration.proxy = new ProxyConfiguration(
-                    proxyConfig.hostname,
-                    proxyConfig.port,
-                    proxyConfig.username,
-                    proxyConfig.password,
-                    proxyConfig.type
-            );
-        }
-        this.client = new Client(configuration);
-        this.uploadManager = new UploadManager(configuration);
-        this.bucketManager = new BucketManager(auth, configuration, this.client);
-
-        // 设置下载域名
-        this.downloadDomain = fsConfig.download.domain;
-        if (this.downloadDomain == null) {
-            // 下载域名未配置时, 若配置了私有云regionId则认为是私有云部署
-            // 私有云部署时需要手动配置下载域名，若未配置则抛出异常
-            if (fsConfig.customRegion.id != null) {
-                // 私有云未配置下载域名时抛出异常
-                throw new QiniuException(new MissingConfigFieldException(String.format(
-                        "download domain can't be empty, you should set it with %s in core-site.xml",
-                        fsConfig.download.KEY_DOMAIN
-                )));
-            } else {
-                // 公有云场景且未配置下载域名，则直接获取源站域名来构造下载链接
-                this.downloadDomain = bucketManager.getDefaultIoSrcHost(bucket);
-            }
-        }
-
-        this.downloadUseSign = fsConfig.download.sign.enable;
-        this.downloadSignExpires = fsConfig.download.sign.expires;
-        this.uploadSignExpires = fsConfig.upload.sign.expires;
-        this.downloadHttpClient = new DownloadHttpClient(configuration, fsConfig.download.useNoCacheHeader);
+        // 公有云环境
+        return Region.autoRegion();
     }
-
 
     private static Auth getAuth(QiniuKodoFsConfig fsConfig) throws AuthorizationException {
         String ak = fsConfig.auth.accessKey;
@@ -246,7 +251,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         return Arrays.asList(listing.items);
     }
 
-    public Iterator<FileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException {
+    public RemoteIterator<FileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException {
         ListProducerConfig listConfig = fsConfig.client.list;
         // 消息队列
         BlockingQueue<FileInfo> fileInfoQueue = new LinkedBlockingQueue<>(listConfig.bufferSize);
@@ -261,19 +266,39 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
         // 生产者线程
         Future<Exception> future = service.submit(producer);
-
-        return new Iterator<FileInfo>() {
+        return new RemoteIterator<FileInfo>() {
             @Override
-            public boolean hasNext() {
-                if (!fileInfoQueue.isEmpty()) {
-                    return true;
+            public boolean hasNext() throws IOException {
+                while (true) {
+                    // 如果队列不为空，返回 true 表示有下一个
+                    if (!fileInfoQueue.isEmpty()) {
+                        return true;
+                    }
+
+                    // 若已完成且队列为空，表示没有下一个了
+                    if (future.isDone() && fileInfoQueue.isEmpty()) {
+                        try {
+                            Exception e = future.get();
+                            // 若生产者线程抛出异常，这里抛出IOException
+                            if (e != null) {
+                                throw new IOException(e);
+                            }
+                        } catch (InterruptedException | ExecutionException e) {
+                            throw new IOException(e);
+                        }
+                        return false;
+                    }
+                    // 若未完成，且队列为空，则等待一段时间
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        return false;
+                    }
                 }
-                // 生产缓冲区队列为空，且生产任务完成，则没有下一个了，返回false
-                return !future.isDone();
             }
 
             @Override
-            public FileInfo next() {
+            public FileInfo next() throws IOException {
                 if (!hasNext()) {
                     return null;
                 }
@@ -281,7 +306,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
                 try {
                     return fileInfoQueue.poll(Long.MAX_VALUE, TimeUnit.SECONDS);
                 } catch (InterruptedException e) {
-                    return null;
+                    throw new IOException(e);
                 }
             }
         };
@@ -293,41 +318,12 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      */
     @Override
     public List<FileInfo> listStatus(String prefixKey, boolean useDirectory) throws IOException {
-        LOG.info("key: {}, useDirectory: {}", prefixKey, useDirectory);
-
-        ListProducerConfig listConfig = fsConfig.client.list;
-        // 最终结果
-        List<FileInfo> retFiles = new ArrayList<>();
-
-        // 消息队列
-        BlockingQueue<FileInfo> fileInfoQueue = new LinkedBlockingQueue<>(listConfig.bufferSize);
-
-        // 生产者
-        ListingProducer producer = new ListingProducer(
-                fileInfoQueue, bucketManager, bucket, prefixKey, false,
-                listConfig.singleRequestLimit,
-                useDirectory, listConfig.useListV2,
-                listConfig.offerTimeout
-        );
-
-        // 生产者线程
-        Future<Exception> future = service.submit(producer);
-
-        // 只要生产者未生产完毕或队列非空就不断地轮询队列
-        while (!future.isDone() || !fileInfoQueue.isEmpty()) {
-            FileInfo product = fileInfoQueue.poll();
-            // 缓冲区队列为空，等待下一次轮询
-            if (product == null) {
-                continue;
-            }
-            // 跳过自身
-            if (product.key.equals(prefixKey)) {
-                continue;
-            }
-            retFiles.add(product);
+        List<FileInfo> list = new ArrayList<>();
+        RemoteIterator<FileInfo> iterator = listStatusIterator(prefixKey, useDirectory);
+        while (iterator.hasNext()) {
+            list.add(iterator.next());
         }
-
-        return retFiles;
+        return list;
     }
 
 
