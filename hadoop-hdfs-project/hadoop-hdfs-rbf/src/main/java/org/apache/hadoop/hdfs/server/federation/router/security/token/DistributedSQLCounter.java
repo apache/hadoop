@@ -52,7 +52,7 @@ public class DistributedSQLCounter {
    * Obtains the value of the counter.
    *
    * @return counter value.
-   * @throws SQLException if SQL connection errors occur.
+   * @throws SQLException if querying the database fails.
    */
   public int selectCounterValue() throws SQLException {
     try (Connection connection = connectionFactory.getConnection()) {
@@ -78,7 +78,7 @@ public class DistributedSQLCounter {
    * Sets the counter to the given value.
    *
    * @param value Value to assign to counter.
-   * @throws SQLException if SQL connection errors occur.
+   * @throws SQLException if querying the database fails.
    */
   public void updateCounterValue(int value) throws SQLException {
     try (Connection connection = connectionFactory.getConnection(true)) {
