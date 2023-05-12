@@ -12,24 +12,21 @@ export HADOOP_OPTIONAL_TOOLS="hadoop-qiniu"
 
 ### core-site.xml 配置
 
-修改`$HADOOP_HOME/etc/hadoop/core-site.xml`，增加Kodo相关的用户配置与实现类相关信息。
+修改`$HADOOP_HOME/etc/hadoop/core-site.xml`，增加Kodo相关的用户配置与实现类相关信息。公有云环境下通常仅需配置如下即可正常工作
 
 ```xml
 
 <configuration>
     <property>
-        <name>fs.qiniu.download.blockSize</name>
-        <value>4194304</value>
-    </property>
-
-    <property>
         <name>fs.qiniu.auth.accessKey</name>
         <value>XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</value>
+        <description>配置七牛Access Key</description>
     </property>
 
     <property>
         <name>fs.qiniu.auth.secretKey</name>
         <value>XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</value>
+        <description>配置七牛Secret Key</description>
     </property>
 
     <property>
@@ -43,6 +40,7 @@ export HADOOP_OPTIONAL_TOOLS="hadoop-qiniu"
     <property>
         <name>fs.defaultFS</name>
         <value>kodo://example-bucket-name/</value>
+        <description>hadoop默认文件系统与默认的bucket名称</description>
     </property>
 </configuration>
 
@@ -50,7 +48,7 @@ export HADOOP_OPTIONAL_TOOLS="hadoop-qiniu"
 
 更多具体配置项说明与默认值可参考yml文件：[config.yml](config.yml)
 
-可自行通过"."分隔符将yml分级描述的配置项转换为xml配置项，并补充命名空间前缀 fs.qiniu
+若有需要可自行通过"."分隔符将yml分级描述的配置项转换为xml配置项，并补充命名空间前缀 fs.qiniu
 
 如对于代理配置：
 

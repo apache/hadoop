@@ -1,6 +1,6 @@
 # 私有云配置
 
-对于私有云用户配置 Hadoop Qiniu 时，还需要在 `core-site.xml` 中添加一些额外配置：
+对于私有云用户配置 Hadoop Qiniu 时，还需要在 `core-site.xml` 中添加或修改一些额外配置项：
 
 ```xml
 
@@ -76,6 +76,22 @@
             是否使用https选项请在fs.qiniu.download.useHttps中配置，
             可选使用fs.qiniu.download.domain配置覆盖默认源站下载域名，
             覆盖后下载文件将不走该配置项的默认源站域名
+        </description>
+    </property>
+    <property>
+        <name>fs.qiniu.useHttps</name>
+        <value>false</value>
+        <description>
+            配置上传，管理相关的域名是否使用https，默认为 true, 即使用 https
+            私有云环境可能通常使用 http, 若有需要，可配置为 false，将使用 http
+        </description>
+    </property>
+    <property>
+        <name>fs.qiniu.download.useHttps</name>
+        <value>false</value>
+        <description>
+            配置下载相关的域名是否使用https，默认为 true, 即使用 https
+            私有云环境可能通常使用 http, 若有需要，可配置为 false，将使用 http
         </description>
     </property>
 </configuration>

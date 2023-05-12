@@ -22,8 +22,8 @@ proxy:
 
 # 文件下载相关设置
 download:
-  # 默认不使用https
-  useHttps: false
+  # 默认使用https
+  useHttps: true
   # 是否添加 X-QN-NOCACHE 请求头，启用后可能会对后端服务造成较大压力，若需要强一致性需求时可启用，默认不启用
   useNoCacheHeader: false
   # 文件下载块大小，默认为4MB，若启用了磁盘缓存，则修改该值可能会清空磁盘缓存
@@ -58,8 +58,8 @@ download:
     blockSize: 65536  # 随机读取策略模式下的单次请求块大小
     maxBlocks: 100       # 随机读取策略模式下的内存缓存块数
 
-# 对于文件上传，文件管理相关API, 是否使用https，默认为false
-useHttps: false
+# 对于文件上传，文件管理相关API, 是否使用https，默认为 true
+useHttps: true
 
 # 文件上传相关设置
 upload:
@@ -146,4 +146,4 @@ client:
     offerTimeout: 10  # 当生产者队列满后的自旋重试的等待时间
 
 logger:
-  level: "INFO" # 日志级别调整，默认为INFO
+  level: "INFO" # 日志级别调整，默认为INFO，若有报错，可调整为DEBUG可获取到更多错误信息
