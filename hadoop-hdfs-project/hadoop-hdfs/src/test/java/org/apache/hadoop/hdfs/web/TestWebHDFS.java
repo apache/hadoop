@@ -2270,8 +2270,9 @@ public class TestWebHDFS {
       final DistributedFileSystem dfs = cluster.getFileSystem();
 
       final String path = "/foo";
-      OutputStream os = webHdfs.create(new Path(path));
-      os.write(new byte[1024]);
+      try (OutputStream os = webHdfs.create(new Path(path))) {
+        os.write(new byte[1024]);
+      }
 
       FsStatus webHdfsFsStatus = webHdfs.getStatus(new Path("/"));
       Assert.assertNotNull(webHdfsFsStatus);
