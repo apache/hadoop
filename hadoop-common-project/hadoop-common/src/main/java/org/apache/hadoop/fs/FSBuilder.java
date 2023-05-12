@@ -146,7 +146,6 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @return generic type B.
    * @see #opt(String, String)
    */
-  @Deprecated
   B optLong(@Nonnull String key, long value);
 
   /**
@@ -157,7 +156,6 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @return generic type B.
    * @see #opt(String, String)
    */
-  @Deprecated
   B optDouble(@Nonnull String key, double value);
 
   /**
