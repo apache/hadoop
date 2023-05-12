@@ -212,7 +212,7 @@ public class TestRouterRpc {
     Configuration namenodeConf = new Configuration();
     namenodeConf.setBoolean(DFSConfigKeys.HADOOP_CALLER_CONTEXT_ENABLED_KEY,
         true);
-    namenodeConf.set(HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY,"256");
+    namenodeConf.set(HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY, "256");
     // It's very easy to become overloaded for some specific dn in this small
     // cluster, which will cause the EC file block allocation failure. To avoid
     // this issue, we disable considerLoad option.
