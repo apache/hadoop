@@ -21,9 +21,7 @@ package org.apache.hadoop.yarn.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +55,7 @@ public class ConfiguredRMFailoverProxyProvider<T>
     this.protocol = protocol;
     this.rmProxy.checkAllowedProtocols(this.protocol);
     this.conf = new YarnConfiguration(configuration);
-    Collection<String> rmIds = HAUtil.getRMHAIds(conf);
+    Collection<String> rmIds = getRandomOrder(conf);
     this.rmServiceIds = rmIds.toArray(new String[rmIds.size()]);
     conf.set(YarnConfiguration.RM_HA_ID, rmServiceIds[currentProxyIndex]);
 
@@ -118,5 +116,29 @@ public class ConfiguredRMFailoverProxyProvider<T>
         RPC.stopProxy(proxy);
       }
     }
+  }
+
+  /**
+   * n YARN Federation mode, the Router is considered as an RM for the client.
+   * We want the client to be able to randomly select a Router and support failover when selecting a Router.
+   * The original code always started trying from the first Router when the client selected a Router,
+   * but this method will support random Router selection.
+   * For clusters that have not enabled Federation mode, the behavior remains unchanged.
+   *
+   * @param conf Configuration.
+   * @return rmIds
+   */
+  private Collection<String> getRandomOrder(Configuration conf) {
+    boolean isFederationEnabled = HAUtil.isFederationEnabled(conf);
+    Collection<String> rmIds = HAUtil.getRMHAIds(conf);
+    boolean isRandomOrder = conf.getBoolean(
+        YarnConfiguration.FEDERATION_YARN_CLIENT_FAILOVER_RANDOM_ORDER,
+        YarnConfiguration.DEFAULT_FEDERATION_YARN_CLIENT_FAILOVER_RANDOM_ORDER);
+    if (isFederationEnabled && isRandomOrder) {
+      List<String> rmIdList = new ArrayList<>(rmIds);
+      Collections.shuffle(rmIdList);
+      return rmIdList;
+    }
+    return rmIds;
   }
 }
