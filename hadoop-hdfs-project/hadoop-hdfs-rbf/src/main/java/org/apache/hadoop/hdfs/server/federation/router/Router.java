@@ -672,7 +672,7 @@ public class Router extends CompositeService implements
    * Compare router state.
    *
    * @param routerState the router service state.
-   * @return true if the given router state is same as the state maintainer by the router object.
+   * @return true if the given router state is same as the state maintained by the router object.
    */
   public boolean isRouterState(RouterServiceState routerState) {
     return routerState.equals(this.state);
