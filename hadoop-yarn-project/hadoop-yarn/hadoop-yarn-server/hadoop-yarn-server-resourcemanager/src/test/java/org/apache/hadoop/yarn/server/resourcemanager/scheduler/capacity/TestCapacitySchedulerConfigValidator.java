@@ -502,7 +502,8 @@ public class TestCapacitySchedulerConfigValidator {
           ms
               .getSource("PartitionQueueMetrics,partition=,q0=root,q1=test3"));
 
-      // Config validation should not change the existing objects in the cache and the metrics system
+      // Config validation should not change the existing
+      // objects in the cache and the metrics system
       Assert.assertEquals(origQM1, cache.get("root.test1"));
       Assert.assertEquals(origQM2, cache.get("root.test2"));
       Assert.assertEquals(origPQM1, cache.get("default.root.test1"));
