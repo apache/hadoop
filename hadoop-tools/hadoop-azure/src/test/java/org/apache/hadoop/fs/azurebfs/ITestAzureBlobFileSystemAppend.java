@@ -29,7 +29,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -431,7 +430,7 @@ public class ITestAzureBlobFileSystemAppend extends
     Assume.assumeTrue(getFileSystem().getAbfsStore().getPrefixMode() == PrefixMode.BLOB);
     final Path SECONDARY_FILE_PATH = new Path("secondarytestfile");
     AzureBlobFileSystem fs = getFileSystem();
-    ExecutorService executorService = Executors.newFixedThreadPool(5);
+    ExecutorService executorService = Executors.newFixedThreadPool(2);
     List<Future<?>> futures = new ArrayList<>();
 
     FSDataOutputStream out1 = fs.create(SECONDARY_FILE_PATH);
@@ -457,7 +456,7 @@ public class ITestAzureBlobFileSystemAppend extends
     futures.add(executorService.submit(() -> {
       try {
         out2.write(b2, 0, 400);
-        out2.hsync();
+        out2.close();
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
