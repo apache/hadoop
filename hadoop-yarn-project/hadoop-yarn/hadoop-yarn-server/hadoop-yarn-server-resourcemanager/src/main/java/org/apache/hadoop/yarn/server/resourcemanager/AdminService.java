@@ -113,7 +113,8 @@ public class AdminService extends CompositeService implements
   private static final Logger LOG =
       LoggerFactory.getLogger(AdminService.class);
 
-  private final ResourceManager rm;
+  @VisibleForTesting
+  final ResourceManager rm;
   private String rmId;
 
   private boolean autoFailoverEnabled;

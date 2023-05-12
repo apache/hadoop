@@ -721,8 +721,9 @@ public class TestApplicationLimits {
     clusterResource = Resources.createResource(90*16*GB);
     rootQueue.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-    queueController.updateRoot(root, clusterResource);
-    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, root);
+    queue.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
+
 
     // Any change is cluster resource needs to enforce user-limit recomputation.
     // In existing code, LeafQueue#updateClusterResource handled this. However

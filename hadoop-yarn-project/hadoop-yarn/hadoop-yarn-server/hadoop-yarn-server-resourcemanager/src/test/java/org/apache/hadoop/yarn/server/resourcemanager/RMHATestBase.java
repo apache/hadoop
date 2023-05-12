@@ -26,6 +26,7 @@ import org.apache.hadoop.ha.ClientBaseWithFixes;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
+import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.HAUtil;
@@ -129,6 +130,12 @@ public abstract class RMHATestBase extends ClientBaseWithFixes{
               throws IOException, YarnException {
             return confForRM1;
           }
+
+          @Override
+          void refreshAll() throws ServiceFailedException {
+            super.refreshAll();
+            CapacitySchedulerTestUtilities.getCapacityScheduler((MockRM) this.rm, 8, 8);
+          }
         };
       }
     };
@@ -152,8 +159,18 @@ public abstract class RMHATestBase extends ClientBaseWithFixes{
       }
     };
 
-    rm2 = new MockRM(confForRM2);
-
+    rm2 = new MockRM(confForRM2) {
+      @Override
+      protected AdminService createAdminService() {
+        return new AdminService(this) {
+          @Override
+          void refreshAll() throws ServiceFailedException {
+            super.refreshAll();
+            CapacitySchedulerTestUtilities.getCapacityScheduler((MockRM) this.rm, 8, 8);
+          }
+        };
+      }
+    };
     startRMs(rm1, conf1, rm2, confForRM2);
   }
 
@@ -221,5 +238,8 @@ public abstract class RMHATestBase extends ClientBaseWithFixes{
     rm1.adminService.transitionToActive(requestInfo);
     Assert.assertTrue(rm1.getRMContext().getHAServiceState()
         == HAServiceState.ACTIVE);
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 8, 8);
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 8, 8);
+
   }
 }
