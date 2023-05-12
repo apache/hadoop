@@ -281,6 +281,13 @@ public class TestCapacitySchedulerNodes {
     // ResourceRequest priorities
     Priority priority0 = Priority.newInstance(0);
 
+    CapacitySchedulerQueueCapacityHandler queueController =
+        new CapacitySchedulerQueueCapacityHandler(resourceManager.getRMContext().getNodeLabelManager());
+    CapacityScheduler cs = (CapacityScheduler) resourceManager.getResourceScheduler();
+    Resource clusterResource = Resource.newInstance(8 * GB, 4);
+    queueController.updateRoot(cs.getQueue("root"), clusterResource);
+    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, cs.getQueue("root"));
+
     // Submit an application
     Application application0 =
         new Application("user_0", "a1", resourceManager);
@@ -356,6 +363,10 @@ public class TestCapacitySchedulerNodes {
 
     MockRM rm = new MockRM(conf);
     rm.start();
+
+    CapacityScheduler scheduler =
+        CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 20, 20);
+
     RMApp app = MockRMAppSubmitter.submitWithMemory(100, rm);
     rm.drainEvents();
 
@@ -366,8 +377,6 @@ public class TestCapacitySchedulerNodes {
     MockNM nm2 = rm.registerNode("127.0.0.1:1235", 10240, 10);
 
     am.allocate(ResourceRequest.ANY, 2048, 1, null);
-    CapacityScheduler scheduler =
-        CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 20, 20);
 
     FiCaSchedulerNode node = scheduler.getNodeTracker().getNode(nm2.getNodeId());
     scheduler.handle(new NodeRemovedSchedulerEvent(

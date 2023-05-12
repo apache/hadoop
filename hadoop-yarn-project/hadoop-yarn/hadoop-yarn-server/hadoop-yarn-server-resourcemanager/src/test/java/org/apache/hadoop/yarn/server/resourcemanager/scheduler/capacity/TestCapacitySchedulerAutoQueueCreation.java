@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -49,6 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt
     .RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerDynamicEditException;
 
@@ -91,6 +93,7 @@ import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.updateChildren;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -809,6 +812,7 @@ public class TestCapacitySchedulerAutoQueueCreation
           (CapacityScheduler) newMockRM.getResourceScheduler();
 
       CSQueue parentQueue = newCS.getQueue(PARENT_QUEUE);
+      CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(newMockRM, 50,96);
 
       //submit app1 as USER1
       submitApp(newMockRM, parentQueue, USER1, USER1, 1, 1);
@@ -844,7 +848,8 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       // add new NM.
       newMockRM.registerNode("127.0.0.3:1234", 125 * GB, 20);
-      CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(newMockRM, 141,68);
+      cs = CapacitySchedulerTestUtilities.getCapacityScheduler(newMockRM, 141,68);
+
 
 
       // There will be change in effective resource when nodes are added
@@ -880,8 +885,8 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       // unregister one NM.
       newMockRM.unRegisterNode(nm3);
-      Resource MIN_RES_UPDATED = Resources.createResource(12800, 2);
-      Resource MAX_RES_UPDATED = Resources.createResource(128000, 20);
+      Resource MIN_RES_UPDATED = Resources.createResource(14438, 6);
+      Resource MAX_RES_UPDATED = Resources.createResource(144384, 68);
 
       // After loosing one NM, resources will reduce
       Assert.assertEquals("Effective Min resource for USER2 is not correct",
@@ -938,6 +943,13 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       newCS.reinitialize(conf, newMockRM.getRMContext());
 
+      CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 48, 96);
+      CapacitySchedulerQueueCapacityHandler queueController =
+          new CapacitySchedulerQueueCapacityHandler(mockRM.getRMContext().getNodeLabelManager());
+      Resource clusterResource = Resource.newInstance(48 * GB, 96);
+      queueController.updateRoot(newCS.getQueue("root"), clusterResource);
+      updateChildren(queueController, clusterResource, newCS.getQueue("root"));
+
       // validate that leaf queues abs capacity is now changed
       AutoCreatedLeafQueue user0Queue = (AutoCreatedLeafQueue) newCS.getQueue(
           USER1);
@@ -950,6 +962,9 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       newCS.reinitialize(conf, newMockRM.getRMContext());
       validateCapacities(user0Queue, 0.3f, 0.09f, 0.4f, 0.2f);
+
+      queueController.updateRoot(newCS.getQueue("root"), clusterResource);
+      updateChildren(queueController, clusterResource, newCS.getQueue("root"));
       validateUserAndAppLimits(user0Queue, 4000, 4000);
 
       //submit app1 as USER3
