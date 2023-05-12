@@ -276,7 +276,6 @@ public class TestPendingReconstruction {
       // Stop the replication/redundancy monitor
       BlockManagerTestUtil.stopRedundancyThread(blkManager);
       pendingReconstruction.clear();
-      pendingReconstruction.stop();
       // Pick a real node
       DatanodeDescriptor desc[] = { blkManager.getDatanodeManager().
           getDatanodes().iterator().next() };
@@ -311,9 +310,6 @@ public class TestPendingReconstruction {
       } finally {
         fsn.writeUnlock();
       }
-
-      GenericTestUtils.waitFor(() -> pendingReconstruction.size() == 0, 500,
-          10000);
       // The pending queue should be empty.
       assertEquals("Size of pendingReconstructions ", 0,
           pendingReconstruction.size());
