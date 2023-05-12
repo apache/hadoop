@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.updateChildren;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -32,7 +33,9 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,8 +44,10 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
@@ -286,6 +291,10 @@ public class TestParentQueue {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    CapacitySchedulerQueueCapacityHandler queueController =
+        new CapacitySchedulerQueueCapacityHandler(rmContext.getNodeLabelManager());
+    queueController.updateRoot(queues.get("root"), clusterResource);
+    updateChildren(queueController, clusterResource, queues.get("root"));
 
     // Start testing
     LeafQueue a = (LeafQueue)queues.get(A);
@@ -534,6 +543,10 @@ public class TestParentQueue {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    CapacitySchedulerQueueCapacityHandler queueController =
+        new CapacitySchedulerQueueCapacityHandler(rmContext.getNodeLabelManager());
+    queueController.updateRoot(queues.get("root"), clusterResource);
+    updateChildren(queueController, clusterResource, queues.get("root"));
 
     // Start testing
     CSQueue a = queues.get(A);
@@ -809,6 +822,10 @@ public class TestParentQueue {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    CapacitySchedulerQueueCapacityHandler queueController =
+        new CapacitySchedulerQueueCapacityHandler(rmContext.getNodeLabelManager());
+    queueController.updateRoot(queues.get("root"), clusterResource);
+    updateChildren(queueController, clusterResource, queues.get("root"));
 
     // Start testing
     LeafQueue a = (LeafQueue)queues.get(A);
@@ -891,6 +908,10 @@ public class TestParentQueue {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    CapacitySchedulerQueueCapacityHandler queueController =
+        new CapacitySchedulerQueueCapacityHandler(rmContext.getNodeLabelManager());
+    queueController.updateRoot(queues.get("root"), clusterResource);
+    updateChildren(queueController, clusterResource, queues.get("root"));
 
     // Start testing
     LeafQueue b3 = (LeafQueue)queues.get(B3);
@@ -1051,6 +1072,10 @@ public class TestParentQueue {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    CapacitySchedulerQueueCapacityHandler queueController =
+        new CapacitySchedulerQueueCapacityHandler(rmContext.getNodeLabelManager());
+    queueController.updateRoot(queues.get("root"), clusterResource);
+    updateChildren(queueController, clusterResource, queues.get("root"));
 
     // Start testing
     LeafQueue a = (LeafQueue) queues.get(A);
@@ -1071,6 +1096,8 @@ public class TestParentQueue {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    queueController.updateRoot(queues.get("root"), clusterResource);
+    updateChildren(queueController, clusterResource, queues.get("root"));
 
     Resource QUEUE_B_RESOURCE_HALF = Resource.newInstance(7 * 1024, 11);
     Resource QUEUE_A_RESOURCE_HALF = Resource.newInstance(3 * 1024, 5);
@@ -1089,6 +1116,8 @@ public class TestParentQueue {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    queueController.updateRoot(queues.get("root"), clusterResource);
+    updateChildren(queueController, clusterResource, queues.get("root"));
 
     Resource QUEUE_B_RESOURCE_70PERC = Resource.newInstance(7 * 1024, 22);
     Resource QUEUE_A_RESOURCE_30PERC = Resource.newInstance(3 * 1024, 10);
@@ -1124,6 +1153,10 @@ public class TestParentQueue {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
             new ResourceLimits(clusterResource));
+    CapacitySchedulerQueueCapacityHandler queueController =
+        new CapacitySchedulerQueueCapacityHandler(rmContext.getNodeLabelManager());
+    queueController.updateRoot(queues.get("root"), clusterResource);
+    updateChildren(queueController, clusterResource, queues.get("root"));
 
     // Start testing
     // Only MaximumSystemApplications is set in csConf
@@ -1164,6 +1197,8 @@ public class TestParentQueue {
     queueContext.reinitialize();
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    queueController.updateRoot(queues.get("root"), clusterResource);
+    updateChildren(queueController, clusterResource, queues.get("root"));
 
     assertEquals((int) (csConf.getGlobalMaximumApplicationsPerQueue() *
             queueAScale), a.getMaxApplications());
@@ -1182,6 +1217,8 @@ public class TestParentQueue {
     queueContext.reinitialize();
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    queueController.updateRoot(queues.get("root"), clusterResource);
+    updateChildren(queueController, clusterResource, queues.get("root"));
 
     assertEquals(queueAMaxApplications, a.getMaxApplications());
     assertEquals(a.getMaxApplications(), a.getMaxApplicationsPerUser());
@@ -1196,6 +1233,8 @@ public class TestParentQueue {
     b.getUsersManager().setUserLimit(oneAndQuarterPercent);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    queueController.updateRoot(queues.get("root"), clusterResource);
+    updateChildren(queueController, clusterResource, queues.get("root"));
 
     assertEquals((int) (a.getMaxApplications() * halfPercent / 100),
             a.getMaxApplicationsPerUser());
@@ -1206,6 +1245,8 @@ public class TestParentQueue {
     b.getUsersManager().setUserLimit(thirdPercent);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    queueController.updateRoot(queues.get("root"), clusterResource);
+    updateChildren(queueController, clusterResource, queues.get("root"));
 
     assertEquals((int) (b.getMaxApplications() * thirdPercent / 100),
         b.getMaxApplicationsPerUser());
@@ -1218,6 +1259,8 @@ public class TestParentQueue {
     b.getUsersManager().setUserLimitFactor(userLimitFactorQueueB);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    queueController.updateRoot(queues.get("root"), clusterResource);
+    updateChildren(queueController, clusterResource, queues.get("root"));
 
     assertEquals((int) (a.getMaxApplications() * halfPercent *
             userLimitFactorQueueA / 100), a.getMaxApplicationsPerUser());
