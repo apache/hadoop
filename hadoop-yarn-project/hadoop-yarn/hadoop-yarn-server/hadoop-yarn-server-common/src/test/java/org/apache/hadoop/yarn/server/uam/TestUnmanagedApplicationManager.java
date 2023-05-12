@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.uam;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -575,7 +574,8 @@ public class TestUnmanagedApplicationManager {
         applicationId, "default", "test-user", "SC-HOME", true, "SC-1", appSubmissionContext);
     Assert.assertNotNull(token1);
 
-    Map<String, UnmanagedApplicationManager> unmanagedAppMasterMap = uamPool.getUnmanagedAppMasterMap();
+    Map<String, UnmanagedApplicationManager> unmanagedAppMasterMap =
+        uamPool.getUnmanagedAppMasterMap();
 
     UnmanagedApplicationManager uamApplicationManager = unmanagedAppMasterMap.get("SC-1");
     Assert.assertNotNull(uamApplicationManager);
