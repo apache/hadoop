@@ -732,9 +732,11 @@ public class TestRouterWebServiceUtil {
     conf.setLong(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, -1L);
     conf.setLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, -1L);
 
-    int connectTimeOut = (int) getTimeDuration(conf, YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,
+    int connectTimeOut = (int) getTimeDuration(conf,
+        YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,
         YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT);
-    int readTimeout = (int) getTimeDuration(conf, YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
+    int readTimeout = (int) getTimeDuration(conf,
+        YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
         YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT);
     Assert.assertEquals(-1, connectTimeOut);
     Assert.assertEquals(-1, readTimeout);
@@ -747,9 +749,11 @@ public class TestRouterWebServiceUtil {
     conf1.setLong(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, connectTimeOutLong);
     conf1.setLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, readTimeOutLong);
 
-    int connectTimeOut1 = (int) getTimeDuration(conf1, YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,
+    int connectTimeOut1 = (int) getTimeDuration(conf1,
+        YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,
         YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT);
-    int readTimeout1 = (int) getTimeDuration(conf1, YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
+    int readTimeout1 = (int) getTimeDuration(conf1,
+        YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
         YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT);
     Assert.assertEquals(-2147483648, connectTimeOut1);
     Assert.assertEquals(-2147483648, readTimeout1);
