@@ -217,13 +217,13 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
       }
     };
     rm.start();
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 3);
 
     // Submit an app
     RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
 
     // Set up a node.
     MockNM nm1 = rm.registerNode("localhost:1234", 3072);
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 3);
     nm1.nodeHeartbeat(true);
     rm.drainEvents();
     
@@ -448,13 +448,13 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
       }
     };
     rm.start();
+    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 3);
 
     // Submit an app
     RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
 
     // Set up a node.
     MockNM nm1 = rm.registerNode("localhost:1234", 3072);
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 3);
     nm1.nodeHeartbeat(true);
     rm.drainEvents();
 
