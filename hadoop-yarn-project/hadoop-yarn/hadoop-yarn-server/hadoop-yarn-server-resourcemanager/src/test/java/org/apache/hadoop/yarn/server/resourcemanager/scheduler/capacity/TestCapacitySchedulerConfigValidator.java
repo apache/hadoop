@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.yarn.LocalConfigurationProvider;
@@ -442,6 +444,39 @@ public class TestCapacitySchedulerConfigValidator {
       RMContext rmContext = mockRM.getRMContext();
       Configuration oldConfig = cs.getConfig();
 
+      final Map<String, QueueMetrics> cache = QueueMetrics.getQueueMetrics();
+      final MetricsSystem ms = DefaultMetricsSystem.instance();
+
+      QueueMetrics origQM1 = cache.get("root.test1");
+      QueueMetrics origQM2 = cache.get("root.test2");
+      Assert.assertNotNull("Original queues should be found in the cache", origQM1);
+      Assert.assertNotNull("Original queues should be found in the cache", origQM2);
+
+      QueueMetrics origPQM1 = cache.get("default.root.test1");
+      QueueMetrics origPQM2 = cache.get("default.root.test2");
+      Assert.assertNotNull("Original queues should be found in the cache (PartitionQueueMetrics)",
+          origPQM1);
+      Assert.assertNotNull("Original queues should be found in the cache (PartitionQueueMetrics)",
+          origPQM2);
+
+      MetricsSource origMS1 =
+          ms.getSource("QueueMetrics,q0=root,q1=test1");
+      MetricsSource origMS2 =
+          ms.getSource("QueueMetrics,q0=root,q1=test2");
+      Assert.assertNotNull("Original queues should be found in the Metrics System",
+          origMS1);
+      Assert.assertNotNull("Original queues should be found in the Metrics System",
+          origMS2);
+
+      MetricsSource origPMS1 = ms
+          .getSource("PartitionQueueMetrics,partition=,q0=root,q1=test1");
+      MetricsSource origPMS2 = ms
+          .getSource("PartitionQueueMetrics,partition=,q0=root,q1=test2");
+      Assert.assertNotNull(
+          "Original queues should be found in Metrics System (PartitionQueueMetrics)", origPMS1);
+      Assert.assertNotNull(
+          "Original queues should be found in Metrics System (PartitionQueueMetrics)", origPMS2);
+
       Configuration newConfig = new Configuration(oldConfig);
       newConfig
           .set("yarn.scheduler.capacity.root.queues", "test1, test2, test3");
@@ -456,39 +491,30 @@ public class TestCapacitySchedulerConfigValidator {
           .validateCSConfiguration(oldConfig, newConfig, rmContext);
       Assert.assertTrue(isValidConfig);
 
-      Assert.assertTrue("Original queues should be found in the cache",
-          QueueMetrics.getQueueMetrics().containsKey("root.test1"));
-      Assert.assertTrue("Original queues should be found in the cache",
-          QueueMetrics.getQueueMetrics().containsKey("root.test2"));
       Assert.assertFalse("Validated new queue should not be in the cache",
-          QueueMetrics.getQueueMetrics().containsKey("root.test3"));
-
-      Assert.assertTrue("Original queues should be found in the cache (PartitionQueueMetrics)",
-          QueueMetrics.getQueueMetrics().containsKey("default.root.test1"));
-      Assert.assertTrue("Original queues should be found in the cache (PartitionQueueMetrics)",
-          QueueMetrics.getQueueMetrics().containsKey("default.root.test2"));
+          cache.containsKey("root.test3"));
       Assert.assertFalse("Validated new queue should not be in the cache (PartitionQueueMetrics)",
-          QueueMetrics.getQueueMetrics().containsKey("default.root.test3"));
-
-      Assert.assertNotNull("Original queues should be found in the Default Metrics System",
-          DefaultMetricsSystem.instance().getSource("QueueMetrics,q0=root,q1=test1"));
-      Assert.assertNotNull("Original queues should be found in the Default Metrics System",
-          DefaultMetricsSystem.instance().getSource("QueueMetrics,q0=root,q1=test2"));
-      Assert.assertNull("Validated new queue should not be in the Default Metrics System",
-          DefaultMetricsSystem.instance().getSource("QueueMetrics,q0=root,q1=test3"));
-
-      Assert.assertNotNull(
-          "Original queues should be found in the Default Metrics System (PartitionQueueMetrics)",
-          DefaultMetricsSystem.instance()
-              .getSource("PartitionQueueMetrics,partition=,q0=root,q1=test1"));
-      Assert.assertNotNull(
-          "Original queues should be found in the Default Metrics System (PartitionQueueMetrics)",
-          DefaultMetricsSystem.instance()
-              .getSource("PartitionQueueMetrics,partition=,q0=root,q1=test2"));
+          cache.containsKey("default.root.test3"));
+      Assert.assertNull("Validated new queue should not be in the Metrics System",
+          ms.getSource("QueueMetrics,q0=root,q1=test3"));
       Assert.assertNull(
-          "Validated new queue should not be in the Default Metrics System (PartitionQueueMetrics)",
-          DefaultMetricsSystem.instance()
+          "Validated new queue should not be in Metrics System (PartitionQueueMetrics)",
+          ms
               .getSource("PartitionQueueMetrics,partition=,q0=root,q1=test3"));
+
+      // Config validation should not change the existing objects in the cache and the metrics system
+      Assert.assertEquals(origQM1, cache.get("root.test1"));
+      Assert.assertEquals(origQM2, cache.get("root.test2"));
+      Assert.assertEquals(origPQM1, cache.get("default.root.test1"));
+      Assert.assertEquals(origPQM1, cache.get("default.root.test1"));
+      Assert.assertEquals(origMS1,
+          ms.getSource("QueueMetrics,q0=root,q1=test1"));
+      Assert.assertEquals(origMS2,
+          ms.getSource("QueueMetrics,q0=root,q1=test2"));
+      Assert.assertEquals(origPMS1,
+          ms.getSource("PartitionQueueMetrics,partition=,q0=root,q1=test1"));
+      Assert.assertEquals(origPMS2,
+          ms.getSource("PartitionQueueMetrics,partition=,q0=root,q1=test2"));
     } finally {
       mockRM.stop();
     }
