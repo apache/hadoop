@@ -276,7 +276,7 @@ public final class FederationUtil {
    *
    * @param conf the configuration object.
    * @return Set of name services in config.
-   * @throws IllegalArgumentException if monitor namenodes are not correctly configured.
+   * @throws IllegalArgumentException if monitored namenodes are not correctly configured.
    */
   public static Set<String> getAllConfiguredNS(Configuration conf)
       throws IllegalArgumentException {

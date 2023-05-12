@@ -352,7 +352,7 @@ public class MountTableResolver
    *
    * @param path a path.
    * @return true if the path matches the trash path pattern, false otherwise.
-   * @throws IOException if retrieval of router user information fails.
+   * @throws IOException if retrieving current user's trash directory fails.
    */
   @VisibleForTesting
   public static boolean isTrashPath(String path) throws IOException {
@@ -374,7 +374,7 @@ public class MountTableResolver
    *
    * @param path a path.
    * @return new path with subtracted trash current path.
-   * @throws IOException if retrieval of router user information fails.
+   * @throws IOException if retrieving current user's trash directory fails.
    */
   @VisibleForTesting
   public static String subtractTrashCurrentPath(String path)

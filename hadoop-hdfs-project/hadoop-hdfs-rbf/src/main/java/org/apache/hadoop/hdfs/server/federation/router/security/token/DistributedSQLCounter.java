@@ -91,7 +91,7 @@ public class DistributedSQLCounter {
    *
    * @param value Value to assign to counter.
    * @param connection Connection to database hosting the counter table.
-   * @throws SQLException if SQL errors occur.
+   * @throws SQLException if querying the database fails.
    */
   public void updateCounterValue(int value, Connection connection) throws SQLException {
     String queryText = String.format("UPDATE %s SET %s = ?", table, field);
@@ -108,7 +108,7 @@ public class DistributedSQLCounter {
    *
    * @param amount Amount to increase the counter.
    * @return Previous counter value.
-   * @throws SQLException if SQL errors occur.
+   * @throws SQLException if querying the database fails.
    */
   public int incrementCounterValue(int amount) throws SQLException {
     // Disabling auto-commit to ensure that all statements on this transaction
