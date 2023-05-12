@@ -172,6 +172,30 @@ public class TestShortCircuitCache {
     cache.close();
   }
   
+  @Test(timeout=3000)
+  public void testMaxTotalSizeOutlier() throws Exception {
+    ShortCircuitCache cache =
+        new ShortCircuitCache(-1, 1, 10, 1, 1, 10000, 0);
+  }
+  
+  @Test(timeout=3000)
+  public void testMaxNonMmappedEvictableLifespanMsOutlier() throws Exception {
+    ShortCircuitCache cache =
+        new ShortCircuitCache(10, -1, 10, 1, 1, 10000, 0);
+  }
+  
+  @Test(timeout=3000)
+  public void testMaxEvictableMmapedSizeOutlier() throws Exception {
+    ShortCircuitCache cache =
+        new ShortCircuitCache(10, 1, -1, 1, 1, 10000, 0);
+  }
+  
+  @Test(timeout=3000)
+  public void testMaxEvictableMmapedLifespanMsOutlier() throws Exception {
+    ShortCircuitCache cache =
+        new ShortCircuitCache(10, 1, 10, -1, 1, 10000, 0);
+  }
+  
   @Test(timeout=60000)
   public void testAddAndRetrieve() throws Exception {
     final ShortCircuitCache cache =
