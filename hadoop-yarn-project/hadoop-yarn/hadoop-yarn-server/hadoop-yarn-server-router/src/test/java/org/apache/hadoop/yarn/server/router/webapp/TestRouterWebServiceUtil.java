@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.config.ClientConfig;
@@ -689,8 +690,8 @@ public class TestRouterWebServiceUtil {
     YarnConfiguration configuration = new YarnConfiguration();
     Client client01 = RouterWebServiceUtil.createJerseyClient(configuration);
     Map<String, Object> properties = client01.getProperties();
-    Object readTimeOut = properties.get(ClientConfig.PROPERTY_READ_TIMEOUT);
-    Object connectTimeOut = properties.get(ClientConfig.PROPERTY_CONNECT_TIMEOUT);
+    int readTimeOut = (int) properties.get(ClientConfig.PROPERTY_READ_TIMEOUT);
+    int connectTimeOut = (int) properties.get(ClientConfig.PROPERTY_CONNECT_TIMEOUT);
     Assert.assertEquals(30000, readTimeOut);
     Assert.assertEquals(30000, connectTimeOut);
     client01.destroy();
@@ -701,8 +702,8 @@ public class TestRouterWebServiceUtil {
     configuration2.setLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, -1L);
     Client client02 = RouterWebServiceUtil.createJerseyClient(configuration2);
     Map<String, Object> properties02 = client02.getProperties();
-    Object readTimeOut02 = properties02.get(ClientConfig.PROPERTY_READ_TIMEOUT);
-    Object connectTimeOut02 = properties02.get(ClientConfig.PROPERTY_CONNECT_TIMEOUT);
+    int readTimeOut02 = (int) properties02.get(ClientConfig.PROPERTY_READ_TIMEOUT);
+    int connectTimeOut02 =  (int) properties02.get(ClientConfig.PROPERTY_CONNECT_TIMEOUT);
     Assert.assertEquals(30000, readTimeOut02);
     Assert.assertEquals(30000, connectTimeOut02);
     client02.destroy();
@@ -717,10 +718,44 @@ public class TestRouterWebServiceUtil {
     configuration3.setLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, readTimeOutLong);
     Client client03 = RouterWebServiceUtil.createJerseyClient(configuration3);
     Map<String, Object> properties03 = client03.getProperties();
-    Object readTimeOut03 = properties03.get(ClientConfig.PROPERTY_READ_TIMEOUT);
-    Object connectTimeOut03 = properties03.get(ClientConfig.PROPERTY_CONNECT_TIMEOUT);
+    int readTimeOut03 = (int) properties03.get(ClientConfig.PROPERTY_READ_TIMEOUT);
+    int connectTimeOut03 = (int) properties03.get(ClientConfig.PROPERTY_CONNECT_TIMEOUT);
     Assert.assertEquals(30000, readTimeOut03);
     Assert.assertEquals(30000, connectTimeOut03);
     client03.destroy();
+  }
+
+  @Test
+  public void testJerseyClient() {
+    // Case1, Set to negative 1.
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setLong(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, -1L);
+    conf.setLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, -1L);
+
+    int connectTimeOut = (int) getTimeDuration(conf, YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT);
+    int readTimeout = (int) getTimeDuration(conf, YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT);
+    Assert.assertEquals(-1, connectTimeOut);
+    Assert.assertEquals(-1, readTimeout);
+
+    // Case2, Set the maximum value that exceeds the integer.
+    // Converted to int, there will be a value out of bounds.
+    YarnConfiguration conf1 = new YarnConfiguration();
+    long connectTimeOutLong = (long) Integer.MAX_VALUE + 1;
+    long readTimeOutLong = (long) Integer.MAX_VALUE + 1;
+    conf1.setLong(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, connectTimeOutLong);
+    conf1.setLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, readTimeOutLong);
+
+    int connectTimeOut1 = (int) getTimeDuration(conf1, YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT);
+    int readTimeout1 = (int) getTimeDuration(conf1, YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT);
+    Assert.assertEquals(-2147483648, connectTimeOut1);
+    Assert.assertEquals(-2147483648, readTimeout1);
+  }
+
+  private long getTimeDuration(YarnConfiguration conf, String varName, long defaultValue) {
+    return conf.getTimeDuration(varName, defaultValue, TimeUnit.MILLISECONDS);
   }
 }
