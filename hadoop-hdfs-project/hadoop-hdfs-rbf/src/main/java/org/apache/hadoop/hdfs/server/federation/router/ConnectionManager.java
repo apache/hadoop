@@ -97,6 +97,7 @@ public class ConnectionManager {
    * Creates a proxy client connection pool manager.
    *
    * @param config Configuration for the connections.
+   * @param routerStateIdContext Federated namespace context for router.
    */
   public ConnectionManager(Configuration config, RouterStateIdContext routerStateIdContext) {
     this.conf = config;
