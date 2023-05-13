@@ -164,7 +164,7 @@ public class ProxyUriUtils {
           originalUri == null ? null : originalUri.getQuery(),
           originalUri == null ? null : originalUri.getFragment());
     } catch (URISyntaxException e) {
-      throw new RuntimeException("Could not proxy "+originalUri,e);
+      throw new RuntimeException("Could not proxy "+originalUri, e);
     }
   }
   
