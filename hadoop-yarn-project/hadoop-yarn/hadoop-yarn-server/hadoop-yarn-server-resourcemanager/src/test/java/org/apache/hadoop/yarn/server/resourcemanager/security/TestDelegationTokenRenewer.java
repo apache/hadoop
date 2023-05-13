@@ -68,6 +68,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -183,7 +184,7 @@ public class TestDelegationTokenRenewer {
     }
 
     @Override
-    public void cancel(Token<?> t, Configuration conf) {
+    public void cancel(Token<?> t, Configuration conf) throws IOException {
       cancelled = true;
       if (t instanceof MyToken) {
         MyToken token = (MyToken) t;
@@ -307,7 +308,12 @@ public class TestDelegationTokenRenewer {
     
     public boolean isCanceled() {return status.equals(CANCELED);}
     
-    public void cancelToken() {this.status=CANCELED;}
+    public void cancelToken() throws IOException {
+      this.status=CANCELED;
+      DelegationTokenIdentifier tokenIdentifier = this.decodeIdentifier();
+      tokenIdentifier.setMaxDate(0);
+      this.setID(tokenIdentifier.getBytes());
+    }
 
     @Override
     public long renew(Configuration conf) throws IOException,
@@ -450,8 +456,15 @@ public class TestDelegationTokenRenewer {
     token2 = dfs.getDelegationToken("user2");
     token3 = dfs.getDelegationToken("user3");
 
+    // make token3 expire time short.
+    AbstractDelegationTokenIdentifier identifier = token3.decodeIdentifier();
+    identifier.setMaxDate(System.currentTimeMillis());
+    token3.setID(identifier.getBytes());
+
     //to cause this one to be set for renew in 2 secs
-    Renewer.tokenToRenewIn2Sec = token1;
+    AbstractDelegationTokenIdentifier identifier1 = token1.decodeIdentifier();
+    identifier1.setMaxDate(System.currentTimeMillis() + 2_000);
+    token1.setID(identifier1.getBytes());
     LOG.info("token="+token1+" should be renewed for 2 secs");
     
     // three distinct Namenodes
@@ -473,8 +486,8 @@ public class TestDelegationTokenRenewer {
         new Configuration());
     waitForEventsToGetProcessed(delegationTokenRenewer);
 
-    // first 3 initial renewals + 1 real
-    int numberOfExpectedRenewals = 3+1; 
+    // token1 and token3 should be renewed.
+    int numberOfExpectedRenewals = 2;
     
     int attempts = 10;
     while(attempts-- > 0) {
@@ -489,7 +502,7 @@ public class TestDelegationTokenRenewer {
     
     LOG.info("dfs=" + dfs.hashCode() + 
         ";Counter = " + Renewer.counter + ";t="+  Renewer.lastRenewed);
-    assertEquals("renew wasn't called as many times as expected(4):",
+    assertEquals("renew wasn't called as many times as expected(2):",
         numberOfExpectedRenewals, Renewer.counter);
     assertEquals("most recently renewed token mismatch", Renewer.lastRenewed, 
         token1);
