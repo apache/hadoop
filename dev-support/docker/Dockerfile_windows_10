@@ -108,6 +108,11 @@ RUN powershell Copy-Item -Path "C:\LibXXHash\usr\bin\*.dll" -Destination "C:\Pro
 RUN powershell Copy-Item -Path "C:\LibZStd\usr\bin\*.dll" -Destination "C:\Program` Files\Git\usr\bin"
 RUN powershell Copy-Item -Path "C:\RSync\usr\bin\*" -Destination "C:\Program` Files\Git\usr\bin"
 
+# Install Python 3.10.11.
+RUN powershell Invoke-WebRequest -Uri https://www.python.org/ftp/python/3.10.11/python-3.10.11-embed-amd64.zip -OutFile $Env:TEMP\python-3.10.11-embed-amd64.zip
+RUN powershell Expand-Archive -Path $Env:TEMP\python-3.10.11-embed-amd64.zip -DestinationPath "C:\Python3"
+RUN setx path "%PATH%;C:\Python3"
+
 # We get strange Javadoc errors without this.
 RUN setx classpath ""
 
