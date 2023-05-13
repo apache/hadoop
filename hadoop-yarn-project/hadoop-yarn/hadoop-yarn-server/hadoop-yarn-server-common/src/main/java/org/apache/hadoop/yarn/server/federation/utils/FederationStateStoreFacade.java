@@ -995,7 +995,6 @@ public final class FederationStateStoreFacade {
    *
    * @param appId ApplicationId
    * @return ApplicationSubmissionContext of ApplicationId
-   * @throws YarnException yarn exception.
    */
   public ApplicationSubmissionContext getApplicationSubmissionContext(ApplicationId appId) {
     try {
