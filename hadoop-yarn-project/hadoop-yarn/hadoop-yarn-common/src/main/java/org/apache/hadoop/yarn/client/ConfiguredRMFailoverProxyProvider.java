@@ -124,10 +124,13 @@ public class ConfiguredRMFailoverProxyProvider<T>
   }
 
   /**
-   * n YARN Federation mode, the Router is considered as an RM for the client.
-   * We want the client to be able to randomly select a Router and support failover when selecting a Router.
-   * The original code always started trying from the first Router when the client selected a Router,
+   * YARN Federation mode, the Router is considered as an RM for the client.
+   * We want the client to be able to randomly
+   * Select a Router and support failover when selecting a Router.
+   * The original code always started trying from the first
+   * Router when the client selected a Router,
    * but this method will support random Router selection.
+   *
    * For clusters that have not enabled Federation mode, the behavior remains unchanged.
    *
    * @param conf Configuration.
