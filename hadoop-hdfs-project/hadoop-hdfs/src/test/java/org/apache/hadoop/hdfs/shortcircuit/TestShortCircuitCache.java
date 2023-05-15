@@ -172,28 +172,23 @@ public class TestShortCircuitCache {
     cache.close();
   }
   
-  @Test(timeout=3000)
-  public void testMaxTotalSizeOutlier() throws Exception {
-    ShortCircuitCache cache =
-        new ShortCircuitCache(-1, 1, 10, 1, 1, 10000, 0);
-  }
-  
-  @Test(timeout=3000)
-  public void testMaxNonMmappedEvictableLifespanMsOutlier() throws Exception {
-    ShortCircuitCache cache =
-        new ShortCircuitCache(10, -1, 10, 1, 1, 10000, 0);
-  }
-  
-  @Test(timeout=3000)
-  public void testMaxEvictableMmapedSizeOutlier() throws Exception {
-    ShortCircuitCache cache =
-        new ShortCircuitCache(10, 1, -1, 1, 1, 10000, 0);
-  }
-  
-  @Test(timeout=3000)
-  public void testMaxEvictableMmapedLifespanMsOutlier() throws Exception {
-    ShortCircuitCache cache =
-        new ShortCircuitCache(10, 1, 10, -1, 1, 10000, 0);
+  @Test(timeout=5000)
+  public void testInvalidConfiguration() throws Exception {
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "maxTotalSize must be greater than zero.",
+        () -> new ShortCircuitCache(-1, 1, 10, 1, 1, 10000, 0));
+
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "maxNonMmappedEvictableLifespanMs must be greater than zero.",
+        () -> new ShortCircuitCache(10, -1, 10, 1, 1, 10000, 0));
+
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "dfs.client.mmap.cache.size must be greater than zero.",
+        () -> new ShortCircuitCache(10, 1, -1, 1, 1, 10000, 0));
+
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "maxEvictableMmapedLifespanMs must be greater than zero.",
+        () -> new ShortCircuitCache(10, 1, 10, -1, 1, 10000, 0));
   }
   
   @Test(timeout=60000)
