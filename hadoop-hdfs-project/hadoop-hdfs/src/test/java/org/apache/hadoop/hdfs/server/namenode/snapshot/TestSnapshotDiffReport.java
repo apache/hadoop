@@ -86,9 +86,9 @@ public class TestSnapshotDiffReport {
   private final Path dir = new Path("/TestSnapshot");
   private final Path sub1 = new Path(dir, "sub1");
   
-  protected Configuration conf;
-  protected MiniDFSCluster cluster;
-  protected DistributedFileSystem hdfs;
+  private Configuration conf;
+  private MiniDFSCluster cluster;
+  private DistributedFileSystem hdfs;
   private final HashMap<Path, Integer> snapshotNumberMap = new HashMap<Path, Integer>();
 
   @Before
