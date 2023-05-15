@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.setQueueHandler;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.updateChildren;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -249,6 +250,10 @@ public class TestChildQueueOrder {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    CapacitySchedulerQueueCapacityHandler queueController =
+        new CapacitySchedulerQueueCapacityHandler(rmContext.getNodeLabelManager());
+    queueController.updateRoot(root, clusterResource);
+    updateChildren(queueController, clusterResource, root);
 
     // Start testing
     CSQueue a = queues.get(A);
@@ -295,38 +300,26 @@ public class TestChildQueueOrder {
 
     // Assign {1,2,3,4} 1GB containers respectively to queues
     stubQueueAllocation(a, clusterResource, node_0, 1*GB);
-    stubQueueAllocation(b, clusterResource, node_0, 0*GB);
-    stubQueueAllocation(c, clusterResource, node_0, 0*GB);
-    stubQueueAllocation(d, clusterResource, node_0, 0*GB);
     root.assignContainers(clusterResource, node_0, new ResourceLimits(
         clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     for(int i=0; i < 2; i++)
     {
-      stubQueueAllocation(a, clusterResource, node_0, 0*GB);
       stubQueueAllocation(b, clusterResource, node_0, 1*GB);
-      stubQueueAllocation(c, clusterResource, node_0, 0*GB);
-      stubQueueAllocation(d, clusterResource, node_0, 0*GB);
       root.assignContainers(clusterResource, node_0, new ResourceLimits(
           clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    } 
+    }
     for(int i=0; i < 3; i++)
     {
-      stubQueueAllocation(a, clusterResource, node_0, 0*GB);
-      stubQueueAllocation(b, clusterResource, node_0, 0*GB);
       stubQueueAllocation(c, clusterResource, node_0, 1*GB);
-      stubQueueAllocation(d, clusterResource, node_0, 0*GB);
       root.assignContainers(clusterResource, node_0, new ResourceLimits(
           clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    }  
+    }
     for(int i=0; i < 4; i++)
     {
-      stubQueueAllocation(a, clusterResource, node_0, 0*GB);
-      stubQueueAllocation(b, clusterResource, node_0, 0*GB);
-      stubQueueAllocation(c, clusterResource, node_0, 0*GB);
       stubQueueAllocation(d, clusterResource, node_0, 1*GB);
       root.assignContainers(clusterResource, node_0, new ResourceLimits(
           clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    }    
+    }
     verifyQueueMetrics(a, 1*GB, clusterResource);
     verifyQueueMetrics(b, 2*GB, clusterResource);
     verifyQueueMetrics(c, 3*GB, clusterResource);
