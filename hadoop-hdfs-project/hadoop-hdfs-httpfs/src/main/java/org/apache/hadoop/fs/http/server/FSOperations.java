@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -421,6 +422,21 @@ public final class FSOperations {
     }
     policies.put(HttpFSFileSystem.STORAGE_POLICY_JSON, jsonArray);
     json.put(HttpFSFileSystem.STORAGE_POLICIES_JSON, policies);
+    return json;
+  }
+
+  /**
+   * @param fsStatus a FsStatus object
+   * @return JSON map suitable for wire transport
+   */
+  @SuppressWarnings("unchecked")
+  private static Map<String, Object> toJson(FsStatus fsStatus) {
+    Map<String, Object> json = new LinkedHashMap<>();
+    JSONObject statusJson = new JSONObject();
+    statusJson.put(HttpFSFileSystem.FS_STATUS_USED_JSON, fsStatus.getUsed());
+    statusJson.put(HttpFSFileSystem.FS_STATUS_REMAINING_JSON, fsStatus.getRemaining());
+    statusJson.put(HttpFSFileSystem.FS_STATUS_CAPACITY_JSON, fsStatus.getCapacity());
+    json.put(HttpFSFileSystem.FS_STATUS_JSON, statusJson);
     return json;
   }
 
@@ -2298,6 +2314,40 @@ public final class FSOperations {
       FileStatus status = fs.getFileLinkStatus(path);
       HttpFSServerWebApp.get().getMetrics().incrOpsStat();
       return toJson(status);
+    }
+  }
+
+  /**
+   * Executor that performs a fs-status FileSystemAccess files
+   * system operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSStatus
+      implements FileSystemAccess.FileSystemExecutor<Map> {
+    final private Path path;
+
+    /**
+     * Creates a fs-status executor.
+     *
+     * @param path the path to retrieve the status.
+     */
+    public FSStatus(String path) {
+      this.path = new Path(path);
+    }
+
+    /**
+     * Executes the filesystem getStatus operation and returns the
+     * result in a JSON Map.
+     *
+     * @param fs filesystem instance to use.
+     * @return a Map object (JSON friendly) with the file status.
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Map execute(FileSystem fs) throws IOException {
+      FsStatus fsStatus = fs.getStatus(path);
+      HttpFSServerWebApp.get().getMetrics().incrOpsStat();
+      return toJson(fsStatus);
     }
   }
 }

@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -247,6 +248,11 @@ public class HttpFSFileSystem extends FileSystem
   public static final String STORAGE_POLICY_JSON = "BlockStoragePolicy";
   public static final String BLOCK_LOCATIONS_JSON = "BlockLocations";
 
+  public static final String FS_STATUS_JSON = "FsStatus";
+  public static final String FS_STATUS_USED_JSON = "used";
+  public static final String FS_STATUS_REMAINING_JSON = "remaining";
+  public static final String FS_STATUS_CAPACITY_JSON = "capacity";
+
   public static final int HTTP_TEMPORARY_REDIRECT = 307;
 
   private static final String HTTP_GET = "GET";
@@ -277,7 +283,7 @@ public class HttpFSFileSystem extends FileSystem
     GETSERVERDEFAULTS(HTTP_GET),
     CHECKACCESS(HTTP_GET), SETECPOLICY(HTTP_PUT), GETECPOLICY(HTTP_GET), UNSETECPOLICY(
         HTTP_POST), SATISFYSTORAGEPOLICY(HTTP_PUT), GETSNAPSHOTDIFFLISTING(HTTP_GET),
-    GETFILELINKSTATUS(HTTP_GET),
+    GETFILELINKSTATUS(HTTP_GET), GETSTATUS(HTTP_GET),
     GET_BLOCK_LOCATIONS(HTTP_GET);
 
     private String httpMethod;
@@ -1754,6 +1760,18 @@ public class HttpFSFileSystem extends FileSystem
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     HdfsFileStatus status = JsonUtilClient.toFileStatus(json, true);
     return status.makeQualified(getUri(), path);
+  }
+
+  @Override
+  public FsStatus getStatus(final Path path) throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETSTATUS.toString());
+    HttpURLConnection conn =
+        getConnection(Operation.GETSTATUS.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    FsStatus status = JsonUtilClient.toFsStatus(json);
+    return status;
   }
 
   @VisibleForTesting
