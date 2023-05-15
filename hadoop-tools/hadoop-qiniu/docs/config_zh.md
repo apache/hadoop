@@ -1,3 +1,6 @@
+Qiniu Hadoop 配置文档
+
+```yaml
 # 七牛鉴权，必须给出否则将抛出异常
 auth:
   accessKey: ''
@@ -147,3 +150,4 @@ client:
 
 logger:
   level: "INFO" # 日志级别调整，默认为INFO，若有报错，可调整为DEBUG可获取到更多错误信息
+```
