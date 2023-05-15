@@ -381,17 +381,16 @@ public class ShortCircuitCache implements Closeable {
       int maxEvictableMmapedSize, long maxEvictableMmapedLifespanMs,
       long mmapRetryTimeoutMs, long staleThresholdMs, int shmInterruptCheckMs) {
     Preconditions.checkArgument(maxTotalSize >= 0,
-      "Invalid argument: maxTotalSize must be greater than zero.");
+      "maxTotalSize must be greater than zero.");
     this.maxTotalSize = maxTotalSize;
     Preconditions.checkArgument(maxNonMmappedEvictableLifespanMs >= 0,
-      "Invalid argument: maxNonMmappedEvictableLifespanMs must be greater than zero.");
+      "maxNonMmappedEvictableLifespanMs must be greater than zero.");
     this.maxNonMmappedEvictableLifespanMs = maxNonMmappedEvictableLifespanMs;
     Preconditions.checkArgument(maxEvictableMmapedSize >= 0,
-      "Invalid argument: " + HdfsClientConfigKeys.Mmap.CACHE_SIZE_KEY +
-      " must be greater than zero.");
+      HdfsClientConfigKeys.Mmap.CACHE_SIZE_KEY + " must be greater than zero.");
     this.maxEvictableMmapedSize = maxEvictableMmapedSize;
     Preconditions.checkArgument(maxEvictableMmapedLifespanMs >= 0,
-      "Invalid argument: maxEvictableMmapedLifespanMs must be greater than zero.");
+      "maxEvictableMmapedLifespanMs must be greater than zero.");
     this.maxEvictableMmapedLifespanMs = maxEvictableMmapedLifespanMs;
     this.mmapRetryTimeoutMs = mmapRetryTimeoutMs;
     this.staleThresholdMs = staleThresholdMs;
