@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,6 +50,8 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -70,6 +72,10 @@ import org.slf4j.LoggerFactory;
 public class TestSnapshotDiffReport {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestSnapshotDiffReport.class);
+
+  {
+    SnapshotTestHelper.disableLogs();
+  }
   private static final long SEED = 0;
   private static final short REPLICATION = 3;
   private static final short REPLICATION_1 = 2;
@@ -1602,5 +1608,51 @@ public class TestSnapshotDiffReport {
       Assert.assertTrue(e.getMessage().contains("Remote Iterator is"
           + "supported for snapshotDiffReport between two snapshots"));
     }
+  }
+
+  @Test
+  public void testSubtrees() throws Exception {
+    final Path root = new Path("/");
+    final Path foo = new Path(root, "foo");
+    final Path bar = new Path(foo, "bar");
+    hdfs.mkdirs(bar);
+    modifyAndCreateSnapshot(bar, new Path[]{root});
+
+    final SnapshottableDirectoryStatus[] snapshottables
+        = hdfs.getSnapshottableDirListing();
+    Assert.assertEquals(1, snapshottables.length);
+    Assert.assertEquals(3, snapshottables[0].getSnapshotNumber());
+
+    final SnapshotStatus[] statuses = hdfs.getSnapshotListing(root);
+    Assert.assertEquals(3, statuses.length);
+    for (int i = 0; i < statuses.length; i++) {
+      final SnapshotStatus s = statuses[i];
+      LOG.info("Snapshot #{}: {}", s.getSnapshotID(), s.getFullPath());
+      Assert.assertEquals(i, s.getSnapshotID());
+    }
+
+    for (int i = 0; i <= 2; i++) {
+      for (int j = 0; j <= 2; j++) {
+        assertDiff(root, foo, bar, "s" + i, "s" + j);
+      }
+    }
+  }
+
+  void assertDiff(Path root, Path foo, Path bar, String from, String to) throws Exception {
+    final String barDiff = diff(bar, from, to);
+    final String fooDiff = diff(foo, from, to);
+    Assert.assertEquals(barDiff, fooDiff.replace("/bar", ""));
+
+    final String rootDiff = diff(root, from, to);
+    Assert.assertEquals(fooDiff, rootDiff.replace("/foo", ""));
+    Assert.assertEquals(barDiff, rootDiff.replace("/foo/bar", ""));
+  }
+
+  String diff(Path path, String from, String to) throws Exception {
+    final SnapshotDiffReport diff = hdfs.getSnapshotDiffReport(path, from, to);
+    LOG.info("DIFF {} from {} to {}", path, from, to);
+    LOG.info("{}", diff);
+    final String report = diff.toString();
+    return report.substring(report.indexOf(":") + 1);
   }
 }
