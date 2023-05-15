@@ -1638,7 +1638,8 @@ public class TestSnapshotDiffReport {
     }
   }
 
-  void assertDiff(Path root, Path foo, Path bar, String from, String to) throws Exception {
+  private void assertDiff(Path root, Path foo, Path bar,
+      String from, String to) throws Exception {
     final String barDiff = diff(bar, from, to);
     final String fooDiff = diff(foo, from, to);
     Assert.assertEquals(barDiff, fooDiff.replace("/bar", ""));
@@ -1648,7 +1649,7 @@ public class TestSnapshotDiffReport {
     Assert.assertEquals(barDiff, rootDiff.replace("/foo/bar", ""));
   }
 
-  String diff(Path path, String from, String to) throws Exception {
+  private String diff(Path path, String from, String to) throws Exception {
     final SnapshotDiffReport diff = hdfs.getSnapshotDiffReport(path, from, to);
     LOG.info("DIFF {} from {} to {}", path, from, to);
     LOG.info("{}", diff);
