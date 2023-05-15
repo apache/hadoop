@@ -80,6 +80,7 @@ import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
@@ -177,15 +178,12 @@ public class TestShortCircuitCache {
     LambdaTestUtils.intercept(IllegalArgumentException.class,
         "maxTotalSize must be greater than zero.",
         () -> new ShortCircuitCache(-1, 1, 10, 1, 1, 10000, 0));
-
     LambdaTestUtils.intercept(IllegalArgumentException.class,
         "maxNonMmappedEvictableLifespanMs must be greater than zero.",
         () -> new ShortCircuitCache(10, -1, 10, 1, 1, 10000, 0));
-
     LambdaTestUtils.intercept(IllegalArgumentException.class,
         "dfs.client.mmap.cache.size must be greater than zero.",
         () -> new ShortCircuitCache(10, 1, -1, 1, 1, 10000, 0));
-
     LambdaTestUtils.intercept(IllegalArgumentException.class,
         "maxEvictableMmapedLifespanMs must be greater than zero.",
         () -> new ShortCircuitCache(10, 1, 10, -1, 1, 10000, 0));
