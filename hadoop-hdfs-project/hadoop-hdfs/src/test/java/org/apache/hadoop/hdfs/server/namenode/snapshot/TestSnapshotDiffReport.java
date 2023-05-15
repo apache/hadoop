@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Random;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.function.Function;
 
 import org.apache.commons.collections.list.TreeList;
 import org.apache.hadoop.conf.Configuration;
@@ -60,7 +61,6 @@ import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -118,10 +118,6 @@ public class TestSnapshotDiffReport {
     }
   }
 
-  protected Path getSnapRootDir() {
-    return sub1;
-  }
-
   private String genSnapshotName(Path snapshotDir) {
     int sNum = -1;
     if (snapshotNumberMap.containsKey(snapshotDir)) {
@@ -131,11 +127,16 @@ public class TestSnapshotDiffReport {
     return "s" + sNum;
   }
 
+  void modifyAndCreateSnapshot(Path modifyDir, Path[] snapshotDirs)
+      throws Exception {
+    modifyAndCreateSnapshot(modifyDir, snapshotDirs, hdfs, this::genSnapshotName);
+  }
   /**
    * Create/modify/delete files under a given directory, also create snapshots
    * of directories.
    */
-  protected void modifyAndCreateSnapshot(Path modifyDir, Path[] snapshotDirs)
+  static void modifyAndCreateSnapshot(Path modifyDir, Path[] snapshotDirs,
+      DistributedFileSystem hdfs, Function<Path, String> getSnapshotName)
       throws Exception {
     Path file10 = new Path(modifyDir, "file10");
     Path file11 = new Path(modifyDir, "file11");
@@ -153,7 +154,7 @@ public class TestSnapshotDiffReport {
     // create snapshot
     for (Path snapshotDir : snapshotDirs) {
       hdfs.allowSnapshot(snapshotDir);
-      hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
+      hdfs.createSnapshot(snapshotDir, getSnapshotName.apply(snapshotDir));
     }
 
     // delete file11
@@ -171,7 +172,7 @@ public class TestSnapshotDiffReport {
 
     // create snapshot
     for (Path snapshotDir : snapshotDirs) {
-      hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
+      hdfs.createSnapshot(snapshotDir, getSnapshotName.apply(snapshotDir));
     }
 
     // create file11 again
@@ -189,7 +190,7 @@ public class TestSnapshotDiffReport {
 
     // create snapshot
     for (Path snapshotDir : snapshotDirs) {
-      hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
+      hdfs.createSnapshot(snapshotDir, getSnapshotName.apply(snapshotDir));
     }
     // modify file10
     hdfs.setReplication(file10, (short) (REPLICATION + 1));
@@ -323,10 +324,6 @@ public class TestSnapshotDiffReport {
 
   @Test(timeout = 60000)
   public void testSnapRootDescendantDiffReport() throws Exception {
-    Assume.assumeTrue(conf.getBoolean(
-        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT,
-        DFSConfigKeys.
-            DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT_DEFAULT));
     Path subSub = new Path(sub1, "subsub1");
     Path subSubSub = new Path(subSub, "subsubsub1");
     Path nonSnapDir = new Path(dir, "non_snap");
@@ -585,10 +582,6 @@ public class TestSnapshotDiffReport {
 
   @Test
   public void testSnapRootDescendantDiffReportWithRename() throws Exception {
-    Assume.assumeTrue(conf.getBoolean(
-        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT,
-        DFSConfigKeys.
-            DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT_DEFAULT));
     Path subSub = new Path(sub1, "subsub1");
     Path subSubSub = new Path(subSub, "subsubsub1");
     Path nonSnapDir = new Path(dir, "non_snap");
