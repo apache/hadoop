@@ -25,6 +25,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.amazonaws.AmazonWebServiceRequest;
+import com.amazonaws.services.s3.model.DeleteObjectRequest;
+import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +43,7 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import static org.apache.hadoop.fs.audit.AuditConstants.DELETE_KEYS_SIZE;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_FILESYSTEM_ID;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_PRINCIPAL;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_THREAD0;
@@ -359,6 +362,8 @@ public class LoggingAuditor
         final T request) {
       // attach range for GetObject requests
       attachRangeFromRequest(request);
+      // for delete op, attach the number of files to delete
+      attachDeleteKeySizeAttribute(request);
       // build the referrer header
       final String header = referrer.buildHttpReferrer();
       // update the outer class's field.
@@ -383,6 +388,24 @@ public class LoggingAuditor
       }
 
       return request;
+    }
+
+    /**
+     * For delete requests, attach delete key size as a referrer attribute.
+     *
+     * @param request the request object.
+     * @param <T> type of the request.
+     */
+    private <T extends AmazonWebServiceRequest> void attachDeleteKeySizeAttribute(T request) {
+      if (request instanceof DeleteObjectsRequest) {
+        int keySize = ((DeleteObjectsRequest) request).getKeys().size();
+        this.set(DELETE_KEYS_SIZE, String.valueOf(keySize));
+      } else if (request instanceof DeleteObjectRequest) {
+        String key = ((DeleteObjectRequest) request).getKey();
+        if (key != null && key.length() > 0) {
+          this.set(DELETE_KEYS_SIZE, "1");
+        }
+      }
     }
 
     @Override

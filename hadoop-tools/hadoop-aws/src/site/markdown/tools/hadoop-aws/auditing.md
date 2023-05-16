@@ -211,6 +211,7 @@ https://audit.example.org/hadoop/1/op_rename/3c0d9b7e-2a63-43d9-a220-3c574d768ef
     &pr=alice
     &p2=s3a://alice-london/path2
     &ps=235865a0-d399-4696-9978-64568db1b51c
+    &ks=5
     &id=3c0d9b7e-2a63-43d9-a220-3c574d768ef3-3
     &t0=12
     &fs=af5943a9-b6f6-4eec-9c58-008982fc492a
@@ -237,6 +238,7 @@ If any of the field values were `null`, the field is omitted.
 | `t0` | Thread 0: thread span was created in | `100` |
 | `t1` | Thread 1: thread this operation was executed in | `200` |
 | `ts` | Timestamp (UTC epoch millis) | `1617116985923` |
+| `ks` | Key size (num of files) to delete as part of the given request (applicable to delete and rename ops) | `5` |
 
 _Notes_
 
