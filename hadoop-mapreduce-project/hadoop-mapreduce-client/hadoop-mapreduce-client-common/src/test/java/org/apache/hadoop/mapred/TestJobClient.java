@@ -23,8 +23,6 @@ import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -34,6 +32,10 @@ import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestJobClient {
 
@@ -64,7 +66,7 @@ public class TestJobClient {
 
   @Test
   @Timeout(10000)
-  void testIsJobDirValid() throws IOException {
+  public void testIsJobDirValid() throws IOException {
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getLocal(conf);
     Path testDir = new Path(TEST_DIR);

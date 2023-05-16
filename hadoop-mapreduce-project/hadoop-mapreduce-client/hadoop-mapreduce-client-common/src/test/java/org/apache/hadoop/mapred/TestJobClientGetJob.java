@@ -20,13 +20,14 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class TestJobClientGetJob {
   
