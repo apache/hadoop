@@ -27,6 +27,7 @@ import java.util.Collection;
 
 import org.junit.Test;
 
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 
 public class TestNameNodeResourcePolicy {
@@ -38,11 +39,13 @@ public class TestNameNodeResourcePolicy {
 
     int minimumRedundantResources = 2;
 
-    LogCapturer logCapturer = LogCapturer.captureLogs(NameNodeResourcePolicy.class);
+    LogCapturer logCapturer =
+        LogCapturer.captureLogs(LoggerFactory.getLogger(NameNodeResourcePolicy.class));
+
     NameNodeResourcePolicy.areResourcesAvailable(resources, minimumRedundantResources);
     logCapturer.stopCapturing();
 
-    assertTrue(logCapturer.getOutput().contains("which will cause safe mode"));
+    assertTrue(logCapturer.getOutput().contains("is greater than the total number");
   }
 
   @Test
