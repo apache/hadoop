@@ -54,7 +54,11 @@ public class QiniuKodoCommonInputStream extends FSInputStream {
     @Override
     public synchronized void seek(long pos) throws IOException {
         checkNotClosed();
-        this.position = pos;
+        if (pos < 0) {
+            throw new EOFException("Don't allow a negative seek: " + pos);
+        } else {
+            this.position = pos;
+        }
     }
 
     @Override
@@ -90,7 +94,7 @@ public class QiniuKodoCommonInputStream extends FSInputStream {
     public synchronized int read() throws IOException {
         checkNotClosed();
         if (position < 0 || position >= contentLength) {
-            throw new EOFException();
+            return -1;
         }
         refreshCurrentBlock();
         int offset = (int) (position % (long) blockSize);
