@@ -562,7 +562,7 @@ public class QiniuKodoFileSystem extends FileSystem {
                 putTime, // access time
                 FsPermission.createImmutable(
                         isDir
-                                ? (short) 0777 // rwxrwxrwx
+                                ? (short) 0715 // rwxrwxrwx
                                 : (short) 0666 // rw-rw-rw-
                 ),   // permission
                 username,   // owner
