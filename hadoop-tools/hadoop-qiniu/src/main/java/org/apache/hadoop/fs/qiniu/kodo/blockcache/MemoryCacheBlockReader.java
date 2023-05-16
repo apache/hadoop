@@ -39,10 +39,6 @@ public class MemoryCacheBlockReader implements IBlockReader {
     @Override
     public void deleteBlocks(String key) {
         source.deleteBlocks(key);
-        for (KeyBlockIdCacheKey kbck : lruCache.keySet()) {
-            if (kbck.key.equals(key)) {
-                lruCache.remove(kbck);
-            }
-        }
+        lruCache.removeIf(x -> x.getKey().key.equals(key));
     }
 }
