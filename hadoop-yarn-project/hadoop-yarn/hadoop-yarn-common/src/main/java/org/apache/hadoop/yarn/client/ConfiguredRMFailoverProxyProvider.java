@@ -60,7 +60,7 @@ public class ConfiguredRMFailoverProxyProvider<T>
     this.protocol = protocol;
     this.rmProxy.checkAllowedProtocols(this.protocol);
     this.conf = new YarnConfiguration(configuration);
-    Collection<String> rmIds = getRandomOrder(conf);
+    Collection<String> rmIds = getRMIds(conf);
     this.rmServiceIds = rmIds.toArray(new String[rmIds.size()]);
     conf.set(YarnConfiguration.RM_HA_ID, rmServiceIds[currentProxyIndex]);
 
@@ -124,6 +124,20 @@ public class ConfiguredRMFailoverProxyProvider<T>
   }
 
   /**
+   * Get the list of RM IDs.
+   *
+   * @param conf Configuration.
+   * @return rmId.
+   */
+  private Collection<String> getRMIds(Configuration conf) {
+    boolean isFederationEnabled = HAUtil.isFederationEnabled(conf);
+    if (!isFederationEnabled) {
+      return HAUtil.getRMHAIds(conf);
+    }
+    return getRandomOrderByRandomFlag(conf);
+  }
+
+  /**
    * YARN Federation mode, the Router is considered as an RM for the client.
    * We want the client to be able to randomly
    * Select a Router and support failover when selecting a Router.
@@ -136,17 +150,18 @@ public class ConfiguredRMFailoverProxyProvider<T>
    * @param conf Configuration.
    * @return rmIds
    */
-  private Collection<String> getRandomOrder(Configuration conf) {
-    boolean isFederationEnabled = HAUtil.isFederationEnabled(conf);
+  private Collection<String> getRandomOrderByRandomFlag(Configuration conf) {
     Collection<String> rmIds = HAUtil.getRMHAIds(conf);
     boolean isRandomOrder = conf.getBoolean(
         YarnConfiguration.FEDERATION_YARN_CLIENT_FAILOVER_RANDOM_ORDER,
         YarnConfiguration.DEFAULT_FEDERATION_YARN_CLIENT_FAILOVER_RANDOM_ORDER);
-    if (isFederationEnabled && isRandomOrder) {
-      List<String> rmIdList = new ArrayList<>(rmIds);
-      Collections.shuffle(rmIdList);
-      return rmIdList;
+    // If the Random option is not enabled, returns the configured array.
+    if (!isRandomOrder) {
+      return rmIds;
     }
-    return rmIds;
+    // If the Random option is enabled, returns an array of Random.
+    List<String> rmIdList = new ArrayList<>(rmIds);
+    Collections.shuffle(rmIdList);
+    return rmIdList;
   }
 }

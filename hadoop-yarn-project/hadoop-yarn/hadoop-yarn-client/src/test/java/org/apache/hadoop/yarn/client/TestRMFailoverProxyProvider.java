@@ -33,7 +33,9 @@ import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
@@ -347,21 +349,32 @@ public class TestRMFailoverProxyProvider {
     for (int i = 0; i < NUM_ITERATIONS; i++) {
       fpp.init(conf, mockRMProxy, protocol);
       FailoverProxyProvider.ProxyInfo<Proxy> proxy = fpp.getProxy();
-      if (("router0").equals(proxy.proxyInfo)) {
+      if ("router0".equals(proxy.proxyInfo)) {
         router1Count.incrementAndGet();
       }
-      if (("router1").equals(proxy.proxyInfo)) {
+      if ("router1".equals(proxy.proxyInfo)) {
         router2Count.incrementAndGet();
       }
-      if (("router2").equals(proxy.proxyInfo)) {
+      if ("router2".equals(proxy.proxyInfo)) {
         router3Count.incrementAndGet();
       }
     }
 
-    assertTrue(router1Count.get() < NUM_ITERATIONS && router1Count.get() > 0);
-    assertTrue(router2Count.get() < NUM_ITERATIONS && router2Count.get() > 0);
-    assertTrue(router3Count.get() < NUM_ITERATIONS && router3Count.get() > 0);
-    assertEquals(NUM_ITERATIONS, router1Count.get() + router2Count.get() + router3Count.get());
+    // router1Count、router2Count、router3Count are
+    // less than NUM_ITERATIONS
+    assertTrue(router1Count.get() < NUM_ITERATIONS);
+    assertTrue(router2Count.get() < NUM_ITERATIONS);
+    assertTrue(router3Count.get() < NUM_ITERATIONS);
+
+    // router1Count、router2Count、router3Count are
+    // more than NUM_ITERATIONS
+    assertTrue(router1Count.get() > 0);
+    assertTrue(router2Count.get() > 0);
+    assertTrue(router3Count.get() > 0);
+
+    // totals(router1Count+router2Count+router3Count ) should be equal NUM_ITERATIONS
+    int totalCount = router1Count.get() + router2Count.get() + router3Count.get();
+    assertEquals(NUM_ITERATIONS, totalCount);
   }
 }
 
