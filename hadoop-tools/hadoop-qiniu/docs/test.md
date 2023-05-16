@@ -78,3 +78,8 @@ XInclude inclusion. Here is an example of `contract-test-options.xml`:
 </configuration>
 ```
 
+### Use maven command
+
+```shell
+mvn test -Dtest=QiniuKodoFileSystemContractBaseTest,QiniuKodoContractCreateTest,QiniuKodoContractDeleteTest,QiniuKodoContractDistCpTest,QiniuKodoContractGetFileStatusTest,QiniuKodoContractMkdirTest,QiniuKodoContractOpenTest,QiniuKodoContractRenameTest,QiniuKodoContractRootDirTest,QiniuKodoContractSeekTest
+```

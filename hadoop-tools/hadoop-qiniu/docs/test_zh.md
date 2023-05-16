@@ -73,3 +73,8 @@
 </configuration>
 ```
 
+### 使用maven测试命令
+
+```shell
+mvn test -Dtest=QiniuKodoFileSystemContractBaseTest,QiniuKodoContractCreateTest,QiniuKodoContractDeleteTest,QiniuKodoContractDistCpTest,QiniuKodoContractGetFileStatusTest,QiniuKodoContractMkdirTest,QiniuKodoContractOpenTest,QiniuKodoContractRenameTest,QiniuKodoContractRootDirTest,QiniuKodoContractSeekTest
+```
