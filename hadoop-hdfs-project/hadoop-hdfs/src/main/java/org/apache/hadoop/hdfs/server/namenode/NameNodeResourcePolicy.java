@@ -20,6 +20,9 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.util.Collection;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Given a set of checkable resources, this class is capable of determining
@@ -38,6 +41,9 @@ final class NameNodeResourcePolicy {
    * @return true if and only if there are sufficient NN resources to
    *         continue logging edits.
    */
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NameNodeResourcePolicy.class.getName());
+
   static boolean areResourcesAvailable(
       Collection<? extends CheckableNameNodeResource> resources,
       int minimumRedundantResources) {
@@ -73,6 +79,11 @@ final class NameNodeResourcePolicy {
       // required resources available.
       return requiredResourceCount > 0;
     } else {
+      if (minimumRedundantResources > resources.size()){
+        LOG.warn("The value of " + DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_MINIMUM_KEY
+            + " is greater than the total number of existing storage volumes,"
+            + " which will cause safe mode to not be turned off even if resources are added.");
+      }
       return redundantResourceCount - disabledRedundantResourceCount >=
           minimumRedundantResources;
     }
