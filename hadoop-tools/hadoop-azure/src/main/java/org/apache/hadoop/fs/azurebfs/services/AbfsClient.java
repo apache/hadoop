@@ -87,7 +87,7 @@ public class AbfsClient implements Closeable {
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
-  private final String xMsVersion = "2019-12-12";
+  private String xMsVersion = "2019-12-12";
   private final ExponentialRetryPolicy retryPolicy;
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
@@ -872,9 +872,9 @@ public class AbfsClient implements Closeable {
             ConfigurationKeys.FS_AZURE_ENABLE_PAGINATED_DELETE,
             DEFAULT_ENABLE_PAGINATED_DELETE
     );
-    if (enablePagination) {
-      abfsUriQueryBuilder.addQuery(QUERY_PARAM_PAGINATED, String.valueOf(enablePagination));
-    }
+
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_PAGINATED, String.valueOf(enablePagination));
+
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RECURSIVE, String.valueOf(recursive));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
     String operation = recursive ? SASTokenProvider.DELETE_RECURSIVE_OPERATION : SASTokenProvider.DELETE_OPERATION;
