@@ -211,7 +211,7 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/data
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/TimeoutFuture.java
 
 
-com.qiniu:qiniu-java-sdk:7.12.1
+com.qiniu:qiniu-java-sdk:7.13.0
 com.aliyun:aliyun-java-sdk-core:3.4.0
 com.aliyun:aliyun-java-sdk-ecs:4.2.0
 com.aliyun:aliyun-java-sdk-ram:3.0.0
