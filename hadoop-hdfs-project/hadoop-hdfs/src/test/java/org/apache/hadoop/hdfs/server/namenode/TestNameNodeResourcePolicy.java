@@ -27,6 +27,8 @@ import java.util.Collection;
 
 import org.junit.Test;
 
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+
 public class TestNameNodeResourcePolicy {
 
   @Test
@@ -71,7 +73,18 @@ public class TestNameNodeResourcePolicy {
     assertFalse(testResourceScenario(2, 2, 1, 1, 1));
     assertFalse(testResourceScenario(2, 2, 2, 1, 1));
   }
-  
+
+  @Test
+  public void testExcessiveMinimumRedundantResources() {
+    Collection<CheckableNameNodeResource> resources =
+        new ArrayList<CheckableNameNodeResource>();
+    int minimumRedundantResources = 2;
+    LogCapturer logCapturer = LogCapturer.captureLogs(NameNodeResourcePolicy.class);
+    NameNodeResourcePolicy.areResourcesAvailable(resources, minimumRedundantResources);
+    logCapturer.stopCapturing();
+    assertTrue(logCapturer.getOutput().contains("which will cause safe mode"));
+  }
+
   private static boolean testResourceScenario(
       int numRedundantResources,
       int numRequiredResources,
