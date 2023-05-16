@@ -81,11 +81,11 @@ public abstract class StateStoreFileBaseImpl
 
   private ExecutorService concurrentStoreAccessPool;
 
-
   /**
    * Get the reader of a record for the file system.
    *
    * @param path Path of the record to read.
+   * @param <T> Type of the state store record.
    * @return Reader for the record.
    */
   protected abstract <T extends BaseRecord> BufferedReader getReader(
@@ -95,6 +95,7 @@ public abstract class StateStoreFileBaseImpl
    * Get the writer of a record for the file system.
    *
    * @param path Path of the record to write.
+   * @param <T> Type of the state store record.
    * @return Writer for the record.
    */
   @VisibleForTesting

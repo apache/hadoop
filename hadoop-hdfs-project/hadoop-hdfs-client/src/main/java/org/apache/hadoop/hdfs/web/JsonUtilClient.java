@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
@@ -820,6 +821,18 @@ public class JsonUtilClient {
         toDiffList(getList(m, "diffList"));
     return new SnapshotDiffReport(snapshotRoot, fromSnapshot, toSnapshot,
         diffList);
+  }
+
+  public static FsStatus toFsStatus(Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    Map<?, ?> m =
+        (Map<?, ?>) json.get(FsStatus.class.getSimpleName());
+    long capacity = getLong(m, "capacity", Long.MAX_VALUE);
+    long used = getLong(m, "used", 0);
+    long remaining = getLong(m, "remaining", Long.MAX_VALUE);
+    return new FsStatus(capacity, used, remaining);
   }
 
   private static List<SnapshotDiffReport.DiffReportEntry> toDiffList(

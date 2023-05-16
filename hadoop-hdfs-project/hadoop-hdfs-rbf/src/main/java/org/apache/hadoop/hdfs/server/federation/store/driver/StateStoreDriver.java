@@ -54,13 +54,13 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
   /** State Store metrics. */
   private StateStoreMetrics metrics;
 
-
   /**
    * Initialize the state store connection.
    *
    * @param config Configuration for the driver.
    * @param id Identifier for the driver.
    * @param records Records that are supported.
+   * @param stateStoreMetrics State store metrics.
    * @return If initialized and ready, false if failed to initialize driver.
    */
   public boolean init(final Configuration config, final String id,
@@ -133,10 +133,10 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
    * Initialize storage for a single record class.
    *
    * @param className String reference of the record class to initialize,
-   *                  used to construct paths and file names for the record.
-   *                  Determined by configuration settings for the specific
-   *                  driver.
+   * used to construct paths and file names for the record.
+   * Determined by configuration settings for the specific driver.
    * @param clazz Record type corresponding to the provided name.
+   * @param <T> Type of the state store record.
    * @return True if successful, false otherwise.
    */
   public abstract <T extends BaseRecord> boolean initRecordStorage(
@@ -166,6 +166,8 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
 
   /**
    * Close the State Store driver connection.
+   *
+   * @throws Exception if something goes wrong while closing the state store driver connection.
    */
   public abstract void close() throws Exception;
 
