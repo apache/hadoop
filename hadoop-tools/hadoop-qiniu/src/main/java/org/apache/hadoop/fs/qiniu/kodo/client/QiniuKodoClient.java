@@ -20,7 +20,6 @@ import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.CopyOperator;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.DeleteOperator;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.RenameOperator;
 import org.apache.hadoop.fs.qiniu.kodo.config.MissingConfigFieldException;
-import org.apache.hadoop.fs.qiniu.kodo.config.ProxyConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.client.base.ListAndBatchBaseConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.client.base.ListProducerConfig;
@@ -251,7 +250,14 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         return Arrays.asList(listing.items);
     }
 
-    public RemoteIterator<FileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException {
+    /**
+     * 列举出指定前缀的所有对象
+     *
+     * @param prefixKey    前缀
+     * @param useDirectory 是否使用路径分割
+     * @return 迭代器
+     */
+    public RemoteIterator<FileInfo> listStatusIterator(String prefixKey, boolean useDirectory) {
         ListProducerConfig listConfig = fsConfig.client.list;
         // 消息队列
         BlockingQueue<FileInfo> fileInfoQueue = new LinkedBlockingQueue<>(listConfig.bufferSize);

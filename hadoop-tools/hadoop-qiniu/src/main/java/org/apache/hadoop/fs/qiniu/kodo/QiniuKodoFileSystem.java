@@ -16,6 +16,7 @@ import org.apache.hadoop.fs.qiniu.kodo.upload.QiniuKodoOutputStream;
 import org.apache.hadoop.fs.qiniu.kodo.util.QiniuKodoUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
@@ -24,6 +25,7 @@ import org.apache.log4j.lf5.LogLevelFormatException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -121,11 +123,15 @@ public class QiniuKodoFileSystem extends FileSystem {
         // root
         if (key.length() == 0) throw fnfeDir;
 
-        long len = kodoClient.getLength(key);
+        FileStatus fileStatus = getFileStatus(qualifiedPath);
+        if (fileStatus.isDirectory()) throw fnfeDir;
+
+        long len = fileStatus.getLen();
         // 空文件内容
         if (len == 0) {
             return new FSDataInputStream(new EmptyInputStream());
         }
+
         return new FSDataInputStream(
                 new QiniuKodoInputStream(
                         key,
@@ -155,23 +161,43 @@ public class QiniuKodoFileSystem extends FileSystem {
         randomBlockReader.deleteBlocks(key);
     }
 
+    @Override
+    public FSDataOutputStreamBuilder createFile(Path path) {
+        return super.createFile(path);
+    }
+
     /**
      * 创建一个文件，返回一个可以被写入的输出流
      */
     @Override
     public FSDataOutputStream create(Path path, FsPermission permission, boolean overwrite, int bufferSize, short replication, long blockSize, Progressable progress) throws IOException {
+        IOException faee = new FileAlreadyExistsException("Can't create file " + path +
+                " because it is a directory");
         LOG.debug("create, path:" + path + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
 
-        if (path.isRoot()) {
-            throw new IOException("Cannot create file named /");
+        if (path.isRoot()) throw faee;
+
+        try {
+            FileStatus fileStatus = getFileStatus(path);
+            // 文件已存在, 如果是文件夹则抛出异常
+            if (fileStatus.isDirectory()) {
+                throw faee;
+            } else {
+                // 文件已存在，如果不能覆盖则抛出异常
+                if (!overwrite) {
+                    throw new FileAlreadyExistsException("File already exists: " + path);
+                }
+            }
+        } catch (FileNotFoundException e) {
+            // ignore
+            // 文件不存在，可以被创建
         }
         makeSureWorkdirCreated(path);
-
         mkdirs(path.getParent());
-
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
-
-        if (overwrite) deleteKeyBlocks(key);
+        if (overwrite) {
+            deleteKeyBlocks(key);
+        }
 
         return new FSDataOutputStream(
                 new QiniuKodoOutputStream(
@@ -185,16 +211,50 @@ public class QiniuKodoFileSystem extends FileSystem {
         );
     }
 
+    /**
+     * 创建一个文件，返回一个可以被写入的输出流，该创建文件的方法不会递归创建父目录
+     *
+     * @param path        the file name to open
+     * @param permission  file permission
+     * @param flags       {@link CreateFlag}s to use for this stream.
+     * @param bufferSize  the size of the buffer to be used.
+     * @param replication required block replication for the file.
+     * @param blockSize   block size
+     * @param progress    the progress reporter
+     * @return
+     * @throws IOException
+     */
     @Override
     public FSDataOutputStream createNonRecursive(
             Path path, FsPermission permission,
             EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
             Progressable progress) throws IOException {
         boolean overwrite = flags.contains(CreateFlag.OVERWRITE);
-        if (path.isRoot()) throw new IOException("Cannot create file named /");
+
+        IOException faee = new FileAlreadyExistsException("Can't create file " + path +
+                " because it is a directory");
+        LOG.debug("createNonRecursive, path:" + path + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
+
+        try {
+            FileStatus fileStatus = getFileStatus(path);
+            // 文件已存在, 如果是文件夹则抛出异常
+            if (fileStatus.isDirectory()) {
+                throw faee;
+            } else {
+                // 文件已存在，如果不能覆盖则抛出异常
+                if (!overwrite) {
+                    throw new FileAlreadyExistsException("File already exists: " + path);
+                }
+            }
+        } catch (FileNotFoundException e) {
+            // ignore
+            // 文件不存在，可以被创建
+        }
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        if (overwrite) deleteKeyBlocks(key);
+        if (overwrite) {
+            deleteKeyBlocks(key);
+        }
 
         return new FSDataOutputStream(
                 new QiniuKodoOutputStream(
@@ -216,7 +276,6 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     @Override
     public boolean rename(Path srcPath, Path dstPath) throws IOException {
-        // TODO: 需要考虑重命名本地缓存池中的缓存
         if (srcPath.isRoot()) {
             // Cannot rename root of file system
             LOG.debug("Cannot rename the root of a filesystem");
@@ -276,12 +335,9 @@ public class QiniuKodoFileSystem extends FileSystem {
                             srcPath, dstPath));
                 }
             } else {
-                // If dst is not a directory
-//                if (srcStatus.isFile()) return false;
-//                throw new FileAlreadyExistsException(String.format(
-//                        "Failed to rename %s to %s, file already exists!",
-//                        srcPath, dstPath));
-                return false;
+                throw new FileAlreadyExistsException(String.format(
+                        "Failed to rename %s to %s, file already exists!",
+                        srcPath, dstPath));
             }
         }
 
@@ -360,49 +416,21 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     @Override
     public FileStatus[] listStatus(Path path) throws IOException {
-        LOG.debug("listStatus, path:" + path);
-
-        String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        key = QiniuKodoUtils.keyToDirKey(key);
-        LOG.debug("listStatus, key:" + key);
-
-        // 尝试列举
-        List<FileInfo> files = kodoClient.listStatus(key, true);
-        if (!files.isEmpty()) {
-            // 列举成功
-            return files.stream()
-                    .filter(Objects::nonNull)
-                    .map(this::fileInfoToFileStatus)
-                    .toArray(FileStatus[]::new);
-        }
-        // 列举为空
-
-        // 可能文件夹本身就不存在
-        if (getFileStatus(path) == null) {
-            throw new FileNotFoundException(path.toString());
-        }
-
-        // 文件夹存在，的确是空文件夹
-        return new FileStatus[0];
+        return RemoteIterators.toArray(listStatusIterator(path), new FileStatus[0]);
     }
 
     @Override
     public RemoteIterator<FileStatus> listStatusIterator(Path path) throws IOException {
-        String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        key = QiniuKodoUtils.keyToDirKey(key);
+        FileStatus status = getFileStatus(path);
+        if (status.isFile()) {
+            return RemoteIterators.remoteIteratorFromSingleton(status);
+        }
 
-        RemoteIterator<FileInfo> it = kodoClient.listStatusIterator(key, true);
-        return new RemoteIterator<FileStatus>() {
-            @Override
-            public boolean hasNext() throws IOException {
-                return it.hasNext();
-            }
-
-            @Override
-            public FileStatus next() throws IOException {
-                return fileInfoToFileStatus(it.next());
-            }
-        };
+        final String key = QiniuKodoUtils.keyToDirKey(QiniuKodoUtils.pathToKey(workingDir, path));
+        return RemoteIterators.mappingRemoteIterator(
+                kodoClient.listStatusIterator(key, true),
+                this::fileInfoToFileStatus
+        );
     }
 
     @Override
