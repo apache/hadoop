@@ -172,7 +172,7 @@ public class TestShortCircuitCache {
         new ShortCircuitCache(10, 1, 10, 1, 1, 10000, 0);
     cache.close();
   }
-  
+
   @Test(timeout=5000)
   public void testInvalidConfiguration() throws Exception {
     LambdaTestUtils.intercept(IllegalArgumentException.class,
@@ -188,7 +188,7 @@ public class TestShortCircuitCache {
         "maxEvictableMmapedLifespanMs must be greater than zero.",
         () -> new ShortCircuitCache(10, 1, 10, -1, 1, 10000, 0));
   }
-  
+
   @Test(timeout=60000)
   public void testAddAndRetrieve() throws Exception {
     final ShortCircuitCache cache =
