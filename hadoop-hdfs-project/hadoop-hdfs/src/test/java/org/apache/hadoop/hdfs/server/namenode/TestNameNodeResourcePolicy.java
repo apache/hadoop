@@ -32,6 +32,20 @@ import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 public class TestNameNodeResourcePolicy {
 
   @Test
+  public void testExcessiveMinimumRedundantResources() {
+    Collection<CheckableNameNodeResource> resources =
+        new ArrayList<CheckableNameNodeResource>();
+
+    int minimumRedundantResources = 2;
+
+    LogCapturer logCapturer = LogCapturer.captureLogs(NameNodeResourcePolicy.class);
+    NameNodeResourcePolicy.areResourcesAvailable(resources, minimumRedundantResources);
+    logCapturer.stopCapturing();
+
+    assertTrue(logCapturer.getOutput().contains("which will cause safe mode"));
+  }
+
+  @Test
   public void testSingleRedundantResource() {
     assertTrue(testResourceScenario(1, 0, 0, 0, 1));
     assertFalse(testResourceScenario(1, 0, 1, 0, 1));
@@ -72,17 +86,6 @@ public class TestNameNodeResourcePolicy {
     assertFalse(testResourceScenario(2, 2, 0, 1, 1));
     assertFalse(testResourceScenario(2, 2, 1, 1, 1));
     assertFalse(testResourceScenario(2, 2, 2, 1, 1));
-  }
-
-  @Test
-  public void testExcessiveMinimumRedundantResources() {
-    Collection<CheckableNameNodeResource> resources =
-        new ArrayList<CheckableNameNodeResource>();
-    int minimumRedundantResources = 2;
-    LogCapturer logCapturer = LogCapturer.captureLogs(NameNodeResourcePolicy.class);
-    NameNodeResourcePolicy.areResourcesAvailable(resources, minimumRedundantResources);
-    logCapturer.stopCapturing();
-    assertTrue(logCapturer.getOutput().contains("which will cause safe mode"));
   }
 
   private static boolean testResourceScenario(
