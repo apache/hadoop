@@ -236,7 +236,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
       List<T> records, boolean update, boolean error) throws IOException {
     verifyDriverReady();
     if (records.isEmpty()) {
-      return new StateStoreOperationResult(Collections.emptyList(), true);
+      return StateStoreOperationResult.getDefaultSuccessResult();
     }
 
     // All records should be the same

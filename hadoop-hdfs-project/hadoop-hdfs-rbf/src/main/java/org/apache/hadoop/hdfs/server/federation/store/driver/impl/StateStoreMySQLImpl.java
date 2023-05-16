@@ -165,7 +165,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
   public <T extends BaseRecord> StateStoreOperationResult putAll(
       List<T> records, boolean allowUpdate, boolean errorIfExists) throws IOException {
     if (records.isEmpty()) {
-      return new StateStoreOperationResult(Collections.emptyList(), true);
+      return StateStoreOperationResult.getDefaultSuccessResult();
     }
 
     verifyDriverReady();
@@ -197,7 +197,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
             if (metrics != null) {
               metrics.addFailure(Time.monotonicNow() - start);
             }
-            return new StateStoreOperationResult(Collections.singletonList(primaryKey), false);
+            return new StateStoreOperationResult(primaryKey);
           } else {
             LOG.debug("Not updating {} as updates are not allowed", record);
           }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.federation.store.driver;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -33,10 +34,35 @@ public class StateStoreOperationResult {
   private final List<String> failedRecordsKeys;
   private final boolean isOperationSuccessful;
 
+  private static final StateStoreOperationResult DEFAULT_OPERATION_SUCCESS_RESULT =
+      new StateStoreOperationResult(Collections.emptyList(), true);
+
+  /**
+   * State store operation result constructor with list of failed records keys and boolean
+   * to inform whether the overall operation is successful.
+   *
+   * @param failedRecordsKeys The list of failed records keys.
+   * @param isOperationSuccessful True if the operation was successful, False otherwise.
+   */
   public StateStoreOperationResult(List<String> failedRecordsKeys,
       boolean isOperationSuccessful) {
     this.failedRecordsKeys = failedRecordsKeys;
     this.isOperationSuccessful = isOperationSuccessful;
+  }
+
+  /**
+   * State store operation result constructor with a single failed record key.
+   *
+   * @param failedRecordKey The failed record key.
+   */
+  public StateStoreOperationResult(String failedRecordKey) {
+    if (failedRecordKey != null && failedRecordKey.length() > 0) {
+      this.isOperationSuccessful = false;
+      this.failedRecordsKeys = Collections.singletonList(failedRecordKey);
+    } else {
+      this.isOperationSuccessful = true;
+      this.failedRecordsKeys = Collections.emptyList();
+    }
   }
 
   public List<String> getFailedRecordsKeys() {
@@ -45,5 +71,9 @@ public class StateStoreOperationResult {
 
   public boolean isOperationSuccessful() {
     return isOperationSuccessful;
+  }
+
+  public static StateStoreOperationResult getDefaultSuccessResult() {
+    return DEFAULT_OPERATION_SUCCESS_RESULT;
   }
 }

@@ -378,7 +378,7 @@ public abstract class StateStoreFileBaseImpl
           throws StateStoreUnavailableException {
     verifyDriverReady();
     if (records.isEmpty()) {
-      return new StateStoreOperationResult(Collections.emptyList(), true);
+      return StateStoreOperationResult.getDefaultSuccessResult();
     }
 
     long start = monotonicNow();
@@ -403,7 +403,7 @@ public abstract class StateStoreFileBaseImpl
           if (metrics != null) {
             metrics.addFailure(monotonicNow() - start);
           }
-          return new StateStoreOperationResult(Collections.singletonList(primaryKey), false);
+          return new StateStoreOperationResult(primaryKey);
         } else {
           LOG.debug("Not updating {}", record);
         }
@@ -473,23 +473,24 @@ public abstract class StateStoreFileBaseImpl
    */
   private <T extends BaseRecord> Void writeRecordToFile(AtomicBoolean success,
       Entry<String, T> entry, List<String> failedRecordsList) {
-    String recordPath = entry.getKey();
-    String recordPathTemp = recordPath + "." + now() + TMP_MARK;
+    final String recordPath = entry.getKey();
+    final T record = entry.getValue();
+    final String primaryKey = getPrimaryKey(record);
+    final String recordPathTemp = recordPath + "." + now() + TMP_MARK;
     boolean recordWrittenSuccessfully = true;
     try (BufferedWriter writer = getWriter(recordPathTemp)) {
-      T record = entry.getValue();
       String line = serializeString(record);
       writer.write(line);
     } catch (IOException e) {
       LOG.error("Cannot write {}", recordPathTemp, e);
       recordWrittenSuccessfully = false;
-      failedRecordsList.add(getPrimaryKey(entry.getValue()));
+      failedRecordsList.add(primaryKey);
       success.set(false);
     }
     // Commit
     if (recordWrittenSuccessfully && !rename(recordPathTemp, recordPath)) {
       LOG.error("Failed committing record into {}", recordPath);
-      failedRecordsList.add(getPrimaryKey(entry.getValue()));
+      failedRecordsList.add(primaryKey);
       success.set(false);
     }
     return null;
