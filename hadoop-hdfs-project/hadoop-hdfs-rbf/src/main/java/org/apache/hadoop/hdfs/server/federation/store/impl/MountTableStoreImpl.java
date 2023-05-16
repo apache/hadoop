@@ -145,7 +145,7 @@ public class MountTableStoreImpl extends MountTableStore {
       final String src = mountTable.getSourcePath();
       checkMountTablePermission(src);
     }
-    boolean status = getDriver().putAll(mountTables, false, true);
+    boolean status = getDriver().putAll(mountTables, false, true).isOperationSuccessful();
     AddMountTableEntriesResponse response = AddMountTableEntriesResponse.newInstance();
     response.setStatus(status);
     if (status) {
