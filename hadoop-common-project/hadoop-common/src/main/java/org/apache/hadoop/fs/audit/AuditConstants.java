@@ -115,4 +115,9 @@ public final class AuditConstants {
    */
   public static final String PARAM_TIMESTAMP = "ts";
 
+  /**
+   * Num of files to be deleted as part of the bulk delete request.
+   */
+  public static final String DELETE_KEYS_SIZE = "ks";
+
 }
