@@ -45,7 +45,7 @@ public class TestNameNodeResourcePolicy {
     NameNodeResourcePolicy.areResourcesAvailable(resources, minimumRedundantResources);
     logCapturer.stopCapturing();
 
-    assertTrue(logCapturer.getOutput().contains("is greater than the total number");
+    assertTrue(logCapturer.getOutput().contains("is greater than the total number"));
   }
 
   @Test
