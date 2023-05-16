@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.sql.CallableStatement;
@@ -35,7 +36,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos;
@@ -91,6 +94,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenReque
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.ApplicationHomeSubClusterPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
@@ -145,7 +149,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       "{call sp_subClusterHeartbeat(?, ?, ?, ?)}";
 
   private static final String CALL_SP_ADD_APPLICATION_HOME_SUBCLUSTER =
-      "{call sp_addApplicationHomeSubCluster(?, ?, ?, ?)}";
+      "{call sp_addApplicationHomeSubCluster(?, ?, ?, ?, ?)}";
 
   private static final String CALL_SP_UPDATE_APPLICATION_HOME_SUBCLUSTER =
       "{call sp_updateApplicationHomeSubCluster(?, ?, ?)}";
@@ -610,10 +614,12 @@ public class SQLFederationStateStore implements FederationStateStore {
     CallableStatement cstmt = null;
 
     String subClusterHome = null;
-    ApplicationId appId =
-        request.getApplicationHomeSubCluster().getApplicationId();
-    SubClusterId subClusterId =
-        request.getApplicationHomeSubCluster().getHomeSubCluster();
+    ApplicationHomeSubCluster applicationHomeSubCluster =
+        request.getApplicationHomeSubCluster();
+    ApplicationId appId = applicationHomeSubCluster.getApplicationId();
+    SubClusterId subClusterId = applicationHomeSubCluster.getHomeSubCluster();
+    ApplicationSubmissionContext applicationContext =
+        applicationHomeSubCluster.getApplicationSubmissionContext();
 
     try {
       cstmt = getCallableStatement(CALL_SP_ADD_APPLICATION_HOME_SUBCLUSTER);
@@ -621,6 +627,10 @@ public class SQLFederationStateStore implements FederationStateStore {
       // Set the parameters for the stored procedure
       cstmt.setString("applicationId_IN", appId.toString());
       cstmt.setString("homeSubCluster_IN", subClusterId.getId());
+      if (applicationHomeSubCluster != null) {
+        cstmt.setBlob("applicationContext_IN", new ByteArrayInputStream(
+            ((ApplicationSubmissionContextPBImpl) applicationContext).getProto().toByteArray()));
+      }
       cstmt.registerOutParameter("storedHomeSubCluster_OUT", VARCHAR);
       cstmt.registerOutParameter("rowCount_OUT", INTEGER);
 
