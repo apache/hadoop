@@ -1133,6 +1133,12 @@
         <groupId>com.amazonaws</groupId>
         <artifactId>aws-java-sdk-core</artifactId>
         <version>${aws-java-sdk.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>software.amazon.ion</groupId>
+            <artifactId>ion-java</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>software.amazon.awssdk</groupId>
@@ -1142,6 +1148,14 @@
           <exclusion>
             <groupId>io.netty</groupId>
             <artifactId>*</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>software.amazon.eventstream</groupId>
+            <artifactId>eventstream</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-cbor</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
