@@ -189,6 +189,7 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String FILE_STATUSES_JSON = "FileStatuses";
   public static final String FILE_STATUS_JSON = "FileStatus";
+  public static final String FS_STATUS_JSON = "FsStatus";
   public static final String PATH_SUFFIX_JSON = "pathSuffix";
   public static final String TYPE_JSON = "type";
   public static final String LENGTH_JSON = "length";
@@ -209,6 +210,9 @@ public class HttpFSFileSystem extends FileSystem
   public static final String XATTRNAMES_JSON = "XAttrNames";
   public static final String ECPOLICY_JSON = "ecPolicyObj";
   public static final String SYMLINK_JSON = "symlink";
+  public static final String CAPACITY_JSON="capacity";
+  public static final String USED_JSON="used";
+  public static final String REMAINING_JSON="remaining";
 
   public static final String FILE_CHECKSUM_JSON = "FileChecksum";
   public static final String CHECKSUM_ALGORITHM_JSON = "algorithm";
@@ -247,11 +251,6 @@ public class HttpFSFileSystem extends FileSystem
   public static final String STORAGE_POLICIES_JSON = "BlockStoragePolicies";
   public static final String STORAGE_POLICY_JSON = "BlockStoragePolicy";
   public static final String BLOCK_LOCATIONS_JSON = "BlockLocations";
-
-  public static final String FS_STATUS_JSON = "FsStatus";
-  public static final String FS_STATUS_USED_JSON = "Used";
-  public static final String FS_STATUS_REMAINING_JSON = "Remaining";
-  public static final String FS_STATUS_CAPACITY_JSON = "Capacity";
 
   public static final int HTTP_TEMPORARY_REDIRECT = 307;
 

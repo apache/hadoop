@@ -435,9 +435,9 @@ public final class FSOperations {
   private static Map<String, Object> toJson(FsStatus fsStatus) {
     Map<String, Object> json = new LinkedHashMap<>();
     JSONObject statusJson = new JSONObject();
-    statusJson.put(HttpFSFileSystem.FS_STATUS_USED_JSON, fsStatus.getUsed());
-    statusJson.put(HttpFSFileSystem.FS_STATUS_REMAINING_JSON, fsStatus.getRemaining());
-    statusJson.put(HttpFSFileSystem.FS_STATUS_CAPACITY_JSON, fsStatus.getCapacity());
+    statusJson.put(HttpFSFileSystem.USED_JSON, fsStatus.getUsed());
+    statusJson.put(HttpFSFileSystem.REMAINING_JSON, fsStatus.getRemaining());
+    statusJson.put(HttpFSFileSystem.CAPACITY_JSON, fsStatus.getCapacity());
     json.put(HttpFSFileSystem.FS_STATUS_JSON, statusJson);
     return json;
   }
