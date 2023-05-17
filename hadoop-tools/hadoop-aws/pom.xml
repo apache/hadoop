@@ -504,6 +504,10 @@
       <scope>test</scope>
       <type>test-jar</type>
     </dependency>
+
+    <!-- The v1 SDK is used at compilation time for adapter classes in
+         org.apache.hadoop.fs.s3a.adapter. It is not needed at runtime
+         unless a non-standard v1 credential provider is declared. -->
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-core</artifactId>
