@@ -1,19 +1,18 @@
-# Using Qiniu Kodo as a Hadoop-compatible file system
+# 使用七牛 Kodo 作为 Hadoop 兼容的文件系统
 
-## Configuration
+## 配置方法
 
-### hadoop-env.sh
+### hadoop-env.sh 配置
 
-Open the file `$HADOOP_HOME/etc/hadoop/hadoop-env.sh` and add the following configuration:
+打开文件$HADOOP_HOME/etc/hadoop/hadoop-env.sh，添加如下配置：
 
 ```shell
 export HADOOP_OPTIONAL_TOOLS="hadoop-qiniu"
 ```
 
-### core-site.xml
+### core-site.xml 配置
 
-Modify file `$HADOOP_HOME/etc/hadoop/core-site.xml` to add user configuration and class information for Kodo.
-In public cloud environments, only the following configuration is usually required to work properly:
+修改`$HADOOP_HOME/etc/hadoop/core-site.xml`，增加Kodo相关的用户配置与实现类相关信息。公有云环境下通常仅需配置如下即可正常工作
 
 ```xml
 
@@ -21,13 +20,13 @@ In public cloud environments, only the following configuration is usually requir
     <property>
         <name>fs.qiniu.auth.accessKey</name>
         <value>XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</value>
-        <description>Qiniu Access Key</description>
+        <description>配置七牛Access Key</description>
     </property>
 
     <property>
         <name>fs.qiniu.auth.secretKey</name>
         <value>XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</value>
-        <description>Qiniu Secret Key</description>
+        <description>配置七牛Secret Key</description>
     </property>
 
     <property>
@@ -41,28 +40,27 @@ In public cloud environments, only the following configuration is usually requir
     <property>
         <name>fs.defaultFS</name>
         <value>kodo://example-bucket-name/</value>
-        <description>hadoop default fs</description>
+        <description>hadoop默认文件系统与默认的bucket名称</description>
     </property>
-
 </configuration>
 
 ```
 
-If you need more configuration, you can refer to the yml file: [config.yml](config.md) and convert the configuration
-items described by the yml hierarchy into xml configuration items by yourself, and supplement the namespace prefix
-`fs.qiniu`
+更多具体配置项说明与默认值可参考yml文件：[config.yml](config.md)
 
-For example, for proxy configuration:
+若有需要可自行通过"."分隔符将yml分级描述的配置项转换为xml配置项，并补充命名空间前缀 `fs.qiniu`
+
+如对于代理配置：
 
 ```yml
-# proxy configuration
+# 代理设置
 proxy:
   enable: true
   hostname: '127.0.0.1'
   port: 8080
 ```
 
-The corresponding xml configuration is as follows:
+转换为xml配置项为：
 
 ```xml
 
@@ -82,9 +80,9 @@ The corresponding xml configuration is as follows:
 </configuration>
 ```
 
-## Run mapreduce example program wordcount
+## 测试运行 mapreduce 示例程序 wordcount
 
-### put command
+### put命令
 
 ```shell
 mkdir testDir
@@ -94,7 +92,7 @@ hadoop fs -put testDir kodo:///testDir
 
 ```
 
-### ls command
+### ls命令
 
 ```shell
 hadoop fs -ls -R kodo://example-bucket/
@@ -104,7 +102,7 @@ drwx--xr-x   - root root          0 1970-01-01 08:00 kodo://example-bucket/testD
 -rw-rw-rw-   0 root root         17 2023-01-18 15:54 kodo://example-bucket/testDir/input.txt
 ```
 
-### get command
+### get命令
 
 ```shell
 $ hadoop fs -get kodo:///testDir testDir1
@@ -113,13 +111,13 @@ total 8
 -rw-r--r--  1 root  staff  17 Jan 18 15:57 input.txt
 ```
 
-### Run wordcount example
+### 运行 wordcount 示例
 
 ```shell
 hadoop jar $HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-examples-{version}.jar wordcount kodo://example-bucket/testDir/input.txt kodo://example-bucket/testDir/output
 ```
 
-If the program runs successfully, the following information will be printed:
+执行成功后返回统计信息
 
 ```text
 2023-01-18 16:00:49,228 INFO mapreduce.Job: Counters: 35
@@ -176,7 +174,7 @@ drwx--xr-x   - root root          0 1970-01-01 08:00 kodo://example-bucket/testD
 -rw-rw-rw-   0 root root         25 2023-01-18 16:00 kodo://example-bucket/testDir/output/part-r-00000
 ```
 
-### cat command
+### cat命令
 
 ```text
 $ hadoop fs -cat kodo://example-bucket/testDir/output/part-r-00000

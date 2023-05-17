@@ -1,6 +1,7 @@
 package org.apache.hadoop.fs.qinu.kodo;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem;
@@ -9,7 +10,11 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.URI;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public class QiniuKodoFileSystemContractBaseTest extends FileSystemContractBaseTest {
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoFileSystemContractBaseTest.class);
@@ -23,14 +28,6 @@ public class QiniuKodoFileSystemContractBaseTest extends FileSystemContractBaseT
         fs = new QiniuKodoFileSystem();
         fs.initialize(URI.create(conf.get("fs.contract.test.fs.kodo")), conf);
 
-    }
-
-    /**
-     * 从根目录递归地遍历太慢了，所以禁用它
-     */
-    @Override
-    protected boolean rootDirTestEnabled() {
-        return false;
     }
 
     @Test
@@ -47,6 +44,21 @@ public class QiniuKodoFileSystemContractBaseTest extends FileSystemContractBaseT
         writeAndRead(path, filedata2, blockSize * 2, true, false);
         writeAndRead(path, filedata1, blockSize, true, false);
         writeAndRead(path, filedata2, blockSize * 2, true, false);
+    }
+
+    @Override
+    protected void rename(Path src, Path dst, boolean renameSucceeded,
+                          boolean srcExists, boolean dstExists) throws IOException {
+        try {
+            assertEquals("Rename result", renameSucceeded, fs.rename(src, dst));
+        } catch (FileAlreadyExistsException faee) {
+            // 如果期望能够成功重命名，但抛出异常，那么失败
+            if (renameSucceeded) {
+                fail("Expected rename succeeded but " + faee);
+            }
+        }
+        assertEquals("Source exists", srcExists, fs.exists(src));
+        assertEquals("Destination exists" + dst, dstExists, fs.exists(dst));
     }
 
     /**
