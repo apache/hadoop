@@ -249,9 +249,9 @@ public class HttpFSFileSystem extends FileSystem
   public static final String BLOCK_LOCATIONS_JSON = "BlockLocations";
 
   public static final String FS_STATUS_JSON = "FsStatus";
-  public static final String FS_STATUS_USED_JSON = "used";
-  public static final String FS_STATUS_REMAINING_JSON = "remaining";
-  public static final String FS_STATUS_CAPACITY_JSON = "capacity";
+  public static final String FS_STATUS_USED_JSON = "Used";
+  public static final String FS_STATUS_REMAINING_JSON = "Remaining";
+  public static final String FS_STATUS_CAPACITY_JSON = "Capacity";
 
   public static final int HTTP_TEMPORARY_REDIRECT = 307;
 
@@ -283,7 +283,8 @@ public class HttpFSFileSystem extends FileSystem
     GETSERVERDEFAULTS(HTTP_GET),
     CHECKACCESS(HTTP_GET), SETECPOLICY(HTTP_PUT), GETECPOLICY(HTTP_GET), UNSETECPOLICY(
         HTTP_POST), SATISFYSTORAGEPOLICY(HTTP_PUT), GETSNAPSHOTDIFFLISTING(HTTP_GET),
-    GETFILELINKSTATUS(HTTP_GET), GETSTATUS(HTTP_GET),
+    GETFILELINKSTATUS(HTTP_GET),
+    GETSTATUS(HTTP_GET),
     GET_BLOCK_LOCATIONS(HTTP_GET);
 
     private String httpMethod;

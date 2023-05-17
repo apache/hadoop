@@ -426,6 +426,8 @@ public final class FSOperations {
   }
 
   /**
+   * Executes the fsStatus operation.
+   *
    * @param fsStatus a FsStatus object
    * @return JSON map suitable for wire transport
    */
@@ -2318,16 +2320,14 @@ public final class FSOperations {
   }
 
   /**
-   * Executor that performs a fs-status FileSystemAccess files
-   * system operation.
+   * Executor that performs a getFsStatus operation.
    */
   @InterfaceAudience.Private
-  public static class FSStatus
-      implements FileSystemAccess.FileSystemExecutor<Map> {
+  public static class FSStatus implements FileSystemAccess.FileSystemExecutor<Map> {
     final private Path path;
 
     /**
-     * Creates a fs-status executor.
+     * Creates a fsStatus executor.
      *
      * @param path the path to retrieve the status.
      */
@@ -2335,18 +2335,10 @@ public final class FSOperations {
       this.path = new Path(path);
     }
 
-    /**
-     * Executes the filesystem getStatus operation and returns the
-     * result in a JSON Map.
-     *
-     * @param fs filesystem instance to use.
-     * @return a Map object (JSON friendly) with the file status.
-     * @throws IOException thrown if an IO error occurred.
-     */
     @Override
     public Map execute(FileSystem fs) throws IOException {
       FsStatus fsStatus = fs.getStatus(path);
-      HttpFSServerWebApp.get().getMetrics().incrOpsStat();
+      HttpFSServerWebApp.get().getMetrics().incrOpsStatus();
       return toJson(fsStatus);
     }
   }

@@ -555,8 +555,7 @@ public class HttpFSServer {
       break;
     }
     case GETSTATUS: {
-      FSOperations.FSStatus command =
-          new FSOperations.FSStatus(path);
+      FSOperations.FSStatus command = new FSOperations.FSStatus(path);
       @SuppressWarnings("rawtypes") Map js = fsExecute(user, command);
       response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       break;

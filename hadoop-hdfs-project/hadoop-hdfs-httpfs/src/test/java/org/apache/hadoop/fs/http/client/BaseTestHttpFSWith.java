@@ -2091,24 +2091,25 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       return;
     }
     final Path path = new Path("/foo");
+    FileSystem fs = FileSystem.get(path.toUri(), this.getProxiedFSConf());
+    if(fs instanceof DistributedFileSystem){
+      DistributedFileSystem dfs = (DistributedFileSystem)
+          FileSystem.get(path.toUri(), this.getProxiedFSConf());
+      FileSystem httpFs = this.getHttpFSFileSystem();
 
-    DistributedFileSystem dfs =
-        (DistributedFileSystem) FileSystem.get(path.toUri(),
-            this.getProxiedFSConf());
-    FileSystem httpFs = this.getHttpFSFileSystem();
+      FsStatus dfsFsStatus = dfs.getStatus(path);
+      FsStatus httpFsStatus = httpFs.getStatus(path);
 
-    try (OutputStream os = dfs.create(path)) {
-      os.write(new byte[1024]);
+      //Validate used free and capacity are the same as DistributedFileSystem
+      Assert.assertEquals(dfsFsStatus.getUsed(), httpFsStatus.getUsed());
+      Assert.assertEquals(dfsFsStatus.getRemaining(),
+          httpFsStatus.getRemaining());
+      Assert.assertEquals(dfsFsStatus.getCapacity(), httpFsStatus.getCapacity());
+      httpFs.close();
+      dfs.close();
+    }else{
+      Assert.fail(fs.getClass().getSimpleName() + " is not of type DistributedFileSystem.");
     }
-
-    FsStatus dfsFsStatus = dfs.getStatus(path);
-    FsStatus httpFsStatus = httpFs.getStatus(path);
-
-    //Validate used free and capacity are the same as DistributedFileSystem
-    Assert.assertEquals(httpFsStatus.getUsed(), dfsFsStatus.getUsed());
-    Assert.assertEquals(httpFsStatus.getRemaining(),
-        dfsFsStatus.getRemaining());
-    Assert.assertEquals(httpFsStatus.getCapacity(), dfsFsStatus.getCapacity());
   }
 
   private void assertHttpFsReportListingWithDfsClient(SnapshotDiffReportListing diffReportListing,
