@@ -16,7 +16,6 @@ set during the testing.
 
 This file will trigger the testing of Qiniu Kodo module. Without the file,
 *none of the tests in this module will be executed*
-这个文件将触发 Qiniu Kodo 模块，如果没有这个文件，这个模块将不会执行任何测试
 
 It contains the accessKey, secretKey and optional proxy configuration information that are needed to connect to Qiniu
 Kodo. If you test in private-cloud environment, the host related region should also be configured.
@@ -37,7 +36,7 @@ Kodo. If you test in private-cloud environment, the host related region should a
 </configuration>
 ```
 
-## 运行 Hadoop 契约测试
+## Run Hadoop Contract Test
 
 Create file `contract-test-options.xml` in directory `hadoop-tols/hadoop-qiniu/src/test/resources`, If a
 specific file `fs.contract.test.fs.kodo` test path is not defined, those tests will be skipped.
