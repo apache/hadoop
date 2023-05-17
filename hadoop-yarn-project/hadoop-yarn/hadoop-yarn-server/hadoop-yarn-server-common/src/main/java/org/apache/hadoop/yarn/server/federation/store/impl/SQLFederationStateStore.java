@@ -25,7 +25,9 @@ import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Blob;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -42,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPB
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProto;
 import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreInvalidInputException;
@@ -94,7 +97,6 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenReque
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
-import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.ApplicationHomeSubClusterPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
@@ -152,13 +154,13 @@ public class SQLFederationStateStore implements FederationStateStore {
       "{call sp_addApplicationHomeSubCluster(?, ?, ?, ?, ?)}";
 
   private static final String CALL_SP_UPDATE_APPLICATION_HOME_SUBCLUSTER =
-      "{call sp_updateApplicationHomeSubCluster(?, ?, ?)}";
+      "{call sp_updateApplicationHomeSubCluster(?, ?, ?, ?)}";
 
   private static final String CALL_SP_DELETE_APPLICATION_HOME_SUBCLUSTER =
       "{call sp_deleteApplicationHomeSubCluster(?, ?)}";
 
   private static final String CALL_SP_GET_APPLICATION_HOME_SUBCLUSTER =
-      "{call sp_getApplicationHomeSubCluster(?, ?)}";
+      "{call sp_getApplicationHomeSubCluster(?, ?, ?, ?)}";
 
   private static final String CALL_SP_GET_APPLICATIONS_HOME_SUBCLUSTER =
       "{call sp_getApplicationsHomeSubCluster(?, ?)}";
@@ -618,7 +620,7 @@ public class SQLFederationStateStore implements FederationStateStore {
         request.getApplicationHomeSubCluster();
     ApplicationId appId = applicationHomeSubCluster.getApplicationId();
     SubClusterId subClusterId = applicationHomeSubCluster.getHomeSubCluster();
-    ApplicationSubmissionContext applicationContext =
+    ApplicationSubmissionContext appSubmissionContext =
         applicationHomeSubCluster.getApplicationSubmissionContext();
 
     try {
@@ -627,9 +629,11 @@ public class SQLFederationStateStore implements FederationStateStore {
       // Set the parameters for the stored procedure
       cstmt.setString("applicationId_IN", appId.toString());
       cstmt.setString("homeSubCluster_IN", subClusterId.getId());
-      if (applicationHomeSubCluster != null) {
+      if (appSubmissionContext != null) {
         cstmt.setBlob("applicationContext_IN", new ByteArrayInputStream(
-            ((ApplicationSubmissionContextPBImpl) applicationContext).getProto().toByteArray()));
+            ((ApplicationSubmissionContextPBImpl) appSubmissionContext).getProto().toByteArray()));
+      } else {
+        cstmt.setNull("applicationContext_IN", Types.BLOB);
       }
       cstmt.registerOutParameter("storedHomeSubCluster_OUT", VARCHAR);
       cstmt.registerOutParameter("rowCount_OUT", INTEGER);
@@ -697,10 +701,12 @@ public class SQLFederationStateStore implements FederationStateStore {
 
     CallableStatement cstmt = null;
 
-    ApplicationId appId =
-        request.getApplicationHomeSubCluster().getApplicationId();
-    SubClusterId subClusterId =
-        request.getApplicationHomeSubCluster().getHomeSubCluster();
+    ApplicationHomeSubCluster applicationHomeSubCluster =
+        request.getApplicationHomeSubCluster();
+    ApplicationId appId = applicationHomeSubCluster.getApplicationId();
+    SubClusterId subClusterId = applicationHomeSubCluster.getHomeSubCluster();
+    ApplicationSubmissionContext appSubmissionContext =
+        applicationHomeSubCluster.getApplicationSubmissionContext();
 
     try {
       cstmt = getCallableStatement(CALL_SP_UPDATE_APPLICATION_HOME_SUBCLUSTER);
@@ -708,6 +714,12 @@ public class SQLFederationStateStore implements FederationStateStore {
       // Set the parameters for the stored procedure
       cstmt.setString("applicationId_IN", appId.toString());
       cstmt.setString("homeSubCluster_IN", subClusterId.getId());
+      if (appSubmissionContext != null) {
+        cstmt.setBlob("applicationContext_IN", new ByteArrayInputStream(
+           ((ApplicationSubmissionContextPBImpl) appSubmissionContext).getProto().toByteArray()));
+      } else {
+        cstmt.setNull("applicationContext_IN", Types.BLOB);
+      }
       cstmt.registerOutParameter("rowCount_OUT", INTEGER);
 
       // Execute the query
@@ -752,8 +764,9 @@ public class SQLFederationStateStore implements FederationStateStore {
     CallableStatement cstmt = null;
 
     SubClusterId homeRM = null;
-
+    Long createTime = 0L;
     ApplicationId applicationId = request.getApplicationId();
+    ApplicationSubmissionContext appSubmissionContext = null;
 
     try {
       cstmt = getCallableStatement(CALL_SP_GET_APPLICATION_HOME_SUBCLUSTER);
@@ -761,6 +774,8 @@ public class SQLFederationStateStore implements FederationStateStore {
       // Set the parameters for the stored procedure
       cstmt.setString("applicationId_IN", applicationId.toString());
       cstmt.registerOutParameter("homeSubCluster_OUT", VARCHAR);
+      cstmt.registerOutParameter("createTime_OUT", java.sql.Types.TIMESTAMP);
+      cstmt.registerOutParameter("applicationContext_OUT", Types.BLOB);
 
       // Execute the query
       long startTime = clock.getTime();
@@ -775,6 +790,15 @@ public class SQLFederationStateStore implements FederationStateStore {
             "Application %s does not exist.", applicationId);
       }
 
+      Timestamp createTimeStamp = cstmt.getTimestamp("createTime_OUT", utcCalendar);
+      createTime = createTimeStamp != null ? createTimeStamp.getTime() : 0;
+
+      Blob blobAppContextData = cstmt.getBlob("applicationContext_OUT");
+      if (blobAppContextData != null && request.getContainsAppSubmissionContext()) {
+        appSubmissionContext = new ApplicationSubmissionContextPBImpl(
+            ApplicationSubmissionContextProto.parseFrom(blobAppContextData.getBinaryStream()));
+      }
+
       LOG.debug("Got the information about the specified application {}."
           + " The AM is running in {}", applicationId, homeRM);
 
@@ -785,11 +809,17 @@ public class SQLFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
           "Unable to obtain the application information for the specified application %s.",
           applicationId);
+    } catch (IOException e) {
+      FederationStateStoreClientMetrics.failedStateStoreCall();
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to obtain the application information for the specified application %s.",
+          applicationId);
     } finally {
       // Return to the pool the CallableStatement
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
     }
-    return GetApplicationHomeSubClusterResponse.newInstance(request.getApplicationId(), homeRM);
+    return GetApplicationHomeSubClusterResponse.newInstance(applicationId, homeRM,
+        createTime, appSubmissionContext);
   }
 
   @Override

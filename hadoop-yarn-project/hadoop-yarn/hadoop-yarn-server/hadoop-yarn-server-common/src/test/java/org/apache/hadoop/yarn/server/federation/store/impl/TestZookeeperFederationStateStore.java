@@ -284,29 +284,4 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     assertNotNull(zkRouterStoreToken);
     assertEquals(token, zkRouterStoreToken);
   }
-
-  @Test
-  public void testGetApplicationHomeSubClusterWithContext() throws Exception {
-    ZookeeperFederationStateStore zkFederationStateStore =
-        (ZookeeperFederationStateStore) this.getStateStore();
-
-    ApplicationId appId = ApplicationId.newInstance(1, 3);
-    SubClusterId subClusterId = SubClusterId.newInstance("SC");
-    ApplicationSubmissionContext context =
-        ApplicationSubmissionContext.newInstance(appId, "test", "default",
-        Priority.newInstance(0), null, true, true,
-        2, Resource.newInstance(10, 2), "test");
-    addApplicationHomeSC(appId, subClusterId, context);
-
-    GetApplicationHomeSubClusterRequest getRequest =
-        GetApplicationHomeSubClusterRequest.newInstance(appId, true);
-    GetApplicationHomeSubClusterResponse result =
-        zkFederationStateStore.getApplicationHomeSubCluster(getRequest);
-
-    ApplicationHomeSubCluster applicationHomeSubCluster = result.getApplicationHomeSubCluster();
-
-    assertEquals(appId, applicationHomeSubCluster.getApplicationId());
-    assertEquals(subClusterId, applicationHomeSubCluster.getHomeSubCluster());
-    assertEquals(context, applicationHomeSubCluster.getApplicationSubmissionContext());
-  }
 }

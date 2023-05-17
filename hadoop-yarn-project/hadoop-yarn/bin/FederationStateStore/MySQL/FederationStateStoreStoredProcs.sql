@@ -93,8 +93,8 @@ CREATE PROCEDURE sp_addApplicationHomeSubCluster(
    OUT storedHomeSubCluster_OUT varchar(256), OUT rowCount_OUT int)
 BEGIN
    INSERT INTO applicationsHomeSubCluster
-      (applicationId,homeSubCluster,applicationContext)
-      (SELECT applicationId_IN, homeSubCluster_IN, applicationContext_IN
+      (applicationId, homeSubCluster, createTime, applicationContext)
+      (SELECT applicationId_IN, homeSubCluster_IN, NOW(), applicationContext_IN
        FROM applicationsHomeSubCluster
        WHERE applicationId = applicationId_IN
        HAVING COUNT(*) = 0 );
@@ -118,9 +118,11 @@ END //
 CREATE PROCEDURE sp_getApplicationHomeSubCluster(
    IN applicationId_IN varchar(64),
    OUT homeSubCluster_OUT varchar(256),
+   OUT createTime_OUT datetime,
    OUT applicationContext_OUT BLOB)
 BEGIN
-   SELECT homeSubCluster, applicationContext INTO homeSubCluster_OUT, applicationContext_OUT
+   SELECT homeSubCluster, applicationContext, createTime
+       INTO homeSubCluster_OUT, applicationContext_OUT, createTime_OUT
    FROM applicationsHomeSubCluster
    WHERE applicationId = applicationID_IN;
 END //

@@ -96,30 +96,4 @@ public class TestMemoryFederationStateStore extends FederationStateStoreBaseTest
     assertTrue(tokenIdentifier instanceof RMDelegationTokenIdentifier);
     assertEquals(identifier, tokenIdentifier);
   }
-
-  @Test
-  public void testGetApplicationHomeSubClusterWithContext() throws Exception {
-    MemoryFederationStateStore memoryStateStore =
-        MemoryFederationStateStore.class.cast(this.getStateStore());
-
-    ApplicationId appId = ApplicationId.newInstance(1, 3);
-    SubClusterId subClusterId = SubClusterId.newInstance("SC");
-    ApplicationSubmissionContext context =
-        ApplicationSubmissionContext.newInstance(appId, "test", "default",
-        Priority.newInstance(0), null, true, true,
-        2, Resource.newInstance(10, 2), "test");
-    addApplicationHomeSC(appId, subClusterId, context);
-
-    GetApplicationHomeSubClusterRequest getRequest =
-        GetApplicationHomeSubClusterRequest.newInstance(appId, true);
-    GetApplicationHomeSubClusterResponse result =
-        memoryStateStore.getApplicationHomeSubCluster(getRequest);
-
-    assertEquals(appId,
-        result.getApplicationHomeSubCluster().getApplicationId());
-    assertEquals(subClusterId,
-        result.getApplicationHomeSubCluster().getHomeSubCluster());
-    assertEquals(context,
-        result.getApplicationHomeSubCluster().getApplicationSubmissionContext());
-  }
 }
