@@ -2056,7 +2056,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  private long getStateAtIndex(long[] states, int index) {
+  public static long getStateAtIndex(long[] states, int index) {
     return states.length > index ? states[index] : -1;
   }
 
