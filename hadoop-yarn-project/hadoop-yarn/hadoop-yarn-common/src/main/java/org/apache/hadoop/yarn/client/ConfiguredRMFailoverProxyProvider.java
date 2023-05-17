@@ -126,15 +126,15 @@ public class ConfiguredRMFailoverProxyProvider<T>
   /**
    * Get the list of RM IDs.
    *
-   * @param conf Configuration.
+   * @param pConfiguration Configuration.
    * @return rmId.
    */
-  private Collection<String> getRMIds(Configuration conf) {
-    boolean isFederationEnabled = HAUtil.isFederationEnabled(conf);
+  private Collection<String> getRMIds(Configuration pConfiguration) {
+    boolean isFederationEnabled = HAUtil.isFederationEnabled(pConfiguration);
     if (!isFederationEnabled) {
-      return HAUtil.getRMHAIds(conf);
+      return HAUtil.getRMHAIds(pConfiguration);
     }
-    return getRandomOrderByRandomFlag(conf);
+    return getRandomOrderByRandomFlag(pConfiguration);
   }
 
   /**
@@ -147,12 +147,12 @@ public class ConfiguredRMFailoverProxyProvider<T>
    *
    * For clusters that have not enabled Federation mode, the behavior remains unchanged.
    *
-   * @param conf Configuration.
+   * @param pConfiguration Configuration.
    * @return rmIds
    */
-  private Collection<String> getRandomOrderByRandomFlag(Configuration conf) {
-    Collection<String> rmIds = HAUtil.getRMHAIds(conf);
-    boolean isRandomOrder = conf.getBoolean(
+  private Collection<String> getRandomOrderByRandomFlag(Configuration pConfiguration) {
+    Collection<String> rmIds = HAUtil.getRMHAIds(pConfiguration);
+    boolean isRandomOrder = pConfiguration.getBoolean(
         YarnConfiguration.FEDERATION_YARN_CLIENT_FAILOVER_RANDOM_ORDER,
         YarnConfiguration.DEFAULT_FEDERATION_YARN_CLIENT_FAILOVER_RANDOM_ORDER);
     // If the Random option is not enabled, returns the configured array.
