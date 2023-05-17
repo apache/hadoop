@@ -50,6 +50,9 @@ public class ConfiguredRMFailoverProxyProvider<T>
   protected YarnConfiguration conf;
   protected String[] rmServiceIds;
 
+  private long rmIdsLastRefreshTime;
+  private long rmIdsRefreshInterval;
+
   @Override
   public void init(Configuration configuration, RMProxy<T> rmProxy,
                     Class<T> protocol) {
@@ -57,9 +60,9 @@ public class ConfiguredRMFailoverProxyProvider<T>
     this.protocol = protocol;
     this.rmProxy.checkAllowedProtocols(this.protocol);
     this.conf = new YarnConfiguration(configuration);
-    Collection<String> rmIds = HAUtil.getRMHAIds(conf);
-    this.rmServiceIds = rmIds.toArray(new String[rmIds.size()]);
-    conf.set(YarnConfiguration.RM_HA_ID, rmServiceIds[currentProxyIndex]);
+    this.rmIdsRefreshInterval = conf.getLong(YarnConfiguration.RM_ID_REFRESH_INTERVAL,
+        YarnConfiguration.RM_ID_REFRESH_INTERVAL_DEFAULT);
+    refreshRMIds(true);
 
     conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY,
         conf.getInt(YarnConfiguration.CLIENT_FAILOVER_RETRIES,
@@ -84,6 +87,9 @@ public class ConfiguredRMFailoverProxyProvider<T>
 
   @Override
   public synchronized ProxyInfo<T> getProxy() {
+    if (shouldRefreshAddress()) {
+      refreshRMIds(false);
+    }
     String rmId = rmServiceIds[currentProxyIndex];
     T current = proxies.get(rmId);
     if (current == null) {
@@ -118,5 +124,48 @@ public class ConfiguredRMFailoverProxyProvider<T>
         RPC.stopProxy(proxy);
       }
     }
+  }
+
+  private boolean shouldRefreshAddress() {
+    long currentTime = System.currentTimeMillis();
+    return rmIdsRefreshInterval > 0 &&
+        currentTime > rmIdsLastRefreshTime + rmIdsRefreshInterval;
+  }
+
+  private synchronized void refreshRMIds(boolean forceRefresh) throws IllegalStateException {
+    if (!forceRefresh && !shouldRefreshAddress()) {
+      return;
+    }
+    String currentRMId = HAUtil.getRMHAId(conf);
+    InetSocketAddress currentAddress = null;
+    if (currentRMId != null) {
+      // explicitly refresh it if not done
+      currentAddress = HAUtil.getInetSocketAddressFromString(conf.get(HAUtil.addSuffix(
+          YarnConfiguration.RM_ADDRESS, currentRMId)));
+      HAUtil.getResolvedRMIdPairs(conf);
+    }
+    rmIdsLastRefreshTime = System.currentTimeMillis();
+    Collection<String> rmIds = HAUtil.getRMHAIds(conf);
+    if (rmIds == null || rmIds.isEmpty()) {
+      String message = "no instances configured.";
+      LOG.error(message);
+      throw new IllegalStateException(message);
+    }
+    proxies.clear();
+    this.rmServiceIds = rmIds.toArray(new String[rmIds.size()]);
+    // After refresh, we should keep current rm pointing to the previous active one
+    if (currentRMId != null) {
+      for (int i = 0; i < rmServiceIds.length; i++) {
+        String confKey = HAUtil.addSuffix(
+            YarnConfiguration.RM_ADDRESS, rmServiceIds[i]);
+        InetSocketAddress thatAddress =
+            HAUtil.getInetSocketAddressFromString(conf.get(confKey));
+        if (currentAddress.equals(thatAddress)) {
+          currentProxyIndex = i;
+          break;
+        }
+      }
+    }
+    conf.set(YarnConfiguration.RM_HA_ID, rmServiceIds[currentProxyIndex]);
   }
 }
