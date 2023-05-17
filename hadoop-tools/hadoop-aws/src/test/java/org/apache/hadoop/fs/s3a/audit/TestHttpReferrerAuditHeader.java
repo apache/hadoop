@@ -350,16 +350,20 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
   public void testHttpReferrerForBulkDelete() throws Throwable {
     AuditSpan span = span();
     long ts = span.getTimestamp();
-    DeleteObjectsRequest request = headForBulkDelete(
+    SdkHttpRequest request = headForBulkDelete(
         "key_01",
         "key_02",
         "key_03");
-    Map<String, String> headers
-        = request.getCustomRequestHeaders();
+    Map<String, List<String>> headers
+        = request.headers();
     assertThat(headers)
         .describedAs("Custom headers")
         .containsKey(HEADER_REFERRER);
-    String header = headers.get(HEADER_REFERRER);
+    List<String> headerValues = headers.get(HEADER_REFERRER);
+    assertThat(headerValues)
+        .describedAs("Multiple referrer headers")
+        .hasSize(1);
+    String header = headerValues.get(0);
     LOG.info("Header is {}", header);
     Map<String, String> params
         = HttpReferrerAuditHeader.extractQueryParameters(header);

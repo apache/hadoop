@@ -29,6 +29,8 @@ import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.core.interceptor.Context;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.http.SdkHttpRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -260,7 +262,8 @@ public class LoggingAuditor
 
     /**
      * Attach Range of data for GetObject Request.
-     * @param request given get object request
+     * @param request the sdk request to be modified
+     * @param executionAttributes execution attributes for this request
      */
     private void attachRangeFromRequest(SdkHttpRequest request,
         ExecutionAttributes executionAttributes) {
@@ -370,12 +373,13 @@ public class LoggingAuditor
     public SdkHttpRequest modifyHttpRequest(Context.ModifyHttpRequest context,
         ExecutionAttributes executionAttributes) {
       SdkHttpRequest httpRequest = context.httpRequest();
+      SdkRequest sdkRequest = context.request();
 
-        // attach range for GetObject requests
-        attachRangeFromRequest(httpRequest, executionAttributes);
+      // attach range for GetObject requests
+      attachRangeFromRequest(httpRequest, executionAttributes);
 
-        // for delete op, attach the number of files to delete
-        attachDeleteKeySizeAttribute(request);
+      // for delete op, attach the number of files to delete
+      attachDeleteKeySizeAttribute(sdkRequest);
 
       // build the referrer header
       final String header = referrer.buildHttpReferrer();
@@ -397,9 +401,9 @@ public class LoggingAuditor
       }
 
       // now see if the request is actually a blocked multipart request
-      if (!isMultipartUploadEnabled && isRequestMultipartIO(httpRequest)) {
+      if (!isMultipartUploadEnabled && isRequestMultipartIO(sdkRequest)) {
         throw new AuditOperationRejectedException("Multipart IO request "
-            + httpRequest + " rejected " + header);
+            + sdkRequest + " rejected " + header);
       }
 
       return httpRequest;
@@ -409,16 +413,16 @@ public class LoggingAuditor
      * For delete requests, attach delete key size as a referrer attribute.
      *
      * @param request the request object.
-     * @param <T> type of the request.
      */
-    private <T extends AmazonWebServiceRequest> void attachDeleteKeySizeAttribute(T request) {
+    private void attachDeleteKeySizeAttribute(SdkRequest request) {
+
       if (request instanceof DeleteObjectsRequest) {
-        int keySize = ((DeleteObjectsRequest) request).getKeys().size();
-        this.set(DELETE_KEYS_SIZE, String.valueOf(keySize));
+        int keySize = ((DeleteObjectsRequest) request).delete().objects().size();
+        referrer.set(DELETE_KEYS_SIZE, String.valueOf(keySize));
       } else if (request instanceof DeleteObjectRequest) {
-        String key = ((DeleteObjectRequest) request).getKey();
+        String key = ((DeleteObjectRequest) request).key();
         if (key != null && key.length() > 0) {
-          this.set(DELETE_KEYS_SIZE, "1");
+          referrer.set(DELETE_KEYS_SIZE, "1");
         }
       }
     }

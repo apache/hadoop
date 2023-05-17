@@ -34,8 +34,11 @@ import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.interceptor.InterceptorContext;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.http.SdkHttpRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+
 import org.junit.After;
 import org.junit.Before;
 import org.slf4j.Logger;
@@ -288,15 +291,31 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
    * @param keys keys to be provided in the bulk delete request.
    * @return a processed request.
    */
-  protected DeleteObjectsRequest headForBulkDelete(String... keys) {
+  protected SdkHttpRequest headForBulkDelete(String... keys) {
     if (keys == null || keys.length == 0) {
       return null;
     }
-    List<DeleteObjectsRequest.KeyVersion> keysToDelete = Arrays
+
+    List<ObjectIdentifier> keysToDelete = Arrays
         .stream(keys)
-        .map(DeleteObjectsRequest.KeyVersion::new)
+        .map(key -> ObjectIdentifier.builder().key(key).build())
         .collect(Collectors.toList());
-    return manager.beforeExecution(requestFactory.newBulkDeleteRequest(keysToDelete));
+
+    ExecutionAttributes executionAttributes = ExecutionAttributes.builder().build();
+
+    SdkHttpRequest.Builder httpRequestBuilder =
+        SdkHttpRequest.builder().uri(URI.create("https://test")).method(SdkHttpMethod.POST);
+
+    DeleteObjectsRequest deleteObjectsRequest =
+        requestFactory.newBulkDeleteRequestBuilder(keysToDelete).build();
+
+    InterceptorContext context = InterceptorContext.builder()
+        .request(deleteObjectsRequest)
+        .httpRequest(httpRequestBuilder.build())
+        .build();
+
+    manager.beforeExecution(context, executionAttributes);
+    return manager.modifyHttpRequest(context, executionAttributes);
   }
 
 }
