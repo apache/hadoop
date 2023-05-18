@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.util.Collection;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,9 +79,9 @@ final class NameNodeResourcePolicy {
       return requiredResourceCount > 0;
     } else {
       if (minimumRedundantResources > resources.size()){
-        LOG.warn("The value of " + DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_MINIMUM_KEY
-            + " is greater than the total number of existing storage volumes,"
-            + " which will cause safe mode to not be turned off even if resources are added.");
+        LOG.info("Resource not available. Details: redundantResourceCount=" + redundantResourceCount
+            + ", disabledRedundantResourceCount=" + disabledRedundantResourceCount
+            + ", minimumRedundantResources=" + minimumRedundantResources + ".");
       }
       return redundantResourceCount - disabledRedundantResourceCount >=
           minimumRedundantResources;
