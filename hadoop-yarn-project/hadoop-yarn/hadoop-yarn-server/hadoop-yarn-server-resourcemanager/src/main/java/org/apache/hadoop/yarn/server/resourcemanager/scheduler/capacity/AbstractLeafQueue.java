@@ -644,8 +644,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
           !(this instanceof AutoCreatedLeafQueue)) {
         String msg =
             "Queue " + getQueuePath() + " already has " + getNumApplications()
-                + " applications, what is more than the max " + getMaxApplications()
-                + ", so cannot accept submission of application: " + applicationId;
+                + " applications, cannot accept submission of application: " + applicationId;
         LOG.info(msg);
         throw new AccessControlException(msg);
       }
