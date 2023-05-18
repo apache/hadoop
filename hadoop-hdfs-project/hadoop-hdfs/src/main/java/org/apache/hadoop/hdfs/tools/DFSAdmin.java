@@ -2399,7 +2399,7 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if ("-report".equals(cmd)) {
-      if (argv.length > 6) {
+      if (argv.length > 7) {
         printUsage(cmd);
         return exitCode;
       }

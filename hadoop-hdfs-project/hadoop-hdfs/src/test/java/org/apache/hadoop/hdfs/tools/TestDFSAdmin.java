@@ -795,6 +795,11 @@ public class TestDFSAdmin {
       resetStream();
       assertEquals(0, ToolRunner.run(dfsAdmin, new String[] {"-report"}));
       verifyNodesAndCorruptBlocks(numDn, numDn - 1, 1, 1, client, 0L, 0L);
+
+      // verify report command for list all DN types
+      resetStream();
+      assertEquals(0, ToolRunner.run(dfsAdmin, new String[] {"-report", "-live",
+          "-dead", "-decommissioning", "-enteringmaintenance", "-inmaintenance", "-slownodes"}));
     }
   }
 
