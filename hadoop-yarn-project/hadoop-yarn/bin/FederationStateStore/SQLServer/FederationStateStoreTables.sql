@@ -310,3 +310,33 @@ ELSE
     PRINT 'Table sequenceTable exists, no operation required...'
     GO
 GO
+
+IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
+    WHERE name = 'versions'
+    AND schema_id = SCHEMA_ID('dbo'))
+    BEGIN
+        PRINT 'Table versions does not exist, create it...'
+
+        SET ANSI_NULLS ON
+
+        SET QUOTED_IDENTIFIER ON
+
+        SET ANSI_PADDING ON
+
+        CREATE TABLE [dbo].[versions](
+            fedVersion VARBINARY(1024) NOT NULL,
+            versionComment VARCHAR(255) NOT NULL
+            CONSTRAINT [pk_fedVersion] PRIMARY KEY
+            (
+                [fedVersion]
+            )
+        )
+
+        SET ANSI_PADDING OFF
+
+        PRINT 'Table versions created.'
+    END
+ELSE
+    PRINT 'Table versions exists, no operation required...'
+    GO
+GO

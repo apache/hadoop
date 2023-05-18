@@ -24,6 +24,8 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.impl.prefetch.BlockData;
 import org.apache.hadoop.fs.impl.prefetch.BlockManager;
 import org.apache.hadoop.fs.impl.prefetch.BufferData;
@@ -61,7 +63,8 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
    * @param s3Attributes attributes of the S3 object being read.
    * @param client callbacks used for interacting with the underlying S3 client.
    * @param streamStatistics statistics for this stream.
-   *
+   * @param conf the configuration.
+   * @param localDirAllocator the local dir allocator instance.
    * @throws IllegalArgumentException if context is null.
    * @throws IllegalArgumentException if s3Attributes is null.
    * @throws IllegalArgumentException if client is null.
@@ -70,7 +73,9 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
       S3AInputStream.InputStreamCallbacks client,
-      S3AInputStreamStatistics streamStatistics) {
+      S3AInputStreamStatistics streamStatistics,
+      Configuration conf,
+      LocalDirAllocator localDirAllocator) {
     super(context, s3Attributes, client, streamStatistics);
 
     this.numBlocksToPrefetch = this.getContext().getPrefetchBlockCount();
@@ -79,7 +84,9 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
         this.getContext().getFuturePool(),
         this.getReader(),
         this.getBlockData(),
-        bufferPoolSize);
+        bufferPoolSize,
+        conf,
+        localDirAllocator);
     int fileSize = (int) s3Attributes.getLen();
     LOG.debug("Created caching input stream for {} (size = {})", this.getName(),
         fileSize);
@@ -176,9 +183,15 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
       ExecutorServiceFuturePool futurePool,
       S3ARemoteObjectReader reader,
       BlockData blockData,
-      int bufferPoolSize) {
-    return new S3ACachingBlockManager(futurePool, reader, blockData,
+      int bufferPoolSize,
+      Configuration conf,
+      LocalDirAllocator localDirAllocator) {
+    return new S3ACachingBlockManager(futurePool,
+        reader,
+        blockData,
         bufferPoolSize,
-        getS3AStreamStatistics());
+        getS3AStreamStatistics(),
+        conf,
+        localDirAllocator);
   }
 }

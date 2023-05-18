@@ -47,6 +47,7 @@ public class PlanQueue extends AbstractManagedParentQueue {
   public PlanQueue(CapacitySchedulerQueueContext queueContext, String queueName,
       CSQueue parent, CSQueue old) throws IOException {
     super(queueContext, queueName, parent, old);
+    super.setupQueueConfigs(queueContext.getClusterResource());
     updateAbsoluteCapacities();
 
     // Set the reservation queue attributes for the Plan

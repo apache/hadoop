@@ -232,7 +232,9 @@ class S3ABlockOutputStream extends OutputStream implements
         LOG.error("Number of partitions in stream exceeds limit for S3: "
              + Constants.MAX_MULTIPART_COUNT +  " write may fail.");
       }
-      activeBlock = blockFactory.create(blockCount, this.blockSize, statistics);
+      activeBlock = blockFactory.create(
+        writeOperationHelper.getAuditSpan().getSpanId(),
+        key, blockCount, this.blockSize, statistics);
     }
     return activeBlock;
   }
@@ -614,7 +616,10 @@ class S3ABlockOutputStream extends OutputStream implements
           try {
             // the putObject call automatically closes the input
             // stream afterwards.
-            return writeOperationHelper.putObject(putObjectRequest, builder.putOptions);
+            return writeOperationHelper.putObject(
+                putObjectRequest,
+                builder.putOptions,
+                statistics);
           } finally {
             cleanupWithLogger(LOG, uploadData, block);
           }
@@ -725,8 +730,14 @@ class S3ABlockOutputStream extends OutputStream implements
 
   /**
    * Shared processing of Syncable operation reporting/downgrade.
+   *
+   * Syncable API is not supported, so calls to hsync/hflush will throw an
+   * UnsupportedOperationException unless the stream was constructed with
+   * {@link #downgradeSyncableExceptions} set to true, in which case the stream is flushed.
+   * @throws IOException IO Problem
+   * @throws UnsupportedOperationException if downgrade syncable exceptions is set to false
    */
-  private void handleSyncableInvocation() {
+  private void handleSyncableInvocation() throws IOException {
     final UnsupportedOperationException ex
         = new UnsupportedOperationException(E_NOT_SYNCABLE);
     if (!downgradeSyncableExceptions) {
@@ -738,6 +749,7 @@ class S3ABlockOutputStream extends OutputStream implements
         key);
     // and log at debug
     LOG.debug("Downgrading Syncable call", ex);
+    flush();
   }
 
   @Override
@@ -897,7 +909,7 @@ class S3ABlockOutputStream extends OutputStream implements
             try {
               LOG.debug("Uploading part {} for id '{}'",
                   currentPartNumber, uploadId);
-              PartETag partETag = writeOperationHelper.uploadPart(request)
+              PartETag partETag = writeOperationHelper.uploadPart(request, statistics)
                   .getPartETag();
               LOG.debug("Completed upload of {} to part {}",
                   block, partETag.getETag());

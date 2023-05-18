@@ -2056,7 +2056,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  private long getStateAtIndex(long[] states, int index) {
+  public static long getStateAtIndex(long[] states, int index) {
     return states.length > index ? states[index] : -1;
   }
 
@@ -3090,10 +3090,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  void updateFileSystemReadStats(int distance, int nRead) {
+  void updateFileSystemReadStats(int distance, int readBytes, long readTimeMS) {
     if (stats != null) {
-      stats.incrementBytesRead(nRead);
-      stats.incrementBytesReadByDistance(distance, nRead);
+      stats.incrementBytesRead(readBytes);
+      stats.incrementBytesReadByDistance(distance, readBytes);
+      if (distance > 0) {
+        //remote read
+        stats.increaseRemoteReadTime(readTimeMS);
+      }
     }
   }
 

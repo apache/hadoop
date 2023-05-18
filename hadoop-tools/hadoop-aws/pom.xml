@@ -200,6 +200,9 @@
                     <exclude>**/ITestMarkerToolRootOperations.java</exclude>
                     <!-- leave this until the end for better statistics -->
                     <exclude>**/ITestAggregateIOStatistics.java</exclude>
+                    <!-- cache file based assertions cannot be properly achieved with parallel
+                         execution, let this be sequential -->
+                    <exclude>**/ITestS3APrefetchingCacheFiles.java</exclude>
                   </excludes>
                 </configuration>
               </execution>
@@ -246,6 +249,8 @@
                     <include>**/ITestS3AContractRootDir.java</include>
                     <!-- leave this until the end for better statistics -->
                     <include>**/ITestAggregateIOStatistics.java</include>
+                    <!-- sequential execution for the better cleanup -->
+                    <include>**/ITestS3APrefetchingCacheFiles.java</include>
                   </includes>
                 </configuration>
               </execution>

@@ -26,6 +26,8 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
@@ -49,6 +51,11 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLa
 import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.AttributeMappingOperationType;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
@@ -58,13 +65,16 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 /**
@@ -520,5 +530,77 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     LambdaTestUtils.intercept(YarnException.class,
         "subClusterId = SC-NON is not an active subCluster.",
         () -> interceptor.replaceLabelsOnNode(request2));
+  }
+
+  @Test
+  public void testCheckForDecommissioningNodesRequest() throws Exception {
+    // null request1.
+    LambdaTestUtils.intercept(YarnException.class, "Missing checkForDecommissioningNodes request.",
+        () -> interceptor.checkForDecommissioningNodes(null));
+
+    // null request2.
+    CheckForDecommissioningNodesRequest request =
+        CheckForDecommissioningNodesRequest.newInstance(null);
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing checkForDecommissioningNodes SubClusterId.",
+        () -> interceptor.checkForDecommissioningNodes(request));
+  }
+
+  @Test
+  public void testCheckForDecommissioningNodesNormalRequest() throws Exception {
+    CheckForDecommissioningNodesRequest request =
+        CheckForDecommissioningNodesRequest.newInstance("SC-1");
+    CheckForDecommissioningNodesResponse response =
+        interceptor.checkForDecommissioningNodes(request);
+    assertNotNull(response);
+    Set<NodeId> nodeIds = response.getDecommissioningNodes();
+    assertNotNull(nodeIds);
+    assertEquals(0, nodeIds.size());
+  }
+
+  @Test
+  public void testMapAttributesToNodesRequest() throws Exception {
+    // null request1.
+    LambdaTestUtils.intercept(YarnException.class, "Missing mapAttributesToNodes request.",
+        () -> interceptor.mapAttributesToNodes(null));
+
+    // null request2.
+    NodeAttribute nodeAttribute = NodeAttribute.newInstance(NodeAttribute.PREFIX_CENTRALIZED, "x",
+        NodeAttributeType.STRING, "dfasdf");
+    List<NodeAttribute> nodeAttributeList = Collections.singletonList(nodeAttribute);
+    NodeToAttributes nodeToAttributes = NodeToAttributes.newInstance("host1", nodeAttributeList);
+    List<NodeToAttributes> nodeToAttributesList = Collections.singletonList(nodeToAttributes);
+    NodesToAttributesMappingRequest request = NodesToAttributesMappingRequest.newInstance(
+        AttributeMappingOperationType.ADD, nodeToAttributesList, true, null);
+    LambdaTestUtils.intercept(YarnException.class, "Missing mapAttributesToNodes SubClusterId.",
+        () -> interceptor.mapAttributesToNodes(request));
+  }
+
+  @Test
+  public void testMapAttributesToNodesNormalRequest() throws Exception {
+    NodeAttribute nodeAttribute = NodeAttribute.newInstance(NodeAttribute.PREFIX_CENTRALIZED, "x",
+        NodeAttributeType.STRING, "dfasdf");
+    List<NodeAttribute> nodeAttributeList = Collections.singletonList(nodeAttribute);
+    NodeToAttributes nodeToAttributes =
+        NodeToAttributes.newInstance("127.0.0.1", nodeAttributeList);
+    List<NodeToAttributes> nodeToAttributesList = Collections.singletonList(nodeToAttributes);
+    NodesToAttributesMappingRequest request = NodesToAttributesMappingRequest.newInstance(
+        AttributeMappingOperationType.ADD, nodeToAttributesList, true, "SC-1");
+    interceptor.mapAttributesToNodes(request);
+  }
+
+  @Test
+  public void testGetGroupsForUserRequest() throws Exception {
+    // null request1.
+    LambdaTestUtils.intercept(IOException.class, "Missing getGroupsForUser user.",
+        () -> interceptor.getGroupsForUser(null));
+  }
+
+  @Test
+  public void testGetGroupsForUserNormalRequest() throws Exception {
+    String[] groups = interceptor.getGroupsForUser("admin");
+    assertNotNull(groups);
+    assertEquals(1, groups.length);
+    assertEquals("admin", groups[0]);
   }
 }

@@ -2102,6 +2102,17 @@ public class DatanodeManager {
       }
 
       @Override
+      public double getInServiceXceiverAverageForVolume() {
+        double avgLoad = 0;
+        final int volumes = heartbeatManager.getInServiceAvailableVolumeCount();
+        if (volumes > 0) {
+          final long xceivers = heartbeatManager.getInServiceXceiverCount();
+          avgLoad = (double)xceivers/volumes;
+        }
+        return avgLoad;
+      }
+
+      @Override
       public Map<StorageType, StorageTypeStats> getStorageTypeStats() {
         return heartbeatManager.getStorageTypeStats();
       }

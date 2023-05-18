@@ -219,11 +219,10 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     final FutureDataInputStreamBuilder builder = fs.openFile(path)
         .opt(FS_OPTION_OPENFILE_READ_POLICY,
             inputPolicy.toString())
-        .opt(FS_OPTION_OPENFILE_LENGTH, length)
-        .opt(FS_OPTION_OPENFILE_BUFFER_SIZE, bufferSize);
-    if (readahead > 0) {
-      builder.opt(READAHEAD_RANGE, readahead);
-    }
+        .optLong(FS_OPTION_OPENFILE_LENGTH, length)
+        .opt(FS_OPTION_OPENFILE_BUFFER_SIZE, bufferSize)
+        .optLong(READAHEAD_RANGE, readahead);
+
     FSDataInputStream stream = awaitFuture(builder.build());
     streamStatistics = getInputStreamStatistics(stream);
     return stream;

@@ -79,7 +79,7 @@ public class TestGetGroups extends GetGroupsTestBase {
     boolean rmStarted = rmStartedSignal.await(60000L, TimeUnit.MILLISECONDS);
     Assert.assertTrue("ResourceManager failed to start up.", rmStarted);
 
-    LOG.info("ResourceManager RMAdmin address: " +
+    LOG.info("ResourceManager RMAdmin address: {}.",
         conf.get(YarnConfiguration.RM_ADMIN_ADDRESS));
   }
   

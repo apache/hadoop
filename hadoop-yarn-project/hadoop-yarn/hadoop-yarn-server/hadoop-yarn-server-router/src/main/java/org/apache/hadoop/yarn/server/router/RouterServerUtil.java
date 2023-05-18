@@ -47,10 +47,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationReque
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.util.Records;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,6 +131,19 @@ public final class RouterServerUtil {
       LOG.error(errMsg);
       throw new YarnException(errMsg);
     }
+  }
+
+  /**
+   * Throws an exception due to an error.
+   *
+   * @param errMsg the error message
+   * @throws YarnException on failure
+   */
+  @Public
+  @Unstable
+  public static void logAndThrowException(String errMsg) throws YarnException {
+    LOG.error(errMsg);
+    throw new YarnException(errMsg);
   }
 
   public static <R> R createRequestInterceptorChain(Configuration conf, String pipeLineClassName,
@@ -750,5 +765,40 @@ public final class RouterServerUtil {
       }
       return b.toByteArray();
     }
+  }
+
+  /**
+   * Get trimmed version of ApplicationSubmissionContext to be saved to
+   * Federation State Store.
+   *
+   * @param actualContext actual ApplicationSubmissionContext.
+   * @return trimmed ApplicationSubmissionContext.
+   */
+  @Private
+  @Unstable
+  public static ApplicationSubmissionContext getTrimmedAppSubmissionContext(
+      ApplicationSubmissionContext actualContext) {
+    if (actualContext == null) {
+      return null;
+    }
+
+    // Set Basic information
+    ApplicationSubmissionContext trimmedContext =
+        Records.newRecord(ApplicationSubmissionContext.class);
+    trimmedContext.setApplicationId(actualContext.getApplicationId());
+    trimmedContext.setApplicationName(actualContext.getApplicationName());
+    trimmedContext.setQueue(actualContext.getQueue());
+    trimmedContext.setPriority(actualContext.getPriority());
+    trimmedContext.setApplicationType(actualContext.getApplicationType());
+    trimmedContext.setNodeLabelExpression(actualContext.getNodeLabelExpression());
+    trimmedContext.setLogAggregationContext(actualContext.getLogAggregationContext());
+    trimmedContext.setApplicationTags(actualContext.getApplicationTags());
+    trimmedContext.setApplicationSchedulingPropertiesMap(
+        actualContext.getApplicationSchedulingPropertiesMap());
+    trimmedContext.setKeepContainersAcrossApplicationAttempts(
+        actualContext.getKeepContainersAcrossApplicationAttempts());
+    trimmedContext.setApplicationTimeouts(actualContext.getApplicationTimeouts());
+
+    return trimmedContext;
   }
 }
