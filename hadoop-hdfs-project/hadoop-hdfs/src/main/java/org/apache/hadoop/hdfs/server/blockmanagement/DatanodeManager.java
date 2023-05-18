@@ -208,7 +208,7 @@ public class DatanodeManager {
   private static final String IP_PORT_SEPARATOR = ":";
 
   @Nullable
-  private SlowPeerTracker slowPeerTracker;
+  private volatile SlowPeerTracker slowPeerTracker;
   private static Set<String> slowNodesUuidSet = Sets.newConcurrentHashSet();
   private Daemon slowPeerCollectorDaemon;
   private final long slowPeerCollectionInterval;
@@ -261,9 +261,6 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY,
         DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
-    if (slowPeerTracker.isSlowPeerTrackerEnabled()) {
-      startSlowPeerCollector();
-    }
     this.slowDiskTracker = dataNodeDiskStatsEnabled ?
         new SlowDiskTracker(conf, timer) : null;
     this.defaultXferPort = NetUtils.createSocketAddr(
@@ -376,10 +373,14 @@ public class DatanodeManager {
     this.slowPeerTracker = dataNodePeerStatsEnabled ?
         new SlowPeerTracker(conf, timer) :
         new SlowPeerDisabledTracker(conf, timer);
+    if (slowPeerTracker.isSlowPeerTrackerEnabled()) {
+      startSlowPeerCollector();
+    }
   }
 
   private void startSlowPeerCollector() {
     if (slowPeerCollectorDaemon != null) {
+      LOG.warn("Slow peers collection thread has been started.");
       return;
     }
     slowPeerCollectorDaemon = new Daemon(new Runnable() {
@@ -402,6 +403,7 @@ public class DatanodeManager {
       }
     });
     slowPeerCollectorDaemon.start();
+    LOG.info("Slow peers collection thread start.");
   }
 
   public void stopSlowPeerCollector() {
@@ -2269,5 +2271,10 @@ public class DatanodeManager {
   public void setMaxSlowPeersToReport(int maxSlowPeersToReport) {
     Preconditions.checkNotNull(slowPeerTracker, "slowPeerTracker should not be un-assigned");
     slowPeerTracker.setMaxSlowPeersToReport(maxSlowPeersToReport);
+  }
+
+  @VisibleForTesting
+  public boolean isSlowPeerCollectorDaemonNull() {
+    return slowPeerCollectorDaemon == null;
   }
 }
