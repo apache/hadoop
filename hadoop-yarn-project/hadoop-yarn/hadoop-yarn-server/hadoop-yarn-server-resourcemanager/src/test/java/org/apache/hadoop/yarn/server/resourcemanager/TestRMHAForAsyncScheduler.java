@@ -43,6 +43,10 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
   private TestCapacitySchedulerAsyncScheduling.NMHeartbeatThread
       nmHeartbeatThread = null;
 
+  private static int NUM_CORES = 8;
+  private static int NUM_MEMORY_GB = 8;
+  private static int GB = 1024;
+
   @Before
   @Override
   public void setup() throws Exception {
@@ -87,8 +91,8 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
     // start two RMs, and transit rm1 to active, rm2 to standby
     startRMs();
     // register NM
-    MockNM nm = rm1.registerNode("192.1.1.1:1234", 8192, 8);
-    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 8,8);
+    MockNM nm = rm1.registerNode("192.1.1.1:1234", NUM_MEMORY_GB * GB, NUM_CORES);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, NUM_MEMORY_GB, NUM_CORES);
     // submit app1 and check
     RMApp app1 = submitAppAndCheckLaunched(rm1);
     keepNMHeartbeat(Arrays.asList(nm), 1000);
@@ -99,8 +103,8 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
     pauseNMHeartbeat();
 
     // register NM, kill app1
-    nm = rm2.registerNode("192.1.1.1:1234", 8192, 8);
-    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm2, 8,8);
+    nm = rm2.registerNode("192.1.1.1:1234", NUM_MEMORY_GB * GB, NUM_CORES);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm2, NUM_MEMORY_GB, NUM_CORES);
     keepNMHeartbeat(Arrays.asList(nm), 1000);
 
     rm2.waitForState(app1.getCurrentAppAttempt().getAppAttemptId(),
@@ -124,8 +128,8 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
     checkAsyncSchedulerThreads(Thread.currentThread());
 
     // register NM, kill app2
-    nm = rm1.registerNode("192.1.1.1:1234", 8192, 8);
-    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 8, 8);
+    nm = rm1.registerNode("192.1.1.1:1234", NUM_MEMORY_GB * GB, NUM_CORES);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, NUM_MEMORY_GB, NUM_CORES);
     keepNMHeartbeat(Arrays.asList(nm), 1000);
 
     rm1.waitForState(app2.getCurrentAppAttempt().getAppAttemptId(),
