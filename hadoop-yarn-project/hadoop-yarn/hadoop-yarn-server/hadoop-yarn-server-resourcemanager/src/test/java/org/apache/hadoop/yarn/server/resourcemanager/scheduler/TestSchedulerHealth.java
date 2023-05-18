@@ -220,12 +220,10 @@ public class TestSchedulerHealth {
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
           Resources.createResource(5 * 1024, 1), mockNodeStatus);
 
-    CapacitySchedulerQueueCapacityHandler queueController =
-        new CapacitySchedulerQueueCapacityHandler(nodeLabelsManager);
     CapacityScheduler cs = (CapacityScheduler) resourceManager.getResourceScheduler();
     Resource clusterResource = Resource.newInstance(5 * 1024, 1);
-    queueController.updateRoot(cs.getQueue("root"), clusterResource);
-    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, cs.getQueue("root"));
+    CapacitySchedulerTestUtilities
+        .updateRootQueue(nodeLabelsManager, cs.getQueue("root"), clusterResource);
 
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
@@ -310,12 +308,10 @@ public class TestSchedulerHealth {
     nodeUpdate(nm_0);
     nodeUpdate(nm_1);
 
-    CapacitySchedulerQueueCapacityHandler queueController =
-        new CapacitySchedulerQueueCapacityHandler(nodeLabelsManager);
     CapacityScheduler cs = (CapacityScheduler) resourceManager.getResourceScheduler();
     Resource clusterResource = Resource.newInstance(7 * 1024, 2);
-    queueController.updateRoot(cs.getQueue("root"), clusterResource);
-    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, cs.getQueue("root"));
+    CapacitySchedulerTestUtilities
+        .updateRootQueue(resourceManager.getRMContext().getNodeLabelManager(), cs.getQueue("root"), clusterResource);
 
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);

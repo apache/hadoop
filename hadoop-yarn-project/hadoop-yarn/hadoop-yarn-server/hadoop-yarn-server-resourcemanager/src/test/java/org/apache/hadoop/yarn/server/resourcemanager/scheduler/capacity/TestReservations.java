@@ -1292,11 +1292,12 @@ public class TestReservations {
             priorityReduce, recordFactory)));
 
 
-    CapacitySchedulerQueueCapacityHandler queueController =
-        new CapacitySchedulerQueueCapacityHandler(rmContext.getNodeLabelManager());
+
     Resource clusterResource2 = Resource.newInstance(1000, 1000);
-    queueController.updateRoot(cs.getQueue("root"), clusterResource2);
-    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource2, cs.getQueue("root"));
+    CapacitySchedulerTestUtilities.updateRootQueue(
+        rmContext.getNodeLabelManager(),
+        cs.getQueue("root"),
+        clusterResource2);
 
     // Start testing...
     // Only AM

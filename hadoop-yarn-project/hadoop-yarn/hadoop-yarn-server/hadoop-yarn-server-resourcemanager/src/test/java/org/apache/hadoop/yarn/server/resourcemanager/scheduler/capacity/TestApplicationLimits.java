@@ -149,10 +149,8 @@ public class TestApplicationLimits {
     doReturn(100).when(queue).getMaxApplications();
     doReturn(25).when(queue).getMaxApplicationsPerUser();
 
-
-    queueController = new CapacitySchedulerQueueCapacityHandler(rmContext.getNodeLabelManager());
-    queueController.updateRoot(root, clusterResource);
-    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, root);
+    CapacitySchedulerTestUtilities
+        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
   }
   
   private static final String A = "a";
@@ -314,8 +312,8 @@ public class TestApplicationLimits {
     		" UserAMResourceLimit=" + 
     		queue.getUserAMResourceLimit());
 
-    queueController.updateRoot(root, clusterResource);
-    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, root);
+    CapacitySchedulerTestUtilities
+        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
 
     Resource amResourceLimit = Resource.newInstance(160 * GB, 1);
     assertThat(queue.calculateAndGetAMResourceLimit()).
@@ -334,8 +332,8 @@ public class TestApplicationLimits {
     
     // Add some nodes to the cluster & test new limits
     clusterResource = Resources.createResource(120 * 16 * GB);
-    queueController.updateRoot(root, clusterResource);
-    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, root);
+    CapacitySchedulerTestUtilities
+        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
 
     assertThat(queue.calculateAndGetAMResourceLimit()).isEqualTo(
         Resource.newInstance(192 * GB, 1));
@@ -376,8 +374,8 @@ public class TestApplicationLimits {
         queues, queues, TestUtils.spyHook);
     clusterResource = Resources.createResource(100 * 16 * GB);
     queueManager.setRootQueue(root);
-    queueController.updateRoot(root, clusterResource);
-    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, root);
+    CapacitySchedulerTestUtilities
+        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
 
     queue = (LeafQueue)queues.get(A);
 
@@ -401,8 +399,8 @@ public class TestApplicationLimits {
         queues, queues, TestUtils.spyHook);
     root.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
-    queueController.updateRoot(root, clusterResource);
-    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, root);
+    CapacitySchedulerTestUtilities
+        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
 
     queue = (LeafQueue)queues.get(A);
     assertEquals(9999, (int)csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
@@ -608,8 +606,8 @@ public class TestApplicationLimits {
     queueManager.setRootQueue(rootQueue);
     rootQueue.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-    queueController.updateRoot(root, clusterResource);
-    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, root);
+    CapacitySchedulerTestUtilities
+        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
 
     ResourceUsage queueCapacities = rootQueue.getQueueResourceUsage();
     when(csContext.getClusterResourceUsage())

@@ -19,7 +19,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.setQueueHandler;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.updateChildren;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -817,10 +816,8 @@ public class TestApplicationLimitsByPartition {
     rootQueue.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
 
-    CapacitySchedulerQueueCapacityHandler queueController =
-        new CapacitySchedulerQueueCapacityHandler(mgr);
-    queueController.updateRoot(rootQueue, clusterResource);
-    updateChildren(queueController, clusterResource, rootQueue);
+    CapacitySchedulerTestUtilities
+        .updateRootQueue(mgr, rootQueue, clusterResource);
 
     // Manipulate queue 'a'
     LeafQueue queue = TestLeafQueue.stubLeafQueue((LeafQueue) queues.get("b2"));

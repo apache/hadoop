@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.updateChildren;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -36,7 +32,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueStateManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -125,11 +120,9 @@ public class TestQueueStateManager {
     Assert.assertFalse(stateManager.canDelete(Q2));
     Assert.assertFalse(stateManager.canDelete(Q3));
 
-    CapacitySchedulerQueueCapacityHandler queueController =
-        new CapacitySchedulerQueueCapacityHandler(rmContext.getNodeLabelManager());
     Resource clusterResource = Resource.newInstance(10,10);
-    queueController.updateRoot(cs.getQueue("root"), clusterResource);
-    updateChildren(queueController, clusterResource, cs.getQueue("root"));
+    CapacitySchedulerTestUtilities
+        .updateRootQueue(rmContext.getNodeLabelManager(), cs.getQueue("root"), clusterResource);
 
     ApplicationId appId = ApplicationId.newInstance(
         System.currentTimeMillis(), 1);

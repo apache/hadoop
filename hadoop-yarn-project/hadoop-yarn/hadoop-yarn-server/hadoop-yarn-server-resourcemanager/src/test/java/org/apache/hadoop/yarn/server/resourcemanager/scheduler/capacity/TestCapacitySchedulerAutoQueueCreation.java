@@ -93,7 +93,6 @@ import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.updateChildren;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -944,11 +943,9 @@ public class TestCapacitySchedulerAutoQueueCreation
       newCS.reinitialize(conf, newMockRM.getRMContext());
 
       CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 48, 96);
-      CapacitySchedulerQueueCapacityHandler queueController =
-          new CapacitySchedulerQueueCapacityHandler(mockRM.getRMContext().getNodeLabelManager());
       Resource clusterResource = Resource.newInstance(48 * GB, 96);
-      queueController.updateRoot(newCS.getQueue("root"), clusterResource);
-      updateChildren(queueController, clusterResource, newCS.getQueue("root"));
+      CapacitySchedulerTestUtilities
+          .updateRootQueue(mockRM.getRMContext().getNodeLabelManager(), newCS.getQueue("root"), clusterResource);
 
       // validate that leaf queues abs capacity is now changed
       AutoCreatedLeafQueue user0Queue = (AutoCreatedLeafQueue) newCS.getQueue(
@@ -963,8 +960,8 @@ public class TestCapacitySchedulerAutoQueueCreation
       newCS.reinitialize(conf, newMockRM.getRMContext());
       validateCapacities(user0Queue, 0.3f, 0.09f, 0.4f, 0.2f);
 
-      queueController.updateRoot(newCS.getQueue("root"), clusterResource);
-      updateChildren(queueController, clusterResource, newCS.getQueue("root"));
+      CapacitySchedulerTestUtilities
+          .updateRootQueue(mockRM.getRMContext().getNodeLabelManager(), newCS.getQueue("root"), clusterResource);
       validateUserAndAppLimits(user0Queue, 4000, 4000);
 
       //submit app1 as USER3

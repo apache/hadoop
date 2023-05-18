@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.setQueueHandler;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.updateChildren;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -250,10 +249,8 @@ public class TestChildQueueOrder {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-    CapacitySchedulerQueueCapacityHandler queueController =
-        new CapacitySchedulerQueueCapacityHandler(rmContext.getNodeLabelManager());
-    queueController.updateRoot(root, clusterResource);
-    updateChildren(queueController, clusterResource, root);
+    CapacitySchedulerTestUtilities
+        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // Start testing
     CSQueue a = queues.get(A);

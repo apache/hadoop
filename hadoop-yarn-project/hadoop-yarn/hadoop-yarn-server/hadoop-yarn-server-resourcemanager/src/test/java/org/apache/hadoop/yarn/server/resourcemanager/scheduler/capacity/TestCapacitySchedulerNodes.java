@@ -281,12 +281,12 @@ public class TestCapacitySchedulerNodes {
     // ResourceRequest priorities
     Priority priority0 = Priority.newInstance(0);
 
-    CapacitySchedulerQueueCapacityHandler queueController =
-        new CapacitySchedulerQueueCapacityHandler(resourceManager.getRMContext().getNodeLabelManager());
     CapacityScheduler cs = (CapacityScheduler) resourceManager.getResourceScheduler();
     Resource clusterResource = Resource.newInstance(8 * GB, 4);
-    queueController.updateRoot(cs.getQueue("root"), clusterResource);
-    CapacitySchedulerTestUtilities.updateChildren(queueController, clusterResource, cs.getQueue("root"));
+    CapacitySchedulerTestUtilities.updateRootQueue(
+        resourceManager.getRMContext().getNodeLabelManager(),
+        cs.getQueue("root"),
+        clusterResource);
 
     // Submit an application
     Application application0 =

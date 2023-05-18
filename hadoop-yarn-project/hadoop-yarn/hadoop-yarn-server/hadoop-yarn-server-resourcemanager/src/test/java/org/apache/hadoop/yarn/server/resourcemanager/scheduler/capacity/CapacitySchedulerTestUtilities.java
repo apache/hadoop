@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
@@ -273,7 +274,17 @@ public final class CapacitySchedulerTestUtilities {
     return cs;
   }
 
-  public static void updateChildren(
+  public static void updateRootQueue(
+      RMNodeLabelsManager nodeLabelsManager, CSQueue root, Resource clusterResource
+  ) {
+    CapacitySchedulerQueueCapacityHandler queueController =
+        new CapacitySchedulerQueueCapacityHandler(nodeLabelsManager);
+    queueController.updateRoot(root, clusterResource);
+    updateChildren(queueController, clusterResource, root);
+  }
+
+
+  private static void updateChildren(
       CapacitySchedulerQueueCapacityHandler queueController,
       Resource clusterResource,
       CSQueue queue
