@@ -60,7 +60,7 @@ public class DownloadConfig extends AConfigBase {
      * 是否对下载请求添加NO-Cache请求头
      */
     private boolean useNoCacheHeader() {
-        return conf.getBoolean(namespace + ".noCacheHeader", false);
+        return conf.getBoolean(namespace + ".useNoCacheHeader", false);
     }
 
 }
