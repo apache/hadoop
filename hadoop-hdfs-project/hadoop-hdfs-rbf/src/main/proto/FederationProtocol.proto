@@ -168,6 +168,7 @@ message AddMountTableEntriesRequestProto {
 
 message AddMountTableEntriesResponseProto {
   optional bool status = 1;
+  repeated string failedEntriesKeys = 2;
 }
 
 message UpdateMountTableEntryRequestProto {
