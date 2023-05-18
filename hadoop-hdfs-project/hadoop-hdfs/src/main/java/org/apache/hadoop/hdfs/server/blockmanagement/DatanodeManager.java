@@ -253,7 +253,6 @@ public class DatanodeManager {
     final boolean dataNodePeerStatsEnabledVal =
         conf.getBoolean(DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY,
             DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT);
-    initSlowPeerTracker(conf, timer, dataNodePeerStatsEnabledVal);
     this.maxSlowPeerReportNodes = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_DEFAULT);
@@ -261,6 +260,7 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY,
         DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
+    initSlowPeerTracker(conf, timer, dataNodePeerStatsEnabledVal);
     this.slowDiskTracker = dataNodeDiskStatsEnabled ?
         new SlowDiskTracker(conf, timer) : null;
     this.defaultXferPort = NetUtils.createSocketAddr(
