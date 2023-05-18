@@ -30,22 +30,6 @@ public class QiniuKodoFileSystemContractBaseTest extends FileSystemContractBaseT
 
     }
 
-    @Test
-    @Override
-    public void testOverWriteAndRead() throws Exception {
-        int blockSize = getBlockSize();
-
-        byte[] filedata1 = dataset(blockSize * 2, 'A', 26);
-        byte[] filedata2 = dataset(blockSize * 2, 'a', 26);
-        Path path = path("testOverWriteAndRead/file-overwrite");
-        writeAndRead(path, filedata1, blockSize, true, false);
-        writeAndRead(path, filedata2, blockSize, true, false);
-        writeAndRead(path, filedata1, blockSize * 2, true, false);
-        writeAndRead(path, filedata2, blockSize * 2, true, false);
-        writeAndRead(path, filedata1, blockSize, true, false);
-        writeAndRead(path, filedata2, blockSize * 2, true, false);
-    }
-
     @Override
     protected void rename(Path src, Path dst, boolean renameSucceeded,
                           boolean srcExists, boolean dstExists) throws IOException {
