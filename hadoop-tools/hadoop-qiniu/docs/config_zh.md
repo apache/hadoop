@@ -27,8 +27,6 @@ proxy:
 download:
   # 默认使用https
   useHttps: true
-  # 是否添加 X-QN-NOCACHE 请求头，启用后可能会对后端服务造成较大压力，若需要强一致性需求时可启用，默认不启用
-  useNoCacheHeader: false
   # 文件下载块大小，默认为4MB，若启用了磁盘缓存，则修改该值可能会清空磁盘缓存
   blockSize: 4194304
   # 下载域名，字符串类型，可自行绑定cdn域名

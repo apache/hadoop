@@ -28,10 +28,6 @@ download:
   # Download url scheme weather use https. Default is true, use https.
   useHttps: true
 
-  # Whether to add X-QN-NOCACHE request header, enabling it may cause great pressure on the backend service. 
-  # If strong consistency is required, it can be enabled. The default is not enabled.
-  useNoCacheHeader: false
-
   # File download block size, default is 4MB. If disk cache is enabled, modifying this value may clear the disk cache.
   blockSize: 4194304
 
