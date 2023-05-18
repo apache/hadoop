@@ -3741,7 +3741,7 @@ public class TestLeafQueue {
     assertEquals(0, e.getNumPendingApplications());
   }
   
-  @Test (timeout = 30000)
+  @Test (timeout = 30_000)
   public void testLocalityDelaysAfterQueueRefresh() throws Exception {
 
     // Manipulate queue 'e'
