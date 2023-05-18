@@ -58,7 +58,7 @@ public class TestSignalContainer {
 
     MockNM nm1 = rm.registerNode("h1:1234", 5000);
 
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 5);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 5);
 
     RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
 

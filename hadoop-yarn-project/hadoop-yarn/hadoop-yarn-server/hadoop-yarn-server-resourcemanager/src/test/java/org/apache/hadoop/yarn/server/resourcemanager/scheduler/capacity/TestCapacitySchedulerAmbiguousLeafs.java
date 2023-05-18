@@ -23,11 +23,9 @@ import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -104,7 +102,7 @@ public class TestCapacitySchedulerAmbiguousLeafs {
 
     MockRM rm = new MockRM(schedulerConf);
     rm.start();
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 20);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 20);
 
     ApplicationId id = submitApplication(rm, "root.a.unique");
     rm.waitForState(id, RMAppState.ACCEPTED);

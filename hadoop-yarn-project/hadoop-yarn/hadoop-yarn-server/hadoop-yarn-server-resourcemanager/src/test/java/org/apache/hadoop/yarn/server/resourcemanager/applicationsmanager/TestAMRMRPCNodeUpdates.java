@@ -120,7 +120,7 @@ public class TestAMRMRPCNodeUpdates {
   public void testAMRMDecommissioningNodes() throws Exception {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10000);
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 10000);
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 20);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 20);
     rm.drainEvents();
 
     RMApp app1 = MockRMAppSubmitter.submitWithMemory(2000, rm);
@@ -154,7 +154,7 @@ public class TestAMRMRPCNodeUpdates {
   public void testAMRMRecommissioningNodes() throws Exception {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10000);
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 10000);
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 20);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 20);
     rm.drainEvents();
 
     RMApp app1 = MockRMAppSubmitter.submitWithMemory(2000, rm);
@@ -205,7 +205,7 @@ public class TestAMRMRPCNodeUpdates {
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 10000);
     MockNM nm3 = rm.registerNode("127.0.0.3:1234", 10000);
     MockNM nm4 = rm.registerNode("127.0.0.4:1234", 10000);
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 40);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 40);
     rm.drainEvents();
 
     RMApp app1 = MockRMAppSubmitter.submitWithMemory(2000, rm);

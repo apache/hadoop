@@ -46,8 +46,8 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
     // start two RMs, and transit rm1 to active, rm2 to standby
     startRMs();
 
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 8, 8);
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm2, 8, 8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 8, 8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm2, 8, 8);
 
     // get a new applicationId from rm1
     ApplicationId appId = rm1.getNewAppId().getApplicationId();
@@ -115,8 +115,8 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
     // RMStateStore already saved the ApplicationState when failover happens
     startRMs();
 
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 8, 8);
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm2, 8, 8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 8, 8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm2, 8, 8);
 
     // Submit Application
     // After submission, the applicationState will be saved in RMStateStore.

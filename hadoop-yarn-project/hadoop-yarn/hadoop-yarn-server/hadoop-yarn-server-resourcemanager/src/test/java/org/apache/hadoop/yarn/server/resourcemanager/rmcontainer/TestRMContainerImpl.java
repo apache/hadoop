@@ -57,7 +57,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
@@ -289,7 +288,7 @@ public class TestRMContainerImpl {
     MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 = rm1.registerNode("unknownhost:1234", 8000);
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 8);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 8);
     RMApp app1 = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     ResourceScheduler scheduler = rm1.getResourceScheduler();
@@ -330,7 +329,7 @@ public class TestRMContainerImpl {
 
     rm1.start();
     MockNM nm1 = rm1.registerNode("unknownhost:1234", 8000);
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 8);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 8);
     RMApp app1 = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 1, ContainerState.RUNNING);
@@ -371,7 +370,7 @@ public class TestRMContainerImpl {
 
     rm1.start();
     MockNM nm1 = rm1.registerNode("unknownhost:1234", 8000);
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 8);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 8);
     RMApp app1 = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 1, ContainerState.RUNNING);

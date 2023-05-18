@@ -31,9 +31,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -826,7 +824,7 @@ public class TestApplicationLimits {
     MockNM nm2 = rm.registerNode("h2:1234", 4096);
     MockNM nm3 = rm.registerNode("h3:1234", 4096);
 
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 4);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 4);
 
     // Submit application to queue c where the default partition capacity is
     // zero

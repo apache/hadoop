@@ -117,7 +117,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     cs.start();
     autoQueueHandler = cs.getCapacitySchedulerQueueManager();
     mockRM.registerNode("h1:1234", MAX_MEMORY * GB); // label = x
-    CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, MAX_MEMORY);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, MAX_MEMORY);
   }
 
   /*
@@ -388,7 +388,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // Now, update root.a's weight to 6
     csConf.setNonLabeledQueueWeight("root.a", 6f);
     cs.reinitialize(csConf, mockRM.getRMContext());
-    cs = CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 1200);
+    cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 1200);
 
     // Double confirm, after refresh, we should still see root queue has 5
     // children.
@@ -408,7 +408,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     csConf.setQueues("root", new String[]{"a", "b", "c-auto"});
     csConf.setNonLabeledQueueWeight("root.c-auto", 6f);
     cs.reinitialize(csConf, mockRM.getRMContext());
-    cs = CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 1200);
+    cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 1200);
 
     // Get queue c
     CSQueue c = cs.getQueue("root.c-auto");
@@ -429,7 +429,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     csConf.setQueues("root.e-auto", new String[]{"e1-auto"});
     csConf.setNonLabeledQueueWeight("root.e-auto.e1-auto", 6f);
     cs.reinitialize(csConf, mockRM.getRMContext());
-    cs = CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 1200);
+    cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 1200);
     // Get queue e1
     CSQueue e1 = cs.getQueue("root.e-auto.e1-auto");
 
@@ -458,7 +458,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     csConf.setNonLabeledQueueWeight("root.a", 6f);
     csConf.setNonLabeledQueueWeight("root.d-auto", 1f);
     cs.reinitialize(csConf, mockRM.getRMContext());
-    cs = CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 1200);
+    cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 1200);
 
     CSQueue d = cs.getQueue("root.d-auto");
 
@@ -856,7 +856,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
         AutoCreatedQueueDeletionPolicy.class.getCanonicalName());
     csConf.setAutoExpiredDeletionTime(1);
     cs.reinitialize(csConf, mockRM.getRMContext());
-    cs = CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 1200);
+    cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 1200);
 
     Set<String> policies = new HashSet<>();
     policies.add(
@@ -1077,7 +1077,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     // Check after removal e.
     cs.removeQueue(e);
-    cs = CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 1200);
+    cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 1200);
 
     CSQueue d = cs.getQueue("root.d-auto");
     Assert.assertEquals(1 / 4f, d.getAbsoluteCapacity(), 1e-6);
@@ -1087,7 +1087,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     // Check after removal d.
     cs.removeQueue(d);
-    cs = CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 1200);
+    cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 1200);
     CSQueue c = cs.getQueue("root.c-auto");
     Assert.assertEquals(1 / 3f, c.getAbsoluteCapacity(), 1e-6);
     Assert.assertEquals(1f, c.getQueueCapacities().getWeight(), 1e-6);
@@ -1096,7 +1096,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     // Check after removal c.
     cs.removeQueue(c);
-    cs = CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 1200);
+    cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 1200);
     CSQueue b = cs.getQueue("root.b");
     Assert.assertEquals(1 / 2f, b.getAbsoluteCapacity(), 1e-6);
     Assert.assertEquals(1f, b.getQueueCapacities().getWeight(), 1e-6);
@@ -1262,7 +1262,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   protected AbstractLeafQueue createQueue(String queuePath) throws YarnException,
       IOException {
     AbstractLeafQueue result =  autoQueueHandler.createQueue(new QueuePath(queuePath));
-    cs = CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 1200);
+    cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 1200);
     return result;
   }
 

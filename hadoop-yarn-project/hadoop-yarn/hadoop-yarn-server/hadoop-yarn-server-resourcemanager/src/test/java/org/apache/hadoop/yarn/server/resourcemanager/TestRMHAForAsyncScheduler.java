@@ -88,7 +88,7 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
     startRMs();
     // register NM
     MockNM nm = rm1.registerNode("192.1.1.1:1234", 8192, 8);
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 8,8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 8,8);
     // submit app1 and check
     RMApp app1 = submitAppAndCheckLaunched(rm1);
     keepNMHeartbeat(Arrays.asList(nm), 1000);
@@ -100,7 +100,7 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
 
     // register NM, kill app1
     nm = rm2.registerNode("192.1.1.1:1234", 8192, 8);
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm2, 8,8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm2, 8,8);
     keepNMHeartbeat(Arrays.asList(nm), 1000);
 
     rm2.waitForState(app1.getCurrentAppAttempt().getAppAttemptId(),
@@ -125,7 +125,7 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
 
     // register NM, kill app2
     nm = rm1.registerNode("192.1.1.1:1234", 8192, 8);
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 8, 8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 8, 8);
     keepNMHeartbeat(Arrays.asList(nm), 1000);
 
     rm1.waitForState(app2.getCurrentAppAttempt().getAppAttemptId(),

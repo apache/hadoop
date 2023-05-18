@@ -95,7 +95,7 @@ public class TestCapacitySchedulerWorkflowPriorityMapping {
     setWorkFlowPriorityMappings(conf);
 
     mockRM = new MockRM(conf);
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 1024,128);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 1024,128);
     mockRM.start();
     cs.start();
 
@@ -176,7 +176,7 @@ public class TestCapacitySchedulerWorkflowPriorityMapping {
     conf.setBoolean(CapacitySchedulerConfiguration
         .ENABLE_WORKFLOW_PRIORITY_MAPPINGS_OVERRIDE, false);
     cs.reinitialize(conf, mockRM.getRMContext());
-    cs = CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 6);
+    cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 6);
 
     MockRMAppSubmitter.submit(mockRM,
         MockRMAppSubmissionData.Builder.createWithMemory(1, mockRM)

@@ -47,7 +47,6 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -134,7 +133,7 @@ public class TestCSAllocateCustomResource {
     nodeResource.setResourceValue(customResourceType, 10);
     MockNM nm1 = rm.registerNode("h1:1234", nodeResource);
 
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 20, 20,
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 20, 20,
         Collections.singletonMap(customResourceType, "10"));
 
     // submit app

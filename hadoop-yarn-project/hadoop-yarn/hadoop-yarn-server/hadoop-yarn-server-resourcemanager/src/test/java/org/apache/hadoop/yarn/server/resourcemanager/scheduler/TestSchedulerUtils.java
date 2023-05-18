@@ -690,7 +690,7 @@ public class TestSchedulerUtils {
     rm.start();
 
     MockNM nm1 = rm.registerNode("localhost:1234", 5120);
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 6);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 6);
 
     Map<ApplicationAccessType, String> acls =
             new HashMap<ApplicationAccessType, String>(2);

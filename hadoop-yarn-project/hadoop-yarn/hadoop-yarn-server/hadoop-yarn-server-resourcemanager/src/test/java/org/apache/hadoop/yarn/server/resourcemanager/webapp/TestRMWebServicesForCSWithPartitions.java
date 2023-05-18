@@ -280,7 +280,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
         rm.getResourceTrackerService());
     nm1.registerNode();
     nm2.registerNode();
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 4);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 4);
     try {
       RMApp app1 = MockRMAppSubmitter.submit(rm,
           MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)

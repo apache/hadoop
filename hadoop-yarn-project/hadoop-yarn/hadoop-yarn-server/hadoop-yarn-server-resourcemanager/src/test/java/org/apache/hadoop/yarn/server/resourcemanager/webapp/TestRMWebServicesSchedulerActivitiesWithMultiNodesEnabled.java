@@ -167,7 +167,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
         rm.getResourceTrackerService());
     nm.registerNode();
 
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 2);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 2);
 
     try {
       RMApp app1 = MockRMAppSubmitter.submit(rm,
@@ -227,7 +227,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
         rm.getResourceTrackerService());
     nm.registerNode();
 
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 8);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 8);
 
     try {
       //Trigger recording for multi-nodes without params
@@ -267,7 +267,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * 1024);
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 2 * 1024);
 
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 6);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 6);
 
     try {
       RMApp app1 = MockRMAppSubmitter.submit(rm,
@@ -335,7 +335,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     MockNM nm3 = rm.registerNode("127.0.0.3:1234", 2 * 1024);
     MockNM nm4 = rm.registerNode("127.0.0.4:1234", 2 * 1024);
 
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 10);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 10);
 
     try {
       RMApp app1 = MockRMAppSubmitter.submit(rm,
@@ -422,7 +422,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     MockNM nm3 = rm.registerNode("127.0.0.3:1234", 2 * 1024);
     MockNM nm4 = rm.registerNode("127.0.0.4:1234", 2 * 1024);
 
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 10);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 10);
 
     try {
       RMApp app1 = MockRMAppSubmitter.submit(rm,
@@ -502,7 +502,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     MockNM nm3 = rm.registerNode("127.0.0.3:1234", 2 * 1024);
     MockNM nm4 = rm.registerNode("127.0.0.4:1234", 2 * 1024);
 
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 10);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 10);
 
     try {
       RMApp app1 = MockRMAppSubmitter.submit(rm,
@@ -589,7 +589,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     MockNM nm3 = rm.registerNode("127.0.0.3:1234", 2 * 1024);
     MockNM nm4 = rm.registerNode("127.0.0.4:1234", 2 * 1024);
 
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 10);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 10);
 
     try {
       RMApp app1 = MockRMAppSubmitter.submit(rm,

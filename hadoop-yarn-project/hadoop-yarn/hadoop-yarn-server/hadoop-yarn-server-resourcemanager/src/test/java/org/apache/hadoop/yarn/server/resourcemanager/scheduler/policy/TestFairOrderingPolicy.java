@@ -177,7 +177,7 @@ public class TestFairOrderingPolicy {
     MockRM rm = new MockRM(csConf);
     rm.start();
 
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 8);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 8);
 
     // Get LeafQueue
     LeafQueue lq = (LeafQueue) cs.getQueue("default");

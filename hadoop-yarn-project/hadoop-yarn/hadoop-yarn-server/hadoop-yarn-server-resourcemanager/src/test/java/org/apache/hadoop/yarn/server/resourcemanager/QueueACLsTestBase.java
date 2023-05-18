@@ -271,7 +271,7 @@ public abstract class QueueACLsTestBase extends ACLsTestBase {
   private void verifyKillAppSuccess(String submitter, String killer,
       String queueName, boolean setupACLs) throws Exception {
 
-    CapacitySchedulerTestUtilities.getCapacityScheduler(resourceManager, 16, 16);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(resourceManager, 16, 16);
 
     ApplicationId applicationId =
         submitAppAndGetAppId(submitter, queueName, setupACLs);

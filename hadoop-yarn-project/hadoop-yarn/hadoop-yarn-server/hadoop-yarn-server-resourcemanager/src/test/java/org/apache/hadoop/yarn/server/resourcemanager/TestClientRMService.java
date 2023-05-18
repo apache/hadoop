@@ -647,7 +647,7 @@ public class TestClientRMService {
     rm.init(conf);
     rm.start();
 
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 8,8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 8,8);
 
     ClientRMService rmService = rm.getClientRMService();
     GetApplicationsRequest getRequest = GetApplicationsRequest.newInstance(
@@ -2383,7 +2383,7 @@ public class TestClientRMService {
     };
     resourceManager = rm;
     rm.start();
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 8,8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 8,8);
 
     NodeAttributesManager mgr = rm.getRMContext().getNodeAttributesManager();
     String node1 = "host1";
@@ -2470,7 +2470,7 @@ public class TestClientRMService {
     resourceManager = rm;
     rm.init(conf);
     rm.start();
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 8);
     MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder
         .createWithMemory(1024, rm)
         .withAppPriority(Priority.newInstance(appPriority))
@@ -2497,7 +2497,7 @@ public class TestClientRMService {
     rm.init(conf);
     rm.start();
     rm.registerNode("host1:1234", 1024);
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 1);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 1);
     // Start app1 with appPriority 5
     MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder
         .createWithMemory(1024, rm)

@@ -125,7 +125,7 @@ public class TestVolumeProcessor {
       mockNMS[i] = rm.registerNode("192.168.0." + i + ":1234", 10 * GB);
       rmNodes[i] = rm.getRMContext().getRMNodes().get(mockNMS[i].getNodeId());
     }
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 40);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 40);
   }
 
   @After

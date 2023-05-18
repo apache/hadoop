@@ -79,7 +79,7 @@ public class TestCapacitySchedulerSchedulingRequestUpdate {
         new MockNM("h2:1234", 200 * GB, rm.getResourceTrackerService());
     nm2.registerNode();
 
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 400);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 400);
 
     // Launch app1 in queue=a1
     MockRMAppSubmissionData data1 =
@@ -215,7 +215,7 @@ public class TestCapacitySchedulerSchedulingRequestUpdate {
         new MockNM("h2:1234", 200 * GB, rm.getResourceTrackerService());
     nm2.registerNode();
 
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 400);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 400);
 
     // Launch app1 in queue=a1
     MockRMAppSubmissionData data1 =

@@ -95,7 +95,7 @@ public class TestAMAllocatedToNonExclusivePartition {
     rm1.start();
 
     MockNM nm1 = rm1.registerNode("h1:1234", 8000); // label = x
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 8);
 
     MockRMAppSubmissionData data2 =
         MockRMAppSubmissionData

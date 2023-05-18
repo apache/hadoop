@@ -136,7 +136,7 @@ public class TestCapacitySchedulerNodes {
         ResourceScheduler.class);
     MockRM rm = new MockRM(conf);
     rm.start();
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 4);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 4);
 
     String host = "127.0.0.1";
     RMNode node =
@@ -365,7 +365,7 @@ public class TestCapacitySchedulerNodes {
     rm.start();
 
     CapacityScheduler scheduler =
-        CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 20, 20);
+        CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 20, 20);
 
     RMApp app = MockRMAppSubmitter.submitWithMemory(100, rm);
     rm.drainEvents();

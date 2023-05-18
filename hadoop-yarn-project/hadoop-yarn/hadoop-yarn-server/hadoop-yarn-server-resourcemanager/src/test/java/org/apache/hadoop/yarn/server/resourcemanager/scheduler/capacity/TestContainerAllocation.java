@@ -104,7 +104,7 @@ public class TestContainerAllocation {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 2 * GB, 4);
     MockNM nm2 = rm.registerNode("127.0.0.1:2234", 3 * GB, 4);
 
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 5);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 5);
 
     nm1.nodeHeartbeat(true);
     nm2.nodeHeartbeat(true);
@@ -171,7 +171,7 @@ public class TestContainerAllocation {
     MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 = rm1.registerNode("127.0.0.1:1234", 8000);
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 8);
     RMApp app1 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     // request a container.
@@ -201,7 +201,7 @@ public class TestContainerAllocation {
     MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 = rm1.registerNode("unknownhost:1234", 8000);
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 8);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 8);
     RMApp app1 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
@@ -240,7 +240,7 @@ public class TestContainerAllocation {
     MockNM nm1 = rm1.registerNode("127.0.0.1:1234", 8000);
     MockNM nm2 = rm1.registerNode("127.0.0.1:2345", 8000);
 
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 16);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 16);
 
     // LogAggregationContext is set as null
     Assert
@@ -343,7 +343,7 @@ public class TestContainerAllocation {
     MockNM nm1 = rm1.registerNode("unknownhost:1234", 8000);
 
     CapacityScheduler cs = CapacitySchedulerTestUtilities
-        .getCapacityScheduler(rm1, 8);
+        .setupCapacityScheduler(rm1, 8);
     RMApp app1;
     try {
       SecurityUtilTestHelper.setTokenServiceUseIp(true);
@@ -385,7 +385,7 @@ public class TestContainerAllocation {
     MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
 
     CapacityScheduler cs = CapacitySchedulerTestUtilities
-        .getCapacityScheduler(rm1, 16);
+        .setupCapacityScheduler(rm1, 16);
     // launch an app to queue, AM container should be launched in nm1
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
@@ -485,7 +485,7 @@ public class TestContainerAllocation {
     MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
 
     CapacityScheduler cs = CapacitySchedulerTestUtilities
-        .getCapacityScheduler(rm1, 16);
+        .setupCapacityScheduler(rm1, 16);
     // launch an app to queue, AM container should be launched in nm1
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
@@ -598,7 +598,7 @@ public class TestContainerAllocation {
     MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
 
     CapacityScheduler cs = CapacitySchedulerTestUtilities
-        .getCapacityScheduler(rm1, 16);
+        .setupCapacityScheduler(rm1, 16);
     // launch an app to queue, AM container should be launched in nm1
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
@@ -686,7 +686,7 @@ public class TestContainerAllocation {
     rm1.start();
     MockNM nm1 = rm1.registerNode("h1:1234", 80 * GB);
     CapacityScheduler cs = CapacitySchedulerTestUtilities
-        .getCapacityScheduler(rm1, 80);
+        .setupCapacityScheduler(rm1, 80);
     // launch an app to queue, AM container should be launched in nm1
     MockRMAppSubmissionData data =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
@@ -744,7 +744,7 @@ public class TestContainerAllocation {
     MockNM nm2 = rm1.registerNode("h2:1234", 90 * GB);
 
     CapacityScheduler cs = CapacitySchedulerTestUtilities
-        .getCapacityScheduler(rm1, 100);
+        .setupCapacityScheduler(rm1, 100);
     // launch an app to queue A, AM container should be launched in nm1
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
@@ -813,7 +813,7 @@ public class TestContainerAllocation {
     MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
 
     CapacityScheduler cs = CapacitySchedulerTestUtilities
-        .getCapacityScheduler(rm1, 16);
+        .setupCapacityScheduler(rm1, 16);
     // launch an app to queue default, AM container should be launched in nm1
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
@@ -921,7 +921,7 @@ public class TestContainerAllocation {
     MockNM nm1 = rm1.registerNode("h1:1234", 100 * GB);
 
     CapacityScheduler cs = CapacitySchedulerTestUtilities
-        .getCapacityScheduler(rm1, 100);
+        .setupCapacityScheduler(rm1, 100);
     // launch an app to queue A, AM container should be launched in nm1
     MockRMAppSubmissionData data2 =
         MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
@@ -1049,7 +1049,7 @@ public class TestContainerAllocation {
     MockNM nm1 = rm1.registerNode("h1:1234", 1000 * GB);
 
     CapacityScheduler cs = CapacitySchedulerTestUtilities
-        .getCapacityScheduler(rm1, 1000);
+        .setupCapacityScheduler(rm1, 1000);
     // launch app from 1st user to queue C, AM container should be launched in nm1
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
@@ -1114,7 +1114,7 @@ public class TestContainerAllocation {
     MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB);
 
     CapacityScheduler cs = CapacitySchedulerTestUtilities
-        .getCapacityScheduler(rm1, 8);
+        .setupCapacityScheduler(rm1, 8);
     MockRMAppSubmissionData data3 =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
             .withAppName("app")
@@ -1212,7 +1212,7 @@ public class TestContainerAllocation {
     MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
 
     CapacityScheduler cs = CapacitySchedulerTestUtilities
-        .getCapacityScheduler(rm1, 16);
+        .setupCapacityScheduler(rm1, 16);
     // launch an app to queue "a", AM container should be launched on nm1
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
@@ -1310,7 +1310,7 @@ public class TestContainerAllocation {
     MockNM nm2 = rm1.registerNode("h2:1234", 10 * GB);
 
     CapacityScheduler cs = CapacitySchedulerTestUtilities
-        .getCapacityScheduler(rm1, 20);
+        .setupCapacityScheduler(rm1, 20);
     // launch an app to queue "c1", AM container should be launched on nm1
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
@@ -1368,7 +1368,7 @@ public class TestContainerAllocation {
     rm1.start();
 
     CapacityScheduler cs = CapacitySchedulerTestUtilities
-        .getCapacityScheduler(rm1, 4);
+        .setupCapacityScheduler(rm1, 4);
     // before any node registered or before registration timeout,
     // submit an app beyond queue max leads to failure.
     boolean submitFailed = false;

@@ -56,7 +56,6 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.records.Container
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -68,7 +67,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestRMApplicationHistoryWriter {
@@ -447,7 +445,7 @@ public class TestRMApplicationHistoryWriter {
   private void testRMWritingMassiveHistory(MockRM rm) throws Exception {
     rm.start();
     MockNM nm = rm.registerNode("127.0.0.1:1234", 1024 * 10100);
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 10100);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 10100);
 
     RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     //Wait to make sure the attempt has the right state

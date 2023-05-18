@@ -33,7 +33,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.DecommissioningNodesWatcher.DecommissioningNodeStatus;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
@@ -63,7 +62,7 @@ public class TestDecommissioningNodesWatcher {
         new DecommissioningNodesWatcher(rm.getRMContext());
 
     MockNM nm1 = rm.registerNode("host1:1234", 10240);
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 10);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 10);
     RMNodeImpl node1 =
         (RMNodeImpl) rm.getRMContext().getRMNodes().get(nm1.getNodeId());
     NodeId id1 = nm1.getNodeId();
@@ -124,7 +123,7 @@ public class TestDecommissioningNodesWatcher {
         new DecommissioningNodesWatcher(rm.getRMContext());
 
     MockNM nm1 = rm.registerNode("host1:1234", 10240);
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 10);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 10);
     RMNodeImpl node1 =
         (RMNodeImpl) rm.getRMContext().getRMNodes().get(nm1.getNodeId());
     NodeId id1 = nm1.getNodeId();

@@ -102,7 +102,7 @@ public class TestResourceManager {
             .getRMNodes().get(nm.getNodeId()));
     resourceManager.getResourceScheduler().handle(nodeAddEvent1);
     CapacitySchedulerTestUtilities
-        .getCapacityScheduler(resourceManager, capability.getMemory());
+        .setupCapacityScheduler(resourceManager, capability.getMemory());
     return nm;
   }
 

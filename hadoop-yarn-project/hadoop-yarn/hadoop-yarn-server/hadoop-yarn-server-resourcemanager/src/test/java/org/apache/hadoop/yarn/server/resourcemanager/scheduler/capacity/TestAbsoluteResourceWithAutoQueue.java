@@ -39,7 +39,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -171,11 +170,11 @@ public class TestAbsoluteResourceWithAutoQueue
       // Add few nodes
       mockRM.registerNode("127.0.0.1:1234", 250 * GB, 40);
 
-      CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 250,40);
+      CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 250,40);
 
       setupGroupQueueMappings(QUEUED, cs.getConfiguration(), "%user");
       cs.reinitialize(cs.getConfiguration(), mockRM.getRMContext());
-      cs = CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 250,40);
+      cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 250,40);
 
       submitApp(mockRM, cs.getQueue(QUEUED), TEST_GROUPUSER, TEST_GROUPUSER, 1,
           1);

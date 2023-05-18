@@ -126,7 +126,7 @@ public class TestCapacitySchedulerMultiNodesWithPreemption {
     MockNM nm3 = rm.registerNode("127.0.0.3:1234", 3 * GB, 2);
     nms[2] = nm3;
 
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 6, 6);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 6, 6);
 
     MultiNodeSortingManager<SchedulerNode> mns = rm.getRMContext()
         .getMultiNodeSortingManager();

@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.util.Sets;
-import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -50,7 +49,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt
     .RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerDynamicEditException;
 
@@ -811,7 +809,7 @@ public class TestCapacitySchedulerAutoQueueCreation
           (CapacityScheduler) newMockRM.getResourceScheduler();
 
       CSQueue parentQueue = newCS.getQueue(PARENT_QUEUE);
-      CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(newMockRM, 50,96);
+      CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(newMockRM, 50,96);
 
       //submit app1 as USER1
       submitApp(newMockRM, parentQueue, USER1, USER1, 1, 1);
@@ -847,7 +845,7 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       // add new NM.
       newMockRM.registerNode("127.0.0.3:1234", 125 * GB, 20);
-      cs = CapacitySchedulerTestUtilities.getCapacityScheduler(newMockRM, 141,68);
+      cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(newMockRM, 141,68);
 
 
 
@@ -942,7 +940,7 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       newCS.reinitialize(conf, newMockRM.getRMContext());
 
-      CapacitySchedulerTestUtilities.getCapacityScheduler(mockRM, 48, 96);
+      CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 48, 96);
       Resource clusterResource = Resource.newInstance(48 * GB, 96);
       CapacitySchedulerTestUtilities
           .updateRootQueue(mockRM.getRMContext().getNodeLabelManager(), newCS.getQueue("root"), clusterResource);

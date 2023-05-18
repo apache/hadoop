@@ -253,7 +253,7 @@ public class TestAbsoluteResourceConfiguration {
     rm.registerNode("127.0.0.1:1234", 250 * GB, 40);
 
     // Get queue object to verify min/max resource configuration.
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 250, 40);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 250, 40);
 
     ManagedParentQueue parentQueue = (ManagedParentQueue) cs.getQueue(QUEUED);
     AutoCreatedLeafQueue d1 = new AutoCreatedLeafQueue(cs.getQueueContext(), "d1", parentQueue);
@@ -325,7 +325,7 @@ public class TestAbsoluteResourceConfiguration {
 
     // Send a removal event to CS. MockRM#unregisterNode does not reflect the real world scenario,
     // therefore we manually need to invoke this removal event.
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 46, 28);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 46, 28);
     cs.handle(new NodeRemovedSchedulerEvent(rm.getRMContext().getRMNodes().get(nm.getNodeId())));
 
     Resource res = Resources.add(
@@ -358,7 +358,7 @@ public class TestAbsoluteResourceConfiguration {
     rm.registerNode("127.0.0.1:1234", 250 * GB, 40);
 
     // Get queue object to verify min/max resource configuration.
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 250,40);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 250,40);
 
     LeafQueue qA = (LeafQueue) cs.getQueue(QUEUEA);
     Assert.assertNotNull(qA);
@@ -450,7 +450,7 @@ public class TestAbsoluteResourceConfiguration {
     rm = new MockRM(csConf2);
     rm.start();
     rm.registerNode("127.0.0.1:1234", 250 * GB, 40);
-    cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 250, 40);
+    cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 250, 40);
 
     LeafQueue qA1 = (LeafQueue) cs.getQueue(QUEUEA1);
     Assert.assertEquals("Effective Min resource for QUEUEA1 is not correct",
@@ -704,7 +704,7 @@ public class TestAbsoluteResourceConfiguration {
     rm.registerNode("127.0.0.2:1234", 125 * GB, 20);
 
     // Get queue object to verify min/max resource configuration.
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 250,40);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 250,40);
 
     LeafQueue qA = (LeafQueue) cs.getQueue(QUEUEA);
     Assert.assertNotNull(qA);
@@ -741,7 +741,7 @@ public class TestAbsoluteResourceConfiguration {
 
     // unregister one NM.
     rm.unRegisterNode(nm1);
-    cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 125,20);
+    cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 125,20);
 
 
     // After loosing one NM, effective min res of queueA will become just
@@ -785,7 +785,7 @@ public class TestAbsoluteResourceConfiguration {
     rm.registerNode("127.0.0.2:1234", 125 * GB, 20);
 
     // Get queue object to verify min/max resource configuration.
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 250, 40);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 250, 40);
 
     ParentQueue qA = (ParentQueue) cs.getQueue(QUEUEA);
     Assert.assertNotNull(qA);
@@ -868,7 +868,7 @@ public class TestAbsoluteResourceConfiguration {
 
     // add new NM.
     rm.registerNode("127.0.0.3:1234", 125 * GB, 20);
-    cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 375, 60);
+    cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 375, 60);
 
     // There will be no change in effective resource when nodes are added.
     // Since configured capacity was based on initial node capacity, a

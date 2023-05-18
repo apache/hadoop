@@ -157,7 +157,7 @@ public class TestApplicationACLs extends ParameterizedSchedulerTestBase {
         UserGroupInformation.createUserForTesting(SUPER_USER,
             new String[] { SUPER_GROUP });
         resourceManager.start();
-        CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(resourceManager, 6);
+        CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(resourceManager, 6);
       };
     }.start();
     int waitCount = 0;

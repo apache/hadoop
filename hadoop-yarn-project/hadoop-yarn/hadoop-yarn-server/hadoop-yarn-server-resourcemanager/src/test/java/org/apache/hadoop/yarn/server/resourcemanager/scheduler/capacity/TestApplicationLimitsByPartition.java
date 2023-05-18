@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -59,7 +58,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.AMState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -158,7 +156,7 @@ public class TestApplicationLimitsByPartition {
     rm1.registerNode("h2:1234", 10 * GB); // label = y
     MockNM nm3 = rm1.registerNode("h3:1234", 10 * GB); // label = <empty>
 
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 30);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 30);
 
     // Submit app1 with 1Gb AM resource to Queue A1 for label X
     MockRMAppSubmissionData data5 =
@@ -213,7 +211,7 @@ public class TestApplicationLimitsByPartition {
         pendingApp.getDiagnostics().toString().contains(
             CSAMContainerLaunchDiagnosticsConstants.QUEUE_AM_RESOURCE_LIMIT_EXCEED));
 
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 10);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 10);
 
     // Now verify the same test case in Queue C1 where label is not configured.
     // Submit an app to Queue C1 with empty label
@@ -653,7 +651,7 @@ public class TestApplicationLimitsByPartition {
     rm1.registerNode("h4:1234", 10 * GB); // label = z
     MockNM nm5 = rm1.registerNode("h5:1234", 10 * GB); // label = <empty>
 
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 50);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 50);
 
     // Submit app1 with 2Gb AM resource to Queue A1 for label Y
     MockRMAppSubmissionData data4 =
@@ -707,7 +705,7 @@ public class TestApplicationLimitsByPartition {
     Assert.assertEquals(2, leafQueue.getNumActiveApplications());
     Assert.assertEquals(1, leafQueue.getNumPendingApplications());
 
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 10);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 10);
 
     // Submit app3 with 1Gb AM resource to Queue B1 (no_label)
     MockRMAppSubmissionData data1 =
@@ -994,7 +992,7 @@ public class TestApplicationLimitsByPartition {
 
     rm.registerNode("127.0.0.1:1234", clusterResource);
 
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 16, 64,
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 16, 64,
         Collections.singletonMap("gpu", "0"));
 
     String userName = "user_0";

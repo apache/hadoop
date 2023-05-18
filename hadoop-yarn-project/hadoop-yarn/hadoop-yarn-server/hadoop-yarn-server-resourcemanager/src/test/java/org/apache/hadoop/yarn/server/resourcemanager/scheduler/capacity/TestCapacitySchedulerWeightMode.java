@@ -507,7 +507,7 @@ public class TestCapacitySchedulerWeightMode {
     MockNM nm4 = rm1.registerNode("h4:1234", 2048);
     MockNM nm5 = rm1.registerNode("h5:1234", 2048);
 
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 2);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 2);
 
     ContainerId containerId;
 

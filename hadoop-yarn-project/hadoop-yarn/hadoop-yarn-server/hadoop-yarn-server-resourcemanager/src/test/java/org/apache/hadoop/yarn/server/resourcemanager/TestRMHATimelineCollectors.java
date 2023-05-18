@@ -64,8 +64,8 @@ public class TestRMHATimelineCollectors extends RMHATestBase {
         = new MockNM("127.0.0.1:1234", 15120, rm2.getResourceTrackerService());
     MockNM nm2
         = new MockNM("127.0.0.1:5678", 15121, rm2.getResourceTrackerService());
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 16);
-    CapacitySchedulerTestUtilities.getCapacityScheduler(rm2, 16);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 16);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm2, 16);
     RMApp app1 = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     String collectorAddr1 = "1.2.3.4:5";
     AppCollectorData data1 = AppCollectorData.newInstance(

@@ -57,7 +57,7 @@ public class TestApplicationPriorityACLs extends ACLsTestBase {
      * apps only at priority 5. Default priority for this user is 3.
      */
 
-    CapacitySchedulerTestUtilities.getCapacityScheduler(resourceManager, 10, 10);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(resourceManager, 10, 10);
 
     // Case 1: App will be submitted with priority 5.
     verifyAppSubmitWithPrioritySuccess(QUEUE_A_USER, QUEUEA, 5);

@@ -152,7 +152,7 @@ public class TestWorkPreservingRMRestartForNodeLabel {
     MockNM nm2 = rm1.registerNode("h2:1234", 8000); // label = y
     MockNM nm3 = rm1.registerNode("h3:1234", 8000); // label = <empty>
 
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm1, 24);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 24);
     
     ContainerId containerId;
 

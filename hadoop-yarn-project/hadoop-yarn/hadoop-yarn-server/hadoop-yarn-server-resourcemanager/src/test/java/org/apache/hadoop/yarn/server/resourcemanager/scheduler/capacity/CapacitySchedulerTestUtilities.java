@@ -43,7 +43,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
@@ -245,15 +244,15 @@ public final class CapacitySchedulerTestUtilities {
     node.checkResourceUsage();
   }
 
-  public static CapacityScheduler getCapacityScheduler(MockRM rm, int memoryGb) {
-    return getCapacityScheduler(rm, memoryGb, 16, Collections.emptyMap());
+  public static CapacityScheduler setupCapacityScheduler(MockRM rm, int memoryGb) {
+    return setupCapacityScheduler(rm, memoryGb, 16, Collections.emptyMap());
   }
 
-  public static CapacityScheduler getCapacityScheduler(MockRM rm, int memoryGb, int cores) {
-    return getCapacityScheduler(rm, memoryGb, cores, Collections.emptyMap());
+  public static CapacityScheduler setupCapacityScheduler(MockRM rm, int memoryGb, int cores) {
+    return setupCapacityScheduler(rm, memoryGb, cores, Collections.emptyMap());
   }
 
-  public static CapacityScheduler getCapacityScheduler(
+  public static CapacityScheduler setupCapacityScheduler(
       MockRM rm, int memoryGb, int cores, Map<String, String> nameToValues
   ) {
     if(!(rm.getResourceScheduler() instanceof CapacityScheduler)) {

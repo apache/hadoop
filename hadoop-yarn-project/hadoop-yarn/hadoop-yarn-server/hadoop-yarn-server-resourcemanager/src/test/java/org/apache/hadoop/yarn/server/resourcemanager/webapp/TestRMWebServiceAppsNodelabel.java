@@ -147,7 +147,7 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
   public void testAppsFinished() throws JSONException, Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 2);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 2);
     amNodeManager.nodeHeartbeat(true);
     RMApp killedApp = MockRMAppSubmitter.submitWithMemory(AM_CONTAINER_MB, rm);
     rm.killApp(killedApp.getApplicationId());
@@ -173,7 +173,7 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 2048);
     MockNM nm2 = rm.registerNode("h2:1235", 2048);
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.getCapacityScheduler(rm, 4);
+    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 4);
 
     nodeLabelManager.addLabelsToNode(
         ImmutableMap.of(NodeId.newInstance("h2", 1235), toSet("X")));
