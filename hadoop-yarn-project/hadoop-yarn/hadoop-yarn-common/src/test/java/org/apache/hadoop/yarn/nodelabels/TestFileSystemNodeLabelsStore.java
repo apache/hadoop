@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 
+import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Timeout;
@@ -348,27 +349,13 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
 
   @MethodSource("getParameters")
   @ParameterizedTest
-  void testRootMkdirOnInitStoreWhenRootDirectoryAlreadyExists(String className) throws Exception {
-    initTestFileSystemNodeLabelsStore(className);
-    final FileSystem mockFs = Mockito.mock(FileSystem.class);
-    final FileSystemNodeLabelsStore mockStore = createMockNodeLabelsStore(mockFs);
-    final int expectedMkdirsCount = 0;
-
-    Mockito.when(mockStore.getFs().exists(Mockito.any(Path.class)))
-        .thenReturn(true);
-    verifyMkdirsCount(mockStore, expectedMkdirsCount);
-  }
-
-  @MethodSource("getParameters")
-  @ParameterizedTest
-  void testRootMkdirOnInitStoreWhenRootDirectoryNotExists(String className) throws Exception {
+  void testRootMkdirOnInitStore(String className) throws Exception {
     initTestFileSystemNodeLabelsStore(className);
     final FileSystem mockFs = Mockito.mock(FileSystem.class);
     final FileSystemNodeLabelsStore mockStore = createMockNodeLabelsStore(mockFs);
     final int expectedMkdirsCount = 1;
 
-    Mockito.when(mockStore.getFs().exists(Mockito.any(Path.class)))
-        .thenReturn(false).thenReturn(true);
+    Mockito.when(mockStore.getFs().mkdirs(Mockito.any(Path.class))).thenReturn(true);
     verifyMkdirsCount(mockStore, expectedMkdirsCount);
   }
 
@@ -378,10 +365,11 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
     initTestFileSystemNodeLabelsStore(className);
     final FileSystem mockFs = Mockito.mock(FileSystem.class);
     final FileSystemNodeLabelsStore mockStore = createMockNodeLabelsStore(mockFs);
-    final int expectedMkdirsCount = 2;
+    final int expectedMkdirsCount = 3;
 
-    Mockito.when(mockStore.getFs().exists(Mockito.any(Path.class)))
-        .thenReturn(false).thenReturn(false).thenReturn(true);
+    Mockito.when(mockStore.getFs().mkdirs(Mockito.any(Path.class)))
+        .thenThrow(SafeModeException.class).thenThrow(SafeModeException.class)
+        .thenReturn(true);
     verifyMkdirsCount(mockStore, expectedMkdirsCount);
   }
 
