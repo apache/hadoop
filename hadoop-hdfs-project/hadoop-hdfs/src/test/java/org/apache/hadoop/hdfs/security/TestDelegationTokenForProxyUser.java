@@ -51,9 +51,11 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.Whitebox;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+
 
 public class TestDelegationTokenForProxyUser {
   private static MiniDFSCluster cluster;
@@ -139,8 +141,8 @@ public class TestDelegationTokenForProxyUser {
       byte[] tokenId = tokens[0].getIdentifier();
       identifier.readFields(new DataInputStream(new ByteArrayInputStream(
           tokenId)));
-      Assert.assertEquals(identifier.getUser().getUserName(), PROXY_USER);
-      Assert.assertEquals(identifier.getUser().getRealUser().getUserName(),
+      assertEquals(identifier.getUser().getUserName(), PROXY_USER);
+      assertEquals(identifier.getUser().getRealUser().getUserName(),
           REAL_USER);
     } catch (InterruptedException e) {
       //Do Nothing
@@ -161,7 +163,7 @@ public class TestDelegationTokenForProxyUser {
     {
       Path responsePath = webhdfs.getHomeDirectory();
       WebHdfsTestUtil.LOG.info("responsePath=" + responsePath);
-      Assert.assertEquals(webhdfs.getUri() + "/user/" + PROXY_USER, responsePath.toString());
+      assertEquals(webhdfs.getUri() + "/user/" + PROXY_USER, responsePath.toString());
     }
 
     final Path f = new Path("/testWebHdfsDoAs/a.txt");
@@ -172,7 +174,7 @@ public class TestDelegationTokenForProxyUser {
   
       final FileStatus status = webhdfs.getFileStatus(f);
       WebHdfsTestUtil.LOG.info("status.getOwner()=" + status.getOwner());
-      Assert.assertEquals(PROXY_USER, status.getOwner());
+      assertEquals(PROXY_USER, status.getOwner());
     }
 
     {
@@ -183,7 +185,7 @@ public class TestDelegationTokenForProxyUser {
       final FileStatus status = webhdfs.getFileStatus(f);
       WebHdfsTestUtil.LOG.info("status.getOwner()=" + status.getOwner());
       WebHdfsTestUtil.LOG.info("status.getLen()  =" + status.getLen());
-      Assert.assertEquals(PROXY_USER, status.getOwner());
+      assertEquals(PROXY_USER, status.getOwner());
     }
   }
 }

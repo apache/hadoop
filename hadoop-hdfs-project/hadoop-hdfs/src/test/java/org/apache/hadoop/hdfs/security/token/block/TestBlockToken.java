@@ -27,6 +27,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -87,8 +88,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -376,7 +375,7 @@ public class TestBlockToken {
     conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
 
-    Assume.assumeTrue(FD_DIR.exists());
+    assumeTrue(FD_DIR.exists());
     BlockTokenSecretManager sm = new BlockTokenSecretManager(
         blockKeyUpdateInterval, blockTokenLifetime, 0, 1, "fake-pool", null,
         enableProtobuf);
@@ -534,7 +533,7 @@ public class TestBlockToken {
       }
       Token<BlockTokenIdentifier> token = locatedBlocks.getLastLocatedBlock()
           .getBlockToken();
-      Assert.assertEquals(BlockTokenIdentifier.KIND_NAME, token.getKind());
+      assertEquals(BlockTokenIdentifier.KIND_NAME, token.getKind());
       out.close();
     } finally {
       cluster.shutdown();

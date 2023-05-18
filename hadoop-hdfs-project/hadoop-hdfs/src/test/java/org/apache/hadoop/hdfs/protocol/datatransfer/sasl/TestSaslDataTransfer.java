@@ -23,6 +23,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTI
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -56,7 +57,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -142,7 +142,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
         LoggerFactory.getLogger(DataNode.class));
     try {
       doTest(clientConf);
-      Assert.fail("Should fail if SASL data transfer protection is not " +
+      fail("Should fail if SASL data transfer protection is not " +
           "configured or not supported in client");
     } catch (IOException e) {
       GenericTestUtils.assertMatches(e.getMessage(), 
@@ -252,7 +252,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
       Peer peer = DFSUtilClient.peerFromSocketAndKey(saslClient, socket,
           dataEncKeyFactory, new Token(), fakeDatanodeId, 1);
       peer.close();
-      Assert.fail("Expected DFSClient#peerFromSocketAndKey to time out.");
+      fail("Expected DFSClient#peerFromSocketAndKey to time out.");
     } catch (SocketTimeoutException e) {
       GenericTestUtils.assertExceptionContains("Read timed out", e);
     } finally {
@@ -303,7 +303,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
       saslClient.socketSend(socket, null, null, dataEncryptionKeyFactory,
           null, null);
 
-      Assert.fail("Expected IOException from "
+      fail("Expected IOException from "
           + "SaslDataTransferClient#checkTrustAndSend");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("Encryption enabled", e);
@@ -352,7 +352,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
       saslClient.socketSend(socket, null, null, dataEncryptionKeyFactory,
           null, null);
 
-      Assert.fail("Expected IOException from "
+      fail("Expected IOException from "
           + "SaslDataTransferClient#checkTrustAndSend");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("Encryption enabled", e);

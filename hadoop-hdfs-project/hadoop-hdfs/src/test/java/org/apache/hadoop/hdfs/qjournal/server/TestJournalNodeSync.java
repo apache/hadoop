@@ -37,12 +37,13 @@ import static org.apache.hadoop.hdfs.server.namenode.FileJournalManager
     .getLogFile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -349,7 +350,7 @@ public class TestJournalNodeSync {
     // JournalNodeSyncer alone (as the edit log queueing has been disabled)
     long numEditLogsSynced = jCluster.getJournalNode(0).getOrCreateJournal(jid)
         .getMetrics().getNumEditLogsSynced().value();
-    Assert.assertTrue("Edit logs downloaded outside syncer. Expected 8 or " +
+    assertTrue("Edit logs downloaded outside syncer. Expected 8 or " +
             "more downloads, got " + numEditLogsSynced + " downloads instead",
         numEditLogsSynced >= 8);
   }
@@ -450,8 +451,8 @@ public class TestJournalNodeSync {
     standbyNNindex=((activeNNindex+1)%2);
     dfsActive = dfsCluster.getFileSystem(activeNNindex);
 
-    Assert.assertTrue(dfsCluster.getNameNode(activeNNindex).isActiveState());
-    Assert.assertFalse(dfsCluster.getNameNode(standbyNNindex).isActiveState());
+    assertTrue(dfsCluster.getNameNode(activeNNindex).isActiveState());
+    assertFalse(dfsCluster.getNameNode(standbyNNindex).isActiveState());
 
     // Restart the current standby NN (previously active)
     dfsCluster.restartNameNode(standbyNNindex, true,
@@ -469,12 +470,11 @@ public class TestJournalNodeSync {
     //finalize rolling upgrade
     final RollingUpgradeInfo finalize = dfsActive.rollingUpgrade(
         HdfsConstants.RollingUpgradeAction.FINALIZE);
-    Assert.assertTrue(finalize.isFinalized());
+    assertTrue(finalize.isFinalized());
 
     // Check the missing edit logs exist after finalizing rolling upgrade
     for (File editLog : missingLogs) {
-      Assert.assertTrue("Edit log missing after finalizing rolling upgrade",
-          editLog.exists());
+      assertTrue("Edit log missing after finalizing rolling upgrade", editLog.exists());
     }
   }
 
@@ -486,7 +486,7 @@ public class TestJournalNodeSync {
       logFile = getLogFile(currentDir, startTxId);
     }
     File deleteFile = logFile.getFile();
-    Assert.assertTrue("Couldn't delete edit log file", deleteFile.delete());
+    assertTrue("Couldn't delete edit log file", deleteFile.delete());
 
     return deleteFile;
   }
@@ -561,7 +561,7 @@ public class TestJournalNodeSync {
     long lastWrittenTxId = dfsCluster.getNameNode(activeNNindex).getFSImage()
         .getEditLog().getLastWrittenTxId();
     for (int i = 1; i <= numEdits; i++) {
-      Assert.assertTrue("Failed to do an edit", doAnEdit());
+      assertTrue("Failed to do an edit", doAnEdit());
     }
     dfsCluster.getNameNode(activeNNindex).getRpcServer().rollEditLog();
     return lastWrittenTxId;

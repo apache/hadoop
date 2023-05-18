@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.qjournal.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -33,7 +34,6 @@ import java.util.List;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.Lists;
-import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -184,7 +184,7 @@ public class TestQuorumJournalManagerUnit {
     QuorumOutputStream os = (QuorumOutputStream) qjm.startLogSegment(1,
         NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     String report = os.generateReport();
-    Assert.assertFalse("Report should be plain text", report.contains("<"));
+    assertFalse("Report should be plain text", report.contains("<"));
   }
 
   @Test

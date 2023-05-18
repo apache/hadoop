@@ -73,7 +73,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Assert;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1290,7 +1289,7 @@ public class TestBalancer {
       Object hotBlockTimeInterval = field1.get(dispatcher);
       assertEquals(1000, (long)hotBlockTimeInterval);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      fail(e.getMessage());
     }
   }
 
@@ -1784,7 +1783,7 @@ public class TestBalancer {
           cluster.triggerHeartbeats();
           datanodeInfos = client.getDatanodeReport(DatanodeReportType.ALL);
         } catch (IOException e) {
-          Assert.fail(e.getMessage());
+          fail(e.getMessage());
         }
         long blocksAfterBalancer = 0;
         for (DatanodeInfo dn : datanodeInfos) {

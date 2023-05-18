@@ -27,9 +27,12 @@ import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertArrayEquals;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -114,7 +117,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Lists;
-import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
@@ -723,7 +725,7 @@ public class TestPBHelper {
     AclEntry[] actual = Lists.newArrayList(
         PBHelperClient.convertAclEntry(PBHelperClient.convertAclEntryProto(Lists
             .newArrayList(e1, e2, e3)))).toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(expected, actual);
+    assertArrayEquals(expected, actual);
   }
 
   @Test
@@ -733,7 +735,7 @@ public class TestPBHelper {
         .setType(AclEntryType.OTHER).build();
     AclStatus s = new AclStatus.Builder().owner("foo").group("bar").addEntry(e)
         .build();
-    Assert.assertEquals(s, PBHelperClient.convert(PBHelperClient.convert(s)));
+    assertEquals(s, PBHelperClient.convert(PBHelperClient.convert(s)));
   }
   
   @Test
@@ -930,8 +932,8 @@ public class TestPBHelper {
     assertFalse("KeyProvider uri is not supported",
         proto.hasKeyProviderUri());
     FsServerDefaults fsServerDefaults = PBHelperClient.convert(proto);
-    Assert.assertNotNull("FsServerDefaults is null", fsServerDefaults);
-    Assert.assertNull("KeyProviderUri should be null",
+    assertNotNull("FsServerDefaults is null", fsServerDefaults);
+    assertNull("KeyProviderUri should be null",
         fsServerDefaults.getKeyProviderUri());
   }
 

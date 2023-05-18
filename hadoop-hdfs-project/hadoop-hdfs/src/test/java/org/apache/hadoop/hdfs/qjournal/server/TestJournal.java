@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Bytes;
 import java.io.ByteArrayOutputStream;
@@ -51,8 +52,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
-import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -115,15 +114,15 @@ public class TestJournal {
     // verify the in-progress editlog segment
     SegmentStateProto segmentState = journal.getSegmentInfo(1);
     assertTrue(segmentState.getIsInProgress());
-    Assert.assertEquals(numTxns, segmentState.getEndTxId());
-    Assert.assertEquals(1, segmentState.getStartTxId());
+    assertEquals(numTxns, segmentState.getEndTxId());
+    assertEquals(1, segmentState.getStartTxId());
     
     // finalize the segment and verify it again
     journal.finalizeLogSegment(makeRI(3), 1, numTxns);
     segmentState = journal.getSegmentInfo(1);
     assertFalse(segmentState.getIsInProgress());
-    Assert.assertEquals(numTxns, segmentState.getEndTxId());
-    Assert.assertEquals(1, segmentState.getStartTxId());
+    assertEquals(numTxns, segmentState.getEndTxId());
+    assertEquals(1, segmentState.getStartTxId());
   }
 
   /**
@@ -287,7 +286,7 @@ public class TestJournal {
   
   @Test (timeout = 10000)
   public void testJournalLocking() throws Exception {
-    Assume.assumeTrue(journal.getStorage().getStorageDir(0).isLockSupported());
+    assumeTrue(journal.getStorage().getStorageDir(0).isLockSupported());
     StorageDirectory sd = journal.getStorage().getStorageDir(0);
     File lockFile = new File(sd.getRoot(), Storage.STORAGE_FILE_LOCK);
     

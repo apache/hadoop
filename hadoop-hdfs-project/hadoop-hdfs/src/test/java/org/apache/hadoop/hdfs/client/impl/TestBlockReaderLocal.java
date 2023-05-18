@@ -18,6 +18,11 @@
 package org.apache.hadoop.hdfs.client.impl;
 
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeThat;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.EOFException;
 import java.io.File;
@@ -59,8 +64,6 @@ import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -82,7 +85,7 @@ public class TestBlockReaderLocal {
       int off2, int len) {
     for (int i = 0; i < len; i++) {
       if (buf1[off1 + i] != buf2[off2 + i]) {
-        Assert.fail("arrays differ at byte " +  i + ". " +
+        fail("arrays differ at byte " +  i + ". " +
           "The first array has " + (int)buf1[off1 + i] +
           ", but the second array has " + (int)buf2[off2 + i]);
       }
@@ -138,7 +141,7 @@ public class TestBlockReaderLocal {
   public void runBlockReaderLocalTest(BlockReaderLocalTest test,
       boolean checksum, long readahead, int shortCircuitCachesNum)
           throws IOException {
-    Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
+    assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
     MiniDFSCluster cluster = null;
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY,
@@ -170,10 +173,10 @@ public class TestBlockReaderLocal {
       try {
         DFSTestUtil.waitReplication(fs, TEST_PATH, (short)1);
       } catch (InterruptedException e) {
-        Assert.fail("unexpected InterruptedException during " +
+        fail("unexpected InterruptedException during " +
             "waitReplication: " + e);
       } catch (TimeoutException e) {
-        Assert.fail("unexpected TimeoutException during " +
+        fail("unexpected TimeoutException during " +
             "waitReplication: " + e);
       }
       fsIn = fs.open(TEST_PATH);
@@ -221,8 +224,8 @@ public class TestBlockReaderLocal {
         metaIn = null;
         test.doTest(blockReaderLocal, original, i * blockSize);
         // BlockReaderLocal should not alter the file position.
-        Assert.assertEquals(0, streams[0].getChannel().position());
-        Assert.assertEquals(0, streams[1].getChannel().position());
+        assertEquals(0, streams[0].getChannel().position());
+        assertEquals(0, streams[1].getChannel().position());
       }
       cluster.shutdown();
       cluster = null;
@@ -269,7 +272,7 @@ public class TestBlockReaderLocal {
       reader.readFully(buf, 1537, 514);
       assertArrayRegionsEqual(original, 1537, buf, 1537, 514);
       // Readahead is always at least the size of one chunk in this test.
-      Assert.assertTrue(reader.getMaxReadaheadLength() >=
+      assertTrue(reader.getMaxReadaheadLength() >=
           BlockReaderLocalTest.BYTES_PER_CHECKSUM);
     }
   }
@@ -489,7 +492,7 @@ public class TestBlockReaderLocal {
       if (usingChecksums) {
         try {
           reader.readFully(buf, 0, 10);
-          Assert.fail("did not detect corruption");
+          fail("did not detect corruption");
         } catch (IOException e) {
           // expected
         }
@@ -539,11 +542,11 @@ public class TestBlockReaderLocal {
         reader.readFully(buf, 816, 900);
         if (usingChecksums) {
           // We should detect the corruption when using a checksum file.
-          Assert.fail("did not detect corruption");
+          fail("did not detect corruption");
         }
       } catch (ChecksumException e) {
         if (!usingChecksums) {
-          Assert.fail("didn't expect to get ChecksumException: not " +
+          fail("didn't expect to get ChecksumException: not " +
               "using checksums.");
         }
       }
@@ -640,7 +643,7 @@ public class TestBlockReaderLocal {
     @Override
     public void doTest(BlockReaderLocal reader, byte original[])
         throws IOException {
-      Assert.assertTrue(!reader.getVerifyChecksum());
+      assertTrue(!reader.getVerifyChecksum());
       ByteBuffer buf = ByteBuffer.wrap(new byte[TEST_LENGTH]);
       reader.skip(1);
       readFully(reader, buf, 1, 9);
@@ -663,15 +666,15 @@ public class TestBlockReaderLocal {
     public void doTest(BlockReaderLocal reader, byte original[])
         throws IOException {
       byte emptyArr[] = new byte[0];
-      Assert.assertEquals(0, reader.read(emptyArr, 0, 0));
+      assertEquals(0, reader.read(emptyArr, 0, 0));
       ByteBuffer emptyBuf = ByteBuffer.wrap(emptyArr);
-      Assert.assertEquals(0, reader.read(emptyBuf));
+      assertEquals(0, reader.read(emptyBuf));
       reader.skip(1);
-      Assert.assertEquals(0, reader.read(emptyArr, 0, 0));
-      Assert.assertEquals(0, reader.read(emptyBuf));
+      assertEquals(0, reader.read(emptyArr, 0, 0));
+      assertEquals(0, reader.read(emptyBuf));
       reader.skip(BlockReaderLocalTest.TEST_LENGTH - 1);
-      Assert.assertEquals(-1, reader.read(emptyArr, 0, 0));
-      Assert.assertEquals(-1, reader.read(emptyBuf));
+      assertEquals(-1, reader.read(emptyArr, 0, 0));
+      assertEquals(-1, reader.read(emptyBuf));
     }
   }
 
@@ -743,7 +746,7 @@ public class TestBlockReaderLocal {
   }
 
   private void testStatistics(boolean isShortCircuit) throws Exception {
-    Assume.assumeTrue(DomainSocket.getLoadingFailureReason() == null);
+    assumeTrue(DomainSocket.getLoadingFailureReason() == null);
     HdfsConfiguration conf = new HdfsConfiguration();
     TemporarySocketDirectory sockDir = null;
     if (isShortCircuit) {
@@ -773,25 +776,25 @@ public class TestBlockReaderLocal {
       try {
         DFSTestUtil.waitReplication(fs, TEST_PATH, (short)1);
       } catch (InterruptedException e) {
-        Assert.fail("unexpected InterruptedException during " +
+        fail("unexpected InterruptedException during " +
             "waitReplication: " + e);
       } catch (TimeoutException e) {
-        Assert.fail("unexpected TimeoutException during " +
+        fail("unexpected TimeoutException during " +
             "waitReplication: " + e);
       }
       fsIn = fs.open(TEST_PATH);
       IOUtils.readFully(fsIn, original, 0,
           BlockReaderLocalTest.TEST_LENGTH);
       HdfsDataInputStream dfsIn = (HdfsDataInputStream)fsIn;
-      Assert.assertEquals(BlockReaderLocalTest.TEST_LENGTH,
+      assertEquals(BlockReaderLocalTest.TEST_LENGTH,
           dfsIn.getReadStatistics().getTotalBytesRead());
-      Assert.assertEquals(BlockReaderLocalTest.TEST_LENGTH,
+      assertEquals(BlockReaderLocalTest.TEST_LENGTH,
           dfsIn.getReadStatistics().getTotalLocalBytesRead());
       if (isShortCircuit) {
-        Assert.assertEquals(BlockReaderLocalTest.TEST_LENGTH,
+        assertEquals(BlockReaderLocalTest.TEST_LENGTH,
             dfsIn.getReadStatistics().getTotalShortCircuitBytesRead());
       } else {
-        Assert.assertEquals(0,
+        assertEquals(0,
             dfsIn.getReadStatistics().getTotalShortCircuitBytesRead());
       }
       fsIn.close();
@@ -838,9 +841,9 @@ public class TestBlockReaderLocal {
         IOUtils.readFully(in, buf, 0, length);
 
         ReadStatistics stats = in.getReadStatistics();
-        Assert.assertEquals(BlockType.CONTIGUOUS, stats.getBlockType());
-        Assert.assertEquals(length, stats.getTotalBytesRead());
-        Assert.assertEquals(length, stats.getTotalLocalBytesRead());
+        assertEquals(BlockType.CONTIGUOUS, stats.getBlockType());
+        assertEquals(length, stats.getTotalBytesRead());
+        assertEquals(length, stats.getTotalLocalBytesRead());
       }
 
       Path ecFile = new Path(ecDir, "file2");
@@ -855,10 +858,10 @@ public class TestBlockReaderLocal {
         IOUtils.readFully(in, buf, 0, length);
 
         ReadStatistics stats = in.getReadStatistics();
-        Assert.assertEquals(BlockType.STRIPED, stats.getBlockType());
-        Assert.assertEquals(length, stats.getTotalLocalBytesRead());
-        Assert.assertEquals(length, stats.getTotalBytesRead());
-        Assert.assertTrue(stats.getTotalEcDecodingTimeMillis() > 0);
+        assertEquals(BlockType.STRIPED, stats.getBlockType());
+        assertEquals(length, stats.getTotalLocalBytesRead());
+        assertEquals(length, stats.getTotalBytesRead());
+        assertTrue(stats.getTotalEcDecodingTimeMillis() > 0);
       }
     }
   }
@@ -878,7 +881,7 @@ public class TestBlockReaderLocal {
       reader.readFully(buf, 1537, 514);
       assertArrayRegionsEqual(original, 1537 + shift, buf, 1537, 514);
       // Readahead is always at least the size of one chunk in this test.
-      Assert.assertTrue(reader.getMaxReadaheadLength() >=
+      assertTrue(reader.getMaxReadaheadLength() >=
               BlockReaderLocalTest.BYTES_PER_CHECKSUM);
     }
   }

@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hdfs.client.impl;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,8 +51,6 @@ import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -142,7 +142,7 @@ public class TestBlockReaderLocalLegacy {
   public void testBothOldAndNewShortCircuitConfigured() throws Exception {
     final short REPL_FACTOR = 1;
     final int FILE_LENGTH = 512;
-    Assume.assumeTrue(null == DomainSocket.getLoadingFailureReason());
+    assumeTrue(null == DomainSocket.getLoadingFailureReason());
     TemporarySocketDirectory socketDir = new TemporarySocketDirectory();
     HdfsConfiguration conf = getConfiguration(socketDir);
     MiniDFSCluster cluster =
@@ -164,7 +164,7 @@ public class TestBlockReaderLocalLegacy {
     byte buf[] = new byte[FILE_LENGTH];
     IOUtils.readFully(fis, buf, 0, FILE_LENGTH);
     fis.close();
-    Assert.assertArrayEquals(orig, buf);
+    assertArrayEquals(orig, buf);
     Arrays.equals(orig, buf);
     cluster.shutdown();
   }
@@ -203,7 +203,7 @@ public class TestBlockReaderLocalLegacy {
 
       // test getBlockLocalPathInfo
       final BlockLocalPathInfo info = proxy.getBlockLocalPathInfo(blk, token);
-      Assert.assertEquals(originalGS, info.getBlock().getGenerationStamp());
+      assertEquals(originalGS, info.getBlock().getGenerationStamp());
     }
 
     { // append one byte
@@ -217,13 +217,13 @@ public class TestBlockReaderLocalLegacy {
       final LocatedBlock lb = cluster.getNameNode().getRpcServer()
           .getBlockLocations(path.toString(), 0, 1).get(0);
       final long newGS = lb.getBlock().getGenerationStamp();
-      Assert.assertTrue(newGS > originalGS);
+      assertTrue(newGS > originalGS);
 
       // getBlockLocalPathInfo using the original block.
-      Assert.assertEquals(originalGS, originalBlock.getGenerationStamp());
+      assertEquals(originalGS, originalBlock.getGenerationStamp());
       final BlockLocalPathInfo info = proxy.getBlockLocalPathInfo(
           originalBlock, token);
-      Assert.assertEquals(newGS, info.getBlock().getGenerationStamp());
+      assertEquals(newGS, info.getBlock().getGenerationStamp());
     }
     cluster.shutdown();
   }
