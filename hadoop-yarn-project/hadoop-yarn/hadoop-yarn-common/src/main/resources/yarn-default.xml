@@ -171,7 +171,7 @@
   <property>
     <description>The expiry interval for application master reporting.</description>
     <name>yarn.am.liveness-monitor.expiry-interval-ms</name>
-    <value>600000</value>
+    <value>900000</value>
   </property>
 
   <property>

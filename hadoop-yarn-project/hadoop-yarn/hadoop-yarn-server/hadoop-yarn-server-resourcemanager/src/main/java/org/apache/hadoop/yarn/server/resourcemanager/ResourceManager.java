@@ -703,6 +703,24 @@ public class ResourceManager extends CompositeService
           + ", " + YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS + "="
           + heartbeatIntvl);
     }
+
+    if (HAUtil.isFederationEnabled(conf)) {
+      /*
+       * In Yarn Federation, we need UAMs in secondary sub-clusters to stay
+       * alive when the next attempt AM in home sub-cluster gets launched. If
+       * the previous AM died because the node is lost after NM timeout. It will
+       * already be too late if AM timeout is even shorter.
+       */
+      int amExpireIntvl = conf.getInt(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+          YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS);
+      if (amExpireIntvl <= expireIntvl) {
+        throw new YarnRuntimeException("When Yarn Federation is enabled, "
+            + "AM expiry interval should be no less than NM expiry interval, "
+            + YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS + "=" + amExpireIntvl
+            + ", " + YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS + "="
+            + expireIntvl);
+      }
+    }
   }
 
   /**
