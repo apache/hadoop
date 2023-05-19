@@ -118,12 +118,12 @@ public class TestCheck extends HTestCase {
 
   @Test(expected = IllegalArgumentException.class)
   public void validIdentifierInvalid4() throws Exception {
-    Check.validIdentifier("`a", 1, "");
+    Check.validIdentifier("`a", 2, "");
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void validIdentifierInvalid5() throws Exception {
-    Check.validIdentifier("[a", 1, "");
+    Check.validIdentifier("[a", 2, "");
   }
 
   @Test
