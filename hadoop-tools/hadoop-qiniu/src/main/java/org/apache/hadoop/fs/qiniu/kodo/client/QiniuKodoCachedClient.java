@@ -86,16 +86,12 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
 
     @Override
     public boolean copyKey(String oldKey, String newKey) throws IOException {
-        boolean result = source.copyKey(oldKey, newKey);
-        cache.remove(oldKey);
-        return result;
+        return source.copyKey(oldKey, newKey);
     }
 
     @Override
     public boolean copyKeys(String oldPrefix, String newPrefix) throws IOException {
-        boolean result = source.copyKeys(oldPrefix, newPrefix);
-        cache.removeIf(e -> e.getKey().startsWith(oldPrefix));
-        return result;
+        return source.copyKeys(oldPrefix, newPrefix);
     }
 
     @Override
