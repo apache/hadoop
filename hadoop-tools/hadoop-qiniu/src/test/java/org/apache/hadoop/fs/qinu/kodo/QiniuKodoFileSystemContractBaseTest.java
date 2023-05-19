@@ -6,7 +6,6 @@ import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem;
 import org.junit.Before;
-import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +26,7 @@ public class QiniuKodoFileSystemContractBaseTest extends FileSystemContractBaseT
 
         fs = new QiniuKodoFileSystem();
         fs.initialize(URI.create(conf.get("fs.contract.test.fs.kodo")), conf);
-
+        fs.delete(getTestBaseDir(), true);
     }
 
     @Override
