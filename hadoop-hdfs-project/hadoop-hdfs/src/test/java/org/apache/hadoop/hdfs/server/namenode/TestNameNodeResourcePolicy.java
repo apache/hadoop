@@ -34,18 +34,11 @@ public class TestNameNodeResourcePolicy {
 
   @Test
   public void testExcessiveMinimumRedundantResources() {
-    Collection<CheckableNameNodeResource> resources =
-        new ArrayList<CheckableNameNodeResource>();
-
-    int minimumRedundantResources = 2;
-
     LogCapturer logCapturer =
         LogCapturer.captureLogs(LoggerFactory.getLogger(NameNodeResourcePolicy.class));
-
-    NameNodeResourcePolicy.areResourcesAvailable(resources, minimumRedundantResources);
+    assertFalse(testResourceScenario(1, 0, 0, 0, 2));
     logCapturer.stopCapturing();
-
-    assertTrue(logCapturer.getOutput().contains("Resource not available."));
+    assertTrue(logCapturer.getOutput().contains("Resources not available."));
   }
 
   @Test
