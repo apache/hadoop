@@ -457,7 +457,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // Multiple dirs separated by "," are acceptable.
   public static final String DFS_DATANODE_PMEM_CACHE_DIRS_KEY =
       "dfs.datanode.pmem.cache.dirs";
-  public static final String DFS_DATANODE_PMEM_CACHE_DIRS_DEFAULT = "";
   public static final String  DFS_DATANODE_PMEM_CACHE_RECOVERY_KEY =
       "dfs.datanode.pmem.cache.recovery";
   public static final boolean DFS_DATANODE_PMEM_CACHE_RECOVERY_DEFAULT =

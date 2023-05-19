@@ -1919,4 +1919,63 @@ public class TestFsDatasetImpl {
       DataNodeFaultInjector.set(oldInjector);
     }
   }
+
+  /**
+   * Test the block file which is not found when disk with some exception.
+   * We expect:
+   *     1. block file wouldn't be deleted from disk.
+   *     2. block info would be removed from dn memory.
+   *     3. block would be reported to nn as missing block.
+   *     4. block would be recovered when disk back to normal.
+   */
+  @Test
+  public void tesInvalidateMissingBlock() throws Exception {
+    long blockSize = 1024;
+    int heatbeatInterval = 1;
+    HdfsConfiguration c = new HdfsConfiguration();
+    c.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, heatbeatInterval);
+    c.setLong(DFS_BLOCK_SIZE_KEY, blockSize);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(c).
+        numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      DFSTestUtil.createFile(cluster.getFileSystem(), new Path("/a"),
+          blockSize, (short)1, 0);
+
+      String bpid = cluster.getNameNode().getNamesystem().getBlockPoolId();
+      DataNode dn = cluster.getDataNodes().get(0);
+      FsDatasetImpl fsdataset = (FsDatasetImpl) dn.getFSDataset();
+      List<ReplicaInfo> replicaInfos = fsdataset.getFinalizedBlocks(bpid);
+      assertEquals(1, replicaInfos.size());
+
+      ReplicaInfo replicaInfo = replicaInfos.get(0);
+      String blockPath = replicaInfo.getBlockURI().getPath();
+      String metaPath = replicaInfo.getMetadataURI().getPath();
+      File blockFile = new File(blockPath);
+      File metaFile = new File(metaPath);
+
+      // Mock local block file not found when disk with some exception.
+      fsdataset.invalidateMissingBlock(bpid, replicaInfo);
+
+      // Assert local block file wouldn't be deleted from disk.
+      assertTrue(blockFile.exists());
+      // Assert block info would be removed from ReplicaMap.
+      assertEquals("null",
+          fsdataset.getReplicaString(bpid, replicaInfo.getBlockId()));
+      BlockManager blockManager = cluster.getNameNode().
+          getNamesystem().getBlockManager();
+      GenericTestUtils.waitFor(() ->
+          blockManager.getLowRedundancyBlocksCount() == 1, 100, 5000);
+
+      // Mock local block file found when disk back to normal.
+      FsVolumeSpi.ScanInfo info = new FsVolumeSpi.ScanInfo(
+          replicaInfo.getBlockId(), blockFile.getParentFile().getAbsoluteFile(),
+          blockFile.getName(), metaFile.getName(), replicaInfo.getVolume());
+      fsdataset.checkAndUpdate(bpid, info);
+      GenericTestUtils.waitFor(() ->
+          blockManager.getLowRedundancyBlocksCount() == 0, 100, 5000);
+    } finally {
+      cluster.shutdown();
+    }
+  }
 }

@@ -292,6 +292,7 @@ Optional:
 |`yarn.router.submit.interval.time` | `10ms` | The interval between two retry, the default value is 10ms. |
 |`yarn.federation.statestore.max-connections` | `10` | This is the maximum number of parallel connections each Router makes to the state-store. |
 |`yarn.federation.cache-ttl.secs` | `60` | The Router caches informations, and this is the time to leave before the cache is invalidated. |
+|`yarn.federation.cache.class` | `org.apache.hadoop.yarn.server.federation.cache.FederationJCache` | The Router caches informations, We can configure the Cache implementation and the default implementation is FederationJCache.|
 |`yarn.router.webapp.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.router.webapp.FederationInterceptorREST` | A comma-separated list of interceptor classes to be run at the router when interfacing with the client via REST interface. The last step of this pipeline must be the Federation Interceptor REST. |
 
 Security:
@@ -313,6 +314,22 @@ To enable cross-origin support (CORS) for the Yarn Router, please set the follow
 | `hadoop.http.filter.initializers`         | `org.apache.hadoop.security.HttpCrossOriginFilterInitializer` | Optional. Set the filter to HttpCrossOriginFilterInitializer, Configure this parameter in core-site.xml. |
 | `yarn.router.webapp.cross-origin.enabled` | `true`                                                       | Optional. Enable/disable CORS filter.Configure this parameter in yarn-site.xml. |
 
+Cache:
+
+Cache is not enabled by default. When we set the `yarn.federation.cache-ttl.secs` parameter and its value is greater than 0, Cache will be enabled.
+We currently provide two Cache implementations: `JCache` and `GuavaCache`.
+
+> JCache
+
+We used `geronimo-jcache`,`geronimo-jcache` is an implementation of the Java Caching API (JSR-107) specification provided by the Apache Geronimo project.
+It defines a standardized implementation of the JCache API, allowing developers to use the same API to access different caching implementations.
+In YARN Federation we use a combination of `geronimo-jcache` and `Ehcache`.
+If we want to use JCache, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationJCache`.
+
+> GuavaCache
+
+This is a Cache implemented based on the Guava framework.
+If we want to use it, we can configure `yarn.federation.cache.class` to `org.apache.hadoop.yarn.server.federation.cache.FederationGuavaCache`.
 
 ###ON NMs:
 

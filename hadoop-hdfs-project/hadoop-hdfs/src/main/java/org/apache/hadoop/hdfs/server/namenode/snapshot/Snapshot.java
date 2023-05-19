@@ -94,6 +94,12 @@ public class Snapshot implements Comparable<byte[]> {
     return s == null ? CURRENT_STATE_ID : s.getId();
   }
 
+  public static String getSnapshotString(int snapshot) {
+    return snapshot == CURRENT_STATE_ID? "<CURRENT_STATE>"
+        : snapshot == NO_SNAPSHOT_ID? "<NO_SNAPSHOT>"
+        : "Snapshot #" + snapshot;
+  }
+
   /**
    * Compare snapshot with IDs, where null indicates the current status thus
    * is greater than any non-null snapshot.

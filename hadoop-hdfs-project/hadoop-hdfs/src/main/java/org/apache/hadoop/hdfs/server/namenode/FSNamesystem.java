@@ -452,7 +452,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   private void appendClientPortToCallerContextIfAbsent() {
-    final CallerContext ctx = CallerContext.getCurrent();
+    CallerContext ctx = CallerContext.getCurrent();
     if (isClientPortInfoAbsent(ctx)) {
       String origContext = ctx == null ? null : ctx.getContext();
       byte[] origSignature = ctx == null ? null : ctx.getSignature();
@@ -462,6 +462,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               .setSignature(origSignature)
               .build());
     }
+    ctx = CallerContext.getCurrent();
+    if (isFromProxyUser(ctx)) {
+      CallerContext.setCurrent(
+          new CallerContext.Builder(ctx.getContext(), contextFieldSeparator)
+              .append(CallerContext.PROXY_USER_PORT, String.valueOf(Server.getRemotePort()))
+              .setSignature(ctx.getSignature())
+              .build());
+    }
   }
 
   private boolean isClientPortInfoAbsent(CallerContext ctx){
@@ -469,6 +477,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         || !ctx.getContext().contains(CallerContext.CLIENT_PORT_STR);
   }
 
+  private boolean isFromProxyUser(CallerContext ctx) {
+    return ctx != null && ctx.getContext() != null &&
+        ctx.getContext().contains(CallerContext.REAL_USER_STR);
+  }
   /**
    * Logger for audit events, noting successful FSNamesystem operations. Emits
    * to FSNamesystem.audit at INFO. Each event causes a set of tab-separated

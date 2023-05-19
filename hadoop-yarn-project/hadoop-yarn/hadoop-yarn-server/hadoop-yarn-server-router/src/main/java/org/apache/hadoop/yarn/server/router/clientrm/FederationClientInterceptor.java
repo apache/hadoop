@@ -194,15 +194,6 @@ import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConsta
 public class FederationClientInterceptor
     extends AbstractClientRequestInterceptor {
 
-  /*
-   * TODO YARN-6740 Federation Router (hiding multiple RMs for
-   * ApplicationClientProtocol) phase 2.
-   *
-   * The current implementation finalized the main 4 calls (getNewApplication,
-   * submitApplication, forceKillApplication and getApplicationReport). Those
-   * allow us to execute applications E2E.
-   */
-
   private static final Logger LOG =
       LoggerFactory.getLogger(FederationClientInterceptor.class);
 
@@ -574,8 +565,10 @@ public class FederationClientInterceptor
 
       // Step2. We Store the mapping relationship
       // between Application and HomeSubCluster in stateStore.
+      ApplicationSubmissionContext trimmedAppSubmissionContext =
+          RouterServerUtil.getTrimmedAppSubmissionContext(appSubmissionContext);
       federationFacade.addOrUpdateApplicationHomeSubCluster(
-          applicationId, subClusterId, retryCount);
+          applicationId, subClusterId, retryCount, trimmedAppSubmissionContext);
 
       // Step3. SubmitApplication to the subCluster
       ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);

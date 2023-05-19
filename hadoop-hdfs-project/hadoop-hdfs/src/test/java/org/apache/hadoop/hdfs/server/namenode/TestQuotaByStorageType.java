@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -723,9 +724,9 @@ public class TestQuotaByStorageType {
     assertEquals(file1Len, ssdConsumed);
 
     // Restart the namenode with checkpoint to make sure fsImage is correct
-    dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+    dfs.setSafeMode(SafeModeAction.ENTER);
     dfs.saveNamespace();
-    dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+    dfs.setSafeMode(SafeModeAction.LEAVE);
     cluster.restartNameNode(true);
     refreshClusterState();
 

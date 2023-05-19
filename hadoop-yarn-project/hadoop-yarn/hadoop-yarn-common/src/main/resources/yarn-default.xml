@@ -5128,6 +5128,15 @@
   </property>
 
   <property>
+    <name>yarn.router.submit.interval.time</name>
+    <value>10ms</value>
+    <description>
+      The interval Time between calling different subCluster requests.
+      Default is 10ms.
+    </description>
+  </property>
+
+  <property>
     <name>yarn.router.asc-interceptor-max-size</name>
     <value>1MB</value>
     <description>
@@ -5191,6 +5200,65 @@
     </description>
     <name>yarn.resourcemanager.nodestore-rootdir.retry-interval-ms</name>
     <value>1000</value>
+  </property>
+
+  <property>
+    <description>The property controls the minimum number of idle connections that
+      HikariCP tries to maintain in the pool.</description>
+    <name>yarn.federation.state-store.sql.minimum-idle</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+      Specifies the name of the connection pool used by the FederationSQLStateStore.
+    </description>
+    <name>yarn.federation.state-store.sql.pool-name</name>
+    <value>YARN-Federation-DataBasePool</value>
+  </property>
+
+  <property>
+    <description>
+      This property controls the maximum lifetime of a connection in the pool.
+    </description>
+    <name>yarn.federation.state-store.sql.max-life-time</name>
+    <value>30m</value>
+  </property>
+
+  <property>
+    <description>
+      This property controls the maximum amount of time
+      that a connection is allowed to sit idle in the pool.
+    </description>
+    <name>yarn.federation.state-store.sql.idle-time-out</name>
+    <value>10m</value>
+  </property>
+
+  <property>
+    <description>Set the maximum amount of time
+      that a client will wait for a connection from the pool.</description>
+    <name>yarn.federation.state-store.sql.conn-time-out</name>
+    <value>10s</value>
+  </property>
+
+  <property>
+    <description>
+      Specifies the class name of the cache implementation in YARN FederationCache.
+      By default, this property is org.apache.hadoop.yarn.server.federation.cache.FederationJCache.
+    </description>
+    <name>yarn.federation.cache.class</name>
+    <value>org.apache.hadoop.yarn.server.federation.cache.FederationJCache</value>
+  </property>
+
+  <property>
+    <description>
+      After enabling YARN Federation mode,
+      clients can be allowed to randomly choose a Router and support FailOver.
+      By default, the configuration is set to false,
+      and clients start attempting from the first Router.
+    </description>
+    <name>yarn.federation.failover.random.order</name>
+    <value>false</value>
   </property>
 
 </configuration>

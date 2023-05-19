@@ -25,6 +25,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.amazonaws.AmazonWebServiceRequest;
+import com.amazonaws.services.s3.model.DeleteObjectRequest;
+import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,17 +37,22 @@ import org.apache.hadoop.fs.audit.AuditConstants;
 import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer;
 import org.apache.hadoop.fs.s3a.audit.AuditFailureException;
+import org.apache.hadoop.fs.s3a.audit.AuditOperationRejectedException;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import static org.apache.hadoop.fs.audit.AuditConstants.DELETE_KEYS_SIZE;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_FILESYSTEM_ID;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_PRINCIPAL;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_THREAD0;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_TIMESTAMP;
 import static org.apache.hadoop.fs.audit.CommonAuditContext.currentAuditContext;
 import static org.apache.hadoop.fs.audit.CommonAuditContext.currentThreadID;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MULTIPART_UPLOAD_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_UPLOADS_ENABLED;
+import static org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer.isRequestMultipartIO;
 import static org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer.isRequestNotAlwaysInSpan;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.OUTSIDE_SPAN;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_ENABLED;
@@ -113,6 +120,12 @@ public class LoggingAuditor
   private Collection<String> filters;
 
   /**
+   * Does the S3A FS instance being audited have multipart upload enabled?
+   * If not: fail if a multipart upload is initiated.
+   */
+  private boolean isMultipartUploadEnabled;
+
+  /**
    * Log for warning of problems getting the range of GetObjectRequest
    * will only log of a problem once per process instance.
    * This is to avoid logs being flooded with errors.
@@ -164,6 +177,8 @@ public class LoggingAuditor
     final CommonAuditContext currentContext = currentAuditContext();
     warningSpan = new WarningSpan(OUTSIDE_SPAN,
         currentContext, createSpanID(), null, null);
+    isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
+              DEFAULT_MULTIPART_UPLOAD_ENABLED);
   }
 
   @Override
@@ -173,6 +188,7 @@ public class LoggingAuditor
     sb.append("ID='").append(getAuditorId()).append('\'');
     sb.append(", headerEnabled=").append(headerEnabled);
     sb.append(", rejectOutOfSpan=").append(rejectOutOfSpan);
+    sb.append(", isMultipartUploadEnabled=").append(isMultipartUploadEnabled);
     sb.append('}');
     return sb.toString();
   }
@@ -346,6 +362,8 @@ public class LoggingAuditor
         final T request) {
       // attach range for GetObject requests
       attachRangeFromRequest(request);
+      // for delete op, attach the number of files to delete
+      attachDeleteKeySizeAttribute(request);
       // build the referrer header
       final String header = referrer.buildHttpReferrer();
       // update the outer class's field.
@@ -363,7 +381,31 @@ public class LoggingAuditor
             analyzer.analyze(request),
             header);
       }
+      // now see if the request is actually a blocked multipart request
+      if (!isMultipartUploadEnabled && isRequestMultipartIO(request)) {
+        throw new AuditOperationRejectedException("Multipart IO request "
+            + request + " rejected " + header);
+      }
+
       return request;
+    }
+
+    /**
+     * For delete requests, attach delete key size as a referrer attribute.
+     *
+     * @param request the request object.
+     * @param <T> type of the request.
+     */
+    private <T extends AmazonWebServiceRequest> void attachDeleteKeySizeAttribute(T request) {
+      if (request instanceof DeleteObjectsRequest) {
+        int keySize = ((DeleteObjectsRequest) request).getKeys().size();
+        this.set(DELETE_KEYS_SIZE, String.valueOf(keySize));
+      } else if (request instanceof DeleteObjectRequest) {
+        String key = ((DeleteObjectRequest) request).getKey();
+        if (key != null && key.length() > 0) {
+          this.set(DELETE_KEYS_SIZE, "1");
+        }
+      }
     }
 
     @Override

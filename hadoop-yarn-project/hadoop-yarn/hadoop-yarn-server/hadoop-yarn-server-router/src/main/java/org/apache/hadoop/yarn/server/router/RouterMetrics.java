@@ -147,6 +147,8 @@ public final class RouterMetrics {
   private MutableGaugeInt numRefreshSuperUserGroupsConfigurationFailedRetrieved;
   @Metric("# of refreshUserToGroupsMappings failed to be retrieved")
   private MutableGaugeInt numRefreshUserToGroupsMappingsFailedRetrieved;
+  @Metric("# of deregisterSubCluster failed to be retrieved")
+  private MutableGaugeInt numDeregisterSubClusterFailedRetrieved;
   @Metric("# of refreshAdminAcls failed to be retrieved")
   private MutableGaugeInt numRefreshAdminAclsFailedRetrieved;
   @Metric("# of refreshServiceAcls failed to be retrieved")
@@ -175,6 +177,10 @@ public final class RouterMetrics {
   private MutableGaugeInt numCheckForDecommissioningNodesFailedRetrieved;
   @Metric("# of refreshClusterMaxPriority failed to be retrieved")
   private MutableGaugeInt numRefreshClusterMaxPriorityFailedRetrieved;
+  @Metric("# of mapAttributesToNodes failed to be retrieved")
+  private MutableGaugeInt numMapAttributesToNodesFailedRetrieved;
+  @Metric("# of getGroupsForUser failed to be retrieved")
+  private MutableGaugeInt numGetGroupsForUserFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -287,6 +293,8 @@ public final class RouterMetrics {
   private MutableRate totalSucceededReplaceLabelsOnNodeRetrieved;
   @Metric("Total number of successful Retrieved GetSchedulerInfo and latency(ms)")
   private MutableRate totalSucceededGetSchedulerInfoRetrieved;
+  @Metric("Total number of successful Retrieved DeregisterSubCluster and latency(ms)")
+  private MutableRate totalSucceededDeregisterSubClusterRetrieved;
   @Metric("Total number of successful Retrieved RefreshAdminAcls and latency(ms)")
   private MutableRate totalSucceededRefreshAdminAclsRetrieved;
   @Metric("Total number of successful Retrieved RefreshServiceAcls and latency(ms)")
@@ -311,6 +319,10 @@ public final class RouterMetrics {
   private MutableRate totalSucceededCheckForDecommissioningNodesRetrieved;
   @Metric("Total number of successful Retrieved RefreshClusterMaxPriority and latency(ms)")
   private MutableRate totalSucceededRefreshClusterMaxPriorityRetrieved;
+  @Metric("Total number of successful Retrieved MapAttributesToNodes and latency(ms)")
+  private MutableRate totalSucceededMapAttributesToNodesRetrieved;
+  @Metric("Total number of successful Retrieved GetGroupsForUser and latency(ms)")
+  private MutableRate totalSucceededGetGroupsForUsersRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -368,6 +380,7 @@ public final class RouterMetrics {
   private MutableQuantiles getSchedulerInfoRetrievedLatency;
   private MutableQuantiles refreshSuperUserGroupsConfLatency;
   private MutableQuantiles refreshUserToGroupsMappingsLatency;
+  private MutableQuantiles refreshDeregisterSubClusterLatency;
   private MutableQuantiles refreshAdminAclsLatency;
   private MutableQuantiles refreshServiceAclsLatency;
   private MutableQuantiles replaceLabelsOnNodesLatency;
@@ -382,6 +395,8 @@ public final class RouterMetrics {
   private MutableQuantiles refreshNodesResourcesLatency;
   private MutableQuantiles checkForDecommissioningNodesLatency;
   private MutableQuantiles refreshClusterMaxPriorityLatency;
+  private MutableQuantiles mapAttributesToNodesLatency;
+  private MutableQuantiles getGroupsForUserLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
@@ -574,6 +589,9 @@ public final class RouterMetrics {
     refreshUserToGroupsMappingsLatency = registry.newQuantiles("refreshUserToGroupsMappingsLatency",
         "latency of refresh user to groups mappings timeouts", "ops", "latency", 10);
 
+    refreshDeregisterSubClusterLatency = registry.newQuantiles("refreshDeregisterSubClusterLatency",
+        "latency of deregister subcluster timeouts", "ops", "latency", 10);
+
     refreshAdminAclsLatency = registry.newQuantiles("refreshAdminAclsLatency",
         "latency of refresh admin acls timeouts", "ops", "latency", 10);
 
@@ -616,6 +634,12 @@ public final class RouterMetrics {
 
     refreshClusterMaxPriorityLatency = registry.newQuantiles("refreshClusterMaxPriorityLatency",
         "latency of refresh cluster max priority timeouts", "ops", "latency", 10);
+
+    mapAttributesToNodesLatency = registry.newQuantiles("mapAttributesToNodesLatency",
+        "latency of map attributes to nodes timeouts", "ops", "latency", 10);
+
+    getGroupsForUserLatency = registry.newQuantiles("getGroupsForUserLatency",
+        "latency of get groups for user timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -893,6 +917,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededDeregisterSubClusterRetrieved() {
+    return totalSucceededDeregisterSubClusterRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public long getNumSucceededRefreshAdminAclsRetrieved() {
     return totalSucceededRefreshAdminAclsRetrieved.lastStat().numSamples();
   }
@@ -950,6 +979,16 @@ public final class RouterMetrics {
   @VisibleForTesting
   public long getNumSucceededRefreshClusterMaxPriorityRetrieved() {
     return totalSucceededRefreshClusterMaxPriorityRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededMapAttributesToNodesRetrieved() {
+    return totalSucceededMapAttributesToNodesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetGroupsForUsersRetrieved() {
+    return totalSucceededGetGroupsForUsersRetrieved.lastStat().numSamples();
   }
 
   @VisibleForTesting
@@ -1223,6 +1262,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededDeregisterSubClusterRetrieved() {
+    return totalSucceededDeregisterSubClusterRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededRefreshAdminAclsRetrieved() {
     return totalSucceededRefreshAdminAclsRetrieved.lastStat().mean();
   }
@@ -1280,6 +1324,16 @@ public final class RouterMetrics {
   @VisibleForTesting
   public double getLatencySucceededRefreshClusterMaxPriorityRetrieved() {
     return totalSucceededRefreshClusterMaxPriorityRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededMapAttributesToNodesRetrieved() {
+    return totalSucceededMapAttributesToNodesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededGetGroupsForUsersRetrieved() {
+    return totalSucceededGetGroupsForUsersRetrieved.lastStat().mean();
   }
 
   @VisibleForTesting
@@ -1503,6 +1557,10 @@ public final class RouterMetrics {
     return numRefreshUserToGroupsMappingsFailedRetrieved.value();
   }
 
+  public int getDeregisterSubClusterFailedRetrieved() {
+    return numDeregisterSubClusterFailedRetrieved.value();
+  }
+
   public int getNumRefreshAdminAclsFailedRetrieved() {
     return numRefreshAdminAclsFailedRetrieved.value();
   }
@@ -1557,6 +1615,14 @@ public final class RouterMetrics {
 
   public int getRefreshClusterMaxPriorityFailedRetrieved() {
     return numRefreshClusterMaxPriorityFailedRetrieved.value();
+  }
+
+  public int getMapAttributesToNodesFailedRetrieved() {
+    return numMapAttributesToNodesFailedRetrieved.value();
+  }
+
+  public int getGroupsForUserFailedRetrieved() {
+    return numGetGroupsForUserFailedRetrieved.value();
   }
 
   public int getDelegationTokenFailedRetrieved() {
@@ -1842,6 +1908,11 @@ public final class RouterMetrics {
     getSchedulerInfoRetrievedLatency.add(duration);
   }
 
+  public void succeededDeregisterSubClusterRetrieved(long duration) {
+    totalSucceededDeregisterSubClusterRetrieved.add(duration);
+    refreshDeregisterSubClusterLatency.add(duration);
+  }
+
   public void succeededRefreshAdminAclsRetrieved(long duration) {
     totalSucceededRefreshAdminAclsRetrieved.add(duration);
     refreshAdminAclsLatency.add(duration);
@@ -1900,6 +1971,16 @@ public final class RouterMetrics {
   public void succeededRefreshClusterMaxPriorityRetrieved(long duration) {
     totalSucceededRefreshClusterMaxPriorityRetrieved.add(duration);
     refreshClusterMaxPriorityLatency.add(duration);
+  }
+
+  public void succeededMapAttributesToNodesRetrieved(long duration) {
+    totalSucceededMapAttributesToNodesRetrieved.add(duration);
+    mapAttributesToNodesLatency.add(duration);
+  }
+
+  public void succeededGetGroupsForUsersRetrieved(long duration) {
+    totalSucceededGetGroupsForUsersRetrieved.add(duration);
+    getGroupsForUserLatency.add(duration);
   }
 
   public void succeededRefreshSuperUserGroupsConfRetrieved(long duration) {
@@ -2106,6 +2187,10 @@ public final class RouterMetrics {
     numRefreshUserToGroupsMappingsFailedRetrieved.incr();
   }
 
+  public void incrDeregisterSubClusterFailedRetrieved() {
+    numDeregisterSubClusterFailedRetrieved.incr();
+  }
+
   public void incrRefreshAdminAclsFailedRetrieved() {
     numRefreshAdminAclsFailedRetrieved.incr();
   }
@@ -2152,6 +2237,14 @@ public final class RouterMetrics {
 
   public void incrRefreshClusterMaxPriorityFailedRetrieved() {
     numRefreshClusterMaxPriorityFailedRetrieved.incr();
+  }
+
+  public void incrMapAttributesToNodesFailedRetrieved() {
+    numMapAttributesToNodesFailedRetrieved.incr();
+  }
+
+  public void incrGetGroupsForUserFailedRetrieved() {
+    numGetGroupsForUserFailedRetrieved.incr();
   }
 
   public void incrGetDelegationTokenFailedRetrieved() {

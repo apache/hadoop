@@ -216,10 +216,15 @@ public class SingleFilePerBlockCache implements BlockCache {
     }
 
     writeFile(blockFilePath, buffer);
-    prefetchingStatistics.blockAddedToFileCache();
     long checksum = BufferData.getChecksum(buffer);
     Entry entry = new Entry(blockNumber, blockFilePath, buffer.limit(), checksum);
     blocks.put(blockNumber, entry);
+    // Update stream_read_blocks_in_cache stats only after blocks map is updated with new file
+    // entry to avoid any discrepancy related to the value of stream_read_blocks_in_cache.
+    // If stream_read_blocks_in_cache is updated before updating the blocks map here, closing of
+    // the input stream can lead to the removal of the cache file even before blocks is added with
+    // the new cache file, leading to incorrect value of stream_read_blocks_in_cache.
+    prefetchingStatistics.blockAddedToFileCache();
   }
 
   private static final Set<? extends OpenOption> CREATE_OPTIONS =
@@ -268,7 +273,7 @@ public class SingleFilePerBlockCache implements BlockCache {
         prefetchingStatistics.blockRemovedFromFileCache();
         numFilesDeleted++;
       } catch (IOException e) {
-        // Ignore while closing so that we can delete as many cache files as possible.
+        LOG.debug("Failed to delete cache file {}", entry.path, e);
       }
     }
 

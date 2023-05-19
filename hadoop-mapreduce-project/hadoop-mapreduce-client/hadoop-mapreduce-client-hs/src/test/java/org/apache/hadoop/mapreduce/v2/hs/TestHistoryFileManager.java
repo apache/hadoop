@@ -32,11 +32,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
@@ -87,9 +87,9 @@ public class TestHistoryFileManager {
   public void cleanTest() throws Exception {
     new File(coreSitePath).delete();
     dfsCluster.getFileSystem().setSafeMode(
-        HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+        SafeModeAction.LEAVE);
     dfsCluster2.getFileSystem().setSafeMode(
-        HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+        SafeModeAction.LEAVE);
   }
 
   private String getDoneDirNameForTest() {
@@ -119,7 +119,7 @@ public class TestHistoryFileManager {
   @Test
   public void testCreateDirsWithFileSystem() throws Exception {
     dfsCluster.getFileSystem().setSafeMode(
-        HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+        SafeModeAction.LEAVE);
     Assert.assertFalse(dfsCluster.getFileSystem().isInSafeMode());
     testTryCreateHistoryDirs(dfsCluster.getConfiguration(0), true);
   }
@@ -127,9 +127,9 @@ public class TestHistoryFileManager {
   @Test
   public void testCreateDirsWithAdditionalFileSystem() throws Exception {
     dfsCluster.getFileSystem().setSafeMode(
-        HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+        SafeModeAction.LEAVE);
     dfsCluster2.getFileSystem().setSafeMode(
-        HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+        SafeModeAction.LEAVE);
     Assert.assertFalse(dfsCluster.getFileSystem().isInSafeMode());
     Assert.assertFalse(dfsCluster2.getFileSystem().isInSafeMode());
 
@@ -157,7 +157,7 @@ public class TestHistoryFileManager {
   @Test
   public void testCreateDirsWithFileSystemInSafeMode() throws Exception {
     dfsCluster.getFileSystem().setSafeMode(
-        HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+        SafeModeAction.ENTER);
     Assert.assertTrue(dfsCluster.getFileSystem().isInSafeMode());
     testTryCreateHistoryDirs(dfsCluster.getConfiguration(0), false);
   }
@@ -175,7 +175,7 @@ public class TestHistoryFileManager {
   public void testCreateDirsWithFileSystemBecomingAvailBeforeTimeout()
       throws Exception {
     dfsCluster.getFileSystem().setSafeMode(
-        HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+        SafeModeAction.ENTER);
     Assert.assertTrue(dfsCluster.getFileSystem().isInSafeMode());
     new Thread() {
       @Override
@@ -183,7 +183,7 @@ public class TestHistoryFileManager {
         try {
           Thread.sleep(500);
           dfsCluster.getFileSystem().setSafeMode(
-              HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+              SafeModeAction.LEAVE);
           Assert.assertTrue(dfsCluster.getFileSystem().isInSafeMode());
         } catch (Exception ex) {
           Assert.fail(ex.toString());
@@ -198,7 +198,7 @@ public class TestHistoryFileManager {
   public void testCreateDirsWithFileSystemNotBecomingAvailBeforeTimeout()
       throws Exception {
     dfsCluster.getFileSystem().setSafeMode(
-        HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+        SafeModeAction.ENTER);
     Assert.assertTrue(dfsCluster.getFileSystem().isInSafeMode());
     final ControlledClock clock = new ControlledClock();
     clock.setTime(1);

@@ -34,6 +34,7 @@ import java.util.Comparator;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
@@ -42,7 +43,6 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
-import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateVersionIncompatibleException;
 import org.apache.hadoop.yarn.server.federation.store.metrics.FederationStateStoreClientMetrics;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
@@ -253,8 +253,12 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationHomeSubCluster homeSubCluster = request.getApplicationHomeSubCluster();
-
+    SubClusterId homeSubClusterId = homeSubCluster.getHomeSubCluster();
+    ApplicationSubmissionContext appSubmissionContext = homeSubCluster.getApplicationSubmissionContext();
     ApplicationId appId = homeSubCluster.getApplicationId();
+
+    LOG.info("appId = {}, homeSubClusterId = {}, appSubmissionContext = {}.",
+        appId, homeSubClusterId, appSubmissionContext);
 
     if (!applications.containsKey(appId)) {
       applications.put(appId, homeSubCluster);
@@ -293,8 +297,20 @@ public class MemoryFederationStateStore implements FederationStateStore {
           "Application %s does not exist.", appId);
     }
 
-    return GetApplicationHomeSubClusterResponse.newInstance(appId,
-        applications.get(appId).getHomeSubCluster());
+    // Whether the returned result contains context
+    ApplicationHomeSubCluster appHomeSubCluster = applications.get(appId);
+    ApplicationSubmissionContext submissionContext =
+        appHomeSubCluster.getApplicationSubmissionContext();
+    boolean containsAppSubmissionContext = request.getContainsAppSubmissionContext();
+    long creatTime = appHomeSubCluster.getCreateTime();
+    SubClusterId homeSubClusterId = appHomeSubCluster.getHomeSubCluster();
+
+    if (containsAppSubmissionContext && submissionContext != null) {
+      return GetApplicationHomeSubClusterResponse.newInstance(appId, homeSubClusterId, creatTime,
+          submissionContext);
+    }
+
+    return GetApplicationHomeSubClusterResponse.newInstance(appId, homeSubClusterId, creatTime);
   }
 
   @Override

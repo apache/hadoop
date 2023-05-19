@@ -348,9 +348,11 @@ public class MountTableResolver
   }
 
   /**
-   * Check if PATH is the trail associated with the Trash.
+   * Check if path is the trail associated with the Trash.
    *
-   * @param path A path.
+   * @param path a path.
+   * @return true if the path matches the trash path pattern, false otherwise.
+   * @throws IOException if retrieving current user's trash directory fails.
    */
   @VisibleForTesting
   public static boolean isTrashPath(String path) throws IOException {
@@ -370,7 +372,9 @@ public class MountTableResolver
   /**
    * Subtract a TrashCurrent to get a new path.
    *
-   * @param path A path.
+   * @param path a path.
+   * @return new path with subtracted trash current path.
+   * @throws IOException if retrieving current user's trash directory fails.
    */
   @VisibleForTesting
   public static String subtractTrashCurrentPath(String path)

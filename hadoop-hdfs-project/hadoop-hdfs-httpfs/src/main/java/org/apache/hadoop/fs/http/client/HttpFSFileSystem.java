@@ -277,6 +277,7 @@ public class HttpFSFileSystem extends FileSystem
     GETSERVERDEFAULTS(HTTP_GET),
     CHECKACCESS(HTTP_GET), SETECPOLICY(HTTP_PUT), GETECPOLICY(HTTP_GET), UNSETECPOLICY(
         HTTP_POST), SATISFYSTORAGEPOLICY(HTTP_PUT), GETSNAPSHOTDIFFLISTING(HTTP_GET),
+    GETFILELINKSTATUS(HTTP_GET),
     GET_BLOCK_LOCATIONS(HTTP_GET);
 
     private String httpMethod;
@@ -1741,6 +1742,18 @@ public class HttpFSFileSystem extends FileSystem
       return null;
     }
     return getFileBlockLocations(status.getPath(), offset, length);
+  }
+
+  @Override
+  public FileStatus getFileLinkStatus(final Path path) throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETFILELINKSTATUS.toString());
+    HttpURLConnection conn =
+        getConnection(Operation.GETFILELINKSTATUS.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    HdfsFileStatus status = JsonUtilClient.toFileStatus(json, true);
+    return status.makeQualified(getUri(), path);
   }
 
   @VisibleForTesting

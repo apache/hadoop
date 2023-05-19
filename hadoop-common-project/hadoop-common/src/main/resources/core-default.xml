@@ -920,6 +920,16 @@
   </description>
 </property>
 
+<property>
+  <name>io.erasurecode.codec.native.enabled</name>
+  <value>true</value>
+  <description>
+    Used to decide whether to enable native codec. If set to false, native codec
+    would not be created and ISA-L support would be disabled. Recommend to set to
+    false when your CPU does not support ISA-L.
+  </description>
+</property>
+
   <!-- file system properties -->
 
 <property>

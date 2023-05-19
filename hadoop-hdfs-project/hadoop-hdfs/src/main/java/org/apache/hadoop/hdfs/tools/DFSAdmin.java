@@ -494,6 +494,7 @@ public class DFSAdmin extends FsShell {
    * Gives a report on how the FileSystem is doing.
    * @exception IOException if the filesystem does not exist.
    */
+  @SuppressWarnings("deprecation")
   public void report(String[] argv, int i) throws IOException {
     DistributedFileSystem dfs = getDFS();
     FsStatus ds = dfs.getStatus();
@@ -660,6 +661,7 @@ public class DFSAdmin extends FsShell {
    * @param idx The index of the command that is being processed.
    * @exception IOException if the filesystem does not exist.
    */
+  @SuppressWarnings("deprecation")
   public void setSafeMode(String[] argv, int idx) throws IOException {
     if (idx != argv.length - 1) {
       printUsage("-safemode");
@@ -713,6 +715,7 @@ public class DFSAdmin extends FsShell {
 
   }
 
+  @SuppressWarnings("deprecation")
   private boolean waitExitSafeMode(DistributedFileSystem dfs, boolean inSafeMode)
       throws IOException {
     while (inSafeMode) {

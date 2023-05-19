@@ -36,10 +36,10 @@ import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlanQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
@@ -163,8 +163,8 @@ public class CapacitySchedulerQueueInfo {
     queueAcls.addAll(getSortedQueueAclInfoList(q, queuePathObject, conf));
 
     queuePriority = q.getPriority().getPriority();
-    if (q instanceof ParentQueue) {
-      ParentQueue queue = (ParentQueue) q;
+    if (q instanceof AbstractParentQueue) {
+      AbstractParentQueue queue = (AbstractParentQueue) q;
       orderingPolicyInfo = queue.getQueueOrderingPolicy()
           .getConfigName();
       autoQueueTemplateProperties = CapacitySchedulerInfoHelper
