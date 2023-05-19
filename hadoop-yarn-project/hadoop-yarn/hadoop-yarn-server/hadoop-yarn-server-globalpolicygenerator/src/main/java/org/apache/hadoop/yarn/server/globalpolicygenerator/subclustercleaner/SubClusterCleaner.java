@@ -48,6 +48,9 @@ public class SubClusterCleaner implements Runnable {
    * The sub-cluster cleaner runnable is invoked by the sub cluster cleaner
    * service to check the membership table and remove sub clusters that have not
    * sent a heart beat in some amount of time.
+   *
+   * @param conf configuration.
+   * @param gpgContext GPGContext.
    */
   public SubClusterCleaner(Configuration conf, GPGContext gpgContext) {
     this.heartbeatExpirationMillis =
