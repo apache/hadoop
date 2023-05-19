@@ -2092,19 +2092,18 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     }
     final Path path = new Path("/foo");
     FileSystem fs = FileSystem.get(path.toUri(), this.getProxiedFSConf());
-    if(fs instanceof DistributedFileSystem){
-      DistributedFileSystem dfs = (DistributedFileSystem)
-          FileSystem.get(path.toUri(), this.getProxiedFSConf());
+    if (fs instanceof DistributedFileSystem) {
+      DistributedFileSystem dfs =
+          (DistributedFileSystem) FileSystem.get(path.toUri(), this.getProxiedFSConf());
       FileSystem httpFs = this.getHttpFSFileSystem();
 
       FsStatus dfsFsStatus = dfs.getStatus(path);
       FsStatus httpFsStatus = httpFs.getStatus(path);
 
       //Validate used free and capacity are the same as DistributedFileSystem
-      Assert.assertEquals(dfsFsStatus.getUsed(), httpFsStatus.getUsed());
-      Assert.assertEquals(dfsFsStatus.getRemaining(),
-          httpFsStatus.getRemaining());
-      Assert.assertEquals(dfsFsStatus.getCapacity(), httpFsStatus.getCapacity());
+      assertEquals(dfsFsStatus.getUsed(), httpFsStatus.getUsed());
+      assertEquals(dfsFsStatus.getRemaining(), httpFsStatus.getRemaining());
+      assertEquals(dfsFsStatus.getCapacity(), httpFsStatus.getCapacity());
       httpFs.close();
       dfs.close();
     }else{

@@ -210,9 +210,9 @@ public class HttpFSFileSystem extends FileSystem
   public static final String XATTRNAMES_JSON = "XAttrNames";
   public static final String ECPOLICY_JSON = "ecPolicyObj";
   public static final String SYMLINK_JSON = "symlink";
-  public static final String CAPACITY_JSON="capacity";
-  public static final String USED_JSON="used";
-  public static final String REMAINING_JSON="remaining";
+  public static final String CAPACITY_JSON = "capacity";
+  public static final String USED_JSON = "used";
+  public static final String REMAINING_JSON = "remaining";
 
   public static final String FILE_CHECKSUM_JSON = "FileChecksum";
   public static final String CHECKSUM_ALGORITHM_JSON = "algorithm";
@@ -1770,8 +1770,7 @@ public class HttpFSFileSystem extends FileSystem
         getConnection(Operation.GETSTATUS.getMethod(), params, path, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
-    FsStatus status = JsonUtilClient.toFsStatus(json);
-    return status;
+    return JsonUtilClient.toFsStatus(json);
   }
 
   @VisibleForTesting
