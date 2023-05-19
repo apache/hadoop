@@ -541,7 +541,7 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String GLOBAL_RM_AM_MAX_ATTEMPTS =
       RM_PREFIX + "am.global.max-attempts";
-  
+
   /** The keytab for the resource manager.*/
   public static final String RM_KEYTAB = 
     RM_PREFIX + "keytab";
@@ -597,7 +597,7 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "submission-preprocessor.file-refresh-interval-ms";
   public static final int
       DEFAULT_RM_SUBMISSION_PREPROCESSOR_REFRESH_INTERVAL_MS = 0;
-  
+
   /** Path to file with nodes to exclude.*/
   public static final String RM_NODES_EXCLUDE_FILE_PATH = 
     RM_PREFIX + "nodes.exclude-path";
@@ -1537,7 +1537,7 @@ public class YarnConfiguration extends Configuration {
       + "log-aggregation.debug.filesize";
   public static final long DEFAULT_LOG_AGGREGATION_DEBUG_FILESIZE
       = 100 * 1024 * 1024;
-  
+
   /**
    * How long to wait between aggregated log retention checks. If set to
    * a value {@literal <=} 0 then the value is computed as one-tenth of the
@@ -2187,7 +2187,7 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_NM_HEALTH_CHECK_TIMEOUT_MS =
       2 * DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS;
 
-  /** Health check script time out period.*/  
+  /** Health check script time out period.*/
   public static final String NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS_TEMPLATE =
       NM_PREFIX + "health-checker.%s.timeout-ms";
   
@@ -2908,7 +2908,7 @@ public class YarnConfiguration extends Configuration {
   /** Binding address for the web proxy. */
   public static final String PROXY_BIND_HOST =
       PROXY_PREFIX + "bind-host";
-  
+
   /**
    * YARN Service Level Authorization
    */
@@ -4325,6 +4325,24 @@ public class YarnConfiguration extends Configuration {
       ROUTER_WEBAPP_PREFIX + "partial-result.enabled";
   public static final boolean DEFAULT_ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED =
       false;
+
+  private static final String FEDERATION_GPG_PREFIX =
+          FEDERATION_PREFIX + "gpg.";
+
+  // The number of threads to use for the GPG scheduled executor service
+  public static final String GPG_SCHEDULED_EXECUTOR_THREADS =
+          FEDERATION_GPG_PREFIX + "scheduled.executor.threads";
+  public static final int DEFAULT_GPG_SCHEDULED_EXECUTOR_THREADS = 10;
+
+  // The interval at which the subcluster cleaner runs, -1 means disabled
+  public static final String GPG_SUBCLUSTER_CLEANER_INTERVAL_MS =
+          FEDERATION_GPG_PREFIX + "subcluster.cleaner.interval-ms";
+  public static final long DEFAULT_GPG_SUBCLUSTER_CLEANER_INTERVAL_MS = -1;
+
+  // The expiration time for a subcluster heartbeat, default is 30 minutes
+  public static final String GPG_SUBCLUSTER_EXPIRATION_MS =
+          FEDERATION_GPG_PREFIX + "subcluster.heartbeat.expiration-ms";
+  public static final long DEFAULT_GPG_SUBCLUSTER_EXPIRATION_MS = 1800000;
 
   /**
    * Connection and Read timeout from the Router to RM.

@@ -215,6 +215,17 @@ public class MemoryFederationStateStore implements FederationStateStore {
     return SubClusterHeartbeatResponse.newInstance();
   }
 
+  @VisibleForTesting
+  public void setSubClusterLastHeartbeat(SubClusterId subClusterId,
+      long lastHeartbeat) throws YarnException {
+    SubClusterInfo subClusterInfo = membership.get(subClusterId);
+    if (subClusterInfo == null) {
+      throw new YarnException(
+          "Subcluster " + subClusterId.toString() + " does not exist");
+    }
+    subClusterInfo.setLastHeartBeat(lastHeartbeat);
+  }
+
   @Override
   public GetSubClusterInfoResponse getSubCluster(GetSubClusterInfoRequest request)
       throws YarnException {
