@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
@@ -85,12 +86,18 @@ public class SingleFilePerBlockCache implements BlockCache {
     private final Path path;
     private final int size;
     private final long checksum;
+    private final ReentrantReadWriteLock lock;
+    private enum LockType {
+      READ,
+      WRITE
+    }
 
     Entry(int blockNumber, Path path, int size, long checksum) {
       this.blockNumber = blockNumber;
       this.path = path;
       this.size = size;
       this.checksum = checksum;
+      this.lock = new ReentrantReadWriteLock();
     }
 
     @Override
@@ -98,6 +105,32 @@ public class SingleFilePerBlockCache implements BlockCache {
       return String.format(
           "([%03d] %s: size = %d, checksum = %d)",
           blockNumber, path, size, checksum);
+    }
+
+    /**
+     * Take the read or write lock.
+     *
+     * @param lockType type of the lock.
+     */
+    void takeLock(LockType lockType) {
+      if (LockType.READ == lockType) {
+        this.lock.readLock().lock();
+      } else if (LockType.WRITE == lockType) {
+        this.lock.writeLock().lock();
+      }
+    }
+
+    /**
+     * Release the read or write lock.
+     *
+     * @param lockType type of the lock.
+     */
+    void releaseLock(LockType lockType) {
+      if (LockType.READ == lockType) {
+        this.lock.readLock().unlock();
+      } else if (LockType.WRITE == lockType) {
+        this.lock.writeLock().unlock();
+      }
     }
   }
 
@@ -148,11 +181,15 @@ public class SingleFilePerBlockCache implements BlockCache {
     checkNotNull(buffer, "buffer");
 
     Entry entry = getEntry(blockNumber);
-    buffer.clear();
-    readFile(entry.path, buffer);
-    buffer.rewind();
-
-    validateEntry(entry, buffer);
+    entry.takeLock(Entry.LockType.READ);
+    try {
+      buffer.clear();
+      readFile(entry.path, buffer);
+      buffer.rewind();
+      validateEntry(entry, buffer);
+    } finally {
+      entry.releaseLock(Entry.LockType.READ);
+    }
   }
 
   protected int readFile(Path path, ByteBuffer buffer) throws IOException {
@@ -200,7 +237,12 @@ public class SingleFilePerBlockCache implements BlockCache {
 
     if (blocks.containsKey(blockNumber)) {
       Entry entry = blocks.get(blockNumber);
-      validateEntry(entry, buffer);
+      entry.takeLock(Entry.LockType.READ);
+      try {
+        validateEntry(entry, buffer);
+      } finally {
+        entry.releaseLock(Entry.LockType.READ);
+      }
       return;
     }
 
@@ -268,12 +310,15 @@ public class SingleFilePerBlockCache implements BlockCache {
     int numFilesDeleted = 0;
 
     for (Entry entry : blocks.values()) {
+      entry.takeLock(Entry.LockType.WRITE);
       try {
         Files.deleteIfExists(entry.path);
         prefetchingStatistics.blockRemovedFromFileCache();
         numFilesDeleted++;
       } catch (IOException e) {
         LOG.debug("Failed to delete cache file {}", entry.path, e);
+      } finally {
+        entry.releaseLock(Entry.LockType.WRITE);
       }
     }
 
