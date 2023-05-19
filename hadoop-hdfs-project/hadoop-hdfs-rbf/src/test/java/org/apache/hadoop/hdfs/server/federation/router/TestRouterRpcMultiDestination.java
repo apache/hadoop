@@ -278,12 +278,10 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
   @Test
   public void testPreviousBlockNotNull()
       throws IOException, URISyntaxException {
-    final GenericTestUtils.LogCapturer stateChangeLog =
-        GenericTestUtils.LogCapturer.captureLogs(NameNode.stateChangeLog);
+    final LogCapturer stateChangeLog = LogCapturer.captureLogs(NameNode.stateChangeLog);
     GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.DEBUG);
 
-    final GenericTestUtils.LogCapturer nameNodeLog =
-        GenericTestUtils.LogCapturer.captureLogs(NameNode.LOG);
+    final LogCapturer nameNodeLog = LogCapturer.captureLogs(NameNode.LOG);
     GenericTestUtils.setLogLevel(NameNode.LOG, Level.DEBUG);
 
     final FederationRPCMetrics metrics = getRouterContext().
