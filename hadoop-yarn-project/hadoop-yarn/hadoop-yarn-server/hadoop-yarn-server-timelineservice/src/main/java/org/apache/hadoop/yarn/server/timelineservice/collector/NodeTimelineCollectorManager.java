@@ -181,7 +181,7 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
       return tokenMgrService.renewToken(appCollector.getDelegationTokenForApp(),
           appCollector.getAppDelegationTokenRenewer());
     } else {
-        LOG.info("Delegation token not available for renewal for app {}",
+      LOG.info("Delegation token not available for renewal for app {}",
           appCollector.getTimelineEntityContext().getAppId());
       return -1;
     }
