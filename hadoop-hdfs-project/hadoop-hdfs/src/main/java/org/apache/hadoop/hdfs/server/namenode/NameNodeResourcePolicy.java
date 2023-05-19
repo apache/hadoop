@@ -78,13 +78,14 @@ final class NameNodeResourcePolicy {
       // required resources available.
       return requiredResourceCount > 0;
     } else {
-      if (minimumRedundantResources > resources.size()){
-        LOG.info("Resource not available. Details: redundantResourceCount=" + redundantResourceCount
-            + ", disabledRedundantResourceCount=" + disabledRedundantResourceCount
-            + ", minimumRedundantResources=" + minimumRedundantResources + ".");
+      final boolean areResourceAvailable =
+          redundantResourceCount - disabledRedundantResourceCount >= minimumRedundantResources;
+      if (!areResourceAvailable) {
+        LOG.info("Resources not available. Details: redundantResourceCount={},"
+                + " disabledRedundantResourceCount={}, minimumRedundantResources={}.",
+            redundantResourceCount, disabledRedundantResourceCount, minimumRedundantResources);
       }
-      return redundantResourceCount - disabledRedundantResourceCount >=
-          minimumRedundantResources;
+      return areResourceAvailable;
     }
   }
 }
