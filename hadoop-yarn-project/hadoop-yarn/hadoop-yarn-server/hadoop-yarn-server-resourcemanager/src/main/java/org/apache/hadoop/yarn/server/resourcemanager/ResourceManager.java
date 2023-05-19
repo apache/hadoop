@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
@@ -711,8 +712,16 @@ public class ResourceManager extends CompositeService
        * the previous AM died because the node is lost after NM timeout. It will
        * already be too late if AM timeout is even shorter.
        */
-      int amExpireIntvl = conf.getInt(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
-          YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS);
+      String rmAmExpiryIntervalMS = conf.get(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS);
+      long amExpireIntvl;
+      if (NumberUtils.isDigits(rmAmExpiryIntervalMS)) {
+        amExpireIntvl = conf.getLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS);
+      } else {
+        amExpireIntvl = conf.getTimeDuration(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS, TimeUnit.MILLISECONDS);
+      }
+
       if (amExpireIntvl <= expireIntvl) {
         throw new YarnRuntimeException("When Yarn Federation is enabled, "
             + "AM expiry interval should be no less than NM expiry interval, "
