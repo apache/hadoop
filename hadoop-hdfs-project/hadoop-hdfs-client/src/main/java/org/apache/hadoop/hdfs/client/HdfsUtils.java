@@ -67,12 +67,12 @@ public class HdfsUtils {
              (DistributedFileSystem) FileSystem.get(uri, conf)) {
       final boolean safemode = fs.setSafeMode(SafeModeAction.SAFEMODE_GET);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Is namenode in safemode? " + safemode + "; uri=" + uri);
+        LOG.debug("Is namenode in safemode? {}; uri={}", safemode, uri);
       }
       return !safemode;
     } catch (IOException e) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Got an exception for uri=" + uri, e);
+        LOG.debug("Got an exception for uri={}", uri, e);
       }
       return false;
     }
