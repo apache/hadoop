@@ -2106,7 +2106,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       assertEquals(dfsFsStatus.getCapacity(), httpFsStatus.getCapacity());
       httpFs.close();
       dfs.close();
-    }else{
+    } else {
       Assert.fail(fs.getClass().getSimpleName() + " is not of type DistributedFileSystem.");
     }
   }
