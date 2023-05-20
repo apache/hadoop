@@ -130,7 +130,7 @@ public class Check {
     }
     if (!IDENTIFIER_PATTERN.matcher(value).find()) {
       throw new IllegalArgumentException(
-        MessageFormat.format("[{0}] = [{1}] must be '{2}'", name, value, IDENTIFIER_PATTERN_STR));
+        MessageFormat.format("[{0}] = [{1}] must be \"{2}\"", name, value, IDENTIFIER_PATTERN_STR));
     }
     return value;
   }
