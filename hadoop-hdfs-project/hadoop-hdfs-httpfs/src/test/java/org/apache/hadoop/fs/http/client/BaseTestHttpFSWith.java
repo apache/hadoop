@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -1216,7 +1217,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST,
     GET_SNAPSHOT_LIST, GET_SERVERDEFAULTS, CHECKACCESS, SETECPOLICY,
     SATISFYSTORAGEPOLICY, GET_SNAPSHOT_DIFF_LISTING, GETFILEBLOCKLOCATIONS,
-    GETFILELINKSTATUS
+    GETFILELINKSTATUS, GETSTATUS
   }
 
   private void operation(Operation op) throws Exception {
@@ -1361,6 +1362,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case GETFILELINKSTATUS:
       testGetFileLinkStatus();
+      break;
+    case GETSTATUS:
+      testGetStatus();
       break;
     }
 
@@ -2079,6 +2083,32 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
 
     assertFalse(fs.getFileLinkStatus(file).isSymlink());
     assertTrue(fs.getFileLinkStatus(linkToFile).isSymlink());
+  }
+
+  private void testGetStatus() throws Exception {
+    if (isLocalFS()) {
+      // do not test the getStatus for local FS.
+      return;
+    }
+    final Path path = new Path("/foo");
+    FileSystem fs = FileSystem.get(path.toUri(), this.getProxiedFSConf());
+    if (fs instanceof DistributedFileSystem) {
+      DistributedFileSystem dfs =
+          (DistributedFileSystem) FileSystem.get(path.toUri(), this.getProxiedFSConf());
+      FileSystem httpFs = this.getHttpFSFileSystem();
+
+      FsStatus dfsFsStatus = dfs.getStatus(path);
+      FsStatus httpFsStatus = httpFs.getStatus(path);
+
+      //Validate used free and capacity are the same as DistributedFileSystem
+      assertEquals(dfsFsStatus.getUsed(), httpFsStatus.getUsed());
+      assertEquals(dfsFsStatus.getRemaining(), httpFsStatus.getRemaining());
+      assertEquals(dfsFsStatus.getCapacity(), httpFsStatus.getCapacity());
+      httpFs.close();
+      dfs.close();
+    } else {
+      Assert.fail(fs.getClass().getSimpleName() + " is not of type DistributedFileSystem.");
+    }
   }
 
   private void assertHttpFsReportListingWithDfsClient(SnapshotDiffReportListing diffReportListing,

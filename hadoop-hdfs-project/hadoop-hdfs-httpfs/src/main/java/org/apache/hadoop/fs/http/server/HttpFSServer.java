@@ -554,6 +554,12 @@ public class HttpFSServer {
       response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       break;
     }
+    case GETSTATUS: {
+      FSOperations.FSStatus command = new FSOperations.FSStatus(path);
+      @SuppressWarnings("rawtypes") Map js = fsExecute(user, command);
+      response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
     default: {
       throw new IOException(
           MessageFormat.format("Invalid HTTP GET operation [{0}]", op.value()));
