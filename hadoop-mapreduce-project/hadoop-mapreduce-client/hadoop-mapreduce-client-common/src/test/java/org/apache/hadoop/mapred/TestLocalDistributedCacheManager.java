@@ -143,7 +143,7 @@ public class TestLocalDistributedCacheManager {
   }
 
   @Test
-  void testDownload() throws Exception {
+  public void testDownload() throws Exception {
     JobID jobId = new JobID();
     JobConf conf = new JobConf();
     conf.setClass("fs.mock.impl", MockFileSystem.class, FileSystem.class);
@@ -214,7 +214,7 @@ public class TestLocalDistributedCacheManager {
    * no files were probed for/opened.
    */
   @Test
-  void testEmptyDownload() throws Exception {
+  public void testEmptyDownload() throws Exception {
     JobID jobId = new JobID();
     JobConf conf = new JobConf();
     conf.setClass("fs.mock.impl", MockFileSystem.class, FileSystem.class);
@@ -253,7 +253,7 @@ public class TestLocalDistributedCacheManager {
    * The same file can be added to the cache twice.
    */
   @Test
-  void testDuplicateDownload() throws Exception {
+  public void testDuplicateDownload() throws Exception {
     JobID jobId = new JobID();
     JobConf conf = new JobConf();
     conf.setClass("fs.mock.impl", MockFileSystem.class, FileSystem.class);
@@ -323,7 +323,7 @@ public class TestLocalDistributedCacheManager {
    * validity of one approach over the other.
    */
   @Test
-  void testMultipleCacheSetup() throws Exception {
+  public void testMultipleCacheSetup() throws Exception {
     JobID jobId = new JobID();
     JobConf conf = new JobConf();
     LocalDistributedCacheManager manager = new LocalDistributedCacheManager();

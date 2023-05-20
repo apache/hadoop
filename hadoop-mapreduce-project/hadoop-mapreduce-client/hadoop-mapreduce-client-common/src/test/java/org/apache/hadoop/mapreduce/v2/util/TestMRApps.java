@@ -18,7 +18,13 @@
 
 package org.apache.hadoop.mapreduce.v2.util;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -85,7 +91,7 @@ public class TestMRApps {
 
   @Test
   @Timeout(120000)
-  void testJobIDtoString() {
+  public void testJobIDtoString() {
     JobId jid = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class);
     jid.setAppId(ApplicationId.newInstance(0, 0));
     assertEquals("job_0_0000", MRApps.toString(jid));
@@ -93,7 +99,7 @@ public class TestMRApps {
 
   @Test
   @Timeout(120000)
-  void testToJobID() {
+  public void testToJobID() {
     JobId jid = MRApps.toJobID("job_1_1");
     assertEquals(1, jid.getAppId().getClusterTimestamp());
     assertEquals(1, jid.getAppId().getId());
@@ -102,7 +108,7 @@ public class TestMRApps {
 
   @Test
   @Timeout(120000)
-  void testJobIDShort() {
+  public void testJobIDShort() {
     assertThrows(IllegalArgumentException.class, () -> {
       MRApps.toJobID("job_0_0_0");
     });
@@ -111,7 +117,7 @@ public class TestMRApps {
   //TODO_get.set
   @Test
   @Timeout(120000)
-  void testTaskIDtoString() {
+  public void testTaskIDtoString() {
     TaskId tid = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskId.class);
     tid.setJobId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class));
     tid.getJobId().setAppId(ApplicationId.newInstance(0, 0));
@@ -128,7 +134,7 @@ public class TestMRApps {
 
   @Test
   @Timeout(120000)
-  void testToTaskID() {
+  public void testToTaskID() {
     TaskId tid = MRApps.toTaskID("task_1_2_r_3");
     assertEquals(1, tid.getJobId().getAppId().getClusterTimestamp());
     assertEquals(2, tid.getJobId().getAppId().getId());
@@ -142,7 +148,7 @@ public class TestMRApps {
 
   @Test
   @Timeout(120000)
-  void testTaskIDShort() {
+  public void testTaskIDShort() {
     assertThrows(IllegalArgumentException.class, () -> {
       MRApps.toTaskID("task_0_0000_m");
     });
@@ -150,7 +156,7 @@ public class TestMRApps {
 
   @Test
   @Timeout(120000)
-  void testTaskIDBadType() {
+  public void testTaskIDBadType() {
     assertThrows(IllegalArgumentException.class, () -> {
       MRApps.toTaskID("task_0_0000_x_000000");
     });
@@ -159,7 +165,7 @@ public class TestMRApps {
   //TODO_get.set
   @Test
   @Timeout(120000)
-  void testTaskAttemptIDtoString() {
+  public void testTaskAttemptIDtoString() {
     TaskAttemptId taid =
         RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskAttemptId.class);
     taid.setTaskId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskId.class));
@@ -172,7 +178,7 @@ public class TestMRApps {
 
   @Test
   @Timeout(120000)
-  void testToTaskAttemptID() {
+  public void testToTaskAttemptID() {
     TaskAttemptId taid = MRApps.toTaskAttemptID("attempt_0_1_m_2_3");
     assertEquals(0, taid.getTaskId().getJobId().getAppId().getClusterTimestamp());
     assertEquals(1, taid.getTaskId().getJobId().getAppId().getId());
@@ -183,7 +189,7 @@ public class TestMRApps {
 
   @Test
   @Timeout(120000)
-  void testTaskAttemptIDShort() {
+  public void testTaskAttemptIDShort() {
     assertThrows(IllegalArgumentException.class, () -> {
       MRApps.toTaskAttemptID("attempt_0_0_0_m_0");
     });
@@ -191,7 +197,7 @@ public class TestMRApps {
 
   @Test
   @Timeout(120000)
-  void testGetJobFileWithUser() {
+  public void testGetJobFileWithUser() {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, "/my/path/to/staging");
     String jobFile = MRApps.getJobFile(conf, "dummy-user",
@@ -203,7 +209,7 @@ public class TestMRApps {
 
   @Test
   @Timeout(120000)
-  void testSetClasspath() throws IOException {
+  public void testSetClasspath() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
     Job job = Job.getInstance(conf);
@@ -236,7 +242,7 @@ public class TestMRApps {
 
   @Test
   @Timeout(120000)
-  void testSetClasspathWithArchives() throws IOException {
+  public void testSetClasspathWithArchives() throws IOException {
     File testTGZ = new File(testWorkDir, "test.tgz");
     FileOutputStream out = new FileOutputStream(testTGZ);
     out.write(0);
@@ -267,7 +273,7 @@ public class TestMRApps {
 
   @Test
   @Timeout(120000)
-  void testSetClasspathWithUserPrecendence() {
+  public void testSetClasspathWithUserPrecendence() {
     Configuration conf = new Configuration();
     conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
     conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, true);
@@ -288,7 +294,7 @@ public class TestMRApps {
 
   @Test
   @Timeout(120000)
-  void testSetClasspathWithNoUserPrecendence() {
+  public void testSetClasspathWithNoUserPrecendence() {
     Configuration conf = new Configuration();
     conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
     conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, false);
@@ -310,7 +316,7 @@ public class TestMRApps {
 
   @Test
   @Timeout(120000)
-  void testSetClasspathWithJobClassloader() throws IOException {
+  public void testSetClasspathWithJobClassloader() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
     conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_CLASSLOADER, true);
@@ -330,7 +336,7 @@ public class TestMRApps {
 
   @Test
   @Timeout(3000000)
-  void testSetClasspathWithFramework() throws IOException {
+  public void testSetClasspathWithFramework() throws IOException {
     final String FRAMEWORK_NAME = "some-framework-name";
     final String FRAMEWORK_PATH = "some-framework-path#" + FRAMEWORK_NAME;
     Configuration conf = new Configuration();
@@ -371,7 +377,7 @@ public class TestMRApps {
 
   @Test
   @Timeout(30000)
-  void testSetupDistributedCacheEmpty() throws IOException {
+  public void testSetupDistributedCacheEmpty() throws IOException {
     Configuration conf = new Configuration();
     Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
     MRApps.setupDistributedCache(conf, localResources);
@@ -382,7 +388,7 @@ public class TestMRApps {
   @SuppressWarnings("deprecation")
   @Test
   @Timeout(120000)
-  void testSetupDistributedCacheConflicts() throws Exception {
+  public void testSetupDistributedCacheConflicts() throws Exception {
     Configuration conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
 
@@ -422,7 +428,7 @@ public class TestMRApps {
   @SuppressWarnings("deprecation")
   @Test
   @Timeout(120000)
-  void testSetupDistributedCacheConflictsFiles() throws Exception {
+  public void testSetupDistributedCacheConflictsFiles() throws Exception {
     Configuration conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
 
@@ -459,7 +465,7 @@ public class TestMRApps {
   @SuppressWarnings("deprecation")
   @Test
   @Timeout(30000)
-  void testSetupDistributedCache() throws Exception {
+  public void testSetupDistributedCache() throws Exception {
     Configuration conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
 
@@ -507,7 +513,7 @@ public class TestMRApps {
   }
 
   @Test
-  void testLogSystemProperties() throws Exception {
+  public void testLogSystemProperties() throws Exception {
     Configuration conf = new Configuration();
     // test no logging
     conf.set(MRJobConfig.MAPREDUCE_JVM_SYSTEM_PROPERTIES_TO_LOG, " ");
@@ -527,7 +533,7 @@ public class TestMRApps {
   }
 
   @Test
-  void testTaskStateUI() {
+  public void testTaskStateUI() {
     assertTrue(MRApps.TaskStateUI.PENDING.correspondsTo(TaskState.SCHEDULED));
     assertTrue(MRApps.TaskStateUI.COMPLETED.correspondsTo(TaskState.SUCCEEDED));
     assertTrue(MRApps.TaskStateUI.COMPLETED.correspondsTo(TaskState.FAILED));
@@ -549,7 +555,7 @@ public class TestMRApps {
           "yarn-default.xml"};
 
   @Test
-  void testSystemClasses() {
+  public void testSystemClasses() {
     final List<String> systemClasses =
         Arrays.asList(StringUtils.getTrimmedStrings(
             ApplicationClassLoader.SYSTEM_CLASSES_DEFAULT));
@@ -566,7 +572,7 @@ public class TestMRApps {
   }
 
   @Test
-  void testInvalidWebappAddress() throws Exception {
+  public void testInvalidWebappAddress() throws Exception {
     assertThrows(IllegalArgumentException.class, () -> {
       Configuration conf = new Configuration();
       conf.set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS, "19888");

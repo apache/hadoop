@@ -195,7 +195,7 @@ public class TestMRWithDistributedCache {
 
   /** Tests using the local job runner. */
   @Test
-  void testLocalJobRunner() throws Exception {
+  public void testLocalJobRunner() throws Exception {
     symlinkFile.delete(); // ensure symlink is not present (e.g. if test is
     // killed part way through)
     
@@ -232,7 +232,7 @@ public class TestMRWithDistributedCache {
 
   @Test
   @Timeout(10000)
-  void testDeprecatedFunctions() throws Exception {
+  public void testDeprecatedFunctions() throws Exception {
     DistributedCache.addLocalArchives(conf, "Test Local Archives 1");
     assertEquals("Test Local Archives 1",
         conf.get(DistributedCache.CACHE_LOCALARCHIVES));

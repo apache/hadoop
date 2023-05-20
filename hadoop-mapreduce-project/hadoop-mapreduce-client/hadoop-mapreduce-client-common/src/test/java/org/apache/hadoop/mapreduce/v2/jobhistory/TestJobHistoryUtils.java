@@ -45,7 +45,7 @@ public class TestJobHistoryUtils {
 
   @Test
   @SuppressWarnings("unchecked")
-  void testGetHistoryDirsForCleaning() throws IOException {
+  public void testGetHistoryDirsForCleaning() throws IOException {
     Path pRoot = new Path(TEST_DIR, "org.apache.hadoop.mapreduce.v2.jobhistory."
         + "TestJobHistoryUtils.testGetHistoryDirsForCleaning");
     FileContext fc = FileContext.getFileContext();
@@ -149,7 +149,7 @@ public class TestJobHistoryUtils {
   }
 
   @Test
-  void testGetConfiguredHistoryIntermediateUserDoneDirPermissions() {
+  public void testGetConfiguredHistoryIntermediateUserDoneDirPermissions() {
     Configuration conf = new Configuration();
     Map<String, FsPermission> parameters = ImmutableMap.of(
         "775", new FsPermission(0775),

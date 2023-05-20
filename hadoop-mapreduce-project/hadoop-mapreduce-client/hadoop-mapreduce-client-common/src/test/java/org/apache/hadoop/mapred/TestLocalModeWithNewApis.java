@@ -63,7 +63,7 @@ public class TestLocalModeWithNewApis {
   }
 
   @Test
-  void testNewApis() throws Exception {
+  public void testNewApis() throws Exception {
     Random r = new Random(System.currentTimeMillis());
     Path tmpBaseDir = new Path("/tmp/wc-" + r.nextInt());
     final Path inDir = new Path(tmpBaseDir, "input");

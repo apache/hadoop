@@ -35,7 +35,7 @@ import org.junit.jupiter.api.Test;
 public class TestRecordFactory {
 
   @Test
-  void testPbRecordFactory() {
+  public void testPbRecordFactory() {
     RecordFactory pbRecordFactory = RecordFactoryPBImpl.get();
 
     try {

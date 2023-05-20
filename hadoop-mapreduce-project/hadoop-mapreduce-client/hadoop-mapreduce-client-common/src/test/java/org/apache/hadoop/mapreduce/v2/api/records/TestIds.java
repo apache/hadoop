@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestIds {
 
   @Test
-  void testJobId() {
+  public void testJobId() {
     long ts1 = 1315890136000l;
     long ts2 = 1315890136001l;
     JobId j1 = createJobId(ts1, 2);
@@ -57,7 +57,7 @@ public class TestIds {
   }
 
   @Test
-  void testTaskId() {
+  public void testTaskId() {
     long ts1 = 1315890136000l;
     long ts2 = 1315890136001l;
     TaskId t1 = createTaskId(ts1, 1, 2, TaskType.MAP);
@@ -87,7 +87,7 @@ public class TestIds {
   }
 
   @Test
-  void testTaskAttemptId() {
+  public void testTaskAttemptId() {
     long ts1 = 1315890136000l;
     long ts2 = 1315890136001l;
     TaskAttemptId t1 = createTaskAttemptId(ts1, 2, 2, TaskType.MAP, 2);

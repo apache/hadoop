@@ -50,7 +50,7 @@ import org.mockito.Mockito;
 
 public class TestTypeConverter {
   @Test
-  void testEnums() throws Exception {
+  public void testEnums() throws Exception {
     for (YarnApplicationState applicationState : YarnApplicationState.values()) {
       TypeConverter.fromYarn(applicationState, FinalApplicationStatus.FAILED);
     }
@@ -76,7 +76,7 @@ public class TestTypeConverter {
   }
 
   @Test
-  void testFromYarn() throws Exception {
+  public void testFromYarn() throws Exception {
     int appStartTime = 612354;
     int appFinishTime = 612355;
     YarnApplicationState state = YarnApplicationState.RUNNING;
@@ -107,7 +107,7 @@ public class TestTypeConverter {
   }
 
   @Test
-  void testFromYarnApplicationReport() {
+  public void testFromYarnApplicationReport() {
     ApplicationId mockAppId = mock(ApplicationId.class);
     when(mockAppId.getClusterTimestamp()).thenReturn(12345L);
     when(mockAppId.getId()).thenReturn(6789);
@@ -157,7 +157,7 @@ public class TestTypeConverter {
   }
 
   @Test
-  void testFromYarnQueueInfo() {
+  public void testFromYarnQueueInfo() {
     org.apache.hadoop.yarn.api.records.QueueInfo queueInfo = Records
         .newRecord(org.apache.hadoop.yarn.api.records.QueueInfo.class);
     queueInfo.setQueueState(org.apache.hadoop.yarn.api.records.QueueState.STOPPED);
@@ -173,7 +173,7 @@ public class TestTypeConverter {
    * queue
    */
   @Test
-  void testFromYarnQueue() {
+  public void testFromYarnQueue() {
     //Define child queue
     org.apache.hadoop.yarn.api.records.QueueInfo child =
         Mockito.mock(org.apache.hadoop.yarn.api.records.QueueInfo.class);
@@ -199,7 +199,7 @@ public class TestTypeConverter {
   }
 
   @Test
-  void testFromYarnJobReport() throws Exception {
+  public void testFromYarnJobReport() throws Exception {
     int jobStartTime = 612354;
     int jobFinishTime = 612355;
     JobState state = JobState.RUNNING;

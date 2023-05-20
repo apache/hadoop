@@ -65,7 +65,7 @@ public class TestRPCFactories {
 
 
   @Test
-  void test() {
+  public void test() {
     testPbServerFactory();
 
     testPbClientFactory();

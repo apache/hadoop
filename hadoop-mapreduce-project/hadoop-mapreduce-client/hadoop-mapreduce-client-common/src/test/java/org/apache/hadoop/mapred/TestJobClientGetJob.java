@@ -46,7 +46,7 @@ public class TestJobClientGetJob {
 
   @SuppressWarnings("deprecation")
   @Test
-  void testGetRunningJobFromJobClient() throws Exception {
+  public void testGetRunningJobFromJobClient() throws Exception {
     JobConf conf = new JobConf();
     conf.set("mapreduce.framework.name", "local");
     FileInputFormat.addInputPath(conf, createTempFile("in", "hello"));

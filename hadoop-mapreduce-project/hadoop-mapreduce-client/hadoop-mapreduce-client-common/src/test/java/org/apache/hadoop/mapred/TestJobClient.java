@@ -48,7 +48,7 @@ public class TestJobClient {
   }
 
   @Test
-  void testGetClusterStatusWithLocalJobRunner() throws Exception {
+  public void testGetClusterStatusWithLocalJobRunner() throws Exception {
     Configuration conf = new Configuration();
     conf.set(JTConfig.JT_IPC_ADDRESS, MRConfig.LOCAL_FRAMEWORK_NAME);
     conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
@@ -85,7 +85,7 @@ public class TestJobClient {
 
   @Test
   @Timeout(10000)
-  void testGetStagingAreaDir() throws IOException, InterruptedException {
+  public void testGetStagingAreaDir() throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     JobClient client = new JobClient(conf);
 
@@ -98,7 +98,7 @@ public class TestJobClient {
    */
   @Test
   @Timeout(10000)
-  void testAutoClosable() throws IOException {
+  public void testAutoClosable() throws IOException {
     Configuration conf = new Configuration();
     try (JobClient jobClient = new JobClient(conf)) {
     }

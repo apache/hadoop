@@ -87,7 +87,7 @@ public class TestFileNameIndexUtils {
   private static final String JOB_START_TIME = "1317928742060";
 
   @Test
-  void testEncodingDecodingEquivalence() throws IOException {
+  public void testEncodingDecodingEquivalence() throws IOException {
     JobIndexInfo info = new JobIndexInfo();
     JobID oldJobId = JobID.forName(JOB_ID);
     JobId jobId = TypeConverter.toYarn(oldJobId);
@@ -128,7 +128,7 @@ public class TestFileNameIndexUtils {
   }
 
   @Test
-  void testUserNamePercentEncoding() throws IOException {
+  public void testUserNamePercentEncoding() throws IOException {
     JobIndexInfo info = new JobIndexInfo();
     JobID oldJobId = JobID.forName(JOB_ID);
     JobId jobId = TypeConverter.toYarn(oldJobId);
@@ -149,7 +149,7 @@ public class TestFileNameIndexUtils {
   }
 
   @Test
-  void testTrimJobName() throws IOException {
+  public void testTrimJobName() throws IOException {
     int jobNameTrimLength = 5;
     JobIndexInfo info = new JobIndexInfo();
     JobID oldJobId = JobID.forName(JOB_ID);
@@ -179,7 +179,7 @@ public class TestFileNameIndexUtils {
    * even if there are some multibyte characters in the job name.
    */
   @Test
-  void testJobNameWithMultibyteChars() throws IOException {
+  public void testJobNameWithMultibyteChars() throws IOException {
     JobIndexInfo info = new JobIndexInfo();
     JobID oldJobId = JobID.forName(JOB_ID);
     JobId jobId = TypeConverter.toYarn(oldJobId);
@@ -327,7 +327,7 @@ public class TestFileNameIndexUtils {
   }
 
   @Test
-  void testUserNamePercentDecoding() throws IOException {
+  public void testUserNamePercentDecoding() throws IOException {
     String jobHistoryFile = String.format(JOB_HISTORY_FILE_FORMATTER,
         JOB_ID,
         SUBMIT_TIME,
@@ -345,7 +345,7 @@ public class TestFileNameIndexUtils {
   }
 
   @Test
-  void testJobNamePercentEncoding() throws IOException {
+  public void testJobNamePercentEncoding() throws IOException {
     JobIndexInfo info = new JobIndexInfo();
     JobID oldJobId = JobID.forName(JOB_ID);
     JobId jobId = TypeConverter.toYarn(oldJobId);
@@ -366,7 +366,7 @@ public class TestFileNameIndexUtils {
   }
 
   @Test
-  void testJobNamePercentDecoding() throws IOException {
+  public void testJobNamePercentDecoding() throws IOException {
     String jobHistoryFile = String.format(JOB_HISTORY_FILE_FORMATTER,
         JOB_ID,
         SUBMIT_TIME,
@@ -384,7 +384,7 @@ public class TestFileNameIndexUtils {
   }
 
   @Test
-  void testQueueNamePercentEncoding() throws IOException {
+  public void testQueueNamePercentEncoding() throws IOException {
     JobIndexInfo info = new JobIndexInfo();
     JobID oldJobId = JobID.forName(JOB_ID);
     JobId jobId = TypeConverter.toYarn(oldJobId);
@@ -405,7 +405,7 @@ public class TestFileNameIndexUtils {
   }
 
   @Test
-  void testQueueNamePercentDecoding() throws IOException {
+  public void testQueueNamePercentDecoding() throws IOException {
     String jobHistoryFile = String.format(JOB_HISTORY_FILE_FORMATTER,
         JOB_ID,
         SUBMIT_TIME,
@@ -423,7 +423,7 @@ public class TestFileNameIndexUtils {
   }
 
   @Test
-  void testJobStartTimeBackwardsCompatible() throws IOException {
+  public void testJobStartTimeBackwardsCompatible() throws IOException {
     String jobHistoryFile = String.format(OLD_FORMAT_BEFORE_ADD_START_TIME,
         JOB_ID,
         SUBMIT_TIME,
@@ -439,7 +439,7 @@ public class TestFileNameIndexUtils {
   }
 
   @Test
-  void testJobHistoryFileNameBackwardsCompatible() throws IOException {
+  public void testJobHistoryFileNameBackwardsCompatible() throws IOException {
     JobID oldJobId = JobID.forName(JOB_ID);
     JobId jobId = TypeConverter.toYarn(oldJobId);
 
@@ -475,7 +475,7 @@ public class TestFileNameIndexUtils {
   }
 
   @Test
-  void testTrimJobNameEqualsLimitLength() throws IOException {
+  public void testTrimJobNameEqualsLimitLength() throws IOException {
     int jobNameTrimLength = 9;
     JobIndexInfo info = new JobIndexInfo();
     JobID oldJobId = JobID.forName(JOB_ID);
