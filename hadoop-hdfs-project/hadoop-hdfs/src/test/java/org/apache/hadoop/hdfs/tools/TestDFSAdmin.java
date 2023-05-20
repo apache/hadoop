@@ -798,8 +798,11 @@ public class TestDFSAdmin {
 
       // verify report command for list all DN types
       resetStream();
-      assertEquals(0, ToolRunner.run(dfsAdmin, new String[] {"-report", "-live",
-          "-dead", "-decommissioning", "-enteringmaintenance", "-inmaintenance", "-slownodes"}));
+      String[] reportWithArg = new String[DFSAdmin.DFS_REPORT_ARGS.length + 1];
+      reportWithArg[0] = "-report";
+      System.arraycopy(DFSAdmin.DFS_REPORT_ARGS, 0, reportWithArg, 1,
+          DFSAdmin.DFS_REPORT_ARGS.length);
+      assertEquals(0, ToolRunner.run(dfsAdmin, reportWithArg));
     }
   }
 
