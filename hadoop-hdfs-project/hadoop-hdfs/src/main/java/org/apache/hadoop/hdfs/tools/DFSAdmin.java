@@ -484,7 +484,11 @@ public class DFSAdmin extends FsShell {
   protected DistributedFileSystem getDFS() throws IOException {
     return AdminHelper.checkAndGetDFS(getFS(), getConf());
   }
-  
+
+  public static final String[] DFS_REPORT_ARGS =
+      new String[] {"-live", "-dead", "-decommissioning", "-enteringmaintenance",
+          "-inmaintenance", "-slownodes"};
+
   /**
    * Gives a report on how the FileSystem is doing.
    * @exception IOException if the filesystem does not exist.
@@ -576,17 +580,16 @@ public class DFSAdmin extends FsShell {
     List<String> args = Arrays.asList(argv);
     // Truncate already handled arguments before parsing report()-specific ones
     args = new ArrayList<String>(args.subList(i, args.size()));
-    final boolean listLive = StringUtils.popOption("-live", args);
-    final boolean listDead = StringUtils.popOption("-dead", args);
+    final boolean listLive = StringUtils.popOption(DFS_REPORT_ARGS[0], args);
+    final boolean listDead = StringUtils.popOption(DFS_REPORT_ARGS[1], args);
     final boolean listDecommissioning =
-        StringUtils.popOption("-decommissioning", args);
+        StringUtils.popOption(DFS_REPORT_ARGS[2], args);
     final boolean listEnteringMaintenance =
-        StringUtils.popOption("-enteringmaintenance", args);
+        StringUtils.popOption(DFS_REPORT_ARGS[3], args);
     final boolean listInMaintenance =
-        StringUtils.popOption("-inmaintenance", args);
+        StringUtils.popOption(DFS_REPORT_ARGS[4], args);
     final boolean listSlowNodes =
-        StringUtils.popOption("-slownodes", args);
-
+        StringUtils.popOption(DFS_REPORT_ARGS[5], args);
 
     // If no filter flags are found, then list all DN types
     boolean listAll = (!listLive && !listDead && !listDecommissioning
@@ -2338,7 +2341,7 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if ("-report".equals(cmd)) {
-      if (argv.length > 6) {
+      if (argv.length > DFS_REPORT_ARGS.length + 1) {
         printUsage(cmd);
         return exitCode;
       }
