@@ -18,11 +18,13 @@
 package org.apache.hadoop.hdfs.server.federation.store.records;
 
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
+import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreOperationResult;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreBaseImpl;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -89,10 +91,9 @@ public class MockStateStoreDriver extends StateStoreBaseImpl {
   }
 
   @Override
-  public <T extends BaseRecord> boolean putAll(List<T> records,
-                                               boolean allowUpdate,
-                                               boolean errorIfExists)
-      throws IOException {
+  public <T extends BaseRecord> StateStoreOperationResult putAll(List<T> records,
+      boolean allowUpdate,
+      boolean errorIfExists) throws IOException {
     checkErrors();
     for (T record : records) {
       Map<String, BaseRecord> map =
@@ -107,7 +108,7 @@ public class MockStateStoreDriver extends StateStoreBaseImpl {
             + ": " + key);
       }
     }
-    return true;
+    return new StateStoreOperationResult(Collections.emptyList(), true);
   }
 
   /**

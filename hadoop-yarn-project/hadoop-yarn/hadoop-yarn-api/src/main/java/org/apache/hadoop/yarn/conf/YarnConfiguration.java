@@ -3966,6 +3966,11 @@ public class YarnConfiguration extends Configuration {
   public static final String FEDERATION_ENABLED = FEDERATION_PREFIX + "enabled";
   public static final boolean DEFAULT_FEDERATION_ENABLED = false;
 
+  public static final String FEDERATION_YARN_CLIENT_FAILOVER_RANDOM_ORDER =
+      FEDERATION_PREFIX + "failover.random.order";
+
+  public static final boolean DEFAULT_FEDERATION_YARN_CLIENT_FAILOVER_RANDOM_ORDER = false;
+
   public static final String FEDERATION_FAILOVER_ENABLED =
       FEDERATION_PREFIX + "failover.enabled";
   public static final boolean DEFAULT_FEDERATION_FAILOVER_ENABLED = true;

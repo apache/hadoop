@@ -406,7 +406,7 @@ public abstract class FederationStateStoreBaseTest {
     ApplicationId appId1 = ApplicationId.newInstance(1, 1);
     SubClusterId subClusterId1 = SubClusterId.newInstance("SC1");
     ApplicationHomeSubCluster ahsc1 =
-        ApplicationHomeSubCluster.newInstance(appId1, subClusterId1);
+        ApplicationHomeSubCluster.newInstance(appId1,  subClusterId1);
 
     ApplicationId appId2 = ApplicationId.newInstance(1, 2);
     SubClusterId subClusterId2 = SubClusterId.newInstance("SC2");
@@ -470,6 +470,7 @@ public abstract class FederationStateStoreBaseTest {
     Assert.assertEquals(10, items.size());
 
     for (ApplicationHomeSubCluster item : items) {
+      appHomeSubClusters.contains(item);
       Assert.assertTrue(appHomeSubClusters.contains(item));
     }
   }

@@ -205,7 +205,7 @@ The order in which you set these configurations is unimportant, but the values y
 
 *   **dfs.client.failover.proxy.provider.[nameservice ID]** - the Java class that HDFS clients use to contact the Active NameNode
 
-    Configure the name of the Java class which will be used by the DFS Client to
+    Configure the name of the Java class which will be used by the HDFS Client to
     determine which NameNode is the current Active, and therefore which NameNode is
     currently serving client requests. The two implementations which currently
     ship with Hadoop are the **ConfiguredFailoverProxyProvider** and the

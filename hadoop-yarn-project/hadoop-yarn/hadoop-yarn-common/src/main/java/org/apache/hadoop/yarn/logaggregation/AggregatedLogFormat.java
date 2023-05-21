@@ -587,7 +587,7 @@ public class AggregatedLogFormat {
             fileContext.openFile(remoteAppLogFile)
                 .opt(FS_OPTION_OPENFILE_READ_POLICY,
                     FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)
-                .opt(FS_OPTION_OPENFILE_LENGTH,
+                .optLong(FS_OPTION_OPENFILE_LENGTH,
                     status.getLen())   // file length hint for object stores
                 .build());
         reader = new TFile.Reader(this.fsDataIStream,
