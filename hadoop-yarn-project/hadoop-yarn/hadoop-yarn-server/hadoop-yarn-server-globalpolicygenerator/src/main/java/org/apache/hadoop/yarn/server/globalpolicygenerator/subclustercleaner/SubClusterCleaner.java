@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.globalpolicygenerator.subclustercleaner;
 
 import java.util.Date;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.time.DurationFormatUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -53,9 +54,9 @@ public class SubClusterCleaner implements Runnable {
    * @param gpgContext GPGContext.
    */
   public SubClusterCleaner(Configuration conf, GPGContext gpgContext) {
-    this.heartbeatExpirationMillis =
-        conf.getLong(YarnConfiguration.GPG_SUBCLUSTER_EXPIRATION_MS,
-            YarnConfiguration.DEFAULT_GPG_SUBCLUSTER_EXPIRATION_MS);
+    this.heartbeatExpirationMillis = conf.getTimeDuration(
+        YarnConfiguration.GPG_SUBCLUSTER_EXPIRATION_MS,
+        YarnConfiguration.DEFAULT_GPG_SUBCLUSTER_EXPIRATION_MS, TimeUnit.MILLISECONDS);
     this.gpgContext = gpgContext;
     LOG.info("Initialized SubClusterCleaner with heartbeat expiration of {}",
         DurationFormatUtils.formatDurationISO(this.heartbeatExpirationMillis));
