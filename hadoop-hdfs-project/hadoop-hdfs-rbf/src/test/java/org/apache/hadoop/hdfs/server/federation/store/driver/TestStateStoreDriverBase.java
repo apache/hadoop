@@ -314,7 +314,7 @@ public class TestStateStoreDriverBase {
     StateStoreOperationResult result2 = driver.putAll(insertList.subList(0, 1), false, true);
     assertFalse(result2.isOperationSuccessful());
     assertEquals(1, result2.getFailedRecordsKeys().size());
-    assertEquals(getPrimaryKey(insertList.get(0)), result2.getFailedRecordsKeys().get(0));
+    assertEquals(insertList.get(0).getPrimaryKey(), result2.getFailedRecordsKeys().get(0));
 
     records = driver.get(clazz);
     assertEquals(records.getRecords().size(), 10);
@@ -699,13 +699,6 @@ public class TestStateStoreDriverBase {
       return (T) Enum.valueOf((Class<Enum>) clazz, data);
     }
     return null;
-  }
-
-  private static String getPrimaryKey(BaseRecord record) {
-    String primaryKey = record.getPrimaryKey();
-    primaryKey = primaryKey.replaceAll("/", "0SLASH0");
-    primaryKey = primaryKey.replaceAll(":", "_");
-    return primaryKey;
   }
 
 }

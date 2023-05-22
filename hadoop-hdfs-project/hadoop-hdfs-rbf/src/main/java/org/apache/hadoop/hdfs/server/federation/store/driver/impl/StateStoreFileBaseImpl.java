@@ -403,7 +403,7 @@ public abstract class StateStoreFileBaseImpl
           if (metrics != null) {
             metrics.addFailure(monotonicNow() - start);
           }
-          return new StateStoreOperationResult(primaryKey);
+          return new StateStoreOperationResult(getOriginalPrimaryKey(primaryKey));
         } else {
           LOG.debug("Not updating {}", record);
         }
@@ -484,13 +484,13 @@ public abstract class StateStoreFileBaseImpl
     } catch (IOException e) {
       LOG.error("Cannot write {}", recordPathTemp, e);
       recordWrittenSuccessfully = false;
-      failedRecordsList.add(primaryKey);
+      failedRecordsList.add(getOriginalPrimaryKey(primaryKey));
       success.set(false);
     }
     // Commit
     if (recordWrittenSuccessfully && !rename(recordPathTemp, recordPath)) {
       LOG.error("Failed committing record into {}", recordPath);
-      failedRecordsList.add(primaryKey);
+      failedRecordsList.add(getOriginalPrimaryKey(primaryKey));
       success.set(false);
     }
     return null;

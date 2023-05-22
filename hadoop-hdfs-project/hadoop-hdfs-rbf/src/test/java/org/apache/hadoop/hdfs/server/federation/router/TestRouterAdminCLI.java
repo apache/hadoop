@@ -1922,7 +1922,7 @@ public class TestRouterAdminCLI {
     assertNotEquals(0, ToolRunner.run(admin, argv));
 
     assertTrue("The error message should return failed entries",
-        err.toString().contains("Cannot add mount points: [0SLASH0testAddMultiMountPoints-01"));
+        err.toString().contains("Cannot add mount points: [/testAddMultiMountPoints-01"));
   }
 
   private void addMountTable(String src, String nsId, String dst)
