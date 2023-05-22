@@ -193,7 +193,8 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
   private static final String SP_UPDATEAPPLICATIONHOMESUBCLUSTER =
       "CREATE PROCEDURE sp_updateApplicationHomeSubCluster("
           + " IN applicationId_IN varchar(64),"
-          + " IN homeSubCluster_IN varchar(256), IN applicationContext_IN BLOB, OUT rowCount_OUT int)"
+          + " IN homeSubCluster_IN varchar(256), "
+          + " IN applicationContext_IN BLOB, OUT rowCount_OUT int)"
           + " MODIFIES SQL DATA BEGIN ATOMIC"
           + " UPDATE applicationsHomeSubCluster"
           + " SET homeSubCluster = homeSubCluster_IN, "

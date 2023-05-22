@@ -716,7 +716,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.setString("homeSubCluster_IN", subClusterId.getId());
       if (appSubmissionContext != null) {
         cstmt.setBlob("applicationContext_IN", new ByteArrayInputStream(
-           ((ApplicationSubmissionContextPBImpl) appSubmissionContext).getProto().toByteArray()));
+            ((ApplicationSubmissionContextPBImpl) appSubmissionContext).getProto().toByteArray()));
       } else {
         cstmt.setNull("applicationContext_IN", Types.BLOB);
       }
