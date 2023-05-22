@@ -18,7 +18,7 @@
 
 -- Script to generate all the stored procedures for the Federation StateStore in MySQL
 
-USE FederationStateStore
+USE FederationStateStore;
 
 DELIMITER //
 

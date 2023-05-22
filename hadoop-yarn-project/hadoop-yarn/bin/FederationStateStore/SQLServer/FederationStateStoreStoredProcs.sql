@@ -43,7 +43,7 @@ AS BEGIN
                 INSERT INTO [dbo].[applicationsHomeSubCluster] (
                     [applicationId],
                     [homeSubCluster],
-                    [createTime]
+                    [createTime],
                     [applicationContext])
                 VALUES (
                     @applicationId_IN,
