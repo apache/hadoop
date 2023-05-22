@@ -117,7 +117,8 @@ public class QueueMetrics implements MetricsSource {
   @Metric("Reserved CPU in virtual cores") MutableGaugeInt reservedVCores;
   @Metric("# of reserved containers") MutableGaugeInt reservedContainers;
 
-  public static final String CONFIGURATION_VALIDATION = "yarn.configuration-validation";
+  // INTERNAL ONLY
+  private static final String CONFIGURATION_VALIDATION = "yarn.configuration-validation";
 
   private final MutableGaugeInt[] runningTime;
   private TimeBucketMetrics<ApplicationId> runBuckets;
@@ -342,7 +343,7 @@ public class QueueMetrics implements MetricsSource {
           "Metrics for queue: " + this.queueName,
           queueMetrics.tag(PARTITION_INFO, partitionJMXStr).tag(QUEUE_INFO,
               this.queueName));
-      if (!conf.getBoolean(CONFIGURATION_VALIDATION, false)) {
+      if (!isConfigurationValidationSet(conf)) {
         getQueueMetrics().put(metricName, queueMetrics);
       }
       registerPartitionMetricsCreation(metricName);
@@ -350,6 +351,26 @@ public class QueueMetrics implements MetricsSource {
     } else {
       return metrics;
     }
+  }
+
+  /**
+   * Check whether we are in a configuration validation mode. INTERNAL ONLY.
+   *
+   * @param conf the configuration to check
+   * @return true if
+   */
+  public static boolean isConfigurationValidationSet(Configuration conf) {
+    return conf.getBoolean(CONFIGURATION_VALIDATION, false);
+  }
+
+  /**
+   * Set configuration validation mode. INTERNAL ONLY.
+   *
+   * @param conf the configuration to update
+   * @param value the value for the validation mode
+   */
+  public static void setConfigurationValidation(Configuration conf, boolean value) {
+    conf.setBoolean(CONFIGURATION_VALIDATION, value);
   }
 
   /**

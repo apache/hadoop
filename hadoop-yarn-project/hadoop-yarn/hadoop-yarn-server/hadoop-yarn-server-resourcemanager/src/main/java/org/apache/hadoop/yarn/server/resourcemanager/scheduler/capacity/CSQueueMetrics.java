@@ -296,8 +296,7 @@ public class CSQueueMetrics extends QueueMetrics {
 
   public synchronized static CSQueueMetrics forQueue(String queueName,
       Queue parent, boolean enableUserMetrics, Configuration conf) {
-    final boolean isConfigValidation =
-        conf.getBoolean(CONFIGURATION_VALIDATION, false);
+    final boolean isConfigValidation = isConfigurationValidationSet(conf);
 
     MetricsSystem ms = isConfigValidation
         ? new DummyMetricsSystemImpl() : DefaultMetricsSystem.instance();
