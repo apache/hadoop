@@ -245,15 +245,23 @@ public final class CapacitySchedulerTestUtilities {
   }
 
   public static CapacityScheduler setupCapacityScheduler(MockRM rm, int memoryGb) {
-    return setupCapacityScheduler(rm, memoryGb, 16, Collections.emptyMap());
+    return setupCapacityScheduler(rm, memoryGb, 16);
   }
 
   public static CapacityScheduler setupCapacityScheduler(MockRM rm, int memoryGb, int cores) {
-    return setupCapacityScheduler(rm, memoryGb, cores, Collections.emptyMap());
+    return setupCapacityScheduler(
+        rm,
+        Resource.newInstance(memoryGb * GB, cores),
+        Collections.emptyMap()
+    );
+  }
+
+  public static CapacityScheduler setupCapacityScheduler(MockRM rm, Resource resource) {
+    return setupCapacityScheduler(rm, resource, Collections.emptyMap());
   }
 
   public static CapacityScheduler setupCapacityScheduler(
-      MockRM rm, int memoryGb, int cores, Map<String, String> nameToValues
+      MockRM rm, Resource resource, Map<String, String> nameToValues
   ) {
     if(!(rm.getResourceScheduler() instanceof CapacityScheduler)) {
       return null;
@@ -266,7 +274,8 @@ public final class CapacitySchedulerTestUtilities {
     for (Map.Entry<String, String> nameToValue : nameToValues.entrySet()) {
       others.put(nameToValue.getKey(), Long.valueOf(nameToValue.getValue()));
     }
-    Resource clusterResource = Resource.newInstance(memoryGb * GB, cores, others);
+    Resource clusterResource = Resource.newInstance(
+        resource.getMemorySize(), resource.getVirtualCores(), others);
     mgr.setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, clusterResource);
     queueController.updateRoot(cs.getQueue("root"), clusterResource);
     updateChildren(queueController, clusterResource, cs.getQueue("root"));

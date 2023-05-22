@@ -133,7 +133,8 @@ public class TestCSAllocateCustomResource {
     nodeResource.setResourceValue(customResourceType, 10);
     MockNM nm1 = rm.registerNode("h1:1234", nodeResource);
 
-    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 20, 20,
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm,
+        Resource.newInstance(20 * 1024, 20),
         Collections.singletonMap(customResourceType, "10"));
 
     // submit app

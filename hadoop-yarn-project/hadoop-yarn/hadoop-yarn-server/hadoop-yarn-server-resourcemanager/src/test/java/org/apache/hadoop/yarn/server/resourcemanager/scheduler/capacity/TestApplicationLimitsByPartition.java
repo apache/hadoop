@@ -992,7 +992,8 @@ public class TestApplicationLimitsByPartition {
 
     rm.registerNode("127.0.0.1:1234", clusterResource);
 
-    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 16, 64,
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm,
+        Resource.newInstance(16 * GB, 64),
         Collections.singletonMap("gpu", "0"));
 
     String userName = "user_0";

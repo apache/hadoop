@@ -5316,8 +5316,11 @@ public class TestLeafQueue {
     conf.setCapacityByLabel(rootChild + "." + D, "test", 10);
     conf.setCapacityByLabel(rootChild + "." + E, "test", 60);
     cs.reinitialize(conf, cs.getRMContext());
-    CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), cs.getQueue("root"),  Resource.newInstance(10 * GB, 10));
+    CapacitySchedulerTestUtilities.updateRootQueue(
+        rmContext.getNodeLabelManager(),
+        cs.getQueue("root"),
+        Resource.newInstance(1600 * GB, 3200)
+    );
 
     e = (LeafQueue) cs.getQueue("e");
     // Maximum application is now determined by test label, because that would

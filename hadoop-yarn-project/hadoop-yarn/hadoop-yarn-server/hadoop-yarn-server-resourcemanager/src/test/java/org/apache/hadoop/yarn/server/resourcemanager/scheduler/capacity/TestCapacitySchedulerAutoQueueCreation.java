@@ -845,7 +845,7 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       // add new NM.
       newMockRM.registerNode("127.0.0.3:1234", 125 * GB, 20);
-      cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(newMockRM, 141,68);
+      CapacitySchedulerTestUtilities.setupCapacityScheduler(newMockRM, 141,68);
 
 
 
@@ -882,8 +882,10 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       // unregister one NM.
       newMockRM.unRegisterNode(nm3);
-      Resource MIN_RES_UPDATED = Resources.createResource(14438, 6);
-      Resource MAX_RES_UPDATED = Resources.createResource(144384, 68);
+
+      Resource MIN_RES_UPDATED = Resources.createResource(12800, 2);
+      Resource MAX_RES_UPDATED = Resources.createResource(128000, 20);
+      CapacitySchedulerTestUtilities.setupCapacityScheduler(newMockRM, MAX_RES_UPDATED);
 
       // After loosing one NM, resources will reduce
       Assert.assertEquals("Effective Min resource for USER2 is not correct",
