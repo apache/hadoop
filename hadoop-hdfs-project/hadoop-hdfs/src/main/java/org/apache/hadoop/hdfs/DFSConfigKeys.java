@@ -271,6 +271,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.redundancy.considerLoad.factor";
   public static final double
       DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_FACTOR_DEFAULT = 2.0;
+  public static final String DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYVOLUME_KEY =
+      "dfs.namenode.redundancy.considerLoadByVolume";
+  public static final boolean
+      DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYVOLUME_DEFAULT
+      = false;
   public static final String DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY;
   public static final int DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_DEFAULT = 3;
@@ -452,7 +457,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // Multiple dirs separated by "," are acceptable.
   public static final String DFS_DATANODE_PMEM_CACHE_DIRS_KEY =
       "dfs.datanode.pmem.cache.dirs";
-  public static final String DFS_DATANODE_PMEM_CACHE_DIRS_DEFAULT = "";
   public static final String  DFS_DATANODE_PMEM_CACHE_RECOVERY_KEY =
       "dfs.datanode.pmem.cache.recovery";
   public static final boolean DFS_DATANODE_PMEM_CACHE_RECOVERY_DEFAULT =

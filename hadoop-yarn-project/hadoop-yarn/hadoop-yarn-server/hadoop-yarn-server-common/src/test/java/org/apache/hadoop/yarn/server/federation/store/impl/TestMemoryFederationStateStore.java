@@ -19,6 +19,10 @@ package org.apache.hadoop.yarn.server.federation.store.impl;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
@@ -27,7 +31,9 @@ import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretManagerState;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
-import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -92,37 +98,28 @@ public class TestMemoryFederationStateStore extends FederationStateStoreBaseTest
   }
 
   @Test
-  public void testGetCurrentVersion() {
+  public void testGetApplicationHomeSubClusterWithContext() throws Exception {
     MemoryFederationStateStore memoryStateStore =
         MemoryFederationStateStore.class.cast(this.getStateStore());
-    Version version = memoryStateStore.getCurrentVersion();
-    assertEquals(version.getMajorVersion(), 1);
-    assertEquals(version.getMinorVersion(), 1);
-  }
 
-  @Test
-  public void testStoreVersion() throws Exception {
-    MemoryFederationStateStore memoryStateStore =
-        MemoryFederationStateStore.class.cast(this.getStateStore());
-    memoryStateStore.storeVersion();
-    Version version = memoryStateStore.getCurrentVersion();
-    assertEquals(version.getMajorVersion(), 1);
-    assertEquals(version.getMinorVersion(), 1);
-  }
+    ApplicationId appId = ApplicationId.newInstance(1, 3);
+    SubClusterId subClusterId = SubClusterId.newInstance("SC");
+    ApplicationSubmissionContext context =
+        ApplicationSubmissionContext.newInstance(appId, "test", "default",
+        Priority.newInstance(0), null, true, true,
+        2, Resource.newInstance(10, 2), "test");
+    addApplicationHomeSC(appId, subClusterId, context);
 
-  @Test
-  public void testLoadVersion() throws Exception {
-    MemoryFederationStateStore memoryStateStore =
-        MemoryFederationStateStore.class.cast(this.getStateStore());
-    Version version = memoryStateStore.loadVersion();
-    assertEquals(version.getMajorVersion(), 1);
-    assertEquals(version.getMinorVersion(), 1);
-  }
+    GetApplicationHomeSubClusterRequest getRequest =
+        GetApplicationHomeSubClusterRequest.newInstance(appId, true);
+    GetApplicationHomeSubClusterResponse result =
+        memoryStateStore.getApplicationHomeSubCluster(getRequest);
 
-  @Test
-  public void testCheckVersion() throws Exception {
-    MemoryFederationStateStore memoryStateStore =
-        MemoryFederationStateStore.class.cast(this.getStateStore());
-    memoryStateStore.checkVersion();
+    assertEquals(appId,
+        result.getApplicationHomeSubCluster().getApplicationId());
+    assertEquals(subClusterId,
+        result.getApplicationHomeSubCluster().getHomeSubCluster());
+    assertEquals(context,
+        result.getApplicationHomeSubCluster().getApplicationSubmissionContext());
   }
 }

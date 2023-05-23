@@ -115,6 +115,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityReque
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -152,6 +153,37 @@ import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConsta
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.FORCE_KILL_APP;
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.TARGET_CLIENT_RM_SERVICE;
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UNKNOWN;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CLUSTERNODES;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_QUEUE_USER_ACLS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_APPLICATIONS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CLUSTERMETRICS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_QUEUEINFO;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.MOVE_APPLICATION_ACROSS_QUEUES;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_NEW_RESERVATION;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.SUBMIT_RESERVATION;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.LIST_RESERVATIONS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UPDATE_RESERVATION;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.DELETE_RESERVATION;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_NODETOLABELS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_LABELSTONODES;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CLUSTERNODELABELS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_APPLICATION_ATTEMPT_REPORT;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_APPLICATION_ATTEMPTS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CONTAINERREPORT;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CONTAINERS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_DELEGATIONTOKEN;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.RENEW_DELEGATIONTOKEN;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.CANCEL_DELEGATIONTOKEN;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.FAIL_APPLICATIONATTEMPT;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UPDATE_APPLICATIONPRIORITY;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.SIGNAL_TOCONTAINER;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UPDATE_APPLICATIONTIMEOUTS;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_RESOURCEPROFILES;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_RESOURCEPROFILE;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_RESOURCETYPEINFO;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_ATTRIBUTESTONODES;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_CLUSTERNODEATTRIBUTES;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_NODESTOATTRIBUTES;
 
 /**
  * Extends the {@code AbstractRequestInterceptorClient} class and provides an
@@ -161,15 +193,6 @@ import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConsta
  */
 public class FederationClientInterceptor
     extends AbstractClientRequestInterceptor {
-
-  /*
-   * TODO YARN-6740 Federation Router (hiding multiple RMs for
-   * ApplicationClientProtocol) phase 2.
-   *
-   * The current implementation finalized the main 4 calls (getNewApplication,
-   * submitApplication, forceKillApplication and getApplicationReport). Those
-   * allow us to execute applications E2E.
-   */
 
   private static final Logger LOG =
       LoggerFactory.getLogger(FederationClientInterceptor.class);
@@ -328,6 +351,8 @@ public class FederationClientInterceptor
       }
     } catch (Exception e) {
       routerMetrics.incrAppsFailedCreated();
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_APP, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, e.getMessage());
       RouterServerUtil.logAndThrowException(e.getMessage(), e);
     }
 
@@ -485,6 +510,8 @@ public class FederationClientInterceptor
 
     } catch (Exception e) {
       routerMetrics.incrAppsFailedSubmitted();
+      RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, e.getMessage(), applicationId);
       RouterServerUtil.logAndThrowException(e.getMessage(), e);
     }
 
@@ -538,8 +565,10 @@ public class FederationClientInterceptor
 
       // Step2. We Store the mapping relationship
       // between Application and HomeSubCluster in stateStore.
+      ApplicationSubmissionContext trimmedAppSubmissionContext =
+          RouterServerUtil.getTrimmedAppSubmissionContext(appSubmissionContext);
       federationFacade.addOrUpdateApplicationHomeSubCluster(
-          applicationId, subClusterId, retryCount);
+          applicationId, subClusterId, retryCount, trimmedAppSubmissionContext);
 
       // Step3. SubmitApplication to the subCluster
       ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
@@ -734,7 +763,10 @@ public class FederationClientInterceptor
       throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrMultipleAppsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getApplications request.", null);
+      String msg = "Missing getApplications request.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APPLICATIONS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getApplications",
@@ -744,10 +776,15 @@ public class FederationClientInterceptor
       applications = invokeConcurrent(remoteMethod, GetApplicationsResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrMultipleAppsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get applications due to exception.", ex);
+      String msg = "Unable to get applications due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APPLICATIONS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededMultipleAppsRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_APPLICATIONS,
+        TARGET_CLIENT_RM_SERVICE);
     // Merge the Application Reports
     return RouterYarnClientUtils.mergeApplications(applications, returnPartialReport);
   }
@@ -757,7 +794,10 @@ public class FederationClientInterceptor
       GetClusterMetricsRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrGetClusterMetricsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getClusterMetrics request.", null);
+      String msg = "Missing getApplications request.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERMETRICS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
@@ -767,10 +807,15 @@ public class FederationClientInterceptor
       clusterMetrics = invokeConcurrent(remoteMethod, GetClusterMetricsResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrGetClusterMetricsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get cluster metrics due to exception.", ex);
+      String msg = "Unable to get cluster metrics due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERMETRICS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetClusterMetricsRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_CLUSTERMETRICS,
+        TARGET_CLIENT_RM_SERVICE);
     return RouterYarnClientUtils.merge(clusterMetrics);
   }
 
@@ -811,7 +856,7 @@ public class FederationClientInterceptor
           results.put(subClusterId, clazz.cast(result));
         } catch (InterruptedException | ExecutionException e) {
           Throwable cause = e.getCause();
-          LOG.error("Cannot execute {} on {}: {}", request.getMethodName(),
+          LOG.error("Cannot execute {} on {} : {}", request.getMethodName(),
               subClusterId.getId(), cause.getMessage());
           exceptions.put(subClusterId, e);
         }
@@ -837,7 +882,10 @@ public class FederationClientInterceptor
       throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrClusterNodesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getClusterNodes request.", null);
+      String msg = "Missing getClusterNodes request.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERNODES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getClusterNodes",
@@ -847,10 +895,15 @@ public class FederationClientInterceptor
           invokeConcurrent(remoteMethod, GetClusterNodesResponse.class);
       long stopTime = clock.getTime();
       routerMetrics.succeededGetClusterNodesRetrieved(stopTime - startTime);
+      RouterAuditLogger.logSuccess(user.getShortUserName(), GET_CLUSTERNODES,
+          TARGET_CLIENT_RM_SERVICE);
       return RouterYarnClientUtils.mergeClusterNodesResponse(clusterNodes);
     } catch (Exception ex) {
       routerMetrics.incrClusterNodesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get cluster nodes due to exception.", ex);
+      String msg = "Unable to get cluster nodes due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERNODES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     throw new YarnException("Unable to get cluster nodes.");
   }
@@ -860,7 +913,10 @@ public class FederationClientInterceptor
       throws YarnException, IOException {
     if (request == null || request.getQueueName() == null) {
       routerMetrics.incrGetQueueInfoFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getQueueInfo request or queueName.", null);
+      String msg = "Missing getQueueInfo request or queueName.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_QUEUEINFO, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
 
     long startTime = clock.getTime();
@@ -871,11 +927,14 @@ public class FederationClientInterceptor
       queues = invokeConcurrent(remoteMethod, GetQueueInfoResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrGetQueueInfoFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get queue [" +
-          request.getQueueName() + "] to exception.", ex);
+      String msg = "Unable to get queue [" + request.getQueueName() + "] to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_QUEUEINFO, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetQueueInfoRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_QUEUEINFO, TARGET_CLIENT_RM_SERVICE);
     // Merge the GetQueueInfoResponse
     return RouterYarnClientUtils.mergeQueues(queues);
   }
@@ -885,7 +944,10 @@ public class FederationClientInterceptor
       GetQueueUserAclsInfoRequest request) throws YarnException, IOException {
     if(request == null){
       routerMetrics.incrQueueUserAclsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getQueueUserAcls request.", null);
+      String msg = "Missing getQueueUserAcls request.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_QUEUE_USER_ACLS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getQueueUserAcls",
@@ -895,10 +957,15 @@ public class FederationClientInterceptor
       queueUserAcls = invokeConcurrent(remoteMethod, GetQueueUserAclsInfoResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrQueueUserAclsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get queue user Acls due to exception.", ex);
+      String msg = "Unable to get queue user Acls due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_QUEUE_USER_ACLS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetQueueUserAclsRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_QUEUE_USER_ACLS,
+        TARGET_CLIENT_RM_SERVICE);
     // Merge the QueueUserAclsInfoResponse
     return RouterYarnClientUtils.mergeQueueUserAcls(queueUserAcls);
   }
@@ -909,8 +976,11 @@ public class FederationClientInterceptor
       throws YarnException, IOException {
     if (request == null || request.getApplicationId() == null || request.getTargetQueue() == null) {
       routerMetrics.incrMoveApplicationAcrossQueuesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing moveApplicationAcrossQueues request or " +
-          "applicationId or target queue.", null);
+      String msg = "Missing moveApplicationAcrossQueues request or " +
+          "applicationId or target queue.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), MOVE_APPLICATION_ACROSS_QUEUES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg);
     }
 
     long startTime = clock.getTime();
@@ -922,8 +992,10 @@ public class FederationClientInterceptor
           .getApplicationHomeSubCluster(applicationId);
     } catch (YarnException e) {
       routerMetrics.incrMoveApplicationAcrossQueuesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Application " +
-          applicationId + " does not exist in FederationStateStore.", e);
+      String errMsgFormat = "Application %s does not exist in FederationStateStore.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), MOVE_APPLICATION_ACROSS_QUEUES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, String.format(errMsgFormat, applicationId));
+      RouterServerUtil.logAndThrowException(e, errMsgFormat, applicationId);
     }
 
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
@@ -932,8 +1004,9 @@ public class FederationClientInterceptor
       response = clientRMProxy.moveApplicationAcrossQueues(request);
     } catch (Exception e) {
       routerMetrics.incrMoveApplicationAcrossQueuesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to moveApplicationAcrossQueues for " +
-          applicationId + " to SubCluster " + subClusterId.getId(), e);
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to moveApplicationAcrossQueues for %s to SubCluster %s.", applicationId,
+          subClusterId.getId());
     }
 
     if (response == null) {
@@ -943,6 +1016,8 @@ public class FederationClientInterceptor
     }
 
     long stopTime = clock.getTime();
+    RouterAuditLogger.logSuccess(user.getShortUserName(), MOVE_APPLICATION_ACROSS_QUEUES,
+        TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
     routerMetrics.succeededMoveApplicationAcrossQueuesRetrieved(stopTime - startTime);
     return response;
   }
@@ -954,6 +1029,8 @@ public class FederationClientInterceptor
     if (request == null) {
       routerMetrics.incrGetNewReservationFailedRetrieved();
       String errMsg = "Missing getNewReservation request.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_RESERVATION, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, errMsg);
       RouterServerUtil.logAndThrowException(errMsg, null);
     }
 
@@ -969,16 +1046,23 @@ public class FederationClientInterceptor
         if (response != null) {
           long stopTime = clock.getTime();
           routerMetrics.succeededGetNewReservationRetrieved(stopTime - startTime);
+          RouterAuditLogger.logSuccess(user.getShortUserName(), GET_NEW_RESERVATION,
+              TARGET_CLIENT_RM_SERVICE);
           return response;
         }
       } catch (Exception e) {
-        LOG.warn("Unable to create a new Reservation in SubCluster {}.", subClusterId.getId(), e);
+        String logFormatted = "Unable to create a new Reservation in SubCluster {}.";
+        LOG.warn(logFormatted, subClusterId.getId(), e);
+        RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_RESERVATION, UNKNOWN,
+            TARGET_CLIENT_RM_SERVICE, logFormatted, subClusterId.getId());
         subClustersActive.remove(subClusterId);
       }
     }
 
     routerMetrics.incrGetNewReservationFailedRetrieved();
     String errMsg = "Failed to create a new reservation.";
+    RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_RESERVATION, UNKNOWN,
+        TARGET_CLIENT_RM_SERVICE, errMsg);
     throw new YarnException(errMsg);
   }
 
@@ -989,9 +1073,11 @@ public class FederationClientInterceptor
     if (request == null || request.getReservationId() == null
         || request.getReservationDefinition() == null || request.getQueue() == null) {
       routerMetrics.incrSubmitReservationFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing submitReservation request or reservationId " +
-          "or reservation definition or queue.", null);
+      String msg = "Missing submitReservation request or reservationId " +
+          "or reservation definition or queue.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_RESERVATION, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
 
     long startTime = clock.getTime();
@@ -1028,6 +1114,8 @@ public class FederationClientInterceptor
           LOG.info("Reservation {} submitted on subCluster {}.", reservationId, subClusterId);
           long stopTime = clock.getTime();
           routerMetrics.succeededSubmitReservationRetrieved(stopTime - startTime);
+          RouterAuditLogger.logSuccess(user.getShortUserName(), SUBMIT_RESERVATION,
+              TARGET_CLIENT_RM_SERVICE);
           return response;
         }
       } catch (Exception e) {
@@ -1037,6 +1125,8 @@ public class FederationClientInterceptor
 
     routerMetrics.incrSubmitReservationFailedRetrieved();
     String msg = String.format("Reservation %s failed to be submitted.", reservationId);
+    RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_RESERVATION, UNKNOWN,
+        TARGET_CLIENT_RM_SERVICE, msg);
     throw new YarnException(msg);
   }
 
@@ -1045,7 +1135,10 @@ public class FederationClientInterceptor
       ReservationListRequest request) throws YarnException, IOException {
     if (request == null || request.getReservationId() == null) {
       routerMetrics.incrListReservationsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing listReservations request.", null);
+      String msg = "Missing listReservations request.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), LIST_RESERVATIONS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("listReservations",
@@ -1054,12 +1147,16 @@ public class FederationClientInterceptor
     try {
       listResponses = invokeConcurrent(remoteMethod, ReservationListResponse.class);
     } catch (Exception ex) {
+      String msg = "Unable to list reservations node due to exception.";
       routerMetrics.incrListReservationsFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Unable to list reservations node due to exception.", ex);
+      RouterAuditLogger.logFailure(user.getShortUserName(), LIST_RESERVATIONS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededListReservationsRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), LIST_RESERVATIONS,
+        TARGET_CLIENT_RM_SERVICE);
     // Merge the ReservationListResponse
     return RouterYarnClientUtils.mergeReservationsList(listResponses);
   }
@@ -1071,8 +1168,10 @@ public class FederationClientInterceptor
     if (request == null || request.getReservationId() == null
         || request.getReservationDefinition() == null) {
       routerMetrics.incrUpdateReservationFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing updateReservation request or reservationId or reservation definition.", null);
+      String msg = "Missing updateReservation request or reservationId or reservation definition.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), UPDATE_RESERVATION, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
 
     long startTime = clock.getTime();
@@ -1085,16 +1184,22 @@ public class FederationClientInterceptor
       if (response != null) {
         long stopTime = clock.getTime();
         routerMetrics.succeededUpdateReservationRetrieved(stopTime - startTime);
+        RouterAuditLogger.logSuccess(user.getShortUserName(), UPDATE_RESERVATION,
+            TARGET_CLIENT_RM_SERVICE);
         return response;
       }
     } catch (Exception ex) {
       routerMetrics.incrUpdateReservationFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Unable to reservation update due to exception.", ex);
+      String msg = "Unable to reservation update due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), UPDATE_RESERVATION, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
 
     routerMetrics.incrUpdateReservationFailedRetrieved();
     String msg = String.format("Reservation %s failed to be update.", reservationId);
+    RouterAuditLogger.logFailure(user.getShortUserName(), UPDATE_RESERVATION, UNKNOWN,
+        TARGET_CLIENT_RM_SERVICE, msg);
     throw new YarnException(msg);
   }
 
@@ -1103,8 +1208,10 @@ public class FederationClientInterceptor
       ReservationDeleteRequest request) throws YarnException, IOException {
     if (request == null || request.getReservationId() == null) {
       routerMetrics.incrDeleteReservationFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing deleteReservation request or reservationId.", null);
+      String msg = "Missing deleteReservation request or reservationId.";
+      RouterServerUtil.logAndThrowException(msg, null);
+      RouterAuditLogger.logFailure(user.getShortUserName(), DELETE_RESERVATION, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
     }
 
     long startTime = clock.getTime();
@@ -1118,16 +1225,22 @@ public class FederationClientInterceptor
         federationFacade.deleteReservationHomeSubCluster(reservationId);
         long stopTime = clock.getTime();
         routerMetrics.succeededDeleteReservationRetrieved(stopTime - startTime);
+        RouterAuditLogger.logSuccess(user.getShortUserName(), DELETE_RESERVATION,
+            TARGET_CLIENT_RM_SERVICE);
         return response;
       }
     } catch (Exception ex) {
       routerMetrics.incrUpdateReservationFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Unable to reservation delete due to exception.", ex);
+      String msg = "Unable to reservation delete due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), DELETE_RESERVATION, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
 
     routerMetrics.incrDeleteReservationFailedRetrieved();
     String msg = String.format("Reservation %s failed to be delete.", reservationId);
+    RouterAuditLogger.logFailure(user.getShortUserName(), DELETE_RESERVATION, UNKNOWN,
+        TARGET_CLIENT_RM_SERVICE, msg);
     throw new YarnException(msg);
   }
 
@@ -1136,20 +1249,28 @@ public class FederationClientInterceptor
       GetNodesToLabelsRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrNodeToLabelsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getNodesToLabels request.", null);
+      String msg = "Missing getNodesToLabels request.";
+      RouterServerUtil.logAndThrowException(msg, null);
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_NODETOLABELS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getNodeToLabels",
-         new Class[] {GetNodesToLabelsRequest.class}, new Object[] {request});
+        new Class[] {GetNodesToLabelsRequest.class}, new Object[] {request});
     Collection<GetNodesToLabelsResponse> clusterNodes = null;
     try {
       clusterNodes = invokeConcurrent(remoteMethod, GetNodesToLabelsResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrNodeToLabelsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get node label due to exception.", ex);
+      String msg = "Unable to get node label due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_NODETOLABELS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetNodeToLabelsRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_NODETOLABELS,
+        TARGET_CLIENT_RM_SERVICE);
     // Merge the NodesToLabelsResponse
     return RouterYarnClientUtils.mergeNodesToLabelsResponse(clusterNodes);
   }
@@ -1159,7 +1280,10 @@ public class FederationClientInterceptor
       GetLabelsToNodesRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getLabelsToNodes request.", null);
+      String msg = "Missing getNodesToLabels request.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_LABELSTONODES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getLabelsToNodes",
@@ -1169,10 +1293,15 @@ public class FederationClientInterceptor
       labelNodes = invokeConcurrent(remoteMethod, GetLabelsToNodesResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get label node due to exception.", ex);
+      String msg = "Unable to get label node due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_LABELSTONODES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetLabelsToNodesRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_LABELSTONODES,
+        TARGET_CLIENT_RM_SERVICE);
     // Merge the LabelsToNodesResponse
     return RouterYarnClientUtils.mergeLabelsToNodes(labelNodes);
   }
@@ -1182,7 +1311,10 @@ public class FederationClientInterceptor
       GetClusterNodeLabelsRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrClusterNodeLabelsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getClusterNodeLabels request.", null);
+      String msg = "Missing getClusterNodeLabels request.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERNODELABELS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getClusterNodeLabels",
@@ -1192,11 +1324,15 @@ public class FederationClientInterceptor
       nodeLabels = invokeConcurrent(remoteMethod, GetClusterNodeLabelsResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrClusterNodeLabelsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get cluster nodeLabels due to exception.",
-          ex);
+      String msg = "Unable to get cluster nodeLabels due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERNODELABELS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetClusterNodeLabelsRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_CLUSTERNODELABELS,
+        TARGET_CLIENT_RM_SERVICE);
     // Merge the ClusterNodeLabelsResponse
     return RouterYarnClientUtils.mergeClusterNodeLabelsResponse(nodeLabels);
   }
@@ -1225,9 +1361,11 @@ public class FederationClientInterceptor
     if (request == null || request.getApplicationAttemptId() == null
             || request.getApplicationAttemptId().getApplicationId() == null) {
       routerMetrics.incrAppAttemptReportFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing getApplicationAttemptReport request or applicationId " +
-          "or applicationAttemptId information.", null);
+      String msg = "Missing getApplicationAttemptReport request or applicationId " +
+          "or applicationAttemptId information.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APPLICATION_ATTEMPT_REPORT, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
 
     long startTime = clock.getTime();
@@ -1237,10 +1375,12 @@ public class FederationClientInterceptor
       subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (YarnException e) {
       routerMetrics.incrAppAttemptReportFailedRetrieved();
-      RouterServerUtil.logAndThrowException("ApplicationAttempt " +
-          request.getApplicationAttemptId() + " belongs to Application " +
-          request.getApplicationAttemptId().getApplicationId() +
-          " does not exist in FederationStateStore.", e);
+      String msgFormat = "ApplicationAttempt %s belongs to " +
+          "Application %s does not exist in FederationStateStore.";
+      ApplicationAttemptId applicationAttemptId = request.getApplicationAttemptId();
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APPLICATION_ATTEMPT_REPORT, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msgFormat, applicationAttemptId, applicationId);
+      RouterServerUtil.logAndThrowException(e, msgFormat, applicationAttemptId, applicationId);
     }
 
     ApplicationClientProtocol clientRMProxy =
@@ -1254,6 +1394,8 @@ public class FederationClientInterceptor
       String msg = String.format(
           "Unable to get the applicationAttempt report for %s to SubCluster %s.",
           request.getApplicationAttemptId(), subClusterId.getId());
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APPLICATION_ATTEMPT_REPORT, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, e);
     }
 
@@ -1265,6 +1407,8 @@ public class FederationClientInterceptor
 
     long stopTime = clock.getTime();
     routerMetrics.succeededAppAttemptReportRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_APPLICATION_ATTEMPT_REPORT,
+        TARGET_CLIENT_RM_SERVICE);
     return response;
   }
 
@@ -1273,8 +1417,10 @@ public class FederationClientInterceptor
       GetApplicationAttemptsRequest request) throws YarnException, IOException {
     if (request == null || request.getApplicationId() == null) {
       routerMetrics.incrAppAttemptsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getApplicationAttempts " +
-          "request or application id.", null);
+      String msg = "Missing getApplicationAttempts request or application id.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APPLICATION_ATTEMPTS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg);
     }
 
     long startTime = clock.getTime();
@@ -1284,8 +1430,10 @@ public class FederationClientInterceptor
       subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (YarnException ex) {
       routerMetrics.incrAppAttemptsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Application " + applicationId +
-          " does not exist in FederationStateStore.", ex);
+      String msg = "Application " + applicationId + " does not exist in FederationStateStore.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APPLICATION_ATTEMPTS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
 
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
@@ -1294,8 +1442,11 @@ public class FederationClientInterceptor
       response = clientRMProxy.getApplicationAttempts(request);
     } catch (Exception ex) {
       routerMetrics.incrAppAttemptsFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get the application attempts for " +
-          applicationId + " from SubCluster " + subClusterId.getId(), ex);
+      String msg = "Unable to get the application attempts for " +
+          applicationId + " from SubCluster " + subClusterId.getId();
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APPLICATION_ATTEMPTS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
 
     if (response == null) {
@@ -1305,6 +1456,8 @@ public class FederationClientInterceptor
     }
 
     long stopTime = clock.getTime();
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_APPLICATION_ATTEMPTS,
+        TARGET_CLIENT_RM_SERVICE, applicationId);
     routerMetrics.succeededAppAttemptsRetrieved(stopTime - startTime);
     return response;
   }
@@ -1314,8 +1467,10 @@ public class FederationClientInterceptor
       GetContainerReportRequest request) throws YarnException, IOException {
     if(request == null || request.getContainerId() == null){
       routerMetrics.incrGetContainerReportFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getContainerReport request " +
-          "or containerId", null);
+      String msg = "Missing getContainerReport request or containerId";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CONTAINERREPORT, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
 
     long startTime = clock.getTime();
@@ -1326,8 +1481,10 @@ public class FederationClientInterceptor
       subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (YarnException ex) {
       routerMetrics.incrGetContainerReportFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Application " + applicationId +
-          " does not exist in FederationStateStore.", ex);
+      String msg = "Application " + applicationId + " does not exist in FederationStateStore.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CONTAINERREPORT, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
 
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
@@ -1348,6 +1505,8 @@ public class FederationClientInterceptor
     }
 
     long stopTime = clock.getTime();
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_CONTAINERREPORT,
+        TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
     routerMetrics.succeededGetContainerReportRetrieved(stopTime - startTime);
     return response;
   }
@@ -1357,8 +1516,10 @@ public class FederationClientInterceptor
       throws YarnException, IOException {
     if (request == null || request.getApplicationAttemptId() == null) {
       routerMetrics.incrGetContainersFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing getContainers request or ApplicationAttemptId.", null);
+      String msg = "Missing getContainers request or ApplicationAttemptId.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CONTAINERS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
 
     long startTime = clock.getTime();
@@ -1368,8 +1529,10 @@ public class FederationClientInterceptor
       subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (YarnException ex) {
       routerMetrics.incrGetContainersFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Application " + applicationId +
-          " does not exist in FederationStateStore.", ex);
+      String msg = "Application " + applicationId + " does not exist in FederationStateStore.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CONTAINERS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
 
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
@@ -1379,8 +1542,11 @@ public class FederationClientInterceptor
       response = clientRMProxy.getContainers(request);
     } catch (Exception ex) {
       routerMetrics.incrGetContainersFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get the containers for " +
-          applicationId + " from SubCluster " + subClusterId.getId(), ex);
+      String msg = "Unable to get the containers for " +
+          applicationId + " from SubCluster " + subClusterId.getId();
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CONTAINERS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
 
     if (response == null) {
@@ -1390,6 +1556,8 @@ public class FederationClientInterceptor
     }
 
     long stopTime = clock.getTime();
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_CONTAINERS,
+        TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
     routerMetrics.succeededGetContainersRetrieved(stopTime - startTime);
     return response;
   }
@@ -1400,16 +1568,20 @@ public class FederationClientInterceptor
 
     if (request == null || request.getRenewer() == null) {
       routerMetrics.incrGetDelegationTokenFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing getDelegationToken request or Renewer.", null);
+      String msg = "Missing getDelegationToken request or Renewer.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_DELEGATIONTOKEN, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
 
     try {
       // Verify that the connection is kerberos authenticated
       if (!RouterServerUtil.isAllowedDelegationTokenOp()) {
         routerMetrics.incrGetDelegationTokenFailedRetrieved();
-        throw new IOException(
-            "Delegation Token can be issued only with kerberos authentication.");
+        String msg = "Delegation Token can be issued only with kerberos authentication.";
+        RouterAuditLogger.logFailure(user.getShortUserName(), GET_DELEGATIONTOKEN, UNKNOWN,
+            TARGET_CLIENT_RM_SERVICE, msg);
+        throw new IOException(msg);
       }
 
       long startTime = clock.getTime();
@@ -1432,9 +1604,13 @@ public class FederationClientInterceptor
 
       long stopTime = clock.getTime();
       routerMetrics.succeededGetDelegationTokenRetrieved((stopTime - startTime));
+      RouterAuditLogger.logSuccess(user.getShortUserName(), GET_DELEGATIONTOKEN,
+          TARGET_CLIENT_RM_SERVICE);
       return GetDelegationTokenResponse.newInstance(routerRMDTToken);
     } catch(IOException e) {
       routerMetrics.incrGetDelegationTokenFailedRetrieved();
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_DELEGATIONTOKEN, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, "getDelegationToken error, errMsg = " + e.getMessage());
       throw new YarnException(e);
     }
   }
@@ -1446,8 +1622,10 @@ public class FederationClientInterceptor
 
       if (!RouterServerUtil.isAllowedDelegationTokenOp()) {
         routerMetrics.incrRenewDelegationTokenFailedRetrieved();
-        throw new IOException(
-            "Delegation Token can be renewed only with kerberos authentication");
+        String msg = "Delegation Token can be renewed only with kerberos authentication";
+        RouterAuditLogger.logFailure(user.getShortUserName(), RENEW_DELEGATIONTOKEN, UNKNOWN,
+            TARGET_CLIENT_RM_SERVICE, msg);
+        throw new IOException(msg);
       }
 
       long startTime = clock.getTime();
@@ -1455,17 +1633,21 @@ public class FederationClientInterceptor
       Token<RMDelegationTokenIdentifier> token = new Token<>(
           protoToken.getIdentifier().array(), protoToken.getPassword().array(),
           new Text(protoToken.getKind()), new Text(protoToken.getService()));
-      String user = RouterServerUtil.getRenewerForToken(token);
-      long nextExpTime = this.getTokenSecretManager().renewToken(token, user);
+      String renewer = RouterServerUtil.getRenewerForToken(token);
+      long nextExpTime = this.getTokenSecretManager().renewToken(token, renewer);
       RenewDelegationTokenResponse renewResponse =
           Records.newRecord(RenewDelegationTokenResponse.class);
       renewResponse.setNextExpirationTime(nextExpTime);
       long stopTime = clock.getTime();
       routerMetrics.succeededRenewDelegationTokenRetrieved((stopTime - startTime));
+      RouterAuditLogger.logSuccess(user.getShortUserName(), RENEW_DELEGATIONTOKEN,
+          TARGET_CLIENT_RM_SERVICE);
       return renewResponse;
 
     } catch (IOException e) {
       routerMetrics.incrRenewDelegationTokenFailedRetrieved();
+      RouterAuditLogger.logFailure(user.getShortUserName(), RENEW_DELEGATIONTOKEN, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, "renewDelegationToken error, errMsg = " + e.getMessage());
       throw new YarnException(e);
     }
   }
@@ -1476,8 +1658,10 @@ public class FederationClientInterceptor
     try {
       if (!RouterServerUtil.isAllowedDelegationTokenOp()) {
         routerMetrics.incrCancelDelegationTokenFailedRetrieved();
-        throw new IOException(
-            "Delegation Token can be cancelled only with kerberos authentication");
+        String msg = "Delegation Token can be cancelled only with kerberos authentication";
+        RouterAuditLogger.logFailure(user.getShortUserName(), CANCEL_DELEGATIONTOKEN, UNKNOWN,
+            TARGET_CLIENT_RM_SERVICE, msg);
+        throw new IOException(msg);
       }
 
       long startTime = clock.getTime();
@@ -1485,13 +1669,17 @@ public class FederationClientInterceptor
       Token<RMDelegationTokenIdentifier> token = new Token<>(
           protoToken.getIdentifier().array(), protoToken.getPassword().array(),
           new Text(protoToken.getKind()), new Text(protoToken.getService()));
-      String user = UserGroupInformation.getCurrentUser().getUserName();
-      this.getTokenSecretManager().cancelToken(token, user);
+      String currentUser = UserGroupInformation.getCurrentUser().getUserName();
+      this.getTokenSecretManager().cancelToken(token, currentUser);
       long stopTime = clock.getTime();
       routerMetrics.succeededCancelDelegationTokenRetrieved((stopTime - startTime));
+      RouterAuditLogger.logSuccess(user.getShortUserName(), CANCEL_DELEGATIONTOKEN,
+          TARGET_CLIENT_RM_SERVICE);
       return Records.newRecord(CancelDelegationTokenResponse.class);
     } catch (IOException e) {
       routerMetrics.incrCancelDelegationTokenFailedRetrieved();
+      RouterAuditLogger.logFailure(user.getShortUserName(), CANCEL_DELEGATIONTOKEN, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, "cancelDelegationToken error, errMsg = " + e.getMessage());
       throw new YarnException(e);
     }
   }
@@ -1502,22 +1690,27 @@ public class FederationClientInterceptor
     if (request == null || request.getApplicationAttemptId() == null
           || request.getApplicationAttemptId().getApplicationId() == null) {
       routerMetrics.incrFailAppAttemptFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing failApplicationAttempt request or applicationId " +
-          "or applicationAttemptId information.", null);
+      String msg = "Missing failApplicationAttempt request or applicationId " +
+          "or applicationAttemptId information.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), FAIL_APPLICATIONATTEMPT, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
     long startTime = clock.getTime();
     SubClusterId subClusterId = null;
-    ApplicationId applicationId = request.getApplicationAttemptId().getApplicationId();
+    ApplicationAttemptId applicationAttemptId = request.getApplicationAttemptId();
+    ApplicationId applicationId = applicationAttemptId.getApplicationId();
 
     try {
       subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (YarnException e) {
       routerMetrics.incrFailAppAttemptFailedRetrieved();
-      RouterServerUtil.logAndThrowException("ApplicationAttempt " +
-          request.getApplicationAttemptId() + " belongs to Application " +
-          request.getApplicationAttemptId().getApplicationId() +
-          " does not exist in FederationStateStore.", e);
+      String msg = "ApplicationAttempt " +
+          applicationAttemptId + " belongs to Application " + applicationId +
+          " does not exist in FederationStateStore.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), FAIL_APPLICATIONATTEMPT, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, e);
     }
 
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
@@ -1526,8 +1719,11 @@ public class FederationClientInterceptor
       response = clientRMProxy.failApplicationAttempt(request);
     } catch (Exception e) {
       routerMetrics.incrFailAppAttemptFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get the applicationAttempt report for " +
-          request.getApplicationAttemptId() + " to SubCluster " + subClusterId.getId(), e);
+      String msg = "Unable to get the applicationAttempt report for " +
+          applicationAttemptId + " to SubCluster " + subClusterId;
+      RouterAuditLogger.logFailure(user.getShortUserName(), FAIL_APPLICATIONATTEMPT, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, e);
     }
 
     if (response == null) {
@@ -1538,6 +1734,8 @@ public class FederationClientInterceptor
 
     long stopTime = clock.getTime();
     routerMetrics.succeededFailAppAttemptRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), FAIL_APPLICATIONATTEMPT,
+        TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
     return response;
   }
 
@@ -1548,9 +1746,11 @@ public class FederationClientInterceptor
     if (request == null || request.getApplicationId() == null
             || request.getApplicationPriority() == null) {
       routerMetrics.incrUpdateAppPriorityFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing updateApplicationPriority request or applicationId " +
-          "or applicationPriority information.", null);
+      String msg = "Missing updateApplicationPriority request or applicationId " +
+          "or applicationPriority information.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), UPDATE_APPLICATIONPRIORITY, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
 
     long startTime = clock.getTime();
@@ -1561,8 +1761,11 @@ public class FederationClientInterceptor
       subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (YarnException e) {
       routerMetrics.incrUpdateAppPriorityFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Application " +
-          request.getApplicationId() + " does not exist in FederationStateStore.", e);
+      String msg = "Application " +
+          applicationId + " does not exist in FederationStateStore.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), UPDATE_APPLICATIONPRIORITY, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, e);
     }
 
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
@@ -1571,8 +1774,11 @@ public class FederationClientInterceptor
       response = clientRMProxy.updateApplicationPriority(request);
     } catch (Exception e) {
       routerMetrics.incrFailAppAttemptFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to update application priority for " +
-          request.getApplicationId() + " to SubCluster " + subClusterId.getId(), e);
+      String msg = "Unable to update application priority for " +
+          applicationId + " to SubCluster " + subClusterId;
+      RouterAuditLogger.logFailure(user.getShortUserName(), UPDATE_APPLICATIONPRIORITY, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, e);
     }
 
     if (response == null) {
@@ -1583,6 +1789,8 @@ public class FederationClientInterceptor
 
     long stopTime = clock.getTime();
     routerMetrics.succeededUpdateAppPriorityRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), UPDATE_APPLICATIONPRIORITY,
+        TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
     return response;
   }
 
@@ -1592,9 +1800,10 @@ public class FederationClientInterceptor
     if (request == null || request.getContainerId() == null
             || request.getCommand() == null) {
       routerMetrics.incrSignalToContainerFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing signalToContainer request or containerId " +
-          "or command information.", null);
+      String msg = "Missing signalToContainer request or containerId or command information.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), SIGNAL_TOCONTAINER, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
 
     long startTime = clock.getTime();
@@ -1605,8 +1814,10 @@ public class FederationClientInterceptor
       subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (YarnException ex) {
       routerMetrics.incrSignalToContainerFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Application " + applicationId +
-          " does not exist in FederationStateStore.", ex);
+      String msg = "Application " + applicationId + " does not exist in FederationStateStore.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), SIGNAL_TOCONTAINER, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
 
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
@@ -1614,17 +1825,22 @@ public class FederationClientInterceptor
     try {
       response = clientRMProxy.signalToContainer(request);
     } catch (Exception ex) {
-      RouterServerUtil.logAndThrowException("Unable to signal to container for " +
-          applicationId + " from SubCluster " + subClusterId.getId(), ex);
+      String msg = "Unable to signal to container for " + applicationId +
+          " from SubCluster " + subClusterId;
+      RouterAuditLogger.logFailure(user.getShortUserName(), SIGNAL_TOCONTAINER, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
 
     if (response == null) {
       LOG.error("No response when signal to container of " +
-          "the applicationId {} to SubCluster {}.", applicationId, subClusterId.getId());
+          "the applicationId {} to SubCluster {}.", applicationId, subClusterId);
     }
 
     long stopTime = clock.getTime();
     routerMetrics.succeededSignalToContainerRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), SIGNAL_TOCONTAINER,
+        TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
     return response;
   }
 
@@ -1635,9 +1851,11 @@ public class FederationClientInterceptor
     if (request == null || request.getApplicationId() == null
             || request.getApplicationTimeouts() == null) {
       routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing updateApplicationTimeouts request or applicationId " +
-          "or applicationTimeouts information.", null);
+      String msg = "Missing updateApplicationTimeouts request or applicationId or " +
+          "applicationTimeouts information.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), UPDATE_APPLICATIONTIMEOUTS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
 
     long startTime = clock.getTime();
@@ -1647,9 +1865,10 @@ public class FederationClientInterceptor
       subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (YarnException e) {
       routerMetrics.incrFailAppAttemptFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Application " +
-          request.getApplicationId() +
-          " does not exist in FederationStateStore.", e);
+      String msg = "Application " + applicationId + " does not exist in FederationStateStore.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), UPDATE_APPLICATIONTIMEOUTS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, e);
     }
 
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
@@ -1658,8 +1877,11 @@ public class FederationClientInterceptor
       response = clientRMProxy.updateApplicationTimeouts(request);
     } catch (Exception e) {
       routerMetrics.incrFailAppAttemptFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to update application timeout for " +
-          request.getApplicationId() + " to SubCluster " + subClusterId.getId(), e);
+      String msg = "Unable to update application timeout for " + applicationId +
+          " to SubCluster " + subClusterId;
+      RouterAuditLogger.logFailure(user.getShortUserName(), UPDATE_APPLICATIONTIMEOUTS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, e);
     }
 
     if (response == null) {
@@ -1670,6 +1892,8 @@ public class FederationClientInterceptor
 
     long stopTime = clock.getTime();
     routerMetrics.succeededUpdateAppTimeoutsRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), UPDATE_APPLICATIONTIMEOUTS,
+        TARGET_CLIENT_RM_SERVICE, applicationId, subClusterId);
     return response;
   }
 
@@ -1678,7 +1902,10 @@ public class FederationClientInterceptor
       GetAllResourceProfilesRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrGetResourceProfilesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getResourceProfiles request.", null);
+      String msg = "Missing getResourceProfiles request.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_RESOURCEPROFILES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getResourceProfiles",
@@ -1688,11 +1915,16 @@ public class FederationClientInterceptor
       resourceProfiles = invokeConcurrent(remoteMethod, GetAllResourceProfilesResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrGetResourceProfilesFailedRetrieved();
+      String msg = "Unable to get resource profiles due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_RESOURCEPROFILES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException("Unable to get resource profiles due to exception.",
           ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetResourceProfilesRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_RESOURCEPROFILES,
+        TARGET_CLIENT_RM_SERVICE);
     return RouterYarnClientUtils.mergeClusterResourceProfilesResponse(resourceProfiles);
   }
 
@@ -1701,8 +1933,10 @@ public class FederationClientInterceptor
       GetResourceProfileRequest request) throws YarnException, IOException {
     if (request == null || request.getProfileName() == null) {
       routerMetrics.incrGetResourceProfileFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getResourceProfile request or profileName.",
-          null);
+      String msg = "Missing getResourceProfile request or profileName.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_RESOURCEPROFILE, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getResourceProfile",
@@ -1712,11 +1946,15 @@ public class FederationClientInterceptor
       resourceProfile = invokeConcurrent(remoteMethod, GetResourceProfileResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrGetResourceProfileFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get resource profile due to exception.",
-          ex);
+      String msg = "Unable to get resource profile due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_RESOURCEPROFILE, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetResourceProfileRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_RESOURCEPROFILE,
+        TARGET_CLIENT_RM_SERVICE);
     return RouterYarnClientUtils.mergeClusterResourceProfileResponse(resourceProfile);
   }
 
@@ -1725,7 +1963,10 @@ public class FederationClientInterceptor
       GetAllResourceTypeInfoRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrResourceTypeInfoFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getResourceTypeInfo request.", null);
+      String msg = "Missing getResourceTypeInfo request.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_RESOURCETYPEINFO, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getResourceTypeInfo",
@@ -1735,11 +1976,16 @@ public class FederationClientInterceptor
       listResourceTypeInfo = invokeConcurrent(remoteMethod, GetAllResourceTypeInfoResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrResourceTypeInfoFailedRetrieved();
-      LOG.error("Unable to get all resource type info node due to exception.", ex);
+      String msg = "Unable to get all resource type info node due to exception.";
+      LOG.error(msg, ex);
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_RESOURCETYPEINFO, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
       throw ex;
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetResourceTypeInfoRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_RESOURCETYPEINFO,
+        TARGET_CLIENT_RM_SERVICE);
     // Merge the GetAllResourceTypeInfoResponse
     return RouterYarnClientUtils.mergeResourceTypes(listResourceTypeInfo);
   }
@@ -1755,8 +2001,10 @@ public class FederationClientInterceptor
       GetAttributesToNodesRequest request) throws YarnException, IOException {
     if (request == null || request.getNodeAttributes() == null) {
       routerMetrics.incrGetAttributesToNodesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getAttributesToNodes request " +
-          "or nodeAttributes.", null);
+      String msg = "Missing getAttributesToNodes request or nodeAttributes.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_ATTRIBUTESTONODES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getAttributesToNodes",
@@ -1767,11 +2015,15 @@ public class FederationClientInterceptor
           invokeConcurrent(remoteMethod, GetAttributesToNodesResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrGetAttributesToNodesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get attributes to nodes due to exception.",
-          ex);
+      String msg = "Unable to get attributes to nodes due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_ATTRIBUTESTONODES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetAttributesToNodesRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_ATTRIBUTESTONODES,
+        TARGET_CLIENT_RM_SERVICE);
     return RouterYarnClientUtils.mergeAttributesToNodesResponse(attributesToNodesResponses);
   }
 
@@ -1780,7 +2032,10 @@ public class FederationClientInterceptor
       GetClusterNodeAttributesRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrGetClusterNodeAttributesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getClusterNodeAttributes request.", null);
+      String msg = "Missing getClusterNodeAttributes request.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERNODEATTRIBUTES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getClusterNodeAttributes",
@@ -1791,11 +2046,15 @@ public class FederationClientInterceptor
           GetClusterNodeAttributesResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrGetClusterNodeAttributesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get cluster node attributes due " +
-          " to exception.", ex);
+      String msg = "Unable to get cluster node attributes due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERNODEATTRIBUTES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetClusterNodeAttributesRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_CLUSTERNODEATTRIBUTES,
+        TARGET_CLIENT_RM_SERVICE);
     return RouterYarnClientUtils.mergeClusterNodeAttributesResponse(clusterNodeAttributesResponses);
   }
 
@@ -1804,8 +2063,10 @@ public class FederationClientInterceptor
       GetNodesToAttributesRequest request) throws YarnException, IOException {
     if (request == null || request.getHostNames() == null) {
       routerMetrics.incrGetNodesToAttributesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing getNodesToAttributes request or " +
-          "hostNames.", null);
+      String msg = "Missing getNodesToAttributes request or hostNames.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_NODESTOATTRIBUTES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, null);
     }
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getNodesToAttributes",
@@ -1816,11 +2077,15 @@ public class FederationClientInterceptor
           GetNodesToAttributesResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrGetNodesToAttributesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to get nodes to attributes due " +
-          " to exception.", ex);
+      String msg = "Unable to get nodes to attributes due to exception.";
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_NODESTOATTRIBUTES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, msg);
+      RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
     routerMetrics.succeededGetNodesToAttributesRetrieved(stopTime - startTime);
+    RouterAuditLogger.logSuccess(user.getShortUserName(), GET_NODESTOATTRIBUTES,
+        TARGET_CLIENT_RM_SERVICE);
     return RouterYarnClientUtils.mergeNodesToAttributesResponse(nodesToAttributesResponses);
   }
 

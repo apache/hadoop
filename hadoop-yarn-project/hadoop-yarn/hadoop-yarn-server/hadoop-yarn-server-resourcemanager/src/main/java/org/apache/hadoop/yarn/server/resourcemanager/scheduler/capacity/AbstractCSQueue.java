@@ -410,8 +410,8 @@ public abstract class AbstractCSQueue implements CSQueue {
    */
   protected void setDynamicQueueProperties() {
     // Set properties from parent template
-    if (parent instanceof ParentQueue) {
-      ((ParentQueue) parent).getAutoCreatedQueueTemplate()
+    if (parent instanceof AbstractParentQueue) {
+      ((AbstractParentQueue) parent).getAutoCreatedQueueTemplate()
           .setTemplateEntriesForChild(queueContext.getConfiguration(), getQueuePath());
 
       String parentTemplate = String.format("%s.%s", parent.getQueuePath(),
@@ -1262,7 +1262,7 @@ public abstract class AbstractCSQueue implements CSQueue {
           CapacityConfigType.ABSOLUTE_RESOURCE)) {
         newEffectiveMinResource = createNormalizedMinResource(
             usageTracker.getQueueResourceQuotas().getConfiguredMinResource(label),
-            ((ParentQueue) parent).getEffectiveMinRatio(label));
+            ((AbstractParentQueue) parent).getEffectiveMinRatio(label));
 
         // Max resource of a queue should be the minimum of {parent's maxResources,
         // this queue's maxResources}. Both parent's maxResources and this queue's

@@ -334,6 +334,14 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.namenode.redundancy.considerLoadByVolume</name>
+    <value>false</value>
+    <description>Decide if chooseTarget considers the target's volume load or
+      not.
+    </description>
+  </property>
+
 <property>
   <name>dfs.namenode.read.considerLoad</name>
   <value>false</value>

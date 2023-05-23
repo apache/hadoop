@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_DEFAULT_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
@@ -73,6 +74,9 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
   private long largeFileSize;
   // Size should be < block size so S3AInMemoryInputStream is used
   private static final int SMALL_FILE_SIZE = S_1K * 16;
+
+  private static final int TIMEOUT_MILLIS = 5000;
+  private static final int INTERVAL_MILLIS = 500;
 
 
   @Override
@@ -202,13 +206,19 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
 
       // Expected to get block 0 (partially read), 1 (prefetch), 2 (fully read), 3 (prefetch)
       // Blocks 0, 1, 3 were not fully read, so remain in the file cache
-      verifyStatisticCounterValue(ioStats, ACTION_HTTP_GET_REQUEST, 4);
-      verifyStatisticCounterValue(ioStats, STREAM_READ_OPENED, 4);
-      verifyStatisticCounterValue(ioStats, STREAM_READ_PREFETCH_OPERATIONS, 2);
-      verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 3);
+      LambdaTestUtils.eventually(TIMEOUT_MILLIS, INTERVAL_MILLIS, () -> {
+        LOG.info("IO stats: {}", ioStats);
+        verifyStatisticCounterValue(ioStats, ACTION_HTTP_GET_REQUEST, 4);
+        verifyStatisticCounterValue(ioStats, STREAM_READ_OPENED, 4);
+        verifyStatisticCounterValue(ioStats, STREAM_READ_PREFETCH_OPERATIONS, 2);
+        verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 3);
+      });
     }
-    verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 0);
-    verifyStatisticGaugeValue(ioStats, STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
+    LambdaTestUtils.eventually(TIMEOUT_MILLIS, INTERVAL_MILLIS, () -> {
+      LOG.info("IO stats: {}", ioStats);
+      verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 0);
+      verifyStatisticGaugeValue(ioStats, STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
+    });
   }
 
   @Test
