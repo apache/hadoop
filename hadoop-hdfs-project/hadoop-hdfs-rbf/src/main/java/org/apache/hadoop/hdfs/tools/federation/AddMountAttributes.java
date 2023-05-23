@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.tools.federation;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
@@ -32,7 +31,7 @@ public class AddMountAttributes {
 
   private String mount;
   private String[] nss;
-  private String dest;
+  private String[] destinations;
   private boolean readonly;
   private boolean faultTolerant;
   private DestinationOrder order;
@@ -55,12 +54,12 @@ public class AddMountAttributes {
     this.nss = nss;
   }
 
-  public String getDest() {
-    return dest;
+  public String[] getDestinations() {
+    return destinations;
   }
 
-  public void setDest(String dest) {
-    this.dest = dest;
+  public void setDestinations(String[] destinations) {
+    this.destinations = destinations;
   }
 
   public boolean isReadonly() {
@@ -115,32 +114,6 @@ public class AddMountAttributes {
   }
 
   /**
-   * Retrieve mount table object with all attributes derived from this object.
-   * The returned mount table could be either new or existing one with updated attributes.
-   *
-   * @param existingEntry Existing mount table entry. If null, new mount table object is created,
-   * otherwise the existing mount table object is updated.
-   * @return MountTable object with updated attributes.
-   * @throws IOException If mount table instantiation fails.
-   */
-  public MountTable getNewOrUpdatedMountTableEntryWithAttributes(MountTable existingEntry)
-      throws IOException {
-    if (existingEntry == null) {
-      return getMountTableForAddRequest(this.mount);
-    } else {
-      // Update the existing entry if it exists
-      for (String nsId : this.getNss()) {
-        if (!existingEntry.addDestination(nsId, this.getDest())) {
-          System.err.println("Cannot add destination at " + nsId + " " + this.getDest());
-          return null;
-        }
-      }
-      updateCommonAttributes(existingEntry);
-      return existingEntry;
-    }
-  }
-
-  /**
    * Create a new mount table object from the given mount point and update its attributes.
    *
    * @param mountSrc mount point src.
@@ -148,10 +121,7 @@ public class AddMountAttributes {
    * @throws IOException If mount table instantiation fails.
    */
   private MountTable getMountTableForAddRequest(String mountSrc) throws IOException {
-    Map<String, String> destMap = new LinkedHashMap<>();
-    for (String ns : this.getNss()) {
-      destMap.put(ns, this.getDest());
-    }
+    Map<String, String> destMap = RouterAdmin.getDestMap(this.nss, this.destinations);
     MountTable newEntry = MountTable.newInstance(mountSrc, destMap);
     updateCommonAttributes(newEntry);
     return newEntry;

@@ -162,23 +162,29 @@ public class RouterAdmin extends Configured implements Tool {
       return usage.toString();
     }
     if (cmd.equals("-add")) {
-      return "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
+      return "\t[-add <source> <nameservice1, nameservice2, ...> "
+          + "<one destination or the same number of destinations as nameservices> "
           + "[-readonly] [-faulttolerant] "
           + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
           + "-owner <owner> -group <group> -mode <mode>]";
     } else if (cmd.equals(ADD_ALL_COMMAND)) {
       return "\t[" + ADD_ALL_COMMAND + " "
-          + "<source1> <nameservice1,nameservice2,...> <destination1> "
-          + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+          + "<source1> <nameservice1, nameservice2, ...> "
+          + "<one destination or the same number of destinations as nameservices> "
+          + "[-readonly] [-faulttolerant] "
+          + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
           + "-owner <owner1> -group <group1> -mode <mode1>"
           + " , "
-          + "<source2> <nameservice1,nameservice2,...> <destination2> "
-          + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+          + "<source2> <nameservice1, nameservice2, ...> "
+          + "<one destination or the same number of destinations as nameservices> "
+          + "[-readonly] [-faulttolerant] "
+          + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
           + "-owner <owner2> -group <group2> -mode <mode2>"
           + " , ...]";
     } else if (cmd.equals("-update")) {
       return "\t[-update <source>"
-          + " [<nameservice1, nameservice2, ...> <destination>] "
+          + " [<nameservice1, nameservice2, ...> "
+          + "<one destination or the same number of destinations as nameservices>] "
           + "[-readonly true|false] [-faulttolerant true|false] "
           + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
           + "-owner <owner> -group <group> -mode <mode>]";
@@ -530,22 +536,14 @@ public class RouterAdmin extends Configured implements Tool {
    * point is to be added.
    * @return AddMountAttributes object.
    */
-  private static AddMountAttributes getAddMountAttributes(String[] parameters, int i,
+  private AddMountAttributes getAddMountAttributes(String[] parameters, int i,
       boolean isMultipleAdd) {
     // Mandatory parameters
     String mount = parameters[i++];
     String[] nss = parameters[i++].split(",");
-    String destination = parameters[i++];
-
-    if (isMultipleAdd) {
-      String[] destinations = destination.split(",");
-      if (nss.length != destinations.length && destinations.length > 1) {
-        String message =
-            "Invalid namespaces and destinations. The number of destinations " + destinations.length
-                + " is not matched with the number of namespaces " + nss.length;
-        System.err.println(message);
-        return null;
-      }
+    String[] destinations = parameters[i++].split(",");
+    if (areInvalidDestinations(nss, destinations)) {
+      return null;
     }
 
     // Optional parameters
@@ -604,7 +602,7 @@ public class RouterAdmin extends Configured implements Tool {
     AddMountAttributes addMountAttributes = new AddMountAttributes();
     addMountAttributes.setMount(mount);
     addMountAttributes.setNss(nss);
-    addMountAttributes.setDest(destination);
+    addMountAttributes.setDestinations(destinations);
     addMountAttributes.setReadonly(readOnly);
     addMountAttributes.setFaultTolerant(faultTolerant);
     addMountAttributes.setOrder(order);
@@ -699,32 +697,52 @@ public class RouterAdmin extends Configured implements Tool {
     // Get the existing entry
     MountTableManager mountTable = client.getMountTableManager();
     MountTable existingEntry = getMountEntry(mount, mountTable);
-    MountTable existingOrNewEntry =
-        addMountAttributes.getNewOrUpdatedMountTableEntryWithAttributes(existingEntry);
-    if (existingOrNewEntry == null) {
+    if (existingEntry != null) {
+      System.err.println("MountTable entry:" + mount + " already exists.");
       return false;
     }
 
-    if (existingEntry == null) {
-      AddMountTableEntryRequest request = AddMountTableEntryRequest
-          .newInstance(existingOrNewEntry);
-      AddMountTableEntryResponse addResponse = mountTable.addMountTableEntry(request);
-      boolean added = addResponse.getStatus();
-      if (!added) {
-        System.err.println("Cannot add mount point " + mount);
-      }
-      return added;
-    } else {
-      UpdateMountTableEntryRequest updateRequest =
-          UpdateMountTableEntryRequest.newInstance(existingOrNewEntry);
-      UpdateMountTableEntryResponse updateResponse =
-          mountTable.updateMountTableEntry(updateRequest);
-      boolean updated = updateResponse.getStatus();
-      if (!updated) {
-        System.err.println("Cannot update mount point " + mount);
-      }
-      return updated;
+    MountTable mountEntry = addMountAttributes.getMountTableEntryWithAttributes();
+    AddMountTableEntryRequest request = AddMountTableEntryRequest.newInstance(mountEntry);
+    AddMountTableEntryResponse addResponse = mountTable.addMountTableEntry(request);
+    boolean added = addResponse.getStatus();
+    if (!added) {
+      System.err.println("Cannot add mount point " + mount);
     }
+    return added;
+  }
+
+  /**
+   * Return the map from namespace to destination.
+   * @param nss input namespaces.
+   * @param destinations input destinations.
+   * @return one map from namespace to destination.
+   * @throws IOException throw IOException if the destinations is invalid.
+   */
+  public static Map<String, String> getDestMap(String[] nss, String[] destinations)
+      throws IOException {
+    if (areInvalidDestinations(nss, destinations)) {
+      String message = "Invalid number of namespaces and destinations. The number of destinations: "
+          + destinations.length + " is not equal to the number of namespaces: " + nss.length;
+      throw new IOException(message);
+    }
+    Map<String, String> destMap = new LinkedHashMap<>();
+    boolean multiDest = destinations.length > 1;
+    for (int nsIndex = 0; nsIndex < nss.length; nsIndex++) {
+      int destIndex = multiDest ? nsIndex : 0;
+      destMap.put(nss[nsIndex], destinations[destIndex]);
+    }
+    return destMap;
+  }
+
+  private static boolean areInvalidDestinations(String[] nss, String[] destinations) {
+    if (destinations.length > 1 && nss.length != destinations.length) {
+      String message = "Invalid number of namespaces and destinations. The number of destinations: "
+          + destinations.length + " is not equal to the number of namespaces: " + nss.length;
+      System.err.println(message);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -747,11 +765,11 @@ public class RouterAdmin extends Configured implements Tool {
 
     if (!parameters[i].startsWith("-")) {
       String[] nss = parameters[i++].split(",");
-      String dest = parameters[i++];
-      Map<String, String> destMap = new LinkedHashMap<>();
-      for (String ns : nss) {
-        destMap.put(ns, dest);
+      String[] destinations = parameters[i++].split(",");
+      if (areInvalidDestinations(nss, destinations)) {
+        return false;
       }
+      Map<String, String> destMap = getDestMap(nss, destinations);
       final List<RemoteLocation> locations = new LinkedList<>();
       for (Entry<String, String> entry : destMap.entrySet()) {
         String nsId = entry.getKey();
