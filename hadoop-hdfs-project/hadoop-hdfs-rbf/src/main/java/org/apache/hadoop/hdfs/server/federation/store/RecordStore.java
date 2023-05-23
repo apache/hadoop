@@ -73,7 +73,7 @@ public abstract class RecordStore<R extends BaseRecord> {
    *
    * @return State Store driver.
    */
-  protected StateStoreDriver getDriver() {
+  public StateStoreDriver getDriver() {
     return this.driver;
   }
 
