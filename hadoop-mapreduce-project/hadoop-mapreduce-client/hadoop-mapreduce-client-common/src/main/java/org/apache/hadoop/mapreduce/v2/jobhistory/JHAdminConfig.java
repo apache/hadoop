@@ -99,9 +99,13 @@ public class JHAdminConfig {
     MR_HISTORY_PREFIX + "intermediate-done-dir";
   public static final String MR_HISTORY_INTERMEDIATE_USER_DONE_DIR_PERMISSIONS =
       MR_HISTORY_PREFIX + "intermediate-user-done-dir.permissions";
+  public static final String MR_HISTORY_INTERMEDIATE_USER_DONE_FILE_PERMISSIONS =
+      MR_HISTORY_PREFIX + "intermediate-user-done-file.permissions";
   public static final short
       DEFAULT_MR_HISTORY_INTERMEDIATE_USER_DONE_DIR_PERMISSIONS = 0770;
-  
+
+  public static final short
+      DEFAULT_MR_HISTORY_INTERMEDIATE_USER_DONE_FILE_PERMISSIONS = 0660;
   /** Size of the job list cache.*/
   public static final String MR_HISTORY_JOBLIST_CACHE_SIZE =
     MR_HISTORY_PREFIX + "joblist.cache.size";

@@ -1044,7 +1044,7 @@ public class TestJobHistoryEventHandler {
     TestParams t = new TestParams(true);
     Configuration conf = new Configuration();
     String setFilePermission = "777";
-    conf.set(JHAdminConfig.MR_HISTORY_INTERMEDIATE_USER_DONE_DIR_PERMISSIONS, setFilePermission);
+    conf.set(JHAdminConfig.MR_HISTORY_INTERMEDIATE_USER_DONE_FILE_PERMISSIONS, setFilePermission);
 
     conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, dfsCluster.getURI().toString());
 
@@ -1074,8 +1074,7 @@ public class TestJobHistoryEventHandler {
       Path intermediateSummaryFileNamePath = new Path(doneDir, intermediateSummaryFileName);
       FsPermission getIntermediateSummaryFilePermission =
           fs.getFileStatus(intermediateSummaryFileNamePath).getPermission();
-      assertEquals(setFilePermission,
-          String.valueOf(getIntermediateSummaryFilePermission.toOctal()));
+      assertEquals(new FsPermission("0666"), getIntermediateSummaryFilePermission);
     } finally {
       jheh.stop();
     }
