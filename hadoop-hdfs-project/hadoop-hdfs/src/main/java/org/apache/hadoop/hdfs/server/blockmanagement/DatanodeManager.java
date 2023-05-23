@@ -208,7 +208,7 @@ public class DatanodeManager {
   private static final String IP_PORT_SEPARATOR = ":";
 
   @Nullable
-  private volatile SlowPeerTracker slowPeerTracker;
+  private SlowPeerTracker slowPeerTracker;
   private static Set<String> slowNodesUuidSet = Sets.newConcurrentHashSet();
   private Daemon slowPeerCollectorDaemon;
   private final long slowPeerCollectionInterval;
@@ -375,6 +375,8 @@ public class DatanodeManager {
         new SlowPeerDisabledTracker(conf, timer);
     if (slowPeerTracker.isSlowPeerTrackerEnabled()) {
       startSlowPeerCollector();
+    } else {
+      stopSlowPeerCollector();
     }
   }
 
@@ -407,6 +409,7 @@ public class DatanodeManager {
   }
 
   public void stopSlowPeerCollector() {
+    LOG.info("Slow peers collection thread shutdown");
     if (slowPeerCollectorDaemon == null) {
       return;
     }
@@ -415,6 +418,8 @@ public class DatanodeManager {
       slowPeerCollectorDaemon.join();
     } catch (InterruptedException e) {
       LOG.error("Slow peers collection thread did not shutdown", e);
+    } finally {
+      slowPeerCollectorDaemon = null;
     }
   }
 
