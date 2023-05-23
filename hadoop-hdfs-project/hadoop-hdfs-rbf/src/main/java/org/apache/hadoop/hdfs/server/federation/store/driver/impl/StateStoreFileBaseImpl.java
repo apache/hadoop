@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUnavailableException;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
+import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreOperationResult;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.Query;
 import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
@@ -372,12 +373,12 @@ public abstract class StateStoreFileBaseImpl
   }
 
   @Override
-  public <T extends BaseRecord> boolean putAll(
+  public <T extends BaseRecord> StateStoreOperationResult putAll(
       List<T> records, boolean allowUpdate, boolean errorIfExists)
           throws StateStoreUnavailableException {
     verifyDriverReady();
     if (records.isEmpty()) {
-      return true;
+      return StateStoreOperationResult.getDefaultSuccessResult();
     }
 
     long start = monotonicNow();
@@ -402,7 +403,7 @@ public abstract class StateStoreFileBaseImpl
           if (metrics != null) {
             metrics.addFailure(monotonicNow() - start);
           }
-          return false;
+          return new StateStoreOperationResult(getOriginalPrimaryKey(primaryKey));
         } else {
           LOG.debug("Not updating {}", record);
         }
@@ -414,7 +415,9 @@ public abstract class StateStoreFileBaseImpl
     // Write the records
     final AtomicBoolean success = new AtomicBoolean(true);
     final List<Callable<Void>> callables = new ArrayList<>();
-    toWrite.entrySet().forEach(entry -> callables.add(() -> writeRecordToFile(success, entry)));
+    final List<String> failedRecordsKeys = Collections.synchronizedList(new ArrayList<>());
+    toWrite.entrySet().forEach(
+        entry -> callables.add(() -> writeRecordToFile(success, entry, failedRecordsKeys)));
     if (this.concurrentStoreAccessPool != null) {
       // Write records concurrently
       List<Future<Void>> futures = null;
@@ -454,36 +457,40 @@ public abstract class StateStoreFileBaseImpl
         metrics.addFailure(end - start);
       }
     }
-    return success.get();
+    return new StateStoreOperationResult(failedRecordsKeys, success.get());
   }
 
   /**
    * Writes the state store record to the file. At first, the record is written to a temp location
    * and then later renamed to the final location that is passed with the entry key.
    *
+   * @param <T> Record class of the records.
    * @param success The atomic boolean that gets updated to false if the file write operation fails.
    * @param entry The entry of the record path and the state store record to be written to the file
    * by first writing to a temp location and then renaming it to the record path.
-   * @param <T> Record class of the records.
+   * @param failedRecordsList The list of paths of the failed records.
    * @return Void.
    */
   private <T extends BaseRecord> Void writeRecordToFile(AtomicBoolean success,
-      Entry<String, T> entry) {
-    String recordPath = entry.getKey();
-    String recordPathTemp = recordPath + "." + now() + TMP_MARK;
+      Entry<String, T> entry, List<String> failedRecordsList) {
+    final String recordPath = entry.getKey();
+    final T record = entry.getValue();
+    final String primaryKey = getPrimaryKey(record);
+    final String recordPathTemp = recordPath + "." + now() + TMP_MARK;
     boolean recordWrittenSuccessfully = true;
     try (BufferedWriter writer = getWriter(recordPathTemp)) {
-      T record = entry.getValue();
       String line = serializeString(record);
       writer.write(line);
     } catch (IOException e) {
       LOG.error("Cannot write {}", recordPathTemp, e);
       recordWrittenSuccessfully = false;
+      failedRecordsList.add(getOriginalPrimaryKey(primaryKey));
       success.set(false);
     }
     // Commit
     if (recordWrittenSuccessfully && !rename(recordPathTemp, recordPath)) {
       LOG.error("Failed committing record into {}", recordPath);
+      failedRecordsList.add(getOriginalPrimaryKey(primaryKey));
       success.set(false);
     }
     return null;

@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.router.security.token.SQLConnectionFactory;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
+import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreOperationResult;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.DisabledNameservice;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
@@ -161,10 +162,10 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
   }
 
   @Override
-  public <T extends BaseRecord> boolean putAll(
+  public <T extends BaseRecord> StateStoreOperationResult putAll(
       List<T> records, boolean allowUpdate, boolean errorIfExists) throws IOException {
     if (records.isEmpty()) {
-      return true;
+      return StateStoreOperationResult.getDefaultSuccessResult();
     }
 
     verifyDriverReady();
@@ -173,6 +174,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
     long start = Time.monotonicNow();
 
     boolean success = true;
+    final List<String> failedRecordsKeys = new ArrayList<>();
     for (T record : records) {
       String tableName = getAndValidateTableNameForClass(record.getClass());
       String primaryKey = getPrimaryKey(record);
@@ -185,6 +187,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
           record.setDateModified(this.getTime());
           if (!updateRecord(tableName, primaryKey, data)) {
             LOG.error("Cannot write {} into table {}", primaryKey, tableName);
+            failedRecordsKeys.add(getOriginalPrimaryKey(primaryKey));
             success = false;
           }
         } else {
@@ -194,7 +197,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
             if (metrics != null) {
               metrics.addFailure(Time.monotonicNow() - start);
             }
-            return false;
+            return new StateStoreOperationResult(getOriginalPrimaryKey(primaryKey));
           } else {
             LOG.debug("Not updating {} as updates are not allowed", record);
           }
@@ -202,6 +205,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
       } else {
         if (!insertRecord(tableName, primaryKey, data)) {
           LOG.error("Cannot write {} in table {}", primaryKey, tableName);
+          failedRecordsKeys.add(getOriginalPrimaryKey(primaryKey));
           success = false;
         }
       }
@@ -215,7 +219,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
         metrics.addFailure(end - start);
       }
     }
-    return success;
+    return new StateStoreOperationResult(failedRecordsKeys, success);
   }
 
   @Override

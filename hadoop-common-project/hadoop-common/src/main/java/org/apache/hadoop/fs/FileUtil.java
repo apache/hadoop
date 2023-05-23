@@ -484,7 +484,7 @@ public class FileUtil {
         in = awaitFuture(srcFS.openFile(src)
             .opt(FS_OPTION_OPENFILE_READ_POLICY,
                 FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE)
-            .opt(FS_OPTION_OPENFILE_LENGTH,
+            .optLong(FS_OPTION_OPENFILE_LENGTH,
                 srcStatus.getLen())   // file length hint for object stores
             .build());
         out = dstFS.create(dst, overwrite);

@@ -92,6 +92,7 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
       Assert.assertEquals(datanode.getRpcPort(),rpcPort);
       // get attribute "HttpPort"
       String httpPort = (String)mbs.getAttribute(mxbeanName, "HttpPort");
+      Assert.assertNotNull(httpPort);
       Assert.assertEquals(datanode.getHttpPort(),httpPort);
       // get attribute "NamenodeAddresses"
       String namenodeAddresses = (String)mbs.getAttribute(mxbeanName, 

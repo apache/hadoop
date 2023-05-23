@@ -50,7 +50,7 @@ public final class CallerContext {
   public static final String CLIENT_ID_STR = "clientId";
   public static final String CLIENT_CALL_ID_STR = "clientCallId";
   public static final String REAL_USER_STR = "realUser";
-
+  public static final String PROXY_USER_PORT = "proxyUserPort";
   /** The caller context.
    *
    * It will be truncated if it exceeds the maximum allowed length in

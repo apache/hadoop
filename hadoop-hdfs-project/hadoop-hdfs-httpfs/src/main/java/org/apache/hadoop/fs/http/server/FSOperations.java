@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -421,6 +422,23 @@ public final class FSOperations {
     }
     policies.put(HttpFSFileSystem.STORAGE_POLICY_JSON, jsonArray);
     json.put(HttpFSFileSystem.STORAGE_POLICIES_JSON, policies);
+    return json;
+  }
+
+  /**
+   * Executes the fsStatus operation.
+   *
+   * @param fsStatus a FsStatus object
+   * @return JSON map suitable for wire transport
+   */
+  @SuppressWarnings("unchecked")
+  private static Map<String, Object> toJson(FsStatus fsStatus) {
+    Map<String, Object> json = new LinkedHashMap<>();
+    JSONObject statusJson = new JSONObject();
+    statusJson.put(HttpFSFileSystem.USED_JSON, fsStatus.getUsed());
+    statusJson.put(HttpFSFileSystem.REMAINING_JSON, fsStatus.getRemaining());
+    statusJson.put(HttpFSFileSystem.CAPACITY_JSON, fsStatus.getCapacity());
+    json.put(HttpFSFileSystem.FS_STATUS_JSON, statusJson);
     return json;
   }
 
@@ -2298,6 +2316,30 @@ public final class FSOperations {
       FileStatus status = fs.getFileLinkStatus(path);
       HttpFSServerWebApp.get().getMetrics().incrOpsStat();
       return toJson(status);
+    }
+  }
+
+  /**
+   * Executor that performs a getFsStatus operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSStatus implements FileSystemAccess.FileSystemExecutor<Map> {
+    final private Path path;
+
+    /**
+     * Creates a fsStatus executor.
+     *
+     * @param path the path to retrieve the status.
+     */
+    public FSStatus(String path) {
+      this.path = new Path(path);
+    }
+
+    @Override
+    public Map execute(FileSystem fs) throws IOException {
+      FsStatus fsStatus = fs.getStatus(path);
+      HttpFSServerWebApp.get().getMetrics().incrOpsStatus();
+      return toJson(fsStatus);
     }
   }
 }

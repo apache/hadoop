@@ -99,6 +99,7 @@ public class UnmanagedApplicationManager {
   private long asyncApiPollIntervalMillis;
   private RecordFactory recordFactory;
   private boolean keepContainersAcrossApplicationAttempts;
+  private ApplicationSubmissionContext applicationSubmissionContext;
 
   /*
    * This flag is used as an indication that this method launchUAM/reAttachUAM
@@ -117,13 +118,15 @@ public class UnmanagedApplicationManager {
    * @param submitter user name of the app
    * @param appNameSuffix the app name suffix to use
    * @param rmName name of the YarnRM
+   * @param originalApplicationSubmissionContext ApplicationSubmissionContext
    * @param keepContainersAcrossApplicationAttempts keep container flag for UAM
    *          recovery. See {@link ApplicationSubmissionContext
    *          #setKeepContainersAcrossApplicationAttempts(boolean)}
    */
   public UnmanagedApplicationManager(Configuration conf, ApplicationId appId,
       String queueName, String submitter, String appNameSuffix,
-      boolean keepContainersAcrossApplicationAttempts, String rmName) {
+      boolean keepContainersAcrossApplicationAttempts, String rmName,
+      ApplicationSubmissionContext originalApplicationSubmissionContext) {
     Preconditions.checkNotNull(conf, "Configuration cannot be null");
     Preconditions.checkNotNull(appId, "ApplicationId cannot be null");
     Preconditions.checkNotNull(submitter, "App submitter cannot be null");
@@ -150,6 +153,7 @@ public class UnmanagedApplicationManager {
             DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS);
     this.keepContainersAcrossApplicationAttempts =
         keepContainersAcrossApplicationAttempts;
+    this.applicationSubmissionContext = originalApplicationSubmissionContext;
   }
 
   @VisibleForTesting
@@ -429,6 +433,18 @@ public class UnmanagedApplicationManager {
     Resource resource = Resources.createResource(1024);
     context.setResource(resource);
     context.setAMContainerSpec(amContainer);
+    if (applicationSubmissionContext != null) {
+      context.setApplicationType(applicationSubmissionContext.getApplicationType());
+      context.setKeepContainersAcrossApplicationAttempts(
+          applicationSubmissionContext.getKeepContainersAcrossApplicationAttempts());
+      context.setApplicationTags(applicationSubmissionContext.getApplicationTags());
+      context.setApplicationTimeouts(applicationSubmissionContext.getApplicationTimeouts());
+      context.setLogAggregationContext(applicationSubmissionContext.getLogAggregationContext());
+      context.setNodeLabelExpression(applicationSubmissionContext.getNodeLabelExpression());
+      context.setApplicationSchedulingPropertiesMap(
+          applicationSubmissionContext.getApplicationSchedulingPropertiesMap());
+      context.setPriority(applicationSubmissionContext.getPriority());
+    }
     submitRequest.setApplicationSubmissionContext(context);
 
     context.setUnmanagedAM(true);
@@ -550,5 +566,10 @@ public class UnmanagedApplicationManager {
   @VisibleForTesting
   protected boolean isHeartbeatThreadAlive() {
     return this.heartbeatHandler.isAlive();
+  }
+
+  @VisibleForTesting
+  public ApplicationSubmissionContext getApplicationSubmissionContext() {
+    return applicationSubmissionContext;
   }
 }

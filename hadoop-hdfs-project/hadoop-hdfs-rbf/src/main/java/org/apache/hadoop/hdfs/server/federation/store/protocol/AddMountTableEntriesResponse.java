@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation.store.protocol;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -38,5 +39,14 @@ public abstract class AddMountTableEntriesResponse {
 
   @Public
   @Unstable
+  public abstract List<String> getFailedRecordsKeys();
+
+  @Public
+  @Unstable
   public abstract void setStatus(boolean result);
+
+  @Public
+  @Unstable
+  public abstract void setFailedRecordsKeys(List<String> failedRecordsKeys);
+
 }

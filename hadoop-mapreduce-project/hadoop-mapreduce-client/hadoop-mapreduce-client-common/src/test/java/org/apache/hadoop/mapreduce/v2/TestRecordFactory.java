@@ -18,37 +18,40 @@
 
 package org.apache.hadoop.mapreduce.v2;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factories.impl.pb.RecordFactoryPBImpl;
+
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersRequest;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.GetCountersRequestPBImpl;
 import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
 import org.apache.hadoop.mapreduce.v2.api.records.impl.pb.CounterGroupPBImpl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestRecordFactory {
-  
+
   @Test
   public void testPbRecordFactory() {
     RecordFactory pbRecordFactory = RecordFactoryPBImpl.get();
-    
+
     try {
       CounterGroup response = pbRecordFactory.newRecordInstance(CounterGroup.class);
-      Assert.assertEquals(CounterGroupPBImpl.class, response.getClass());
+      assertEquals(CounterGroupPBImpl.class, response.getClass());
     } catch (YarnRuntimeException e) {
       e.printStackTrace();
-      Assert.fail("Failed to crete record");
+      fail("Failed to crete record");
     }
-    
+
     try {
       GetCountersRequest response = pbRecordFactory.newRecordInstance(GetCountersRequest.class);
-      Assert.assertEquals(GetCountersRequestPBImpl.class, response.getClass());
+      assertEquals(GetCountersRequestPBImpl.class, response.getClass());
     } catch (YarnRuntimeException e) {
       e.printStackTrace();
-      Assert.fail("Failed to crete record");
+      fail("Failed to crete record");
     }
   }
 
