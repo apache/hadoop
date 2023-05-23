@@ -564,4 +564,34 @@ public class TestHDFSConcat {
 
     assertEquals(1, dfs.getContentSummary(new Path(dir)).getFileCount());
   }
+
+  /**
+   * Verifies concat with wrong user when dfs.permissions.enabled is false
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testConcatPermissions() throws IOException {
+    conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
+    MiniDFSCluster cluster2 = new MiniDFSCluster.Builder(conf).numDataNodes(REPL_FACTOR).build();
+    cluster2.waitClusterUp();
+    DistributedFileSystem dfs2 = cluster2.getFileSystem();
+
+    String testPathDir = "/dir1";
+    Path dir = new Path(testPathDir);
+    dfs2.mkdirs(dir);
+    Path trg = new Path(testPathDir, "trg");
+    Path src = new Path(testPathDir, "src");
+    DFSTestUtil.createFile(dfs2, trg, blockSize, REPL_FACTOR, 1);
+    DFSTestUtil.createFile(dfs2, src, blockSize, REPL_FACTOR, 1);
+
+    final UserGroupInformation user1 =
+        UserGroupInformation.createUserForTesting("theDoctor", new String[] {"tardis"});
+    DistributedFileSystem hdfs = (DistributedFileSystem) DFSTestUtil.getFileSystemAs(user1, conf);
+    try {
+      hdfs.concat(trg, new Path[] {src});
+    } catch (IOException ie) {
+      fail("Got expected exception for permissions" + ie.getLocalizedMessage());
+    }
+  }
 }
