@@ -12,9 +12,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -92,39 +90,60 @@ public class MockQiniuKodoClient implements IQiniuKodoClient {
                 .collect(Collectors.toList());
     }
 
+    private static boolean hasPrefix(String[] source, String[] prefix) {
+        if (source.length < prefix.length) {
+            return false;
+        }
+        for (int i = 0; i < prefix.length; i++) {
+            if (!source[i].equals(prefix[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static String getCommonPrefixByTrieNode(TrieTree.TrieNode<?> node, String delimiter) {
+        TrieTree.TrieNode<?> n = node;
+        List<String> prefixParts = new ArrayList<>();
+        while (n != null) {
+            prefixParts.add(n.name);
+            n = n.parent;
+        }
+        Collections.reverse(prefixParts);
+        return String.join(delimiter, prefixParts);
+    }
+
     @Override
     public List<MyFileInfo> listStatus(String key, boolean useDirectory) throws IOException {
-        ArrayList<String> commonPrefixes = new ArrayList<>();
-        ArrayList<MyFileInfo> fileInfos = new ArrayList<>();
-        for (Map.Entry<String, MockFile> entry : mockFileMap.entrySet()) {
-            String entryKey = entry.getKey();
-            if (entryKey.startsWith(key)) {
-                if (entryKey.equals(key)) {
-                    if (useDirectory) {
-                        commonPrefixes.add(key);
-                    } else {
-                        fileInfos.add(entry.getValue().toMyFileInfo());
-                    }
-                } else {
-                    int slashIndex = entryKey.indexOf('/', key.length());
-                    if (slashIndex == -1) {
-                        fileInfos.add(entry.getValue().toMyFileInfo());
-                    } else {
-                        String prefix = entryKey.substring(0, slashIndex + 1);
-                        if (!commonPrefixes.contains(prefix)) {
-                            commonPrefixes.add(prefix);
-                        }
-                    }
-                }
+        List<MyFileInfo> allPrefixFiles = listNStatus(key, Integer.MAX_VALUE);
+        if (!useDirectory) {
+            return allPrefixFiles;
+        }
+        String delimiter = "/";
+        TrieTree<MyFileInfo> trie = new TrieTree<>();
+        for (MyFileInfo fileInfo : allPrefixFiles) {
+            String[] keyParts = fileInfo.key.split(delimiter);
+            trie.insert(Arrays.asList(keyParts), fileInfo);
+        }
+
+        TrieTree.TrieNode<MyFileInfo> result = trie.search(Arrays.asList(key.isEmpty() ? new String[0] : key.split(delimiter)));
+        if (result == null) {
+            return Collections.emptyList();
+        }
+
+        List<String> commonPrefixes = new ArrayList<>();
+        List<MyFileInfo> files = new ArrayList<>();
+        for (TrieTree.TrieNode<MyFileInfo> node : result.children) {
+            if (node.value != null) {
+                files.add(node.value);
+            } else {
+                commonPrefixes.add(getCommonPrefixByTrieNode(node, delimiter));
             }
         }
-        if (useDirectory) {
-            for (String prefix : commonPrefixes) {
-                fileInfos.add(new MyFileInfo(prefix, 0, 0));
-            }
+        for (String prefix : commonPrefixes) {
+            files.add(new MyFileInfo(prefix, 0, 0));
         }
-        fileInfos.removeIf(fileInfo -> fileInfo.key.equals(key));
-        return fileInfos;
+        return files;
     }
 
     @Override
