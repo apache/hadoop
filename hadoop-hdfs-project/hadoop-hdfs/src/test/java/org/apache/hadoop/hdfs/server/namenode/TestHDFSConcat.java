@@ -574,7 +574,7 @@ public class TestHDFSConcat {
   public void testConcatPermissions() throws IOException {
     Configuration conf2 = new Configuration();
     conf2.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
-    conf2.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
+    conf2.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
     MiniDFSCluster cluster2 = new MiniDFSCluster.Builder(conf2).numDataNodes(REPL_FACTOR).build();
     cluster2.waitClusterUp();
     DistributedFileSystem dfs2 = cluster2.getFileSystem();
@@ -587,13 +587,43 @@ public class TestHDFSConcat {
     DFSTestUtil.createFile(dfs2, trg, blockSize, REPL_FACTOR, 1);
     DFSTestUtil.createFile(dfs2, src, blockSize, REPL_FACTOR, 1);
 
-    final UserGroupInformation user1 =
-        UserGroupInformation.createUserForTesting("theDoctor", new String[] {"tardis"});
-    DistributedFileSystem hdfs = (DistributedFileSystem) DFSTestUtil.getFileSystemAs(user1, conf2);
+    // check permissions with the wrong user when dfs.permissions.enabled is true
+    final UserGroupInformation user = UserGroupInformation.createUserForTesting(
+        "theDoctor", new String[] { "tardis" });
+    DistributedFileSystem hdfs1 =
+        (DistributedFileSystem)DFSTestUtil.getFileSystemAs(user, conf2);
     try {
-      hdfs.concat(trg, new Path[] {src});
+      hdfs1.concat(trg, new Path[] {src});
+      fail("Permission exception expected");
     } catch (IOException ie) {
-      fail("Got expected exception for permissions" + ie.getLocalizedMessage());
+      System.out.println("Got expected exception for permissions:"
+          + ie.getLocalizedMessage());
+      // expected
     }
+
+    dfs2.close();
+    cluster2.shutdownDataNodes();
+    cluster2.shutdown();
+
+    conf2.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
+    cluster2 = new MiniDFSCluster.Builder(conf2).numDataNodes(REPL_FACTOR).build();
+    cluster2.waitClusterUp();
+    dfs2 = cluster2.getFileSystem();
+    dfs2.mkdirs(dir);
+    DFSTestUtil.createFile(dfs2, trg, blockSize, REPL_FACTOR, 1);
+    DFSTestUtil.createFile(dfs2, src, blockSize, REPL_FACTOR, 1);
+
+    // check permissions with the wrong user when dfs.permissions.enabled is false
+    DistributedFileSystem hdfs2 = (DistributedFileSystem) DFSTestUtil.getFileSystemAs(user, conf2);
+    try {
+      hdfs2.concat(trg, new Path[] {src});
+    } catch (IOException ie) {
+      fail("Got unexpected exception for permissions" + ie.getLocalizedMessage());
+    }
+    dfs2.close();
+    dfs2 = null;
+    cluster2.shutdownDataNodes();
+    cluster2.shutdown();
+    cluster2 = null;
   }
 }
