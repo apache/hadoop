@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.globalpolicygenerator.subclustercleaner;
 
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -47,6 +48,8 @@ public class TestSubClusterCleaner {
   private FederationStateStoreFacade facade;
   private SubClusterCleaner cleaner;
   private GPGContext gpgContext;
+
+  private static final long TWO_SECONDS = TimeUnit.SECONDS.toMillis(2);
 
   private ArrayList<SubClusterId> subClusterIds;
 
@@ -110,7 +113,7 @@ public class TestSubClusterCleaner {
     // The second subcluster didn't heartbeat for two seconds, should mark lost
     subClusterId = subClusterIds.get(1);
     stateStore.setSubClusterLastHeartbeat(subClusterId,
-        System.currentTimeMillis() - 2000);
+        System.currentTimeMillis() - TWO_SECONDS);
 
     cleaner.run();
     Assert.assertEquals(1, facade.getSubClusters(true, true).size());

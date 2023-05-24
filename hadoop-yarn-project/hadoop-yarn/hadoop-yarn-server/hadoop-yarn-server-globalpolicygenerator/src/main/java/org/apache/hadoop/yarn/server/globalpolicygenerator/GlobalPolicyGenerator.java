@@ -102,9 +102,10 @@ public class GlobalPolicyGenerator extends CompositeService {
     super.serviceStart();
 
     // Scheduler SubClusterCleaner service
-    long scCleanerIntervalMs = getConfig().getLong(
+    Configuration config = getConfig();
+    long scCleanerIntervalMs = config.getTimeDuration(
         YarnConfiguration.GPG_SUBCLUSTER_CLEANER_INTERVAL_MS,
-        YarnConfiguration.DEFAULT_GPG_SUBCLUSTER_CLEANER_INTERVAL_MS);
+        YarnConfiguration.DEFAULT_GPG_SUBCLUSTER_CLEANER_INTERVAL_MS, TimeUnit.MILLISECONDS);
     if (scCleanerIntervalMs > 0) {
       this.scheduledExecutorService.scheduleAtFixedRate(this.subClusterCleaner,
           0, scCleanerIntervalMs, TimeUnit.MILLISECONDS);

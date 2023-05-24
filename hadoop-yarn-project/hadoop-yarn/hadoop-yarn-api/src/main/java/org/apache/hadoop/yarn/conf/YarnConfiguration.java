@@ -4336,7 +4336,8 @@ public class YarnConfiguration extends Configuration {
   // The interval at which the subcluster cleaner runs, -1 means disabled
   public static final String GPG_SUBCLUSTER_CLEANER_INTERVAL_MS =
       FEDERATION_GPG_PREFIX + "subcluster.cleaner.interval-ms";
-  public static final long DEFAULT_GPG_SUBCLUSTER_CLEANER_INTERVAL_MS = -1;
+  public static final long DEFAULT_GPG_SUBCLUSTER_CLEANER_INTERVAL_MS =
+      TimeUnit.MILLISECONDS.toMillis(-1);
 
   // The expiration time for a subcluster heartbeat, default is 30 minutes
   public static final String GPG_SUBCLUSTER_EXPIRATION_MS =

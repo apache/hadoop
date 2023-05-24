@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.conf;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
@@ -246,5 +247,10 @@ public class TestYarnConfiguration {
     assertTrue(localizerAddress.toString().startsWith("yo.yo.yo"));
     assertNull(conf.get(
         HAUtil.addSuffix(YarnConfiguration.NM_LOCALIZER_ADDRESS, "rm1")));
+  }
+
+  @Test
+  public void testCheck() throws Exception {
+    System.out.println(TimeUnit.MILLISECONDS.toMillis(-1));
   }
 }
