@@ -92,12 +92,9 @@ CREATE PROCEDURE sp_addApplicationHomeSubCluster(
    IN applicationContext_IN BLOB,
    OUT storedHomeSubCluster_OUT varchar(256), OUT rowCount_OUT int)
 BEGIN
-   INSERT INTO applicationsHomeSubCluster
-      (applicationId, homeSubCluster, createTime, applicationContext)
-      (SELECT applicationId_IN, homeSubCluster_IN, NOW(), applicationContext_IN
-       FROM applicationsHomeSubCluster
-       WHERE applicationId = applicationId_IN
-       HAVING COUNT(*) = 0 );
+   INSERT IGNORE INTO applicationsHomeSubCluster(
+       applicationId, homeSubCluster, createTime, applicationContext)
+   VALUES(applicationId_IN, homeSubCluster_IN, NOW(), applicationContext_IN);
    SELECT ROW_COUNT() INTO rowCount_OUT;
    SELECT homeSubCluster INTO storedHomeSubCluster_OUT
    FROM applicationsHomeSubCluster
