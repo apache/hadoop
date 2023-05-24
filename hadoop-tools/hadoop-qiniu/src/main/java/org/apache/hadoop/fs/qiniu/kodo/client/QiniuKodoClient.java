@@ -11,8 +11,11 @@ import com.qiniu.storage.model.FileListing;
 import com.qiniu.util.Auth;
 import com.qiniu.util.StringMap;
 import com.qiniu.util.StringUtils;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.BatchOperationConsumer;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.ListingProducer;
 import org.apache.hadoop.fs.qiniu.kodo.client.batch.operator.BatchOperator;
@@ -23,14 +26,18 @@ import org.apache.hadoop.fs.qiniu.kodo.config.MissingConfigFieldException;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.client.base.ListAndBatchBaseConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.client.base.ListProducerConfig;
+import org.apache.hadoop.fs.qiniu.kodo.util.QiniuKodoUtils;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.util.functional.RemoteIterators;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.net.URI;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class QiniuKodoClient implements IQiniuKodoClient {
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoClient.class);
@@ -168,18 +175,18 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * 给定一个输入流将读取并上传对应文件
      */
     @Override
-    public Response upload(InputStream stream, String key, boolean overwrite) throws IOException {
+    public boolean upload(InputStream stream, String key, boolean overwrite) throws IOException {
         if (stream.available() > 0) {
-            return uploadManager.put(stream, key, getUploadToken(key, overwrite), null, null);
+            return uploadManager.put(stream, key, getUploadToken(key, overwrite), null, null).isOK();
         }
         int b = stream.read();
         if (b == -1) {
             // 空流
-            return uploadManager.put(new byte[0], key, getUploadToken(key, overwrite));
+            return uploadManager.put(new byte[0], key, getUploadToken(key, overwrite)).isOK();
         }
         // 有内容，还得拼回去
         SequenceInputStream sis = new SequenceInputStream(new ByteArrayInputStream(new byte[]{(byte) b}), stream);
-        return uploadManager.put(sis, key, getUploadToken(key, overwrite), null, null);
+        return uploadManager.put(sis, key, getUploadToken(key, overwrite), null, null).isOK();
     }
 
 
@@ -231,8 +238,8 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * 获取一个指定前缀的对象
      */
     @Override
-    public FileInfo listOneStatus(String keyPrefix) throws IOException {
-        List<FileInfo> ret = listNStatus(keyPrefix, 1);
+    public MyFileInfo listOneStatus(String keyPrefix) throws IOException {
+        List<MyFileInfo> ret = listNStatus(keyPrefix, 1);
         if (ret.isEmpty()) {
             return null;
         }
@@ -242,12 +249,12 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     /**
      * 获取指定前缀的最多前n个对象
      */
-    public List<FileInfo> listNStatus(String keyPrefix, int n) throws IOException {
+    public List<MyFileInfo> listNStatus(String keyPrefix, int n) throws IOException {
         FileListing listing = bucketManager.listFiles(bucket, keyPrefix, null, n, "");
         if (listing.items == null) {
             return Collections.emptyList();
         }
-        return Arrays.asList(listing.items);
+        return Arrays.stream(listing.items).map(QiniuKodoClient::qiniuFileInfoToMyFileInfo).collect(Collectors.toList());
     }
 
     /**
@@ -257,7 +264,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * @param useDirectory 是否使用路径分割
      * @return 迭代器
      */
-    public RemoteIterator<FileInfo> listStatusIterator(String prefixKey, boolean useDirectory) {
+    public RemoteIterator<MyFileInfo> listStatusIterator(String prefixKey, boolean useDirectory) {
         ListProducerConfig listConfig = fsConfig.client.list;
         // 消息队列
         BlockingQueue<FileInfo> fileInfoQueue = new LinkedBlockingQueue<>(listConfig.bufferSize);
@@ -272,7 +279,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
         // 生产者线程
         Future<Exception> future = service.submit(producer);
-        return new RemoteIterator<FileInfo>() {
+        return new RemoteIterator<MyFileInfo>() {
             @Override
             public boolean hasNext() throws IOException {
                 while (true) {
@@ -304,13 +311,13 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             }
 
             @Override
-            public FileInfo next() throws IOException {
+            public MyFileInfo next() throws IOException {
                 if (!hasNext()) {
                     return null;
                 }
 
                 try {
-                    return fileInfoQueue.poll(Long.MAX_VALUE, TimeUnit.SECONDS);
+                    return qiniuFileInfoToMyFileInfo(fileInfoQueue.poll(Long.MAX_VALUE, TimeUnit.SECONDS));
                 } catch (InterruptedException e) {
                     throw new IOException(e);
                 }
@@ -323,13 +330,8 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * 否则，将呈现出所有前缀为key的对象
      */
     @Override
-    public List<FileInfo> listStatus(String prefixKey, boolean useDirectory) throws IOException {
-        List<FileInfo> list = new ArrayList<>();
-        RemoteIterator<FileInfo> iterator = listStatusIterator(prefixKey, useDirectory);
-        while (iterator.hasNext()) {
-            list.add(iterator.next());
-        }
-        return list;
+    public List<MyFileInfo> listStatus(String prefixKey, boolean useDirectory) throws IOException {
+        return RemoteIterators.toList(listStatusIterator(prefixKey, useDirectory));
     }
 
 
@@ -527,13 +529,13 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * 不存在不抛异常，返回为空，只有在其他错误时抛异常
      */
     @Override
-    public FileInfo getFileStatus(String key) throws IOException {
+    public MyFileInfo getFileStatus(String key) throws IOException {
         try {
             FileInfo fileInfo = bucketManager.stat(bucket, key);
             if (fileInfo != null) {
                 fileInfo.key = key;
             }
-            return fileInfo;
+            return qiniuFileInfoToMyFileInfo(fileInfo);
         } catch (QiniuException e) {
             if (e.response != null && e.response.statusCode == 612) {
                 return null;
@@ -553,5 +555,14 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             return auth.privateDownloadUrl(url, downloadSignExpires);
         }
         return url;
+    }
+
+    public static MyFileInfo qiniuFileInfoToMyFileInfo(FileInfo fileInfo) {
+        if (fileInfo == null) return null;
+        return new MyFileInfo(
+                fileInfo.key,
+                fileInfo.fsize,
+                fileInfo.putTime
+        );
     }
 }

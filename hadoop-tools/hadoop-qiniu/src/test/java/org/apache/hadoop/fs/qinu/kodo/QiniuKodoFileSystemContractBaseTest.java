@@ -24,7 +24,7 @@ public class QiniuKodoFileSystemContractBaseTest extends FileSystemContractBaseT
         conf.addResource("core-site.xml");
         conf.addResource("contract-test-options.xml");
 
-        fs = new QiniuKodoFileSystem();
+        fs = new MockQiniuKodoFileSystem();
         fs.initialize(URI.create(conf.get("fs.contract.test.fs.kodo")), conf);
         fs.delete(getTestBaseDir(), true);
     }

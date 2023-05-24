@@ -3,6 +3,7 @@ package org.apache.hadoop.fs.qinu.kodo.contract;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
+import org.apache.hadoop.fs.qinu.kodo.MockQiniuKodoFileSystem;
 
 import java.io.IOException;
 import java.net.URI;
@@ -21,13 +22,6 @@ public class QiniuKodoContract extends AbstractBondedFSContract {
     }
 
     @Override
-    public FileSystem getFileSystem(URI uri) throws IOException {
-        FileSystem fs = super.getFileSystem(uri);
-        fs.delete(getTestPath(), true);
-        return fs;
-    }
-
-    @Override
     public FileSystem getTestFileSystem() throws IOException {
         FileSystem fs = super.getTestFileSystem();
         fs.delete(getTestPath(), true);
@@ -36,12 +30,6 @@ public class QiniuKodoContract extends AbstractBondedFSContract {
 
     @Override
     public String getScheme() {
-        return "kodo";
-    }
-
-    public synchronized static Configuration getConfiguration() {
-        Configuration cfg = new Configuration();
-        cfg.addResource(CONTRACT_XML);
-        return cfg;
+        return "mockkodo";
     }
 }
