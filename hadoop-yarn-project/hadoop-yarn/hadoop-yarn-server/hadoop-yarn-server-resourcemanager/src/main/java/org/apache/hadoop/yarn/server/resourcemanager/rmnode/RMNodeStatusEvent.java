@@ -85,5 +85,7 @@ public class RMNodeStatusEvent extends RMNodeEvent {
         Collections.emptyList() : this.nodeStatus.getIncreasedContainers();
   }
 
-
+  public boolean isMaintenance() {
+    return this.nodeStatus.isMaintenance();
+  }
 }

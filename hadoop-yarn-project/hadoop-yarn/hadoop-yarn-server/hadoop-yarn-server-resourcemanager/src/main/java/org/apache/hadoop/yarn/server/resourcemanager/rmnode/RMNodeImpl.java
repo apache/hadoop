@@ -1369,7 +1369,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       NodeState initialState = rmNode.getState();
       boolean isNodeDecommissioning =
           initialState.equals(NodeState.DECOMMISSIONING);
-      if (isNodeDecommissioning) {
+      /**
+       * Since, Graceful Decommissioning is used as Maintenance Mode
+       * the node should not be allowed to be DECOMMISSIONED even though there
+       * are no applications running if and only if the Node is in maintenance.
+       */
+      if (isNodeDecommissioning && !statusEvent.isMaintenance()) {
         List<ApplicationId> keepAliveApps = statusEvent.getKeepAliveAppIds();
         // hasScheduledAMContainers solves the following race condition -
         // 1. launch AM container on a node with 0 containers.

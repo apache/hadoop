@@ -425,6 +425,21 @@ public class NodeStatusPBImpl extends NodeStatus {
         convertToProtoFormat(opportunisticContainersStatus));
   }
 
+  @Override
+  public void setMaintenance(boolean decommissioningModeState) {
+    maybeInitBuilder();
+    this.builder.setMaintenance(decommissioningModeState);
+  }
+
+  @Override
+  public boolean isMaintenance() {
+    NodeStatusProtoOrBuilder p = this.viaProto ? this.proto : this.builder;
+    if (!p.hasMaintenance()) {
+      return false;
+    }
+    return p.getMaintenance();
+  }
+
   private NodeIdProto convertToProtoFormat(NodeId nodeId) {
     return ((NodeIdPBImpl)nodeId).getProto();
   }
