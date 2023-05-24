@@ -792,7 +792,7 @@ Security
         Delegation token support is disabled
 
 Directory Markers
-        The directory marker policy is "delete"
+        The directory marker policy is "keep"
         Available Policies: delete, keep, authoritative
         Authoritative paths: fs.s3a.authoritative.path=```
 ```

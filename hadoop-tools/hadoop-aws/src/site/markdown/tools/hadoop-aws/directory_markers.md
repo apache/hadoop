@@ -12,11 +12,11 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# Experimental: Controlling the S3A Directory Marker Behavior
+# Controlling the S3A Directory Marker Behavior
 
-This document discusses an experimental feature of the S3A
-connector since Hadoop 3.3.1: the ability to retain directory
-marker objects above paths containing files or subdirectories.
+This document discusses an performance feature of the S3A
+connector: directory markers are not deleted unless the
+client is explicitly configured to do so.
 
 ## <a name="compatibility"></a> Critical: this is not backwards compatible!
 
@@ -24,23 +24,28 @@ This document shows how the performance of S3 I/O, especially applications
 creating many files (for example Apache Hive) or working with versioned S3 buckets can
 increase performance by changing the S3A directory marker retention policy.
 
-Changing the policy from the default value, `"delete"` _is not backwards compatible_.
+The default policy in this release of hadoop is "keep", 
+which _is not backwards compatible_ with hadoop versions
+released before 2021.
 
-Versions of Hadoop which are incompatible with other marker retention policies,
-as of August 2020.
+The compatibility table of older releases is as follows:
 
-|  Branch    | Compatible Since | Supported           |
-|------------|------------------|---------------------|
-| Hadoop 2.x |       n/a        | WONTFIX             |
-| Hadoop 3.0 |      check       | Read-only           |
-| Hadoop 3.1 |      check       | Read-only           |
-| Hadoop 3.2 |      check       | Read-only           |
-| Hadoop 3.3 |      3.3.1       | Done                |
+| Branch     | Compatible Since | Supported | Released |
+|------------|------------------|-----------|----------|
+| Hadoop 2.x | 2.10.2           | Read-only | 05/2022  |
+| Hadoop 3.0 | n/a              | WONTFIX   |          |
+| Hadoop 3.1 | n/a              | WONTFIX   |          |
+| Hadoop 3.2 | 3.2.2            | Read-only | 01/2022  |
+| Hadoop 3.3 | 3.3.1            | Done      | 01/2021  |
 
 
 *WONTFIX*
 
-The Hadoop branch-2 line will *not* be patched.
+The Hadoop 3.0 and 3.1 lines will have no further releases, so will
+not be upgraded.
+The compatibility patch "HADOOP-17199. S3A Directory Marker HADOOP-13230 backport"
+is present in both source code branches, for anyone wishing to make a private
+release.
 
 *Read-only*
 
@@ -50,7 +55,17 @@ These branches have read-only compatibility.
   such directories have child entries.
 * They will open files under directories with such markers.
 
+## How to re-enable backwards compatibility
 
+The option `fs.s3a.directory.marker.retention` can be changed to "delete" to re-enable
+the original policy.
+
+```xml
+  <property>
+    <name>fs.s3a.directory.marker.retention</name>
+    <value>delete</value>
+  </property>
+```
 ## Verifying read compatibility.
 
 The `s3guard bucket-info` tool [can be used to verify support](#bucket-info).
@@ -161,7 +176,7 @@ When a file is created under a path, the directory marker is deleted. And when a
 file is deleted, if it was the last file in the directory, the marker is
 recreated.
 
-And, historically, When a path is listed, if a marker to that path is found, *it
+And, historically, when a path is listed, if a marker to that path is found, *it
 has been interpreted as an empty directory.*
 
 It is that little detail which is the cause of the incompatibility issues.
@@ -202,7 +217,7 @@ Issue #2 has turned out to cause significant problems on some interactions with
 large hive tables:
 
 Because each object listed in a DELETE call is treated as one operation, and
-there is (as of summer 2020) a limit of 3500 write requests/second in a directory
+there is a limit of 3500 write requests/second in a directory
 tree.
 When writing many files to a deep directory tree, it is the delete calls which
 create throttling problems.
@@ -237,29 +252,19 @@ of backwards compatibility.
 There is now an option `fs.s3a.directory.marker.retention` which controls how
 markers are managed when new files are created
 
-*Default* `delete`: a request is issued to delete any parental directory markers
+1.`delete`: a request is issued to delete any parental directory markers
 whenever a file or directory is created.
-
-*New* `keep`: No delete request is issued.
+2. `keep`: No delete request is issued.
 Any directory markers which exist are not deleted.
 This is *not* backwards compatible
+3. `authoritative`: directory markers are deleted _except for files created
+in "authoritative" directories_. This is backwards compatible _outside authoritative directories_.
 
-*New* `authoritative`: directory markers are deleted _except for files created
-in "authoritative" directories_.
-This is backwards compatible _outside authoritative directories_.
+The setting, `fs.s3a.directory.marker.retention = delete` is compatible with
+every shipping Hadoop release; that of `keep` compatible with
+all releases since 2021
 
-Until now, the notion of an "authoritative"
-directory has only been used as a performance optimization for deployments
-where it is known that all applications were using the same S3Guard metastore
-when writing and reading data.
-In such a deployment, if it is also known that all applications are using a
-compatible version of the s3a connector, then they
-can switch to the higher-performance mode for those specific directories.
-
-Only the default setting, `fs.s3a.directory.marker.retention = delete` is compatible with
-every shipping Hadoop releases.
-
-##  <a name="s3guard"></a> Directory Markers and S3Guard
+##  <a name="s3guard"></a> Directory Markers and Authoritative paths
 
 
 The now-deleted S3Guard feature included the concept of "authoritative paths";
@@ -271,9 +276,8 @@ store -potentially being much faster.
 In production, authoritative paths were usually only ever for Hive managed
 tables, where access was strictly restricted to the Hive services.
 
-Likewise, the directory marker retention can enabled purely for authoritative
-paths.
-When S3Guard is configured to treat some directories as  [Authoritative](s3guard.html#authoritative)
+
+When the S3A client is configured to treat some directories as "Authoritative"
 then an S3A connector with a retention policy of `fs.s3a.directory.marker.retention` of
 `authoritative` will omit deleting markers in authoritative directories.
 
@@ -293,12 +297,12 @@ The `bucket-info` command has been enhanced to support verification from the com
 line of bucket policies via the `-marker` option
 
 
-| option | verifies |
-|--------|--------|
-| `-markers aware` | the hadoop release is "aware" of directory markers |
-| `-markers delete` | directory markers are deleted |
-| `-markers keep` | directory markers are kept (not backwards compatible) |
-| `-markers authoritative` | directory markers are kept in authoritative paths |
+| option                   | verifies                                              |
+|--------------------------|-------------------------------------------------------|
+| `-markers aware`         | the hadoop release is "aware" of directory markers    |
+| `-markers delete`        | directory markers are deleted                         |
+| `-markers keep`          | directory markers are kept (not backwards compatible) |
+| `-markers authoritative` | directory markers are kept in authoritative paths     |
 
 All releases of Hadoop which have been updated to be marker aware will support the `-markers aware` option.
 
@@ -415,25 +419,25 @@ markers (-audit | -clean) [-min <count>] [-max <count>] [-out <filename>] [-limi
 
 *Options*
 
-| Option                  | Meaning                 |
-|-------------------------|-------------------------|
-|  `-audit`               | Audit the path for surplus markers |
-|  `-clean`               | Clean all surplus markers under a path |
-|  `-min <count>`         | Minimum number of markers an audit must find (default: 0) |
-|  `-max <count>]`        | Minimum number of markers an audit must find (default: 0)  |
-|  `-limit <count>]`      | Limit the number of objects to scan |
-|  `-nonauth`             | Only consider markers in non-authoritative paths as errors  |
-|  `-out <filename>`      | Save a list of all markers found to the nominated file  |
-|  `-verbose`             | Verbose output  |
+| Option            | Meaning                                                    |
+|-------------------|------------------------------------------------------------|
+| `-audit`          | Audit the path for surplus markers                         |
+| `-clean`          | Clean all surplus markers under a path                     |
+| `-min <count>`    | Minimum number of markers an audit must find (default: 0)  |
+| `-max <count>]`   | Minimum number of markers an audit must find (default: 0)  |
+| `-limit <count>]` | Limit the number of objects to scan                        |
+| `-nonauth`        | Only consider markers in non-authoritative paths as errors |
+| `-out <filename>` | Save a list of all markers found to the nominated file     |
+| `-verbose`        | Verbose output                                             |
 
 *Exit Codes*
 
-| Code  | Meaning |
-|-------|---------|
-| 0     | Success |
-| 3     | interrupted -the value of `-limit` was reached |
-| 42    | Usage   |
-| 46    | Markers were found (see HTTP "406", "unacceptable") |
+| Code | Meaning                                             |
+|------|-----------------------------------------------------|
+| 0    | Success                                             |
+| 3    | interrupted -the value of `-limit` was reached      |
+| 42   | Usage                                               |
+| 46   | Markers were found (see HTTP "406", "unacceptable") |
 
 All other non-zero status code also indicate errors of some form or other.
 
@@ -647,7 +651,7 @@ Take a bucket with a retention policy of "authoritative" -only paths under `/tab
   <property>
     <name>fs.s3a.bucket.london.authoritative.path</name>
     <value>/tables</value>
-  </property>```
+  </property>
 ```
 
 With this policy the path capability `fs.s3a.capability.directory.marker.action.keep` will hold under
@@ -732,6 +736,8 @@ and some applications.
 
 * [HADOOP-16823](https://issues.apache.org/jira/browse/HADOOP-16823). _Large DeleteObject requests are their own Thundering Herd_
 
+* [HADOOP-17199](https://issues.apache.org/jira/browse/HADOOP-17199).
+  Backport HADOOP-13230 list/getFileStatus changes for preserved directory markers
 * [Object Versioning](https://docs.aws.amazon.com/AmazonS3/latest/dev/Versioning.html). _Using versioning_
 
 * [Optimizing Performance](https://docs.aws.amazon.com/AmazonS3/latest/dev/optimizing-performance.html). _Best Practices Design Patterns: Optimizing Amazon S3 Performance_
