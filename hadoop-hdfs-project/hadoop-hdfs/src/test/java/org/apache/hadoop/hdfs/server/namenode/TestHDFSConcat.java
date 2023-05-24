@@ -566,18 +566,20 @@ public class TestHDFSConcat {
   }
 
   /**
-   * Verifies concat with wrong user when dfs.permissions.enabled is false
+   * Verifies concat with wrong user when dfs.permissions.enabled is false.
    *
    * @throws IOException
    */
   @Test
   public void testConcatPermissions() throws IOException {
-    conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
-    MiniDFSCluster cluster2 = new MiniDFSCluster.Builder(conf).numDataNodes(REPL_FACTOR).build();
+    Configuration conf2 = new Configuration();
+    conf2.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    conf2.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
+    MiniDFSCluster cluster2 = new MiniDFSCluster.Builder(conf2).numDataNodes(REPL_FACTOR).build();
     cluster2.waitClusterUp();
     DistributedFileSystem dfs2 = cluster2.getFileSystem();
 
-    String testPathDir = "/dir1";
+    String testPathDir = "/dir2";
     Path dir = new Path(testPathDir);
     dfs2.mkdirs(dir);
     Path trg = new Path(testPathDir, "trg");
@@ -587,7 +589,7 @@ public class TestHDFSConcat {
 
     final UserGroupInformation user1 =
         UserGroupInformation.createUserForTesting("theDoctor", new String[] {"tardis"});
-    DistributedFileSystem hdfs = (DistributedFileSystem) DFSTestUtil.getFileSystemAs(user1, conf);
+    DistributedFileSystem hdfs = (DistributedFileSystem) DFSTestUtil.getFileSystemAs(user1, conf2);
     try {
       hdfs.concat(trg, new Path[] {src});
     } catch (IOException ie) {
