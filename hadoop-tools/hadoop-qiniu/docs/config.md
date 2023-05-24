@@ -187,4 +187,8 @@ client:
 logger:
   # Logger level, default is INFO, if there is an error, you can adjust it to DEBUG to get more error information.
   level: "INFO"
+
+test:
+  # Use mock kodo service in test, default is false
+  useMock: true
 ```

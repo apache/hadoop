@@ -1,5 +1,6 @@
 package org.apache.hadoop.fs.qiniu.kodo;
 
+import com.qiniu.common.QiniuException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -15,6 +16,7 @@ import org.apache.hadoop.fs.qiniu.kodo.download.blockreader.QiniuKodoRandomBlock
 import org.apache.hadoop.fs.qiniu.kodo.upload.QiniuKodoOutputStream;
 import org.apache.hadoop.fs.qiniu.kodo.util.QiniuKodoUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.log4j.Level;
@@ -35,16 +37,16 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoFileSystem.class);
 
-    protected URI uri;
-    protected String username;
-    protected Path workingDir;
+    private URI uri;
+    private String username;
+    private Path workingDir;
 
-    protected IQiniuKodoClient kodoClient;
+    private IQiniuKodoClient kodoClient;
 
-    protected QiniuKodoFsConfig fsConfig;
-    protected QiniuKodoGeneralBlockReader generalblockReader;
-    protected QiniuKodoRandomBlockReader randomBlockReader;
-    protected ExecutorService uploadExecutorService;
+    private QiniuKodoFsConfig fsConfig;
+    private QiniuKodoGeneralBlockReader generalblockReader;
+    private QiniuKodoRandomBlockReader randomBlockReader;
+    private ExecutorService uploadExecutorService;
 
     @Override
     public void initialize(URI name, Configuration conf) throws IOException {
@@ -62,10 +64,10 @@ public class QiniuKodoFileSystem extends FileSystem {
         this.workingDir = new Path("/user", username).makeQualified(uri, null);
 
         if (fsConfig.client.cache.enable) {
-            this.kodoClient = new QiniuKodoClient(bucket, fsConfig, statistics);
+            this.kodoClient = buildKodoClient(bucket, fsConfig);
             this.kodoClient = new QiniuKodoCachedClient(this.kodoClient, fsConfig.client.cache.maxCapacity);
         } else {
-            this.kodoClient = new QiniuKodoClient(bucket, fsConfig, statistics);
+            this.kodoClient = buildKodoClient(bucket, fsConfig);
         }
 
         this.generalblockReader = new QiniuKodoGeneralBlockReader(fsConfig, kodoClient);
@@ -74,6 +76,10 @@ public class QiniuKodoFileSystem extends FileSystem {
                 fsConfig.download.random.blockSize,
                 fsConfig.download.random.maxBlocks
         );
+    }
+
+    protected IQiniuKodoClient buildKodoClient(String bucket, QiniuKodoFsConfig fsConfig) throws QiniuException, AuthorizationException {
+        return new QiniuKodoClient(bucket, fsConfig, statistics);
     }
 
     protected static void setLog4jConfig(QiniuKodoFsConfig fsConfig) {

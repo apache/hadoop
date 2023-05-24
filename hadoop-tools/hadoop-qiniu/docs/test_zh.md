@@ -1,4 +1,52 @@
-# 测试说明
+# 离线测试说明
+
+本项目还支持离线测试，离线测试基于内存中的 `HashMap` 数据结构模拟了 Kodo 服务，不需要任何认证信息。
+
+但是，为了使得测试不被 `maven` 跳过，还是需要创建一个 `auth-keys.xml` 文件，但不需要任何认证信息，可以创建文件内容如下：
+
+```xml
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<configuration>
+</configuration>
+```
+
+还需要创建文件 `contract-test-options.xml`，这个文件内容如下：
+
+```xml
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+    <property>
+        <name>fs.qiniu.test.useMock</name>
+        <value>true</value>
+    </property>
+
+    <property>
+        <name>fs.contract.test.fs.mockkodo</name>
+        <value>mockkodo://hadoop-java</value>
+    </property>
+
+    <property>
+        <name>fs.mockkodo.impl</name>
+        <value>org.apache.hadoop.fs.qiniu.kodo.MockQiniuKodoFileSystem</value>
+    </property>
+
+    <property>
+        <name>fs.AbstractFileSystem.mockkodo.impl</name>
+        <value>org.apache.hadoop.fs.qiniu.kodo.MockQiniuKodo</value>
+    </property>
+</configuration>
+```
+
+## 使用 maven 测试命令
+
+```shell
+mvn test -Dtest=QiniuKodoFileSystemContractBaseTest,QiniuKodoContractCreateTest,QiniuKodoContractDeleteTest,QiniuKodoContractDistCpTest,QiniuKodoContractGetFileStatusTest,QiniuKodoContractMkdirTest,QiniuKodoContractOpenTest,QiniuKodoContractRenameTest,QiniuKodoContractRootDirTest,QiniuKodoContractSeekTest
+```
+
+# 在线测试说明
 
 为了测试 `kodo://` 文件系统，需要确保 `hadoop-tols/hadoop-qiniu/src/test/resources` 中存在以下两个配置文件：
 
@@ -53,6 +101,11 @@
 
     <property>
         <name>fs.qiniu.download.useHttps</name>
+        <value>false</value>
+    </property>
+
+    <property>
+        <name>fs.qiniu.test.useMock</name>
         <value>false</value>
     </property>
 

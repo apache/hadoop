@@ -23,8 +23,14 @@ public class QiniuKodoFileSystemContractBaseTest extends FileSystemContractBaseT
         conf.addResource("core-site.xml");
         conf.addResource("contract-test-options.xml");
 
-        fs = new MockQiniuKodoFileSystem();
-        fs.initialize(URI.create(conf.get("fs.contract.test.fs.kodo")), conf);
+        if (conf.getBoolean("fs.qiniu.test.useMock", true)) {
+            fs = new MockQiniuKodoFileSystem();
+            fs.initialize(URI.create(conf.get("fs.contract.test.fs.mockkodo")), conf);
+        } else {
+            fs = new QiniuKodoFileSystem();
+            fs.initialize(URI.create(conf.get("fs.contract.test.fs.kodo")), conf);
+        }
+
         fs.delete(getTestBaseDir(), true);
     }
 
@@ -41,13 +47,5 @@ public class QiniuKodoFileSystemContractBaseTest extends FileSystemContractBaseT
         }
         assertEquals("Source exists", srcExists, fs.exists(src));
         assertEquals("Destination exists" + dst, dstExists, fs.exists(dst));
-    }
-
-    /**
-     * 方便调试不会超时，所以超时时间设置为int的最大值
-     */
-    @Override
-    protected int getGlobalTimeout() {
-        return Integer.MAX_VALUE;
     }
 }

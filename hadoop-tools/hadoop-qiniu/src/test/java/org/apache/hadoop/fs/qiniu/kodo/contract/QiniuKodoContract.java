@@ -7,16 +7,12 @@ import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
 import java.io.IOException;
 
 public class QiniuKodoContract extends AbstractBondedFSContract {
-    private static final String CONTRACT_XML = "qiniu-kodo/contract.xml";
+    private final boolean useMock;
 
-    /**
-     * Constructor: loads the authentication keys if found
-     *
-     * @param conf configuration to work with
-     */
     public QiniuKodoContract(Configuration conf) {
         super(conf);
-        addConfResource(CONTRACT_XML);
+        addConfResource("qiniu-kodo/contract.xml");
+        useMock = conf.getBoolean("fs.qiniu.test.useMock", true);
     }
 
     @Override
@@ -28,6 +24,6 @@ public class QiniuKodoContract extends AbstractBondedFSContract {
 
     @Override
     public String getScheme() {
-        return "mockkodo";
+        return useMock ? "mockkodo" : "kodo";
     }
 }

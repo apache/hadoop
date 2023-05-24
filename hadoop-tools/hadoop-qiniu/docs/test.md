@@ -1,4 +1,54 @@
-# Testing the hadoop-qiniu Module
+# Mock Test the hadoop-qiniu Module
+
+The project also supports offline testing based mock, which simulates the Kodo service based on the `HashMap` data
+structure in memory, and does not require any authentication information.
+
+But in order to prevent `maven` from skipping the test, you still need to create an `auth-keys.xml` file, but no
+authentication information is required. You can create a file with the following content:
+
+```xml
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<configuration>
+</configuration>
+```
+
+We also need to create the file `contract-test-options.xml`, the content of this file is as follows:
+
+```xml
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+    <property>
+        <name>fs.qiniu.test.useMock</name>
+        <value>true</value>
+    </property>
+
+    <property>
+        <name>fs.contract.test.fs.mockkodo</name>
+        <value>mockkodo://hadoop-java</value>
+    </property>
+
+    <property>
+        <name>fs.mockkodo.impl</name>
+        <value>org.apache.hadoop.fs.qiniu.kodo.MockQiniuKodoFileSystem</value>
+    </property>
+
+    <property>
+        <name>fs.AbstractFileSystem.mockkodo.impl</name>
+        <value>org.apache.hadoop.fs.qiniu.kodo.MockQiniuKodo</value>
+    </property>
+</configuration>
+```
+
+## Use maven command
+
+```shell
+mvn test -Dtest=QiniuKodoFileSystemContractBaseTest,QiniuKodoContractCreateTest,QiniuKodoContractDeleteTest,QiniuKodoContractDistCpTest,QiniuKodoContractGetFileStatusTest,QiniuKodoContractMkdirTest,QiniuKodoContractOpenTest,QiniuKodoContractRenameTest,QiniuKodoContractRootDirTest,QiniuKodoContractSeekTest
+```
+
+# Living Test the hadoop-qiniu Module
 
 To test `kodo://` filesystem client，two files in `hadoop-tols/hadoop-qiniu/src/test/resources` which pass in
 authentication details to the test runner are needed.
@@ -57,6 +107,11 @@ XInclude inclusion. Here is an example of `contract-test-options.xml`:
 
     <property>
         <name>fs.qiniu.download.useHttps</name>
+        <value>false</value>
+    </property>
+
+    <property>
+        <name>fs.qiniu.test.useMock</name>
         <value>false</value>
     </property>
 

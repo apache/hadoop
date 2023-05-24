@@ -148,4 +148,8 @@ client:
 
 logger:
   level: "INFO" # 日志级别调整，默认为INFO，若有报错，可调整为DEBUG可获取到更多错误信息
+
+test:
+  # 在测试时使用 mock 服务，可实现离线集成测试，默认为 false
+  useMock: true
 ```
