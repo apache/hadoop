@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.client.base.ListAndBatchBaseConfig;
 import org.apache.hadoop.fs.qiniu.kodo.config.client.base.ListProducerConfig;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +77,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         Configuration configuration = buildQiniuConfiguration(fsConfig);
         this.useDownloadHttps = fsConfig.download.useHttps;
         this.client = new Client(configuration);
+        Client.setAppName("Hadoop " + VersionInfo.getVersion());
         this.uploadManager = new UploadManager(configuration);
         this.bucketManager = new BucketManager(auth, configuration, this.client);
         this.downloadDomain = buildDownloadHost(fsConfig, bucketManager, bucket);

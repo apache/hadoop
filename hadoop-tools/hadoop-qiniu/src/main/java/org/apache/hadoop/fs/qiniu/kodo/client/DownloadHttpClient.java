@@ -1,8 +1,10 @@
 package org.apache.hadoop.fs.qiniu.kodo.client;
 
 import com.qiniu.common.Constants;
+import com.qiniu.http.Client;
 import com.qiniu.storage.Configuration;
 import okhttp3.*;
+import org.apache.hadoop.util.VersionInfo;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -61,11 +63,11 @@ public class DownloadHttpClient {
     }
 
     private static String userAgent() {
-        final String javaVersion = "Java/" + System.getProperty("java.version");
-        final String os = System.getProperty("os.name") + " "
-                + System.getProperty("os.arch") + " " + System.getProperty("os.version");
+        String javaVersion = "Java/" + System.getProperty("java.version");
+        String os = System.getProperty("os.name") + " " + System.getProperty("os.arch") + " " + System.getProperty("os.version");
         final String sdk = "QiniuJava/" + Constants.VERSION;
-        return sdk + " (" + os + ") " + javaVersion;
+        String userApp = "Hadoop " + VersionInfo.getVersion();
+        return sdk + userApp + " (" + os + ") " + javaVersion;
     }
 
     public Response get(String url, Map<String, String> headers) throws IOException {
