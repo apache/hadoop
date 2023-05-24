@@ -53,7 +53,7 @@ public class MockQiniuKodoClient implements IQiniuKodoClient {
     @Override
     public boolean upload(InputStream stream, String key, boolean overwrite) throws IOException {
         if (!overwrite && mockFileMap.containsKey(key)) {
-            return false;
+            throw new IOException("key already exists: " + key);
         }
         byte[] data = IOUtils.readFullyToByteArray(new DataInputStream(stream));
         MockFile mockFile = new MockFile(key, System.currentTimeMillis(), data);
@@ -90,17 +90,6 @@ public class MockQiniuKodoClient implements IQiniuKodoClient {
                 .collect(Collectors.toList());
     }
 
-    private static boolean hasPrefix(String[] source, String[] prefix) {
-        if (source.length < prefix.length) {
-            return false;
-        }
-        for (int i = 0; i < prefix.length; i++) {
-            if (!source[i].equals(prefix[i])) {
-                return false;
-            }
-        }
-        return true;
-    }
 
     private static String getCommonPrefixByTrieNode(TrieTree.TrieNode<?> node, String delimiter) {
         TrieTree.TrieNode<?> n = node;

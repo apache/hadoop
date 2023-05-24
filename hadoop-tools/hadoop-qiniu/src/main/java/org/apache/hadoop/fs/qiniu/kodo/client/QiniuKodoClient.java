@@ -560,7 +560,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         return new MyFileInfo(
                 fileInfo.key,
                 fileInfo.fsize,
-                fileInfo.putTime
+                fileInfo.putTime / 10000
         );
     }
 }

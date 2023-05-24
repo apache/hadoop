@@ -22,13 +22,21 @@ public class TestQiniuKodoClient {
         client = new MockQiniuKodoClient();
     }
 
+    public byte[] dataset(int size) {
+        byte[] data = new byte[size];
+        for (int i = 0; i < size; i++) {
+            data[i] = (byte) (i % 256);
+        }
+        return data;
+    }
+
     @Test
     public void testUploadAndFetch() throws IOException {
         MockQiniuKodoClient client = new MockQiniuKodoClient();
 
         // Upload a test file
         String testKey = "test_key";
-        byte[] testData = "Hello, world!".getBytes();
+        byte[] testData = dataset(1024 * 1024 * 10); // 10MB test data
         InputStream testStream = new ByteArrayInputStream(testData);
         assertTrue(client.upload(testStream, testKey, true));
 
