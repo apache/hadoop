@@ -3,10 +3,8 @@ package org.apache.hadoop.fs.qinu.kodo.contract;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
-import org.apache.hadoop.fs.qinu.kodo.MockQiniuKodoFileSystem;
 
 import java.io.IOException;
-import java.net.URI;
 
 public class QiniuKodoContract extends AbstractBondedFSContract {
     private static final String CONTRACT_XML = "qiniu-kodo/contract.xml";

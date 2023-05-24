@@ -1,10 +1,8 @@
 package org.apache.hadoop.fs.qinu.kodo;
 
-import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.client.MyFileInfo;
-import org.apache.hadoop.fs.qiniu.kodo.download.EmptyInputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.slf4j.Logger;
@@ -15,11 +13,9 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 public class MockQiniuKodoClient implements IQiniuKodoClient {
