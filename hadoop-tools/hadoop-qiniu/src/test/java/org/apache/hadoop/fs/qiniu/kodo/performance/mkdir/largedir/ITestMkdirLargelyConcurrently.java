@@ -1,16 +1,16 @@
-package org.apache.hadoop.fs.qiniu.kodo.performance.stat;
+package org.apache.hadoop.fs.qiniu.kodo.performance.mkdir.largedir;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class GetFileStatusSeriallyTest extends AGetFileStatusTest {
+public class ITestMkdirLargelyConcurrently extends AMkdirLargelyTest {
     @Override
     protected ExecutorService buildExecutorService() {
-        return Executors.newSingleThreadExecutor();
+        return Executors.newFixedThreadPool(consumers());
     }
 
     @Override
     protected int consumers() {
-        return 1;
+        return 8;
     }
 }

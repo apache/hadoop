@@ -1,14 +1,18 @@
-package org.apache.hadoop.fs.qiniu.kodo.performance.rename.largedir;
+package org.apache.hadoop.fs.qiniu.kodo.performance.rename.bigfile;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.qiniu.kodo.performance.QiniuKodoPerformanceBaseTest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class RenameLargeDirTest extends QiniuKodoPerformanceBaseTest {
+public class ITestRenameBigFile extends QiniuKodoPerformanceBaseTest {
+    private static final Logger LOG = LoggerFactory.getLogger(ITestRenameBigFile.class);
+
     @Override
     protected ExecutorService buildExecutorService() {
         return Executors.newSingleThreadExecutor();
@@ -16,12 +20,17 @@ public class RenameLargeDirTest extends QiniuKodoPerformanceBaseTest {
 
     @Override
     protected long testImpl(String testDir, FileSystem fs, ExecutorService service) throws Exception {
-        String oldPath = testDir + "/oldDir";
-        String newPath = testDir + "/newDir";
-        getPrepareHelper().prepareLargeDir(oldPath, 10000);
+        String oldFile = testDir + "/oldBigFile";
+        String newFile = testDir + "/newBigFile";
+        getPrepareHelper().prepareBigFile(oldFile, 4 * 1024 * 1024);
         service.submit(() -> {
             try {
-                fs.rename(new Path(oldPath), new Path(newPath));
+                for (int i = 0; i < 2; i++) {
+                    LOG.info("rename from {} to {}", oldFile, newFile);
+                    fs.rename(new Path(oldFile), new Path(newFile));
+                    LOG.info("rename from {} to {}", newFile, oldFile);
+                    fs.rename(new Path(newFile), new Path(oldFile));
+                }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

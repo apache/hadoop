@@ -1,9 +1,9 @@
-package org.apache.hadoop.fs.qiniu.kodo.performance.stat;
+package org.apache.hadoop.fs.qiniu.kodo.performance.mkdir.deepdir;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class GetFileStatusConcurrentlyTest extends AGetFileStatusTest {
+public class ITestMkdirDeeplyConcurrently extends AMkdirDeeplyTest {
     @Override
     protected ExecutorService buildExecutorService() {
         return Executors.newFixedThreadPool(consumers());
@@ -11,6 +11,6 @@ public class GetFileStatusConcurrentlyTest extends AGetFileStatusTest {
 
     @Override
     protected int consumers() {
-        return 4;
+        return 8;
     }
 }

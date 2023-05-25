@@ -51,7 +51,7 @@ public abstract class QiniuKodoPerformanceBaseTest {
         }
 
         testResult.get(getSceneString()).put("data", testInputData());
-        
+
         if (getSceneDescription() != null) {
             testResult.get(getSceneString()).put("description", getSceneDescription());
         }

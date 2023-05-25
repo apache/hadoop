@@ -1,9 +1,9 @@
-package org.apache.hadoop.fs.qiniu.kodo.performance.openfile.sequence;
+package org.apache.hadoop.fs.qiniu.kodo.performance.list;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class SequenceOpenBigFileConcurrentlyTest extends ASequenceOpenBigFileTest {
+public class ITestListBigDirectoryConcurrently extends AListBigDirectoryTest {
     @Override
     protected ExecutorService buildExecutorService() {
         return Executors.newFixedThreadPool(readers());

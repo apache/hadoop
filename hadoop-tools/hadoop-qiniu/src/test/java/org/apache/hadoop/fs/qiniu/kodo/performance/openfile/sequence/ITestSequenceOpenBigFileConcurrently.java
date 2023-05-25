@@ -3,19 +3,14 @@ package org.apache.hadoop.fs.qiniu.kodo.performance.openfile.sequence;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class SequenceOpenBigFileSeriallyTest extends ASequenceOpenBigFileTest {
+public class ITestSequenceOpenBigFileConcurrently extends ASequenceOpenBigFileTest {
     @Override
     protected ExecutorService buildExecutorService() {
-        return Executors.newSingleThreadExecutor();
+        return Executors.newFixedThreadPool(readers());
     }
 
     @Override
     protected int readers() {
-        return 1;
-    }
-
-    @Override
-    protected int count() {
         return 4;
     }
 }

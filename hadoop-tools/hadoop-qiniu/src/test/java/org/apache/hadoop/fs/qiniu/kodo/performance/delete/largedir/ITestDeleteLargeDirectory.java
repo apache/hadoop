@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class DeleteLargeDirectoryTest extends QiniuKodoPerformanceBaseTest {
+public class ITestDeleteLargeDirectory extends QiniuKodoPerformanceBaseTest {
     protected int files() {
         return 2000;
     }

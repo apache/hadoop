@@ -1,16 +1,16 @@
-package org.apache.hadoop.fs.qiniu.kodo.performance.mkdir.largedir;
+package org.apache.hadoop.fs.qiniu.kodo.performance.mkdir.deepdir;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class MkdirLargelyConcurrentlyTest extends AMkdirLargelyTest {
+public class ITestMkdirDeeplySerially extends AMkdirDeeplyTest {
     @Override
     protected ExecutorService buildExecutorService() {
-        return Executors.newFixedThreadPool(consumers());
+        return Executors.newSingleThreadExecutor();
     }
 
     @Override
     protected int consumers() {
-        return 8;
+        return 1;
     }
 }

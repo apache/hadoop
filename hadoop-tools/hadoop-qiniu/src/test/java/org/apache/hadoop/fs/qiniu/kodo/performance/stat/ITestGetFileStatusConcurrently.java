@@ -1,9 +1,9 @@
-package org.apache.hadoop.fs.qiniu.kodo.performance.createfile.smallfile;
+package org.apache.hadoop.fs.qiniu.kodo.performance.stat;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class CreateSmallFileConcurrentlyTest extends ACreateSmallFileTest {
+public class ITestGetFileStatusConcurrently extends AGetFileStatusTest {
     @Override
     protected ExecutorService buildExecutorService() {
         return Executors.newFixedThreadPool(consumers());
@@ -11,6 +11,6 @@ public class CreateSmallFileConcurrentlyTest extends ACreateSmallFileTest {
 
     @Override
     protected int consumers() {
-        return 8;
+        return 4;
     }
 }

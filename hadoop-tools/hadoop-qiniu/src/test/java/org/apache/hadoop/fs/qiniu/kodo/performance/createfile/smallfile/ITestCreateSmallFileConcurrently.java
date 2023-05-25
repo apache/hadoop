@@ -1,9 +1,9 @@
-package org.apache.hadoop.fs.qiniu.kodo.performance.mkdir.deepdir;
+package org.apache.hadoop.fs.qiniu.kodo.performance.createfile.smallfile;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class MkdirDeeplyConcurrentlyTest extends AMkdirDeeplyTest {
+public class ITestCreateSmallFileConcurrently extends ACreateSmallFileTest {
     @Override
     protected ExecutorService buildExecutorService() {
         return Executors.newFixedThreadPool(consumers());

@@ -14,6 +14,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class MockQiniuKodoClient implements IQiniuKodoClient {
@@ -141,7 +143,7 @@ public class MockQiniuKodoClient implements IQiniuKodoClient {
     }
 
     @Override
-    public boolean copyKey(String oldKey, String newKey) throws IOException {
+    public boolean copyKey(String oldKey, String newKey) {
         MockFile oldFile = mockFileMap.get(oldKey);
         if (oldFile == null) {
             return false;
@@ -153,19 +155,14 @@ public class MockQiniuKodoClient implements IQiniuKodoClient {
 
     @Override
     public boolean copyKeys(String oldPrefix, String newPrefix) throws IOException {
-        for (String key : mockFileMap.keySet()) {
-            if (key.startsWith(oldPrefix)) {
-                String newKey = newPrefix + key.substring(oldPrefix.length());
-                if (!copyKey(key, newKey)) {
-                    return false;
-                }
-            }
-        }
-        return true;
+        return batchAction(oldPrefix, key -> {
+            String newKey = newPrefix + key.substring(oldPrefix.length());
+            return copyKey(key, newKey);
+        });
     }
 
     @Override
-    public boolean renameKey(String oldKey, String newKey) throws IOException {
+    public boolean renameKey(String oldKey, String newKey) {
         MockFile oldFile = mockFileMap.remove(oldKey);
         if (oldFile == null) {
             return false;
@@ -177,27 +174,27 @@ public class MockQiniuKodoClient implements IQiniuKodoClient {
 
     @Override
     public boolean renameKeys(String oldPrefix, String newPrefix) throws IOException {
-        for (String key : mockFileMap.keySet()) {
-            if (key.startsWith(oldPrefix)) {
-                String newKey = newPrefix + key.substring(oldPrefix.length());
-                if (!renameKey(key, newKey)) {
-                    return false;
-                }
-            }
-        }
-        return true;
+        return batchAction(oldPrefix, key -> {
+            String newKey = newPrefix + key.substring(oldPrefix.length());
+            return renameKey(key, newKey);
+        });
     }
 
     @Override
-    public boolean deleteKey(String key) throws IOException {
+    public boolean deleteKey(String key) {
         return mockFileMap.remove(key) != null;
     }
 
     @Override
     public boolean deleteKeys(String prefix) throws IOException {
+        return batchAction(prefix, this::deleteKey);
+    }
+
+    private boolean batchAction(String prefix, Function<String, Boolean> action) throws IOException {
         for (String key : mockFileMap.keySet()) {
             if (key.startsWith(prefix)) {
-                if (!deleteKey(key)) {
+                // if action return false, then stop
+                if (!action.apply(key)) {
                     return false;
                 }
             }

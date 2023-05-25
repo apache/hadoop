@@ -3,14 +3,14 @@ package org.apache.hadoop.fs.qiniu.kodo.performance.list;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class ListBigDirectoryConcurrentlyTest extends AListBigDirectoryTest {
+public class ITestListBigDirectorySerially extends AListBigDirectoryTest {
     @Override
     protected ExecutorService buildExecutorService() {
-        return Executors.newFixedThreadPool(readers());
+        return Executors.newSingleThreadExecutor();
     }
 
     @Override
     protected int readers() {
-        return 4;
+        return 1;
     }
 }
