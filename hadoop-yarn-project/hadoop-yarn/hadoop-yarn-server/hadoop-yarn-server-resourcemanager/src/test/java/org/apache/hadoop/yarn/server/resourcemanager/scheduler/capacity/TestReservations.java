@@ -1275,6 +1275,11 @@ public class TestReservations {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    CapacitySchedulerTestUtilities.updateRootQueue(
+        rmContext.getNodeLabelManager(),
+        root,
+        clusterResource
+    );
 
     // Setup resource-requests
     Priority priorityAM = TestUtils.createMockPriority(1);
@@ -1290,14 +1295,6 @@ public class TestReservations {
     app_0.updateResourceRequests(Collections.singletonList(TestUtils
         .createResourceRequest(ResourceRequest.ANY, 5 * GB, 2, true,
             priorityReduce, recordFactory)));
-
-
-
-    Resource clusterResource2 = Resource.newInstance(1000, 1000);
-    CapacitySchedulerTestUtilities.updateRootQueue(
-        rmContext.getNodeLabelManager(),
-        cs.getQueue("root"),
-        clusterResource2);
 
     // Start testing...
     // Only AM

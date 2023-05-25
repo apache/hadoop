@@ -173,10 +173,11 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 2048);
     MockNM nm2 = rm.registerNode("h2:1235", 2048);
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 4);
 
     nodeLabelManager.addLabelsToNode(
         ImmutableMap.of(NodeId.newInstance("h2", 1235), toSet("X")));
+
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 4);
 
     MockRMAppSubmissionData data =
         MockRMAppSubmissionData.Builder.createWithMemory(AM_CONTAINER_MB, rm)
