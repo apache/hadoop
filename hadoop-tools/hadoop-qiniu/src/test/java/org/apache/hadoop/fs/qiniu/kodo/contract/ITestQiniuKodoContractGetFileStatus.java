@@ -1,14 +1,12 @@
 package org.apache.hadoop.fs.qiniu.kodo.contract;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
 
-public class QiniuKodoContractDistCpTest extends AbstractContractDistCpTest {
-
+public class ITestQiniuKodoContractGetFileStatus extends AbstractContractGetFileStatusTest {
     @Override
     protected AbstractFSContract createContract(Configuration conf) {
         return new QiniuKodoContract(conf);
     }
-
 }

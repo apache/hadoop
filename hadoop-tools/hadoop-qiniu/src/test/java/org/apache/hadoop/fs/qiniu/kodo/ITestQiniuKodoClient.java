@@ -14,7 +14,7 @@ import java.util.List;
 
 import static org.junit.Assert.*;
 
-public class TestQiniuKodoClient {
+public class ITestQiniuKodoClient {
     protected IQiniuKodoClient client;
 
     @Before

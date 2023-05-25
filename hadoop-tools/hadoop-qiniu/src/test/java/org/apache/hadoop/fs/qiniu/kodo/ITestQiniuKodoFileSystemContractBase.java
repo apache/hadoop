@@ -14,8 +14,8 @@ import java.net.URI;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-public class QiniuKodoFileSystemContractBaseTest extends FileSystemContractBaseTest {
-    private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoFileSystemContractBaseTest.class);
+public class ITestQiniuKodoFileSystemContractBase extends FileSystemContractBaseTest {
+    private static final Logger LOG = LoggerFactory.getLogger(ITestQiniuKodoFileSystemContractBase.class);
 
     @Before
     public void setup() throws Exception {
