@@ -178,7 +178,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " OUT storedHomeSubCluster_OUT varchar(256), OUT rowCount_OUT int)"
           + " MODIFIES SQL DATA BEGIN ATOMIC"
           + " INSERT IGNORE INTO applicationsHomeSubCluster "
-          + " (applicationId,homeSubCluster,createTime,applicationContext) "
+          + " (applicationId,homeSubCluster,createTime,applicationContext) VALUES"
           + " (applicationId_IN, homeSubCluster_IN, "
           + " NOW() AT TIME ZONE INTERVAL '0:00' HOUR TO MINUTE, "
           + " applicationContext_IN);"
