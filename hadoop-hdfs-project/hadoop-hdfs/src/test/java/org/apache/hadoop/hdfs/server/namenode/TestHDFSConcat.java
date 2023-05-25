@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -571,7 +573,7 @@ public class TestHDFSConcat {
    * @throws IOException
    */
   @Test
-  public void testConcatPermissions() throws IOException {
+  public void testConcatPermissionEnabled() throws IOException {
     Configuration conf2 = new Configuration();
     conf2.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf2.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
@@ -587,18 +589,15 @@ public class TestHDFSConcat {
     DFSTestUtil.createFile(dfs2, trg, blockSize, REPL_FACTOR, 1);
     DFSTestUtil.createFile(dfs2, src, blockSize, REPL_FACTOR, 1);
 
-    // check permissions with the wrong user when dfs.permissions.enabled is true
-    final UserGroupInformation user = UserGroupInformation.createUserForTesting(
-        "theDoctor", new String[] { "tardis" });
-    DistributedFileSystem hdfs1 =
-        (DistributedFileSystem)DFSTestUtil.getFileSystemAs(user, conf2);
+    // Check permissions with the wrong user when dfs.permissions.enabled is true.
+    final UserGroupInformation user =
+        UserGroupInformation.createUserForTesting("theDoctor", new String[] {"tardis"});
+    DistributedFileSystem hdfs1 = (DistributedFileSystem) DFSTestUtil.getFileSystemAs(user, conf2);
     try {
       hdfs1.concat(trg, new Path[] {src});
       fail("Permission exception expected");
     } catch (IOException ie) {
-      System.out.println("Got expected exception for permissions:"
-          + ie.getLocalizedMessage());
-      // expected
+      LOG.info("Got expected exception for permissions:" + ie.getLocalizedMessage());
     }
 
     dfs2.close();
@@ -613,17 +612,67 @@ public class TestHDFSConcat {
     DFSTestUtil.createFile(dfs2, trg, blockSize, REPL_FACTOR, 1);
     DFSTestUtil.createFile(dfs2, src, blockSize, REPL_FACTOR, 1);
 
-    // check permissions with the wrong user when dfs.permissions.enabled is false
+    // Check permissions with the wrong user when dfs.permissions.enabled is false.
     DistributedFileSystem hdfs2 = (DistributedFileSystem) DFSTestUtil.getFileSystemAs(user, conf2);
     try {
       hdfs2.concat(trg, new Path[] {src});
     } catch (IOException ie) {
-      fail("Got unexpected exception for permissions" + ie.getLocalizedMessage());
+      fail("Got unexpected exception for permissions:" + ie.getLocalizedMessage());
     }
     dfs2.close();
-    dfs2 = null;
     cluster2.shutdownDataNodes();
     cluster2.shutdown();
-    cluster2 = null;
+  }
+
+  /**
+   * Test permissions of Concat operation.
+   */
+  @Test
+  public void testConcatPermissions() throws IOException {
+    String testPathDir = "/dir";
+    Path dir = new Path(testPathDir);
+    dfs.mkdirs(dir);
+    dfs.setPermission(dir, new FsPermission((short) 0777));
+
+    Path dst = new Path(testPathDir, "dst");
+    Path src = new Path(testPathDir, "src");
+    DFSTestUtil.createFile(dfs, dst, blockSize, REPL_FACTOR, 1);
+
+    // Create a user who is not the owner of the file and try concat operation.
+    final UserGroupInformation user =
+        UserGroupInformation.createUserForTesting("theDoctor", new String[] {"group"});
+    DistributedFileSystem dfs2 = (DistributedFileSystem) DFSTestUtil.getFileSystemAs(user, conf);
+
+    // Test 1: User is not the owner of the file and has src & dst permission.
+    DFSTestUtil.createFile(dfs, src, blockSize, REPL_FACTOR, 1);
+    dfs.setPermission(dst, new FsPermission((short) 0777));
+    dfs.setPermission(src, new FsPermission((short) 0777));
+    try {
+      dfs2.concat(dst, new Path[] {src});
+    } catch (AccessControlException ace) {
+      fail("Got unexpected exception:" + ace.getLocalizedMessage());
+    }
+
+    // Test 2: User is not the owner of the file and has only dst permission.
+    DFSTestUtil.createFile(dfs, src, blockSize, REPL_FACTOR, 1);
+    dfs.setPermission(dst, new FsPermission((short) 0777));
+    dfs.setPermission(src, new FsPermission((short) 0700));
+    try {
+      dfs2.concat(dst, new Path[] {src});
+      fail("Permission exception expected");
+    } catch (AccessControlException ace) {
+      LOG.info("Got expected exception for permissions:" + ace.getLocalizedMessage());
+    }
+
+    // Test 3: User is not the owner of the file and has only src permission.
+    DFSTestUtil.createFile(dfs, src, blockSize, REPL_FACTOR, 1);
+    dfs.setPermission(dst, new FsPermission((short) 0700));
+    dfs.setPermission(src, new FsPermission((short) 0777));
+    try {
+      dfs2.concat(dst, new Path[] {src});
+      fail("Permission exception expected");
+    } catch (AccessControlException ace) {
+      LOG.info("Got expected exception for permissions:" + ace.getLocalizedMessage());
+    }
   }
 }
