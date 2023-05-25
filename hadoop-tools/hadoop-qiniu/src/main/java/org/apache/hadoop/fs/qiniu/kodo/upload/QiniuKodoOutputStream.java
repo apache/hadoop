@@ -35,10 +35,10 @@ public class QiniuKodoOutputStream extends OutputStream {
         this.pis = new PipedInputStream(pos, bufferSize);
         this.future = executorService.submit(() -> {
             try {
-                if (client.upload(pis, key, overwrite)) {
-                    return null;
-                }
-                return new FileAlreadyExistsException("key exists " + key);
+                // 这里抛出的异常基本都是 QiniuException 是属于 IOException
+                // 正常情况上传后应当返回 null
+                client.upload(pis, key, overwrite);
+                return null;
             } catch (IOException e) {
                 return e;
             }

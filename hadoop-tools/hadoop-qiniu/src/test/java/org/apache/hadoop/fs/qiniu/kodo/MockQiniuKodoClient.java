@@ -52,14 +52,13 @@ public class MockQiniuKodoClient implements IQiniuKodoClient {
     }
 
     @Override
-    public boolean upload(InputStream stream, String key, boolean overwrite) throws IOException {
+    public void upload(InputStream stream, String key, boolean overwrite) throws IOException {
         if (!overwrite && mockFileMap.containsKey(key)) {
             throw new IOException("key already exists: " + key);
         }
         byte[] data = IOUtils.readFullyToByteArray(new DataInputStream(stream));
         MockFile mockFile = new MockFile(key, System.currentTimeMillis(), data);
         mockFileMap.put(key, mockFile);
-        return true;
     }
 
     @Override
@@ -142,73 +141,86 @@ public class MockQiniuKodoClient implements IQiniuKodoClient {
     }
 
     @Override
-    public boolean copyKey(String oldKey, String newKey) {
+    public void copyKey(String oldKey, String newKey) throws IOException {
         MockFile oldFile = mockFileMap.get(oldKey);
         if (oldFile == null) {
-            return false;
+            throw new IOException("key not found: " + oldKey);
         }
         MockFile newFile = new MockFile(newKey, System.currentTimeMillis(), oldFile.data.clone());
         mockFileMap.put(newKey, newFile);
-        return true;
     }
 
     @Override
-    public boolean copyKeys(String oldPrefix, String newPrefix) throws IOException {
-        return batchAction(oldPrefix, key -> {
-            String newKey = newPrefix + key.substring(oldPrefix.length());
-            return copyKey(key, newKey);
+    public void copyKeys(String oldPrefix, String newPrefix) throws IOException {
+        batchAction(oldPrefix, key -> {
+            try {
+                copyKey(key, key.replaceFirst(oldPrefix, newPrefix));
+            } catch (IOException e) {
+                return e;
+            }
+            return null;
         });
     }
 
     @Override
-    public boolean renameKey(String oldKey, String newKey) {
+    public void renameKey(String oldKey, String newKey) throws IOException {
         MockFile oldFile = mockFileMap.remove(oldKey);
         if (oldFile == null) {
-            return false;
+            throw new IOException("key not found: " + oldKey);
         }
         MockFile newFile = new MockFile(newKey, System.currentTimeMillis(), oldFile.data.clone());
         mockFileMap.put(newKey, newFile);
-        return true;
     }
 
     @Override
-    public boolean renameKeys(String oldPrefix, String newPrefix) throws IOException {
-        return batchAction(oldPrefix, key -> {
-            String newKey = newPrefix + key.substring(oldPrefix.length());
-            return renameKey(key, newKey);
+    public void renameKeys(String oldPrefix, String newPrefix) throws IOException {
+        batchAction(oldPrefix, key -> {
+            try {
+                renameKey(key, key.replaceFirst(oldPrefix, newPrefix));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            return null;
         });
     }
 
     @Override
-    public boolean deleteKey(String key) {
-        return mockFileMap.remove(key) != null;
+    public void deleteKey(String key) throws IOException {
+        if (mockFileMap.remove(key) == null) {
+            throw new IOException("key not found: " + key);
+        }
     }
 
     @Override
-    public boolean deleteKeys(String prefix) throws IOException {
-        return batchAction(prefix, this::deleteKey);
+    public void deleteKeys(String prefix) throws IOException {
+        batchAction(prefix, key -> {
+            try {
+                deleteKey(key);
+            } catch (IOException e) {
+                return e;
+            }
+            return null;
+        });
     }
 
-    private boolean batchAction(String prefix, Function<String, Boolean> action) throws IOException {
+    private void batchAction(String prefix, Function<String, IOException> action) throws IOException {
         for (String key : mockFileMap.keySet()) {
             if (key.startsWith(prefix)) {
-                // if action return false, then stop
-                if (!action.apply(key)) {
-                    return false;
+                IOException e = action.apply(key);
+                if (e != null) {
+                    throw e;
                 }
             }
         }
-        return true;
     }
 
     @Override
-    public boolean makeEmptyObject(String key) throws IOException {
+    public void makeEmptyObject(String key) throws IOException {
         if (mockFileMap.containsKey(key)) {
-            return false;
+            throw new IOException("key already exists: " + key);
         }
         MockFile file = new MockFile(key, System.currentTimeMillis(), new byte[0]);
         mockFileMap.put(key, file);
-        return true;
     }
 
     @Override

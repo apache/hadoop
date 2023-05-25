@@ -12,7 +12,7 @@ public interface IQiniuKodoClient {
 
     long getLength(String key) throws IOException;
 
-    boolean upload(InputStream stream, String key, boolean overwrite) throws IOException;
+    void upload(InputStream stream, String key, boolean overwrite) throws IOException;
 
     InputStream fetch(String key, long offset, int size) throws IOException;
 
@@ -24,19 +24,19 @@ public interface IQiniuKodoClient {
 
     RemoteIterator<QiniuKodoFileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException;
 
-    boolean copyKey(String oldKey, String newKey) throws IOException;
+    void copyKey(String oldKey, String newKey) throws IOException;
 
-    boolean copyKeys(String oldPrefix, String newPrefix) throws IOException;
+    void copyKeys(String oldPrefix, String newPrefix) throws IOException;
 
-    boolean renameKey(String oldKey, String newKey) throws IOException;
+    void renameKey(String oldKey, String newKey) throws IOException;
 
-    boolean renameKeys(String oldPrefix, String newPrefix) throws IOException;
+    void renameKeys(String oldPrefix, String newPrefix) throws IOException;
 
-    boolean deleteKey(String key) throws IOException;
+    void deleteKey(String key) throws IOException;
 
-    boolean deleteKeys(String prefix) throws IOException;
+    void deleteKeys(String prefix) throws IOException;
 
-    boolean makeEmptyObject(String key) throws IOException;
+    void makeEmptyObject(String key) throws IOException;
 
     QiniuKodoFileInfo getFileStatus(String key) throws IOException;
 

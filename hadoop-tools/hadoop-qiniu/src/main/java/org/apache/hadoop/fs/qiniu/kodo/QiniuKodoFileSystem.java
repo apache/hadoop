@@ -82,6 +82,10 @@ public class QiniuKodoFileSystem extends FileSystem {
         return new QiniuKodoClient(bucket, fsConfig, statistics);
     }
 
+    public IQiniuKodoClient getKodoClient() {
+        return kodoClient;
+    }
+
     protected static void setLog4jConfig(QiniuKodoFsConfig fsConfig) {
         org.apache.log4j.Logger rootLogger = LogManager.getRootLogger();
         if (fsConfig.logger.level != null) {
@@ -160,15 +164,11 @@ public class QiniuKodoFileSystem extends FileSystem {
         return uploadExecutorService;
     }
 
-    private void deleteKeyBlocks(String key) throws IOException {
+    private void deleteKeyBlocks(String key) {
         generalblockReader.deleteBlocks(key);
         randomBlockReader.deleteBlocks(key);
     }
 
-    @Override
-    public FSDataOutputStreamBuilder createFile(Path path) {
-        return super.createFile(path);
-    }
 
     /**
      * 创建一个文件，返回一个可以被写入的输出流
@@ -225,8 +225,8 @@ public class QiniuKodoFileSystem extends FileSystem {
      * @param replication required block replication for the file.
      * @param blockSize   block size
      * @param progress    the progress reporter
-     * @return
-     * @throws IOException
+     * @return a new FSDataOutputStream
+     * @throws IOException IO Exception
      */
     @Override
     public FSDataOutputStream createNonRecursive(
@@ -361,7 +361,8 @@ public class QiniuKodoFileSystem extends FileSystem {
     private boolean copyFile(Path srcPath, Path dstPath) throws IOException {
         String srcKey = QiniuKodoUtils.pathToKey(workingDir, srcPath);
         String dstKey = QiniuKodoUtils.pathToKey(workingDir, dstPath);
-        return kodoClient.copyKey(srcKey, dstKey);
+        kodoClient.copyKey(srcKey, dstKey);
+        return true;
     }
 
     private boolean copyDirectory(Path srcPath, Path dstPath) throws IOException {
@@ -374,7 +375,8 @@ public class QiniuKodoFileSystem extends FileSystem {
             LOG.warn("Cannot rename a directory to a subdirectory of self");
             return false;
         }
-        return kodoClient.copyKeys(srcKey, dstKey);
+        kodoClient.copyKeys(srcKey, dstKey);
+        return true;
     }
 
     @Override
@@ -393,20 +395,21 @@ public class QiniuKodoFileSystem extends FileSystem {
         LOG.debug("delete, key:" + key);
 
         if (file.isDirectory()) {
-            return deleteDir(key, recursive);
+            deleteDir(key, recursive);
         } else {
-            return deleteFile(key);
+            deleteFile(key);
         }
+        return true;
     }
 
-    private boolean deleteFile(String fileKey) throws IOException {
+    private void deleteFile(String fileKey) throws IOException {
         fileKey = QiniuKodoUtils.keyToFileKey(fileKey);
         LOG.debug("delete, fileKey:" + fileKey);
         deleteKeyBlocks(fileKey);
-        return kodoClient.deleteKey(fileKey);
+        kodoClient.deleteKey(fileKey);
     }
 
-    private boolean deleteDir(String dirKey, boolean recursive) throws IOException {
+    private void deleteDir(String dirKey, boolean recursive) throws IOException {
         dirKey = QiniuKodoUtils.keyToDirKey(dirKey);
         LOG.debug("deleteDir, dirKey:" + dirKey + " recursive:" + recursive);
         if (kodoClient.listNStatus(dirKey, 2).size() > 1 && !recursive) {
@@ -414,7 +417,7 @@ public class QiniuKodoFileSystem extends FileSystem {
             throw new IOException("Dir is not empty");
         }
         deleteKeyBlocks(dirKey);
-        return kodoClient.deleteKeys(dirKey);
+        kodoClient.deleteKeys(dirKey);
     }
 
 
@@ -501,7 +504,8 @@ public class QiniuKodoFileSystem extends FileSystem {
         }
 
         // 啥都找不到，创建文件夹
-        return kodoClient.makeEmptyObject(dirKey);
+        kodoClient.makeEmptyObject(dirKey);
+        return true;
     }
 
     @Override

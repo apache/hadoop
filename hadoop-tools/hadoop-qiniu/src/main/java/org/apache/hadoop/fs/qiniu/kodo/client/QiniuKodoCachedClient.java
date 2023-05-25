@@ -1,5 +1,6 @@
 package org.apache.hadoop.fs.qiniu.kodo.client;
 
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.qiniu.kodo.util.LRUCache;
 import org.apache.hadoop.fs.qiniu.kodo.util.QiniuKodoUtils;
@@ -38,12 +39,9 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
     }
 
     @Override
-    public boolean upload(InputStream stream, String key, boolean overwrite) throws IOException {
-        boolean success = source.upload(stream, key, overwrite);
-        if (success) {
-            cache.remove(key);
-        }
-        return success;
+    public void upload(InputStream stream, String key, boolean overwrite) throws IOException {
+        source.upload(stream, key, overwrite);
+        cache.remove(key);
     }
 
     @Override
@@ -82,51 +80,59 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
     }
 
     @Override
-    public boolean copyKey(String oldKey, String newKey) throws IOException {
-        return source.copyKey(oldKey, newKey);
+    public void copyKey(String oldKey, String newKey) throws IOException {
+        source.copyKey(oldKey, newKey);
     }
 
     @Override
-    public boolean copyKeys(String oldPrefix, String newPrefix) throws IOException {
-        return source.copyKeys(oldPrefix, newPrefix);
+    public void copyKeys(String oldPrefix, String newPrefix) throws IOException {
+        source.copyKeys(oldPrefix, newPrefix);
     }
 
     @Override
-    public boolean renameKey(String oldKey, String newKey) throws IOException {
-        boolean result = source.renameKey(oldKey, newKey);
-        cache.remove(oldKey);
-        return result;
+    public void renameKey(String oldKey, String newKey) throws IOException {
+        try {
+            source.renameKey(oldKey, newKey);
+        } finally {
+            cache.remove(oldKey);
+        }
     }
 
     @Override
-    public boolean renameKeys(String oldPrefix, String newPrefix) throws IOException {
-        boolean result = source.renameKeys(oldPrefix, newPrefix);
-        cache.removeIf(e -> e.getKey().startsWith(oldPrefix));
-        return result;
+    public void renameKeys(String oldPrefix, String newPrefix) throws IOException {
+        try {
+            source.renameKeys(oldPrefix, newPrefix);
+        } finally {
+            cache.removeIf(e -> e.getKey().startsWith(oldPrefix));
+        }
     }
 
     @Override
-    public boolean deleteKey(String key) throws IOException {
-        boolean result = source.deleteKey(key);
-        cache.remove(key);
-        return result;
+    public void deleteKey(String key) throws IOException {
+        try {
+            source.deleteKey(key);
+        } finally {
+            cache.remove(key);
+        }
     }
 
     @Override
-    public boolean deleteKeys(String prefix) throws IOException {
-        boolean result = source.deleteKeys(prefix);
-        cache.removeIf(e -> e.getKey().startsWith(prefix));
-        return result;
+    public void deleteKeys(String prefix) throws IOException {
+        try {
+            source.deleteKeys(prefix);
+        } finally {
+            cache.removeIf(e -> e.getKey().startsWith(prefix));
+        }
     }
 
     @Override
-    public boolean makeEmptyObject(String key) throws IOException {
+    public void makeEmptyObject(String key) throws IOException {
         QiniuKodoFileInfo fileInfo = cache.get(key);
         if (fileInfo != null) {
-            return false;
+            throw new FileAlreadyExistsException(key);
         }
         cache.remove(key);
-        return source.makeEmptyObject(key);
+        source.makeEmptyObject(key);
     }
 
     @Override

@@ -175,22 +175,51 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         return auth.uploadToken(bucket, key, uploadSignExpires, policy);
     }
 
+    private class QiniuUploader {
+        private final boolean overwrite;
+
+        private QiniuUploader(boolean overwrite) {
+            this.overwrite = overwrite;
+        }
+
+        void upload(String key, InputStream stream) throws IOException {
+            if (!uploadManager.put(stream, key, getUploadToken(key, overwrite),
+                    null, null).isOK()) {
+                throw new IOException("Upload failed"
+                        + " bucket: " + bucket
+                        + " key: " + key
+                        + " overwrite: " + overwrite);
+            }
+        }
+
+        void uploadArray(String key, byte[] data) throws IOException {
+            upload(key, new ByteArrayInputStream(data));
+        }
+
+        void uploadEmpty(String key) throws IOException {
+            uploadArray(key, new byte[0]);
+        }
+    }
+
     /**
      * 给定一个输入流将读取并上传对应文件
      */
     @Override
-    public boolean upload(InputStream stream, String key, boolean overwrite) throws IOException {
+    public void upload(InputStream stream, String key, boolean overwrite) throws IOException {
+        QiniuUploader uploader = new QiniuUploader(overwrite);
         if (stream.available() > 0) {
-            return uploadManager.put(stream, key, getUploadToken(key, overwrite), null, null).isOK();
+            uploader.upload(key, stream);
+            return;
         }
         int b = stream.read();
         if (b == -1) {
             // 空流
-            return uploadManager.put(new byte[0], key, getUploadToken(key, overwrite)).isOK();
+            uploader.uploadEmpty(key);
+            return;
         }
         // 有内容，还得拼回去
         SequenceInputStream sis = new SequenceInputStream(new ByteArrayInputStream(new byte[]{(byte) b}), stream);
-        return uploadManager.put(sis, key, getUploadToken(key, overwrite), null, null).isOK();
+        uploader.upload(key, sis);
     }
 
 
@@ -343,9 +372,8 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * 复制对象
      */
     @Override
-    public boolean copyKey(String oldKey, String newKey) throws IOException {
-        Response response = bucketManager.copy(bucket, oldKey, bucket, newKey);
-        return response.isOK();
+    public void copyKey(String oldKey, String newKey) throws IOException {
+        bucketManager.copy(bucket, oldKey, bucket, newKey);
     }
 
     /**
@@ -355,7 +383,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * @param prefixKey 生产列举的key前缀
      * @param f         消费操作函数
      */
-    private boolean listAndBatch(
+    private void listAndBatch(
             ListAndBatchBaseConfig config,
             String prefixKey,
             Function<FileInfo, BatchOperator> f
@@ -438,13 +466,11 @@ public class QiniuKodoClient implements IQiniuKodoClient {
                 throw new IOException(e);
             }
         }
-
-        return true;
     }
 
     @Override
-    public boolean copyKeys(String oldPrefix, String newPrefix) throws IOException {
-        return listAndBatch(
+    public void copyKeys(String oldPrefix, String newPrefix) throws IOException {
+        listAndBatch(
                 fsConfig.client.copy,
                 oldPrefix,
                 (FileInfo fileInfo) -> {
@@ -459,22 +485,20 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * 重命名指定 key 的对象
      */
     @Override
-    public boolean renameKey(String oldKey, String newKey) throws IOException {
+    public void renameKey(String oldKey, String newKey) throws IOException {
         if (Objects.equals(oldKey, newKey)) {
-            return true;
+            return;
         }
         Response response = bucketManager.rename(bucket, oldKey, newKey);
         incrementOneReadOps();
-
-        return response.isOK();
     }
 
     /**
      * 批量重命名 key 为指定前缀的对象
      */
     @Override
-    public boolean renameKeys(String oldPrefix, String newPrefix) throws IOException {
-        return listAndBatch(
+    public void renameKeys(String oldPrefix, String newPrefix) throws IOException {
+        listAndBatch(
                 fsConfig.client.rename,
                 oldPrefix,
                 (FileInfo fileInfo) -> {
@@ -489,15 +513,14 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * 仅删除一层 key
      */
     @Override
-    public boolean deleteKey(String key) throws IOException {
+    public void deleteKey(String key) throws IOException {
         Response response = bucketManager.delete(bucket, key);
         incrementOneReadOps();
-        return response.isOK();
     }
 
     @Override
-    public boolean deleteKeys(String prefix) throws IOException {
-        return listAndBatch(
+    public void deleteKeys(String prefix) throws IOException {
+        listAndBatch(
                 fsConfig.client.delete,
                 prefix,
                 e -> new DeleteOperator(bucket, e.key)
@@ -514,19 +537,10 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * 使用对象存储模拟文件系统，文件夹只是作为一个空白文件，仅用于表示文件夹的存在性与元数据的存储
      * 该 makeEmptyObject 仅创建一层空文件
      */
-
-    public boolean makeEmptyObject(String key, boolean overwrite) throws IOException {
-        byte[] content = new byte[]{};
-        StringMap policy = new StringMap();
-        policy.put("insertOnly", overwrite ? 0 : 1);
-        String token = auth.uploadToken(bucket, null, uploadSignExpires, policy);
-        Response response = uploadManager.put(content, key, token);
-        return response.isOK();
-    }
-
     @Override
-    public boolean makeEmptyObject(String key) throws IOException {
-        return this.makeEmptyObject(key, false);
+    public void makeEmptyObject(String key) throws IOException {
+        QiniuUploader uploader = new QiniuUploader(false);
+        uploader.uploadEmpty(key);
     }
 
     /**
