@@ -121,7 +121,7 @@ public class CapacitySchedulerQueueCapacityHandler {
 
   private void updateChildrenAfterCalculation(
       ResourceCalculationDriver resourceCalculationDriver, ResourceLimits resourceLimits) {
-    ParentQueue parentQueue = (ParentQueue) resourceCalculationDriver.getQueue();
+    AbstractParentQueue parentQueue = (AbstractParentQueue) resourceCalculationDriver.getQueue();
     for (CSQueue childQueue : parentQueue.getChildQueues()) {
       updateQueueCapacities(resourceCalculationDriver, childQueue);
 
