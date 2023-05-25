@@ -3,6 +3,8 @@ package org.apache.hadoop.fs.qiniu.kodo.contract;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
+import org.apache.hadoop.fs.qiniu.kodo.Constants;
+import org.apache.hadoop.fs.qiniu.kodo.TestConstants;
 
 import java.io.IOException;
 
@@ -11,8 +13,11 @@ public class QiniuKodoContract extends AbstractBondedFSContract {
 
     public QiniuKodoContract(Configuration conf) {
         super(conf);
-        addConfResource("qiniu-kodo/contract.xml");
-        useMock = conf.getBoolean("fs.qiniu.test.useMock", true);
+        addConfResource(TestConstants.FILE_CONTRACT_XML);
+        useMock = conf.getBoolean(
+                TestConstants.CONFIG_TEST_USE_MOCK_KEY,
+                TestConstants.CONFIG_TEST_USE_MOCK_DEFAULT_VALUE
+        );
     }
 
     @Override
@@ -24,6 +29,6 @@ public class QiniuKodoContract extends AbstractBondedFSContract {
 
     @Override
     public String getScheme() {
-        return useMock ? "mockkodo" : "kodo";
+        return useMock ? TestConstants.MOCKKODO_SCHEME : Constants.KODO_SCHEME;
     }
 }

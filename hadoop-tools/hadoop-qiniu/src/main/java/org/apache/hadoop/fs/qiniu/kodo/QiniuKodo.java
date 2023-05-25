@@ -8,15 +8,13 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 public class QiniuKodo extends DelegateToFileSystem {
-
     public QiniuKodo(URI theUri, Configuration conf)
             throws IOException, URISyntaxException {
-        super(theUri, new QiniuKodoFileSystem(), conf, "kodo", false);
+        super(theUri, new QiniuKodoFileSystem(), conf, Constants.KODO_SCHEME, false);
     }
 
     @Override
     public int getUriDefaultPort() {
-        // return Constants.S3A_DEFAULT_PORT;
         return super.getUriDefaultPort();
     }
 }

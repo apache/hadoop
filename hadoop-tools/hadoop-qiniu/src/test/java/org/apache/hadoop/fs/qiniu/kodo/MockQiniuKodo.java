@@ -11,7 +11,7 @@ public class MockQiniuKodo extends DelegateToFileSystem {
 
     public MockQiniuKodo(URI theUri, Configuration conf)
             throws IOException, URISyntaxException {
-        super(theUri, new QiniuKodoFileSystem(), conf, "mockKodo", false);
+        super(theUri, new QiniuKodoFileSystem(), conf, TestConstants.MOCKKODO_SCHEME, false);
     }
 
     @Override

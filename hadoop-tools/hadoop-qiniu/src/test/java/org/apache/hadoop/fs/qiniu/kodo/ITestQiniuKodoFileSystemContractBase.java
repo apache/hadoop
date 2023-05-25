@@ -20,15 +20,18 @@ public class ITestQiniuKodoFileSystemContractBase extends FileSystemContractBase
     @Before
     public void setup() throws Exception {
         Configuration conf = new Configuration();
-        conf.addResource("core-site.xml");
-        conf.addResource("contract-test-options.xml");
+        conf.addResource(TestConstants.FILE_CORE_SITE_XML);
+        conf.addResource(TestConstants.FILE_CONTRACT_TEST_OPTIONS_XML);
 
-        if (conf.getBoolean("fs.qiniu.test.useMock", true)) {
+        if (conf.getBoolean(
+                TestConstants.CONFIG_TEST_USE_MOCK_KEY,
+                TestConstants.CONFIG_TEST_USE_MOCK_DEFAULT_VALUE
+        )) {
             fs = new MockQiniuKodoFileSystem();
-            fs.initialize(URI.create(conf.get("fs.contract.test.fs.mockkodo")), conf);
+            fs.initialize(URI.create(conf.get(TestConstants.CONFIG_TEST_CONTRACT_MOCK_FS_KEY)), conf);
         } else {
             fs = new QiniuKodoFileSystem();
-            fs.initialize(URI.create(conf.get("fs.contract.test.fs.kodo")), conf);
+            fs.initialize(URI.create(conf.get(TestConstants.CONFIG_TEST_CONTRACT_FS_KEY)), conf);
         }
 
         fs.delete(getTestBaseDir(), true);
