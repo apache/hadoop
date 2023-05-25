@@ -137,17 +137,15 @@ public class TestReservations {
     when(csContext.getClusterResource()).thenReturn(
         Resources.createResource(100 * 16 * GB, 100 * 12));
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
-    CapacitySchedulerQueueManager queueManager = new CapacitySchedulerQueueManager(conf,
-        rmContext.getNodeLabelManager(), null);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
-    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
     when(csContext.getRMContext()).thenReturn(rmContext);
     RMContainerTokenSecretManager containerTokenSecretManager = new RMContainerTokenSecretManager(
         conf);
     containerTokenSecretManager.rollMasterKey();
     when(csContext.getContainerTokenSecretManager()).thenReturn(
         containerTokenSecretManager);
-    setQueueHandler(csContext);
+    CapacitySchedulerQueueManager queueManager = setQueueHandler(csContext);
+    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
 
     queueContext = new CapacitySchedulerQueueContext(csContext);
 
@@ -273,6 +271,11 @@ public class TestReservations {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    CapacitySchedulerTestUtilities.updateRootQueue(
+        rmContext.getNodeLabelManager(),
+        root,
+        clusterResource
+    );
 
     // Setup resource-requests
     Priority priorityAM = TestUtils.createMockPriority(1);
@@ -462,6 +465,11 @@ public class TestReservations {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    CapacitySchedulerTestUtilities.updateRootQueue(
+        rmContext.getNodeLabelManager(),
+        root,
+        clusterResource
+    );
 
     // Setup resource-requests
     Priority priorityAM = TestUtils.createMockPriority(1);
@@ -610,6 +618,11 @@ public class TestReservations {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    CapacitySchedulerTestUtilities.updateRootQueue(
+        rmContext.getNodeLabelManager(),
+        root,
+        clusterResource
+    );
 
     // Setup resource-requests
     Priority priorityAM = TestUtils.createMockPriority(1);
@@ -793,6 +806,11 @@ public class TestReservations {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    CapacitySchedulerTestUtilities.updateRootQueue(
+        rmContext.getNodeLabelManager(),
+        root,
+        clusterResource
+    );
 
     // Setup resource-requests
     Priority priorityAM = TestUtils.createMockPriority(1);
@@ -1084,6 +1102,11 @@ public class TestReservations {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
+    CapacitySchedulerTestUtilities.updateRootQueue(
+        rmContext.getNodeLabelManager(),
+        root,
+        clusterResource
+    );
 
     // Setup resource-requests
     Priority priorityAM = TestUtils.createMockPriority(1);
@@ -1444,7 +1467,11 @@ public class TestReservations {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-
+    CapacitySchedulerTestUtilities.updateRootQueue(
+        rmContext.getNodeLabelManager(),
+        root,
+        clusterResource
+    );
 
     // Setup resource-requests
     Priority priorityAM = TestUtils.createMockPriority(1);
