@@ -940,11 +940,17 @@ public class AbfsClient implements Closeable {
         abfsUriQueryBuilder, cachedSasToken);
 
     URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    if (url.toString().contains(WASB_DNS_PREFIX)) {
-      url = changePrefixFromBlobtoDfs(url);
+    AbfsRestOperationType opType;
+    if (getAbfsConfiguration().getPrefixMode() == PrefixMode.BLOB) {
+      opType = AbfsRestOperationType.GetBlob;
+    } else {
+      if (url.toString().contains(WASB_DNS_PREFIX)) {
+        url = changePrefixFromBlobtoDfs(url);
+      }
+      opType = AbfsRestOperationType.ReadFile;
     }
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.ReadFile,
+            opType,
             this,
             HTTP_METHOD_GET,
             url,
