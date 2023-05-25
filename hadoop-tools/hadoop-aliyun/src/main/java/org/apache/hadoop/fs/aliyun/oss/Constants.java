@@ -134,6 +134,59 @@ public final class Constants {
   // Comma separated list of directories
   public static final String BUFFER_DIR_KEY = "fs.oss.buffer.dir";
 
+  /**
+   * What buffer to use.
+   * Default is {@link #FAST_UPLOAD_BUFFER_DISK}
+   * Value: {@value}
+   */
+  public static final String FAST_UPLOAD_BUFFER =
+      "fs.oss.fast.upload.buffer";
+
+  /**
+   * Buffer blocks to disk: {@value}.
+   * Capacity is limited to available disk space.
+   */
+  public static final String FAST_UPLOAD_BUFFER_DISK = "disk";
+
+  /**
+   * Use an in-memory array. Fast but will run of heap rapidly: {@value}.
+   */
+  public static final String FAST_UPLOAD_BUFFER_ARRAY = "array";
+
+  /**
+   * Use a byte buffer. May be more memory efficient than the
+   * {@link #FAST_UPLOAD_BUFFER_ARRAY}: {@value}.
+   */
+  public static final String FAST_UPLOAD_BYTEBUFFER = "bytebuffer";
+
+  /**
+   * Use an in-memory array and fallback to disk if
+   * used memory exceed the quota.
+   */
+  public static final String FAST_UPLOAD_BUFFER_ARRAY_DISK = "array_disk";
+
+  /**
+   * Use a byte buffer and fallback to disk if
+   * used memory exceed the quota.
+   */
+  public static final String FAST_UPLOAD_BYTEBUFFER_DISK = "bytebuffer_disk";
+
+  /**
+   * Memory limit of {@link #FAST_UPLOAD_BUFFER_ARRAY_DISK} or
+   * {@link #FAST_UPLOAD_BYTEBUFFER_DISK}.
+   */
+  public static final String FAST_UPLOAD_BUFFER_MEMORY_LIMIT =
+      "fs.oss.fast.upload.memory.limit";
+
+  public static final long FAST_UPLOAD_BUFFER_MEMORY_LIMIT_DEFAULT =
+      1024 * 1024 * 1024; // 1GB
+
+  /**
+   * Default buffer option: {@value}.
+   */
+  public static final String DEFAULT_FAST_UPLOAD_BUFFER =
+      FAST_UPLOAD_BUFFER_DISK;
+
   // private | public-read | public-read-write
   public static final String CANNED_ACL_KEY = "fs.oss.acl.default";
   public static final String CANNED_ACL_DEFAULT = "";

@@ -218,6 +218,20 @@ public class AWSRequestAnalyzer {
   }
 
   /**
+   * Predicate which returns true if the request is part of the
+   * multipart upload API -and which therefore must be rejected
+   * if multipart upload is disabled.
+   * @param request request
+   * @return true if the transfer manager creates them.
+   */
+  public static boolean isRequestMultipartIO(final Object request) {
+    return request instanceof CopyPartRequest
+        || request instanceof CompleteMultipartUploadRequest
+        || request instanceof InitiateMultipartUploadRequest
+        || request instanceof UploadPartRequest;
+  }
+
+  /**
    * Info about a request.
    */
   public static final class RequestInfo {

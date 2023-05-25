@@ -47,6 +47,7 @@ public class RouterStoreTokenPBImpl extends RouterStoreToken {
 
   private YARNDelegationTokenIdentifier rMDelegationTokenIdentifier = null;
   private Long renewDate;
+  private String tokenInfo;
 
   public RouterStoreTokenPBImpl() {
     builder = RouterStoreTokenProto.newBuilder();
@@ -83,6 +84,10 @@ public class RouterStoreTokenPBImpl extends RouterStoreToken {
 
     if (this.renewDate != null) {
       builder.setRenewDate(this.renewDate);
+    }
+
+    if (this.tokenInfo != null) {
+      builder.setTokenInfo(this.tokenInfo);
     }
   }
 
@@ -163,6 +168,29 @@ public class RouterStoreTokenPBImpl extends RouterStoreToken {
     }
     this.renewDate = renewDate;
     this.builder.setRenewDate(renewDate);
+  }
+  @Override
+  public String getTokenInfo() {
+    RouterStoreTokenProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.tokenInfo != null) {
+      return this.tokenInfo;
+    }
+    if (!p.hasTokenInfo()) {
+      return null;
+    }
+    this.tokenInfo = p.getTokenInfo();
+    return this.tokenInfo;
+  }
+
+  @Override
+  public void setTokenInfo(String tokenInfo) {
+    maybeInitBuilder();
+    if (tokenInfo == null) {
+      builder.clearTokenInfo();
+      return;
+    }
+    this.tokenInfo = tokenInfo;
+    this.builder.setTokenInfo(tokenInfo);
   }
 
   private YARNDelegationTokenIdentifierProto convertToProtoFormat(

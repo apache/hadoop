@@ -256,17 +256,6 @@ public class TaskLog {
   throws IOException {
     System.out.flush();
     System.err.flush();
-    Enumeration<Logger> allLoggers = LogManager.getCurrentLoggers();
-    while (allLoggers.hasMoreElements()) {
-      Logger l = allLoggers.nextElement();
-      Enumeration<Appender> allAppenders = l.getAllAppenders();
-      while (allAppenders.hasMoreElements()) {
-        Appender a = allAppenders.nextElement();
-        if (a instanceof TaskLogAppender) {
-          ((TaskLogAppender)a).flush();
-        }
-      }
-    }
     if (currentTaskid != taskid) {
       currentTaskid = taskid;
       resetPrevLengths(logLocation);

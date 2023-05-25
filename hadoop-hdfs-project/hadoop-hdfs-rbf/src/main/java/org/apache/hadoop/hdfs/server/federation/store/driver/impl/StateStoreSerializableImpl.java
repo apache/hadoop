@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.federation.store.driver.impl;
 import java.io.IOException;
 import java.util.Collection;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreSerializer;
@@ -29,6 +31,8 @@ import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
  * State Store driver that stores a serialization of the records. The serializer
  * is pluggable.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public abstract class StateStoreSerializableImpl extends StateStoreBaseImpl {
 
   /** Mark for slashes in path names. */
@@ -53,7 +57,9 @@ public abstract class StateStoreSerializableImpl extends StateStoreBaseImpl {
 
   /**
    * Serialize a record using the serializer.
+   *
    * @param record Record to serialize.
+   * @param <T> Type of the state store record.
    * @return Byte array with the serialization of the record.
    */
   protected <T extends BaseRecord> byte[] serialize(T record) {
@@ -62,7 +68,9 @@ public abstract class StateStoreSerializableImpl extends StateStoreBaseImpl {
 
   /**
    * Serialize a record using the serializer.
+   *
    * @param record Record to serialize.
+   * @param <T> Type of the state store record.
    * @return String with the serialization of the record.
    */
   protected <T extends BaseRecord> String serializeString(T record) {
@@ -71,11 +79,13 @@ public abstract class StateStoreSerializableImpl extends StateStoreBaseImpl {
 
   /**
    * Creates a record from an input data string.
+   *
    * @param data Serialized text of the record.
    * @param clazz Record class.
    * @param includeDates If dateModified and dateCreated are serialized.
-   * @return The created record.
-   * @throws IOException
+   * @param <T> Type of the state store record.
+   * @return The created record by deserializing the input text.
+   * @throws IOException If the record deserialization fails.
    */
   protected <T extends BaseRecord> T newRecord(
       String data, Class<T> clazz, boolean includeDates) throws IOException {

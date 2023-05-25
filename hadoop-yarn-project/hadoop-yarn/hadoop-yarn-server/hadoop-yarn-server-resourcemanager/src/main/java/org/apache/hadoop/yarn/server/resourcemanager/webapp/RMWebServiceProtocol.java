@@ -98,6 +98,7 @@ public interface RMWebServiceProtocol {
    * This method retrieves the cluster user information, and it is reachable by using
    * {@link RMWSConsts#CLUSTER_USER_INFO}.
    *
+   * @param hsr the servlet request
    * @return the cluster user information
    */
   ClusterUserInfo getClusterUserInfo(HttpServletRequest hsr);
@@ -161,6 +162,7 @@ public interface RMWebServiceProtocol {
    *               It is a PathParam.
    * @param resourceOption The resource change.
    * @throws AuthorizationException If the user is not authorized.
+   * @return the resources of a specific node.
    */
   ResourceInfo updateNodeResource(HttpServletRequest hsr, String nodeId,
       ResourceOptionInfo resourceOption) throws AuthorizationException;
@@ -223,6 +225,7 @@ public interface RMWebServiceProtocol {
    *        aggregated. It is a QueryParam.
    * @param activitiesCount number of activities
    * @return last n activities
+   * @throws InterruptedException if interrupted.
    */
   BulkActivitiesInfo getBulkActivities(HttpServletRequest hsr,
       String groupBy, int activitiesCount) throws InterruptedException;

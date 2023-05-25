@@ -23,8 +23,7 @@ import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMCommunicator.AllocatorRunnable;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.Clock;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.Test;
 import org.mockito.stubbing.Answer;
 
 import static org.mockito.Mockito.doThrow;
@@ -46,8 +45,7 @@ public class TestRMCommunicator {
     }
   }
 
-  @Test
-  @Timeout(2000)
+  @Test(timeout = 2000)
   public void testRMContainerAllocatorExceptionIsHandled() throws Exception {
     ClientService mockClientService = mock(ClientService.class);
     AppContext mockContext = mock(AppContext.class);
@@ -68,8 +66,7 @@ public class TestRMCommunicator {
     testRunnable.run();
   }
 
-  @Test
-  @Timeout(2000)
+  @Test(timeout = 2000)
   public void testRMContainerAllocatorYarnRuntimeExceptionIsHandled()
       throws Exception {
     ClientService mockClientService = mock(ClientService.class);

@@ -207,8 +207,8 @@ public class TestParentQueue {
               " alloc=" + allocation + " node=" + node.getNodeName());
         }
         final Resource allocatedResource = Resources.createResource(allocation);
-        if (queue instanceof ParentQueue) {
-          ((ParentQueue)queue).allocateResource(clusterResource, 
+        if (queue instanceof AbstractParentQueue) {
+          ((AbstractParentQueue)queue).allocateResource(clusterResource,
               allocatedResource, RMNodeLabelsManager.NO_LABEL);
         } else {
           FiCaSchedulerApp app1 = getMockApplication(0, "");

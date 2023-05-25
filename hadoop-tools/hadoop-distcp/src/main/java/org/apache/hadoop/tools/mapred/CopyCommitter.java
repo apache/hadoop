@@ -156,10 +156,7 @@ public class CopyCommitter extends FileOutputCommitter {
 
     final boolean directWrite = conf.getBoolean(
         DistCpOptionSwitch.DIRECT_WRITE.getConfigLabel(), false);
-    final boolean append = conf.getBoolean(
-        DistCpOptionSwitch.APPEND.getConfigLabel(), false);
-    final boolean useTempTarget = !append && !directWrite;
-    if (!useTempTarget) {
+    if (directWrite) {
       return;
     }
 

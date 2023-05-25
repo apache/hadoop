@@ -59,7 +59,7 @@ class PendingReconstructionBlocks {
   // It might take anywhere between 5 to 10 minutes before
   // a request is timed out.
   //
-  private long timeout =
+  private volatile long timeout =
       DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT * 1000;
   private final static long DEFAULT_RECHECK_INTERVAL = 5 * 60 * 1000;
 

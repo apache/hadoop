@@ -27,10 +27,9 @@ import java.nio.channels.WritableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -39,8 +38,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalDirAllocator;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNull;
@@ -66,6 +69,12 @@ public class SingleFilePerBlockCache implements BlockCache {
   private boolean closed;
 
   private final PrefetchingStatistics prefetchingStatistics;
+
+  /**
+   * File attributes attached to any intermediate temporary file created during index creation.
+   */
+  private static final Set<PosixFilePermission> TEMP_FILE_ATTRS =
+      ImmutableSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
 
   /**
    * Cache entry.
@@ -172,11 +181,17 @@ public class SingleFilePerBlockCache implements BlockCache {
   /**
    * Puts the given block in this cache.
    *
-   * @throws IllegalArgumentException if buffer is null.
-   * @throws IllegalArgumentException if buffer.limit() is zero or negative.
+   * @param blockNumber the block number, used as a key for blocks map.
+   * @param buffer buffer contents of the given block to be added to this cache.
+   * @param conf the configuration.
+   * @param localDirAllocator the local dir allocator instance.
+   * @throws IOException if either local dir allocator fails to allocate file or if IO error
+   * occurs while writing the buffer content to the file.
+   * @throws IllegalArgumentException if buffer is null, or if buffer.limit() is zero or negative.
    */
   @Override
-  public void put(int blockNumber, ByteBuffer buffer) throws IOException {
+  public void put(int blockNumber, ByteBuffer buffer, Configuration conf,
+      LocalDirAllocator localDirAllocator) throws IOException {
     if (closed) {
       return;
     }
@@ -191,7 +206,7 @@ public class SingleFilePerBlockCache implements BlockCache {
 
     Validate.checkPositiveInteger(buffer.limit(), "buffer.limit()");
 
-    Path blockFilePath = getCacheFilePath();
+    Path blockFilePath = getCacheFilePath(conf, localDirAllocator);
     long size = Files.size(blockFilePath);
     if (size != 0) {
       String message =
@@ -201,10 +216,15 @@ public class SingleFilePerBlockCache implements BlockCache {
     }
 
     writeFile(blockFilePath, buffer);
-    prefetchingStatistics.blockAddedToFileCache();
     long checksum = BufferData.getChecksum(buffer);
     Entry entry = new Entry(blockNumber, blockFilePath, buffer.limit(), checksum);
     blocks.put(blockNumber, entry);
+    // Update stream_read_blocks_in_cache stats only after blocks map is updated with new file
+    // entry to avoid any discrepancy related to the value of stream_read_blocks_in_cache.
+    // If stream_read_blocks_in_cache is updated before updating the blocks map here, closing of
+    // the input stream can lead to the removal of the cache file even before blocks is added with
+    // the new cache file, leading to incorrect value of stream_read_blocks_in_cache.
+    prefetchingStatistics.blockAddedToFileCache();
   }
 
   private static final Set<? extends OpenOption> CREATE_OPTIONS =
@@ -221,8 +241,19 @@ public class SingleFilePerBlockCache implements BlockCache {
     writeChannel.close();
   }
 
-  protected Path getCacheFilePath() throws IOException {
-    return getTempFilePath();
+  /**
+   * Return temporary file created based on the file path retrieved from local dir allocator.
+   *
+   * @param conf The configuration object.
+   * @param localDirAllocator Local dir allocator instance.
+   * @return Path of the temporary file created.
+   * @throws IOException if IO error occurs while local dir allocator tries to retrieve path
+   * from local FS or file creation fails or permission set fails.
+   */
+  protected Path getCacheFilePath(final Configuration conf,
+      final LocalDirAllocator localDirAllocator)
+      throws IOException {
+    return getTempFilePath(conf, localDirAllocator);
   }
 
   @Override
@@ -242,7 +273,7 @@ public class SingleFilePerBlockCache implements BlockCache {
         prefetchingStatistics.blockRemovedFromFileCache();
         numFilesDeleted++;
       } catch (IOException e) {
-        // Ignore while closing so that we can delete as many cache files as possible.
+        LOG.debug("Failed to delete cache file {}", entry.path, e);
       }
     }
 
@@ -323,9 +354,19 @@ public class SingleFilePerBlockCache implements BlockCache {
 
   private static final String CACHE_FILE_PREFIX = "fs-cache-";
 
-  public static boolean isCacheSpaceAvailable(long fileSize) {
+  /**
+   * Determine if the cache space is available on the local FS.
+   *
+   * @param fileSize The size of the file.
+   * @param conf The configuration.
+   * @param localDirAllocator Local dir allocator instance.
+   * @return True if the given file size is less than the available free space on local FS,
+   * False otherwise.
+   */
+  public static boolean isCacheSpaceAvailable(long fileSize, Configuration conf,
+      LocalDirAllocator localDirAllocator) {
     try {
-      Path cacheFilePath = getTempFilePath();
+      Path cacheFilePath = getTempFilePath(conf, localDirAllocator);
       long freeSpace = new File(cacheFilePath.toString()).getUsableSpace();
       LOG.info("fileSize = {}, freeSpace = {}", fileSize, freeSpace);
       Files.deleteIfExists(cacheFilePath);
@@ -339,16 +380,25 @@ public class SingleFilePerBlockCache implements BlockCache {
   // The suffix (file extension) of each serialized index file.
   private static final String BINARY_FILE_SUFFIX = ".bin";
 
-  // File attributes attached to any intermediate temporary file created during index creation.
-  private static final FileAttribute<Set<PosixFilePermission>> TEMP_FILE_ATTRS =
-      PosixFilePermissions.asFileAttribute(EnumSet.of(PosixFilePermission.OWNER_READ,
-          PosixFilePermission.OWNER_WRITE));
-
-  private static Path getTempFilePath() throws IOException {
-    return Files.createTempFile(
-        CACHE_FILE_PREFIX,
-        BINARY_FILE_SUFFIX,
-        TEMP_FILE_ATTRS
-    );
+  /**
+   * Create temporary file based on the file path retrieved from local dir allocator
+   * instance. The file is created with .bin suffix. The created file has been granted
+   * posix file permissions available in TEMP_FILE_ATTRS.
+   *
+   * @param conf the configuration.
+   * @param localDirAllocator the local dir allocator instance.
+   * @return path of the file created.
+   * @throws IOException if IO error occurs while local dir allocator tries to retrieve path
+   * from local FS or file creation fails or permission set fails.
+   */
+  private static Path getTempFilePath(final Configuration conf,
+      final LocalDirAllocator localDirAllocator) throws IOException {
+    org.apache.hadoop.fs.Path path =
+        localDirAllocator.getLocalPathForWrite(CACHE_FILE_PREFIX, conf);
+    File dir = new File(path.getParent().toUri().getPath());
+    String prefix = path.getName();
+    File tmpFile = File.createTempFile(prefix, BINARY_FILE_SUFFIX, dir);
+    Path tmpFilePath = Paths.get(tmpFile.toURI());
+    return Files.setPosixFilePermissions(tmpFilePath, TEMP_FILE_ATTRS);
   }
 }

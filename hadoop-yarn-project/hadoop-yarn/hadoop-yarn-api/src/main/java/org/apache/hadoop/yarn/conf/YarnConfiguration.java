@@ -217,6 +217,16 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_RM_APPLICATION_MAX_TAG_LENGTH = 100;
 
+  public static final String NODE_STORE_ROOT_DIR_NUM_RETRIES =
+      RM_PREFIX + "nodestore-rootdir.num-retries";
+
+  public static final int NODE_STORE_ROOT_DIR_NUM_DEFAULT_RETRIES = 1000;
+
+  public static final String NODE_STORE_ROOT_DIR_RETRY_INTERVAL =
+      RM_PREFIX + "nodestore-rootdir.retry-interval-ms";
+
+  public static final int NODE_STORE_ROOT_DIR_RETRY_DEFAULT_INTERVAL = 1000;
+
   public static final String RM_APPLICATION_MASTER_SERVICE_PROCESSORS =
       RM_PREFIX + "application-master-service.processors";
 
@@ -3070,6 +3080,10 @@ public class YarnConfiguration extends Configuration {
       + "amrmproxy.ha.enable";
   public static final boolean DEFAULT_AMRM_PROXY_HA_ENABLED = false;
 
+  // Enable NM Dispatcher Metric default False.
+  public static final String NM_DISPATCHER_METRIC_ENABLED = NM_PREFIX + "dispatcher.metric.enable";
+  public static final boolean DEFAULT_NM_DISPATCHER_METRIC_ENABLED = false;
+
   /**
    * Default platform-agnostic CLASSPATH for YARN applications. A
    * comma-separated list of CLASSPATH entries. The parameter expansion marker
@@ -3952,6 +3966,11 @@ public class YarnConfiguration extends Configuration {
   public static final String FEDERATION_ENABLED = FEDERATION_PREFIX + "enabled";
   public static final boolean DEFAULT_FEDERATION_ENABLED = false;
 
+  public static final String FEDERATION_YARN_CLIENT_FAILOVER_RANDOM_ORDER =
+      FEDERATION_PREFIX + "failover.random.order";
+
+  public static final boolean DEFAULT_FEDERATION_YARN_CLIENT_FAILOVER_RANDOM_ORDER = false;
+
   public static final String FEDERATION_FAILOVER_ENABLED =
       FEDERATION_PREFIX + "failover.enabled";
   public static final boolean DEFAULT_FEDERATION_FAILOVER_ENABLED = true;
@@ -3999,6 +4018,11 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_FEDERATION_CLUSTER_RESOLVER_CLASS =
       "org.apache.hadoop.yarn.server.federation.resolver."
           + "DefaultSubClusterResolverImpl";
+
+  public static final String FEDERATION_FACADE_CACHE_CLASS =
+      FEDERATION_PREFIX + "cache.class";
+  public static final String DEFAULT_FEDERATION_FACADE_CACHE_CLASS =
+      "org.apache.hadoop.yarn.server.federation.cache.FederationJCache";
 
   // the maximum wait time for the first async heartbeat response
   public static final String FEDERATION_AMRMPROXY_HB_MAX_WAIT_MS =
@@ -4055,6 +4079,43 @@ public class YarnConfiguration extends Configuration {
       FEDERATION_STATESTORE_SQL_PREFIX + "max-connections";
 
   public static final int DEFAULT_FEDERATION_STATESTORE_SQL_MAXCONNECTIONS = 1;
+
+  /** Database connection pool minimum number of connections. **/
+  public static final String FEDERATION_STATESTORE_SQL_MINIMUMIDLE =
+      FEDERATION_STATESTORE_SQL_PREFIX + "minimum-idle";
+
+  /** The default value of the minimum number of connections in the database connection pool. **/
+  public static final int DEFAULT_FEDERATION_STATESTORE_SQL_MINIMUMIDLE = 1;
+
+  /** The name of the database connection pool. **/
+  public static final String FEDERATION_STATESTORE_POOL_NAME =
+      FEDERATION_STATESTORE_SQL_PREFIX + "pool-name";
+
+  /** The default name of the database connection pool. **/
+  public static final String DEFAULT_FEDERATION_STATESTORE_POOL_NAME =
+      "YARN-Federation-DataBasePool";
+
+  /** The maximum lifetime of a database connection. **/
+  public static final String FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME =
+      FEDERATION_STATESTORE_SQL_PREFIX + "max-life-time";
+
+  /** Database connection maximum lifetime. **/
+  public static final long DEFAULT_FEDERATION_STATESTORE_CONN_MAX_LIFE_TIME =
+      TimeUnit.MINUTES.toMillis(30);
+
+  /** Database connection idle timeout time. **/
+  public static final String FEDERATION_STATESTORE_CONN_IDLE_TIMEOUT_TIME =
+      FEDERATION_STATESTORE_SQL_PREFIX + "idle-time-out";
+
+  public static final long DEFAULT_FEDERATION_STATESTORE_CONN_IDLE_TIMEOUT_TIME =
+      TimeUnit.MINUTES.toMillis(10);
+
+  /** Database connection timeout time. **/
+  public static final String FEDERATION_STATESTORE_CONNECTION_TIMEOUT =
+      FEDERATION_STATESTORE_SQL_PREFIX + "conn-time-out";
+
+  public static final long DEFAULT_FEDERATION_STATESTORE_CONNECTION_TIMEOUT_TIME =
+      TimeUnit.SECONDS.toMillis(10);
 
   public static final String FEDERATION_STATESTORE_MAX_APPLICATIONS =
       FEDERATION_PREFIX + "state-store.max-applications";
@@ -4250,6 +4311,13 @@ public class YarnConfiguration extends Configuration {
           + "DefaultRequestInterceptorREST";
 
   /**
+   * ApplicationSubmissionContextInterceptor configurations.
+   **/
+  public static final String ROUTER_ASC_INTERCEPTOR_MAX_SIZE =
+      ROUTER_PREFIX + "asc-interceptor-max-size";
+  public static final String DEFAULT_ROUTER_ASC_INTERCEPTOR_MAX_SIZE = "1MB";
+
+  /**
    * The interceptor class used in FederationInterceptorREST should return
    * partial AppReports.
    */
@@ -4298,6 +4366,28 @@ public class YarnConfiguration extends Configuration {
   public static final String ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED =
       ROUTER_PREFIX + "interceptor.allow-partial-result.enable";
   public static final boolean DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED = false;
+
+  /** Router SubCluster Cleaner Thread Clean Interval Time. **/
+  public static final String ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME =
+      ROUTER_PREFIX + "subcluster.cleaner.interval.time";
+  public static final long DEFAULT_ROUTER_SUBCLUSTER_CLEANER_INTERVAL_TIME =
+      TimeUnit.SECONDS.toMillis(60);
+
+  /** Router SubCluster Timeout Allowed by Router. **/
+  public static final String ROUTER_SUBCLUSTER_EXPIRATION_TIME =
+      ROUTER_PREFIX + "subcluster.heartbeat.expiration.time";
+  public static final long DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME =
+      TimeUnit.MINUTES.toMillis(30);
+
+  /** Router Thread Pool Schedule Thread Number. **/
+  public static final String ROUTER_SCHEDULED_EXECUTOR_THREADS =
+      ROUTER_PREFIX + "scheduled.executor.threads";
+  public static final int DEFAULT_ROUTER_SCHEDULED_EXECUTOR_THREADS = 1;
+
+  /** Enable DeregisterSubCluster, enabled by default. **/
+  public static final String ROUTER_DEREGISTER_SUBCLUSTER_ENABLED =
+      ROUTER_PREFIX + "deregister.subcluster.enabled";
+  public static final boolean DEFAULT_ROUTER_DEREGISTER_SUBCLUSTER_ENABLED = true;
 
   ////////////////////////////////
   // CSI Volume configs

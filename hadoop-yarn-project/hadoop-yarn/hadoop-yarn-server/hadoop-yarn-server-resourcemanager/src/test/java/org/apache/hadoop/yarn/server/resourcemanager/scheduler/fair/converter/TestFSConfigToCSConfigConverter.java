@@ -194,6 +194,8 @@ public class TestFSConfigToCSConfigConverter {
 
     assertNull("root.users user-limit-factor should be null",
             conf.get(PREFIX + "root.users." + USER_LIMIT_FACTOR));
+    assertEquals("root.users auto-queue-creation-v2.enabled", "true",
+            conf.get(PREFIX + "root.users.auto-queue-creation-v2.enabled"));
 
     assertEquals("root.default user-limit-factor", "-1.0",
             conf.get(PREFIX + "root.default.user-limit-factor"));
@@ -203,6 +205,8 @@ public class TestFSConfigToCSConfigConverter {
 
     assertEquals("root.admins.bob user-limit-factor", "-1.0",
             conf.get(PREFIX + "root.admins.bob.user-limit-factor"));
+    assertNull("root.admin.bob auto-queue-creation-v2.enabled should be null",
+            conf.get(PREFIX + "root.admin.bob.auto-queue-creation-v2.enabled"));
   }
 
   @Test

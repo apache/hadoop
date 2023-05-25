@@ -179,6 +179,7 @@ public class VariableContext {
   /**
    * Returns the dataset referenced by the name.
    * @param name Name of the set to be returned.
+   * @return the dataset referenced by the name.
    */
   public Set<String> getExtraDataset(String name) {
     return extraDataset.get(name);

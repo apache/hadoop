@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.oncrpc;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -26,6 +27,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -172,15 +174,18 @@ public final class RpcUtil {
    */
   @ChannelHandler.Sharable
   private static final class RpcUdpResponseStage extends
-      ChannelInboundHandlerAdapter {
+          SimpleChannelInboundHandler<RpcResponse> {
+    public RpcUdpResponseStage() {
+      // do not auto release the RpcResponse message.
+      super(false);
+    }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg)
-        throws Exception {
-      RpcResponse r = (RpcResponse) msg;
-      // TODO: check out https://github.com/netty/netty/issues/1282 for
-      // correct usage
-      ctx.channel().writeAndFlush(r.data());
+    protected void channelRead0(ChannelHandlerContext ctx,
+                                RpcResponse response) throws Exception {
+      ByteBuf buf = Unpooled.wrappedBuffer(response.data());
+      ctx.writeAndFlush(new DatagramPacket(
+              buf, (InetSocketAddress) response.recipient()));
     }
   }
 }

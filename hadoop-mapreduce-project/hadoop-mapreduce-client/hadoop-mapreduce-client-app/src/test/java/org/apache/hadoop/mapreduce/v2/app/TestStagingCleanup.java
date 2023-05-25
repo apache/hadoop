@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
@@ -61,10 +61,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Test;
 
 
 /**
@@ -79,7 +78,7 @@ import org.junit.jupiter.api.Timeout;
    private final static RecordFactory recordFactory = RecordFactoryProvider.
        getRecordFactory(null);
 
-   @AfterEach
+   @After
    public void tearDown() {
      conf.setBoolean(MRJobConfig.PRESERVE_FAILED_TASK_FILES, false);
    }
@@ -136,7 +135,7 @@ import org.junit.jupiter.api.Timeout;
      JobId jobid = recordFactory.newRecordInstance(JobId.class);
      jobid.setAppId(appId);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
-     Assertions.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
+     Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
          JobStateInternal.RUNNING, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
      appMaster.init(conf);
@@ -147,8 +146,7 @@ import org.junit.jupiter.api.Timeout;
      verify(fs).delete(stagingJobPath, true);
    }
 
-   @Test
-   @Timeout(30000)
+   @Test (timeout = 30000)
    public void testNoDeletionofStagingOnReboot() throws IOException {
      conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
      fs = mock(FileSystem.class);
@@ -160,7 +158,7 @@ import org.junit.jupiter.api.Timeout;
          0);
      ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
-     Assertions.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
+     Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
          JobStateInternal.REBOOT, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
      appMaster.init(conf);
@@ -199,8 +197,7 @@ import org.junit.jupiter.api.Timeout;
      verify(fs).delete(stagingJobPath, true);
    }
    
-   @Test
-   @Timeout(30000)
+   @Test (timeout = 30000)
    public void testDeletionofStagingOnKill() throws IOException {
      conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
      fs = mock(FileSystem.class);
@@ -218,7 +215,7 @@ import org.junit.jupiter.api.Timeout;
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc);
      appMaster.init(conf);
      //simulate the process being killed
-     MRAppMaster.MRAppMasterShutdownHook hook =
+     MRAppMaster.MRAppMasterShutdownHook hook = 
        new MRAppMaster.MRAppMasterShutdownHook(appMaster);
      hook.run();
      verify(fs, times(0)).delete(stagingJobPath, true);
@@ -245,14 +242,13 @@ import org.junit.jupiter.api.Timeout;
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc); //no retry
      appMaster.init(conf);
-     assertTrue(appMaster.isLastAMRetry(),
-         "appMaster.isLastAMRetry() is false");
+     assertTrue("appMaster.isLastAMRetry() is false", appMaster.isLastAMRetry());
      //simulate the process being killed
      MRAppMaster.MRAppMasterShutdownHook hook = 
        new MRAppMaster.MRAppMasterShutdownHook(appMaster);
      hook.run();
-     assertTrue(appMaster.isInState(Service.STATE.STOPPED),
-         "MRAppMaster isn't stopped");
+     assertTrue("MRAppMaster isn't stopped",
+                appMaster.isInState(Service.STATE.STOPPED));
      verify(fs).delete(stagingJobPath, true);
    }
 
@@ -274,7 +270,7 @@ import org.junit.jupiter.api.Timeout;
      JobId jobid = recordFactory.newRecordInstance(JobId.class);
      jobid.setAppId(appId);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
-     Assertions.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
+     Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
              JobStateInternal.FAILED, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
      appMaster.init(conf);
@@ -302,7 +298,7 @@ import org.junit.jupiter.api.Timeout;
      JobId jobid = recordFactory.newRecordInstance(JobId.class);
      jobid.setAppId(appId);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
-     Assertions.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
+     Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
              JobStateInternal.RUNNING, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
      appMaster.init(conf);
@@ -328,7 +324,7 @@ import org.junit.jupiter.api.Timeout;
     JobId jobid = recordFactory.newRecordInstance(JobId.class);
     jobid.setAppId(appId);
     ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
-    Assertions.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
+    Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
     MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
             JobStateInternal.RUNNING, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
     appMaster.init(conf);
@@ -359,7 +355,7 @@ import org.junit.jupiter.api.Timeout;
     JobId jobid = recordFactory.newRecordInstance(JobId.class);
     jobid.setAppId(appId);
     ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
-    Assertions.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
+    Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
     MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
             JobStateInternal.RUNNING, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
     appMaster.init(conf);
@@ -587,8 +583,7 @@ import org.junit.jupiter.api.Timeout;
     };
   }
 
-  @Test
-  @Timeout(20000)
+  @Test(timeout=20000)
   public void testStagingCleanupOrder() throws Exception {
     MRAppTestCleanup app = new MRAppTestCleanup(1, 1, true,
         this.getClass().getName(), true);
@@ -603,7 +598,7 @@ import org.junit.jupiter.api.Timeout;
     }
 
     // assert ContainerAllocatorStopped and then tagingDirCleanedup
-    Assertions.assertEquals(1, app.ContainerAllocatorStopped);
-    Assertions.assertEquals(2, app.stagingDirCleanedup);
+    Assert.assertEquals(1, app.ContainerAllocatorStopped);
+    Assert.assertEquals(2, app.stagingDirCleanedup);
   }
  }

@@ -48,8 +48,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT;
@@ -185,9 +183,6 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -341,18 +336,15 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.Lists;
-import org.apache.log4j.Logger;
-import org.apache.log4j.Appender;
-import org.apache.log4j.AsyncAppender;
 import org.eclipse.jetty.util.ajax.JSON;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-
-import org.slf4j.LoggerFactory;
 
 /**
  * FSNamesystem is a container of both transient
@@ -387,8 +379,7 @@ import org.slf4j.LoggerFactory;
 public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     NameNodeMXBean, ReplicatedBlocksMBean, ECBlockGroupsMBean {
 
-  public static final org.slf4j.Logger LOG = LoggerFactory
-      .getLogger(FSNamesystem.class.getName());
+  public static final Logger LOG = LoggerFactory.getLogger(FSNamesystem.class);
 
   // The following are private configurations
   public static final String DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED =
@@ -405,7 +396,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final String contextFieldSeparator;
 
   boolean isAuditEnabled() {
-    return (!isDefaultAuditLogger || auditLog.isInfoEnabled())
+    return (!isDefaultAuditLogger || AUDIT_LOG.isInfoEnabled())
         && !auditLoggers.isEmpty();
   }
 
@@ -461,7 +452,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   private void appendClientPortToCallerContextIfAbsent() {
-    final CallerContext ctx = CallerContext.getCurrent();
+    CallerContext ctx = CallerContext.getCurrent();
     if (isClientPortInfoAbsent(ctx)) {
       String origContext = ctx == null ? null : ctx.getContext();
       byte[] origSignature = ctx == null ? null : ctx.getSignature();
@@ -471,6 +462,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               .setSignature(origSignature)
               .build());
     }
+    ctx = CallerContext.getCurrent();
+    if (isFromProxyUser(ctx)) {
+      CallerContext.setCurrent(
+          new CallerContext.Builder(ctx.getContext(), contextFieldSeparator)
+              .append(CallerContext.PROXY_USER_PORT, String.valueOf(Server.getRemotePort()))
+              .setSignature(ctx.getSignature())
+              .build());
+    }
   }
 
   private boolean isClientPortInfoAbsent(CallerContext ctx){
@@ -478,6 +477,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         || !ctx.getContext().contains(CallerContext.CLIENT_PORT_STR);
   }
 
+  private boolean isFromProxyUser(CallerContext ctx) {
+    return ctx != null && ctx.getContext() != null &&
+        ctx.getContext().contains(CallerContext.REAL_USER_STR);
+  }
   /**
    * Logger for audit events, noting successful FSNamesystem operations. Emits
    * to FSNamesystem.audit at INFO. Each event causes a set of tab-separated
@@ -491,8 +494,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * perm=&lt;permissions (optional)&gt;
    * </code>
    */
-  public static final Log auditLog = LogFactory.getLog(
-      FSNamesystem.class.getName() + ".audit");
+  public static final Logger AUDIT_LOG =
+      LoggerFactory.getLogger(FSNamesystem.class.getName() + ".audit");
 
   private final int maxCorruptFileBlocksReturn;
   private final boolean isPermissionEnabled;
@@ -862,11 +865,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throws IOException {
     provider = DFSUtil.createKeyProviderCryptoExtension(conf);
     LOG.info("KeyProvider: " + provider);
-    if (conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY,
-                        DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT)) {
-      LOG.info("Enabling async auditlog");
-      enableAsyncAuditLog(conf);
-    }
+    checkForAsyncLogEnabledByOldConfigs(conf);
     auditLogWithRemotePort =
         conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_WITH_REMOTE_PORT_KEY,
             DFS_NAMENODE_AUDIT_LOG_WITH_REMOTE_PORT_DEFAULT);
@@ -1077,6 +1076,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       LOG.error(getClass().getSimpleName() + " initialization failed.", re);
       close();
       throw re;
+    }
+  }
+
+  private static void checkForAsyncLogEnabledByOldConfigs(Configuration conf) {
+    // dfs.namenode.audit.log.async is no longer in use. Use log4j properties instead.
+    if (conf.getBoolean("dfs.namenode.audit.log.async", false)) {
+      LOG.warn("Use log4j properties to enable async log for audit logs. "
+          + "dfs.namenode.audit.log.async is no longer in use.");
     }
   }
 
@@ -4177,7 +4184,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, src);
       throw e;
     }
-    if (needLocation && isObserver()) {
+    if (dl != null && needLocation && isObserver()) {
       for (HdfsFileStatus fs : dl.getPartialListing()) {
         if (fs instanceof HdfsLocatedFileStatus) {
           LocatedBlocks lbs = ((HdfsLocatedFileStatus) fs).getLocatedBlocks();
@@ -5943,6 +5950,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     // Ensure we record the new generation stamp
     getEditLog().logSync();
+    LOG.info("bumpBlockGenerationStamp({}, client={}) success",
+        locatedBlock.getBlock(), clientName);
     return locatedBlock;
   }
   
@@ -8783,15 +8792,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         FileStatus status, CallerContext callerContext, UserGroupInformation ugi,
         DelegationTokenSecretManager dtSecretManager) {
 
-      if (auditLog.isDebugEnabled() ||
-          (auditLog.isInfoEnabled() && !debugCmdSet.contains(cmd))) {
+      if (AUDIT_LOG.isDebugEnabled() ||
+          (AUDIT_LOG.isInfoEnabled() && !debugCmdSet.contains(cmd))) {
         final StringBuilder sb = STRING_BUILDER.get();
         src = escapeJava(src);
         dst = escapeJava(dst);
         sb.setLength(0);
+        String ipAddr = addr != null ? "/" + addr.getHostAddress() : "null";
         sb.append("allowed=").append(succeeded).append("\t")
             .append("ugi=").append(userName).append("\t")
-            .append("ip=").append(addr).append("\t")
+            .append("ip=").append(ipAddr).append("\t")
             .append("cmd=").append(cmd).append("\t")
             .append("src=").append(src).append("\t")
             .append("dst=").append(dst).append("\t");
@@ -8853,38 +8863,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
 
     public void logAuditMessage(String message) {
-      auditLog.info(message);
+      AUDIT_LOG.info(message);
     }
   }
 
-  private static void enableAsyncAuditLog(Configuration conf) {
-    if (!(auditLog instanceof Log4JLogger)) {
-      LOG.warn("Log4j is required to enable async auditlog");
-      return;
-    }
-    Logger logger = ((Log4JLogger)auditLog).getLogger();
-    @SuppressWarnings("unchecked")
-    List<Appender> appenders = Collections.list(logger.getAllAppenders());
-    // failsafe against trying to async it more than once
-    if (!appenders.isEmpty() && !(appenders.get(0) instanceof AsyncAppender)) {
-      AsyncAppender asyncAppender = new AsyncAppender();
-      asyncAppender.setBlocking(conf.getBoolean(
-          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_KEY,
-          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_DEFAULT
-      ));
-      asyncAppender.setBufferSize(conf.getInt(
-          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_KEY,
-          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_DEFAULT
-      ));
-      // change logger to have an async appender containing all the
-      // previously configured appenders
-      for (Appender appender : appenders) {
-        logger.removeAppender(appender);
-        asyncAppender.addAppender(appender);
-      }
-      logger.addAppender(asyncAppender);        
-    }
-  }
   /**
    * Return total number of Sync Operations on FSEditLog.
    */

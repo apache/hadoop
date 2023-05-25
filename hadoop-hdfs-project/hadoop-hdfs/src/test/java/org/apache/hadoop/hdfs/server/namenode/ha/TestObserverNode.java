@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.ServiceFailedException;
@@ -57,7 +58,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
@@ -71,6 +71,7 @@ import org.apache.hadoop.hdfs.tools.GetGroups;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.junit.After;
@@ -356,7 +357,7 @@ public class TestObserverNode {
     assertSentTo(2);
 
     // Set observer to safe mode.
-    dfsCluster.getFileSystem(2).setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    dfsCluster.getFileSystem(2).setSafeMode(SafeModeAction.ENTER);
 
     // Mock block manager for observer to generate some fake blocks which
     // will trigger the (retriable) safe mode exception.
@@ -379,7 +380,7 @@ public class TestObserverNode {
     Mockito.reset(bmSpy);
 
     // Remove safe mode on observer, request should still go to it.
-    dfsCluster.getFileSystem(2).setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    dfsCluster.getFileSystem(2).setSafeMode(SafeModeAction.LEAVE);
     dfs.open(testPath).close();
     assertSentTo(2);
   }
@@ -650,6 +651,17 @@ public class TestObserverNode {
         fail("Unexpected exception: " + e);
       }
     }
+  }
+
+  @Test
+  public void testGetListingForDeletedDir() throws Exception {
+    Path path = new Path("/dir1/dir2/testFile");
+    dfs.create(path).close();
+
+    assertTrue(dfs.delete(new Path("/dir1/dir2"), true));
+
+    LambdaTestUtils.intercept(FileNotFoundException.class,
+        () -> dfs.listLocatedStatus(new Path("/dir1/dir2")));
   }
 
   @Test

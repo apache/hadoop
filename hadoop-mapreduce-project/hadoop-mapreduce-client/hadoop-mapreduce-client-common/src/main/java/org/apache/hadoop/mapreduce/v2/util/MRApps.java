@@ -60,8 +60,6 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.util.ApplicationClassLoader;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.ContainerLogAppender;
-import org.apache.hadoop.yarn.ContainerRollingLogAppender;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -588,8 +586,7 @@ public class MRApps extends Apps {
   
   /**
    * Add the JVM system properties necessary to configure
-   *  {@link ContainerLogAppender} or
-   *  {@link ContainerRollingLogAppender}.
+   * {@link org.apache.log4j.RollingFileAppender}.
    *
    * @param task for map/reduce, or null for app master
    * @param vargs the argument list to append to

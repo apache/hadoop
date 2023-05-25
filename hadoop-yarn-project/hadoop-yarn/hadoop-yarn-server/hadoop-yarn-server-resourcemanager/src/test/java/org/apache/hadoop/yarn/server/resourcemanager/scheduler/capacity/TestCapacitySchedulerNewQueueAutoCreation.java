@@ -520,12 +520,12 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     empty = cs.getQueue("root.empty-auto-parent");
     Assert.assertTrue("empty-auto-parent is not a ParentQueue",
-        empty instanceof ParentQueue);
+        empty instanceof AbstractParentQueue);
     Assert.assertEquals("empty-auto-parent has children",
         0, empty.getChildQueues().size());
     Assert.assertTrue("empty-auto-parent is not eligible " +
             "for auto queue creation",
-        ((ParentQueue)empty).isEligibleForAutoQueueCreation());
+        ((AbstractParentQueue)empty).isEligibleForAutoQueueCreation());
   }
 
   @Test
@@ -1257,6 +1257,17 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     Assert.assertNull("root.a.a-auto should have been removed", aAuto);
     Assert.assertNull("root.e.e1-auto should have been removed", eAuto);
+  }
+
+  @Test()
+  public void testAutoCreateInvalidParent() throws Exception {
+    startScheduler();
+    Assert.assertThrows(SchedulerDynamicEditException.class,
+        () -> createQueue("invalid.queue"));
+    Assert.assertThrows(SchedulerDynamicEditException.class,
+        () -> createQueue("invalid.queue.longer"));
+    Assert.assertThrows(SchedulerDynamicEditException.class,
+        () -> createQueue("invalidQueue"));
   }
 
   protected AbstractLeafQueue createQueue(String queuePath) throws YarnException,

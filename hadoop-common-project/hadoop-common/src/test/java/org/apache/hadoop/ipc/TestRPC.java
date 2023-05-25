@@ -378,7 +378,7 @@ public class TestRPC extends TestRpcBase {
     assertEquals(confReaders, server.getNumReaders());
 
     server = newServerBuilder(conf)
-        .setNumHandlers(1).setnumReaders(3).setQueueSizePerHandler(200)
+        .setNumHandlers(1).setNumReaders(3).setQueueSizePerHandler(200)
         .setVerbose(false).build();
 
     assertEquals(3, server.getNumReaders());
@@ -1336,11 +1336,15 @@ public class TestRPC extends TestRpcBase {
           3000, getLongCounter("RpcProcessingTimeNumOps", rpcMetrics));
       assertEquals("Expected correct rpc lock wait count",
           3000, getLongCounter("RpcLockWaitTimeNumOps", rpcMetrics));
+      assertEquals("Expected correct rpc response count",
+          3000, getLongCounter("RpcResponseTimeNumOps", rpcMetrics));
       assertEquals("Expected zero rpc lock wait time",
           0, getDoubleGauge("RpcLockWaitTimeAvgTime", rpcMetrics), 0.001);
       MetricsAsserts.assertQuantileGauges("RpcQueueTime" + interval + "s",
           rpcMetrics);
       MetricsAsserts.assertQuantileGauges("RpcProcessingTime" + interval + "s",
+          rpcMetrics);
+      MetricsAsserts.assertQuantileGauges("RpcResponseTime" + interval + "s",
           rpcMetrics);
       String actualUserVsCon = MetricsAsserts
           .getStringMetric("NumOpenConnectionsPerUser", rpcMetrics);
@@ -1849,6 +1853,11 @@ public class TestRPC extends TestRpcBase {
           // if it wasn't fatal, verify there's only one open connection.
           Connection[] conns = server.getConnections();
           assertEquals(reqName, 1, conns.length);
+          String connectionInfo = conns[0].toString();
+          LOG.info("Connection is from: {}", connectionInfo);
+          assertEquals(
+              "Connection string representation should include both IP address and Host name", 2,
+              connectionInfo.split(" / ").length);
           // verify whether the connection should have been reused.
           if (isDisconnected) {
             assertNotSame(reqName, lastConn, conns[0]);

@@ -20,10 +20,10 @@ package org.apache.hadoop.mapreduce.v2.app.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.StringReader;
 import java.util.List;
@@ -54,8 +54,8 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -103,7 +103,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
         Guice.createInjector(new WebServletModule()));
   }
 
-  @BeforeEach
+  @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -128,7 +128,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals(1, json.length(), "incorrect number of elements");
+    assertEquals("incorrect number of elements", 1, json.length());
     JSONObject jobs = json.getJSONObject("jobs");
     JSONArray arr = jobs.getJSONArray("job");
     JSONObject info = arr.getJSONObject(0);
@@ -146,7 +146,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals(1, json.length(), "incorrect number of elements");
+    assertEquals("incorrect number of elements", 1, json.length());
     JSONObject jobs = json.getJSONObject("jobs");
     JSONArray arr = jobs.getJSONArray("job");
     JSONObject info = arr.getJSONObject(0);
@@ -163,7 +163,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals(1, json.length(), "incorrect number of elements");
+    assertEquals("incorrect number of elements", 1, json.length());
     JSONObject jobs = json.getJSONObject("jobs");
     JSONArray arr = jobs.getJSONArray("job");
     JSONObject info = arr.getJSONObject(0);
@@ -187,9 +187,9 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList jobs = dom.getElementsByTagName("jobs");
-    assertEquals(1, jobs.getLength(), "incorrect number of elements");
+    assertEquals("incorrect number of elements", 1, jobs.getLength());
     NodeList job = dom.getElementsByTagName("job");
-    assertEquals(1, job.getLength(), "incorrect number of elements");
+    assertEquals("incorrect number of elements", 1, job.getLength());
     verifyAMJobXML(job, appContext);
 
   }
@@ -207,7 +207,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals(1, json.length(), "incorrect number of elements");
+      assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("job");
       verifyAMJob(info, jobsMap.get(id));
     }
@@ -227,7 +227,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals(1, json.length(), "incorrect number of elements");
+      assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("job");
       verifyAMJob(info, jobsMap.get(id));
     }
@@ -245,7 +245,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals(1, json.length(), "incorrect number of elements");
+      assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("job");
       verifyAMJob(info, jobsMap.get(id));
     }
@@ -267,7 +267,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals(3, exception.length(), "incorrect number of elements");
+      assertEquals("incorrect number of elements", 3, exception.length());
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
@@ -295,7 +295,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals(3, exception.length(), "incorrect number of elements");
+      assertEquals("incorrect number of elements", 3, exception.length());
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
@@ -319,7 +319,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals(3, exception.length(), "incorrect number of elements");
+      assertEquals("incorrect number of elements", 3, exception.length());
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
@@ -383,7 +383,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals(3, exception.length(), "incorrect number of elements");
+      assertEquals("incorrect number of elements", 3, exception.length());
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
@@ -425,7 +425,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
 
   public void verifyAMJob(JSONObject info, Job job) throws JSONException {
 
-    assertEquals(31, info.length(), "incorrect number of elements");
+    assertEquals("incorrect number of elements", 31, info.length());
 
     // everyone access fields
     verifyAMJobGeneric(job, info.getString("id"), info.getString("user"),
@@ -476,8 +476,8 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
         } else {
           fail("should have acls in the web service info");
         }
-        assertTrue(found,
-                "acl: " + expectName + " not found in webservice output");
+        assertTrue("acl: " + expectName + " not found in webservice output",
+            found);
       }
     }
 
@@ -485,14 +485,14 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
 
   public void verifyAMJobXML(NodeList nodes, AppContext appContext) {
 
-    assertEquals(1, nodes.getLength(), "incorrect number of elements");
+    assertEquals("incorrect number of elements", 1, nodes.getLength());
 
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
 
       Job job = appContext.getJob(MRApps.toJobID(WebServicesTestUtils
           .getXmlString(element, "id")));
-      assertNotNull(job, "Job not found - output incorrect");
+      assertNotNull("Job not found - output incorrect", job);
 
       verifyAMJobGeneric(job, WebServicesTestUtils.getXmlString(element, "id"),
           WebServicesTestUtils.getXmlString(element, "user"),
@@ -551,8 +551,8 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
           } else {
             fail("should have acls in the web service info");
           }
-          assertTrue(found,
-                  "acl: " + expectName + " not found in webservice output");
+          assertTrue("acl: " + expectName + " not found in webservice output",
+              found);
         }
       }
     }
@@ -572,21 +572,21 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
     WebServicesTestUtils.checkStringMatch("state", job.getState().toString(),
         state);
 
-    assertEquals(report.getStartTime(), startTime, "startTime incorrect");
-    assertEquals(report.getFinishTime(), finishTime, "finishTime incorrect");
-    assertEquals(Times.elapsed(report.getStartTime(), report.getFinishTime()),
-        elapsedTime, "elapsedTime incorrect");
-    assertEquals(job.getTotalMaps(), mapsTotal, "mapsTotal incorrect");
-    assertEquals(job.getCompletedMaps(), mapsCompleted,
-            "mapsCompleted incorrect");
-    assertEquals(job.getTotalReduces(), reducesTotal,
-            "reducesTotal incorrect");
-    assertEquals(job.getCompletedReduces(), reducesCompleted,
-            "reducesCompleted incorrect");
-    assertEquals(report.getMapProgress() * 100, mapProgress, 0,
-            "mapProgress incorrect");
-    assertEquals(report.getReduceProgress() * 100, reduceProgress, 0,
-            "reduceProgress incorrect");
+    assertEquals("startTime incorrect", report.getStartTime(), startTime);
+    assertEquals("finishTime incorrect", report.getFinishTime(), finishTime);
+    assertEquals("elapsedTime incorrect",
+        Times.elapsed(report.getStartTime(), report.getFinishTime()),
+        elapsedTime);
+    assertEquals("mapsTotal incorrect", job.getTotalMaps(), mapsTotal);
+    assertEquals("mapsCompleted incorrect", job.getCompletedMaps(),
+        mapsCompleted);
+    assertEquals("reducesTotal incorrect", job.getTotalReduces(), reducesTotal);
+    assertEquals("reducesCompleted incorrect", job.getCompletedReduces(),
+        reducesCompleted);
+    assertEquals("mapProgress incorrect", report.getMapProgress() * 100,
+        mapProgress, 0);
+    assertEquals("reduceProgress incorrect", report.getReduceProgress() * 100,
+        reduceProgress, 0);
   }
 
   public void verifyAMJobGenericSecure(Job job, int mapsPending,
@@ -609,27 +609,28 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
     WebServicesTestUtils.checkStringMatch("diagnostics", diagString,
         diagnostics);
 
-    assertEquals(job.isUber(), uberized, "isUber incorrect");
+    assertEquals("isUber incorrect", job.isUber(), uberized);
 
     // unfortunately the following fields are all calculated in JobInfo
     // so not easily accessible without doing all the calculations again.
     // For now just make sure they are present.
-    assertTrue(mapsPending >= 0, "mapsPending not >= 0");
-    assertTrue(mapsRunning >= 0, "mapsRunning not >= 0");
-    assertTrue(reducesPending >= 0, "reducesPending not >= 0");
-    assertTrue(reducesRunning >= 0, "reducesRunning not >= 0");
+    assertTrue("mapsPending not >= 0", mapsPending >= 0);
+    assertTrue("mapsRunning not >= 0", mapsRunning >= 0);
+    assertTrue("reducesPending not >= 0", reducesPending >= 0);
+    assertTrue("reducesRunning not >= 0", reducesRunning >= 0);
 
-    assertTrue(newReduceAttempts >= 0, "newReduceAttempts not >= 0");
-    assertTrue(runningReduceAttempts >= 0, "runningReduceAttempts not >= 0");
-    assertTrue(failedReduceAttempts >= 0, "failedReduceAttempts not >= 0");
-    assertTrue(killedReduceAttempts >= 0, "killedReduceAttempts not >= 0");
-    assertTrue(successfulReduceAttempts >= 0, "successfulReduceAttempts not >= 0");
+    assertTrue("newReduceAttempts not >= 0", newReduceAttempts >= 0);
+    assertTrue("runningReduceAttempts not >= 0", runningReduceAttempts >= 0);
+    assertTrue("failedReduceAttempts not >= 0", failedReduceAttempts >= 0);
+    assertTrue("killedReduceAttempts not >= 0", killedReduceAttempts >= 0);
+    assertTrue("successfulReduceAttempts not >= 0",
+        successfulReduceAttempts >= 0);
 
-    assertTrue(newMapAttempts >= 0, "newMapAttempts not >= 0");
-    assertTrue(runningMapAttempts >= 0, "runningMapAttempts not >= 0");
-    assertTrue(failedMapAttempts >= 0, "failedMapAttempts not >= 0");
-    assertTrue(killedMapAttempts >= 0, "killedMapAttempts not >= 0");
-    assertTrue(successfulMapAttempts >= 0, "successfulMapAttempts not >= 0");
+    assertTrue("newMapAttempts not >= 0", newMapAttempts >= 0);
+    assertTrue("runningMapAttempts not >= 0", runningMapAttempts >= 0);
+    assertTrue("failedMapAttempts not >= 0", failedMapAttempts >= 0);
+    assertTrue("killedMapAttempts not >= 0", killedMapAttempts >= 0);
+    assertTrue("successfulMapAttempts not >= 0", successfulMapAttempts >= 0);
 
   }
 
@@ -646,8 +647,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals(1, json.length(),
-              "incorrect number of elements");
+      assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("jobCounters");
       verifyAMJobCounters(info, jobsMap.get(id));
     }
@@ -666,8 +666,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals(1, json.length(),
-              "incorrect number of elements");
+      assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("jobCounters");
       verifyAMJobCounters(info, jobsMap.get(id));
     }
@@ -685,8 +684,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals(1, json.length(),
-              "incorrect number of elements");
+      assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("jobCounters");
       verifyAMJobCounters(info, jobsMap.get(id));
     }
@@ -718,8 +716,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
   public void verifyAMJobCounters(JSONObject info, Job job)
       throws JSONException {
 
-    assertEquals(2, info.length(),
-            "incorrect number of elements");
+    assertEquals("incorrect number of elements", 2, info.length());
 
     WebServicesTestUtils.checkStringMatch("id", MRApps.toString(job.getID()),
         info.getString("id"));
@@ -729,22 +726,22 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
     for (int i = 0; i < counterGroups.length(); i++) {
       JSONObject counterGroup = counterGroups.getJSONObject(i);
       String name = counterGroup.getString("counterGroupName");
-      assertTrue((name != null && !name.isEmpty()), "name not set");
+      assertTrue("name not set", (name != null && !name.isEmpty()));
       JSONArray counters = counterGroup.getJSONArray("counter");
       for (int j = 0; j < counters.length(); j++) {
         JSONObject counter = counters.getJSONObject(j);
         String counterName = counter.getString("name");
-        assertTrue((counterName != null && !counterName.isEmpty()),
-                "counter name not set");
+        assertTrue("counter name not set",
+            (counterName != null && !counterName.isEmpty()));
 
         long mapValue = counter.getLong("mapCounterValue");
-        assertTrue(mapValue >= 0, "mapCounterValue  >= 0");
+        assertTrue("mapCounterValue  >= 0", mapValue >= 0);
 
         long reduceValue = counter.getLong("reduceCounterValue");
-        assertTrue(reduceValue >= 0, "reduceCounterValue  >= 0");
+        assertTrue("reduceCounterValue  >= 0", reduceValue >= 0);
 
         long totalValue = counter.getLong("totalCounterValue");
-        assertTrue(totalValue >= 0, "totalCounterValue  >= 0");
+        assertTrue("totalCounterValue  >= 0", totalValue >= 0);
 
       }
     }
@@ -755,7 +752,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
 
-      assertNotNull(job, "Job not found - output incorrect");
+      assertNotNull("Job not found - output incorrect", job);
 
       WebServicesTestUtils.checkStringMatch("id", MRApps.toString(job.getID()),
           WebServicesTestUtils.getXmlString(element, "id"));
@@ -765,30 +762,29 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
 
       for (int j = 0; j < groups.getLength(); j++) {
         Element counters = (Element) groups.item(j);
-        assertNotNull(counters,
-                "should have counters in the web service info");
+        assertNotNull("should have counters in the web service info", counters);
         String name = WebServicesTestUtils.getXmlString(counters,
             "counterGroupName");
-        assertTrue((name != null && !name.isEmpty()), "name not set");
+        assertTrue("name not set", (name != null && !name.isEmpty()));
         NodeList counterArr = counters.getElementsByTagName("counter");
         for (int z = 0; z < counterArr.getLength(); z++) {
           Element counter = (Element) counterArr.item(z);
           String counterName = WebServicesTestUtils.getXmlString(counter,
               "name");
-          assertTrue((counterName != null && !counterName.isEmpty()),
-                  "counter name not set");
+          assertTrue("counter name not set",
+              (counterName != null && !counterName.isEmpty()));
 
           long mapValue = WebServicesTestUtils.getXmlLong(counter,
               "mapCounterValue");
-          assertTrue(mapValue >= 0, "mapCounterValue not >= 0");
+          assertTrue("mapCounterValue not >= 0", mapValue >= 0);
 
           long reduceValue = WebServicesTestUtils.getXmlLong(counter,
               "reduceCounterValue");
-          assertTrue(reduceValue >= 0, "reduceCounterValue  >= 0");
+          assertTrue("reduceCounterValue  >= 0", reduceValue >= 0);
 
           long totalValue = WebServicesTestUtils.getXmlLong(counter,
               "totalCounterValue");
-          assertTrue(totalValue >= 0, "totalCounterValue  >= 0");
+          assertTrue("totalCounterValue  >= 0", totalValue >= 0);
         }
       }
     }
@@ -807,7 +803,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals(1, json.length(), "incorrect number of elements");
+      assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("jobAttempts");
       verifyJobAttempts(info, jobsMap.get(id));
     }
@@ -826,7 +822,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals(1, json.length(), "incorrect number of elements");
+      assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("jobAttempts");
       verifyJobAttempts(info, jobsMap.get(id));
     }
@@ -845,7 +841,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals(1, json.length(), "incorrect number of elements");
+      assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("jobAttempts");
       verifyJobAttempts(info, jobsMap.get(id));
     }
@@ -870,8 +866,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       is.setCharacterStream(new StringReader(xml));
       Document dom = db.parse(is);
       NodeList attempts = dom.getElementsByTagName("jobAttempts");
-      assertEquals(1, attempts.getLength(),
-              "incorrect number of elements");
+      assertEquals("incorrect number of elements", 1, attempts.getLength());
       NodeList info = dom.getElementsByTagName("jobAttempt");
       verifyJobAttemptsXML(info, jobsMap.get(id));
     }
@@ -881,8 +876,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       throws JSONException {
 
     JSONArray attempts = info.getJSONArray("jobAttempt");
-    assertEquals(2, attempts.length(),
-            "incorrect number of elements");
+    assertEquals("incorrect number of elements", 2, attempts.length());
     for (int i = 0; i < attempts.length(); i++) {
       JSONObject attempt = attempts.getJSONObject(i);
       verifyJobAttemptsGeneric(job, attempt.getString("nodeHttpAddress"),
@@ -894,8 +888,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
 
   public void verifyJobAttemptsXML(NodeList nodes, Job job) {
 
-    assertEquals(2, nodes.getLength(),
-            "incorrect number of elements");
+    assertEquals("incorrect number of elements", 2, nodes.getLength());
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
       verifyJobAttemptsGeneric(job,
@@ -921,17 +914,17 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
             + nmHttpPort, nodeHttpAddress);
         WebServicesTestUtils.checkStringMatch("nodeId",
             NodeId.newInstance(nmHost, nmPort).toString(), nodeId);
-        assertTrue(startTime > 0, "startime not greater than 0");
+        assertTrue("startime not greater than 0", startTime > 0);
         WebServicesTestUtils.checkStringMatch("containerId", amInfo
             .getContainerId().toString(), containerId);
 
         String localLogsLink =ujoin("node", "containerlogs", containerId,
             job.getUserName());
 
-        assertTrue(logsLink.contains(localLogsLink), "logsLink");
+        assertTrue("logsLink", logsLink.contains(localLogsLink));
       }
     }
-    assertTrue(attemptFound, "attempt: " + id + " was not found");
+    assertTrue("attempt: " + id + " was not found", attemptFound);
   }
 
 }

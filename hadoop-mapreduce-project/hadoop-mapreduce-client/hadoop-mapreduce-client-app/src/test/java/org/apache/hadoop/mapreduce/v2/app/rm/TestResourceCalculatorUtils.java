@@ -19,8 +19,8 @@
 package org.apache.hadoop.mapreduce.v2.app.rm;
 
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.EnumSet;
 
@@ -59,17 +59,17 @@ public class TestResourceCalculatorUtils {
       Resource nonZeroResource, int expectedNumberOfContainersForMemoryOnly,
       int expectedNumberOfContainersOverall) {
 
-    Assertions.assertEquals(expectedNumberOfContainersForMemoryOnly,
+    Assert.assertEquals("Incorrect number of available containers for Memory",
+        expectedNumberOfContainersForMemoryOnly,
         ResourceCalculatorUtils.computeAvailableContainers(
             clusterAvailableResources, nonZeroResource,
-            EnumSet.of(SchedulerResourceTypes.MEMORY)),
-        "Incorrect number of available containers for Memory");
+            EnumSet.of(SchedulerResourceTypes.MEMORY)));
 
-    Assertions.assertEquals(expectedNumberOfContainersOverall,
+    Assert.assertEquals("Incorrect number of available containers overall",
+        expectedNumberOfContainersOverall,
         ResourceCalculatorUtils.computeAvailableContainers(
             clusterAvailableResources, nonZeroResource,
             EnumSet.of(SchedulerResourceTypes.CPU,
-                SchedulerResourceTypes.MEMORY)),
-        "Incorrect number of available containers overall");
+                SchedulerResourceTypes.MEMORY)));
   }
 }

@@ -241,6 +241,8 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    *   </li>
    *   <li>killed by RM because of RM restart or failover.</li>
    * </ul>
+   *
+   * @return attempt retry count.
    */
   boolean shouldCountTowardsMaxAttemptRetry();
   
@@ -258,7 +260,7 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
 
   /**
    * To capture Launch diagnostics of the app.
-   * @param amLaunchDiagnostics
+   * @param amLaunchDiagnostics amLaunchDiagnostics.
    */
   void updateAMLaunchDiagnostics(String amLaunchDiagnostics);
 

@@ -85,6 +85,8 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
@@ -110,6 +112,8 @@ public class FederationStateStoreService extends AbstractService
   private long heartbeatInterval;
   private long heartbeatInitialDelay;
   private RMContext rmContext;
+  private final Clock clock = new MonotonicClock();
+  private FederationStateStoreServiceMetrics metrics;
   private String cleanUpThreadNamePrefix = "FederationStateStoreService-Clean-Thread";
   private int cleanUpRetryCountNum;
   private long cleanUpRetrySleepTime;
@@ -170,6 +174,9 @@ public class FederationStateStoreService extends AbstractService
         TimeUnit.MILLISECONDS);
 
     LOG.info("Initialized federation membership service.");
+
+    this.metrics = FederationStateStoreServiceMetrics.getMetrics();
+    LOG.info("Initialized federation statestore service metrics.");
 
     super.serviceInit(conf);
   }
@@ -266,161 +273,268 @@ public class FederationStateStoreService extends AbstractService
   }
 
   @Override
-  public Version loadVersion() {
+  public Version loadVersion() throws Exception {
     return stateStoreClient.getCurrentVersion();
+  }
+
+  @Override
+  public void storeVersion() throws Exception {
+    stateStoreClient.storeVersion();
+  }
+
+  @Override
+  public void checkVersion() throws Exception {
+    stateStoreClient.checkVersion();
   }
 
   @Override
   public GetSubClusterPolicyConfigurationResponse getPolicyConfiguration(
       GetSubClusterPolicyConfigurationRequest request) throws YarnException {
-    return stateStoreClient.getPolicyConfiguration(request);
+    FederationClientMethod<GetSubClusterPolicyConfigurationResponse> clientMethod =
+        new FederationClientMethod<>("getPolicyConfiguration",
+        GetSubClusterPolicyConfigurationRequest.class, request,
+        GetSubClusterPolicyConfigurationResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public SetSubClusterPolicyConfigurationResponse setPolicyConfiguration(
       SetSubClusterPolicyConfigurationRequest request) throws YarnException {
-    return stateStoreClient.setPolicyConfiguration(request);
+    FederationClientMethod<SetSubClusterPolicyConfigurationResponse> clientMethod =
+        new FederationClientMethod<>("setPolicyConfiguration",
+        SetSubClusterPolicyConfigurationRequest.class, request,
+        SetSubClusterPolicyConfigurationResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public GetSubClusterPoliciesConfigurationsResponse getPoliciesConfigurations(
       GetSubClusterPoliciesConfigurationsRequest request) throws YarnException {
-    return stateStoreClient.getPoliciesConfigurations(request);
+    FederationClientMethod<GetSubClusterPoliciesConfigurationsResponse> clientMethod =
+        new FederationClientMethod<>("getPoliciesConfigurations",
+        GetSubClusterPoliciesConfigurationsRequest.class, request,
+        GetSubClusterPoliciesConfigurationsResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
-  public SubClusterRegisterResponse registerSubCluster(
-      SubClusterRegisterRequest registerSubClusterRequest)
+  public SubClusterRegisterResponse registerSubCluster(SubClusterRegisterRequest request)
       throws YarnException {
-    return stateStoreClient.registerSubCluster(registerSubClusterRequest);
+    FederationClientMethod<SubClusterRegisterResponse> clientMethod =
+        new FederationClientMethod<>("registerSubCluster",
+        SubClusterRegisterRequest.class, request,
+        SubClusterRegisterResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
-  public SubClusterDeregisterResponse deregisterSubCluster(
-      SubClusterDeregisterRequest subClusterDeregisterRequest)
+  public SubClusterDeregisterResponse deregisterSubCluster(SubClusterDeregisterRequest request)
       throws YarnException {
-    return stateStoreClient.deregisterSubCluster(subClusterDeregisterRequest);
+    FederationClientMethod<SubClusterDeregisterResponse> clientMethod =
+        new FederationClientMethod<>("deregisterSubCluster",
+        SubClusterDeregisterRequest.class, request,
+        SubClusterDeregisterResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
-  public SubClusterHeartbeatResponse subClusterHeartbeat(
-      SubClusterHeartbeatRequest subClusterHeartbeatRequest)
+  public SubClusterHeartbeatResponse subClusterHeartbeat(SubClusterHeartbeatRequest request)
       throws YarnException {
-    return stateStoreClient.subClusterHeartbeat(subClusterHeartbeatRequest);
+    FederationClientMethod<SubClusterHeartbeatResponse> clientMethod =
+        new FederationClientMethod<>("subClusterHeartbeat",
+        SubClusterHeartbeatRequest.class, request,
+        SubClusterHeartbeatResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
-  public GetSubClusterInfoResponse getSubCluster(
-      GetSubClusterInfoRequest subClusterRequest) throws YarnException {
-    return stateStoreClient.getSubCluster(subClusterRequest);
+  public GetSubClusterInfoResponse getSubCluster(GetSubClusterInfoRequest request)
+      throws YarnException {
+    FederationClientMethod<GetSubClusterInfoResponse> clientMethod =
+        new FederationClientMethod<>("getSubCluster",
+        GetSubClusterInfoRequest.class, request,
+        GetSubClusterInfoResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
-  public GetSubClustersInfoResponse getSubClusters(
-      GetSubClustersInfoRequest subClustersRequest) throws YarnException {
-    return stateStoreClient.getSubClusters(subClustersRequest);
+  public GetSubClustersInfoResponse getSubClusters(GetSubClustersInfoRequest request)
+      throws YarnException {
+    FederationClientMethod<GetSubClustersInfoResponse> clientMethod =
+        new FederationClientMethod<>("getSubClusters",
+        GetSubClustersInfoRequest.class, request,
+        GetSubClustersInfoResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public AddApplicationHomeSubClusterResponse addApplicationHomeSubCluster(
       AddApplicationHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.addApplicationHomeSubCluster(request);
+    FederationClientMethod<AddApplicationHomeSubClusterResponse> clientMethod =
+        new FederationClientMethod<>("addApplicationHomeSubCluster",
+        AddApplicationHomeSubClusterRequest.class, request,
+        AddApplicationHomeSubClusterResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public UpdateApplicationHomeSubClusterResponse updateApplicationHomeSubCluster(
       UpdateApplicationHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.updateApplicationHomeSubCluster(request);
+    FederationClientMethod<UpdateApplicationHomeSubClusterResponse> clientMethod =
+        new FederationClientMethod<>("updateApplicationHomeSubCluster",
+        AddApplicationHomeSubClusterRequest.class, request,
+        UpdateApplicationHomeSubClusterResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public GetApplicationHomeSubClusterResponse getApplicationHomeSubCluster(
       GetApplicationHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.getApplicationHomeSubCluster(request);
+    FederationClientMethod<GetApplicationHomeSubClusterResponse> clientMethod =
+        new FederationClientMethod<>("getApplicationHomeSubCluster",
+        GetApplicationHomeSubClusterRequest.class, request,
+        GetApplicationHomeSubClusterResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public GetApplicationsHomeSubClusterResponse getApplicationsHomeSubCluster(
       GetApplicationsHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.getApplicationsHomeSubCluster(request);
+    FederationClientMethod<GetApplicationsHomeSubClusterResponse> clientMethod =
+        new FederationClientMethod<>("getApplicationsHomeSubCluster",
+        GetApplicationsHomeSubClusterRequest.class, request,
+        GetApplicationsHomeSubClusterResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public DeleteApplicationHomeSubClusterResponse deleteApplicationHomeSubCluster(
       DeleteApplicationHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.deleteApplicationHomeSubCluster(request);
+    FederationClientMethod<DeleteApplicationHomeSubClusterResponse> clientMethod =
+        new FederationClientMethod<>("deleteApplicationHomeSubCluster",
+        DeleteApplicationHomeSubClusterRequest.class, request,
+        DeleteApplicationHomeSubClusterResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public AddReservationHomeSubClusterResponse addReservationHomeSubCluster(
       AddReservationHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.addReservationHomeSubCluster(request);
+    FederationClientMethod<AddReservationHomeSubClusterResponse> clientMethod =
+        new FederationClientMethod<>("addReservationHomeSubCluster",
+        AddReservationHomeSubClusterRequest.class, request,
+        AddReservationHomeSubClusterResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public GetReservationHomeSubClusterResponse getReservationHomeSubCluster(
       GetReservationHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.getReservationHomeSubCluster(request);
+    FederationClientMethod<GetReservationHomeSubClusterResponse> clientMethod =
+        new FederationClientMethod<>("getReservationHomeSubCluster",
+        GetReservationHomeSubClusterRequest.class, request,
+        GetReservationHomeSubClusterResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster(
       GetReservationsHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.getReservationsHomeSubCluster(request);
+    FederationClientMethod<GetReservationsHomeSubClusterResponse> clientMethod =
+        new FederationClientMethod<>("getReservationsHomeSubCluster",
+        GetReservationsHomeSubClusterRequest.class, request,
+        GetReservationsHomeSubClusterResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
       UpdateReservationHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.updateReservationHomeSubCluster(request);
+    FederationClientMethod<UpdateReservationHomeSubClusterResponse> clientMethod =
+        new FederationClientMethod<>("updateReservationHomeSubCluster",
+        GetReservationsHomeSubClusterRequest.class, request,
+        UpdateReservationHomeSubClusterResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public DeleteReservationHomeSubClusterResponse deleteReservationHomeSubCluster(
       DeleteReservationHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.deleteReservationHomeSubCluster(request);
+    FederationClientMethod<DeleteReservationHomeSubClusterResponse> clientMethod =
+        new FederationClientMethod<>("deleteReservationHomeSubCluster",
+        DeleteReservationHomeSubClusterRequest.class, request,
+        DeleteReservationHomeSubClusterResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    return stateStoreClient.storeNewMasterKey(request);
+    FederationClientMethod<RouterMasterKeyResponse> clientMethod = new FederationClientMethod<>(
+        "storeNewMasterKey",
+        RouterMasterKeyRequest.class, request,
+        RouterMasterKeyResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    return stateStoreClient.removeStoredMasterKey(request);
+    FederationClientMethod<RouterMasterKeyResponse> clientMethod = new FederationClientMethod<>(
+        "removeStoredMasterKey",
+        RouterMasterKeyRequest.class, request,
+        RouterMasterKeyResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    return stateStoreClient.getMasterKeyByDelegationKey(request);
+    FederationClientMethod<RouterMasterKeyResponse> clientMethod = new FederationClientMethod<>(
+        "getMasterKeyByDelegationKey",
+        RouterMasterKeyRequest.class, request,
+        RouterMasterKeyResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    return stateStoreClient.storeNewToken(request);
+    FederationClientMethod<RouterRMTokenResponse> clientMethod = new FederationClientMethod<>(
+        "storeNewToken",
+        RouterRMTokenRequest.class, request,
+        RouterRMTokenResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    return stateStoreClient.updateStoredToken(request);
+    FederationClientMethod<RouterRMTokenResponse> clientMethod = new FederationClientMethod<>(
+        "updateStoredToken",
+        RouterRMTokenRequest.class, request,
+        RouterRMTokenResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    return stateStoreClient.removeStoredToken(request);
+    FederationClientMethod<RouterRMTokenResponse> clientMethod = new FederationClientMethod<>(
+        "removeStoredToken",
+        RouterRMTokenRequest.class, request,
+        RouterRMTokenResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
   public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    return stateStoreClient.getTokenByRouterStoreToken(request);
+    FederationClientMethod<RouterRMTokenResponse> clientMethod = new FederationClientMethod<>(
+        "getTokenByRouterStoreToken",
+        RouterRMTokenRequest.class, request,
+        RouterRMTokenResponse.class, stateStoreClient, clock);
+    return clientMethod.invoke();
   }
 
   @Override
@@ -602,5 +716,4 @@ public class FederationStateStoreService extends AbstractService
     }
     return true;
   }
-
 }

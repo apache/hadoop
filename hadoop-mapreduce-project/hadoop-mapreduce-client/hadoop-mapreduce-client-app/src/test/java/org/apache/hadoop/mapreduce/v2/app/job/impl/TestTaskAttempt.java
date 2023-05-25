@@ -20,10 +20,9 @@ package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
 import static org.apache.hadoop.test.GenericTestUtils.waitFor;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -42,10 +41,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
 import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -112,7 +111,7 @@ import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
@@ -152,17 +151,17 @@ public class TestTaskAttempt{
     }
   }
 
-  @BeforeAll
+  @BeforeClass
   public static void setupBeforeClass() {
     ResourceUtils.resetResourceTypes(new Configuration());
   }
 
-  @BeforeEach
+  @Before
   public void before() {
     TaskAttemptImpl.RESOURCE_REQUEST_CACHE.clear();
   }
 
-  @AfterEach
+  @After
   public void tearDown() {
     ResourceUtils.resetResourceTypes(new Configuration());
   }
@@ -290,7 +289,7 @@ public class TestTaskAttempt{
     ArgumentCaptor<Event> arg = ArgumentCaptor.forClass(Event.class);
     verify(eventHandler, times(2)).handle(arg.capture());
     if (!(arg.getAllValues().get(1) instanceof ContainerRequestEvent)) {
-      Assertions.fail("Second Event not of type ContainerRequestEvent");
+      Assert.fail("Second Event not of type ContainerRequestEvent");
     }
     ContainerRequestEvent cre =
         (ContainerRequestEvent) arg.getAllValues().get(1);
@@ -324,7 +323,7 @@ public class TestTaskAttempt{
     ArgumentCaptor<Event> arg = ArgumentCaptor.forClass(Event.class);
     verify(eventHandler, times(2)).handle(arg.capture());
     if (!(arg.getAllValues().get(1) instanceof ContainerRequestEvent)) {
-      Assertions.fail("Second Event not of type ContainerRequestEvent");
+      Assert.fail("Second Event not of type ContainerRequestEvent");
     }
     Map<String, Boolean> expected = new HashMap<String, Boolean>();
     expected.put("host1", true);
@@ -362,16 +361,16 @@ public class TestTaskAttempt{
     Job job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
     Map<TaskId, Task> tasks = job.getTasks();
-    Assertions.assertEquals(2, tasks.size(), "Num tasks is not correct");
+    Assert.assertEquals("Num tasks is not correct", 2, tasks.size());
     Iterator<Task> taskIter = tasks.values().iterator();
     Task mTask = taskIter.next();
     app.waitForState(mTask, TaskState.RUNNING);
     Task rTask = taskIter.next();
     app.waitForState(rTask, TaskState.RUNNING);
     Map<TaskAttemptId, TaskAttempt> mAttempts = mTask.getAttempts();
-    Assertions.assertEquals(1, mAttempts.size(), "Num attempts is not correct");
+    Assert.assertEquals("Num attempts is not correct", 1, mAttempts.size());
     Map<TaskAttemptId, TaskAttempt> rAttempts = rTask.getAttempts();
-    Assertions.assertEquals(1, rAttempts.size(), "Num attempts is not correct");
+    Assert.assertEquals("Num attempts is not correct", 1, rAttempts.size());
     TaskAttempt mta = mAttempts.values().iterator().next();
     TaskAttempt rta = rAttempts.values().iterator().next();
     app.waitForState(mta, TaskAttemptState.RUNNING);
@@ -393,21 +392,21 @@ public class TestTaskAttempt{
 
     int memoryMb = (int) containerResource.getMemorySize();
     int vcores = containerResource.getVirtualCores();
-    Assertions.assertEquals((int) Math.ceil((float) memoryMb / minContainerSize),
+    Assert.assertEquals((int) Math.ceil((float) memoryMb / minContainerSize),
         counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue());
-    Assertions.assertEquals((int) Math.ceil((float) memoryMb / minContainerSize),
+    Assert.assertEquals((int) Math.ceil((float) memoryMb / minContainerSize),
         counters.findCounter(JobCounter.SLOTS_MILLIS_REDUCES).getValue());
-    Assertions.assertEquals(1,
+    Assert.assertEquals(1,
         counters.findCounter(JobCounter.MILLIS_MAPS).getValue());
-    Assertions.assertEquals(1,
+    Assert.assertEquals(1,
         counters.findCounter(JobCounter.MILLIS_REDUCES).getValue());
-    Assertions.assertEquals(memoryMb,
+    Assert.assertEquals(memoryMb,
         counters.findCounter(JobCounter.MB_MILLIS_MAPS).getValue());
-    Assertions.assertEquals(memoryMb,
+    Assert.assertEquals(memoryMb,
         counters.findCounter(JobCounter.MB_MILLIS_REDUCES).getValue());
-    Assertions.assertEquals(vcores,
+    Assert.assertEquals(vcores,
         counters.findCounter(JobCounter.VCORES_MILLIS_MAPS).getValue());
-    Assertions.assertEquals(vcores,
+    Assert.assertEquals(vcores,
         counters.findCounter(JobCounter.VCORES_MILLIS_REDUCES).getValue());
   }
 
@@ -453,25 +452,23 @@ public class TestTaskAttempt{
     app.waitForState(job, JobState.FAILED);
     Map<TaskId, Task> tasks = job.getTasks();
 
-    Assertions.assertEquals(1, tasks.size(),
-        "Num tasks is not correct");
+    Assert.assertEquals("Num tasks is not correct", 1, tasks.size());
     Task task = tasks.values().iterator().next();
-    Assertions.assertEquals(TaskState.FAILED, task.getReport().getTaskState(),
-        "Task state not correct");
+    Assert.assertEquals("Task state not correct", TaskState.FAILED, task
+        .getReport().getTaskState());
     Map<TaskAttemptId, TaskAttempt> attempts = tasks.values().iterator().next()
         .getAttempts();
-    Assertions.assertEquals(4, attempts.size(),
-        "Num attempts is not correct");
+    Assert.assertEquals("Num attempts is not correct", 4, attempts.size());
 
     Iterator<TaskAttempt> it = attempts.values().iterator();
     TaskAttemptReport report = it.next().getReport();
-    Assertions.assertEquals(TaskAttemptState.FAILED, report.getTaskAttemptState(),
-        "Attempt state not correct");
-    Assertions.assertEquals("Test Diagnostic Event", report.getDiagnosticInfo(),
-        "Diagnostic Information is not Correct");
+    Assert.assertEquals("Attempt state not correct", TaskAttemptState.FAILED,
+        report.getTaskAttemptState());
+    Assert.assertEquals("Diagnostic Information is not Correct",
+        "Test Diagnostic Event", report.getDiagnosticInfo());
     report = it.next().getReport();
-    Assertions.assertEquals(TaskAttemptState.FAILED, report.getTaskAttemptState(),
-        "Attempt state not correct ");
+    Assert.assertEquals("Attempt state not correct", TaskAttemptState.FAILED,
+        report.getTaskAttemptState());
   }
 
   private void testTaskAttemptAssignedFailHistory
@@ -480,8 +477,8 @@ public class TestTaskAttempt{
     Job job = app.submit(conf);
     app.waitForState(job, JobState.FAILED);
     Map<TaskId, Task> tasks = job.getTasks();
-    Assertions.assertTrue(app.getTaStartJHEvent(), "No Ta Started JH Event");
-    Assertions.assertTrue(app.getTaFailedJHEvent(), "No Ta Failed JH Event");
+    Assert.assertTrue("No Ta Started JH Event", app.getTaStartJHEvent());
+    Assert.assertTrue("No Ta Failed JH Event", app.getTaFailedJHEvent());
   }
 
   private void testTaskAttemptAssignedKilledHistory
@@ -521,8 +518,8 @@ public class TestTaskAttempt{
           if (event.getType() == org.apache.hadoop.mapreduce.jobhistory.EventType.MAP_ATTEMPT_FAILED) {
             TaskAttemptUnsuccessfulCompletion datum = (TaskAttemptUnsuccessfulCompletion) event
                 .getHistoryEvent().getDatum();
-            Assertions.assertEquals("Test Diagnostic Event", datum.get(8).toString(),
-                "Diagnostic Information is not Correct");
+            Assert.assertEquals("Diagnostic Information is not Correct",
+                "Test Diagnostic Event", datum.get(8).toString());
           }
         }
       };
@@ -641,8 +638,8 @@ public class TestTaskAttempt{
     taImpl.handle(new TaskAttemptEvent(attemptId,
         TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED));
     assertFalse(eventHandler.internalError);
-    assertEquals(Locality.NODE_LOCAL, taImpl.getLocality(),
-        "Task attempt is not assigned on the local node");
+    assertEquals("Task attempt is not assigned on the local node", 
+        Locality.NODE_LOCAL, taImpl.getLocality());
   }
 
   @Test
@@ -698,10 +695,10 @@ public class TestTaskAttempt{
         .isEqualTo(TaskAttemptState.RUNNING);
     taImpl.handle(new TaskAttemptEvent(attemptId,
         TaskAttemptEventType.TA_CONTAINER_CLEANED));
-    assertFalse(eventHandler.internalError,
-        "InternalError occurred trying to handle TA_CONTAINER_CLEANED");
-    assertEquals(Locality.RACK_LOCAL, taImpl.getLocality(),
-        "Task attempt is not assigned on the local rack");
+    assertFalse("InternalError occurred trying to handle TA_CONTAINER_CLEANED",
+        eventHandler.internalError);
+    assertEquals("Task attempt is not assigned on the local rack",
+        Locality.RACK_LOCAL, taImpl.getLocality());
   }
 
   @Test
@@ -760,10 +757,10 @@ public class TestTaskAttempt{
         .isEqualTo(TaskAttemptState.COMMIT_PENDING);
     taImpl.handle(new TaskAttemptEvent(attemptId,
         TaskAttemptEventType.TA_CONTAINER_CLEANED));
-    assertFalse(eventHandler.internalError,
-        "InternalError occurred trying to handle TA_CONTAINER_CLEANED");
-    assertEquals(Locality.OFF_SWITCH,taImpl.getLocality(),
-        "Task attempt is assigned locally");
+    assertFalse("InternalError occurred trying to handle TA_CONTAINER_CLEANED",
+        eventHandler.internalError);
+    assertEquals("Task attempt is assigned locally", Locality.OFF_SWITCH,
+        taImpl.getLocality());
   }
 
   @Test
@@ -835,8 +832,8 @@ public class TestTaskAttempt{
     assertThat(taImpl.getState())
         .withFailMessage("Task attempt is not in FAILED state, still")
         .isEqualTo(TaskAttemptState.FAILED);
-    assertFalse(eventHandler.internalError,
-        "InternalError occurred trying to handle TA_CONTAINER_CLEANED");
+    assertFalse("InternalError occurred trying to handle TA_CONTAINER_CLEANED",
+        eventHandler.internalError);
   }
 
 
@@ -886,15 +883,16 @@ public class TestTaskAttempt{
         TaskAttemptEventType.TA_SCHEDULE));
     taImpl.handle(new TaskAttemptDiagnosticsUpdateEvent(attemptId,
         "Task got killed"));
-    assertFalse(eventHandler.internalError,
-        "InternalError occurred trying to handle TA_DIAGNOSTICS_UPDATE on assigned task");
+    assertFalse(
+        "InternalError occurred trying to handle TA_DIAGNOSTICS_UPDATE on assigned task",
+        eventHandler.internalError);
     try {
       taImpl.handle(new TaskAttemptEvent(attemptId,
           TaskAttemptEventType.TA_KILL));
-      Assertions.assertTrue(true, "No exception on UNASSIGNED STATE KILL event");
+      Assert.assertTrue("No exception on UNASSIGNED STATE KILL event", true);
     } catch (Exception e) {
-      Assertions.assertFalse(true,
-          "Exception not expected for UNASSIGNED STATE KILL event");
+      Assert.assertFalse(
+          "Exception not expected for UNASSIGNED STATE KILL event", true);
     }
   }
 
@@ -964,8 +962,8 @@ public class TestTaskAttempt{
     assertThat(taImpl.getState())
         .withFailMessage("Task attempt is not in KILLED state, still")
         .isEqualTo(TaskAttemptState.KILLED);
-    assertFalse(eventHandler.internalError,
-        "InternalError occurred trying to handle TA_CONTAINER_CLEANED");
+    assertFalse("InternalError occurred trying to handle TA_CONTAINER_CLEANED",
+      eventHandler.internalError);
   }
 
   @Test
@@ -1011,8 +1009,9 @@ public class TestTaskAttempt{
     when(container.getNodeHttpAddress()).thenReturn("localhost:0");
     taImpl.handle(new TaskAttemptDiagnosticsUpdateEvent(attemptId,
         "Task got killed"));
-    assertFalse(eventHandler.internalError,
-        "InternalError occurred trying to handle TA_DIAGNOSTICS_UPDATE on assigned task");
+    assertFalse(
+        "InternalError occurred trying to handle TA_DIAGNOSTICS_UPDATE on assigned task",
+        eventHandler.internalError);
   }
     
   @Test
@@ -1073,8 +1072,8 @@ public class TestTaskAttempt{
         .withFailMessage("Task attempt is not in SUCCEEDED state")
         .isEqualTo(TaskAttemptState.SUCCEEDED);
 
-    assertTrue(taImpl.getFinishTime() > 0,
-        "Task Attempt finish time is not greater than 0");
+    assertTrue("Task Attempt finish time is not greater than 0",
+        taImpl.getFinishTime() > 0);
 
     Long finishTime = taImpl.getFinishTime();
     Thread.sleep(5);
@@ -1085,9 +1084,9 @@ public class TestTaskAttempt{
         .withFailMessage("Task attempt is not in FAILED state")
         .isEqualTo(TaskAttemptState.FAILED);
 
-    assertEquals(finishTime, Long.valueOf(taImpl.getFinishTime()),
-        "After TA_TOO_MANY_FETCH_FAILURE,"
-            + " Task attempt finish time is not the same ");
+    assertEquals("After TA_TOO_MANY_FETCH_FAILURE,"
+        + " Task attempt finish time is not the same ",
+        finishTime, Long.valueOf(taImpl.getFinishTime()));
   }
 
   private void containerKillBeforeAssignment(boolean scheduleAttempt)
@@ -1115,7 +1114,7 @@ public class TestTaskAttempt{
     assertThat(taImpl.getInternalState())
         .withFailMessage("Task attempt's internal state is not KILLED")
         .isEqualTo(TaskAttemptStateInternal.KILLED);
-    assertFalse(eventHandler.internalError, "InternalError occurred");
+    assertFalse("InternalError occurred", eventHandler.internalError);
     TaskEvent event = eventHandler.lastTaskEvent;
     assertEquals(TaskEventType.T_ATTEMPT_KILLED, event.getType());
     // In NEW state, new map attempt should not be rescheduled.
@@ -1239,8 +1238,8 @@ public class TestTaskAttempt{
         .isEqualTo(TaskAttemptState.RUNNING);
     taImpl.handle(new TaskAttemptEvent(attemptId,
         TaskAttemptEventType.TA_KILL));
-    assertFalse(eventHandler.internalError,
-        "InternalError occurred trying to handle TA_KILL");
+    assertFalse("InternalError occurred trying to handle TA_KILL",
+        eventHandler.internalError);
     assertThat(taImpl.getInternalState())
         .withFailMessage("Task should be in KILL_CONTAINER_CLEANUP state")
         .isEqualTo(TaskAttemptStateInternal.KILL_CONTAINER_CLEANUP);
@@ -1302,8 +1301,8 @@ public class TestTaskAttempt{
         .isEqualTo(TaskAttemptStateInternal.COMMIT_PENDING);
     taImpl.handle(new TaskAttemptEvent(attemptId,
         TaskAttemptEventType.TA_KILL));
-    assertFalse(eventHandler.internalError,
-        "InternalError occurred trying to handle TA_KILL");
+    assertFalse("InternalError occurred trying to handle TA_KILL",
+        eventHandler.internalError);
     assertThat(taImpl.getInternalState())
         .withFailMessage("Task should be in KILL_CONTAINER_CLEANUP state")
         .isEqualTo(TaskAttemptStateInternal.KILL_CONTAINER_CLEANUP);
@@ -1349,7 +1348,7 @@ public class TestTaskAttempt{
         .withFailMessage("Task attempt is not in KILLED state")
         .isEqualTo(TaskAttemptState.KILLED);
 
-    assertFalse(eventHandler.internalError, "InternalError occurred");
+    assertFalse("InternalError occurred", eventHandler.internalError);
   }
 
   @Test
@@ -1360,30 +1359,32 @@ public class TestTaskAttempt{
     taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
         TaskAttemptEventType.TA_DONE));
 
-    assertEquals(TaskAttemptState.SUCCEEDED, taImpl.getState(),
-        "Task attempt is not in SUCCEEDED state");
-    assertEquals(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
-        taImpl.getInternalState(), "Task attempt's internal state is not " +
-            "SUCCESS_FINISHING_CONTAINER");
+    assertEquals("Task attempt is not in SUCCEEDED state",
+        TaskAttemptState.SUCCEEDED, taImpl.getState());
+    assertEquals("Task attempt's internal state is not " +
+            "SUCCESS_FINISHING_CONTAINER",
+        TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
+        taImpl.getInternalState());
 
     // If the map only task is killed when it is in SUCCESS_FINISHING_CONTAINER
     // state, the state will move to SUCCESS_CONTAINER_CLEANUP
     taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
         TaskAttemptEventType.TA_KILL));
-    assertEquals(TaskAttemptState.SUCCEEDED, taImpl.getState(),
-        "Task attempt is not in SUCCEEDED state");
-    assertEquals(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
-        taImpl.getInternalState(), "Task attempt's internal state is not " +
-            "SUCCESS_CONTAINER_CLEANUP");
+    assertEquals("Task attempt is not in SUCCEEDED state",
+        TaskAttemptState.SUCCEEDED, taImpl.getState());
+    assertEquals("Task attempt's internal state is not " +
+            "SUCCESS_CONTAINER_CLEANUP",
+        TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
+        taImpl.getInternalState());
 
     taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
         TaskAttemptEventType.TA_CONTAINER_CLEANED));
-    assertEquals(TaskAttemptState.SUCCEEDED, taImpl.getState(),
-        "Task attempt is not in SUCCEEDED state");
-    assertEquals(TaskAttemptStateInternal.SUCCEEDED, taImpl.getInternalState(),
-        "Task attempt's internal state is not SUCCEEDED state");
+    assertEquals("Task attempt is not in SUCCEEDED state",
+        TaskAttemptState.SUCCEEDED, taImpl.getState());
+    assertEquals("Task attempt's internal state is not SUCCEEDED state",
+        TaskAttemptStateInternal.SUCCEEDED, taImpl.getInternalState());
 
-    assertFalse(eventHandler.internalError, "InternalError occurred");
+    assertFalse("InternalError occurred", eventHandler.internalError);
   }
 
   @Test
@@ -1413,7 +1414,7 @@ public class TestTaskAttempt{
     assertThat(taImpl.getInternalState())
         .withFailMessage("Task attempt's internal state is not KILLED")
         .isEqualTo(TaskAttemptStateInternal.KILLED);
-    assertFalse(eventHandler.internalError, "InternalError occurred");
+    assertFalse("InternalError occurred", eventHandler.internalError);
     TaskEvent event = eventHandler.lastTaskEvent;
     assertEquals(TaskEventType.T_ATTEMPT_KILLED, event.getType());
     // Send an attempt killed event to TaskImpl forwarding the same reschedule
@@ -1429,21 +1430,22 @@ public class TestTaskAttempt{
     taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
         TaskAttemptEventType.TA_DONE));
 
-    assertEquals(TaskAttemptState.SUCCEEDED, taImpl.getState(),
-        "Task attempt is not in SUCCEEDED state");
-    assertEquals(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
-        taImpl.getInternalState(), "Task attempt's internal state is not " +
-            "SUCCESS_FINISHING_CONTAINER");
+    assertEquals("Task attempt is not in SUCCEEDED state",
+        TaskAttemptState.SUCCEEDED, taImpl.getState());
+    assertEquals("Task attempt's internal state is not " +
+            "SUCCESS_FINISHING_CONTAINER",
+        TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
+        taImpl.getInternalState());
 
     taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
         TaskAttemptEventType.TA_CONTAINER_CLEANED));
     // Succeeded
     taImpl.handle(new TaskAttemptKillEvent(taImpl.getID(),"", true));
-    assertEquals(TaskAttemptState.SUCCEEDED, taImpl.getState(),
-        "Task attempt is not in SUCCEEDED state");
-    assertEquals(TaskAttemptStateInternal.SUCCEEDED, taImpl.getInternalState(),
-        "Task attempt's internal state is not SUCCEEDED");
-    assertFalse(eventHandler.internalError, "InternalError occurred");
+    assertEquals("Task attempt is not in SUCCEEDED state",
+        TaskAttemptState.SUCCEEDED, taImpl.getState());
+    assertEquals("Task attempt's internal state is not SUCCEEDED",
+        TaskAttemptStateInternal.SUCCEEDED, taImpl.getInternalState());
+    assertFalse("InternalError occurred", eventHandler.internalError);
     TaskEvent event = eventHandler.lastTaskEvent;
     assertEquals(TaskEventType.T_ATTEMPT_SUCCEEDED, event.getType());
   }
@@ -1496,7 +1498,7 @@ public class TestTaskAttempt{
         .withFailMessage("Task attempt is not in FAILED state")
         .isEqualTo(TaskAttemptState.FAILED);
 
-    assertFalse(eventHandler.internalError, "InternalError occurred");
+    assertFalse("InternalError occurred", eventHandler.internalError);
   }
 
   @Test
@@ -1529,7 +1531,7 @@ public class TestTaskAttempt{
         .withFailMessage("Task attempt is not in FAILED state")
         .isEqualTo(TaskAttemptState.FAILED);
 
-    assertFalse(eventHandler.internalError, "InternalError occurred");
+    assertFalse("InternalError occurred", eventHandler.internalError);
   }
 
   @Test
@@ -1559,7 +1561,7 @@ public class TestTaskAttempt{
             "SUCCESS_FINISHING_CONTAINER")
         .isEqualTo(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER);
 
-    assertFalse(eventHandler.internalError, "InternalError occurred");
+    assertFalse("InternalError occurred", eventHandler.internalError);
   }
 
   @Test
@@ -1590,7 +1592,7 @@ public class TestTaskAttempt{
                 "SUCCESS_CONTAINER_CLEANUP")
             .isEqualTo(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP);
 
-    assertFalse(eventHandler.internalError, "InternalError occurred");
+    assertFalse("InternalError occurred", eventHandler.internalError);
   }
 
   @Test
@@ -1617,7 +1619,7 @@ public class TestTaskAttempt{
             "FAIL_CONTAINER_CLEANUP")
         .isEqualTo(TaskAttemptStateInternal.FAIL_CONTAINER_CLEANUP);
 
-    assertFalse(eventHandler.internalError, "InternalError occurred");
+    assertFalse("InternalError occurred", eventHandler.internalError);
   }
 
   @Test
@@ -1634,8 +1636,8 @@ public class TestTaskAttempt{
     ResourceInformation resourceInfo =
         getResourceInfoFromContainerRequest(taImpl, eventHandler).
         getResourceInformation(CUSTOM_RESOURCE_NAME);
-    assertEquals("G", resourceInfo.getUnits(),
-        "Expecting the default unit (G)");
+    assertEquals("Expecting the default unit (G)",
+        "G", resourceInfo.getUnits());
     assertEquals(7L, resourceInfo.getValue());
   }
 
@@ -1652,8 +1654,8 @@ public class TestTaskAttempt{
     ResourceInformation resourceInfo =
         getResourceInfoFromContainerRequest(taImpl, eventHandler).
         getResourceInformation(CUSTOM_RESOURCE_NAME);
-    assertEquals("m", resourceInfo.getUnits(),
-        "Expecting the specified unit (m)");
+    assertEquals("Expecting the specified unit (m)",
+        "m", resourceInfo.getUnits());
     assertEquals(3L, resourceInfo.getValue());
   }
 
@@ -1750,20 +1752,18 @@ public class TestTaskAttempt{
     }
   }
 
-  @Test
+  @Test(expected=IllegalArgumentException.class)
   public void testReducerMemoryRequestMultipleName() {
-    assertThrows(IllegalArgumentException.class, () -> {
-      EventHandler eventHandler = mock(EventHandler.class);
-      Clock clock = SystemClock.getInstance();
-      JobConf jobConf = new JobConf();
-      for (String memoryName : ImmutableList.of(
-          MRJobConfig.RESOURCE_TYPE_NAME_MEMORY,
-          MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY)) {
-        jobConf.set(MRJobConfig.REDUCE_RESOURCE_TYPE_PREFIX + memoryName,
-            "3Gi");
-      }
-      createReduceTaskAttemptImplForTest(eventHandler, clock, jobConf);
-    });
+    EventHandler eventHandler = mock(EventHandler.class);
+    Clock clock = SystemClock.getInstance();
+    JobConf jobConf = new JobConf();
+    for (String memoryName : ImmutableList.of(
+        MRJobConfig.RESOURCE_TYPE_NAME_MEMORY,
+        MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY)) {
+      jobConf.set(MRJobConfig.REDUCE_RESOURCE_TYPE_PREFIX + memoryName,
+          "3Gi");
+    }
+    createReduceTaskAttemptImplForTest(eventHandler, clock, jobConf);
   }
 
   @Test
@@ -1853,24 +1853,21 @@ public class TestTaskAttempt{
         containerRequestEvents.add((ContainerRequestEvent) e);
       }
     }
-    assertEquals(1, containerRequestEvents.size(),
-        "Expected one ContainerRequestEvent after scheduling "
-            + "task attempt");
+    assertEquals("Expected one ContainerRequestEvent after scheduling "
+        + "task attempt", 1, containerRequestEvents.size());
 
     return containerRequestEvents.get(0).getCapability();
   }
 
-  @Test
+  @Test(expected=IllegalArgumentException.class)
   public void testReducerCustomResourceTypeWithInvalidUnit() {
-    assertThrows(IllegalArgumentException.class, () -> {
-      initResourceTypes();
-      EventHandler eventHandler = mock(EventHandler.class);
-      Clock clock = SystemClock.getInstance();
-      JobConf jobConf = new JobConf();
-      jobConf.set(MRJobConfig.REDUCE_RESOURCE_TYPE_PREFIX
-          + CUSTOM_RESOURCE_NAME, "3z");
-      createReduceTaskAttemptImplForTest(eventHandler, clock, jobConf);
-    });
+    initResourceTypes();
+    EventHandler eventHandler = mock(EventHandler.class);
+    Clock clock = SystemClock.getInstance();
+    JobConf jobConf = new JobConf();
+    jobConf.set(MRJobConfig.REDUCE_RESOURCE_TYPE_PREFIX
+        + CUSTOM_RESOURCE_NAME, "3z");
+    createReduceTaskAttemptImplForTest(eventHandler, clock, jobConf);
   }
 
   @Test
@@ -1885,19 +1882,22 @@ public class TestTaskAttempt{
     // move in two steps to the desired state (cannot get there directly)
     taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
         TaskAttemptEventType.TA_DONE));
-    assertEquals(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
-        taImpl.getInternalState(), "Task attempt's internal state is not " +
-            "SUCCESS_FINISHING_CONTAINER");
+    assertEquals("Task attempt's internal state is not " +
+        "SUCCESS_FINISHING_CONTAINER",
+        TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
+        taImpl.getInternalState());
 
     taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
         TaskAttemptEventType.TA_TIMED_OUT));
-    assertEquals(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
-        taImpl.getInternalState(), "Task attempt's internal state is not " +
-            "SUCCESS_CONTAINER_CLEANUP");
+    assertEquals("Task attempt's internal state is not " +
+        "SUCCESS_CONTAINER_CLEANUP",
+        TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
+        taImpl.getInternalState());
 
     taImpl.handle(new TaskAttemptKillEvent(mapTAId, "", true));
-    assertEquals(TaskAttemptState.KILLED,
-        taImpl.getState(), "Task attempt is not in KILLED state");
+    assertEquals("Task attempt is not in KILLED state",
+        TaskAttemptState.KILLED,
+        taImpl.getState());
   }
 
   @Test
@@ -1912,21 +1912,24 @@ public class TestTaskAttempt{
     // move in two steps to the desired state (cannot get there directly)
     taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
         TaskAttemptEventType.TA_DONE));
-    assertEquals(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
-        taImpl.getInternalState(), "Task attempt's internal state is not " +
-            "SUCCESS_FINISHING_CONTAINER");
+    assertEquals("Task attempt's internal state is not " +
+        "SUCCESS_FINISHING_CONTAINER",
+        TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
+        taImpl.getInternalState());
 
     taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
         TaskAttemptEventType.TA_TIMED_OUT));
-    assertEquals(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
-        taImpl.getInternalState(), "Task attempt's internal state is not " +
-            "SUCCESS_CONTAINER_CLEANUP");
+    assertEquals("Task attempt's internal state is not " +
+        "SUCCESS_CONTAINER_CLEANUP",
+        TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
+        taImpl.getInternalState());
 
     taImpl.handle(new TaskAttemptTooManyFetchFailureEvent(taImpl.getID(),
         reduceTAId, "Host"));
-    assertEquals(TaskAttemptState.FAILED,
-        taImpl.getState(), "Task attempt is not in FAILED state");
-    assertFalse(eventHandler.internalError, "InternalError occurred");
+    assertEquals("Task attempt is not in FAILED state",
+        TaskAttemptState.FAILED,
+        taImpl.getState());
+    assertFalse("InternalError occurred", eventHandler.internalError);
   }
 
   private void initResourceTypes() {
@@ -1948,15 +1951,17 @@ public class TestTaskAttempt{
     taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
         TaskAttemptEventType.TA_DONE));
 
-    assertEquals(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
-        taImpl.getInternalState(), "Task attempt's internal state is not " +
-            "SUCCESS_FINISHING_CONTAINER");
+    assertEquals("Task attempt's internal state is not " +
+        "SUCCESS_FINISHING_CONTAINER",
+        TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
+        taImpl.getInternalState());
 
     taImpl.handle(new TaskAttemptTooManyFetchFailureEvent(taImpl.getID(),
         reduceTAId, "Host"));
-    assertEquals(TaskAttemptState.FAILED,
-        taImpl.getState(), "Task attempt is not in FAILED state");
-    assertFalse(eventHandler.internalError, "InternalError occurred");
+    assertEquals("Task attempt is not in FAILED state",
+        TaskAttemptState.FAILED,
+        taImpl.getState());
+    assertFalse("InternalError occurred", eventHandler.internalError);
   }
 
   private void setupTaskAttemptFinishingMonitor(

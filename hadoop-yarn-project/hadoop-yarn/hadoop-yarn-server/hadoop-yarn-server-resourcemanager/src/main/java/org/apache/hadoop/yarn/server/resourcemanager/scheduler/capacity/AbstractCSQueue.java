@@ -413,8 +413,8 @@ public abstract class AbstractCSQueue implements CSQueue {
    */
   protected void setDynamicQueueProperties() {
     // Set properties from parent template
-    if (parent instanceof ParentQueue && isDynamicQueue()) {
-      ((ParentQueue) parent).getAutoCreatedQueueTemplate()
+    if (parent instanceof AbstractParentQueue && isDynamicQueue()) {
+      ((AbstractParentQueue) parent).getAutoCreatedQueueTemplate()
           .setTemplateEntriesForChild(queueContext.getConfiguration(), getQueuePath());
 
       String parentTemplate = String.format("%s.%s", parent.getQueuePath(),
@@ -670,6 +670,10 @@ public abstract class AbstractCSQueue implements CSQueue {
   /**
    * Returns whether we should continue to look at all heart beating nodes even
    * after the reservation limit was hit.
+   *
+   * @return true,
+   * continue to look at all heart beating nodes even after the reservation limit was hit.
+   * otherwise false.
    */
   @Private
   public boolean isReservationsContinueLooking() {
@@ -1269,7 +1273,7 @@ public abstract class AbstractCSQueue implements CSQueue {
           CapacityConfigType.ABSOLUTE_RESOURCE)) {
         newEffectiveMinResource = createNormalizedMinResource(
             usageTracker.getQueueResourceQuotas().getConfiguredMinResource(label),
-            ((ParentQueue) parent).getEffectiveMinRatio(label));
+            ((AbstractParentQueue) parent).getEffectiveMinRatio(label));
 
         // Max resource of a queue should be the minimum of {parent's maxResources,
         // this queue's maxResources}. Both parent's maxResources and this queue's

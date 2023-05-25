@@ -37,11 +37,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.curator.ZKCuratorManager;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClusterIdProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClusterInfoProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClusterPolicyConfigurationProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.ApplicationHomeSubClusterProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
@@ -93,6 +96,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenReque
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterIdPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterInfoPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterPolicyConfigurationPBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.ApplicationHomeSubClusterPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
@@ -103,6 +107,7 @@ import org.apache.hadoop.yarn.server.federation.store.utils.FederationReservatio
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationRouterRMTokenInputValidator;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.SystemClock;
@@ -153,6 +158,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private final static String ROOT_ZNODE_NAME_POLICY = "policies";
   private final static String ROOT_ZNODE_NAME_RESERVATION = "reservation";
 
+  protected static final String ROOT_ZNODE_NAME_VERSION = "version";
+
   /** Store Delegation Token Node. */
   private final static String ROUTER_RM_DT_SECRET_MANAGER_ROOT = "router_rm_dt_secret_manager_root";
   private static final String ROUTER_RM_DT_MASTER_KEYS_ROOT_ZNODE_NAME =
@@ -183,6 +190,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private String membershipZNode;
   private String policiesZNode;
   private String reservationsZNode;
+  private String versionNode;
   private int maxAppsInStateStore;
 
   /** Directory to store the delegation token data. **/
@@ -193,6 +201,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private String routerRMMasterKeyIdPath;
 
   private volatile Clock clock = SystemClock.getInstance();
+
+  protected static final Version CURRENT_VERSION_INFO = Version.newInstance(1, 1);
 
   @VisibleForTesting
   private ZKFederationStateStoreOpDurations opDurations =
@@ -222,6 +232,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     appsZNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_APPLICATION);
     policiesZNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_POLICY);
     reservationsZNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_RESERVATION);
+    versionNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_VERSION);
 
     // delegation token znodes
     routerRMDTSecretManagerRoot = getNodePath(baseZNode, ROUTER_RM_DT_SECRET_MANAGER_ROOT);
@@ -244,6 +255,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       zkManager.createRootDirRecursively(routerRMDTSecretManagerRoot, zkAcl);
       zkManager.createRootDirRecursively(routerRMDTMasterKeysRootPath, zkAcl);
       zkManager.createRootDirRecursively(routerRMDelegationTokensRootPath, zkAcl);
+      zkManager.createRootDirRecursively(versionNode, zkAcl);
     } catch (Exception e) {
       String errMsg = "Cannot create base directories: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
@@ -314,49 +326,76 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
     long start = clock.getTime();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
-    ApplicationHomeSubCluster app = request.getApplicationHomeSubCluster();
-    ApplicationId appId = app.getApplicationId();
+
+    // parse parameters
+    // We need to get applicationId, subClusterId, appSubmissionContext 3 parameters.
+    ApplicationHomeSubCluster requestApplicationHomeSubCluster =
+        request.getApplicationHomeSubCluster();
+    ApplicationId requestApplicationId = requestApplicationHomeSubCluster.getApplicationId();
+    SubClusterId requestSubClusterId = requestApplicationHomeSubCluster.getHomeSubCluster();
+    ApplicationSubmissionContext requestApplicationSubmissionContext =
+         requestApplicationHomeSubCluster.getApplicationSubmissionContext();
+
+    LOG.debug("applicationId = {}, subClusterId = {}, appSubmissionContext = {}.",
+        requestApplicationId, requestSubClusterId, requestApplicationSubmissionContext);
 
     // Try to write the subcluster
-    SubClusterId homeSubCluster = app.getHomeSubCluster();
     try {
-      putApp(appId, homeSubCluster, false);
+      storeOrUpdateApplicationHomeSubCluster(requestApplicationId,
+          requestApplicationHomeSubCluster, false);
     } catch (Exception e) {
-      String errMsg = "Cannot add application home subcluster for " + appId;
+      String errMsg = "Cannot add application home subcluster for " + requestApplicationId;
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
 
     // Check for the actual subcluster
     try {
-      homeSubCluster = getApp(appId);
+      // We try to get the ApplicationHomeSubCluster actually stored in ZK
+      // according to the applicationId.
+      ApplicationHomeSubCluster actualAppHomeSubCluster =
+          getApplicationHomeSubCluster(requestApplicationId);
+      SubClusterId responseSubClusterId = actualAppHomeSubCluster.getHomeSubCluster();
+      long end = clock.getTime();
+      opDurations.addAppHomeSubClusterDuration(start, end);
+      return AddApplicationHomeSubClusterResponse.newInstance(responseSubClusterId);
     } catch (Exception e) {
-      String errMsg = "Cannot check app home subcluster for " + appId;
+      String errMsg = "Cannot check app home subcluster for " + requestApplicationId;
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    long end = clock.getTime();
-    opDurations.addAppHomeSubClusterDuration(start, end);
-    return AddApplicationHomeSubClusterResponse
-        .newInstance(homeSubCluster);
+
+    // Throw YarnException.
+    throw new YarnException("Cannot addApplicationHomeSubCluster by request");
   }
 
   @Override
-  public UpdateApplicationHomeSubClusterResponse
-      updateApplicationHomeSubCluster(
-          UpdateApplicationHomeSubClusterRequest request)
-              throws YarnException {
+  public UpdateApplicationHomeSubClusterResponse updateApplicationHomeSubCluster(
+      UpdateApplicationHomeSubClusterRequest request) throws YarnException {
 
     long start = clock.getTime();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
-    ApplicationHomeSubCluster app = request.getApplicationHomeSubCluster();
-    ApplicationId appId = app.getApplicationId();
-    SubClusterId homeSubCluster = getApp(appId);
-    if (homeSubCluster == null) {
-      String errMsg = "Application " + appId + " does not exist";
+    ApplicationHomeSubCluster requestApplicationHomeSubCluster =
+        request.getApplicationHomeSubCluster();
+    ApplicationId requestApplicationId = requestApplicationHomeSubCluster.getApplicationId();
+    ApplicationHomeSubCluster zkStoreApplicationHomeSubCluster =
+        getApplicationHomeSubCluster(requestApplicationId);
+
+    if (zkStoreApplicationHomeSubCluster == null) {
+      String errMsg = "Application " + requestApplicationId + " does not exist";
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    SubClusterId newSubClusterId =
-        request.getApplicationHomeSubCluster().getHomeSubCluster();
-    putApp(appId, newSubClusterId, true);
+
+    SubClusterId oldSubClusterId = zkStoreApplicationHomeSubCluster.getHomeSubCluster();
+    SubClusterId newSubClusterId = requestApplicationHomeSubCluster.getHomeSubCluster();
+    ApplicationSubmissionContext requestApplicationSubmissionContext =
+        requestApplicationHomeSubCluster.getApplicationSubmissionContext();
+
+    LOG.debug("applicationId = {}, oldHomeSubClusterId = {}, newHomeSubClusterId = {}, " +
+        "appSubmissionContext = {}.", requestApplicationId, oldSubClusterId, newSubClusterId,
+        requestApplicationSubmissionContext);
+
+    // update stored ApplicationHomeSubCluster
+    storeOrUpdateApplicationHomeSubCluster(requestApplicationId,
+        requestApplicationHomeSubCluster, true);
 
     long end = clock.getTime();
     opDurations.addUpdateAppHomeSubClusterDuration(start, end);
@@ -369,15 +408,33 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
     long start = clock.getTime();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
-    ApplicationId appId = request.getApplicationId();
-    SubClusterId homeSubCluster = getApp(appId);
-    if (homeSubCluster == null) {
-      String errMsg = "Application " + appId + " does not exist";
+    ApplicationId requestApplicationId = request.getApplicationId();
+
+    ApplicationHomeSubCluster zkStoreApplicationHomeSubCluster =
+        getApplicationHomeSubCluster(requestApplicationId);
+    if (zkStoreApplicationHomeSubCluster == null) {
+      String errMsg = "Application " + requestApplicationId + " does not exist";
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
+
+    // Prepare to return data
+    SubClusterId subClusterId = zkStoreApplicationHomeSubCluster.getHomeSubCluster();
+    long createTime = zkStoreApplicationHomeSubCluster.getCreateTime();
+
     long end = clock.getTime();
     opDurations.addGetAppHomeSubClusterDuration(start, end);
-    return GetApplicationHomeSubClusterResponse.newInstance(appId, homeSubCluster);
+
+    // If the request asks for an ApplicationSubmissionContext to be returned,
+    // we will return
+    if (request.getContainsAppSubmissionContext()) {
+      ApplicationSubmissionContext submissionContext =
+          zkStoreApplicationHomeSubCluster.getApplicationSubmissionContext();
+      return GetApplicationHomeSubClusterResponse.newInstance(
+          requestApplicationId, subClusterId, createTime, submissionContext);
+    }
+
+    return GetApplicationHomeSubClusterResponse.newInstance(requestApplicationId,
+        subClusterId, createTime);
   }
 
   @Override
@@ -412,13 +469,18 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   private ApplicationHomeSubCluster generateAppHomeSC(String appId) {
     try {
+      // Parse ApplicationHomeSubCluster
       ApplicationId applicationId = ApplicationId.fromString(appId);
-      SubClusterId homeSubCluster = getApp(applicationId);
-      ApplicationHomeSubCluster app =
-          ApplicationHomeSubCluster.newInstance(applicationId, homeSubCluster);
-      return app;
+      ApplicationHomeSubCluster zkStoreApplicationHomeSubCluster =
+          getApplicationHomeSubCluster(applicationId);
+
+      // Prepare to return data
+      SubClusterId subClusterId = zkStoreApplicationHomeSubCluster.getHomeSubCluster();
+      ApplicationHomeSubCluster resultApplicationHomeSubCluster =
+          ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
+      return resultApplicationHomeSubCluster;
     } catch (Exception ex) {
-      LOG.error("get homeSubCluster by appId = {}.", appId);
+      LOG.error("get homeSubCluster by appId = {}.", appId, ex);
     }
     return null;
   }
@@ -642,49 +704,66 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   @Override
   public Version getCurrentVersion() {
+    return CURRENT_VERSION_INFO;
+  }
+
+  @Override
+  public Version loadVersion() throws Exception {
+    if (exists(versionNode)) {
+      byte[] data = get(versionNode);
+      if (data != null) {
+        return new VersionPBImpl(VersionProto.parseFrom(data));
+      }
+    }
     return null;
   }
 
   @Override
-  public Version loadVersion() {
-    return null;
+  public void storeVersion() throws Exception {
+    byte[] data = ((VersionPBImpl) CURRENT_VERSION_INFO).getProto().toByteArray();
+    boolean isUpdate = exists(versionNode);
+    put(versionNode, data, isUpdate);
   }
 
   /**
    * Get the subcluster for an application.
+   *
    * @param appId Application identifier.
-   * @return Subcluster identifier.
+   * @return ApplicationHomeSubCluster identifier.
    * @throws Exception If it cannot contact ZooKeeper.
    */
-  private SubClusterId getApp(final ApplicationId appId) throws YarnException {
+  private ApplicationHomeSubCluster getApplicationHomeSubCluster(
+      final ApplicationId appId) throws YarnException {
     String appZNode = getNodePath(appsZNode, appId.toString());
 
-    SubClusterId subClusterId = null;
+    ApplicationHomeSubCluster appHomeSubCluster = null;
     byte[] data = get(appZNode);
     if (data != null) {
       try {
-        subClusterId = new SubClusterIdPBImpl(
-            SubClusterIdProto.parseFrom(data));
+        appHomeSubCluster = new ApplicationHomeSubClusterPBImpl(
+            ApplicationHomeSubClusterProto.parseFrom(data));
       } catch (InvalidProtocolBufferException e) {
         String errMsg = "Cannot parse application at " + appZNode;
         FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
       }
     }
-    return subClusterId;
+    return appHomeSubCluster;
   }
 
   /**
-   * Put an application.
-   * @param appId Application identifier.
-   * @param subClusterId Subcluster identifier.
+   * We will store the data of ApplicationHomeSubCluster according to appId.
+   *
+   * @param applicationId ApplicationId.
+   * @param applicationHomeSubCluster ApplicationHomeSubCluster.
+   * @param update false, add records; true, update records.
    * @throws Exception If it cannot contact ZooKeeper.
    */
-  private void putApp(final ApplicationId appId,
-      final SubClusterId subClusterId, boolean update)
-          throws YarnException {
-    String appZNode = getNodePath(appsZNode, appId.toString());
-    SubClusterIdProto proto =
-        ((SubClusterIdPBImpl)subClusterId).getProto();
+  private void storeOrUpdateApplicationHomeSubCluster(final ApplicationId applicationId,
+      final ApplicationHomeSubCluster applicationHomeSubCluster, boolean update)
+      throws YarnException {
+    String appZNode = getNodePath(appsZNode, applicationId.toString());
+    ApplicationHomeSubClusterProto proto =
+        ((ApplicationHomeSubClusterPBImpl) applicationHomeSubCluster).getProto();
     byte[] data = proto.toByteArray();
     put(appZNode, data, update);
   }

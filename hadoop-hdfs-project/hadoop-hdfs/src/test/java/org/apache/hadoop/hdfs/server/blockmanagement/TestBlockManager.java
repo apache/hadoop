@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.LinkedListMultimap;
@@ -677,8 +680,8 @@ public class TestBlockManager {
    */
   @Test
   public void testHighestPriReplSrcChosenDespiteMaxReplLimit() throws Exception {
-    bm.maxReplicationStreams = 0;
-    bm.replicationStreamsHardLimit = 1;
+    bm.setMaxReplicationStreams(0, false);
+    bm.setReplicationStreamsHardLimit(1);
 
     long blockId = 42;         // arbitrary
     Block aBlock = new Block(blockId, 0, 0);
@@ -735,7 +738,7 @@ public class TestBlockManager {
 
   @Test
   public void testChooseSrcDatanodesWithDupEC() throws Exception {
-    bm.maxReplicationStreams = 4;
+    bm.setMaxReplicationStreams(4, false);
 
     long blockId = -9223372036854775776L; // real ec block id
     Block aBlock = new Block(blockId, 0, 0);
@@ -895,7 +898,7 @@ public class TestBlockManager {
     assertNotNull(work);
 
     // simulate the 2 nodes reach maxReplicationStreams
-    for(int i = 0; i < bm.maxReplicationStreams; i++){
+    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){
       ds3.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
       ds4.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
     }
@@ -939,7 +942,7 @@ public class TestBlockManager {
     assertNotNull(work);
 
     // simulate the 1 node reaches maxReplicationStreams
-    for(int i = 0; i < bm.maxReplicationStreams; i++){
+    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){
       ds2.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
     }
 
@@ -948,7 +951,7 @@ public class TestBlockManager {
     assertNotNull(work);
 
     // simulate the 1 more node reaches maxReplicationStreams
-    for(int i = 0; i < bm.maxReplicationStreams; i++){
+    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){
       ds3.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
     }
 
@@ -997,7 +1000,7 @@ public class TestBlockManager {
     DatanodeDescriptor[] dummyDDArray = new DatanodeDescriptor[]{dummyDD};
     DatanodeStorageInfo[] dummyDSArray = new DatanodeStorageInfo[]{ds1};
     // Simulate the 2 nodes reach maxReplicationStreams.
-    for(int i = 0; i < bm.maxReplicationStreams; i++){ //Add some dummy EC reconstruction task.
+    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){ //Add some dummy EC reconstruction task.
       ds3.getDatanodeDescriptor().addBlockToBeErasureCoded(dummyBlock, dummyDDArray,
               dummyDSArray, new byte[0], new byte[0], ecPolicy);
       ds4.getDatanodeDescriptor().addBlockToBeErasureCoded(dummyBlock, dummyDDArray,
@@ -1011,8 +1014,8 @@ public class TestBlockManager {
 
   @Test
   public void testFavorDecomUntilHardLimit() throws Exception {
-    bm.maxReplicationStreams = 0;
-    bm.replicationStreamsHardLimit = 1;
+    bm.setMaxReplicationStreams(0, false);
+    bm.setReplicationStreamsHardLimit(1);
 
     long blockId = 42;         // arbitrary
     Block aBlock = new Block(blockId, 0, 0);
@@ -2065,5 +2068,57 @@ public class TestBlockManager {
     assertFalse(bm.validateReconstructionWork(work));
     // validateReconstructionWork return false, need to perform resetTargets().
     assertNull(work.getTargets());
+  }
+
+  /**
+   * Test whether the first block report after DataNode restart is completely
+   * processed.
+   */
+  @Test
+  public void testBlockReportAfterDataNodeRestart() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+           .numDataNodes(3).storagesPerDatanode(1).build()) {
+      cluster.waitActive();
+      BlockManager blockManager = cluster.getNamesystem().getBlockManager();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      final Path filePath = new Path("/tmp.txt");
+      final long fileLen = 1L;
+      DFSTestUtil.createFile(fs, filePath, fileLen, (short) 3, 1L);
+      DFSTestUtil.waitForReplication(fs, filePath, (short) 3, 60000);
+      ArrayList<DataNode> datanodes = cluster.getDataNodes();
+      assertEquals(datanodes.size(), 3);
+
+      // Stop RedundancyMonitor.
+      blockManager.setInitializedReplQueues(false);
+
+      // Delete the replica on the first datanode.
+      DataNode dn = datanodes.get(0);
+      int dnIpcPort = dn.getIpcPort();
+      File dnDir = dn.getFSDataset().getVolumeList().get(0).getCurrentDir();
+      String[] children = FileUtil.list(dnDir);
+      for (String s : children) {
+        if (!s.equals("VERSION")) {
+          FileUtil.fullyDeleteContents(new File(dnDir, s));
+        }
+      }
+
+      // The number of replicas is still 3 because the datanode has not sent
+      // a new block report.
+      FileStatus stat = fs.getFileStatus(filePath);
+      BlockLocation[] locs = fs.getFileBlockLocations(stat, 0, stat.getLen());
+      assertEquals(3, locs[0].getHosts().length);
+
+      // Restart the first datanode.
+      cluster.restartDataNode(0, true);
+
+      // Wait for the block report to be processed.
+      cluster.waitDatanodeFullyStarted(cluster.getDataNode(dnIpcPort), 10000);
+      cluster.waitFirstBRCompleted(0, 10000);
+
+      // The replica num should be 2.
+      locs = fs.getFileBlockLocations(stat, 0, stat.getLen());
+      assertEquals(2, locs[0].getHosts().length);
+    }
   }
 }

@@ -563,9 +563,12 @@ public class TestCopyCommitter {
         Path sourcePath = new Path(sourceBase + srcFilename);
         CopyListingFileStatus sourceCurrStatus =
                 new CopyListingFileStatus(fs.getFileStatus(sourcePath));
-        Assert.assertFalse(DistCpUtils.checksumsAreEqual(
-            fs, new Path(sourceBase + srcFilename), null,
-            fs, new Path(targetBase + srcFilename), sourceCurrStatus.getLen()));
+        Assert.assertEquals("Checksum should not be equal",
+            CopyMapper.ChecksumComparison.FALSE,
+            DistCpUtils.checksumsAreEqual(
+                fs, new Path(sourceBase + srcFilename), null,
+                fs, new Path(targetBase + srcFilename),
+                sourceCurrStatus.getLen()));
       } catch(IOException exception) {
         if (skipCrc) {
           LOG.error("Unexpected exception is found", exception);
@@ -583,13 +586,11 @@ public class TestCopyCommitter {
 
   @Test
   public void testCommitWithCleanupTempFiles() throws IOException {
-    testCommitWithCleanup(true, false);
-    testCommitWithCleanup(false, true);
-    testCommitWithCleanup(true, true);
-    testCommitWithCleanup(false, false);
+    testCommitWithCleanup(true);
+    testCommitWithCleanup(false);
   }
 
-  private void testCommitWithCleanup(boolean append, boolean directWrite)throws IOException {
+  private void testCommitWithCleanup(boolean directWrite) throws IOException {
     TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
     JobID jobID = taskAttemptContext.getTaskAttemptID().getJobID();
     JobContext jobContext = new JobContextImpl(
@@ -608,7 +609,7 @@ public class TestCopyCommitter {
       DistCpOptions options = new DistCpOptions.Builder(
           Collections.singletonList(new Path(sourceBase)),
           new Path("/out"))
-          .withAppend(append)
+          .withAppend(true)
           .withSyncFolder(true)
           .withDirectWrite(directWrite)
           .build();
@@ -628,7 +629,7 @@ public class TestCopyCommitter {
           null, taskAttemptContext);
       committer.commitJob(jobContext);
 
-      if (append || directWrite) {
+      if (directWrite) {
         ContractTestUtils.assertPathExists(fs, "Temp files should not be cleanup with append or direct option",
             tempFilePath);
       } else {

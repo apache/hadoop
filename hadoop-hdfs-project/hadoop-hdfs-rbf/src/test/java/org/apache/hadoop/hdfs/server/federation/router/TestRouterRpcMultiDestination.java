@@ -73,6 +73,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 /**
  * The RPC interface of the {@link getRouter()} implemented by
@@ -275,6 +276,14 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
   @Test
   public void testPreviousBlockNotNull()
       throws IOException, URISyntaxException {
+    final GenericTestUtils.LogCapturer stateChangeLog =
+        GenericTestUtils.LogCapturer.captureLogs(NameNode.stateChangeLog);
+    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.DEBUG);
+
+    final GenericTestUtils.LogCapturer nameNodeLog =
+        GenericTestUtils.LogCapturer.captureLogs(NameNode.LOG);
+    GenericTestUtils.setLogLevel(NameNode.LOG, Level.DEBUG);
+
     final FederationRPCMetrics metrics = getRouterContext().
         getRouter().getRpcServer().getRPCMetrics();
     final ClientProtocol clientProtocol = getRouterProtocol();
@@ -305,6 +314,7 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
       long proxyNumAddBlock = metrics.getProcessingOps();
       assertEquals(2, proxyNumAddBlock - proxyNumCreate);
 
+      stateChangeLog.clearOutput();
       // Add a block via router and previous block is not null.
       LocatedBlock blockTwo = clientProtocol.addBlock(
           testPath, clientName, blockOne.getBlock(), null,
@@ -312,7 +322,9 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
       assertNotNull(blockTwo);
       long proxyNumAddBlock2 = metrics.getProcessingOps();
       assertEquals(1, proxyNumAddBlock2 - proxyNumAddBlock);
+      assertTrue(stateChangeLog.getOutput().contains("BLOCK* getAdditionalBlock: " + testPath));
 
+      nameNodeLog.clearOutput();
       // Get additionalDatanode via router and block is not null.
       DatanodeInfo[] exclusions = DatanodeInfo.EMPTY_ARRAY;
       LocatedBlock newBlock = clientProtocol.getAdditionalDatanode(
@@ -322,12 +334,15 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
       assertNotNull(newBlock);
       long proxyNumAdditionalDatanode = metrics.getProcessingOps();
       assertEquals(1, proxyNumAdditionalDatanode - proxyNumAddBlock2);
+      assertTrue(nameNodeLog.getOutput().contains("getAdditionalDatanode: src=" + testPath));
 
+      stateChangeLog.clearOutput();
       // Complete the file via router and last block is not null.
       clientProtocol.complete(testPath, clientName,
           newBlock.getBlock(), status.getFileId());
       long proxyNumComplete = metrics.getProcessingOps();
       assertEquals(1, proxyNumComplete - proxyNumAdditionalDatanode);
+      assertTrue(stateChangeLog.getOutput().contains("DIR* NameSystem.completeFile: " + testPath));
     } finally {
       clientProtocol.delete(testPath, true);
     }
@@ -440,7 +455,7 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
   @Test
   public void testCallerContextWithMultiDestinations() throws IOException {
     GenericTestUtils.LogCapturer auditLog =
-        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
     // set client context
     CallerContext.setCurrent(

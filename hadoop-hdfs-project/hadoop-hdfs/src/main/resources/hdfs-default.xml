@@ -334,6 +334,14 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.namenode.redundancy.considerLoadByVolume</name>
+    <value>false</value>
+    <description>Decide if chooseTarget considers the target's volume load or
+      not.
+    </description>
+  </property>
+
 <property>
   <name>dfs.namenode.read.considerLoad</name>
   <value>false</value>
@@ -2721,10 +2729,10 @@
   <description>
     Specifies whether to flush edit log file channel. When set, expensive
     FileChannel#force calls are skipped and synchronous disk writes are
-    enabled instead by opening the edit log file with RandomAccessFile("rws")
+    enabled instead by opening the edit log file with RandomAccessFile("rwd")
     flags. This can significantly improve the performance of edit log writes
     on the Windows platform.
-    Note that the behavior of the "rws" flags is platform and hardware specific
+    Note that the behavior of the "rwd" flags is platform and hardware specific
     and might not provide the same level of guarantees as FileChannel#force.
     For example, the write will skip the disk-cache on SAS and SCSI devices
     while it might not on SATA devices. This is an expert level setting,
@@ -5096,35 +5104,6 @@
     If this specified amount of time has elapsed and no block has been moved
     out of a source DataNode, on more effort will be made to move blocks out of
     this DataNode in the current Mover iteration.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.audit.log.async</name>
-  <value>false</value>
-  <description>
-    If true, enables asynchronous audit log.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.audit.log.async.blocking</name>
-  <value>true</value>
-  <description>
-    Only used when enables asynchronous audit log. Sets whether audit log async
-    appender should wait if there is no space available in the event buffer or
-    immediately return. Default value is true.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.audit.log.async.buffer.size</name>
-  <value>128</value>
-  <description>
-    Only used when enables asynchronous audit log. Sets the number of audit
-    logs allowed in the event buffer before the calling thread is blocked
-    (if dfs.namenode.audit.log.async.blocking is true) or until logs are
-    summarized and discarded. Default value is 128.
   </description>
 </property>
 

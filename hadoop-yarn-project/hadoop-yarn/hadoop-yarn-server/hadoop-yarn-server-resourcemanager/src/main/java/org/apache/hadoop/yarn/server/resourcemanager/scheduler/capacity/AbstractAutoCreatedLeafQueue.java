@@ -53,7 +53,7 @@ public class AbstractAutoCreatedLeafQueue extends AbstractLeafQueue {
    *
    * @param entitlement the new entitlement for the queue (capacity,
    *                    maxCapacity, etc..)
-   * @throws SchedulerDynamicEditException
+   * @throws SchedulerDynamicEditException when setEntitlement fails.
    */
   public void setEntitlement(QueueEntitlement entitlement)
       throws SchedulerDynamicEditException {
@@ -86,11 +86,12 @@ public class AbstractAutoCreatedLeafQueue extends AbstractLeafQueue {
 
   /**
    * This methods to change capacity for a queue and adjusts its
-   * absoluteCapacity
+   * absoluteCapacity.
    *
+   * @param nodeLabel nodeLabel.
    * @param entitlement the new entitlement for the queue (capacity,
    *                    maxCapacity, etc..)
-   * @throws SchedulerDynamicEditException
+   * @throws SchedulerDynamicEditException when setEntitlement fails.
    */
   public void setEntitlement(String nodeLabel, QueueEntitlement entitlement)
       throws SchedulerDynamicEditException {

@@ -56,8 +56,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.Test;
 import org.slf4j.event.Level;
 
 public class MRAppBenchmark {
@@ -197,8 +196,7 @@ public class MRAppBenchmark {
     }
   }
 
-  @Test
-  @Timeout(60000)
+  @Test(timeout = 60000)
   public void benchmark1() throws Exception {
     int maps = 100; // Adjust for benchmarking. Start with thousands.
     int reduces = 0;
@@ -277,8 +275,7 @@ public class MRAppBenchmark {
     });
   }
 
-  @Test
-  @Timeout(60000)
+  @Test(timeout = 60000)
   public void benchmark2() throws Exception {
     int maps = 100; // Adjust for benchmarking, start with a couple of thousands
     int reduces = 50;

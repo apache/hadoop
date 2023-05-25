@@ -27,8 +27,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
+import org.junit.After;
+import org.junit.Assert;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileStatus;
@@ -58,12 +58,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 @SuppressWarnings({"rawtypes"})
 public class TestTaskAttemptContainerRequest {
 
-  @AfterEach
+  @After
   public void cleanup() {
     UserGroupInformation.reset();
   }
@@ -114,8 +114,7 @@ public class TestTaskAttemptContainerRequest {
             mock(WrappedJvmID.class), taListener,
             credentials);
 
-    Assertions.assertEquals(acls, launchCtx.getApplicationACLs(),
-        "ACLs mismatch");
+    Assert.assertEquals("ACLs mismatch", acls, launchCtx.getApplicationACLs());
     Credentials launchCredentials = new Credentials();
 
     DataInputByteBuffer dibb = new DataInputByteBuffer();
@@ -126,18 +125,17 @@ public class TestTaskAttemptContainerRequest {
     for (Token<? extends TokenIdentifier> token : credentials.getAllTokens()) {
       Token<? extends TokenIdentifier> launchToken =
           launchCredentials.getToken(token.getService());
-      Assertions.assertNotNull(launchToken,
-          "Token " + token.getService() + " is missing");
-      Assertions.assertEquals(token, launchToken,
-          "Token " + token.getService() + " mismatch");
+      Assert.assertNotNull("Token " + token.getService() + " is missing",
+          launchToken);
+      Assert.assertEquals("Token " + token.getService() + " mismatch",
+          token, launchToken);
     }
 
     // verify the secret key is in the launch context
-    Assertions.assertNotNull(launchCredentials.getSecretKey(SECRET_KEY_ALIAS),
-        "Secret key missing");
-    Assertions.assertTrue(Arrays.equals(SECRET_KEY,
-        launchCredentials.getSecretKey(SECRET_KEY_ALIAS)),
-        "Secret key mismatch");
+    Assert.assertNotNull("Secret key missing",
+        launchCredentials.getSecretKey(SECRET_KEY_ALIAS));
+    Assert.assertTrue("Secret key mismatch", Arrays.equals(SECRET_KEY,
+        launchCredentials.getSecretKey(SECRET_KEY_ALIAS)));
   }
 
   static public class StubbedFS extends RawLocalFileSystem {

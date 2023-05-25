@@ -56,6 +56,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -221,5 +223,11 @@ public class DefaultRMAdminRequestInterceptor
       NodesToAttributesMappingRequest request)
       throws YarnException, IOException {
     return rmAdminProxy.mapAttributesToNodes(request);
+  }
+
+  @Override
+  public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request)
+      throws YarnException, IOException {
+    return rmAdminProxy.deregisterSubCluster(request);
   }
 }
