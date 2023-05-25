@@ -41,6 +41,10 @@ import java.util.stream.Collectors;
 public class QiniuKodoClient implements IQiniuKodoClient {
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoClient.class);
 
+    static {
+        Client.setAppName("Hadoop " + VersionInfo.getVersion());
+    }
+
     private final String bucket;
 
     private final Auth auth;
@@ -62,6 +66,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     private final ExecutorService service;
     private final DownloadHttpClient downloadHttpClient;
 
+
     public QiniuKodoClient(
             String bucket,
             QiniuKodoFsConfig fsConfig,
@@ -77,7 +82,6 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         Configuration configuration = buildQiniuConfiguration(fsConfig);
         this.useDownloadHttps = fsConfig.download.useHttps;
         this.client = new Client(configuration);
-        Client.setAppName("Hadoop " + VersionInfo.getVersion());
         this.uploadManager = new UploadManager(configuration);
         this.bucketManager = new BucketManager(auth, configuration, this.client);
         this.downloadDomain = buildDownloadHost(fsConfig, bucketManager, bucket);
