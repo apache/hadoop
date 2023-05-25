@@ -1,7 +1,7 @@
 package org.apache.hadoop.fs.qiniu.kodo;
 
 import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
-import org.apache.hadoop.fs.qiniu.kodo.client.MyFileInfo;
+import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoFileInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -64,19 +64,19 @@ public class ITestQiniuKodoClient {
         assertTrue(client.upload(testStream3, "dir/test_key3", true));
 
         // List all files
-        List<MyFileInfo> allFiles = client.listStatus("", false);
+        List<QiniuKodoFileInfo> allFiles = client.listStatus("", false);
         assertEquals(3, allFiles.size());
 
         // List files with prefix "test_"
-        List<MyFileInfo> testFiles = client.listStatus("test_", false);
+        List<QiniuKodoFileInfo> testFiles = client.listStatus("test_", false);
         assertEquals(2, testFiles.size());
 
         // List files with prefix "dir/"
-        List<MyFileInfo> dirFiles = client.listStatus("dir/", false);
+        List<QiniuKodoFileInfo> dirFiles = client.listStatus("dir/", false);
         assertEquals(1, dirFiles.size());
 
         // List all files, including directories
-        List<MyFileInfo> allFilesAndDirs = client.listStatus("", true);
+        List<QiniuKodoFileInfo> allFilesAndDirs = client.listStatus("", true);
         assertEquals(3, allFilesAndDirs.size());
     }
 

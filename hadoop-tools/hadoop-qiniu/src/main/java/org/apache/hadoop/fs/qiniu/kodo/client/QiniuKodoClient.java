@@ -238,8 +238,8 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * 获取一个指定前缀的对象
      */
     @Override
-    public MyFileInfo listOneStatus(String keyPrefix) throws IOException {
-        List<MyFileInfo> ret = listNStatus(keyPrefix, 1);
+    public QiniuKodoFileInfo listOneStatus(String keyPrefix) throws IOException {
+        List<QiniuKodoFileInfo> ret = listNStatus(keyPrefix, 1);
         if (ret.isEmpty()) {
             return null;
         }
@@ -249,7 +249,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     /**
      * 获取指定前缀的最多前n个对象
      */
-    public List<MyFileInfo> listNStatus(String keyPrefix, int n) throws IOException {
+    public List<QiniuKodoFileInfo> listNStatus(String keyPrefix, int n) throws IOException {
         FileListing listing = bucketManager.listFiles(bucket, keyPrefix, null, n, "");
         if (listing.items == null) {
             return Collections.emptyList();
@@ -264,7 +264,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * @param useDirectory 是否使用路径分割
      * @return 迭代器
      */
-    public RemoteIterator<MyFileInfo> listStatusIterator(String prefixKey, boolean useDirectory) {
+    public RemoteIterator<QiniuKodoFileInfo> listStatusIterator(String prefixKey, boolean useDirectory) {
         ListProducerConfig listConfig = fsConfig.client.list;
         // 消息队列
         BlockingQueue<FileInfo> fileInfoQueue = new LinkedBlockingQueue<>(listConfig.bufferSize);
@@ -279,7 +279,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
         // 生产者线程
         Future<Exception> future = service.submit(producer);
-        return new RemoteIterator<MyFileInfo>() {
+        return new RemoteIterator<QiniuKodoFileInfo>() {
             @Override
             public boolean hasNext() throws IOException {
                 while (true) {
@@ -311,7 +311,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             }
 
             @Override
-            public MyFileInfo next() throws IOException {
+            public QiniuKodoFileInfo next() throws IOException {
                 if (!hasNext()) {
                     return null;
                 }
@@ -330,7 +330,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * 否则，将呈现出所有前缀为key的对象
      */
     @Override
-    public List<MyFileInfo> listStatus(String prefixKey, boolean useDirectory) throws IOException {
+    public List<QiniuKodoFileInfo> listStatus(String prefixKey, boolean useDirectory) throws IOException {
         return RemoteIterators.toList(listStatusIterator(prefixKey, useDirectory));
     }
 
@@ -529,7 +529,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
      * 不存在不抛异常，返回为空，只有在其他错误时抛异常
      */
     @Override
-    public MyFileInfo getFileStatus(String key) throws IOException {
+    public QiniuKodoFileInfo getFileStatus(String key) throws IOException {
         try {
             FileInfo fileInfo = bucketManager.stat(bucket, key);
             if (fileInfo != null) {
@@ -557,9 +557,9 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         return url;
     }
 
-    public static MyFileInfo qiniuFileInfoToMyFileInfo(FileInfo fileInfo) {
+    public static QiniuKodoFileInfo qiniuFileInfoToMyFileInfo(FileInfo fileInfo) {
         if (fileInfo == null) return null;
-        return new MyFileInfo(
+        return new QiniuKodoFileInfo(
                 fileInfo.key,
                 fileInfo.fsize,
                 fileInfo.putTime / 10000

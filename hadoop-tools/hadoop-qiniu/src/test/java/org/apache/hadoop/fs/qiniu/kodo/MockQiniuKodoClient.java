@@ -2,7 +2,7 @@ package org.apache.hadoop.fs.qiniu.kodo;
 
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
-import org.apache.hadoop.fs.qiniu.kodo.client.MyFileInfo;
+import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoFileInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.slf4j.Logger;
@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -30,8 +29,8 @@ public class MockQiniuKodoClient implements IQiniuKodoClient {
             this.data = data;
         }
 
-        public MyFileInfo toMyFileInfo() {
-            return new MyFileInfo(key, data.length, putTime);
+        public QiniuKodoFileInfo toMyFileInfo() {
+            return new QiniuKodoFileInfo(key, data.length, putTime);
         }
 
         public InputStream toInputStream(long offset, int size) {
@@ -73,8 +72,8 @@ public class MockQiniuKodoClient implements IQiniuKodoClient {
     }
 
     @Override
-    public MyFileInfo listOneStatus(String keyPrefix) throws IOException {
-        List<MyFileInfo> fileInfos = listNStatus(keyPrefix, 1);
+    public QiniuKodoFileInfo listOneStatus(String keyPrefix) throws IOException {
+        List<QiniuKodoFileInfo> fileInfos = listNStatus(keyPrefix, 1);
         if (fileInfos.isEmpty()) {
             return null;
         }
@@ -82,7 +81,7 @@ public class MockQiniuKodoClient implements IQiniuKodoClient {
     }
 
     @Override
-    public List<MyFileInfo> listNStatus(String keyPrefix, int n) throws IOException {
+    public List<QiniuKodoFileInfo> listNStatus(String keyPrefix, int n) throws IOException {
         return mockFileMap.entrySet()
                 .stream()
                 .filter(entry -> entry.getKey().startsWith(keyPrefix))
@@ -105,26 +104,26 @@ public class MockQiniuKodoClient implements IQiniuKodoClient {
     }
 
     @Override
-    public List<MyFileInfo> listStatus(String key, boolean useDirectory) throws IOException {
-        List<MyFileInfo> allPrefixFiles = listNStatus(key, Integer.MAX_VALUE);
+    public List<QiniuKodoFileInfo> listStatus(String key, boolean useDirectory) throws IOException {
+        List<QiniuKodoFileInfo> allPrefixFiles = listNStatus(key, Integer.MAX_VALUE);
         if (!useDirectory) {
             return allPrefixFiles;
         }
         String delimiter = "/";
-        TrieTree<MyFileInfo> trie = new TrieTree<>();
-        for (MyFileInfo fileInfo : allPrefixFiles) {
+        TrieTree<QiniuKodoFileInfo> trie = new TrieTree<>();
+        for (QiniuKodoFileInfo fileInfo : allPrefixFiles) {
             String[] keyParts = fileInfo.key.split(delimiter);
             trie.insert(Arrays.asList(keyParts), fileInfo);
         }
 
-        TrieTree.TrieNode<MyFileInfo> result = trie.search(Arrays.asList(key.isEmpty() ? new String[0] : key.split(delimiter)));
+        TrieTree.TrieNode<QiniuKodoFileInfo> result = trie.search(Arrays.asList(key.isEmpty() ? new String[0] : key.split(delimiter)));
         if (result == null) {
             return Collections.emptyList();
         }
 
         List<String> commonPrefixes = new ArrayList<>();
-        List<MyFileInfo> files = new ArrayList<>();
-        for (TrieTree.TrieNode<MyFileInfo> node : result.children) {
+        List<QiniuKodoFileInfo> files = new ArrayList<>();
+        for (TrieTree.TrieNode<QiniuKodoFileInfo> node : result.children) {
             if (node.value != null) {
                 files.add(node.value);
             } else {
@@ -132,13 +131,13 @@ public class MockQiniuKodoClient implements IQiniuKodoClient {
             }
         }
         for (String prefix : commonPrefixes) {
-            files.add(new MyFileInfo(prefix, 0, 0));
+            files.add(new QiniuKodoFileInfo(prefix, 0, 0));
         }
         return files;
     }
 
     @Override
-    public RemoteIterator<MyFileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException {
+    public RemoteIterator<QiniuKodoFileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException {
         return RemoteIterators.remoteIteratorFromIterable(listStatus(prefixKey, useDirectory));
     }
 
@@ -213,7 +212,7 @@ public class MockQiniuKodoClient implements IQiniuKodoClient {
     }
 
     @Override
-    public MyFileInfo getFileStatus(String key) throws IOException {
+    public QiniuKodoFileInfo getFileStatus(String key) throws IOException {
         if (mockFileMap.containsKey(key)) {
             return mockFileMap.get(key).toMyFileInfo();
         }

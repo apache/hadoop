@@ -9,7 +9,7 @@ import java.io.InputStream;
 import java.util.List;
 
 public class QiniuKodoCachedClient implements IQiniuKodoClient {
-    private final LRUCache<String, MyFileInfo> cache;
+    private final LRUCache<String, QiniuKodoFileInfo> cache;
     private final IQiniuKodoClient source;
 
     public QiniuKodoCachedClient(
@@ -30,7 +30,7 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
 
     @Override
     public long getLength(String key) throws IOException {
-        MyFileInfo fileInfo = cache.get(key);
+        QiniuKodoFileInfo fileInfo = cache.get(key);
         if (fileInfo != null) {
             return fileInfo.size;
         }
@@ -52,8 +52,8 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
     }
 
     @Override
-    public MyFileInfo listOneStatus(String keyPrefix) throws IOException {
-        MyFileInfo fileInfo = cache.get(keyPrefix);
+    public QiniuKodoFileInfo listOneStatus(String keyPrefix) throws IOException {
+        QiniuKodoFileInfo fileInfo = cache.get(keyPrefix);
         if (fileInfo != null) {
             return fileInfo;
         }
@@ -72,12 +72,12 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
     }
 
     @Override
-    public List<MyFileInfo> listNStatus(String keyPrefix, int n) throws IOException {
+    public List<QiniuKodoFileInfo> listNStatus(String keyPrefix, int n) throws IOException {
         return source.listNStatus(keyPrefix, n);
     }
 
     @Override
-    public List<MyFileInfo> listStatus(String key, boolean useDirectory) throws IOException {
+    public List<QiniuKodoFileInfo> listStatus(String key, boolean useDirectory) throws IOException {
         return source.listStatus(key, useDirectory);
     }
 
@@ -121,7 +121,7 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
 
     @Override
     public boolean makeEmptyObject(String key) throws IOException {
-        MyFileInfo fileInfo = cache.get(key);
+        QiniuKodoFileInfo fileInfo = cache.get(key);
         if (fileInfo != null) {
             return false;
         }
@@ -130,8 +130,8 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
     }
 
     @Override
-    public MyFileInfo getFileStatus(String key) throws IOException {
-        MyFileInfo fileInfo = cache.get(key);
+    public QiniuKodoFileInfo getFileStatus(String key) throws IOException {
+        QiniuKodoFileInfo fileInfo = cache.get(key);
         if (fileInfo != null) {
             return fileInfo;
         }
@@ -143,7 +143,7 @@ public class QiniuKodoCachedClient implements IQiniuKodoClient {
     }
 
     @Override
-    public RemoteIterator<MyFileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException {
+    public RemoteIterator<QiniuKodoFileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException {
         return source.listStatusIterator(prefixKey, useDirectory);
     }
 }

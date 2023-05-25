@@ -16,13 +16,13 @@ public interface IQiniuKodoClient {
 
     InputStream fetch(String key, long offset, int size) throws IOException;
 
-    MyFileInfo listOneStatus(String keyPrefix) throws IOException;
+    QiniuKodoFileInfo listOneStatus(String keyPrefix) throws IOException;
 
-    List<MyFileInfo> listNStatus(String keyPrefix, int n) throws IOException;
+    List<QiniuKodoFileInfo> listNStatus(String keyPrefix, int n) throws IOException;
 
-    List<MyFileInfo> listStatus(String key, boolean useDirectory) throws IOException;
+    List<QiniuKodoFileInfo> listStatus(String key, boolean useDirectory) throws IOException;
 
-    RemoteIterator<MyFileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException;
+    RemoteIterator<QiniuKodoFileInfo> listStatusIterator(String prefixKey, boolean useDirectory) throws IOException;
 
     boolean copyKey(String oldKey, String newKey) throws IOException;
 
@@ -38,6 +38,6 @@ public interface IQiniuKodoClient {
 
     boolean makeEmptyObject(String key) throws IOException;
 
-    MyFileInfo getFileStatus(String key) throws IOException;
+    QiniuKodoFileInfo getFileStatus(String key) throws IOException;
 
 }

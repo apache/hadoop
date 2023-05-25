@@ -5,7 +5,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
-import org.apache.hadoop.fs.qiniu.kodo.client.MyFileInfo;
+import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoFileInfo;
 import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoCachedClient;
 import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.config.QiniuKodoFsConfig;
@@ -545,7 +545,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         // 1. key 可能是实际文件或文件夹, 也可能是中间路径
 
         // 先尝试查找 key
-        MyFileInfo file = kodoClient.getFileStatus(key);
+        QiniuKodoFileInfo file = kodoClient.getFileStatus(key);
 
         // 能查找到, 直接返回文件信息
         if (file != null) {
@@ -568,7 +568,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         }
 
         // 是文件夹前缀
-        MyFileInfo newDir = new MyFileInfo(newKey, 0, 0);
+        QiniuKodoFileInfo newDir = new QiniuKodoFileInfo(newKey, 0, 0);
         kodoClient.makeEmptyObject(newKey);
         return fileInfoToFileStatus(newDir);
     }
@@ -577,7 +577,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     /**
      * 七牛SDK的文件信息转换为 hadoop fs 的文件信息
      */
-    private FileStatus fileInfoToFileStatus(MyFileInfo file) {
+    private FileStatus fileInfoToFileStatus(QiniuKodoFileInfo file) {
         if (file == null) return null;
 
         LOG.debug("file stat, key:" + file.key);
