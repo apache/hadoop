@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.assertInverseQuantileGauges;
 import static org.apache.hadoop.test.MetricsAsserts.assertQuantileGauges;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
@@ -749,6 +750,57 @@ public class TestDataNodeMetrics {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  @Test(timeout=60000)
+  public void testDatanodeNetworkErrorsMetricDefaultConf() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setStrings("dfs.client.block.write.replace-datanode-on-failure.policy", "NEVER");
+    conf.setInt("dfs.client.block.write.replace-datanode-on-failure.min-replication", 0);
+    final MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(6).build();
+    final List<FSDataOutputStream> streams = Lists.newArrayList();
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+
+    try {
+      for (int i = 0; i < 3; i++) {
+        final Path path = new Path("/test" + i);
+        final FSDataOutputStream out =
+            cluster.getFileSystem().create(path, (short) 2);
+        final DataNodeFaultInjector injector = Mockito.mock
+            (DataNodeFaultInjector.class);
+        Mockito.doThrow(new IOException("mock IOException")).
+            when(injector).
+            writeBlockAfterFlush();
+        DataNodeFaultInjector.set(injector);
+        streams.add(out);
+        out.writeBytes("old gs data\n");
+        out.hflush();
+      }
+      /* Test the metric. */
+      final MetricsRecordBuilder dnMetrics =
+          getMetrics(cluster.getDataNodes().get(0).getMetrics().name());
+      //assertCounter("DatanodeNetworkErrors", 1L, dnMetrics);
+      assertCounterGt("DatanodeNetworkErrors", 1L, dnMetrics);
+
+      /* Test JMX datanode network counts. */
+      final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      final ObjectName mxbeanName =
+          new ObjectName("Hadoop:service=DataNode,name=DataNodeInfo");
+      final Object dnc =
+          mbs.getAttribute(mxbeanName, "DatanodeNetworkCounts");
+      final String allDnc = dnc.toString();
+      assertTrue("expected to see loopback address",
+          allDnc.indexOf("127.0.0.1") >= 0);
+      assertTrue("expected to see networkErrors",
+          allDnc.indexOf("networkErrors") >= 0);
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, streams.toArray(new Closeable[0]));
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      DataNodeFaultInjector.set(oldInjector);
     }
   }
 }
