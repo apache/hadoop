@@ -510,9 +510,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
    *    configured interval (if any).
    */
   private boolean shouldUpdateJmx() {
-    return updateJmxIntervalMs == 0
-        || (updateJmxIntervalMs > 0
-        && Time.monotonicNow() - lastJmxUpdateAttempt > updateJmxIntervalMs);
+    return updateJmxIntervalMs >= 0
+        && Time.monotonicNow() - lastJmxUpdateAttempt > updateJmxIntervalMs;
   }
 
   /**
