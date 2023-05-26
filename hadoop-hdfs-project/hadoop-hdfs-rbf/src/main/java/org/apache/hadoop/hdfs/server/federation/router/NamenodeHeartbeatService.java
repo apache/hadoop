@@ -112,15 +112,15 @@ public class NamenodeHeartbeatService extends PeriodicService {
   /** URL scheme to use for JMX calls. */
   private String scheme;
 
-  /** Whether to update JMX report */
+  /** Whether to update JMX report. */
   private boolean updateJmxEnabled;
-  /** Frequency of updates to JMX report */
+  /** Frequency of updates to JMX report. */
   private long updateJmxIntervalMs;
-  /** Timestamp of last attempt to update JMX report */
+  /** Timestamp of last attempt to update JMX report. */
   private long lastJmxUpdateAttempt;
-  /** Result of the last successful FsNamesystemMetrics report */
+  /** Result of the last successful FsNamesystemMetrics report. */
   private JSONArray fsNamesystemMetrics;
-  /** Result of the last successful NamenodeInfoMetrics report */
+  /** Result of the last successful NamenodeInfoMetrics report. */
   private JSONArray namenodeInfoMetrics;
 
   private String resolvedHost;
