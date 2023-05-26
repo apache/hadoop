@@ -6549,7 +6549,7 @@
     <value>-1</value>
     <description>
       The number of datanodenetworkerror metric per datanode displays.
-      -1 represents having no limit.
+      negative number represents having no limit.
     </description>
   </property>
 

@@ -2768,19 +2768,16 @@ public class DataNode extends ReconfigurableBase
       ConcurrentMap<String, Map<String, Long>> map = datanodeNetworkCounts.asMap();
       Set<Map.Entry<String, Map<String, Long>>> entries = map.entrySet();
       List<Map.Entry<String, Map<String, Long>>> list = new ArrayList<>(entries);
-      Collections.sort(list, new Comparator<Entry<String, Map<String, Long>>>() {
-        @Override
-        public int compare(Map.Entry<String, Map<String, Long>> o1,
-            Map.Entry<String, Map<String, Long>> o2) {
-          Map<String, Long> value1Map = o1.getValue();
-          Map<String, Long> value2Map = o2.getValue();
-          long compared = value2Map.getOrDefault(DataNode.NETWORK_ERRORS, 0L) -
-              value1Map.getOrDefault(DataNode.NETWORK_ERRORS, 0L);
-          return (int)compared;
-        }
+      list.sort((o1, o2) -> {
+        Map<String, Long> value1Map = o1.getValue();
+        Map<String, Long> value2Map = o2.getValue();
+        long compared =
+            value2Map.getOrDefault(DataNode.NETWORK_ERRORS, 0L) - value1Map.getOrDefault(
+                DataNode.NETWORK_ERRORS, 0L);
+        return (int) compared;
       });
       Map<String, Map<String, Long>> resultMap = new ConcurrentHashMap<>();
-      maxDisplay = list.size() > maxDisplay ? maxDisplay : list.size();
+      maxDisplay = Math.min(list.size(), maxDisplay);
       for (int i = 0; i < maxDisplay; i++) {
         resultMap.put(list.get(i).getKey(), list.get(i).getValue());
       }
