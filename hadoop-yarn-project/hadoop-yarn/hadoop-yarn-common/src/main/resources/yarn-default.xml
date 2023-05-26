@@ -5261,4 +5261,33 @@
     <value>false</value>
   </property>
 
+  <property>
+    <name>yarn.apps.cache.enable</name>
+    <value>false</value>
+    <description>
+      Optional.
+      To enable cache for RMWebServices.getApps
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.apps.cache.size</name>
+    <value>1000</value>
+    <description>
+      Optional.
+      The size of cache for RMWebServices.getApps when
+      yarn.apps.cache.enable = true, Default is 1000
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.apps.cache.expire</name>
+    <value>30s</value>
+    <description>
+      Optional.
+      The expire time of cache for RMWebServices.getApps when
+      yarn.apps.cache.enable = true, Default is 30s
+    </description>
+  </property>
+
 </configuration>
