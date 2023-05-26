@@ -298,7 +298,7 @@ public class TestRouterNamenodeMonitoring {
   public void testJmxRequestFrequency() {
     // Disable JMX requests
     Configuration conf = getNamenodesConfig();
-    conf.setBoolean(RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_ENABLED, false);
+    conf.setLong(RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS, -1);
     verifyUrlSchemes(HttpConfig.Policy.HTTPS_ONLY.name(), conf, 0, 0, 1);
 
     // Set JMX requests to lower frequency

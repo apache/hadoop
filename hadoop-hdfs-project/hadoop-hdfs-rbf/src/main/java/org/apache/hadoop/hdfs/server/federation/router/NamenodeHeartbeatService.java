@@ -21,8 +21,6 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HEALTH_MONITOR_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HEARTBEAT_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HEARTBEAT_INTERVAL_MS_DEFAULT;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_ENABLED;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS_DEFAULT;
 
@@ -112,8 +110,6 @@ public class NamenodeHeartbeatService extends PeriodicService {
   /** URL scheme to use for JMX calls. */
   private String scheme;
 
-  /** Whether to update JMX report. */
-  private boolean updateJmxEnabled;
   /** Frequency of updates to JMX report. */
   private long updateJmxIntervalMs;
   /** Timestamp of last attempt to update JMX report. */
@@ -249,8 +245,6 @@ public class NamenodeHeartbeatService extends PeriodicService {
       this.healthMonitorTimeoutMs = (int) timeoutMs;
     }
 
-    this.updateJmxEnabled = conf.getBoolean(DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_ENABLED,
-        DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_ENABLED_DEFAULT);
     this.updateJmxIntervalMs = conf.getLong(DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS,
         DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS_DEFAULT);
 
@@ -516,9 +510,9 @@ public class NamenodeHeartbeatService extends PeriodicService {
    *    configured interval (if any).
    */
   private boolean shouldUpdateJmx() {
-    return updateJmxEnabled
-        && (updateJmxIntervalMs < 0
-        || Time.monotonicNow() - lastJmxUpdateAttempt > updateJmxIntervalMs);
+    return updateJmxIntervalMs == 0
+        || (updateJmxIntervalMs > 0
+        && Time.monotonicNow() - lastJmxUpdateAttempt > updateJmxIntervalMs);
   }
 
   /**
