@@ -245,8 +245,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
       this.healthMonitorTimeoutMs = (int) timeoutMs;
     }
 
-    this.updateJmxIntervalMs = conf.getLong(DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS,
-        DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS_DEFAULT);
+    this.updateJmxIntervalMs = conf.getTimeDuration(DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS,
+        DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS_DEFAULT, TimeUnit.MILLISECONDS);
 
     super.serviceInit(configuration);
   }
@@ -463,12 +463,12 @@ public class NamenodeHeartbeatService extends PeriodicService {
     try {
       // TODO part of this should be moved to its own utility
       if (shouldUpdateJmx()) {
-        lastJmxUpdateAttempt = Time.monotonicNow();
+        this.lastJmxUpdateAttempt = Time.monotonicNow();
         getFsNamesystemMetrics(address);
         getNamenodeInfoMetrics(address);
       }
-      populateFsNamesystemMetrics(fsNamesystemMetrics, report);
-      populateNamenodeInfoMetrics(namenodeInfoMetrics, report);
+      populateFsNamesystemMetrics(this.fsNamesystemMetrics, report);
+      populateNamenodeInfoMetrics(this.namenodeInfoMetrics, report);
     } catch (Exception e) {
       LOG.error("Cannot get stat from {} using JMX", getNamenodeDesc(), e);
     }
@@ -510,8 +510,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
    *    configured interval (if any).
    */
   private boolean shouldUpdateJmx() {
-    return updateJmxIntervalMs >= 0
-        && Time.monotonicNow() - lastJmxUpdateAttempt > updateJmxIntervalMs;
+    return this.updateJmxIntervalMs >= 0
+        && Time.monotonicNow() - this.lastJmxUpdateAttempt > this.updateJmxIntervalMs;
   }
 
   /**
@@ -520,7 +520,7 @@ public class NamenodeHeartbeatService extends PeriodicService {
    */
   private void getNamenodeInfoMetrics(String address) {
     String query = "Hadoop:service=NameNode,name=NameNodeInfo";
-    namenodeInfoMetrics = FederationUtil.getJmx(query, address, connectionFactory, scheme);
+    this.namenodeInfoMetrics = FederationUtil.getJmx(query, address, connectionFactory, scheme);
   }
 
   /**
@@ -551,7 +551,7 @@ public class NamenodeHeartbeatService extends PeriodicService {
    */
   private void getFsNamesystemMetrics(String address) {
     String query = "Hadoop:service=NameNode,name=FSNamesystem*";
-    fsNamesystemMetrics = FederationUtil.getJmx(query, address, connectionFactory, scheme);
+    this.fsNamesystemMetrics = FederationUtil.getJmx(query, address, connectionFactory, scheme);
   }
 
   /**
