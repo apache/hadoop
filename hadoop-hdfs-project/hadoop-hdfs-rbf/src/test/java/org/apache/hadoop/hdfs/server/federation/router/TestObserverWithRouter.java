@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeConte
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.ha.RouterObserverReadProxyProvider;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.Assertions;
@@ -58,6 +59,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.api.TestInfo;
 
 
@@ -139,15 +142,29 @@ public class TestObserverWithRouter {
     routerContext  = cluster.getRandomRouter();
   }
 
-  private static Configuration getConfToEnableObserverReads() {
+  public enum ConfigSetting {
+    USE_NAMENODE_PROXY_FLAG,
+    USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER
+  }
+
+  private Configuration getConfToEnableObserverReads(ConfigSetting configSetting) {
     Configuration conf = new Configuration();
-    conf.setBoolean(HdfsClientConfigKeys.DFS_RBF_OBSERVER_READ_ENABLE, true);
+    switch (configSetting) {
+      case USE_NAMENODE_PROXY_FLAG:
+        conf.setBoolean(HdfsClientConfigKeys.DFS_RBF_OBSERVER_READ_ENABLE, true);
+        break;
+      case USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER:
+        conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX + "." + routerContext.getRouter()
+            .getRpcServerAddress()
+            .getHostName(), RouterObserverReadProxyProvider.class.getName());
+    }
     return conf;
   }
 
-  @Test
-  public void testObserverRead() throws Exception {
-    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
+  public void testObserverRead(ConfigSetting configSetting) throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     internalTestObserverRead();
   }
 
@@ -187,13 +204,14 @@ public class TestObserverWithRouter {
     assertEquals("One call should be sent to observer", 1, rpcCountForObserver);
   }
 
-  @Test
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
   @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
-  public void testObserverReadWithoutFederatedStatePropagation() throws Exception {
+  public void testObserverReadWithoutFederatedStatePropagation(ConfigSetting configSetting) throws Exception {
     Configuration confOverrides = new Configuration(false);
     confOverrides.setInt(RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE, 0);
     startUpCluster(2, confOverrides);
-    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
@@ -216,14 +234,15 @@ public class TestObserverWithRouter {
     assertEquals("No call should be sent to observer", 0, rpcCountForObserver);
   }
 
-  @Test
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
   @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
-  public void testDisablingObserverReadUsingNameserviceOverride() throws Exception {
+  public void testDisablingObserverReadUsingNameserviceOverride(ConfigSetting configSetting) throws Exception {
     // Disable observer reads using per-nameservice override
     Configuration confOverrides = new Configuration(false);
     confOverrides.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES, "ns0");
     startUpCluster(2, confOverrides);
-    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
 
     Path path = new Path("/testFile");
     fileSystem.create(path).close();
@@ -239,9 +258,10 @@ public class TestObserverWithRouter {
     assertEquals("Zero calls should be sent to observer", 0, rpcCountForObserver);
   }
 
-  @Test
-  public void testReadWhenObserverIsDown() throws Exception {
-    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
+  public void testReadWhenObserverIsDown(ConfigSetting configSetting) throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     Path path = new Path("/testFile1");
     // Send Create call to active
     fileSystem.create(path).close();
@@ -267,9 +287,10 @@ public class TestObserverWithRouter {
         rpcCountForObserver);
   }
 
-  @Test
-  public void testMultipleObserver() throws Exception {
-    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
+  public void testMultipleObserver(ConfigSetting configSetting) throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     Path path = new Path("/testFile1");
     // Send Create call to active
     fileSystem.create(path).close();
@@ -406,9 +427,10 @@ public class TestObserverWithRouter {
     innerCluster.shutdown();
   }
 
-  @Test
-  public void testUnavailableObserverNN() throws Exception {
-    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
+  public void testUnavailableObserverNN(ConfigSetting configSetting) throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     stopObserver(2);
 
     Path path = new Path("/testFile");
@@ -442,9 +464,10 @@ public class TestObserverWithRouter {
     assertTrue("There must be unavailable namenodes", hasUnavailable);
   }
 
-  @Test
-  public void testRouterMsync() throws Exception {
-    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
+  public void testRouterMsync(ConfigSetting configSetting) throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     Path path = new Path("/testFile");
 
     // Send Create call to active
@@ -464,9 +487,10 @@ public class TestObserverWithRouter {
         rpcCountForActive);
   }
 
-  @Test
-  public void testSingleRead() throws Exception {
-    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
+  public void testSingleRead(ConfigSetting configSetting) throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
@@ -554,10 +578,11 @@ public class TestObserverWithRouter {
     Assertions.assertEquals(10L, latestFederateState.get("ns0"));
   }
 
-  @Test
-  public void testStateIdProgressionInRouter() throws Exception {
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
+  public void testStateIdProgressionInRouter(ConfigSetting configSetting) throws Exception {
     Path rootPath = new Path("/");
-    fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads());
+    fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     RouterStateIdContext routerStateIdContext = routerContext
         .getRouterRpcServer()
         .getRouterStateIdContext();
@@ -570,9 +595,10 @@ public class TestObserverWithRouter {
     assertEquals("Router's shared should have progressed.", 21, namespaceStateId.get());
   }
 
-  @Test
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
   @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
-  public void testSharedStateInRouterStateIdContext() throws Exception {
+  public void testSharedStateInRouterStateIdContext(ConfigSetting configSetting) throws Exception {
     Path rootPath = new Path("/");
     long cleanupPeriodMs = 1000;
 
@@ -580,7 +606,7 @@ public class TestObserverWithRouter {
     conf.setLong(RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_POOL_CLEAN, cleanupPeriodMs);
     conf.setLong(RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_CLEAN_MS, cleanupPeriodMs / 10);
     startUpCluster(1, conf);
-    fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads());
+    fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     RouterStateIdContext routerStateIdContext = routerContext.getRouterRpcServer()
         .getRouterStateIdContext();
 
@@ -616,9 +642,10 @@ public class TestObserverWithRouter {
   }
 
 
-  @Test
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
   @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
-  public void testRouterStateIdContextCleanup() throws Exception {
+  public void testRouterStateIdContextCleanup(ConfigSetting configSetting) throws Exception {
     Path rootPath = new Path("/");
     long recordExpiry = TimeUnit.SECONDS.toMillis(1);
 
@@ -626,7 +653,7 @@ public class TestObserverWithRouter {
     confOverride.setLong(RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS, recordExpiry);
 
     startUpCluster(1, confOverride);
-    fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads());
+    fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     RouterStateIdContext routerStateIdContext = routerContext.getRouterRpcServer()
         .getRouterStateIdContext();
 
@@ -645,9 +672,10 @@ public class TestObserverWithRouter {
     assertTrue(namespace2.isEmpty());
   }
 
-  @Test
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
   @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
-  public void testPeriodicStateRefreshUsingActiveNamenode() throws Exception {
+  public void testPeriodicStateRefreshUsingActiveNamenode(ConfigSetting configSetting) throws Exception {
     Path rootPath = new Path("/");
 
     Configuration confOverride = new Configuration(false);
@@ -655,7 +683,7 @@ public class TestObserverWithRouter {
     confOverride.set(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, "3s");
     startUpCluster(1, confOverride);
 
-    fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads());
+    fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     fileSystem.listStatus(rootPath);
     int initialLengthOfRootListing = fileSystem.listStatus(rootPath).length;
 
