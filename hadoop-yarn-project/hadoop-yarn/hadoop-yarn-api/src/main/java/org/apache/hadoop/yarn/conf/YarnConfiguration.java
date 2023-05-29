@@ -4959,6 +4959,17 @@ public class YarnConfiguration extends Configuration {
   public static final String APPS_CACHE_EXPIRE = YARN_PREFIX + "apps.cache.expire";
   public static final String DEFAULT_APPS_CACHE_EXPIRE = "30s";
 
+  /** Enabled trigger log-dir deletion by size for NonAggregatingLogHandler. */
+  public static final String NM_LOG_TRIGGER_DELETE_BY_SIZE_ENABLED = NM_PREFIX +
+      "log.trigger.delete.by-size.enabled";
+  public static final boolean DEFAULT_NM_LOG_TRIGGER_DELETE_BY_SIZE_ENABLED = false;
+
+  /** Trigger log-dir deletion when the total log size of an app is greater than
+   *  yarn.nodemanager.log.delete.threshold.
+   *  Depends on yarn.nodemanager.log.trigger.delete.by-size.enabled = true. */
+  public static final String NM_LOG_DELETE_THRESHOLD = NM_PREFIX + "log.delete.threshold";
+  public static final long DEFAULT_NM_LOG_DELETE_THRESHOLD = 100L * 1024 * 1024 * 1024;
+
   public YarnConfiguration() {
     super();
   }
