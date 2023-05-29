@@ -286,8 +286,9 @@ public class ConnectionPool {
       }
       this.connections = tmpConnections;
     }
-    LOG.debug("Expected to remove {} connection and actually removed {} connections",
-        num, removed.size());
+    LOG.debug("Expected to remove {} connection and actually removed {} connections " +
+            "for connectionPool: {}",
+        num, removed.size(), connectionPoolId);
     return removed;
   }
 
