@@ -170,7 +170,9 @@ public class ConnectionContext {
     Class<?> clazz = proxy.getClass();
 
     StringBuilder sb = new StringBuilder();
-    sb.append(clazz.getSimpleName())
+    sb.append("hashcode:")
+        .append(hashCode() + " ")
+        .append(clazz.getSimpleName())
         .append("@")
         .append(addr)
         .append("x")
