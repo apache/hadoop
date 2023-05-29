@@ -24,7 +24,10 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -38,18 +41,27 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
 
 import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 
 import static org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider.*;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.startsWith;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 
 /**
@@ -65,6 +77,8 @@ public class TestObserverReadProxyProvider {
   private Configuration conf;
 
   private ObserverReadProxyProvider<ClientProtocol> proxyProvider;
+  @Mock private Logger logger;
+
   private NameNodeAnswer[] namenodeAnswers;
   private String[] namenodeAddrs;
 
@@ -79,6 +93,7 @@ public class TestObserverReadProxyProvider {
     conf.setTimeDuration(
         OBSERVER_PROBE_RETRY_PERIOD_KEY, 0, TimeUnit.MILLISECONDS);
     conf.setBoolean(HdfsClientConfigKeys.Failover.RANDOM_ORDER, false);
+    MockitoAnnotations.initMocks(this);
   }
 
   private void setupProxyProvider(int namenodeCount) throws Exception {
@@ -114,7 +129,8 @@ public class TestObserverReadProxyProvider {
               AtomicBoolean fallbackToSimpleAuth) {
             return proxyMap.get(nnAddr.toString());
           }
-        })  {
+        },
+        logger)  {
       @Override
       protected List<NNProxyInfo<ClientProtocol>> getProxyAddresses(
           URI uri, String addressKey) {
@@ -323,6 +339,92 @@ public class TestObserverReadProxyProvider {
 
     doRead();
     assertHandledBy(1);
+  }
+
+  // Happy case for GetHAServiceStateWithTimeout
+  @Test
+  public void testGetHAServiceStateWithTimeout() throws Exception {
+    setupProxyProvider(1);
+    final HAServiceState state = HAServiceState.STANDBY;
+    NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
+        (NNProxyInfo<ClientProtocol>) mock(NNProxyInfo.class);
+    Future<HAServiceState> task = mock(Future.class);
+    when(task.get(anyLong(), any(TimeUnit.class))).thenReturn(state);
+
+    HAServiceState state2 =
+        proxyProvider.getHAServiceStateWithTimeout(dummyNNProxyInfo, task);
+    assertEquals(state, state2);
+    verify(task).get(anyLong(), any(TimeUnit.class));
+    verifyNoMoreInteractions(task);
+    verify(logger).debug(startsWith("HA State for"));
+  }
+
+  /**
+   * Test TimeoutException for GetHAServiceStateWithTimeout
+   */
+  @Test
+  public void testTimeoutExceptionGetHAServiceStateWithTimeout()
+      throws Exception {
+    setupProxyProvider(1);
+    NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
+        (NNProxyInfo<ClientProtocol>) Mockito.mock(NNProxyInfo.class);
+    Future<HAServiceState> task = mock(Future.class);
+    when(task.get(anyLong(), any(TimeUnit.class))).thenThrow(
+        new TimeoutException("Timeout"));
+
+    HAServiceState state =
+        proxyProvider.getHAServiceStateWithTimeout(dummyNNProxyInfo, task);
+    assertNull(state);
+    verify(task).get(anyLong(), any(TimeUnit.class));
+    verify(task).cancel(true);
+    verifyNoMoreInteractions(task);
+    verify(logger).debug(startsWith("Cancel NN probe task due to timeout for"));
+  }
+
+  /**
+   * Test InterruptedException for GetHAServiceStateWithTimeout.
+   * Tests for the other two exceptions are the same and thus left out.
+   */
+  @Test
+  public void testInterruptedExceptionGetHAServiceStateWithTimeout()
+      throws Exception {
+    setupProxyProvider(1);
+    NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
+        (NNProxyInfo<ClientProtocol>) Mockito.mock(NNProxyInfo.class);
+    Future<HAServiceState> task = mock(Future.class);
+    when(task.get(anyLong(), any(TimeUnit.class))).thenThrow(
+        new InterruptedException("Interrupted"));
+
+    HAServiceState state =
+        proxyProvider.getHAServiceStateWithTimeout(dummyNNProxyInfo, task);
+    assertNull(state);
+    verify(task).get(anyLong(), any(TimeUnit.class));
+    verifyNoMoreInteractions(task);
+    verify(logger).debug(
+        startsWith("Interrupted exception in NN probe task for"));
+  }
+
+  /**
+   * Test InterruptedException for GetHAServiceStateWithTimeout.
+   * Tests for the other two exceptions are the same and thus left out.
+   */
+  @Test
+  public void testExecutionExceptionGetHAServiceStateWithTimeout()
+      throws Exception {
+    setupProxyProvider(1);
+    NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
+        (NNProxyInfo<ClientProtocol>) Mockito.mock(NNProxyInfo.class);
+    Future<HAServiceState> task = mock(Future.class);
+    when(task.get(anyLong(), any(TimeUnit.class))).thenThrow(
+        new ExecutionException(new InterruptedException("Interrupted")));
+
+    HAServiceState state =
+        proxyProvider.getHAServiceStateWithTimeout(dummyNNProxyInfo, task);
+    assertNull(state);
+    verify(task).get(anyLong(), any(TimeUnit.class));
+    verifyNoMoreInteractions(task);
+    verify(logger).debug(
+        startsWith("Execution exception in NN probe task for "));
   }
 
   private void doRead() throws Exception {

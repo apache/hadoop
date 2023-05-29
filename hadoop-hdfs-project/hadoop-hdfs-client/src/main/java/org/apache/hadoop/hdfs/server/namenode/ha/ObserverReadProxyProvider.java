@@ -24,7 +24,15 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.URI;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.TimeoutException;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -70,7 +78,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 public class ObserverReadProxyProvider<T>
     extends AbstractNNFailoverProxyProvider<T> {
   @VisibleForTesting
-  static final Logger LOG = LoggerFactory.getLogger(
+  static Logger LOG = LoggerFactory.getLogger(
       ObserverReadProxyProvider.class);
 
   /** Configuration key for {@link #autoMsyncPeriodMs}. */
@@ -87,6 +95,12 @@ public class ObserverReadProxyProvider<T>
       HdfsClientConfigKeys.Failover.PREFIX + "observer.probe.retry.period";
   /** Observer probe retry period default to 10 min. */
   static final long OBSERVER_PROBE_RETRY_PERIOD_DEFAULT = 60 * 10 * 1000;
+
+  /** Timeout to cancel the ha-state probe rpc request for an namenode. */
+  static final String NAMENODE_HA_STATE_PROBE_TIMEOUT =
+      "dfs.client.namenode.ha-state.probe.timeout";
+  /** Namenode ha-state probe timeout default to 5 sec. */
+  static final long NAMENODE_HA_STATE_PROBE_TIMEOUT_DEFAULT = 5;
 
   /** The inner proxy provider used for active/standby failover. */
   private final AbstractNNFailoverProxyProvider<T> failoverProxy;
@@ -156,10 +170,20 @@ public class ObserverReadProxyProvider<T>
   private long observerProbeRetryPeriodMs;
 
   /**
+   * Timeout in seconds when we try to get the HA state of an namenode
+   */
+  @VisibleForTesting
+  long namenodeHAStateProbeTimeoutSec;
+
+  /**
    * The previous time where zero observer were found. If there was observer,
    * or it is initialization, this is set to 0.
    */
   private long lastObserverProbeTime;
+
+  private final ExecutorService NNProbingThreadPool =
+      new ThreadPoolExecutor(4, 4, 0L, TimeUnit.MILLISECONDS,
+          new ArrayBlockingQueue<Runnable>(1024));
 
   /**
    * By default ObserverReadProxyProvider uses
@@ -213,6 +237,9 @@ public class ObserverReadProxyProvider<T>
     observerProbeRetryPeriodMs = conf.getTimeDuration(
         OBSERVER_PROBE_RETRY_PERIOD_KEY,
         OBSERVER_PROBE_RETRY_PERIOD_DEFAULT, TimeUnit.MILLISECONDS);
+    namenodeHAStateProbeTimeoutSec = conf.getTimeDuration(
+        NAMENODE_HA_STATE_PROBE_TIMEOUT,
+        NAMENODE_HA_STATE_PROBE_TIMEOUT_DEFAULT, TimeUnit.SECONDS);
 
     if (wrappedProxy instanceof ClientProtocol) {
       this.observerReadEnabled = true;
@@ -221,6 +248,14 @@ public class ObserverReadProxyProvider<T>
           + "class does not implement {}", uri, ClientProtocol.class.getName());
       this.observerReadEnabled = false;
     }
+  }
+
+  public ObserverReadProxyProvider(
+      Configuration conf, URI uri, Class<T> xface, HAProxyFactory<T> factory,
+      Logger logger) {
+    this(conf, uri, xface, factory,
+        new ConfiguredFailoverProxyProvider<>(conf, uri, xface, factory));
+    this.LOG = logger;
   }
 
   public AlignmentContext getAlignmentContext() {
@@ -284,11 +319,66 @@ public class ObserverReadProxyProvider<T>
     }
     currentIndex = (currentIndex + 1) % nameNodeProxies.size();
     currentProxy = createProxyIfNeeded(nameNodeProxies.get(currentIndex));
-    currentProxy.setCachedState(getHAServiceState(currentProxy));
+    currentProxy.setCachedState(getHAServiceStateWithTimeout(currentProxy));
     LOG.debug("Changed current proxy from {} to {}",
         initial == null ? "none" : initial.proxyInfo,
         currentProxy.proxyInfo);
     return currentProxy;
+  }
+
+  /**
+   * Execute getHAServiceState() call with a timeout, to avoid a long wait when
+   * an NN becomes irresponsive to rpc requests
+   * (when a thread/heap dump is being taken, e.g.).
+   *
+   * For each getHAServiceState() call, a task is created and submitted to a
+   * threadpool for execution. We will wait for a response up to
+   * namenodeHAStateProbeTimeoutSec and cancel these requests if they time out.
+   *
+   * The implemention is split into two functions so that we can unit test
+   * the second function.
+   */
+  HAServiceState getHAServiceStateWithTimeout(final NNProxyInfo<T> proxyInfo) {
+
+    Callable<HAServiceState> getHAServiceStateTask =
+        new Callable<HAServiceState>() {
+          @Override
+          public HAServiceState call() {
+            return getHAServiceState(proxyInfo);
+          }
+        };
+
+    try {
+      Future<HAServiceState> task =
+          NNProbingThreadPool.submit(getHAServiceStateTask);
+      return getHAServiceStateWithTimeout(proxyInfo, task);
+    } catch (RejectedExecutionException e) {
+      LOG.debug("Run out of threads to submit the request to query HA state. "
+          + "Ok to return null and we will fallback to use active NN to serve "
+          + "this request.");
+      return null;
+    }
+  }
+
+  HAServiceState getHAServiceStateWithTimeout(final NNProxyInfo<T> proxyInfo,
+      Future<HAServiceState> task) {
+    HAServiceState state = null;
+    try {
+      state = task.get(namenodeHAStateProbeTimeoutSec, TimeUnit.SECONDS);
+      LOG.debug("HA State for " + proxyInfo.proxyInfo + " is " + state);
+    } catch (TimeoutException e) {
+      // Cancel the task on timeout
+      LOG.debug("Cancel NN probe task due to timeout for " + proxyInfo.proxyInfo);
+      if (task != null) {
+        task.cancel(true);
+      }
+    } catch (InterruptedException e) {
+      LOG.debug("Interrupted exception in NN probe task for " + proxyInfo.proxyInfo + ": " + e);
+    } catch (ExecutionException e) {
+      LOG.debug("Execution exception in NN probe task for " + proxyInfo.proxyInfo + ": " + e);
+    }
+
+    return state;
   }
 
   /**
