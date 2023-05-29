@@ -59,7 +59,7 @@ public class RouterObserverReadProxyProvider<T> extends AbstractNNFailoverProxyP
   /** The inner proxy provider used for active/standby failover. */
   private final AbstractNNFailoverProxyProvider<T> innerProxy;
 
-  /** The proxy which redirects the internal one */
+  /** The proxy which redirects the internal one. */
   private final ProxyInfo<T> wrapperProxy;
 
   /**
@@ -86,13 +86,14 @@ public class RouterObserverReadProxyProvider<T> extends AbstractNNFailoverProxyP
    */
   private volatile long lastMsyncTimeMs = -1;
 
-  public RouterObserverReadProxyProvider(Configuration conf, URI uri, Class<T> xface, HAProxyFactory<T> factory) {
+  public RouterObserverReadProxyProvider(Configuration conf, URI uri, Class<T> xface,
+      HAProxyFactory<T> factory) {
     this(conf, uri, xface, factory, new IPFailoverProxyProvider<>(conf, uri, xface, factory));
   }
 
   @SuppressWarnings("unchecked")
-  public RouterObserverReadProxyProvider(Configuration conf, URI uri, Class<T> xface, HAProxyFactory<T> factory,
-      AbstractNNFailoverProxyProvider<T> failoverProxy) {
+  public RouterObserverReadProxyProvider(Configuration conf, URI uri, Class<T> xface,
+      HAProxyFactory<T> factory, AbstractNNFailoverProxyProvider<T> failoverProxy) {
     super(conf, uri, xface, factory);
     this.alignmentContext = new ClientGSIContext();
     factory.setAlignmentContext(alignmentContext);
@@ -107,7 +108,8 @@ public class RouterObserverReadProxyProvider<T> extends AbstractNNFailoverProxyP
 
     autoMsyncPeriodMs = conf.getTimeDuration(
         // The host of the URI is the name service ID
-        AUTO_MSYNC_PERIOD_KEY_PREFIX + "." + uri.getHost(), AUTO_MSYNC_PERIOD_DEFAULT, TimeUnit.MILLISECONDS);
+        AUTO_MSYNC_PERIOD_KEY_PREFIX + "." + uri.getHost(),
+        AUTO_MSYNC_PERIOD_DEFAULT, TimeUnit.MILLISECONDS);
 
     if (wrappedProxy instanceof ClientProtocol) {
       this.observerReadEnabled = true;

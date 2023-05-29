@@ -154,9 +154,14 @@ public class TestObserverWithRouter {
         conf.setBoolean(HdfsClientConfigKeys.DFS_RBF_OBSERVER_READ_ENABLE, true);
         break;
       case USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER:
-        conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX + "." + routerContext.getRouter()
-            .getRpcServerAddress()
-            .getHostName(), RouterObserverReadProxyProvider.class.getName());
+        conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX +
+            "." +
+            routerContext.getRouter()
+                .getRpcServerAddress()
+                .getHostName(), RouterObserverReadProxyProvider.class.getName());
+        break;
+      default:
+        Assertions.fail("Unknown config setting: " + configSetting);
     }
     return conf;
   }
@@ -207,7 +212,8 @@ public class TestObserverWithRouter {
   @EnumSource(ConfigSetting.class)
   @ParameterizedTest
   @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
-  public void testObserverReadWithoutFederatedStatePropagation(ConfigSetting configSetting) throws Exception {
+  public void testObserverReadWithoutFederatedStatePropagation(ConfigSetting configSetting)
+      throws Exception {
     Configuration confOverrides = new Configuration(false);
     confOverrides.setInt(RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE, 0);
     startUpCluster(2, confOverrides);
@@ -237,7 +243,8 @@ public class TestObserverWithRouter {
   @EnumSource(ConfigSetting.class)
   @ParameterizedTest
   @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
-  public void testDisablingObserverReadUsingNameserviceOverride(ConfigSetting configSetting) throws Exception {
+  public void testDisablingObserverReadUsingNameserviceOverride(ConfigSetting configSetting)
+      throws Exception {
     // Disable observer reads using per-nameservice override
     Configuration confOverrides = new Configuration(false);
     confOverrides.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES, "ns0");
@@ -675,7 +682,8 @@ public class TestObserverWithRouter {
   @EnumSource(ConfigSetting.class)
   @ParameterizedTest
   @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
-  public void testPeriodicStateRefreshUsingActiveNamenode(ConfigSetting configSetting) throws Exception {
+  public void testPeriodicStateRefreshUsingActiveNamenode(ConfigSetting configSetting)
+      throws Exception {
     Path rootPath = new Path("/");
 
     Configuration confOverride = new Configuration(false);
