@@ -71,6 +71,9 @@ allowed_expr+="|^krb5_udp-template.conf$"
 allowed_expr+="|^jetty-dir.css$"
 # Snappy java is native library. We cannot relocate it to under org/apache/hadoop.
 allowed_expr+="|^org/xerial/"
+# Jetty checks if class isAssignableFrom javax.servlet.Filter
+# throws exception due to relocation
+allowed_expr+="|^javax/"
 
 allowed_expr+=")"
 declare -i bad_artifacts=0

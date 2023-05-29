@@ -335,13 +335,6 @@
                       </excludes>
                     </relocation>
                     <relocation>
-                      <pattern>javax/servlet/</pattern>
-                      <shadedPattern>${shaded.dependency.prefix}.javax.servlet.</shadedPattern>
-                      <excludes>
-                        <exclude>**/pom.xml</exclude>
-                      </excludes>
-                    </relocation>
-                    <relocation>
                       <pattern>javax/activation/</pattern>
                       <shadedPattern>${shaded.dependency.prefix}.javax.activation.</shadedPattern>
                       <excludes>

@@ -210,13 +210,6 @@
                       </excludes>
                     </relocation>
                     <relocation>
-                      <pattern>javax/servlet/</pattern>
-                      <shadedPattern>${shaded.dependency.prefix}.javax.servlet.</shadedPattern>
-                      <excludes>
-                        <exclude>**/pom.xml</exclude>
-                      </excludes>
-                    </relocation>
-                    <relocation>
                       <pattern>javax/ws/</pattern>
                       <shadedPattern>${shaded.dependency.prefix}.javax.ws.</shadedPattern>
                       <excludes>
