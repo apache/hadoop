@@ -255,7 +255,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
               String recordZNode = getNodePath(znode, primaryKey);
               byte[] data = serialize(record);
               if (!writeNode(recordZNode, data, update, error)) {
-                failedRecordsKeys.add(primaryKey);
+                failedRecordsKeys.add(getOriginalPrimaryKey(primaryKey));
                 status.set(false);
               }
               return null;

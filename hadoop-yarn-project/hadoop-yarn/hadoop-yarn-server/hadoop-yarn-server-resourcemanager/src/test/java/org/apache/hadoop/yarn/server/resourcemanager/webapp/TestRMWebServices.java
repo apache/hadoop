@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeoutException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -49,6 +50,7 @@ import javax.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -72,6 +74,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.*;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -90,6 +93,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.AdHocLogDumper;
+import org.apache.hadoop.yarn.util.AppsCacheKey;
+import org.apache.hadoop.yarn.util.LRUCache;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
@@ -1156,5 +1161,74 @@ public class TestRMWebServices extends JerseyTestBase {
     // 8.Verify that applicationPriority is as expected
     int applicationPriority = json.getInt("applicationPriority");
     assertEquals(0, applicationPriority);
+  }
+
+  @Test
+  public void testGetAppsCache() throws YarnException, InterruptedException, TimeoutException {
+    // mock up an RM that returns app reports for apps that don't exist
+    // in the RMApps list
+    ApplicationId appId = ApplicationId.newInstance(1, 1);
+    ApplicationReport mockReport = mock(ApplicationReport.class);
+    when(mockReport.getApplicationId()).thenReturn(appId);
+    GetApplicationsResponse mockAppsResponse =
+        mock(GetApplicationsResponse.class);
+    when(mockAppsResponse.getApplicationList())
+        .thenReturn(Arrays.asList(new ApplicationReport[]{mockReport}));
+
+    ClientRMService mockClientSvc = mock(ClientRMService.class);
+    when(mockClientSvc.getApplications(isA(GetApplicationsRequest.class)))
+        .thenReturn(mockAppsResponse);
+    ResourceManager mockRM = mock(ResourceManager.class);
+    RMContextImpl rmContext = new RMContextImpl(null, null, null, null, null, null, null, null,
+        null, null);
+    when(mockRM.getRMContext()).thenReturn(rmContext);
+    when(mockRM.getClientRMService()).thenReturn(mockClientSvc);
+    rmContext.setNodeLabelManager(mock(RMNodeLabelsManager.class));
+
+    Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.APPS_CACHE_ENABLE, true);
+    conf.setInt(YarnConfiguration.APPS_CACHE_SIZE, 2);
+    conf.setInt(YarnConfiguration.APPS_CACHE_EXPIRE, 100);
+    RMWebServices webSvc = new RMWebServices(mockRM, conf,
+        mock(HttpServletResponse.class));
+    final Set<String> emptySet =
+        Collections.unmodifiableSet(Collections.<String>emptySet());
+
+    // verify we don't get any apps when querying
+    HttpServletRequest mockHsr = mock(HttpServletRequest.class);
+    AppsInfo appsInfo = webSvc.getApps(mockHsr, null, emptySet, null,
+        "mock_user", "mock_queue", null, null, null, null, null, emptySet,
+        emptySet, null, null);
+    LRUCache<AppsCacheKey, AppsInfo> cache = webSvc.getAppsLRUCache();
+    Assert.assertEquals(1, cache.size());
+    AppsCacheKey appsCacheKey = AppsCacheKey.newInstance(null, emptySet,
+        null, "mock_user", "mock_queue", null, null, null, null, null, emptySet,
+        emptySet, null, null);
+    Assert.assertEquals(appsInfo, cache.get(appsCacheKey));
+
+    AppsInfo appsInfo1 = webSvc.getApps(mockHsr, null, emptySet, null,
+        "mock_user1", "mock_queue", null, null, null, null, null, emptySet,
+        emptySet, null, null);
+    Assert.assertEquals(2, cache.size());
+    AppsCacheKey appsCacheKey1 = AppsCacheKey.newInstance(null, emptySet,
+        null, "mock_user1", "mock_queue", null, null, null, null, null, emptySet,
+        emptySet, null, null);
+    Assert.assertEquals(appsInfo1, cache.get(appsCacheKey1));
+
+    AppsInfo appsInfo2 = webSvc.getApps(mockHsr, null, emptySet, null,
+        "mock_user2", "mock_queue", null, null, null, null, null, emptySet,
+        emptySet, null, null);
+    Assert.assertEquals(2, cache.size());
+    AppsCacheKey appsCacheKey2 = AppsCacheKey.newInstance(null, emptySet,
+        null, "mock_user2", "mock_queue", null, null, null, null, null, emptySet,
+        emptySet, null, null);
+    Assert.assertEquals(appsInfo2, cache.get(appsCacheKey2));
+    // appsCacheKey have removed
+    Assert.assertNull(cache.get(appsCacheKey));
+
+    GenericTestUtils.waitFor(() -> cache.get(appsCacheKey1) == null,
+        300, 1000);
+    GenericTestUtils.waitFor(() -> cache.get(appsCacheKey2) == null,
+        300, 1000);
   }
 }
