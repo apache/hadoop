@@ -26,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.ClientGSIContext;
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.Client;
@@ -35,6 +34,9 @@ import org.apache.hadoop.ipc.RpcInvocationHandler;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider.AUTO_MSYNC_PERIOD_KEY_PREFIX;
+import static org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider.AUTO_MSYNC_PERIOD_DEFAULT;
 
 /**
  * A {@link org.apache.hadoop.io.retry.FailoverProxyProvider} implementation
@@ -46,12 +48,6 @@ import org.slf4j.LoggerFactory;
 public class RouterObserverReadProxyProvider<T> extends AbstractNNFailoverProxyProvider<T> {
   @VisibleForTesting
   static final Logger LOG = LoggerFactory.getLogger(ObserverReadProxyProvider.class);
-
-  /** Configuration key for {@link #autoMsyncPeriodMs}. */
-  static final String AUTO_MSYNC_PERIOD_KEY_PREFIX =
-      HdfsClientConfigKeys.Failover.PREFIX + "observer.auto-msync-period";
-  /** Auto-msync disabled by default. */
-  static final long AUTO_MSYNC_PERIOD_DEFAULT = -1;
 
   /** Client-side context for syncing with the NameNode server side. */
   private final AlignmentContext alignmentContext;
