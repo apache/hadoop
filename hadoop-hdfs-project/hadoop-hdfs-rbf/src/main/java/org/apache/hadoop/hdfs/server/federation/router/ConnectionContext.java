@@ -150,8 +150,8 @@ public class ConnectionContext {
       // this is an erroneous case, but we have to close the connection
       // anyway since there will be connection leak if we don't do so
       // the connection has been moved out of the pool
-      LOG.error("Active connection with {} handlers will be closed",
-          this.numThreads);
+      LOG.error("Active connection with {} handlers will be closed, ConnectionContext is {}",
+          this.numThreads, this.toString());
     }
     this.closed = true;
     Object proxy = this.client.getProxy();
