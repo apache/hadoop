@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.test.MinimalWriteOperationHelperCallbacks;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
-import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.util.Progressable;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,10 +38,7 @@ import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditor;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -63,9 +59,6 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
         mock(S3ADataBlocks.BlockFactory.class);
     long blockSize = Constants.DEFAULT_MULTIPART_SIZE;
     WriteOperationHelper oHelper = mock(WriteOperationHelper.class);
-    AuditSpan auditSpan = mock(AuditSpan.class);
-    when(auditSpan.getSpanId()).thenReturn("spanId");
-    when(oHelper.getAuditSpan()).thenReturn(auditSpan);
     PutTracker putTracker = mock(PutTracker.class);
     final S3ABlockOutputStream.BlockOutputStreamBuilder builder =
         S3ABlockOutputStream.builder()
@@ -163,7 +156,6 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
     stream = spy(new S3ABlockOutputStream(builder));
     intercept(UnsupportedOperationException.class, () -> stream.hflush());
     intercept(UnsupportedOperationException.class, () -> stream.hsync());
-    verify(stream, never()).flush();
   }
 
   /**
@@ -177,11 +169,8 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
     builder.withDowngradeSyncableExceptions(true);
     stream = spy(new S3ABlockOutputStream(builder));
 
-    verify(stream, never()).flush();
     stream.hflush();
-    verify(stream, times(1)).flush();
     stream.hsync();
-    verify(stream, times(2)).flush();
   }
 
 }

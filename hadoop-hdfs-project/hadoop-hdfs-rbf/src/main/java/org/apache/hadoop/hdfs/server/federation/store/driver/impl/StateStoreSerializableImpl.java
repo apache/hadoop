@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.federation.store.driver.impl;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Objects;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -105,4 +106,20 @@ public abstract class StateStoreSerializableImpl extends StateStoreBaseImpl {
     primaryKey = primaryKey.replaceAll(":", COLON_MARK);
     return primaryKey;
   }
+
+  /**
+   * Get the original primary key for the given state store record key. The returned
+   * key is readable as it is the original key.
+   *
+   * @param stateStoreRecordKey The record primary key stored by the state store implementations.
+   * @return The original primary key for the given record key.
+   */
+  protected static String getOriginalPrimaryKey(String stateStoreRecordKey) {
+    Objects.requireNonNull(stateStoreRecordKey,
+        "state store record key provided to getOriginalPrimaryKey should not be null");
+    stateStoreRecordKey = stateStoreRecordKey.replaceAll(SLASH_MARK, "/");
+    stateStoreRecordKey = stateStoreRecordKey.replaceAll(COLON_MARK, ":");
+    return stateStoreRecordKey;
+  }
+
 }
