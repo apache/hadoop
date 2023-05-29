@@ -61,6 +61,7 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`GETLINKTARGET`](#Get_Link_Target) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTarget)
     * [`GETFILELINKSTATUS`](#Get_File_Link_Status) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileLinkStatus)
     * [`GETSTATUS`](#Get_Status) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getStatus)
+    * [`GETECPOLICIES`](#Get_EC_Policies)
 *   HTTP PUT
     * [`CREATE`](#Create_and_Write_to_a_File) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).create)
     * [`MKDIRS`](#Make_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).mkdirs)
@@ -1191,7 +1192,43 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getLinkTa
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileLinkInfo
 
-### Get Status
+### Get EC Policies
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETECPOLICIES"
+
+  The client receives a response with a [`ECPolicies` JSON object](#EC_Policies_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {
+          "ErasureCodingPolicies": {
+            "ErasureCodingPolicyInfo": [
+              {
+                "state": "ENABLED",
+                "policy": {
+                  "name": "RS-6-3-1024k",
+                  "schema": {
+                    "codecName": "rs",
+                    "numDataUnits": 6,
+                    "numParityUnits": 3,
+                    "extraOptions": {}
+                  },
+                  "cellSize": 1048576,
+                  "id": 1,
+                  "replicationPolicy": false,
+                  "codecName": "rs",
+                  "numDataUnits": 6,
+                  "numParityUnits": 3,
+                  "systemPolicy": true
+                }
+              }
+            ]
+          }
+        }
 
 * Submit a HTTP GET request.
 
@@ -3173,6 +3210,33 @@ var blockLocationProperties =
     "remaining": 292893392896,
     "capacity": 322122547200
   }
+}
+```
+### EC Policies JSON Schema
+
+```json
+{
+	"ErasureCodingPolicies": {
+		"ErasureCodingPolicyInfo": [{
+			"state": "ENABLED",
+			"policy": {
+				"name": "RS-6-3-1024k",
+				"schema": {
+					"codecName": "rs",
+					"numDataUnits": 6,
+					"numParityUnits": 3,
+					"extraOptions": {}
+				},
+				"cellSize": 1048576,
+				"id": 1,
+				"replicationPolicy": false,
+				"codecName": "rs",
+				"numDataUnits": 6,
+				"numParityUnits": 3,
+				"systemPolicy": true
+			}
+		}]
+	}
 }
 ```
 

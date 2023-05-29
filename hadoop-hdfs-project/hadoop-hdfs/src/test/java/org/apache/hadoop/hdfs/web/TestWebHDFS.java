@@ -2291,6 +2291,36 @@ public class TestWebHDFS {
     }
   }
 
+  @Test
+  public void testGetErasureCodingPolicies() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster.waitActive();
+
+      final WebHdfsFileSystem webHdfs =
+          WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+              WebHdfsConstants.WEBHDFS_SCHEME);
+
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+
+      Collection<ErasureCodingPolicyInfo> webHdfsEcPolicyInfos =
+          webHdfs.getAllErasureCodingPolicies();
+
+      Collection<ErasureCodingPolicyInfo> dfsEcPolicyInfos =
+          dfs.getAllErasureCodingPolicies();
+
+      //Validate erasureCodingPolicyInfos are the same as DistributedFileSystem
+      boolean isEqual = webHdfsEcPolicyInfos.stream()
+          .allMatch(dfsEcPolicyInfos::contains) &&
+          dfsEcPolicyInfos.stream()
+              .allMatch(webHdfsEcPolicyInfos::contains);
+      assertTrue(isEqual);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   /**
    * Get FileStatus JSONObject from ListStatus response.
    */
