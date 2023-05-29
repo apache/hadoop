@@ -1230,6 +1230,8 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileLi
           }
         }
 
+### Get Status
+
 * Submit a HTTP GET request.
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETSTATUS"
