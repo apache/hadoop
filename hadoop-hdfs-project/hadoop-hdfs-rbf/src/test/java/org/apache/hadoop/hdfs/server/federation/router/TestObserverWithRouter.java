@@ -150,18 +150,18 @@ public class TestObserverWithRouter {
   private Configuration getConfToEnableObserverReads(ConfigSetting configSetting) {
     Configuration conf = new Configuration();
     switch (configSetting) {
-      case USE_NAMENODE_PROXY_FLAG:
-        conf.setBoolean(HdfsClientConfigKeys.DFS_RBF_OBSERVER_READ_ENABLE, true);
-        break;
-      case USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER:
-        conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX +
-            "." +
-            routerContext.getRouter()
-                .getRpcServerAddress()
-                .getHostName(), RouterObserverReadProxyProvider.class.getName());
-        break;
-      default:
-        Assertions.fail("Unknown config setting: " + configSetting);
+    case USE_NAMENODE_PROXY_FLAG:
+      conf.setBoolean(HdfsClientConfigKeys.DFS_RBF_OBSERVER_READ_ENABLE, true);
+      break;
+    case USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER:
+      conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX +
+          "." +
+          routerContext.getRouter()
+              .getRpcServerAddress()
+              .getHostName(), RouterObserverReadProxyProvider.class.getName());
+      break;
+    default:
+      Assertions.fail("Unknown config setting: " + configSetting);
     }
     return conf;
   }
