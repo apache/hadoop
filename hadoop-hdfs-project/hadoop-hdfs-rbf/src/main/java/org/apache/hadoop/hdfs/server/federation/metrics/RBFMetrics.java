@@ -50,6 +50,8 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -81,12 +83,14 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
+import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.metrics2.util.Metrics2Util;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
@@ -712,13 +716,19 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
 
   @Override
   public String getTopTokenRealOwners() {
-    RouterSecurityManager mgr =
-        this.router.getRpcServer().getRouterSecurityManager();
+    String topTokenRealOwnersString = "";
+    RouterSecurityManager mgr = this.router.getRpcServer().getRouterSecurityManager();
     if (mgr != null && mgr.getSecretManager() != null) {
-      return JSON.toString(mgr.getSecretManager()
-          .getTopTokenRealOwners(this.topTokenRealOwners));
+      try {
+        List<Metrics2Util.NameValuePair> topOwners = mgr.getSecretManager()
+                .getTopTokenRealOwners(this.topTokenRealOwners);
+        topTokenRealOwnersString = JsonUtil.toJsonString(topOwners);
+      }
+      catch (Exception e) {
+        LOG.error("Unable to fetch the top token real owners as string {}", e.getMessage());
+      }
     }
-    return "";
+    return topTokenRealOwnersString;
   }
 
   @Override
