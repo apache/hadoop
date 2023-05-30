@@ -1,6 +1,6 @@
 # 私有云配置
 
-对于私有云用户配置 Hadoop Qiniu 时，还需要在 `core-site.xml` 中添加或修改一些额外配置项：
+对于私有云用户配置 Hadoop Qiniu 时，还需要在 `$HADOOP_HOME/etc/core-site.xml` 中添加或修改一些额外配置项：
 
 ```xml
 

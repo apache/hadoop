@@ -2,7 +2,9 @@
 
 本项目还支持离线测试，离线测试基于内存中的 `HashMap` 数据结构模拟了 Kodo 服务，不需要任何认证信息。
 
-但是，为了使得测试不被 `maven` 跳过，还是需要创建一个 `auth-keys.xml` 文件，但不需要任何认证信息，可以创建文件内容如下：
+但是，为了使得测试不被 `maven`
+跳过，还是需要创建一个 `hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources/auth-keys.xml`
+文件，但不需要任何认证信息，可以创建文件内容如下：
 
 ```xml
 <?xml version="1.0"?>
@@ -12,7 +14,7 @@
 </configuration>
 ```
 
-还需要创建文件 `contract-test-options.xml`，这个文件内容如下：
+还需要创建文件 `hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources/contract-test-options.xml`，这个文件内容如下：
 
 ```xml
 <?xml version="1.0"?>
@@ -82,7 +84,7 @@ mvn test -Dtest=ITestQiniuKodoFileSystemContractBase,ITestQiniuKodoContractCreat
 
 ## 运行 Hadoop 契约测试
 
-在`hadoop-qiniu/src/test/resources`文件夹下创建`contract-test-options.xml`
+创建`hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources/contract-test-options.xml`
 文件，这个文件中的`fs.contract.test.fs.kodo`
 定义了测试环境所用的文件系统路径，如果该属性未定义，则自动跳过这些契约测试。注意运行这些测试需要认证信息，这些认证信息将通过`XInclude`
 标签包含进来，这是一个`contract-test-options.xml`的例子：

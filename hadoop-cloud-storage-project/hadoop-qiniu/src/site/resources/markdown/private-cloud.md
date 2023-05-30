@@ -1,6 +1,7 @@
 # Private Cloud Configuration
 
-For private cloud users, you need to add or modify some additional configuration items in `core-site.xml` when
+For private cloud users, you need to add or modify some additional configuration items
+in `$HADOOP_HOME/etc/core-site.xml` when
 configuring Hadoop Qiniu:
 
 ```xml

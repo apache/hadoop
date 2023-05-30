@@ -3,7 +3,8 @@
 The project also supports offline testing based mock, which simulates the Kodo service based on the `HashMap` data
 structure in memory, and does not require any authentication information.
 
-But in order to prevent `maven` from skipping the test, you still need to create an `auth-keys.xml` file, but no
+But in order to prevent `maven` from skipping the test, you still need to create
+an `hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources/auth-keys.xml` file, but no
 authentication information is required. You can create a file with the following content:
 
 ```xml
@@ -14,7 +15,9 @@ authentication information is required. You can create a file with the following
 </configuration>
 ```
 
-We also need to create the file `contract-test-options.xml`, the content of this file is as follows:
+We also need to create the
+file `hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources/contract-test-options.xml`, the content of this file
+is as follows:
 
 ```xml
 <?xml version="1.0"?>
@@ -88,9 +91,10 @@ Kodo. If you test in private-cloud environment, the host related region should a
 
 ## Run Hadoop Contract Test
 
-Create file `contract-test-options.xml` in directory `hadoop-qiniu/src/test/resources`, If a
+Create file `hadoop-qiniu/src/test/resources/contract-test-options.xml`, If a
 specific file `fs.contract.test.fs.kodo` test path is not defined, those tests will be skipped.
-Credentials are also needed to run any of those tests, they can be copied from `auth-keys.xml` or through direct
+Credentials are also needed to run any of those tests, they can be copied
+from `hadoop-qiniu/src/test/resources/auth-keys.xml` or through direct
 XInclude inclusion. Here is an example of `contract-test-options.xml`:
 
 ```xml
