@@ -1,7 +1,6 @@
 package org.apache.hadoop.fs.qiniu.kodo.client;
 
 import com.qiniu.common.Constants;
-import com.qiniu.http.Client;
 import com.qiniu.storage.Configuration;
 import okhttp3.*;
 import org.apache.hadoop.util.VersionInfo;

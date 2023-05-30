@@ -1,10 +1,8 @@
 package org.apache.hadoop.fs.qiniu.kodo;
 
-import com.qiniu.storage.UploadManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
-import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoFileInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Before;
