@@ -109,7 +109,7 @@ public abstract class RMHATestBase extends ClientBaseWithFixes{
   }
 
   private MockRM initMockRMWithOldConf(Configuration confForRM1) {
-    return new MockRM(confForRM1, null, true, false) {
+    return new MockRM(confForRM1, null, false, false) {
       @Override
       protected AdminService createAdminService() {
         return new AdminService(this) {
@@ -237,7 +237,6 @@ public abstract class RMHATestBase extends ClientBaseWithFixes{
     Assert.assertTrue(rm1.getRMContext().getHAServiceState()
         == HAServiceState.ACTIVE);
     CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 8, 8);
-    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 8, 8);
-
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm2, 8, 8);
   }
 }

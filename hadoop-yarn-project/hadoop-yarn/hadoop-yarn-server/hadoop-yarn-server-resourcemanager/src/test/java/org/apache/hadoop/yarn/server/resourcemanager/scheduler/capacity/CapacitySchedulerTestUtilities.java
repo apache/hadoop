@@ -266,7 +266,7 @@ public final class CapacitySchedulerTestUtilities {
     if(!(rm.getResourceScheduler() instanceof CapacityScheduler)) {
       return null;
     }
-    NullRMNodeLabelsManager mgr = (NullRMNodeLabelsManager) rm.getRMContext().getNodeLabelManager();
+    RMNodeLabelsManager mgr = rm.getRMContext().getNodeLabelManager();
     CapacitySchedulerQueueCapacityHandler queueController =
         new CapacitySchedulerQueueCapacityHandler(mgr);
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -276,7 +276,9 @@ public final class CapacitySchedulerTestUtilities {
     }
     Resource clusterResource = Resource.newInstance(
         resource.getMemorySize(), resource.getVirtualCores(), others);
-    mgr.setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, clusterResource);
+    if (mgr instanceof NullRMNodeLabelsManager) {
+      ((NullRMNodeLabelsManager) mgr).setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, clusterResource);
+    }
     queueController.updateRoot(cs.getQueue("root"), clusterResource);
     updateChildren(queueController, clusterResource, cs.getQueue("root"));
     return cs;

@@ -29,6 +29,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -70,7 +72,10 @@ public class TestRMHAForNodeLabels extends RMHATestBase {
         .addToCluserNodeLabels(
             Arrays.asList(NodeLabel.newInstance("a"),
                 NodeLabel.newInstance("b"), NodeLabel.newInstance("c")));
-   
+
+
+
+
     Map<NodeId, Set<String>> nodeToLabels = new HashMap<>();
     nodeToLabels.put(NodeId.newInstance("host1", 0), ImmutableSet.of("a"));
     nodeToLabels.put(NodeId.newInstance("host2", 0), ImmutableSet.of("b"));
@@ -79,6 +84,9 @@ public class TestRMHAForNodeLabels extends RMHATestBase {
 
     // Do the failover
     explicitFailover();
+
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm2, 8);
 
     // Check labels in rm2
     Assert
