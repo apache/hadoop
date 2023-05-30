@@ -80,13 +80,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -252,7 +250,7 @@ public class TestLeafQueue {
         new CapacitySchedulerQueueCapacityHandler(rmContext.getNodeLabelManager());
     Resource clusterResource = Resource.newInstance(1600 * GB, 3200);
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     ResourceUsage queueResUsage = root.getQueueResourceUsage();
     when(csContext.getClusterResourceUsage())
@@ -386,7 +384,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
     assertEquals(Resource.newInstance(1 * GB, 1),
         a.calculateAndGetAMResourceLimit());
 
@@ -437,7 +435,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
@@ -715,7 +713,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
@@ -793,7 +791,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
     applyCSAssignment(clusterResource,
         a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource),
@@ -864,7 +862,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // Increase the user-limit-factor to make user_0 fully use max resources of the queue.
     // The max resources can be used are 0.99 * [100 * GB, 100]
@@ -1006,7 +1004,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // Setup resource-requests so that one application is memory dominant
     // and other application is vcores dominant
@@ -1073,7 +1071,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
     expectedRatio =
         queueUser0.getUsed().getVirtualCores()
             / (numNodes * 100.0f)
@@ -1132,7 +1130,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // Mock the queue
     LeafQueue leafQueue = stubLeafQueue((LeafQueue) queues.get(A));
@@ -1353,7 +1351,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // Mock the queue
     LeafQueue leafQueue = stubLeafQueue((LeafQueue)queues.get(A));
@@ -1663,7 +1661,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
@@ -1690,7 +1688,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // There're two active users
     assertEquals(2, a.getAbstractUsersManager().getNumActiveUsers());
@@ -1721,7 +1719,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     applyCSAssignment(clusterResource,
         a.assignContainers(clusterResource, node1,
@@ -1801,7 +1799,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
     // There're two active users
     assertEquals(2, a.getAbstractUsersManager().getNumActiveUsers());
 
@@ -2016,7 +2014,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // Setup resource-requests
     // app_0 asks for 3 3-GB containers
@@ -2133,7 +2131,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
     final ApplicationAttemptId appAttemptId_0 =
               TestUtils.getMockApplicationAttemptId(0, 0);
     FiCaSchedulerApp app_0 =
@@ -2339,7 +2337,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // Now, only user_0 should be active since he is the only one with
     // outstanding requests
@@ -2376,7 +2374,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
     app_2.updateResourceRequests(Collections.singletonList(
         TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, true,
             priority, recordFactory)));
@@ -2458,7 +2456,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     Priority priority = TestUtils.createMockPriority(1);
 
@@ -2572,7 +2570,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
@@ -2658,7 +2656,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
     applyCSAssignment(clusterResource,
         a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource),
@@ -2676,7 +2674,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
     applyCSAssignment(clusterResource,
         a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource),
@@ -2785,7 +2783,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
     
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
@@ -3328,7 +3326,7 @@ public class TestLeafQueue {
     newRoot.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), newRoot, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), newRoot, clusterResource);
 
     // Setup resource-requests and submit
     Priority priority = TestUtils.createMockPriority(1);
@@ -3734,7 +3732,7 @@ public class TestLeafQueue {
     root.updateClusterResource(csContext.getClusterResource(),
         new ResourceLimits(csContext.getClusterResource()));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), newRoot, Resource.newInstance(100 * GB,100));
+        .updateCSQueues(rmContext.getNodeLabelManager(), newRoot, Resource.newInstance(100 * GB,100));
 
     // after reinitialization
     assertEquals(3, e.getNumActiveApplications());
@@ -3812,7 +3810,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // after updating cluster resource
     assertEquals(3, e.getNumActiveApplications());
@@ -4093,7 +4091,7 @@ public class TestLeafQueue {
     // host_1_0: 8G
     // host_1_1: 7G
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     assignment = a.assignContainers(clusterResource, node_1_0, 
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
@@ -4130,7 +4128,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // Manipulate queue 'b'
     LeafQueue b = stubLeafQueue((LeafQueue) queues.get(B));
@@ -4151,7 +4149,7 @@ public class TestLeafQueue {
         TestUtils.spyHook);
     root.reinitialize(newRoot, clusterResource);
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     b = stubLeafQueue((LeafQueue) newQueues.get(B));
     assertEquals(b.calculateAndGetAMResourceLimit(),
@@ -4742,7 +4740,7 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // Pending resource requests for app_0 and app_1 total 5GB.
     Priority priority = TestUtils.createMockPriority(1);
@@ -4922,7 +4920,7 @@ public class TestLeafQueue {
         TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, true,
             priority, recordFactory)));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
     // Pending resource requests for user_1: app_2 and app_3 total 1GB.
     priority = TestUtils.createMockPriority(1);
     app_2.updateResourceRequests(Collections.singletonList(
@@ -5302,7 +5300,7 @@ public class TestLeafQueue {
     cs.setMaxRunningAppsEnforcer(new CSMaxRunningAppsEnforcer(cs));
     cs.reinitialize(conf, cs.getRMContext());
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), cs.getQueue("root"),  Resource.newInstance(10 * GB, 10));
+        .updateCSQueues(rmContext.getNodeLabelManager(), cs.getQueue("root"),  Resource.newInstance(10 * GB, 10));
 
     LeafQueue e = (LeafQueue) cs.getQueue("e");
     // Maximum application should be calculated with the default node label
@@ -5316,7 +5314,7 @@ public class TestLeafQueue {
     conf.setCapacityByLabel(rootChild + "." + D, "test", 10);
     conf.setCapacityByLabel(rootChild + "." + E, "test", 60);
     cs.reinitialize(conf, cs.getRMContext());
-    CapacitySchedulerTestUtilities.updateRootQueue(
+    CapacitySchedulerTestUtilities.updateCSQueues(
         rmContext.getNodeLabelManager(),
         cs.getQueue("root"),
         Resource.newInstance(1600 * GB, 3200)

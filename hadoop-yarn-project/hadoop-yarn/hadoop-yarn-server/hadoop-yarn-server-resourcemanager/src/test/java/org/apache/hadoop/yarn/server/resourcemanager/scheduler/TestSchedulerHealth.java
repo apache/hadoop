@@ -38,7 +38,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabels
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueCapacityHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -47,8 +46,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.junit.Assume.assumeTrue;
@@ -223,7 +220,7 @@ public class TestSchedulerHealth {
     CapacityScheduler cs = (CapacityScheduler) resourceManager.getResourceScheduler();
     Resource clusterResource = Resource.newInstance(5 * 1024, 1);
     CapacitySchedulerTestUtilities
-        .updateRootQueue(nodeLabelsManager, cs.getQueue("root"), clusterResource);
+        .updateCSQueues(nodeLabelsManager, cs.getQueue("root"), clusterResource);
 
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
@@ -311,7 +308,7 @@ public class TestSchedulerHealth {
     CapacityScheduler cs = (CapacityScheduler) resourceManager.getResourceScheduler();
     Resource clusterResource = Resource.newInstance(7 * 1024, 2);
     CapacitySchedulerTestUtilities
-        .updateRootQueue(resourceManager.getRMContext().getNodeLabelManager(), cs.getQueue("root"), clusterResource);
+        .updateCSQueues(resourceManager.getRMContext().getNodeLabelManager(), cs.getQueue("root"), clusterResource);
 
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);

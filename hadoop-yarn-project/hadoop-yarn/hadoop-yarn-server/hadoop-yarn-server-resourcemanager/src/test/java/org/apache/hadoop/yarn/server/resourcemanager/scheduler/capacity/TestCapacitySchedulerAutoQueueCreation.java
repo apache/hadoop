@@ -945,7 +945,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 48, 96);
       Resource clusterResource = Resource.newInstance(48 * GB, 96);
       CapacitySchedulerTestUtilities
-          .updateRootQueue(mockRM.getRMContext().getNodeLabelManager(), newCS.getQueue("root"), clusterResource);
+          .updateCSQueues(mockRM.getRMContext().getNodeLabelManager(), newCS.getQueue("root"), clusterResource);
 
       // validate that leaf queues abs capacity is now changed
       AutoCreatedLeafQueue user0Queue = (AutoCreatedLeafQueue) newCS.getQueue(
@@ -961,7 +961,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       validateCapacities(user0Queue, 0.3f, 0.09f, 0.4f, 0.2f);
 
       CapacitySchedulerTestUtilities
-          .updateRootQueue(mockRM.getRMContext().getNodeLabelManager(), newCS.getQueue("root"), clusterResource);
+          .updateCSQueues(mockRM.getRMContext().getNodeLabelManager(), newCS.getQueue("root"), clusterResource);
       validateUserAndAppLimits(user0Queue, 4000, 4000);
 
       //submit app1 as USER3

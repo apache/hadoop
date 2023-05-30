@@ -284,7 +284,7 @@ public final class CapacitySchedulerTestUtilities {
     return cs;
   }
 
-  public static void updateRootQueue(
+  public static void updateCSQueues(
       RMNodeLabelsManager nodeLabelsManager, CSQueue root, Resource clusterResource
   ) {
     CapacitySchedulerQueueCapacityHandler queueController =

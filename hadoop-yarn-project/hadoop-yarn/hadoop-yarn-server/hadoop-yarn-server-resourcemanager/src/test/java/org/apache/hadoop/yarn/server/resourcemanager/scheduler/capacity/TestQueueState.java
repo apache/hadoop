@@ -137,7 +137,7 @@ public class TestQueueState {
 
     Resource clusterResource = Resource.newInstance(4 * 1024, 4);
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), cs.getQueue("root"), clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), cs.getQueue("root"), clusterResource);
 
     //by default, the state of ALL queues should be RUNNING
     Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());

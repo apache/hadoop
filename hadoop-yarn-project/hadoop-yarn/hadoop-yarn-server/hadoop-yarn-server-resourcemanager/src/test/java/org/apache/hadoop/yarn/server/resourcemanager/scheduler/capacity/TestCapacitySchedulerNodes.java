@@ -283,7 +283,7 @@ public class TestCapacitySchedulerNodes {
 
     CapacityScheduler cs = (CapacityScheduler) resourceManager.getResourceScheduler();
     Resource clusterResource = Resource.newInstance(8 * GB, 4);
-    CapacitySchedulerTestUtilities.updateRootQueue(
+    CapacitySchedulerTestUtilities.updateCSQueues(
         resourceManager.getRMContext().getNodeLabelManager(),
         cs.getQueue("root"),
         clusterResource);

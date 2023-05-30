@@ -815,14 +815,14 @@ public class TestApplicationLimitsByPartition {
         new ResourceLimits(clusterResource));
 
     CapacitySchedulerTestUtilities
-        .updateRootQueue(mgr, rootQueue, clusterResource);
+        .updateCSQueues(mgr, rootQueue, clusterResource);
 
     // Manipulate queue 'a'
     LeafQueue queue = TestLeafQueue.stubLeafQueue((LeafQueue) queues.get("b2"));
     queue.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(mgr, rootQueue, clusterResource);
+        .updateCSQueues(mgr, rootQueue, clusterResource);
 
     String rack_0 = "rack_0";
     FiCaSchedulerNode node_0 = TestUtils.getMockNode("h0", rack_0, 0, 160 * GB);

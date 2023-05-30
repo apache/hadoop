@@ -250,7 +250,7 @@ public class TestChildQueueOrder {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), root, clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // Start testing
     CSQueue a = queues.get(A);

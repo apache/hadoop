@@ -122,7 +122,7 @@ public class TestQueueStateManager {
 
     Resource clusterResource = Resource.newInstance(10,10);
     CapacitySchedulerTestUtilities
-        .updateRootQueue(rmContext.getNodeLabelManager(), cs.getQueue("root"), clusterResource);
+        .updateCSQueues(rmContext.getNodeLabelManager(), cs.getQueue("root"), clusterResource);
 
     ApplicationId appId = ApplicationId.newInstance(
         System.currentTimeMillis(), 1);

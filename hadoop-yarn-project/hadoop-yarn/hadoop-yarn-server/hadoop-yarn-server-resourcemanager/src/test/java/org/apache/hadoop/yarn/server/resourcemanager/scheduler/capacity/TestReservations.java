@@ -271,7 +271,7 @@ public class TestReservations {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-    CapacitySchedulerTestUtilities.updateRootQueue(
+    CapacitySchedulerTestUtilities.updateCSQueues(
         rmContext.getNodeLabelManager(),
         root,
         clusterResource
@@ -465,7 +465,7 @@ public class TestReservations {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-    CapacitySchedulerTestUtilities.updateRootQueue(
+    CapacitySchedulerTestUtilities.updateCSQueues(
         rmContext.getNodeLabelManager(),
         root,
         clusterResource
@@ -618,7 +618,7 @@ public class TestReservations {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-    CapacitySchedulerTestUtilities.updateRootQueue(
+    CapacitySchedulerTestUtilities.updateCSQueues(
         rmContext.getNodeLabelManager(),
         root,
         clusterResource
@@ -806,7 +806,7 @@ public class TestReservations {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-    CapacitySchedulerTestUtilities.updateRootQueue(
+    CapacitySchedulerTestUtilities.updateCSQueues(
         rmContext.getNodeLabelManager(),
         root,
         clusterResource
@@ -1102,7 +1102,7 @@ public class TestReservations {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-    CapacitySchedulerTestUtilities.updateRootQueue(
+    CapacitySchedulerTestUtilities.updateCSQueues(
         rmContext.getNodeLabelManager(),
         root,
         clusterResource
@@ -1298,7 +1298,7 @@ public class TestReservations {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-    CapacitySchedulerTestUtilities.updateRootQueue(
+    CapacitySchedulerTestUtilities.updateCSQueues(
         rmContext.getNodeLabelManager(),
         root,
         clusterResource
@@ -1467,7 +1467,7 @@ public class TestReservations {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-    CapacitySchedulerTestUtilities.updateRootQueue(
+    CapacitySchedulerTestUtilities.updateCSQueues(
         rmContext.getNodeLabelManager(),
         root,
         clusterResource
