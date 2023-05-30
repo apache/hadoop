@@ -753,14 +753,14 @@ public class TestObserverWithRouter {
 
     switch (configSetting) {
     case USE_NAMENODE_PROXY_FLAG:
-      // First read goes to active
+      // First read goes to active.
       assertEquals("Calls sent to the active", 1, rpcCountForActive);
-      // The rest of the reads are sent to the observer
+      // The rest of the reads are sent to the observer.
       assertEquals("Reads sent to observer", numListings - 1, rpcCountForObserver);
       break;
     case USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER:
       // An msync is sent to each active namenode for each read.
-      // Total msyncs will be (numListings * num_of_nameservices);
+      // Total msyncs will be (numListings * num_of_nameservices).
       assertEquals("Msyncs sent to the active namenodes",
           NUM_NAMESERVICES * numListings, rpcCountForActive);
       // All reads should be sent of the observer.
@@ -803,13 +803,14 @@ public class TestObserverWithRouter {
 
     switch (configSetting) {
     case USE_NAMENODE_PROXY_FLAG:
-      // First read goes to active
+      // First read goes to active.
       assertEquals("Calls sent to the active", 1, rpcCountForActive);
-      // The rest of the reads are sent to the observer
+      // The rest of the reads are sent to the observer.
       assertEquals("Reads sent to observer", 2, rpcCountForObserver);
       break;
     case USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER:
-      // 4 msyncs expected. 2 for the first read, and 2 for the third read after the auto-msync period.
+      // 4 msyncs expected. 2 for the first read, and 2 for the third read
+      // after the auto-msync period has elapsed during the sleep.
       assertEquals("Msyncs sent to the active namenodes",
           4, rpcCountForActive);
       // All three reads should be sent of the observer.
