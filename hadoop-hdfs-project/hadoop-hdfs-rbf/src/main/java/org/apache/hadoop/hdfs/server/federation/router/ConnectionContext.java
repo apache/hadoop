@@ -151,7 +151,7 @@ public class ConnectionContext {
       // anyway since there will be connection leak if we don't do so
       // the connection has been moved out of the pool
       LOG.error("Active connection with {} handlers will be closed, ConnectionContext is {}",
-          this.numThreads, this.toString());
+          this.numThreads, this);
     }
     this.closed = true;
     Object proxy = this.client.getProxy();
@@ -171,7 +171,8 @@ public class ConnectionContext {
 
     StringBuilder sb = new StringBuilder();
     sb.append("hashcode:")
-        .append(hashCode() + " ")
+        .append(hashCode())
+        .append(" ")
         .append(clazz.getSimpleName())
         .append("@")
         .append(addr)
