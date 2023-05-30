@@ -3218,27 +3218,29 @@ var blockLocationProperties =
 
 ```json
 {
-	"ErasureCodingPolicies": {
-		"ErasureCodingPolicyInfo": [{
-			"state": "ENABLED",
-			"policy": {
-				"name": "RS-6-3-1024k",
-				"schema": {
-					"codecName": "rs",
-					"numDataUnits": 6,
-					"numParityUnits": 3,
-					"extraOptions": {}
-				},
-				"cellSize": 1048576,
-				"id": 1,
-				"replicationPolicy": false,
-				"codecName": "rs",
-				"numDataUnits": 6,
-				"numParityUnits": 3,
-				"systemPolicy": true
-			}
-		}]
-	}
+  "ErasureCodingPolicies": {
+    "ErasureCodingPolicyInfo": [
+      {
+        "state": "ENABLED",
+        "policy": {
+          "name": "RS-6-3-1024k",
+          "schema": {
+            "codecName": "rs",
+            "numDataUnits": 6,
+            "numParityUnits": 3,
+            "extraOptions": {}
+          },
+          "cellSize": 1048576,
+          "id": 1,
+          "replicationPolicy": false,
+          "codecName": "rs",
+          "numDataUnits": 6,
+          "numParityUnits": 3,
+          "systemPolicy": true
+        }
+      }
+    ]
+  }
 }
 ```
 
