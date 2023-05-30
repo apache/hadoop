@@ -144,7 +144,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     assertTrue(addMountTable(addEntry));
     routerFs.mkdirs(new Path("/mount/dir/dir"));
     assertTrue(nnFs0.exists(new Path("/tmp/dir/dir")) ||
-        nnFs1.exists(new Path("/tmp/dir/dir")) );
+        nnFs1.exists(new Path("/tmp/dir/dir")));
     DFSTestUtil.createFile(routerFs, new Path("/mount/dir/file"), 100L, (short) 1,
         1024L);
     DFSTestUtil.createFile(routerFs, new Path("/mount/file"), 100L, (short) 1,
@@ -158,10 +158,10 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     RemoveMountTableEntryRequest req2 =
         RemoveMountTableEntryRequest.newInstance("/mount");
     mountTableManager.removeMountTableEntry(req2);
-    // Reload the Router cache.
-    resolver.loadCache(true);
     nnFs0.delete(new Path("/tmp"), true);
     nnFs1.delete(new Path("/tmp"), true);
+    // Reload the Router cache.
+    resolver.loadCache(true);
 
   }
 
