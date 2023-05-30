@@ -326,6 +326,6 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     //Therefore CS will think there's only the default queue there.
     ((CapacityScheduler) rm.getResourceScheduler()).reinitialize(conf,
         rm.getRMContext(), true);
-    CapacityScheduler cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 0,0);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 0,0);
   }
 }
