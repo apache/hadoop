@@ -2,6 +2,7 @@ package org.apache.hadoop.fs.qiniu.kodo;
 
 import com.qiniu.storage.UploadManager;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.qiniu.kodo.client.IQiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoClient;
 import org.apache.hadoop.fs.qiniu.kodo.client.QiniuKodoFileInfo;
@@ -35,6 +36,7 @@ public class ITestQiniuKodoClient {
         } else {
             try (QiniuKodoFileSystem fs = new QiniuKodoFileSystem()) {
                 fs.initialize(URI.create(conf.get(TestConstants.CONFIG_TEST_CONTRACT_FS_KEY)), conf);
+                fs.delete(new Path("/"), true);
                 client = fs.getKodoClient();
             }
         }
@@ -51,15 +53,13 @@ public class ITestQiniuKodoClient {
     @Test
     public void testUploadOverWrite() throws IOException {
         byte[] data1 = dataset(1024);
-        client.upload(new ByteArrayInputStream(data1), "test_key", false);
+        client.upload(new ByteArrayInputStream(data1), "test_key", true);
         byte[] data2 = dataset(1024);
-        client.upload(new ByteArrayInputStream(data2), "test_key", false);
+        client.upload(new ByteArrayInputStream(data2), "test_key", true);
     }
 
     @Test
     public void testUploadAndFetch() throws IOException {
-        MockQiniuKodoClient client = new MockQiniuKodoClient();
-
         // Upload a test file
         String testKey = "test_key";
         byte[] testData = dataset(1024 * 1024 * 10); // 10MB test data
@@ -74,8 +74,6 @@ public class ITestQiniuKodoClient {
 
     @Test
     public void testListStatus() throws IOException {
-        MockQiniuKodoClient client = new MockQiniuKodoClient();
-
         // Upload some test files
         byte[] testData1 = "Test data 1".getBytes();
         InputStream testStream1 = new ByteArrayInputStream(testData1);
@@ -108,8 +106,6 @@ public class ITestQiniuKodoClient {
 
     @Test
     public void testExists() throws IOException {
-        MockQiniuKodoClient client = new MockQiniuKodoClient();
-
         // Upload a test file
         String testKey = "test_key";
         byte[] testData = "Hello, world!".getBytes();
@@ -123,8 +119,6 @@ public class ITestQiniuKodoClient {
 
     @Test
     public void testDelete() throws IOException {
-        MockQiniuKodoClient client = new MockQiniuKodoClient();
-
         // Upload a test file
         String testKey = "test_key";
         byte[] testData = "Hello, world!".getBytes();
@@ -140,8 +134,6 @@ public class ITestQiniuKodoClient {
 
     @Test
     public void testCopy() throws IOException {
-        MockQiniuKodoClient client = new MockQiniuKodoClient();
-
         // Upload a test file
         String testKey = "test_key";
         byte[] testData = "Hello, world!".getBytes();
