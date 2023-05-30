@@ -852,23 +852,23 @@ public class TestObserverWithRouter {
         .getRPCMetrics().getObserverProxyOps();
 
     switch (configSetting) {
-      case USE_NAMENODE_PROXY_FLAG:
-        // First listing and mkdir go to the active.
-        assertEquals("Calls sent to the active namenodes", 2, rpcCountForActive);
-        // Second listing goes to the observer.
-        assertEquals("Read sent to observer", 1, rpcCountForObserver);
-        break;
-      case USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER:
-        // 5 calls to the active namenodes expected. 4 msync and a mkdir.
-        // Each of the 2 reads results in an msync to 2 nameservices.
-        // The mkdir also goes to the active.
-        assertEquals("Calls sent to the active namenodes",
-            5, rpcCountForActive);
-        // Both reads should be sent of the observer.
-        assertEquals("Reads sent to observer", 2, rpcCountForObserver);
-        break;
-      default:
-        Assertions.fail("Unknown config setting: " + configSetting);
+    case USE_NAMENODE_PROXY_FLAG:
+      // First listing and mkdir go to the active.
+      assertEquals("Calls sent to the active namenodes", 2, rpcCountForActive);
+      // Second listing goes to the observer.
+      assertEquals("Read sent to observer", 1, rpcCountForObserver);
+      break;
+    case USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER:
+      // 5 calls to the active namenodes expected. 4 msync and a mkdir.
+      // Each of the 2 reads results in an msync to 2 nameservices.
+      // The mkdir also goes to the active.
+      assertEquals("Calls sent to the active namenodes",
+          5, rpcCountForActive);
+      // Both reads should be sent of the observer.
+      assertEquals("Reads sent to observer", 2, rpcCountForObserver);
+      break;
+    default:
+      Assertions.fail("Unknown config setting: " + configSetting);
     }
   }
 }
