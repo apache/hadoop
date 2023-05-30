@@ -63,6 +63,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
         .createPercentageConfig();
 
     initResourceManager(config);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 0,0);
 
     /*
      * mode: percentage
@@ -101,6 +102,8 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     initAutoQueueHandler(8192 * GB);
     createQueue("root.managed.queue1");
 
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 8192,8192);
+
     assertJsonResponse(sendRequest(),
         "webapp/scheduler-response-AbsoluteModeLegacyAutoCreation.json");
   }
@@ -112,6 +115,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
         .createAbsoluteConfig();
 
     initResourceManager(config);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 6,30);
 
     /*
      * mode: absolute
@@ -129,6 +133,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
         .createWeightConfig();
 
     initResourceManager(config);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 0,0);
 
     /*
      * mode: weight
@@ -154,6 +159,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     initResourceManager(config);
     initAutoQueueHandler(1200 * GB);
 
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 1200,1200);
     // same as webapp/scheduler-response-WeightMode.json, but with effective resources filled in
     assertJsonResponse(sendRequest(),
         "webapp/scheduler-response-WeightModeWithAutoCreatedQueues-Before.json");
@@ -174,7 +180,6 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     autoQueueHandler = cs.getCapacitySchedulerQueueManager();
     rm.registerNode("h1:1234", nodeMemory); // label = x
-    cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, nodeMemory / 1024, nodeMemory / 1024);
   }
 
   private void createQueue(String queuePath) throws YarnException,
@@ -326,6 +331,5 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     //Therefore CS will think there's only the default queue there.
     ((CapacityScheduler) rm.getResourceScheduler()).reinitialize(conf,
         rm.getRMContext(), true);
-    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 0,0);
   }
 }
