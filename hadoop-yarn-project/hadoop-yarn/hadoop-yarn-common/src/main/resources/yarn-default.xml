@@ -5289,7 +5289,7 @@
     <name>yarn.federation.gpg.subcluster.heartbeat.expiration-ms</name>
     <value>30m</value>
   </property>
-  
+
   <property>
     <name>yarn.apps.cache.enable</name>
     <value>false</value>
