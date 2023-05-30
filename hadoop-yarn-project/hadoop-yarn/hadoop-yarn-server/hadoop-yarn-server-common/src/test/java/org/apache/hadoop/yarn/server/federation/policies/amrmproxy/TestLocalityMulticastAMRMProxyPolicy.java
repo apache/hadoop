@@ -816,7 +816,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
       // The randomly selected sub-cluster should at least be active
       Assert.assertTrue(activeClusters.containsKey(originalResult));
 
-      // Alwasy use home sub-cluster so that unit test is deterministic
+      // Always use home sub-cluster so that unit test is deterministic
       return getHomeSubCluster();
     }
   }
