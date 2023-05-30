@@ -50,6 +50,8 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
 
   public static final Logger LOG = LoggerFactory
       .getLogger(TestKillApplicationWithRMHA.class);
+  private final int MEMORY_GB = 18;
+  private final int V_CORES = 5;
 
   @Test (timeout = 20000)
   public void testKillAppWhenFailoverHappensAtNewState()
@@ -63,8 +65,8 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
         new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
     nm1.registerNode();
 
-    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 15, 8);
-    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm2, 15, 8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, MEMORY_GB, V_CORES);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm2, MEMORY_GB, V_CORES);
 
     // Submit the application
     MockRMAppSubmissionData data =
@@ -109,8 +111,8 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
         rm1.getResourceTrackerService());
     nm1.registerNode();
 
-    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 15, 8);
-    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm2, 15, 8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, MEMORY_GB, V_CORES);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm2, MEMORY_GB, V_CORES);
 
     // create app and launch the AM
     RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);
@@ -135,8 +137,8 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
         rm1.getResourceTrackerService());
     nm1.registerNode();
 
-    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 15, 8);
-    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm2, 15, 8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, MEMORY_GB, V_CORES);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm2, MEMORY_GB, V_CORES);
 
     // create app and launch the AM
     RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);
@@ -169,8 +171,8 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
         rm1.getResourceTrackerService());
     nm1.registerNode();
 
-    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 15, 8);
-    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm2, 15, 8);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, MEMORY_GB, V_CORES);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm2, MEMORY_GB, V_CORES);
 
     // create app and launch the AM
     RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);

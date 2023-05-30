@@ -221,7 +221,7 @@ public abstract class RMHATestBase extends ClientBaseWithFixes{
         == HAServiceState.ACTIVE);
   }
 
-  protected void startRMs(MockRM rm1, Configuration confForRM1, MockRM rm2,
+  protected void  startRMs(MockRM rm1, Configuration confForRM1, MockRM rm2,
       Configuration confForRM2) throws IOException {
     rm1.init(confForRM1);
     rm1.start();
