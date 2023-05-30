@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -96,6 +98,19 @@ public class TestObserverReadProxyProvider {
     MockitoAnnotations.initMocks(this);
   }
 
+  /**
+   * Replace LOG in ObserverReadProxy with a mocked logger.
+   */
+  private void setupMockLoggerForProxyProvider() throws NoSuchFieldException, IllegalAccessException {
+    Field field = ObserverReadProxyProvider.class.getDeclaredField("LOG");
+    field.setAccessible(true);
+    // remove final modifier
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+    field.set(proxyProvider, logger);
+  }
+
   private void setupProxyProvider(int namenodeCount) throws Exception {
     String[] namenodeIDs = new String[namenodeCount];
     namenodeAddrs = new String[namenodeCount];
@@ -129,8 +144,7 @@ public class TestObserverReadProxyProvider {
               AtomicBoolean fallbackToSimpleAuth) {
             return proxyMap.get(nnAddr.toString());
           }
-        },
-        logger)  {
+        })  {
       @Override
       protected List<NNProxyInfo<ClientProtocol>> getProxyAddresses(
           URI uri, String addressKey) {
@@ -140,6 +154,7 @@ public class TestObserverReadProxyProvider {
       }
     };
     proxyProvider.setObserverReadEnabled(true);
+    setupMockLoggerForProxyProvider();
   }
 
   @Test
@@ -341,7 +356,9 @@ public class TestObserverReadProxyProvider {
     assertHandledBy(1);
   }
 
-  // Happy case for GetHAServiceStateWithTimeout
+  /**
+   * Happy case for GetHAServiceStateWithTimeout.
+   */
   @Test
   public void testGetHAServiceStateWithTimeout() throws Exception {
     setupProxyProvider(1);
@@ -360,7 +377,7 @@ public class TestObserverReadProxyProvider {
   }
 
   /**
-   * Test TimeoutException for GetHAServiceStateWithTimeout
+   * Test TimeoutException for GetHAServiceStateWithTimeout.
    */
   @Test
   public void testTimeoutExceptionGetHAServiceStateWithTimeout()

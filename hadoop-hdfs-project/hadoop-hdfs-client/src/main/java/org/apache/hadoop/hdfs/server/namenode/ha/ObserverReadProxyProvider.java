@@ -78,7 +78,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 public class ObserverReadProxyProvider<T>
     extends AbstractNNFailoverProxyProvider<T> {
   @VisibleForTesting
-  static Logger LOG = LoggerFactory.getLogger(
+  static final Logger LOG = LoggerFactory.getLogger(
       ObserverReadProxyProvider.class);
 
   /** Configuration key for {@link #autoMsyncPeriodMs}. */
@@ -170,10 +170,10 @@ public class ObserverReadProxyProvider<T>
   private long observerProbeRetryPeriodMs;
 
   /**
-   * Timeout in seconds when we try to get the HA state of an namenode
+   * Timeout in seconds when we try to get the HA state of an namenode.
    */
   @VisibleForTesting
-  long namenodeHAStateProbeTimeoutSec;
+  private long namenodeHAStateProbeTimeoutSec;
 
   /**
    * The previous time where zero observer were found. If there was observer,
@@ -181,7 +181,7 @@ public class ObserverReadProxyProvider<T>
    */
   private long lastObserverProbeTime;
 
-  private final ExecutorService NNProbingThreadPool =
+  private final ExecutorService nnProbingThreadPool =
       new ThreadPoolExecutor(4, 4, 0L, TimeUnit.MILLISECONDS,
           new ArrayBlockingQueue<Runnable>(1024));
 
@@ -248,14 +248,6 @@ public class ObserverReadProxyProvider<T>
           + "class does not implement {}", uri, ClientProtocol.class.getName());
       this.observerReadEnabled = false;
     }
-  }
-
-  public ObserverReadProxyProvider(
-      Configuration conf, URI uri, Class<T> xface, HAProxyFactory<T> factory,
-      Logger logger) {
-    this(conf, uri, xface, factory,
-        new ConfiguredFailoverProxyProvider<>(conf, uri, xface, factory));
-    this.LOG = logger;
   }
 
   public AlignmentContext getAlignmentContext() {
@@ -350,7 +342,7 @@ public class ObserverReadProxyProvider<T>
 
     try {
       Future<HAServiceState> task =
-          NNProbingThreadPool.submit(getHAServiceStateTask);
+          nnProbingThreadPool.submit(getHAServiceStateTask);
       return getHAServiceStateWithTimeout(proxyInfo, task);
     } catch (RejectedExecutionException e) {
       LOG.debug("Run out of threads to submit the request to query HA state. "
