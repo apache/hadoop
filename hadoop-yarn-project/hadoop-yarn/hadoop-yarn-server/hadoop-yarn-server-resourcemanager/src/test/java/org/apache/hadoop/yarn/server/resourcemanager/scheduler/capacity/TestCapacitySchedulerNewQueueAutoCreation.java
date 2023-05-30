@@ -1273,7 +1273,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   protected AbstractLeafQueue createQueue(String queuePath) throws YarnException,
       IOException {
     AbstractLeafQueue result =  autoQueueHandler.createQueue(new QueuePath(queuePath));
-    cs = CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 1200);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(mockRM, 1200);
     return result;
   }
 
