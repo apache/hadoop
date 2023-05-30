@@ -193,7 +193,12 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         }
 
         void uploadArray(String key, byte[] data) throws IOException {
-            upload(key, new ByteArrayInputStream(data));
+            if (!uploadManager.put(data, key, getUploadToken(key, overwrite)).isOK()) {
+                throw new IOException("Upload failed"
+                        + " bucket: " + bucket
+                        + " key: " + key
+                        + " overwrite: " + overwrite);
+            }
         }
 
         void uploadEmpty(String key) throws IOException {

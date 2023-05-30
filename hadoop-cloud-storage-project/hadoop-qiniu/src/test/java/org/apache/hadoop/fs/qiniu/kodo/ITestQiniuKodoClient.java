@@ -149,4 +149,13 @@ public class ITestQiniuKodoClient {
         byte[] fetchedData = IOUtils.readFullyToByteArray(new DataInputStream(fetchedStream));
         assertArrayEquals(testData, fetchedData);
     }
+
+    @Test
+    public void testMakeEmptyObject() throws IOException {
+        String testKey = "test_key";
+        client.makeEmptyObject(testKey);
+        QiniuKodoFileInfo fileInfo = client.getFileStatus(testKey);
+        assertEquals(0, fileInfo.size);
+        assertEquals(testKey, fileInfo.key);
+    }
 }
