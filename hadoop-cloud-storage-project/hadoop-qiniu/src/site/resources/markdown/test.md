@@ -23,33 +23,41 @@ is as follows:
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
-    <property>
-        <name>fs.qiniu.test.useMock</name>
-        <value>true</value>
-    </property>
+  <property>
+    <name>fs.qiniu.test.useMock</name>
+    <value>true</value>
+  </property>
 
-    <property>
-        <name>fs.contract.test.fs.mockkodo</name>
-        <value>mockkodo://hadoop-java</value>
-    </property>
+  <property>
+    <name>fs.contract.test.fs.mockkodo</name>
+    <value>mockkodo://hadoop-java</value>
+  </property>
 
-    <property>
-        <name>fs.mockkodo.impl</name>
-        <value>org.apache.hadoop.fs.qiniu.kodo.MockQiniuKodoFileSystem</value>
-    </property>
+  <property>
+    <name>fs.mockkodo.impl</name>
+    <value>org.apache.hadoop.fs.qiniu.kodo.MockQiniuKodoFileSystem</value>
+  </property>
 
-    <property>
-        <name>fs.AbstractFileSystem.mockkodo.impl</name>
-        <value>org.apache.hadoop.fs.qiniu.kodo.MockQiniuKodo</value>
-    </property>
+  <property>
+    <name>fs.AbstractFileSystem.mockkodo.impl</name>
+    <value>org.apache.hadoop.fs.qiniu.kodo.MockQiniuKodo</value>
+  </property>
 </configuration>
 ```
 
 ## Use maven command
 
+To run the contract tests, you need to use the `mvn` command in the `hadoop-cloud-storage-project/hadoop-qiniu/` folder,
+and specify all the test classes that need to be run using the `-Dtest` parameter, for example:
+
 ```shell
+cd hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources
 mvn test -Dtest=ITestQiniuKodoFileSystemContractBase,ITestQiniuKodoContractCreate,ITestQiniuKodoContractDelete,ITestQiniuKodoContractDistCp,ITestQiniuKodoContractGetFileStatus,ITestQiniuKodoContractMkdir,ITestQiniuKodoContractOpen,ITestQiniuKodoContractRename,ITestQiniuKodoContractRootDir,ITestQiniuKodoContractSeek
 ```
+
+> PS: If you run the `ITestQiniuKodoContractDistCp` test class, some test cases report an error
+> `java.lang.NoSuchMethodError`, please first in the outermost `hadoop` repository, execute
+> the `mvn install -DskipTests` command
 
 # Living Test the hadoop-qiniu Module
 
@@ -91,10 +99,10 @@ Kodo. If you test in private-cloud environment, the host related region should a
 
 ## Run Hadoop Contract Test
 
-Create file `hadoop-qiniu/src/test/resources/contract-test-options.xml`, If a
+Create file `hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources/contract-test-options.xml`, If a
 specific file `fs.contract.test.fs.kodo` test path is not defined, those tests will be skipped.
 Credentials are also needed to run any of those tests, they can be copied
-from `hadoop-qiniu/src/test/resources/auth-keys.xml` or through direct
+from `hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources/auth-keys.xml` and through direct
 XInclude inclusion. Here is an example of `contract-test-options.xml`:
 
 ```xml
@@ -109,35 +117,43 @@ XInclude inclusion. Here is an example of `contract-test-options.xml`:
         <value>false</value>
     </property>
 
-    <property>
-        <name>fs.qiniu.download.useHttps</name>
-        <value>false</value>
-    </property>
+  <property>
+    <name>fs.qiniu.download.useHttps</name>
+    <value>false</value>
+  </property>
 
-    <property>
-        <name>fs.qiniu.test.useMock</name>
-        <value>false</value>
-    </property>
+  <property>
+    <name>fs.qiniu.test.useMock</name>
+    <value>false</value>
+  </property>
 
-    <property>
-        <name>fs.contract.test.fs.kodo</name>
-        <value>kodo://your-test-bucket</value>
-    </property>
+  <property>
+    <name>fs.contract.test.fs.kodo</name>
+    <value>kodo://your-test-bucket</value>
+  </property>
 
-    <property>
-        <name>fs.kodo.impl</name>
-        <value>org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem</value>
-    </property>
+  <property>
+    <name>fs.kodo.impl</name>
+    <value>org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem</value>
+  </property>
 
-    <property>
-        <name>fs.AbstractFileSystem.kodo.impl</name>
-        <value>org.apache.hadoop.fs.qiniu.kodo.QiniuKodo</value>
-    </property>
+  <property>
+    <name>fs.AbstractFileSystem.kodo.impl</name>
+    <value>org.apache.hadoop.fs.qiniu.kodo.QiniuKodo</value>
+  </property>
 </configuration>
 ```
 
 ### Use maven command
 
+To run the contract tests, you need to use the `mvn` command in the `hadoop-cloud-storage-project/hadoop-qiniu/` folder,
+and specify all the test classes that need to be run using the `-Dtest` parameter, for example:
+
 ```shell
+cd hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources
 mvn test -Dtest=ITestQiniuKodoFileSystemContractBase,ITestQiniuKodoContractCreate,ITestQiniuKodoContractDelete,ITestQiniuKodoContractDistCp,ITestQiniuKodoContractGetFileStatus,ITestQiniuKodoContractMkdir,ITestQiniuKodoContractOpen,ITestQiniuKodoContractRename,ITestQiniuKodoContractRootDir,ITestQiniuKodoContractSeek
 ```
+
+> PS: If you run the `ITestQiniuKodoContractDistCp` test class, some test cases report an error
+> `java.lang.NoSuchMethodError`, please first in the outermost `hadoop` repository, execute
+> the `mvn install -DskipTests` command

@@ -20,37 +20,44 @@
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
-    <property>
-        <name>fs.qiniu.test.useMock</name>
-        <value>true</value>
-    </property>
+  <property>
+    <name>fs.qiniu.test.useMock</name>
+    <value>true</value>
+  </property>
 
-    <property>
-        <name>fs.contract.test.fs.mockkodo</name>
-        <value>mockkodo://hadoop-java</value>
-    </property>
+  <property>
+    <name>fs.contract.test.fs.mockkodo</name>
+    <value>mockkodo://hadoop-java</value>
+  </property>
 
-    <property>
-        <name>fs.mockkodo.impl</name>
-        <value>org.apache.hadoop.fs.qiniu.kodo.MockQiniuKodoFileSystem</value>
-    </property>
+  <property>
+    <name>fs.mockkodo.impl</name>
+    <value>org.apache.hadoop.fs.qiniu.kodo.MockQiniuKodoFileSystem</value>
+  </property>
 
-    <property>
-        <name>fs.AbstractFileSystem.mockkodo.impl</name>
-        <value>org.apache.hadoop.fs.qiniu.kodo.MockQiniuKodo</value>
-    </property>
+  <property>
+    <name>fs.AbstractFileSystem.mockkodo.impl</name>
+    <value>org.apache.hadoop.fs.qiniu.kodo.MockQiniuKodo</value>
+  </property>
 </configuration>
 ```
 
 ## 使用 maven 测试命令
 
+为了运行契约测试，需要在`hadoop-cloud-storage-project/hadoop-qiniu/`文件夹下，使用`mvn`命令，通过使用`-Dtest`
+参数指定所有需要运行的测试类，例如：
+
 ```shell
+cd hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources
 mvn test -Dtest=ITestQiniuKodoFileSystemContractBase,ITestQiniuKodoContractCreate,ITestQiniuKodoContractDelete,ITestQiniuKodoContractDistCp,ITestQiniuKodoContractGetFileStatus,ITestQiniuKodoContractMkdir,ITestQiniuKodoContractOpen,ITestQiniuKodoContractRename,ITestQiniuKodoContractRootDir,ITestQiniuKodoContractSeek
 ```
 
+> PS: 如果在运行`ITestQiniuKodoContractDistCp`测试类时，部分测试用例报错`java.lang.NoSuchMethodError`
+> ，请先在最外层`hadoop`仓库中，执行`mvn install -DskipTests`命令
+
 # 在线测试说明
 
-为了测试 `kodo://` 文件系统，需要确保 `hadoop-qiniu/src/test/resources` 中存在以下两个配置文件：
+为了测试 `kodo://` 文件系统，需要确保 `hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources` 中存在以下两个配置文件：
 
 1. `auth-keys.xml`
 
@@ -86,7 +93,8 @@ mvn test -Dtest=ITestQiniuKodoFileSystemContractBase,ITestQiniuKodoContractCreat
 
 创建`hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources/contract-test-options.xml`
 文件，这个文件中的`fs.contract.test.fs.kodo`
-定义了测试环境所用的文件系统路径，如果该属性未定义，则自动跳过这些契约测试。注意运行这些测试需要认证信息，这些认证信息将通过`XInclude`
+定义了测试环境所用的文件系统路径，如果该属性未定义，则自动跳过这些契约测试。注意运行这些测试需要认证信息，这些认证信息将放入
+`hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources/auth-keys.xml` 文件中。并通过`XInclude`
 标签包含进来，这是一个`contract-test-options.xml`的例子：
 
 ```xml
@@ -130,6 +138,13 @@ mvn test -Dtest=ITestQiniuKodoFileSystemContractBase,ITestQiniuKodoContractCreat
 
 ### 使用maven测试命令
 
+为了运行契约测试，需要在`hadoop-cloud-storage-project/hadoop-qiniu/`文件夹下，使用`mvn`命令，通过使用`-Dtest`
+参数指定所有需要运行的测试类，例如：
+
 ```shell
+cd hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources
 mvn test -Dtest=ITestQiniuKodoFileSystemContractBase,ITestQiniuKodoContractCreate,ITestQiniuKodoContractDelete,ITestQiniuKodoContractDistCp,ITestQiniuKodoContractGetFileStatus,ITestQiniuKodoContractMkdir,ITestQiniuKodoContractOpen,ITestQiniuKodoContractRename,ITestQiniuKodoContractRootDir,ITestQiniuKodoContractSeek
 ```
+
+> PS: 如果在运行`ITestQiniuKodoContractDistCp`测试类时，部分测试用例报错`java.lang.NoSuchMethodError`
+> ，请先在最外层`hadoop`仓库中，执行`mvn install -DskipTests`命令
