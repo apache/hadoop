@@ -95,6 +95,7 @@ public class TestCapacitySchedulerMultiNodes {
     rm.registerNode("127.0.0.1:1235", 10 * GB);
     rm.registerNode("127.0.0.1:1236", 10 * GB);
     rm.registerNode("127.0.0.1:1237", 10 * GB);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 40);
     ResourceScheduler scheduler = rm.getRMContext().getScheduler();
     waitforNMRegistered(scheduler, 4, 5);
     MultiNodeSortingManager<SchedulerNode> mns = rm.getRMContext()
@@ -116,6 +117,7 @@ public class TestCapacitySchedulerMultiNodes {
     MockNM nm2 = rm.registerNode("127.0.0.2:1235", 10 * GB, 10);
     MockNM nm3 = rm.registerNode("127.0.0.3:1236", 10 * GB, 10);
     MockNM nm4 = rm.registerNode("127.0.0.4:1237", 10 * GB, 10);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 40,40);
     ResourceScheduler scheduler = rm.getRMContext().getScheduler();
     waitforNMRegistered(scheduler, 4, 5);
 
@@ -207,7 +209,7 @@ public class TestCapacitySchedulerMultiNodes {
     rm1.start();
     MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB);
     MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
-
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 16);
     // launch an app to queue, AM container should be launched in nm1
     RMApp app1 = MockRMAppSubmitter.submit(rm1,
         MockRMAppSubmissionData.Builder.createWithMemory(5 * GB, rm1)
@@ -293,6 +295,7 @@ public class TestCapacitySchedulerMultiNodes {
     rm1.start();
     MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB);
     MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 16);
 
     // launch an app to queue, AM container should be launched in nm1
     RMApp app1 = MockRMAppSubmitter.submit(rm1,
@@ -364,6 +367,7 @@ public class TestCapacitySchedulerMultiNodes {
     rm1.start();
     MockNM nm1 = rm1.registerNode("h1:1234", 12 * GB, 2);
     MockNM nm2 = rm1.registerNode("h2:1234", 12 * GB, 2);
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 24,4);
 
     // launch an app1 to queue, AM container will be launched in nm1
     RMApp app1 = MockRMAppSubmitter.submit(rm1,
@@ -452,7 +456,7 @@ public class TestCapacitySchedulerMultiNodes {
     rm.registerNode("127.0.0.2:1234", 10 * GB);
     rm.registerNode("127.0.0.3:1234", 10 * GB);
     rm.registerNode("127.0.0.4:1234", 10 * GB);
-
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 40);
     Set<SchedulerNode> nodes = new HashSet<>();
     String partition = "";
 

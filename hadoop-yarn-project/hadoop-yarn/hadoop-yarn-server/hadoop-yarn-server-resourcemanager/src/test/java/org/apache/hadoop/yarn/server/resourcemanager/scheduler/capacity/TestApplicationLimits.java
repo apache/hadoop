@@ -869,8 +869,8 @@ public class TestApplicationLimits {
     assertEquals(
         "org.apache.hadoop.security.AccessControlException: "
             + "Queue root.a.a1 already has 1 applications, "
-            + "what is more than the max 1, so cannot accept "
-            + "submission of application: " + app3.getApplicationId(),
+            + "cannot accept submission of application: "
+            + app3.getApplicationId(),
         app3.getDiagnostics().toString());
 
     // based on per user max app settings, app should be rejected instantly
