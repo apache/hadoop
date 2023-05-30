@@ -45,7 +45,7 @@ We also need to create the file `contract-test-options.xml`, the content of this
 ## Use maven command
 
 ```shell
-mvn test -Dtest=QiniuKodoFileSystemContractBaseTest,QiniuKodoContractCreateTest,QiniuKodoContractDeleteTest,QiniuKodoContractDistCpTest,QiniuKodoContractGetFileStatusTest,QiniuKodoContractMkdirTest,QiniuKodoContractOpenTest,QiniuKodoContractRenameTest,QiniuKodoContractRootDirTest,QiniuKodoContractSeekTest
+mvn test -Dtest=ITestQiniuKodoFileSystemContractBase,ITestQiniuKodoContractCreate,ITestQiniuKodoContractDelete,ITestQiniuKodoContractDistCp,ITestQiniuKodoContractGetFileStatus,ITestQiniuKodoContractMkdir,ITestQiniuKodoContractOpen,ITestQiniuKodoContractRename,ITestQiniuKodoContractRootDir,ITestQiniuKodoContractSeek
 ```
 
 # Living Test the hadoop-qiniu Module
@@ -135,5 +135,5 @@ XInclude inclusion. Here is an example of `contract-test-options.xml`:
 ### Use maven command
 
 ```shell
-mvn test -Dtest=QiniuKodoFileSystemContractBaseTest,QiniuKodoContractCreateTest,QiniuKodoContractDeleteTest,QiniuKodoContractDistCpTest,QiniuKodoContractGetFileStatusTest,QiniuKodoContractMkdirTest,QiniuKodoContractOpenTest,QiniuKodoContractRenameTest,QiniuKodoContractRootDirTest,QiniuKodoContractSeekTest
+mvn test -Dtest=ITestQiniuKodoFileSystemContractBase,ITestQiniuKodoContractCreate,ITestQiniuKodoContractDelete,ITestQiniuKodoContractDistCp,ITestQiniuKodoContractGetFileStatus,ITestQiniuKodoContractMkdir,ITestQiniuKodoContractOpen,ITestQiniuKodoContractRename,ITestQiniuKodoContractRootDir,ITestQiniuKodoContractSeek
 ```
