@@ -74,7 +74,7 @@
             <configuration>
               <!-- build a shellprofile -->
               <outputFile>
-                target/hadoop-tools-deps/hadoop-qiniu.tools-optional.txt
+                ${project.basedir}/target/hadoop-cloud-storage-deps/${project.artifactId}.cloud-storage-optional.txt
               </outputFile>
             </configuration>
           </execution>
