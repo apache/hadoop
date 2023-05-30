@@ -50,7 +50,7 @@ mvn test -Dtest=ITestQiniuKodoFileSystemContractBase,ITestQiniuKodoContractCreat
 
 # Living Test the hadoop-qiniu Module
 
-To test `kodo://` filesystem client，two files in `hadoop-tols/hadoop-qiniu/src/test/resources` which pass in
+To test `kodo://` filesystem client，two files in `hadoop-qiniu/src/test/resources` which pass in
 authentication details to the test runner are needed.
 
 1. `auth-keys.xml`
@@ -88,7 +88,7 @@ Kodo. If you test in private-cloud environment, the host related region should a
 
 ## Run Hadoop Contract Test
 
-Create file `contract-test-options.xml` in directory `hadoop-tols/hadoop-qiniu/src/test/resources`, If a
+Create file `contract-test-options.xml` in directory `hadoop-qiniu/src/test/resources`, If a
 specific file `fs.contract.test.fs.kodo` test path is not defined, those tests will be skipped.
 Credentials are also needed to run any of those tests, they can be copied from `auth-keys.xml` or through direct
 XInclude inclusion. Here is an example of `contract-test-options.xml`:
