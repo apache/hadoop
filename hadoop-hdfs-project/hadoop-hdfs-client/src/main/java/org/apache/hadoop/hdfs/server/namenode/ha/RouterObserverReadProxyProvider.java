@@ -212,17 +212,12 @@ public class RouterObserverReadProxyProvider<T> extends AbstractNNFailoverProxyP
         autoMsyncIfNecessary();
       }
 
-      Object retVal;
       try {
-        retVal = method.invoke(innerProxy.getProxy().proxy, args);
+        return method.invoke(innerProxy.getProxy().proxy, args);
       } catch (InvocationTargetException e) {
         // This exception will be handled by higher layers
         throw e.getCause();
       }
-
-      lastMsyncTimeMs = Time.monotonicNow();
-      return retVal;
     }
-
   }
 }
