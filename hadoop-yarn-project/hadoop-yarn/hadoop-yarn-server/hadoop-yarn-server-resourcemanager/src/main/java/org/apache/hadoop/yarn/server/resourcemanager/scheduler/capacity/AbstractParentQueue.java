@@ -32,6 +32,7 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.slf4j.Logger;
@@ -1141,10 +1142,24 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
   @Override
   public void updateClusterResource(Resource clusterResource,
       ResourceLimits resourceLimits) {
+    LOG.error("SAAAANYI _____ " + queuePath + clusterResource);
     if (rootQueue) {
       queueContext.getQueueManager().getQueueCapacityHandler().updateRoot(this, clusterResource);
-    } else {
-      queueContext.getQueueManager().getQueueCapacityHandler().updateChildren(clusterResource, getParent());
+    }
+    queueContext.getQueueManager().getQueueCapacityHandler().updateChildren(clusterResource, getParent());
+
+    // Update effective capacity in all parent queue.
+    for (String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
+      calculateEffectiveResourcesAndCapacity(label, clusterResource);
+    }
+
+    // Update all children
+    for (CSQueue childQueue : childQueues) {
+      // Get ResourceLimits of child queue before assign containers
+      ResourceLimits childLimits = getResourceLimitsOfChild(childQueue,
+          clusterResource, resourceLimits,
+          RMNodeLabelsManager.NO_LABEL, false);
+      childQueue.updateClusterResource(clusterResource, childLimits);
     }
   }
   @Override

@@ -102,8 +102,6 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     initAutoQueueHandler(8192 * GB);
     createQueue("root.managed.queue1");
 
-    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm, 8192,8192);
-
     assertJsonResponse(sendRequest(),
         "webapp/scheduler-response-AbsoluteModeLegacyAutoCreation.json");
   }

@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -314,6 +315,7 @@ public class TestApplicationLimitsByPartition {
     MockNM nm1 = rm1.registerNode("h1:1234", 10 * GB); // label = x
     rm1.registerNode("h2:1234", 10 * GB); // label = y
     MockNM nm3 = rm1.registerNode("h3:1234", 10 * GB); // label = <empty>
+    CapacitySchedulerTestUtilities.setupCapacityScheduler(rm1, 3);
 
     // Submit app1 (2 GB) to Queue A1 and label X
     MockRMAppSubmissionData data3 =
@@ -785,13 +787,13 @@ public class TestApplicationLimitsByPartition {
     when(spyRMContext.getNodeLabelManager()).thenReturn(mgr);
     when(csContext.getRMContext()).thenReturn(spyRMContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
-    CapacitySchedulerQueueManager queueManager =
-        new CapacitySchedulerQueueManager(csConf, mgr, null);
+    CapacitySchedulerQueueManager queueManager = new CapacitySchedulerQueueManager(
+        csContext.getConfiguration(), csContext.getRMContext().getNodeLabelManager(),
+        new AppPriorityACLsManager(csContext.getConfiguration()));
     when(csContext.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
 
     // Setup nodelabels
     queueManager.reinitConfiguredNodeLabels(csConf);
-    queueManager = setQueueHandler(csContext);
 
     mgr.activateNode(NodeId.newInstance("h0", 0),
         Resource.newInstance(160 * GB, 16)); // default Label
@@ -799,7 +801,6 @@ public class TestApplicationLimitsByPartition {
         Resource.newInstance(160 * GB, 16)); // label x
     mgr.activateNode(NodeId.newInstance("h2", 0),
         Resource.newInstance(160 * GB, 16)); // label y
-
 
     // Say cluster has 100 nodes of 16G each
     Resource clusterResource = Resources.createResource(160 * GB);
@@ -814,15 +815,10 @@ public class TestApplicationLimitsByPartition {
     rootQueue.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
 
-    CapacitySchedulerTestUtilities
-        .updateCSQueues(mgr, rootQueue, clusterResource);
-
     // Manipulate queue 'a'
     LeafQueue queue = TestLeafQueue.stubLeafQueue((LeafQueue) queues.get("b2"));
     queue.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-    CapacitySchedulerTestUtilities
-        .updateCSQueues(mgr, rootQueue, clusterResource);
 
     String rack_0 = "rack_0";
     FiCaSchedulerNode node_0 = TestUtils.getMockNode("h0", rack_0, 0, 160 * GB);
@@ -875,7 +871,6 @@ public class TestApplicationLimitsByPartition {
     //head room = queue capacity = 50 % 90% 160 GB * 0.25 (UL)
     Resource expectedHeadroom =
         Resources.createResource((int) (0.5 * 0.9 * 160 * 0.25) * GB, 1);
-    queueManager.setRootQueue(rootQueue);
     assertEquals(expectedHeadroom, app_0_0.getHeadroom());
 
     // Submit second application from user_0, check headroom

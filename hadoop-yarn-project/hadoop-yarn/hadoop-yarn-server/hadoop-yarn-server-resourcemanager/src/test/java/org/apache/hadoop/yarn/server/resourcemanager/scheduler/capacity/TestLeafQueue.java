@@ -4127,8 +4127,6 @@ public class TestLeafQueue {
         CapacitySchedulerConfiguration.ROOT, queues, queues, TestUtils.spyHook);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-    CapacitySchedulerTestUtilities
-        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     // Manipulate queue 'b'
     LeafQueue b = stubLeafQueue((LeafQueue) queues.get(B));
@@ -4148,8 +4146,6 @@ public class TestLeafQueue {
         csConf, null, CapacitySchedulerConfiguration.ROOT, newQueues, queues,
         TestUtils.spyHook);
     root.reinitialize(newRoot, clusterResource);
-    CapacitySchedulerTestUtilities
-        .updateCSQueues(rmContext.getNodeLabelManager(), root, clusterResource);
 
     b = stubLeafQueue((LeafQueue) newQueues.get(B));
     assertEquals(b.calculateAndGetAMResourceLimit(),
