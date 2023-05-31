@@ -35,9 +35,6 @@ public class PercentageQueueCapacityCalculator extends AbstractQueueCapacityCalc
     double absoluteCapacity = parentAbsoluteCapacity * remainingPerEffectiveResourceRatio
         * context.getCurrentMinimumCapacityEntry(label).getResourceValue() / 100;
 
-    double pfff = resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label)
-        .getResourceValue(resourceName) * absoluteCapacity;
-
     return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label)
         .getResourceValue(resourceName) * absoluteCapacity;
   }
