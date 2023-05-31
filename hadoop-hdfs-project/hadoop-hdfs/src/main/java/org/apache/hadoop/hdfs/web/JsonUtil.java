@@ -753,7 +753,7 @@ public class JsonUtil {
   }
 
   public static String toJsonString(ErasureCodingPolicyInfo[] ecPolicyInfos) {
-    final Map<String, Object> erasureCodingPolicies = new TreeMap<>();
+    final Map<String, Object> erasureCodingPolicies = new HashMap<>();
     Object[] erasureCodingPolicyInfos = null;
     if (ecPolicyInfos != null && ecPolicyInfos.length > 0) {
       erasureCodingPolicyInfos = new Object[ecPolicyInfos.length];
