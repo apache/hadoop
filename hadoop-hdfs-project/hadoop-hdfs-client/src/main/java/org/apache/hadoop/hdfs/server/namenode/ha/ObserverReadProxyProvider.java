@@ -96,15 +96,15 @@ public class ObserverReadProxyProvider<T>
   /** Observer probe retry period default to 10 min. */
   static final long OBSERVER_PROBE_RETRY_PERIOD_DEFAULT = 60 * 10 * 1000;
 
-  /** Timeout to cancel the ha-state probe rpc request for an namenode. */
+  /** Timeout in ms to cancel the ha-state probe rpc request for an namenode. */
   static final String NAMENODE_HA_STATE_PROBE_TIMEOUT =
-      "dfs.client.namenode.ha-state.probe.timeout";
+      HdfsClientConfigKeys.Failover.PREFIX + "namenode.ha-state.probe.timeout";
   /**
    * Namenode ha-state probe timeout default to 25 sec.
    * ipc.client.connect.timeout defaults to be 20 seconds. So, in 25 seconds,
    * we can try twice to connect to an NN.
    */
-  static final long NAMENODE_HA_STATE_PROBE_TIMEOUT_DEFAULT = 25;
+  static final long NAMENODE_HA_STATE_PROBE_TIMEOUT_DEFAULT = 25000;  // 25 secs
 
   /** The inner proxy provider used for active/standby failover. */
   private final AbstractNNFailoverProxyProvider<T> failoverProxy;
@@ -174,10 +174,10 @@ public class ObserverReadProxyProvider<T>
   private long observerProbeRetryPeriodMs;
 
   /**
-   * Timeout in seconds when we try to get the HA state of an namenode.
+   * Timeout in ms when we try to get the HA state of a namenode.
    */
   @VisibleForTesting
-  private long namenodeHAStateProbeTimeoutSec;
+  private long namenodeHAStateProbeTimeoutMs;
 
   /**
    * The previous time where zero observer were found. If there was observer,
@@ -186,7 +186,7 @@ public class ObserverReadProxyProvider<T>
   private long lastObserverProbeTime;
 
   private final ExecutorService nnProbingThreadPool =
-      new ThreadPoolExecutor(1, 4, 60000L, TimeUnit.MILLISECONDS,
+      new ThreadPoolExecutor(1, 4, 1L, TimeUnit.MINUTES,
           new ArrayBlockingQueue<Runnable>(1024));
 
   /**
@@ -241,13 +241,8 @@ public class ObserverReadProxyProvider<T>
     observerProbeRetryPeriodMs = conf.getTimeDuration(
         OBSERVER_PROBE_RETRY_PERIOD_KEY,
         OBSERVER_PROBE_RETRY_PERIOD_DEFAULT, TimeUnit.MILLISECONDS);
-    namenodeHAStateProbeTimeoutSec = conf.getTimeDuration(
-        NAMENODE_HA_STATE_PROBE_TIMEOUT,
-        NAMENODE_HA_STATE_PROBE_TIMEOUT_DEFAULT, TimeUnit.SECONDS);
-    // Disallow negative values for namenodeHAStateProbeTimeoutSec
-    if (namenodeHAStateProbeTimeoutSec < 0) {
-      namenodeHAStateProbeTimeoutSec = NAMENODE_HA_STATE_PROBE_TIMEOUT_DEFAULT;
-    }
+    namenodeHAStateProbeTimeoutMs = conf.getTimeDuration(NAMENODE_HA_STATE_PROBE_TIMEOUT,
+        NAMENODE_HA_STATE_PROBE_TIMEOUT_DEFAULT, TimeUnit.MILLISECONDS);
 
     if (wrappedProxy instanceof ClientProtocol) {
       this.observerReadEnabled = true;
@@ -335,18 +330,12 @@ public class ObserverReadProxyProvider<T>
    * threadpool for execution. We will wait for a response up to
    * namenodeHAStateProbeTimeoutSec and cancel these requests if they time out.
    *
-   * The implemention is split into two functions so that we can unit test
+   * The implementation is split into two functions so that we can unit test
    * the second function.
    */
   HAServiceState getHAServiceStateWithTimeout(final NNProxyInfo<T> proxyInfo) {
 
-    Callable<HAServiceState> getHAServiceStateTask =
-        new Callable<HAServiceState>() {
-          @Override
-          public HAServiceState call() {
-            return getHAServiceState(proxyInfo);
-          }
-        };
+    Callable<HAServiceState> getHAServiceStateTask = () -> getHAServiceState(proxyInfo);
 
     try {
       Future<HAServiceState> task =
@@ -364,18 +353,22 @@ public class ObserverReadProxyProvider<T>
       Future<HAServiceState> task) {
     HAServiceState state = null;
     try {
-      state = task.get(namenodeHAStateProbeTimeoutSec, TimeUnit.SECONDS);
-      LOG.debug("HA State for " + proxyInfo.proxyInfo + " is " + state);
+      if (namenodeHAStateProbeTimeoutMs > 0) {
+        state = task.get(namenodeHAStateProbeTimeoutMs, TimeUnit.MILLISECONDS);
+      } else {
+        // Disable timeout by waiting indefinitely when namenodeHAStateProbeTimeoutSec is set to 0
+        // or a negative value.
+        state = task.get();
+      }
+      LOG.debug("HA State for {} is {}", proxyInfo.proxyInfo, state);
     } catch (TimeoutException e) {
       // Cancel the task on timeout
-      LOG.debug("Cancel NN probe task due to timeout for " + proxyInfo.proxyInfo);
+      LOG.debug("Cancel NN probe task due to timeout for {}: {}", proxyInfo.proxyInfo, e);
       if (task != null) {
         task.cancel(true);
       }
-    } catch (InterruptedException e) {
-      LOG.debug("Interrupted exception in NN probe task for " + proxyInfo.proxyInfo + ": " + e);
-    } catch (ExecutionException e) {
-      LOG.debug("Execution exception in NN probe task for " + proxyInfo.proxyInfo + ": " + e);
+    } catch (InterruptedException|ExecutionException e) {
+      LOG.debug("Exception in NN probe task for {}: {}", proxyInfo.proxyInfo, e);
     }
 
     return state;
