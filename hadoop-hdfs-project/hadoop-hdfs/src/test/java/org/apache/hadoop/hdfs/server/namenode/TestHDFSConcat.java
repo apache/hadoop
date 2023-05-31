@@ -573,7 +573,7 @@ public class TestHDFSConcat {
    * @throws IOException
    */
   @Test
-  public void testConcatPermissionEnabled() throws IOException {
+  public void testConcatPermissionEnabled() throws Exception {
     Configuration conf2 = new Configuration();
     conf2.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf2.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
@@ -594,15 +594,12 @@ public class TestHDFSConcat {
         UserGroupInformation.createUserForTesting("theDoctor", new String[] {"tardis"});
     DistributedFileSystem hdfs1 = (DistributedFileSystem) DFSTestUtil.getFileSystemAs(user, conf2);
     try {
-      hdfs1.concat(trg, new Path[] {src});
-      fail("Permission exception expected");
-    } catch (IOException ie) {
-      LOG.info("Got expected exception for permissions:" + ie.getLocalizedMessage());
+      LambdaTestUtils.intercept(AccessControlException.class,
+          "Permission denied: user=theDoctor, access=WRITE",
+          () -> hdfs1.concat(trg, new Path[] {src}));
+    } finally {
+      cluster2.shutdown();
     }
-
-    dfs2.close();
-    cluster2.shutdownDataNodes();
-    cluster2.shutdown();
 
     conf2.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
     cluster2 = new MiniDFSCluster.Builder(conf2).numDataNodes(REPL_FACTOR).build();
@@ -618,17 +615,16 @@ public class TestHDFSConcat {
       hdfs2.concat(trg, new Path[] {src});
     } catch (IOException ie) {
       fail("Got unexpected exception for permissions:" + ie.getLocalizedMessage());
+    } finally {
+      cluster2.shutdown();
     }
-    dfs2.close();
-    cluster2.shutdownDataNodes();
-    cluster2.shutdown();
   }
 
   /**
    * Test permissions of Concat operation.
    */
   @Test
-  public void testConcatPermissions() throws IOException {
+  public void testConcatPermissions() throws Exception {
     String testPathDir = "/dir";
     Path dir = new Path(testPathDir);
     dfs.mkdirs(dir);
@@ -657,22 +653,16 @@ public class TestHDFSConcat {
     DFSTestUtil.createFile(dfs, src, blockSize, REPL_FACTOR, 1);
     dfs.setPermission(dst, new FsPermission((short) 0777));
     dfs.setPermission(src, new FsPermission((short) 0700));
-    try {
-      dfs2.concat(dst, new Path[] {src});
-      fail("Permission exception expected");
-    } catch (AccessControlException ace) {
-      LOG.info("Got expected exception for permissions:" + ace.getLocalizedMessage());
-    }
+    LambdaTestUtils.intercept(AccessControlException.class,
+        "Permission denied: user=theDoctor, access=READ",
+        () -> dfs2.concat(dst, new Path[] {src}));
 
     // Test 3: User is not the owner of the file and has only src permission.
     DFSTestUtil.createFile(dfs, src, blockSize, REPL_FACTOR, 1);
     dfs.setPermission(dst, new FsPermission((short) 0700));
     dfs.setPermission(src, new FsPermission((short) 0777));
-    try {
-      dfs2.concat(dst, new Path[] {src});
-      fail("Permission exception expected");
-    } catch (AccessControlException ace) {
-      LOG.info("Got expected exception for permissions:" + ace.getLocalizedMessage());
-    }
+    LambdaTestUtils.intercept(AccessControlException.class,
+        "Permission denied: user=theDoctor, access=WRITE",
+        () -> dfs2.concat(dst, new Path[] {src}));
   }
 }
