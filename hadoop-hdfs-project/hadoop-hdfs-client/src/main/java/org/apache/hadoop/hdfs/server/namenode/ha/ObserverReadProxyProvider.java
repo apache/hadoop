@@ -99,8 +99,12 @@ public class ObserverReadProxyProvider<T>
   /** Timeout to cancel the ha-state probe rpc request for an namenode. */
   static final String NAMENODE_HA_STATE_PROBE_TIMEOUT =
       "dfs.client.namenode.ha-state.probe.timeout";
-  /** Namenode ha-state probe timeout default to 5 sec. */
-  static final long NAMENODE_HA_STATE_PROBE_TIMEOUT_DEFAULT = 5;
+  /**
+   * Namenode ha-state probe timeout default to 25 sec.
+   * ipc.client.connect.timeout defaults to be 20 seconds. So, in 25 seconds,
+   * we can try twice to connect to an NN.
+   */
+  static final long NAMENODE_HA_STATE_PROBE_TIMEOUT_DEFAULT = 25;
 
   /** The inner proxy provider used for active/standby failover. */
   private final AbstractNNFailoverProxyProvider<T> failoverProxy;
@@ -182,7 +186,7 @@ public class ObserverReadProxyProvider<T>
   private long lastObserverProbeTime;
 
   private final ExecutorService nnProbingThreadPool =
-      new ThreadPoolExecutor(4, 4, 0L, TimeUnit.MILLISECONDS,
+      new ThreadPoolExecutor(1, 4, 60000L, TimeUnit.MILLISECONDS,
           new ArrayBlockingQueue<Runnable>(1024));
 
   /**

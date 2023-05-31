@@ -101,7 +101,8 @@ public class TestObserverReadProxyProvider {
   /**
    * Replace LOG in ObserverReadProxy with a mocked logger.
    */
-  private void setupMockLoggerForProxyProvider() throws NoSuchFieldException, IllegalAccessException {
+  private void setupMockLoggerForProxyProvider()
+      throws NoSuchFieldException, IllegalAccessException {
     Field field = ObserverReadProxyProvider.class.getDeclaredField("LOG");
     field.setAccessible(true);
     // remove final modifier
