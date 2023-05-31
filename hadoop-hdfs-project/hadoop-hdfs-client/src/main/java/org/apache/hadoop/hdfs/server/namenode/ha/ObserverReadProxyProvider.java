@@ -244,6 +244,10 @@ public class ObserverReadProxyProvider<T>
     namenodeHAStateProbeTimeoutSec = conf.getTimeDuration(
         NAMENODE_HA_STATE_PROBE_TIMEOUT,
         NAMENODE_HA_STATE_PROBE_TIMEOUT_DEFAULT, TimeUnit.SECONDS);
+    // Disallow negative values for namenodeHAStateProbeTimeoutSec
+    if (namenodeHAStateProbeTimeoutSec < 0) {
+      namenodeHAStateProbeTimeoutSec = NAMENODE_HA_STATE_PROBE_TIMEOUT_DEFAULT;
+    }
 
     if (wrappedProxy instanceof ClientProtocol) {
       this.observerReadEnabled = true;
