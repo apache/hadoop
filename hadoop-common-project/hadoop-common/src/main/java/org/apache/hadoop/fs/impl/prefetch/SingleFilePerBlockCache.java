@@ -73,6 +73,16 @@ public class SingleFilePerBlockCache implements BlockCache {
   private final PrefetchingStatistics prefetchingStatistics;
 
   /**
+   * Timeout to be used by close, while acquiring prefetch block write lock.
+   */
+  private static final int PREFETCH_WRITE_LOCK_TIMEOUT = 5;
+
+  /**
+   * Lock timeout unit to be used by the thread while acquiring prefetch block write lock.
+   */
+  private static final TimeUnit PREFETCH_WRITE_LOCK_TIMEOUT_UNIT = TimeUnit.SECONDS;
+
+  /**
    * File attributes attached to any intermediate temporary file created during index creation.
    */
   private static final Set<PosixFilePermission> TEMP_FILE_ATTRS =
@@ -113,7 +123,7 @@ public class SingleFilePerBlockCache implements BlockCache {
      *
      * @param lockType type of the lock.
      */
-    void takeLock(LockType lockType) {
+    private void takeLock(LockType lockType) {
       if (LockType.READ == lockType) {
         lock.readLock().lock();
       } else if (LockType.WRITE == lockType) {
@@ -126,7 +136,7 @@ public class SingleFilePerBlockCache implements BlockCache {
      *
      * @param lockType type of the lock.
      */
-    void releaseLock(LockType lockType) {
+    private void releaseLock(LockType lockType) {
       if (LockType.READ == lockType) {
         lock.readLock().unlock();
       } else if (LockType.WRITE == lockType) {
@@ -142,7 +152,7 @@ public class SingleFilePerBlockCache implements BlockCache {
      * @param unit the time unit of the timeout argument.
      * @return true if the lock of the given lock type was acquired.
      */
-    boolean takeLock(LockType lockType, long timeout, TimeUnit unit) {
+    private boolean takeLock(LockType lockType, long timeout, TimeUnit unit) {
       try {
         if (LockType.READ == lockType) {
           return lock.readLock().tryLock(timeout, unit);
@@ -333,10 +343,12 @@ public class SingleFilePerBlockCache implements BlockCache {
     int numFilesDeleted = 0;
 
     for (Entry entry : blocks.values()) {
-      boolean lockAcquired = entry.takeLock(Entry.LockType.WRITE, 5, TimeUnit.SECONDS);
+      boolean lockAcquired = entry.takeLock(Entry.LockType.WRITE, PREFETCH_WRITE_LOCK_TIMEOUT,
+          PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
       if (!lockAcquired) {
         LOG.error("Cache file {} deletion would not be attempted as write lock could not"
-            + " be acquired within 5 sec", entry.path);
+                + " be acquired within {} {}", entry.path, PREFETCH_WRITE_LOCK_TIMEOUT,
+            PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
         continue;
       }
       try {
