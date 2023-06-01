@@ -183,7 +183,7 @@ The snapshot path is returned in these methods.
 
 #### Delete Snapshots
 
-Delete a snapshot of from a snapshottable directory.
+Delete a snapshot from a snapshottable directory.
 This operation requires owner privilege of the snapshottable directory.
 
 * Command:

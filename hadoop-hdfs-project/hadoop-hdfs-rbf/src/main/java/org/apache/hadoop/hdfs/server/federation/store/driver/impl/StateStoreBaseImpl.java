@@ -75,7 +75,7 @@ public abstract class StateStoreBaseImpl extends StateStoreDriver {
       T record, boolean allowUpdate, boolean errorIfExists) throws IOException {
     List<T> singletonList = new ArrayList<>();
     singletonList.add(record);
-    return putAll(singletonList, allowUpdate, errorIfExists);
+    return putAll(singletonList, allowUpdate, errorIfExists).isOperationSuccessful();
   }
 
   @Override

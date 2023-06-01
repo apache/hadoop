@@ -38,13 +38,14 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.cache.FederationCache;
-import org.apache.hadoop.yarn.server.federation.cache.FederationJCache;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
@@ -132,8 +133,13 @@ public final class FederationStateStoreFacade {
           SubClusterResolver.class);
       this.subclusterResolver.load();
 
-      federationCache = new FederationJCache();
-      federationCache.initCache(config, stateStore);
+      // We check the configuration of Cache,
+      // if the configuration is null, set it to FederationJCache
+      this.federationCache = createInstance(conf,
+          YarnConfiguration.FEDERATION_FACADE_CACHE_CLASS,
+          YarnConfiguration.DEFAULT_FEDERATION_FACADE_CACHE_CLASS,
+          FederationCache.class);
+      this.federationCache.initCache(config, stateStore);
 
     } catch (YarnException ex) {
       LOG.error("Failed to initialize the FederationStateStoreFacade object", ex);
@@ -833,13 +839,16 @@ public final class FederationStateStoreFacade {
    * @param applicationId applicationId, is the id of the application.
    * @param subClusterId homeSubClusterId, this is selected by strategy.
    * @param retryCount number of retries.
+   * @param appSubmissionContext appSubmissionContext.
    * @throws YarnException yarn exception.
    */
   public void addOrUpdateApplicationHomeSubCluster(ApplicationId applicationId,
-      SubClusterId subClusterId, int retryCount) throws YarnException {
+      SubClusterId subClusterId, int retryCount, ApplicationSubmissionContext appSubmissionContext)
+      throws YarnException {
     Boolean exists = existsApplicationHomeSubCluster(applicationId);
     ApplicationHomeSubCluster appHomeSubCluster =
-        ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
+        ApplicationHomeSubCluster.newInstance(applicationId, Time.now(),
+        subClusterId, appSubmissionContext);
     if (!exists || retryCount == 0) {
       // persist the mapping of applicationId and the subClusterId which has
       // been selected as its home.
@@ -979,6 +988,26 @@ public final class FederationStateStoreFacade {
       return null;
     }
   }
+
+  /**
+   * Get ApplicationSubmissionContext according to ApplicationId.
+   * We don't throw exceptions. If the application cannot be found, we return null.
+   *
+   * @param appId ApplicationId
+   * @return ApplicationSubmissionContext of ApplicationId
+   */
+  public ApplicationSubmissionContext getApplicationSubmissionContext(ApplicationId appId) {
+    try {
+      GetApplicationHomeSubClusterResponse response = stateStore.getApplicationHomeSubCluster(
+          GetApplicationHomeSubClusterRequest.newInstance(appId));
+      ApplicationHomeSubCluster appHomeSubCluster = response.getApplicationHomeSubCluster();
+      return appHomeSubCluster.getApplicationSubmissionContext();
+    } catch (Exception e) {
+      LOG.error("getApplicationSubmissionContext error, applicationId = {}.", appId, e);
+      return null;
+    }
+  }
+
 
   @VisibleForTesting
   public FederationCache getFederationCache() {

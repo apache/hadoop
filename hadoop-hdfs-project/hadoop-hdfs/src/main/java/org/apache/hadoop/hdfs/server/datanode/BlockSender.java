@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
@@ -351,11 +350,8 @@ class BlockSender implements java.io.Closeable {
         } catch (FileNotFoundException e) {
           if ((e.getMessage() != null) && !(e.getMessage()
               .contains("Too many open files"))) {
-            // The replica is on its volume map but not on disk
-            datanode
-                .notifyNamenodeDeletedBlock(block, replica.getStorageUuid());
-            datanode.data.invalidate(block.getBlockPoolId(),
-                new Block[] {block.getLocalBlock()});
+            datanode.data.invalidateMissingBlock(block.getBlockPoolId(),
+                block.getLocalBlock());
           }
           throw e;
         } finally {

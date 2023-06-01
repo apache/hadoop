@@ -35,7 +35,7 @@ IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
             applicationId   VARCHAR(64) COLLATE Latin1_General_100_BIN2 NOT NULL,
             homeSubCluster  VARCHAR(256) NOT NULL,
             createTime      DATETIME2 NOT NULL CONSTRAINT ts_createAppTime DEFAULT GETUTCDATE(),
-
+            applicationContext VARBINARY(MAX) NULL,
             CONSTRAINT [pk_applicationId] PRIMARY KEY
             (
                 [applicationId]

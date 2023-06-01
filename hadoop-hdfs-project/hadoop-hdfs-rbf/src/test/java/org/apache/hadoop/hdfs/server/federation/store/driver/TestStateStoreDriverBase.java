@@ -307,7 +307,15 @@ public class TestStateStoreDriverBase {
     }
 
     // Verify
-    assertTrue(driver.putAll(insertList, false, true));
+    StateStoreOperationResult result1 = driver.putAll(insertList, false, true);
+    assertTrue(result1.isOperationSuccessful());
+    assertEquals(0, result1.getFailedRecordsKeys().size());
+
+    StateStoreOperationResult result2 = driver.putAll(insertList.subList(0, 1), false, true);
+    assertFalse(result2.isOperationSuccessful());
+    assertEquals(1, result2.getFailedRecordsKeys().size());
+    assertEquals(insertList.get(0).getPrimaryKey(), result2.getFailedRecordsKeys().get(0));
+
     records = driver.get(clazz);
     assertEquals(records.getRecords().size(), 10);
 
@@ -384,7 +392,10 @@ public class TestStateStoreDriverBase {
     }
 
     // Verify
-    assertTrue(driver.putAll(insertList, false, true));
+    StateStoreOperationResult result = driver.putAll(insertList, false, true);
+    assertTrue(result.isOperationSuccessful());
+    assertEquals(0, result.getFailedRecordsKeys().size());
+
     records = driver.get(clazz);
     assertEquals(records.getRecords().size(), 10);
 
@@ -689,4 +700,5 @@ public class TestStateStoreDriverBase {
     }
     return null;
   }
+
 }

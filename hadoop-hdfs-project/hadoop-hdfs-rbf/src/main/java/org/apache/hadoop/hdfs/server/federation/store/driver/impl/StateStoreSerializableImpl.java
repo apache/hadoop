@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.federation.store.driver.impl;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Objects;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -57,7 +58,9 @@ public abstract class StateStoreSerializableImpl extends StateStoreBaseImpl {
 
   /**
    * Serialize a record using the serializer.
+   *
    * @param record Record to serialize.
+   * @param <T> Type of the state store record.
    * @return Byte array with the serialization of the record.
    */
   protected <T extends BaseRecord> byte[] serialize(T record) {
@@ -66,7 +69,9 @@ public abstract class StateStoreSerializableImpl extends StateStoreBaseImpl {
 
   /**
    * Serialize a record using the serializer.
+   *
    * @param record Record to serialize.
+   * @param <T> Type of the state store record.
    * @return String with the serialization of the record.
    */
   protected <T extends BaseRecord> String serializeString(T record) {
@@ -75,11 +80,13 @@ public abstract class StateStoreSerializableImpl extends StateStoreBaseImpl {
 
   /**
    * Creates a record from an input data string.
+   *
    * @param data Serialized text of the record.
    * @param clazz Record class.
    * @param includeDates If dateModified and dateCreated are serialized.
-   * @return The created record.
-   * @throws IOException
+   * @param <T> Type of the state store record.
+   * @return The created record by deserializing the input text.
+   * @throws IOException If the record deserialization fails.
    */
   protected <T extends BaseRecord> T newRecord(
       String data, Class<T> clazz, boolean includeDates) throws IOException {
@@ -99,4 +106,20 @@ public abstract class StateStoreSerializableImpl extends StateStoreBaseImpl {
     primaryKey = primaryKey.replaceAll(":", COLON_MARK);
     return primaryKey;
   }
+
+  /**
+   * Get the original primary key for the given state store record key. The returned
+   * key is readable as it is the original key.
+   *
+   * @param stateStoreRecordKey The record primary key stored by the state store implementations.
+   * @return The original primary key for the given record key.
+   */
+  protected static String getOriginalPrimaryKey(String stateStoreRecordKey) {
+    Objects.requireNonNull(stateStoreRecordKey,
+        "state store record key provided to getOriginalPrimaryKey should not be null");
+    stateStoreRecordKey = stateStoreRecordKey.replaceAll(SLASH_MARK, "/");
+    stateStoreRecordKey = stateStoreRecordKey.replaceAll(COLON_MARK, ":");
+    return stateStoreRecordKey;
+  }
+
 }

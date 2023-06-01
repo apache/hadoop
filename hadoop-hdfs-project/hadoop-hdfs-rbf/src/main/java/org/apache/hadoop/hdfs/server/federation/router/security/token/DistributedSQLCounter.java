@@ -50,7 +50,9 @@ public class DistributedSQLCounter {
 
   /**
    * Obtains the value of the counter.
+   *
    * @return counter value.
+   * @throws SQLException if querying the database fails.
    */
   public int selectCounterValue() throws SQLException {
     try (Connection connection = connectionFactory.getConnection()) {
@@ -74,7 +76,9 @@ public class DistributedSQLCounter {
 
   /**
    * Sets the counter to the given value.
+   *
    * @param value Value to assign to counter.
+   * @throws SQLException if querying the database fails.
    */
   public void updateCounterValue(int value) throws SQLException {
     try (Connection connection = connectionFactory.getConnection(true)) {
@@ -84,8 +88,10 @@ public class DistributedSQLCounter {
 
   /**
    * Sets the counter to the given value.
-   * @param connection Connection to database hosting the counter table.
+   *
    * @param value Value to assign to counter.
+   * @param connection Connection to database hosting the counter table.
+   * @throws SQLException if querying the database fails.
    */
   public void updateCounterValue(int value, Connection connection) throws SQLException {
     String queryText = String.format("UPDATE %s SET %s = ?", table, field);
@@ -99,8 +105,10 @@ public class DistributedSQLCounter {
   /**
    * Increments the counter by the given amount and
    * returns the previous counter value.
+   *
    * @param amount Amount to increase the counter.
    * @return Previous counter value.
+   * @throws SQLException if querying the database fails.
    */
   public int incrementCounterValue(int amount) throws SQLException {
     // Disabling auto-commit to ensure that all statements on this transaction
