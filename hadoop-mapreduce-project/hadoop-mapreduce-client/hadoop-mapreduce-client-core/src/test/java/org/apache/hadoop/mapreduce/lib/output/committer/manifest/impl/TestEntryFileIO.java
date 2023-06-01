@@ -193,6 +193,7 @@ public class TestEntryFileIO extends AbstractManifestCommitterTest {
     // now use the iterator to access it.
     List<FileEntry> files = new ArrayList<>();
     Assertions.assertThat(foreach(iterateOverEntryFile(), files::add))
+        .describedAs("Count of iterations over entries in an entry file with no entries")
         .isEqualTo(0);
   }
 

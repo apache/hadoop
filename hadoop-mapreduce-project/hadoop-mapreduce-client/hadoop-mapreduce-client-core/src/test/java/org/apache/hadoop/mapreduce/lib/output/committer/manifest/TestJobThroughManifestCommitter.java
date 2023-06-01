@@ -146,6 +146,8 @@ public class TestJobThroughManifestCommitter
 
   /**
    * Loaded manifest data, set in job commit and used in validation.
+   * This is static so it can be passed from where it is loaded
+   * {@link #test_0400_loadManifests()} to subsequent tests.
    */
   private static LoadedManifestData
       loadedManifestData;

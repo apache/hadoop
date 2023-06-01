@@ -29,7 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * {@link IOStatisticsSnapshot} to also support it.
  * These are the simple setters, they don't provide for increments,
  * decrements, calculation of min/max/mean etc.
- * @since The interface and IOStatisticsSnapshot support was added after Hadoop 3.3.5
+ * @since The interface and IOStatisticsSnapshot support was added <i>after</i> Hadoop 3.3.5
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

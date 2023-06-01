@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.statistics;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -61,12 +62,14 @@ public class TestIOStatisticsSetters extends AbstractHadoopTestBase {
 
   private final IOStatisticsSetters ioStatistics;
 
-  @Parameterized.Parameters
+  private final boolean createsNewEntries;
+
+  @Parameterized.Parameters(name="{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {new IOStatisticsSnapshot()},
-        {createTestStore()},
-        {new ForwardingIOStatisticsStore(createTestStore())},
+        {"IOStatisticsSnapshot", new IOStatisticsSnapshot(), true},
+        {"IOStatisticsStore", createTestStore(), false},
+        {"ForwardingIOStatisticsStore", new ForwardingIOStatisticsStore(createTestStore()), false},
     });
   }
 
@@ -84,8 +87,13 @@ public class TestIOStatisticsSetters extends AbstractHadoopTestBase {
         .build();
   }
 
-  public TestIOStatisticsSetters(IOStatisticsSetters ioStatisticsSetters) {
+  public TestIOStatisticsSetters(
+      String source,
+      IOStatisticsSetters ioStatisticsSetters,
+      boolean createsNewEntries) {
     this.ioStatistics = ioStatisticsSetters;
+
+    this.createsNewEntries = createsNewEntries;
   }
 
   @Test
@@ -101,7 +109,16 @@ public class TestIOStatisticsSetters extends AbstractHadoopTestBase {
         .isEqualTo(2);
 
     // unknown value
-    ioStatistics.setCounter("c2", 3);
+    final String unknown = "unknown";
+    ioStatistics.setCounter(unknown, 3);
+    if (createsNewEntries) {
+      assertThatStatisticCounter(ioStatistics, unknown)
+          .isEqualTo(3);
+    } else {
+      Assertions.assertThat(ioStatistics.counters())
+          .describedAs("Counter map in {}", ioStatistics)
+          .doesNotContainKey(unknown);
+    }
   }
 
   @Test

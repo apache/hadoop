@@ -86,6 +86,9 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
   /** resilient commit expected? */
   private boolean resilientCommit;
 
+  /**
+   * Entry file IO.
+   */
   private EntryFileIO entryFileIO;
 
   protected boolean isResilientCommit() {

@@ -127,5 +127,4 @@ public final class InternalConstants {
   /** Schemas of filesystems we know to not work with this committer. */
   public static final Set<String> UNSUPPORTED_FS_SCHEMAS =
       ImmutableSet.of("s3a", "wasb");
-
 }
