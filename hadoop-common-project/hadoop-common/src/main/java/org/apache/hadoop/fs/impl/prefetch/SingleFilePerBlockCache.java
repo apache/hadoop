@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
@@ -114,9 +115,9 @@ public class SingleFilePerBlockCache implements BlockCache {
      */
     void takeLock(LockType lockType) {
       if (LockType.READ == lockType) {
-        this.lock.readLock().lock();
+        lock.readLock().lock();
       } else if (LockType.WRITE == lockType) {
-        this.lock.writeLock().lock();
+        lock.writeLock().lock();
       }
     }
 
@@ -127,10 +128,32 @@ public class SingleFilePerBlockCache implements BlockCache {
      */
     void releaseLock(LockType lockType) {
       if (LockType.READ == lockType) {
-        this.lock.readLock().unlock();
+        lock.readLock().unlock();
       } else if (LockType.WRITE == lockType) {
-        this.lock.writeLock().unlock();
+        lock.writeLock().unlock();
       }
+    }
+
+    /**
+     * Try to take the read or write lock within the given timeout.
+     *
+     * @param lockType type of the lock.
+     * @param timeout the time to wait for the given lock.
+     * @param unit the time unit of the timeout argument.
+     * @return true if the lock of the given lock type was acquired.
+     */
+    boolean takeLock(LockType lockType, long timeout, TimeUnit unit) {
+      try {
+        if (LockType.READ == lockType) {
+          return lock.readLock().tryLock(timeout, unit);
+        } else if (LockType.WRITE == lockType) {
+          return lock.writeLock().tryLock(timeout, unit);
+        }
+      } catch (InterruptedException e) {
+        LOG.warn("Thread interrupted while trying to acquire {} lock", lockType, e);
+        Thread.currentThread().interrupt();
+      }
+      return false;
     }
   }
 
@@ -310,7 +333,12 @@ public class SingleFilePerBlockCache implements BlockCache {
     int numFilesDeleted = 0;
 
     for (Entry entry : blocks.values()) {
-      entry.takeLock(Entry.LockType.WRITE);
+      boolean lockAcquired = entry.takeLock(Entry.LockType.WRITE, 5, TimeUnit.SECONDS);
+      if (!lockAcquired) {
+        LOG.error("Cache file {} deletion would not be attempted as write lock could not"
+            + " be acquired within 5 sec", entry.path);
+        continue;
+      }
       try {
         Files.deleteIfExists(entry.path);
         prefetchingStatistics.blockRemovedFromFileCache();
