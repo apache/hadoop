@@ -18,12 +18,13 @@
 
 -- Script to generate all the tables for the Federation StateStore in MySQL
 
-USE FederationStateStore
+USE FederationStateStore;
 
 CREATE TABLE applicationsHomeSubCluster(
    applicationId varchar(64) NOT NULL,
    homeSubCluster varchar(256) NOT NULL,
    createTime datetime NOT NULL,
+   applicationContext BLOB NULL,
    CONSTRAINT pk_applicationId PRIMARY KEY (applicationId)
 );
 

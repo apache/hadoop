@@ -394,7 +394,8 @@ public class YarnConfiguration extends Configuration {
   /** The expiry interval for application master reporting.*/
   public static final String RM_AM_EXPIRY_INTERVAL_MS = 
     YARN_PREFIX  + "am.liveness-monitor.expiry-interval-ms";
-  public static final int DEFAULT_RM_AM_EXPIRY_INTERVAL_MS = 600000;
+  public static final long DEFAULT_RM_AM_EXPIRY_INTERVAL_MS =
+      TimeUnit.MINUTES.toMillis(15);
 
   /** How long to wait until a node manager is considered dead.*/
   public static final String RM_NM_EXPIRY_INTERVAL_MS = 
@@ -4945,6 +4946,19 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "workflow-id.tag-prefix";
   public static final String DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX =
       "workflowid:";
+
+  public static final String APPS_CACHE_ENABLE = YARN_PREFIX + "apps.cache.enable";
+  public static final boolean DEFAULT_APPS_CACHE_ENABLE = false;
+
+  // The size of cache for RMWebServices.getApps when yarn.apps.cache.enable = true,
+  // default is 1000
+  public static final String APPS_CACHE_SIZE = YARN_PREFIX + "apps.cache.size";
+  public static final int DEFAULT_APPS_CACHE_SIZE = 1000;
+
+  // The expire time of cache for RMWebServices.getApps when yarn.apps.cache.enable = true,
+  // default is 30s
+  public static final String APPS_CACHE_EXPIRE = YARN_PREFIX + "apps.cache.expire";
+  public static final String DEFAULT_APPS_CACHE_EXPIRE = "30s";
 
   public YarnConfiguration() {
     super();

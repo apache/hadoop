@@ -472,6 +472,16 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.namenode.heartbeat.jmx.interval</name>
+    <value>0</value>
+    <description>
+      How often the Router should request JMX reports from the Namenode in miliseconds.
+      If this value is 0, it will request JMX reports every time a Namenode report is requested.
+      If this value is negative, it will disable JMX reports from the Namenode.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.store.router.expiration</name>
     <value>5m</value>
     <description>

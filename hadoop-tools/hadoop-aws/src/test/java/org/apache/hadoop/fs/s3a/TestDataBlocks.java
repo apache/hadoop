@@ -51,7 +51,7 @@ public class TestDataBlocks extends Assert {
              new S3ADataBlocks.ByteBufferBlockFactory(null)) {
       int limit = 128;
       S3ADataBlocks.ByteBufferBlockFactory.ByteBufferBlock block
-          = factory.create("spanId", "s3\\object/key", 1, limit, null);
+          = factory.create(1, limit, null);
       assertOutstandingBuffers(factory, 1);
 
       byte[] buffer = ContractTestUtils.toAsciiByteArray("test data");
