@@ -169,9 +169,12 @@
   </property>
 
   <property>
-    <description>The expiry interval for application master reporting.</description>
+    <description>
+      The expiry interval for application master reporting.
+      The default is 900000 ms, or 15m.
+    </description>
     <name>yarn.am.liveness-monitor.expiry-interval-ms</name>
-    <value>600000</value>
+    <value>900000</value>
   </property>
 
   <property>
@@ -5259,6 +5262,35 @@
     </description>
     <name>yarn.federation.failover.random.order</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <name>yarn.apps.cache.enable</name>
+    <value>false</value>
+    <description>
+      Optional.
+      To enable cache for RMWebServices.getApps
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.apps.cache.size</name>
+    <value>1000</value>
+    <description>
+      Optional.
+      The size of cache for RMWebServices.getApps when
+      yarn.apps.cache.enable = true, Default is 1000
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.apps.cache.expire</name>
+    <value>30s</value>
+    <description>
+      Optional.
+      The expire time of cache for RMWebServices.getApps when
+      yarn.apps.cache.enable = true, Default is 30s
+    </description>
   </property>
 
 </configuration>

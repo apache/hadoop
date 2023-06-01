@@ -52,6 +52,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " applicationId varchar(64) NOT NULL,"
           + " homeSubCluster varchar(256) NOT NULL,"
           + " createTime datetime NOT NULL,"
+          + " applicationContext BLOB NULL,"
           + " CONSTRAINT pk_applicationId PRIMARY KEY (applicationId))";
 
   private static final String TABLE_MEMBERSHIP =
@@ -173,12 +174,14 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
       "CREATE PROCEDURE sp_addApplicationHomeSubCluster("
           + " IN applicationId_IN varchar(64),"
           + " IN homeSubCluster_IN varchar(256),"
+          + " IN applicationContext_IN BLOB,"
           + " OUT storedHomeSubCluster_OUT varchar(256), OUT rowCount_OUT int)"
           + " MODIFIES SQL DATA BEGIN ATOMIC"
           + " INSERT INTO applicationsHomeSubCluster "
-          + " (applicationId,homeSubCluster,createTime) "
+          + " (applicationId,homeSubCluster,createTime,applicationContext) "
           + " (SELECT applicationId_IN, homeSubCluster_IN, "
-          + " NOW() AT TIME ZONE INTERVAL '0:00' HOUR TO MINUTE"
+          + " NOW() AT TIME ZONE INTERVAL '0:00' HOUR TO MINUTE, "
+          + " applicationContext_IN "
           + " FROM applicationsHomeSubCluster"
           + " WHERE applicationId = applicationId_IN"
           + " HAVING COUNT(*) = 0 );"
@@ -190,19 +193,24 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
   private static final String SP_UPDATEAPPLICATIONHOMESUBCLUSTER =
       "CREATE PROCEDURE sp_updateApplicationHomeSubCluster("
           + " IN applicationId_IN varchar(64),"
-          + " IN homeSubCluster_IN varchar(256), OUT rowCount_OUT int)"
+          + " IN homeSubCluster_IN varchar(256), "
+          + " IN applicationContext_IN BLOB, OUT rowCount_OUT int)"
           + " MODIFIES SQL DATA BEGIN ATOMIC"
           + " UPDATE applicationsHomeSubCluster"
-          + " SET homeSubCluster = homeSubCluster_IN"
+          + " SET homeSubCluster = homeSubCluster_IN, "
+          + " applicationContext = applicationContext_IN "
           + " WHERE applicationId = applicationId_IN;"
           + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT; END";
 
   private static final String SP_GETAPPLICATIONHOMESUBCLUSTER =
       "CREATE PROCEDURE sp_getApplicationHomeSubCluster("
           + " IN applicationId_IN varchar(64),"
-          + " OUT homeSubCluster_OUT varchar(256))"
+          + " OUT homeSubCluster_OUT varchar(256),"
+          + " OUT createTime_OUT datetime,"
+          + " OUT applicationContext_OUT BLOB)"
           + " MODIFIES SQL DATA BEGIN ATOMIC"
-          + " SELECT homeSubCluster INTO homeSubCluster_OUT"
+          + " SELECT homeSubCluster, applicationContext, createTime "
+          + " INTO homeSubCluster_OUT, applicationContext_OUT, createTime_OUT "
           + " FROM applicationsHomeSubCluster"
           + " WHERE applicationId = applicationID_IN; END";
 

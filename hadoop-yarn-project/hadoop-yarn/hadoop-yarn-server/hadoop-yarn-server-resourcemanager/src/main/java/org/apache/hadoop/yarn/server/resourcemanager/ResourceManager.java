@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
@@ -702,6 +703,32 @@ public class ResourceManager extends CompositeService
           + YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS + "=" + expireIntvl
           + ", " + YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS + "="
           + heartbeatIntvl);
+    }
+
+    if (HAUtil.isFederationEnabled(conf)) {
+      /*
+       * In Yarn Federation, we need UAMs in secondary sub-clusters to stay
+       * alive when the next attempt AM in home sub-cluster gets launched. If
+       * the previous AM died because the node is lost after NM timeout. It will
+       * already be too late if AM timeout is even shorter.
+       */
+      String rmAmExpiryIntervalMS = conf.get(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS);
+      long amExpireIntvl;
+      if (NumberUtils.isDigits(rmAmExpiryIntervalMS)) {
+        amExpireIntvl = conf.getLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS);
+      } else {
+        amExpireIntvl = conf.getTimeDuration(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS, TimeUnit.MILLISECONDS);
+      }
+
+      if (amExpireIntvl <= expireIntvl) {
+        throw new YarnRuntimeException("When Yarn Federation is enabled, "
+            + "AM expiry interval should be no less than NM expiry interval, "
+            + YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS + "=" + amExpireIntvl
+            + ", " + YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS + "="
+            + expireIntvl);
+      }
     }
   }
 

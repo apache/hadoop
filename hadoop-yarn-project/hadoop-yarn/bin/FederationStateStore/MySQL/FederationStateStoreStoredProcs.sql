@@ -18,7 +18,7 @@
 
 -- Script to generate all the stored procedures for the Federation StateStore in MySQL
 
-USE FederationStateStore
+USE FederationStateStore;
 
 DELIMITER //
 
@@ -89,11 +89,12 @@ END //
 
 CREATE PROCEDURE sp_addApplicationHomeSubCluster(
    IN applicationId_IN varchar(64), IN homeSubCluster_IN varchar(256),
+   IN applicationContext_IN BLOB,
    OUT storedHomeSubCluster_OUT varchar(256), OUT rowCount_OUT int)
 BEGIN
    INSERT INTO applicationsHomeSubCluster
-      (applicationId,homeSubCluster)
-      (SELECT applicationId_IN, homeSubCluster_IN
+      (applicationId, homeSubCluster, createTime, applicationContext)
+      (SELECT applicationId_IN, homeSubCluster_IN, NOW(), applicationContext_IN
        FROM applicationsHomeSubCluster
        WHERE applicationId = applicationId_IN
        HAVING COUNT(*) = 0 );
@@ -105,19 +106,23 @@ END //
 
 CREATE PROCEDURE sp_updateApplicationHomeSubCluster(
    IN applicationId_IN varchar(64),
-   IN homeSubCluster_IN varchar(256), OUT rowCount_OUT int)
+   IN homeSubCluster_IN varchar(256), IN applicationContext_IN BLOB, OUT rowCount_OUT int)
 BEGIN
    UPDATE applicationsHomeSubCluster
-     SET homeSubCluster = homeSubCluster_IN
+     SET homeSubCluster = homeSubCluster_IN,
+         applicationContext = applicationContext_IN
    WHERE applicationId = applicationId_IN;
    SELECT ROW_COUNT() INTO rowCount_OUT;
 END //
 
 CREATE PROCEDURE sp_getApplicationHomeSubCluster(
    IN applicationId_IN varchar(64),
-   OUT homeSubCluster_OUT varchar(256))
+   OUT homeSubCluster_OUT varchar(256),
+   OUT createTime_OUT datetime,
+   OUT applicationContext_OUT BLOB)
 BEGIN
-   SELECT homeSubCluster INTO homeSubCluster_OUT
+   SELECT homeSubCluster, applicationContext, createTime
+       INTO homeSubCluster_OUT, applicationContext_OUT, createTime_OUT
    FROM applicationsHomeSubCluster
    WHERE applicationId = applicationID_IN;
 END //

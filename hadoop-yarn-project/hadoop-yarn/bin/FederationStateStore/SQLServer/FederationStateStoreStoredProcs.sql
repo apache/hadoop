@@ -26,6 +26,7 @@ GO
 CREATE PROCEDURE [dbo].[sp_addApplicationHomeSubCluster]
     @applicationId_IN VARCHAR(64),
     @homeSubCluster_IN VARCHAR(256),
+    @applicationContext_IN VARBINARY(MAX),
     @storedHomeSubCluster_OUT VARCHAR(256) OUTPUT,
     @rowCount_OUT int OUTPUT
 AS BEGIN
@@ -41,10 +42,14 @@ AS BEGIN
 
                 INSERT INTO [dbo].[applicationsHomeSubCluster] (
                     [applicationId],
-                    [homeSubCluster])
+                    [homeSubCluster],
+                    [createTime],
+                    [applicationContext])
                 VALUES (
                     @applicationId_IN,
-                    @homeSubCluster_IN);
+                    @homeSubCluster_IN,
+                    GETUTCDATE(),
+                    @applicationContext_IN);
             -- End of the IF block
 
             SELECT @rowCount_OUT = @@ROWCOUNT;
@@ -77,6 +82,7 @@ GO
 CREATE PROCEDURE [dbo].[sp_updateApplicationHomeSubCluster]
     @applicationId_IN VARCHAR(64),
     @homeSubCluster_IN VARCHAR(256),
+    @applicationContext_IN VARBINARY(MAX),
     @rowCount_OUT int OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
@@ -85,7 +91,8 @@ AS BEGIN
         BEGIN TRAN
 
             UPDATE [dbo].[applicationsHomeSubCluster]
-            SET [homeSubCluster] = @homeSubCluster_IN
+            SET [homeSubCluster] = @homeSubCluster_IN,
+                [applicationContext] = @applicationContext_IN
             WHERE [applicationId] = @applicationId_IN;
             SELECT @rowCount_OUT = @@ROWCOUNT;
 
@@ -151,13 +158,17 @@ GO
 
 CREATE PROCEDURE [dbo].[sp_getApplicationHomeSubCluster]
     @applicationId_IN VARCHAR(64),
-    @homeSubCluster_OUT VARCHAR(256) OUTPUT
+    @homeSubCluster_OUT VARCHAR(256) OUTPUT,
+    @createTime_OUT datetime OUT,
+    @applicationContext_OUT VARBINARY(MAX) OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
     BEGIN TRY
 
-        SELECT @homeSubCluster_OUT = [homeSubCluster]
+        SELECT @homeSubCluster_OUT = [homeSubCluster],
+            @createTime_OUT = [createTime],
+            @applicationContext_OUT = [applicationContext]
         FROM [dbo].[applicationsHomeSubCluster]
         WHERE [applicationId] = @applicationId_IN;
 

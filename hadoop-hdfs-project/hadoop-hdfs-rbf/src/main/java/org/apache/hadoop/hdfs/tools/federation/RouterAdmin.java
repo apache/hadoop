@@ -515,7 +515,7 @@ public class RouterAdmin extends Configured implements Tool {
         mountTable.addMountTableEntries(request);
     boolean added = addResponse.getStatus();
     if (!added) {
-      System.err.println("Cannot add some or all mount points");
+      System.err.println("Cannot add mount points: " + addResponse.getFailedRecordsKeys());
     }
     return added;
   }

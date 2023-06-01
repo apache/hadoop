@@ -1882,6 +1882,8 @@ public class TestRouterAdminCLI {
 
   @Test
   public void testAddMultipleMountPointsFailure() throws Exception {
+    System.setErr(new PrintStream(err));
+
     String[] argv =
         new String[] {"-addAll", "/testAddMultiMountPoints-01", "ns01", ",", "/dest01", ",",
             "/testAddMultiMountPoints-02", "ns02,ns03", "/dest02", "-order", "HASH_ALL",
@@ -1918,6 +1920,9 @@ public class TestRouterAdminCLI {
             "-faulttolerant"};
     // mount points were already added
     assertNotEquals(0, ToolRunner.run(admin, argv));
+
+    assertTrue("The error message should return failed entries",
+        err.toString().contains("Cannot add mount points: [/testAddMultiMountPoints-01"));
   }
 
   private void addMountTable(String src, String nsId, String dst)
