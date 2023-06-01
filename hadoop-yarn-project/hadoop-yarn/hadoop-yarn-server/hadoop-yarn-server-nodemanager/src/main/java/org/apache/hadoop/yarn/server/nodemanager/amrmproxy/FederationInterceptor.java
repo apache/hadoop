@@ -574,6 +574,10 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
   public synchronized RegisterApplicationMasterResponse registerApplicationMaster(
       RegisterApplicationMasterRequest request) throws YarnException, IOException {
 
+    if (request == null) {
+      throw new YarnException("RegisterApplicationMasterRequest can't be null!");
+    }
+
     // Reset the heartbeat responseId to zero upon register
     synchronized (this.lastAllocateResponseLock) {
       this.lastAllocateResponse.setResponseId(0);
@@ -617,6 +621,11 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
      * the other sub-cluster RM will be done lazily as needed later.
      */
     this.amRegistrationResponse = this.homeRMRelayer.registerApplicationMaster(request);
+
+    if (this.amRegistrationResponse == null) {
+      throw new YarnException("RegisterApplicationMasterResponse can't be null!");
+    }
+
     List<Container> containersFromPreviousAttempts =
         this.amRegistrationResponse.getContainersFromPreviousAttempts();
     if (containersFromPreviousAttempts != null) {
