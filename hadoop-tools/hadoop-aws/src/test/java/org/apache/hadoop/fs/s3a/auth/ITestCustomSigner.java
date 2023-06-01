@@ -25,12 +25,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.amazonaws.SignableRequest;
-import com.amazonaws.auth.AWS4Signer;
-import com.amazonaws.arn.Arn;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.Signer;
-import com.amazonaws.services.s3.internal.AWSS3V4Signer;
+import software.amazon.awssdk.arns.Arn;
+import software.amazon.awssdk.auth.signer.Aws4Signer;
+import software.amazon.awssdk.auth.signer.AwsS3V4Signer;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.core.signer.Signer;
+import software.amazon.awssdk.http.SdkHttpFullRequest;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -183,14 +183,15 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
      * request because the signature calculated by the service doesn't match
      * what we sent.
      * @param request the request to sign.
-     * @param credentials credentials used to sign the request.
+     * @param executionAttributes request executionAttributes which contain the credentials.
      */
     @Override
-    public void sign(SignableRequest<?> request, AWSCredentials credentials) {
+    public SdkHttpFullRequest sign(SdkHttpFullRequest request,
+        ExecutionAttributes executionAttributes) {
       int c = INVOCATION_COUNT.incrementAndGet();
       LOG.info("Signing request #{}", c);
 
-      String host = request.getEndpoint().getHost();
+      String host = request.host();
       String bucketName = parseBucketFromHost(host);
       try {
         lastStoreValue = CustomSignerInitializer
@@ -199,19 +200,11 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
         throw new RuntimeException("Failed to get current Ugi", e);
       }
       if (bucketName.equals("kms")) {
-        AWS4Signer realKMSSigner = new AWS4Signer();
-        realKMSSigner.setServiceName("kms");
-        if (lastStoreValue != null) {
-          realKMSSigner.setRegionName(lastStoreValue.conf.get(TEST_REGION_KEY));
-        }
-        realKMSSigner.sign(request, credentials);
+        Aws4Signer realKMSSigner = Aws4Signer.create();
+        return realKMSSigner.sign(request, executionAttributes);
       } else {
-        AWSS3V4Signer realSigner = new AWSS3V4Signer();
-        realSigner.setServiceName("s3");
-        if (lastStoreValue != null) {
-          realSigner.setRegionName(lastStoreValue.conf.get(TEST_REGION_KEY));
-        }
-        realSigner.sign(request, credentials);
+        AwsS3V4Signer realSigner = AwsS3V4Signer.create();
+        return realSigner.sign(request, executionAttributes);
       }
     }
 
@@ -235,11 +228,11 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
         String accessPointName =
             bucketName.substring(0, bucketName.length() - (accountId.length() + 1));
         Arn arn = Arn.builder()
-            .withAccountId(accountId)
-            .withPartition("aws")
-            .withRegion(hostBits[2])
-            .withResource("accesspoint" + "/" + accessPointName)
-            .withService("s3").build();
+            .accountId(accountId)
+            .partition("aws")
+            .region(hostBits[2])
+            .resource("accesspoint" + "/" + accessPointName)
+            .service("s3").build();
 
         bucketName = arn.toString();
       }

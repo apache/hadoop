@@ -107,7 +107,7 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
     try (FileSystem fs = requesterPaysPath.getFileSystem(conf)) {
       intercept(
           AccessDeniedException.class,
-          "403 Forbidden",
+          "403",
           "Expected requester pays bucket to fail without header set",
           () -> fs.open(requesterPaysPath).close()
       );

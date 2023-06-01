@@ -189,6 +189,8 @@
     <surefire.fork.timeout>900</surefire.fork.timeout>
     <aws-java-sdk.version>1.12.316</aws-java-sdk.version>
     <hsqldb.version>2.7.1</hsqldb.version>
+    <aws-java-sdk-v2.version>2.19.12</aws-java-sdk-v2.version>
+    <awscrt.version>0.21.0</awscrt.version>
     <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
     <jasmine-maven-plugin.version>2.1</jasmine-maven-plugin.version>
     <phantomjs-maven-plugin.version>0.7</phantomjs-maven-plugin.version>
@@ -1108,14 +1110,24 @@
       </dependency>
       <dependency>
         <groupId>com.amazonaws</groupId>
-        <artifactId>aws-java-sdk-bundle</artifactId>
+        <artifactId>aws-java-sdk-core</artifactId>
         <version>${aws-java-sdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>bundle</artifactId>
+        <version>${aws-java-sdk-v2.version}</version>
         <exclusions>
           <exclusion>
             <groupId>io.netty</groupId>
             <artifactId>*</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>software.amazon.awssdk.crt</groupId>
+        <artifactId>aws-crt</artifactId>
+        <version>${awscrt.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.mina</groupId>

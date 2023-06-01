@@ -21,9 +21,9 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.net.URI;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.services.s3.AmazonS3;
+import software.amazon.awssdk.core.SdkRequest;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.s3.S3Client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.test.MinimalWriteOperationHelperCallbacks;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.util.Progressable;
+
 
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditor;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTrackerFactory;
@@ -116,9 +117,7 @@ public class MockS3AFileSystem extends S3AFileSystem {
     root = new Path(FS_URI.toString());
   }
 
-  private static <T extends AmazonWebServiceRequest> T prepareRequest(T t) {
-    return t;
-  }
+  private static void prepareRequest(SdkRequest.Builder t) {}
 
   @Override
   public RequestFactory getRequestFactory() {
@@ -210,7 +209,7 @@ public class MockS3AFileSystem extends S3AFileSystem {
    * @param client client.
    */
   @Override
-  public void setAmazonS3Client(AmazonS3 client) {
+  public void setAmazonS3Client(S3Client client) {
     LOG.debug("Setting S3 client to {}", client);
     super.setAmazonS3Client(client);
   }
@@ -353,13 +352,13 @@ public class MockS3AFileSystem extends S3AFileSystem {
   void deleteObjectAtPath(Path f,
       String key,
       boolean isFile)
-      throws AmazonClientException, IOException {
+      throws SdkException, IOException {
     deleteObject(key);
   }
 
   @Override
   protected void maybeCreateFakeParentDirectory(Path path)
-      throws IOException, AmazonClientException {
+      throws IOException, SdkException {
     // no-op
   }
 

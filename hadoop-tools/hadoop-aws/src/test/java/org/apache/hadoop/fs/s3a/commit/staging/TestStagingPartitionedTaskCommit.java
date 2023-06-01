@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.assertj.core.api.Assertions;
@@ -146,10 +146,10 @@ public class TestStagingPartitionedTaskCommit
   protected void verifyFilesCreated(
       final PartitionedStagingCommitter committer) {
     Set<String> files = Sets.newHashSet();
-    for (InitiateMultipartUploadRequest request :
+    for (CreateMultipartUploadRequest request :
         getMockResults().getRequests().values()) {
-      assertEquals(BUCKET, request.getBucketName());
-      files.add(request.getKey());
+      assertEquals(BUCKET, request.bucket());
+      files.add(request.key());
     }
     Assertions.assertThat(files)
         .describedAs("Should have the right number of uploads")
