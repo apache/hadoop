@@ -798,6 +798,7 @@ public abstract class AbstractManifestCommitterTest
         .withName(String.format(NAME_FORMAT_JOB_ATTEMPT, jobId))
         .withOperations(getStoreOperations())
         .withProgressable(getProgressCounter())
+        .withSuccessMarkerFileLimit(100_000)
         .withWriterQueueCapacity(DEFAULT_WRITER_QUEUE_CAPACITY);
 
     // if there's a task attempt ID set, set up its details

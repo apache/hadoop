@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
@@ -36,7 +36,6 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.EntryFileI
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.LoadedManifestData;
 import org.apache.hadoop.util.functional.TaskPool;
 
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER_FILE_LIMIT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_COMMIT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_RENAME_FILES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createManifestOutcome;
@@ -59,7 +58,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Man
  */
 public class RenameFilesStage extends
     AbstractJobOrTaskStage<
-        Pair<LoadedManifestData, Set<Path>>,
+        Triple<LoadedManifestData, Set<Path>, Integer>,
         ManifestSuccessData> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -106,12 +105,12 @@ public class RenameFilesStage extends
    */
   @Override
   protected ManifestSuccessData executeStage(
-      Pair<LoadedManifestData, Set<Path>> args)
+      Triple<LoadedManifestData, Set<Path>, Integer> args)
       throws IOException {
 
 
     final LoadedManifestData manifestData = args.getLeft();
-    createdDirectories = args.getRight();
+    createdDirectories = args.getMiddle();
     final EntryFileIO entryFileIO = new EntryFileIO(getStageConfig().getConf());
 
 
@@ -140,7 +139,7 @@ public class RenameFilesStage extends
     // enough for simple testing
     success.setFilenamePaths(
         committed
-            .subList(0, Math.min(committed.size(), SUCCESS_MARKER_FILE_LIMIT))
+            .subList(0, Math.min(committed.size(), args.getRight()))
             .stream().map(FileEntry::getDestPath)
             .collect(Collectors.toList()));
 

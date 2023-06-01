@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
@@ -35,6 +35,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.LoadedMani
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER_FILE_LIMIT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_BYTES_COMMITTED_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_FILES_COMMITTED_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_COMMIT;
@@ -84,23 +85,22 @@ public class CommitJobStage extends
       LoadManifestsStage.Result result = new LoadManifestsStage(stageConfig).apply(
           new LoadManifestsStage.Arguments(
               File.createTempFile("manifest", ".list"),
-              false,  /* do not cache manifests */
+              /* do not cache manifests */
               stageConfig.getWriterQueueCapacity()));
-      LoadManifestsStage.SummaryInfo summary = result.getSummary();
+      LoadManifestsStage.SummaryInfo loadedManifestSummary = result.getSummary();
       loadedManifestData = result.getLoadedManifestData();
 
-      LOG.debug("{}: Job Summary {}", getName(), summary);
+      LOG.debug("{}: Job Summary {}", getName(), loadedManifestSummary);
       LOG.info("{}: Committing job with file count: {}; total size {} bytes",
           getName(),
-          summary.getFileCount(),
-          String.format("%,d", summary.getTotalFileSize()));
+          loadedManifestSummary.getFileCount(),
+          String.format("%,d", loadedManifestSummary.getTotalFileSize()));
       addHeapInformation(heapInfo, OP_STAGE_JOB_LOAD_MANIFESTS);
-
 
       // add in the manifest statistics to our local IOStatistics for
       // reporting.
       IOStatisticsStore iostats = getIOStatistics();
-      iostats.aggregate(summary.getIOStatistics());
+      iostats.aggregate(loadedManifestSummary.getIOStatistics());
 
       // prepare destination directories.
       final CreateOutputDirectoriesStage.Result dirStageResults =
@@ -113,7 +113,9 @@ public class CommitJobStage extends
       // and hence all aggregate stats from the tasks.
       ManifestSuccessData successData;
       successData = new RenameFilesStage(stageConfig).apply(
-          Pair.of(loadedManifestData, dirStageResults.getCreatedDirectories()));
+          Triple.of(loadedManifestData,
+              dirStageResults.getCreatedDirectories(),
+              stageConfig.getSuccessMarkerFileLimit()));
       if (LOG.isDebugEnabled()) {
         LOG.debug("{}: _SUCCESS file summary {}", getName(), successData.toJson());
       }
@@ -124,10 +126,10 @@ public class CommitJobStage extends
       // aggregating tasks.
       iostats.setCounter(
           COMMITTER_FILES_COMMITTED_COUNT,
-          summary.getFileCount());
+          loadedManifestSummary.getFileCount());
       iostats.setCounter(
           COMMITTER_BYTES_COMMITTED_COUNT,
-          summary.getTotalFileSize());
+          loadedManifestSummary.getTotalFileSize());
       successData.snapshotIOStatistics(iostats);
       successData.getIOStatistics().aggregate(heapInfo);
 

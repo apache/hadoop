@@ -77,11 +77,6 @@ public class LoadManifestsStage extends
   private final SummaryInfo summaryInfo = new SummaryInfo();
 
   /**
-   * List of loaded manifests.
-   */
-  private final List<TaskManifest> manifests = new ArrayList<>();
-
-  /**
    * Map of directories from manifests, coalesced to reduce duplication.
    */
   private final Map<String, DirEntry> directories = new ConcurrentHashMap<>();
@@ -90,12 +85,6 @@ public class LoadManifestsStage extends
    * Writer of entries.
    */
   private EntryFileIO.EntryWriter entryWriter;
-
-  /**
-   * Should the manifests be cached and returned?
-   * only for testing.
-   */
-  private boolean cacheManifests;
 
   public LoadManifestsStage(final StageConfig stageConfig) {
     super(false, stageConfig, OP_STAGE_JOB_LOAD_MANIFESTS, true);
@@ -117,7 +106,6 @@ public class LoadManifestsStage extends
     LOG.info("{}: Executing Manifest Job Commit with manifests in {}",
         getName(),
         manifestDir);
-    cacheManifests = arguments.cacheManifests;
 
     final Path entrySequenceData = arguments.getEntrySequenceData();
 
@@ -125,12 +113,7 @@ public class LoadManifestsStage extends
     entryWriter = entryFileIO.launchEntryWriter(
             entryFileIO.createWriter(entrySequenceData),
             arguments.queueCapacity);
-    // manifest list is only built up when caching is enabled.
-    // as this is memory hungry, it is warned about
-    List<TaskManifest> manifestList;
-    if (arguments.cacheManifests) {
-      LOG.info("Loaded manifests are cached; this is memory hungry");
-    }
+
     try {
 
       // sync fs before the list
@@ -142,7 +125,7 @@ public class LoadManifestsStage extends
           haltableRemoteIterator(listManifests(),
               () -> entryWriter.isActive());
 
-      manifestList = loadAllManifests(manifestFiles);
+      processAllManifests(manifestFiles);
       maybeAddIOStatistics(getIOStatistics(), manifestFiles);
 
       LOG.info("{}: Summary of {} manifests loaded in {}: {}",
@@ -158,24 +141,34 @@ public class LoadManifestsStage extends
       entryWriter.maybeRaiseWriteException();
 
       // collect any stats
+    } catch (EntryWriteException e) {
+      // something went wrong while writing.
+      // raise anything on the write thread,
+      entryWriter.maybeRaiseWriteException();
+
+      // falling back to that from the worker thread
+      throw e;
     } finally {
+      // close which is a no-op if the clean close was invoked;
+      // it is not a no-op if something went wrong with reading/parsing/processing
+      // the manifests.
       entryWriter.close();
     }
+
     final LoadedManifestData loadedManifestData = new LoadedManifestData(
         new ArrayList<>(directories.values()),  // new array to free up the map
         entrySequenceData,
         entryWriter.getCount());
 
-    return new LoadManifestsStage.Result(summaryInfo, loadedManifestData, manifestList);
+    return new LoadManifestsStage.Result(summaryInfo, loadedManifestData);
   }
 
   /**
-   * Load all the manifests.
+   * Load and process all the manifests.
    * @param manifestFiles list of manifest files.
-   * @return the loaded manifests.
-   * @throws IOException IO Failure.
+   * @throws IOException failure to load/parse/queue
    */
-  private List<TaskManifest> loadAllManifests(
+  private void processAllManifests(
       final RemoteIterator<FileStatus> manifestFiles) throws IOException {
 
     trackDurationOfInvocation(getIOStatistics(), OP_LOAD_ALL_MANIFESTS, () ->
@@ -183,13 +176,12 @@ public class LoadManifestsStage extends
             .executeWith(getIOProcessors())
             .stopOnFailure()
             .run(this::processOneManifest));
-    return manifests;
   }
 
   /**
    * Method invoked to process one manifest.
    * @param status file to process.
-   * @throws IOException failure to load/parse
+   * @throws IOException failure to load/parse/queue
    */
   private void processOneManifest(FileStatus status)
       throws IOException {
@@ -200,9 +192,9 @@ public class LoadManifestsStage extends
 
     // update the directories
     final int created = coalesceDirectories(manifest);
-    final String taskID = manifest.getTaskID();
-    LOG.debug("{}: task {} added {} directories",
-        getName(), taskID, created);
+    final String attemptID = manifest.getTaskAttemptID();
+    LOG.debug("{}: task attempt {} added {} directories",
+        getName(), attemptID, created);
 
     // add to the summary.
     summaryInfo.add(manifest);
@@ -213,20 +205,12 @@ public class LoadManifestsStage extends
     manifest.setIOStatistics(null);
     manifest.getExtraData().clear();
 
-    // if manifests are cached add to the list
-    if (cacheManifests) {
-      // update the manifest list in a synchronized block.
-      synchronized (manifests) {
-        manifests.add(manifest);
-      }
-    }
-
     // queue those files.
     final boolean enqueued = entryWriter.enqueue(manifest.getFilesToCommit());
     if (!enqueued) {
       LOG.warn("{}: Failed to write manifest for task {}",
-          getName(),
-          taskID);
+          getName(), attemptID);
+      throw new EntryWriteException(attemptID);
     }
 
   }
@@ -302,20 +286,19 @@ public class LoadManifestsStage extends
     private final File entrySequenceFile;
 
     /**
-     * build a list of manifests and return them?
-     */
-    private final boolean cacheManifests;
-
-    /**
      * Capacity for queue between manifest loader and the writers.
      */
     private final int queueCapacity;
 
-    public Arguments(final File entrySequenceFile,
-        final boolean cacheManifests,
+    /**
+     * Arguments.
+     * @param entrySequenceFile path to local file to create for storing entries
+     * @param queueCapacity capacity of the queue
+     */
+    public Arguments(
+        final File entrySequenceFile,
         final int queueCapacity) {
       this.entrySequenceFile = entrySequenceFile;
-      this.cacheManifests = cacheManifests;
       this.queueCapacity = queueCapacity;
     }
 
@@ -332,20 +315,19 @@ public class LoadManifestsStage extends
     private final SummaryInfo summary;
 
     /**
-     * manifest list, non-null only if cacheManifests is true.
-     */
-    private final List<TaskManifest> manifests;
-
-    /**
      * Output of this stage to pass on to the subsequence stages.
      */
     private final LoadedManifestData loadedManifestData;
 
-    public Result(SummaryInfo summary,
-        final LoadedManifestData loadedManifestData,
-        final List<TaskManifest> manifests) {
+    /**
+     * Result.
+     * @param summary summary of jobs
+     * @param loadedManifestData all loaded manifest data
+     */
+    public Result(
+        final SummaryInfo summary,
+        final LoadedManifestData loadedManifestData) {
       this.summary = summary;
-      this.manifests = manifests;
       this.loadedManifestData = loadedManifestData;
     }
 
@@ -353,15 +335,21 @@ public class LoadManifestsStage extends
       return summary;
     }
 
-    public List<TaskManifest> getManifests() {
-      return manifests;
-    }
-
     public LoadedManifestData getLoadedManifestData() {
       return loadedManifestData;
     }
   }
 
+  /**
+   * IOE to raise on queueing failure.
+   */
+  public static final class EntryWriteException extends IOException {
+
+    private EntryWriteException(String taskId) {
+      super("Failed to write manifest data for task "
+          + taskId + "to local file");
+    }
+  }
   /**
    * Summary information.
    * Implementation note: atomic counters are used here to keep spotbugs quiet,
@@ -378,6 +366,11 @@ public class LoadManifestsStage extends
      * Task IDs.
      */
     private final List<String> taskIDs = new ArrayList<>();
+
+    /**
+     * Task IDs.
+     */
+    private final List<String> taskAttemptIDs = new ArrayList<>();
 
     /**
      * How many manifests were loaded.
@@ -431,6 +424,10 @@ public class LoadManifestsStage extends
       return taskIDs;
     }
 
+    public List<String> getTaskAttemptIDs() {
+      return taskAttemptIDs;
+    }
+
     /**
      * Add all statistics; synchronized.
      * @param manifest manifest to add.
@@ -442,6 +439,7 @@ public class LoadManifestsStage extends
       directoryCount.addAndGet(manifest.getDestDirectories().size());
       totalFileSize.addAndGet(manifest.getTotalFileSize());
       taskIDs.add(manifest.getTaskID());
+      taskAttemptIDs.add(manifest.getTaskAttemptID());
     }
 
     /**

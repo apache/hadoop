@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
@@ -145,7 +144,10 @@ public class TestJobThroughManifestCommitter
    */
   private StageConfig ta11Config;
 
-  private LoadedManifestData
+  /**
+   * Loaded manifest data, set in job commit and used in validation.
+   */
+  private static LoadedManifestData
       loadedManifestData;
 
   @Override
@@ -451,23 +453,22 @@ public class TestJobThroughManifestCommitter
     describe("Load all manifests; committed must be TA01 and TA10");
     File entryFile = File.createTempFile("entry", ".seq");
     LoadManifestsStage.Arguments args = new LoadManifestsStage.Arguments(
-        entryFile, true, DEFAULT_WRITER_QUEUE_CAPACITY);
+        entryFile, DEFAULT_WRITER_QUEUE_CAPACITY);
     LoadManifestsStage.Result result
         = new LoadManifestsStage(getJobStageConfig()).apply(args);
 
     loadedManifestData = result.getLoadedManifestData();
+    Assertions.assertThat(loadedManifestData)
+        .describedAs("manifest data from %s", result)
+        .isNotNull();
 
-    String summary = result.getSummary().toString();
+    final LoadManifestsStage.SummaryInfo stageSummary = result.getSummary();
+    String summary = stageSummary.toString();
     LOG.info("Manifest summary {}", summary);
-    List<TaskManifest> manifests = result.getManifests();
-    Assertions.assertThat(manifests)
-        .describedAs("Loaded manifests in %s", summary)
-        .hasSize(2);
-    Map<String, TaskManifest> manifestMap = toMap(manifests);
-    verifyManifestTaskAttemptID(
-        manifestMap.get(taskAttempt01), taskAttempt01);
-    verifyManifestTaskAttemptID(
-        manifestMap.get(taskAttempt10), taskAttempt10);
+    Assertions.assertThat(stageSummary.getTaskAttemptIDs())
+        .describedAs("Task attempts in %s", summary)
+        .hasSize(2)
+        .contains(taskAttempt01, taskAttempt10);
   }
 
   @Test
@@ -490,12 +491,10 @@ public class TestJobThroughManifestCommitter
         .describedAs("Loaded Manifest Data from earlier stage")
         .isNotNull();
 
-
     // load in the success data.
     ManifestSuccessData successData = loadAndPrintSuccessData(
         getFileSystem(),
         getJobStageConfig().getJobSuccessMarkerPath());
-
 
     // Now verify their files exist, returning the list of renamed files.
     final List<FileEntry> validatedEntries = new ValidateRenamedFilesStage(getJobStageConfig())
@@ -513,11 +512,7 @@ public class TestJobThroughManifestCommitter
     Assertions.assertThat(committedFiles)
         .containsAll(successData.getFilenames());
 
-    // delete an entry, repeat
-    getFileSystem().delete(validatedEntries.get(0).getDestPath(), false);
-    intercept(OutputValidationException.class, () ->
-        new ValidateRenamedFilesStage(getJobStageConfig())
-            .apply(loadedManifestData.getEntrySequenceData()));
+
   }
 
   @Test
@@ -561,7 +556,7 @@ public class TestJobThroughManifestCommitter
   }
 
   @Test
-  public void test_440_validateSuccessFiles() throws Throwable {
+  public void test_0440_validateSuccessFiles() throws Throwable {
 
     // load in the success data.
     final FileSystem fs = getFileSystem();
@@ -571,6 +566,30 @@ public class TestJobThroughManifestCommitter
     validateGeneratedFiles(fs,
         getJobStageConfig().getDestinationDir(),
         successData, false);
+  }
+
+  /**
+   * Verify that the validation stage will correctly report a failure
+   * if one of the files has as different name.
+   */
+
+  @Test
+  public void test_0450_validationDetectsFailures() throws Throwable {
+    // delete an entry, repeat
+    final List<FileEntry> validatedEntries = new ValidateRenamedFilesStage(getJobStageConfig())
+        .apply(loadedManifestData.getEntrySequenceData());
+    final Path path = validatedEntries.get(0).getDestPath();
+    final Path p2 = new Path(path.getParent(), path.getName() + "-renamed");
+    final FileSystem fs = getFileSystem();
+    fs.rename(path, p2);
+    try {
+      intercept(OutputValidationException.class, () ->
+          new ValidateRenamedFilesStage(getJobStageConfig())
+              .apply(loadedManifestData.getEntrySequenceData()));
+    } finally {
+      // if this doesn't happen, later stages will fail.
+      fs.rename(p2, path);
+    }
   }
 
   @Test

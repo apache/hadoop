@@ -133,7 +133,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
         stageConfig);
     entryFile = File.createTempFile("entry", ".seq");
     LoadManifestsStage.Arguments args = new LoadManifestsStage.Arguments(
-        entryFile, false, DEFAULT_WRITER_QUEUE_CAPACITY);
+        entryFile, DEFAULT_WRITER_QUEUE_CAPACITY);
 
     LoadManifestsStage.Result loadManifestsResult = stage.apply(args);
     LoadManifestsStage.SummaryInfo summary = loadManifestsResult.getSummary();
@@ -142,7 +142,6 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
         ioStatisticsToPrettyString(getStageStatistics()));
     LOG.info("Heap size = {}", heapSize());
     heapinfo(heapInfo, "load.manifests");
-
 
     Assertions.assertThat(summary.getManifestCount())
         .describedAs("Manifest count of  %s", summary)
@@ -193,9 +192,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     final FileSystem summaryFS = path.getFileSystem(conf);
     success.save(summaryFS, path, true);
     LOG.info("Saved summary to {}", path);
-    ManifestPrinter showManifest = new ManifestPrinter();
-    ManifestSuccessData manifestSuccessData =
-        showManifest.loadAndPrintManifest(summaryFS, path);
+    new ManifestPrinter().loadAndPrintManifest(summaryFS, path);
   }
 
   /**

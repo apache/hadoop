@@ -29,7 +29,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -50,6 +50,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER_FILE_LIMIT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.saveManifest;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.getEtag;
@@ -243,7 +244,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     // delete target paths and it works
     try {
       new RenameFilesStage(stageConfig.withDeleteTargetPaths(true))
-          .apply(Pair.of(manifestData, Collections.emptySet()));
+          .apply(Triple.of(manifestData, Collections.emptySet(), SUCCESS_MARKER_FILE_LIMIT));
     } finally {
       manifestData.getEntrySequenceFile().delete();
     }
@@ -365,7 +366,7 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
     E ex;
     try {
       ex = intercept(exceptionClass, errorText, () ->
-          stage.apply(Pair.of(manifestData, Collections.emptySet())));
+          stage.apply(Triple.of(manifestData, Collections.emptySet(), SUCCESS_MARKER_FILE_LIMIT)));
     } finally {
       manifestData.getEntrySequenceFile().delete();
     }

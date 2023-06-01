@@ -63,7 +63,18 @@ public class EntryFileIO {
   private static final Logger LOG = LoggerFactory.getLogger(
       EntryFileIO.class);
 
-  public static final int WRITER_SHUTDOWN_TIMEOUT = 60;
+  /**
+   * How long should the writer shutdown take?
+   */
+  public static final int WRITER_SHUTDOWN_TIMEOUT_SECONDS = 60;
+
+  /**
+   * How long should trying to queue a write block before giving up
+   * with an error?
+   * This is a safety feature to ensure that if something has gone wrong
+   * in the queue code the job fails with an error rather than just hangs
+   */
+  public static final int WRITER_QUEUE_PUT_TIMEOUT_MINUTES = 10;
 
   /** Configuration used to load filesystems. */
   private final Configuration conf;
@@ -327,15 +338,20 @@ public class EntryFileIO {
       }
       if (active.get()) {
         try {
-          queue.put(new QueueEntry(Actions.write, entries));
-          LOG.debug("Queued {}", entries.size());
-          return true;
+          LOG.debug("Queueing {} entries", entries.size());
+          final boolean enqueued = queue.offer(new QueueEntry(Actions.write, entries),
+              WRITER_QUEUE_PUT_TIMEOUT_MINUTES, TimeUnit.MINUTES);
+          if (!enqueued) {
+            LOG.warn("Timeout submitting entries to {}", this);
+          }
+          return enqueued;
         } catch (InterruptedException e) {
           Thread.interrupted();
           return false;
         }
       } else {
-        LOG.warn("EntryFile write queue inactive; discarding {} entries", entries.size());
+        LOG.warn("EntryFile write queue inactive; discarding {} entries submitted to {}",
+            entries.size(), this);
         return false;
       }
     }
@@ -424,7 +440,7 @@ public class EntryFileIO {
       }
       try {
         // wait for the op to finish.
-        int total = FutureIO.awaitFuture(future, WRITER_SHUTDOWN_TIMEOUT, TimeUnit.SECONDS);
+        int total = FutureIO.awaitFuture(future, WRITER_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         LOG.debug("Processed {} files", total);
         executor.shutdown();
       } catch (TimeoutException e) {

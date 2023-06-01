@@ -24,9 +24,11 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
@@ -53,6 +55,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.EntryFileI
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.LoadedManifestData;
 import org.apache.hadoop.util.functional.RemoteIterators;
 
+import static java.util.Comparator.naturalOrder;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_CLASSNAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER;
@@ -205,29 +208,35 @@ public final class ManifestCommitterTestSupport {
       Path destDir,
       ManifestSuccessData successData,
       boolean exclusive) throws IOException {
-    Map<Path, LocatedFileStatus> map = new HashMap<>();
+    Map<Path, LocatedFileStatus> fileListing = new HashMap<>();
     RemoteIterators.foreach(fs.listFiles(destDir, true),
         e -> {
           if (!e.getPath().getName().startsWith("_")) {
-            map.put(e.getPath(), e);
+            fileListing.put(e.getPath(), e);
           }
         });
+    final List<Path> actual = fileListing.keySet().stream()
+        .sorted(Comparator.comparing(Path::getName))
+        .collect(Collectors.toList());
+
     // map has all files other than temp ones and the success marker
     // what do we expect
     final List<Path> expected = filesInManifest(successData);
+    expected.sort(Comparator.comparing(Path::getName));
 
     // all of those must be found
-    Assertions.assertThat(map.keySet())
-        .describedAs("Files in FS compared to manifest")
+    Assertions.assertThat(actual)
+        .describedAs("Files in FS expected to contain all listed in manifest")
         .containsAll(expected);
 
     // and if exclusive, that too
     if (exclusive) {
-      Assertions.assertThat(map.keySet())
-          .describedAs("Files in FS compared to manifest")
+      Assertions.assertThat(actual)
+          .describedAs("Files in FS expected to be exclusively of the job")
+          .hasSize(expected.size())
           .containsExactlyInAnyOrderElementsOf(expected);
     }
-    return map;
+    return fileListing;
   }
 
   /**
