@@ -190,12 +190,12 @@ public abstract class
    * @see #opt(String, String)
    */
   @Override
-  public final B opt(@Nonnull final String key, int value) {
+  public B opt(@Nonnull final String key, int value) {
     return optLong(key, value);
   }
 
   @Override
-  public final B opt(@Nonnull final String key, final long value) {
+  public B opt(@Nonnull final String key, final long value) {
     return optLong(key, value);
   }
 
@@ -210,7 +210,7 @@ public abstract class
    * @see #opt(String, String)
    */
   @Override
-  public final B opt(@Nonnull final String key, float value) {
+  public B opt(@Nonnull final String key, float value) {
     return optLong(key, (long) value);
   }
 
@@ -220,7 +220,7 @@ public abstract class
    * @see #opt(String, String)
    */
   @Override
-  public final B opt(@Nonnull final String key, double value) {
+  public B opt(@Nonnull final String key, double value) {
     return optLong(key, (long) value);
   }
 
@@ -291,22 +291,22 @@ public abstract class
    * @see #must(String, String)
    */
   @Override
-  public final B must(@Nonnull final String key, int value) {
+  public B must(@Nonnull final String key, int value) {
     return mustLong(key, value);
   }
 
   @Override
-  public final B must(@Nonnull final String key, final long value) {
+  public B must(@Nonnull final String key, final long value) {
     return mustLong(key, value);
   }
 
   @Override
-  public final B must(@Nonnull final String key, final float value) {
+  public B must(@Nonnull final String key, final float value) {
     return mustLong(key, (long) value);
   }
 
   @Override
-  public final B must(@Nonnull final String key, double value) {
+  public B must(@Nonnull final String key, double value) {
     return mustLong(key, (long) value);
   }
 
