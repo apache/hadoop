@@ -41,6 +41,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.util.StopWatch;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -56,6 +57,7 @@ import static org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvide
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Matchers.any;
@@ -72,6 +74,8 @@ import static org.mockito.Mockito.verify;
  * NameNode to communicate with.
  */
 public class TestObserverReadProxyProvider {
+  private final static int SLOW_RESPONSE_SLEEP_TIME = 5000; // 5 s
+  private final static int NAMENODE_HA_STATE_PROBE_TIMEOUT_TEST = 2000; // 2s
 
   private static final LocatedBlock[] EMPTY_BLOCKS = new LocatedBlock[0];
   private String ns;
@@ -434,6 +438,41 @@ public class TestObserverReadProxyProvider {
     verify(logger).debug(eq("Exception in NN probe task for {}: {}"), eq(null), eq(e));
   }
 
+  /**
+   * Test default (no timeout) getHAServiceState when we have a slow NN.
+   * Expect the response to take longer than SLOW_RESPONSE_SLEEP_TIME.
+   */
+  @Test
+  public void testStandbyGetHAServiceStateNoTimeout() throws Exception {
+    setupProxyProvider(4);
+    namenodeAnswers[0].setActiveState();
+    namenodeAnswers[1].setSlowNode(true);
+    namenodeAnswers[3].setObserverState();
+
+    StopWatch watch = new StopWatch();
+    watch.start();
+    doRead();
+    long runtime = watch.now(TimeUnit.MILLISECONDS);
+    assertTrue("Read operation finishes earlier than we expected",
+        runtime > SLOW_RESPONSE_SLEEP_TIME);
+  }
+
+  /**
+   * Test getHAServiceState using a 2s timeout with a slow standby.
+   * Fail the test if we don't complete it in 4s.
+   */
+  @Test(timeout = 4000)
+  public void testStandbyGetHAServiceStateTimeout() throws Exception {
+    setupProxyProvider(4);
+    namenodeAnswers[0].setActiveState();
+    namenodeAnswers[1].setSlowNode(true);
+    namenodeAnswers[3].setObserverState();
+    proxyProvider.namenodeHAStateProbeTimeoutMs =
+        NAMENODE_HA_STATE_PROBE_TIMEOUT_TEST;
+
+    doRead();
+  }
+
   private void doRead() throws Exception {
     doRead(proxyProvider.getProxy().proxy);
   }
@@ -466,6 +505,7 @@ public class TestObserverReadProxyProvider {
 
     private volatile boolean unreachable = false;
     private volatile boolean retryActive = false;
+    private volatile boolean slowNode = false;
 
     // Standby state by default
     private volatile boolean allowWrites = false;
@@ -479,6 +519,12 @@ public class TestObserverReadProxyProvider {
         if (unreachable) {
           throw new IOException("Unavailable");
         }
+
+        // sleep to simulate slow rpc responses.
+        if (slowNode) {
+          Thread.sleep(SLOW_RESPONSE_SLEEP_TIME);
+        }
+
         // retryActive should be checked before getHAServiceState.
         // Check getHAServiceState first here only because in test,
         // it relies read call, which relies on getHAServiceState
@@ -523,6 +569,11 @@ public class TestObserverReadProxyProvider {
 
     void setUnreachable(boolean unreachable) {
       this.unreachable = unreachable;
+    }
+
+    // Whether this node should be slow in rpc response.
+    void setSlowNode(boolean slowNode) {
+      this.slowNode = slowNode;
     }
 
     void setActiveState() {
