@@ -92,6 +92,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.slf4j.event.Level;
 
 /**
@@ -285,6 +286,7 @@ public class TestFileCreation {
       }, 1, 6000);
 
     } finally {
+      Mockito.reset(spyNamesystem);
       cluster.shutdown();
     }
   }
