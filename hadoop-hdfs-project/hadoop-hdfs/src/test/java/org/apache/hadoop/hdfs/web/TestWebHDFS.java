@@ -2294,6 +2294,7 @@ public class TestWebHDFS {
   @Test
   public void testGetErasureCodingPolicies() throws Exception {
     final Configuration conf = WebHdfsTestUtil.createConf();
+    MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
@@ -2311,13 +2312,12 @@ public class TestWebHDFS {
           dfs.getAllErasureCodingPolicies();
 
       //Validate erasureCodingPolicyInfos are the same as DistributedFileSystem
-      boolean isEqual = webHdfsEcPolicyInfos.stream()
-          .allMatch(dfsEcPolicyInfos::contains) &&
-          dfsEcPolicyInfos.stream()
-              .allMatch(webHdfsEcPolicyInfos::contains);
-      assertTrue(isEqual);
+      assertEquals(dfsEcPolicyInfos.size(), webHdfsEcPolicyInfos.size());
+      assertTrue(dfsEcPolicyInfos.containsAll(webHdfsEcPolicyInfos));
     } finally {
-      cluster.shutdown();
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 
