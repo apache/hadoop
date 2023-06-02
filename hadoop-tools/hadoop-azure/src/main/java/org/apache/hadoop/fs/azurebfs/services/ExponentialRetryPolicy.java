@@ -29,7 +29,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CON
 /**
  * Retry policy used by AbfsClient.
  * */
-public class ExponentialRetryPolicy {
+public class ExponentialRetryPolicy extends RetryPolicy{
   /**
    * Represents the default amount of time used when calculating a random delta in the exponential
    * delay between retries.

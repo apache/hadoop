@@ -1175,6 +1175,11 @@ public class AbfsConfiguration{
     this.enableAbfsListIterator = enableAbfsListIterator;
   }
 
+  @VisibleForTesting
+  public void setLinearRetryDoubleStepUpEnabled(final boolean linearRetryDoubleStepUpEnabled) {
+    this.linearRetryDoubleStepUpEnabled = linearRetryDoubleStepUpEnabled;
+  }
+
   public boolean getRenameResilience() {
     return renameResilience;
   }
