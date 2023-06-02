@@ -18,17 +18,16 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.net.HttpURLConnection;
-
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
-
+/**
+ * Abstract Class for Retry policy to be used by {@link AbfsClient}
+ * Implementation to be used is based on retry cause.
+ */
 public abstract class RetryPolicy {
 
   /**
    * Returns if a request should be retried based on the retry count, current response,
-   * and the current strategy. The valid http status code lies in the range of 1xx-5xx.
-   * But an invalid status code might be set due to network or timeout kind of issues.
-   * Such invalid status code also qualify for retry.
+   * and the current strategy.
+   * Child class should define exact behavior
    *
    * @param retryCount The current retry attempt count.
    * @param statusCode The status code of the response, or -1 for socket error.
@@ -36,5 +35,12 @@ public abstract class RetryPolicy {
    */
   public abstract boolean shouldRetry(final int retryCount, final int statusCode);
 
+  /**
+   * Returns backoff interval to be used for a particular retry count
+   * Child class should define how they want to calculate retry interval
+   *
+   * @param retryCount The current retry attempt count.
+   * @return backoff Interval time
+   */
   public abstract long getRetryInterval(final int retryCount);
 }

@@ -25,6 +25,10 @@ import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
+/**
+ * Class to test the behavior of Linear Retry policy as well the inheritance
+ * between {@link RetryPolicy}, {@link LinearRetryPolicy}, {@link ExponentialRetryPolicy}
+ */
 public class TestLinearRetryPolicy extends AbstractAbfsIntegrationTest {
 
   public TestLinearRetryPolicy() throws Exception {
@@ -36,17 +40,17 @@ public class TestLinearRetryPolicy extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     AbfsClient client = fs.getAbfsStore().getClient();
 
+    // Assert that linear retry policy will be used only for CT Failures
     RetryPolicy retryPolicy = client.getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
-    Assertions.assertThat(retryPolicy instanceof LinearRetryPolicy);
+    Assertions.assertThat(retryPolicy).isInstanceOf(LinearRetryPolicy.class);
 
+    // For all other possible values of failureReason, Exponential retry is used
     retryPolicy = client.getRetryPolicy("");
-    Assertions.assertThat(retryPolicy instanceof ExponentialRetryPolicy);
-
+    Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
     retryPolicy = client.getRetryPolicy(null);
-    Assertions.assertThat(retryPolicy instanceof ExponentialRetryPolicy);
-
+    Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
     retryPolicy = client.getRetryPolicy(CONNECTION_RESET_ABBREVIATION);
-    Assertions.assertThat(retryPolicy instanceof ExponentialRetryPolicy);
+    Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
   }
 
   @Test
@@ -58,10 +62,10 @@ public class TestLinearRetryPolicy extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(retryPolicy instanceof LinearRetryPolicy);
     Assertions.assertThat(((LinearRetryPolicy) retryPolicy).getDoubleStepUpEnabled());
 
-    Assertions.assertThat(500 == retryPolicy.getRetryInterval(0));
-    Assertions.assertThat(1000 == retryPolicy.getRetryInterval(1));
-    Assertions.assertThat(2000 == retryPolicy.getRetryInterval(2));
-    Assertions.assertThat(4000 == retryPolicy.getRetryInterval(3));
+    Assertions.assertThat(retryPolicy.getRetryInterval(0)).isEqualTo(500);
+    Assertions.assertThat(retryPolicy.getRetryInterval(1)).isEqualTo(1000);
+    Assertions.assertThat(retryPolicy.getRetryInterval(2)).isEqualTo(2000);
+    Assertions.assertThat(retryPolicy.getRetryInterval(3)).isEqualTo(4000);
   }
 
   @Test
@@ -74,9 +78,9 @@ public class TestLinearRetryPolicy extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(retryPolicy instanceof LinearRetryPolicy);
     Assertions.assertThat(!((LinearRetryPolicy) retryPolicy).getDoubleStepUpEnabled());
 
-    Assertions.assertThat(500 == retryPolicy.getRetryInterval(0));
-    Assertions.assertThat(1500 == retryPolicy.getRetryInterval(1));
-    Assertions.assertThat(2500 == retryPolicy.getRetryInterval(2));
-    Assertions.assertThat(3500 == retryPolicy.getRetryInterval(3));
+    Assertions.assertThat(retryPolicy.getRetryInterval(0)).isEqualTo(500);
+    Assertions.assertThat(retryPolicy.getRetryInterval(1)).isEqualTo(1500);
+    Assertions.assertThat(retryPolicy.getRetryInterval(2)).isEqualTo(2500);
+    Assertions.assertThat(retryPolicy.getRetryInterval(3)).isEqualTo(3500);
   }
 }

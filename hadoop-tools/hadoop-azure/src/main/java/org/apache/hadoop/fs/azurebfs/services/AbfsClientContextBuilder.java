@@ -59,7 +59,10 @@ public class AbfsClientContextBuilder {
    */
   public AbfsClientContext build() {
     //validate the values
-    return new AbfsClientContext(exponentialRetryPolicy, linearRetryPolicy, abfsPerfTracker,
+    return new AbfsClientContext(
+        exponentialRetryPolicy,
+        linearRetryPolicy,
+        abfsPerfTracker,
         abfsCounters);
   }
 }
