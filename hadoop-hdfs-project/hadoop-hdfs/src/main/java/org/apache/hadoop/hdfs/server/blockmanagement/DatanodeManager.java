@@ -2279,7 +2279,7 @@ public class DatanodeManager {
   }
 
   @VisibleForTesting
-  public boolean isSlowPeerCollectorDaemonNull() {
+  public boolean isSlowPeerCollectorInitialized() {
     return slowPeerCollectorDaemon == null;
   }
 }
