@@ -146,6 +146,22 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_MAX_BACKOFF_INTERVAL)
   private int maxBackoffInterval;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED,
+      DefaultValue = DEFAULT_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED)
+  private boolean linearRetryForConnectionTimeoutEnabled;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MIN_BACKOFF_INTERVAL_FOR_CONNECTION_TIMEOUT,
+      DefaultValue = DEFAULT_MIN_BACKOFF_INTERVAL_FOR_CONNECTION_TIMEOUT)
+  private int minBackoffIntervalForConnectionTimeout;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MAX_BACKOFF_INTERVAL_FOR_CONNECTION_TIMEOUT,
+      DefaultValue = DEFAULT_MAX_BACKOFF_INTERVAL_FOR_CONNECTION_TIMEOUT)
+  private int maxBackoffIntervalForConnectionTimeout;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED,
+      DefaultValue = DEFAULT_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED)
+  private boolean linearRetryDoubleStepUpEnabled;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_BACKOFF_INTERVAL,
       DefaultValue = DEFAULT_BACKOFF_INTERVAL)
   private int backoffInterval;
@@ -440,7 +456,7 @@ public class AbfsConfiguration{
    * looks for an account-agnostic value.
    * @param key Account-agnostic configuration key
    * @return value in String form if one exists, else null
-   * @throws IOException
+   * @throws java.io.IOException
    */
   public String getPasswordString(String key) throws IOException {
     char[] passchars = rawConfig.getPassword(accountConf(key));
@@ -455,12 +471,12 @@ public class AbfsConfiguration{
 
   /**
    * Returns a value for the key if the value exists and is not null.
-   * Otherwise, throws {@link ConfigurationPropertyNotFoundException} with
+   * Otherwise, throws {@link org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException} with
    * key name.
    *
    * @param key Account-agnostic configuration key
    * @return value if exists
-   * @throws IOException if error in fetching password or
+   * @throws java.io.IOException if error in fetching password or
    *     ConfigurationPropertyNotFoundException for missing key
    */
   private String getMandatoryPasswordString(String key) throws IOException {
@@ -653,6 +669,22 @@ public class AbfsConfiguration{
 
   public int getMaxBackoffIntervalMilliseconds() {
     return this.maxBackoffInterval;
+  }
+
+  public boolean getLinearRetryForConnectionTimeoutEnabled() {
+    return linearRetryForConnectionTimeoutEnabled;
+  }
+
+  public int getMinBackoffIntervalMillisecondsForConnectionTimeout() {
+    return this.minBackoffIntervalForConnectionTimeout;
+  }
+
+  public int getMaxBackoffIntervalMillisecondsForConnectionTimeout() {
+    return this.maxBackoffIntervalForConnectionTimeout;
+  }
+
+  public boolean getLinearRetryDoubleStepUpEnabled() {
+    return linearRetryDoubleStepUpEnabled;
   }
 
   public int getBackoffIntervalMilliseconds() {

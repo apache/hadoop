@@ -48,6 +48,10 @@ public final class ConfigurationKeys {
   // Retry strategy defined by the user
   public static final String AZURE_MIN_BACKOFF_INTERVAL = "fs.azure.io.retry.min.backoff.interval";
   public static final String AZURE_MAX_BACKOFF_INTERVAL = "fs.azure.io.retry.max.backoff.interval";
+  public static final String AZURE_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED = "fs.azure.linear.retry.for.connection.timeout.enabled";
+  public static final String AZURE_MIN_BACKOFF_INTERVAL_FOR_CONNECTION_TIMEOUT = "fs.azure.io.retry.min.backoff.interval.for.connection.timeout";
+  public static final String AZURE_MAX_BACKOFF_INTERVAL_FOR_CONNECTION_TIMEOUT = "fs.azure.io.retry.max.backoff.interval.for.connection.timeout";
+  public static final String AZURE_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED = "fs.azure.linear.retry.double.step.up.enabled";
   public static final String AZURE_BACKOFF_INTERVAL = "fs.azure.io.retry.backoff.interval";
   public static final String AZURE_MAX_IO_RETRIES = "fs.azure.io.retry.max.retries";
   public static final String AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT = "fs.azure.custom.token.fetch.retry.count";
@@ -70,7 +74,7 @@ public final class ConfigurationKeys {
    * This stops a single stream overloading the shared thread pool.
    * {@value}
    * <p>
-   * Default is {@link FileSystemConfigurations#BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT}
+   * Default is {@link org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations#BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT}
    */
   public static final String FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS =
       "fs.azure.block.upload.active.blocks";
@@ -87,7 +91,7 @@ public final class ConfigurationKeys {
    * <br>
    * Options include: "disk"(Default), "array", and "bytebuffer".
    * <br>
-   * Default is {@link FileSystemConfigurations#DATA_BLOCKS_BUFFER_DEFAULT}.
+   * Default is {@link org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations#DATA_BLOCKS_BUFFER_DEFAULT}.
    * Value: {@value}
    */
   public static final String DATA_BLOCKS_BUFFER =
@@ -108,7 +112,7 @@ public final class ConfigurationKeys {
 
   /**
    * Read ahead range parameter which can be set by user.
-   * Default value is {@link FileSystemConfigurations#DEFAULT_READ_AHEAD_RANGE}.
+   * Default value is {@link org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations#DEFAULT_READ_AHEAD_RANGE}.
    * This might reduce number of calls to remote as next requested
    * data could already be present in buffer {@value}.
    */
@@ -264,7 +268,7 @@ public final class ConfigurationKeys {
    * Optional config to enable a lock free pread which will bypass buffer in AbfsInputStream.
    * This is not a config which can be set at cluster level. It can be used as
    * an option on FutureDataInputStreamBuilder.
-   * @see FileSystem#openFile(org.apache.hadoop.fs.Path)
+   * @see org.apache.hadoop.fs.FileSystem#openFile(org.apache.hadoop.fs.Path)
    */
   public static final String FS_AZURE_BUFFERED_PREAD_DISABLE = "fs.azure.buffered.pread.disable";
   private ConfigurationKeys() {}

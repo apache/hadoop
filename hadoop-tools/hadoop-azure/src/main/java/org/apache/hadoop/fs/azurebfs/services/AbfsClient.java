@@ -92,6 +92,7 @@ public class AbfsClient implements Closeable {
   private final SharedKeyCredentials sharedKeyCredentials;
   private final String xMsVersion = "2019-12-12";
   private final ExponentialRetryPolicy retryPolicy;
+  private final LinearRetryPolicy linearRetryPolicy;
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
   private final String userAgent;
@@ -125,6 +126,7 @@ public class AbfsClient implements Closeable {
     this.filesystem = baseUrlString.substring(baseUrlString.lastIndexOf(FORWARD_SLASH) + 1);
     this.abfsConfiguration = abfsConfiguration;
     this.retryPolicy = abfsClientContext.getExponentialRetryPolicy();
+    this.linearRetryPolicy = abfsClientContext.getLinearRetryPolicy();
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
     this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
@@ -219,6 +221,10 @@ public class AbfsClient implements Closeable {
 
   ExponentialRetryPolicy getRetryPolicy() {
     return retryPolicy;
+  }
+
+  public LinearRetryPolicy getLinearRetryPolicy() {
+    return linearRetryPolicy;
   }
 
   SharedKeyCredentials getSharedKeyCredentials() {
@@ -521,7 +527,7 @@ public class AbfsClient implements Closeable {
    * @param isNamespaceEnabled        whether namespace enabled account or not
    * @return AbfsClientRenameResult result of rename operation indicating the
    * AbfsRest operation, rename recovery and incomplete metadata state failure.
-   * @throws AzureBlobFileSystemException failure, excluding any recovery from overload failures.
+   * @throws org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException failure, excluding any recovery from overload failures.
    */
   public AbfsClientRenameResult renamePath(
           final String source,
@@ -1190,8 +1196,8 @@ public class AbfsClient implements Closeable {
    * @param path  Path for which access check needs to be performed
    * @param rwx   The permission to be checked on the path
    * @param tracingContext Tracks identifiers for request header
-   * @return      The {@link AbfsRestOperation} object for the operation
-   * @throws AzureBlobFileSystemException in case of bad requests
+   * @return      The {@link org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation} object for the operation
+   * @throws org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException in case of bad requests
    */
   public AbfsRestOperation checkAccess(String path, String rwx, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
@@ -1232,7 +1238,7 @@ public class AbfsClient implements Closeable {
    * @param operation
    * @param queryBuilder
    * @return sasToken - returned for optional re-use.
-   * @throws SASTokenProviderException
+   * @throws org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException
    */
   private String appendSASTokenToQuery(String path, String operation, AbfsUriQueryBuilder queryBuilder) throws SASTokenProviderException {
     return appendSASTokenToQuery(path, operation, queryBuilder, null);
@@ -1245,7 +1251,7 @@ public class AbfsClient implements Closeable {
    * @param queryBuilder
    * @param cachedSasToken - previously acquired SAS token to be reused.
    * @return sasToken - returned for optional re-use.
-   * @throws SASTokenProviderException
+   * @throws org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException
    */
   private String appendSASTokenToQuery(String path,
                                        String operation,

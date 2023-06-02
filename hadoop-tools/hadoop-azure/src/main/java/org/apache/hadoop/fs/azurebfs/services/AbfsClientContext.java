@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import javax.sound.sampled.Line;
+
 /**
  * Class to hold extra configurations for AbfsClient and further classes
  * inside AbfsClient.
@@ -25,20 +27,27 @@ package org.apache.hadoop.fs.azurebfs.services;
 public class AbfsClientContext {
 
   private final ExponentialRetryPolicy exponentialRetryPolicy;
+  private final LinearRetryPolicy linearRetryPolicy;
   private final AbfsPerfTracker abfsPerfTracker;
   private final AbfsCounters abfsCounters;
 
   AbfsClientContext(
       ExponentialRetryPolicy exponentialRetryPolicy,
+      LinearRetryPolicy linearRetryPolicy,
       AbfsPerfTracker abfsPerfTracker,
       AbfsCounters abfsCounters) {
     this.exponentialRetryPolicy = exponentialRetryPolicy;
+    this.linearRetryPolicy = linearRetryPolicy;
     this.abfsPerfTracker = abfsPerfTracker;
     this.abfsCounters = abfsCounters;
   }
 
   public ExponentialRetryPolicy getExponentialRetryPolicy() {
     return exponentialRetryPolicy;
+  }
+
+  public LinearRetryPolicy getLinearRetryPolicy() {
+    return linearRetryPolicy;
   }
 
   public AbfsPerfTracker getAbfsPerfTracker() {
