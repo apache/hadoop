@@ -183,8 +183,9 @@ public class ApplicationHomeSubClusterPBImpl extends ApplicationHomeSubCluster {
   @Override
   public void setApplicationSubmissionContext(ApplicationSubmissionContext context) {
     maybeInitBuilder();
-    if (applicationSubmissionContext == null) {
+    if (context == null) {
       builder.clearAppSubmitContext();
+      return;
     }
     this.applicationSubmissionContext = context;
     builder.setAppSubmitContext(convertToProtoFormat(context));
