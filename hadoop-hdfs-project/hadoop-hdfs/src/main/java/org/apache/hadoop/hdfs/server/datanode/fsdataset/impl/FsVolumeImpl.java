@@ -511,7 +511,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   private long getRemainingReserved() throws IOException {
-    long actualNonDfsUsed = getActualNonDfsUsed();
+    long actualNonDfsUsed = Math.max(getActualNonDfsUsed(), 0L);
     long actualReserved = getReserved();
     if (actualNonDfsUsed < actualReserved) {
       return actualReserved - actualNonDfsUsed;
