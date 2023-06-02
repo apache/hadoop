@@ -439,8 +439,13 @@ public class TestObserverReadProxyProvider {
   }
 
   /**
-   * Test default (no timeout) getHAServiceState when we have a slow NN.
-   * Expect the response to take longer than SLOW_RESPONSE_SLEEP_TIME.
+   * Test getHAServiceState when we have a slow NN, using the default timeout (25s).
+   * This is to verify the old behavior without being able to fast-fail (we can also set
+   * namenodeHAStateProbeTimeoutMs to 0 or a negative value and the rest of the test can stay
+   * the same).
+   *
+   * 5-second (SLOW_RESPONSE_SLEEP_TIME) latency is introduced and we expect that latency is added
+   * to the READ operation.
    */
   @Test
   public void testStandbyGetHAServiceStateNoTimeout() throws Exception {
@@ -453,7 +458,7 @@ public class TestObserverReadProxyProvider {
     watch.start();
     doRead();
     long runtime = watch.now(TimeUnit.MILLISECONDS);
-    assertTrue("Read operation finishes earlier than we expected",
+    assertTrue("Read operation finished earlier than we expected",
         runtime > SLOW_RESPONSE_SLEEP_TIME);
   }
 
