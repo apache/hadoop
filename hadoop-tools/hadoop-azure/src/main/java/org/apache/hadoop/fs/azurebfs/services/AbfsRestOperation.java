@@ -233,13 +233,7 @@ public class AbfsRestOperation {
         tracingContext.setRetryCount(retryCount);
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
-        if (failureReason.equals(CONNECTION_TIMEOUT_ABBREVIATION)
-            && client.getAbfsConfiguration().getLinearRetryForConnectionTimeoutEnabled()) {
-          Thread.sleep(client.getLinearRetryPolicy().getRetryInterval(retryCount));
-        }
-        else {
-          Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
-        }
+        Thread.sleep(client.getRetryPolicy(failureReason).getRetryInterval(retryCount));
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
       }
@@ -319,7 +313,7 @@ public class AbfsRestOperation {
       failureReason = RetryReason.getAbbreviation(ex, null, null);
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
-      if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
+      if (!client.getRetryPolicy(failureReason).shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
       return false;
@@ -330,7 +324,7 @@ public class AbfsRestOperation {
 
       failureReason = RetryReason.getAbbreviation(ex, -1, "");
 
-      if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
+      if (!client.getRetryPolicy(failureReason).shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
 
@@ -354,7 +348,7 @@ public class AbfsRestOperation {
 
     LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
 
-    if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {
+    if (client.getRetryPolicy(failureReason).shouldRetry(retryCount, httpOperation.getStatusCode())) {
       int status = httpOperation.getStatusCode();
       failureReason = RetryReason.getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
       return false;

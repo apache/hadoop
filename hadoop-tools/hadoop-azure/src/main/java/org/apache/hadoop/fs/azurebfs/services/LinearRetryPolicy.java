@@ -30,7 +30,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CON
 /**
  * Retry policy used by AbfsClient.
  * */
-public class LinearRetryPolicy {
+public class LinearRetryPolicy extends RetryPolicy{
   
   /**
    * Represents the default maximum amount of time used when calculating the exponential
@@ -45,6 +45,12 @@ public class LinearRetryPolicy {
   private static final int DEFAULT_MIN_BACKOFF = 500 * 1; // 500ms
 
   /**
+   * Represents the default minimum amount of time used when calculating the exponential
+   * delay between retries.
+   */
+  private static final int INTERVAL_DELTA_ONE_SEND = 1000; // 1s
+
+  /**
    * The maximum backoff time.
    */
   private final int maxBackoff;
@@ -57,7 +63,7 @@ public class LinearRetryPolicy {
   /**
    * The maximum number of retry attempts.
    */
-  private final int maxRetryCount;
+  private final int retryCount;
 
   /**
    * Whether we want to double up the retry interval
@@ -90,38 +96,52 @@ public class LinearRetryPolicy {
   /**
    * Initializes a new instance of the {@link LinearRetryPolicy} class.
    *
-   * @param maxRetryCount The maximum number of retry attempts.
+   * @param retryCount The maximum number of retry attempts.
    * @param minBackoff The minimum backoff time.
    * @param maxBackoff The maximum backoff time.
    * @param doubleStepUpEnabled Type of linear increment, double or increment
    */
-  public LinearRetryPolicy(final int maxRetryCount, final int minBackoff, final int maxBackoff, final boolean doubleStepUpEnabled) {
-    this.maxRetryCount = maxRetryCount;
+  public LinearRetryPolicy(final int retryCount, final int minBackoff, final int maxBackoff, final boolean doubleStepUpEnabled) {
+    this.retryCount = retryCount;
     this.minBackoff = minBackoff;
     this.maxBackoff = maxBackoff;
     this.doubleStepUpEnabled = doubleStepUpEnabled;
   }
 
   /**
-   * Returns backoff interval between 80% and 120% of the desired backoff,
-   * multiply by 2^n-1 for exponential.
+   * Returns if a request should be retried based on the retry count
+   *
+   * @param retryCount The current retry attempt count.
+   * @return true if the request should be retried; false otherwise.
+   */
+  public boolean shouldRetry(final int retryCount, final int statusCode) {
+    return retryCount < this.retryCount;
+  }
+
+  /**
+   * Returns backoff interval based on the type of linear backoff enabled
+   * if doubleStepUpEnabled, double the minBackoff retryCount times
+   * else, add 1000ms to minBackoff retryCount times
    *
    * @param retryCount The current retry attempt count.
    * @return backoff Interval time
    */
   public long getRetryInterval(final int retryCount) {
+    if (retryCount <= 0)
+        return minBackoff;
+
     final double incrementDelta = doubleStepUpEnabled
         ? minBackoff * Math.pow(2, retryCount)
-        : minBackoff * retryCount;
+        : minBackoff + retryCount * INTERVAL_DELTA_ONE_SEND;
 
-    final long retryInterval = (int) Math.round(Math.min(minBackoff + incrementDelta, maxBackoff));
+    final long retryInterval = (int) Math.round(Math.min(incrementDelta, maxBackoff));
 
     return retryInterval;
   }
 
   @VisibleForTesting
   int getRetryCount() {
-    return this.maxRetryCount;
+    return this.retryCount;
   }
 
   @VisibleForTesting

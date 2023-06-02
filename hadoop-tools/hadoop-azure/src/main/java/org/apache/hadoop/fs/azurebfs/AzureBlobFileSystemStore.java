@@ -900,7 +900,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param destination destination of rename.
    * @param tracingContext trace context
    * @param sourceEtag etag of source file. may be null or empty
-   * @throws org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException failure, excluding any recovery from overload failures.
+   * @throws AzureBlobFileSystemException failure, excluding any recovery from overload failures.
    * @return true if recovery was needed and succeeded.
    */
   public boolean rename(final Path source,
