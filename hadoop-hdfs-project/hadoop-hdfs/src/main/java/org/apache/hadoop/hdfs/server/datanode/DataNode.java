@@ -453,6 +453,9 @@ public class DataNode extends ReconfigurableBase
 
   private final ExecutorService xferService;
 
+  /** One executor to copy block cross namespace. **/
+  private final ExecutorService blockCopyExecutor;
+
   @Nullable
   private final StorageLocationChecker storageLocationChecker;
 
@@ -500,6 +503,7 @@ public class DataNode extends ReconfigurableBase
     volumeChecker = new DatasetVolumeChecker(conf, new Timer());
     this.xferService =
         HadoopExecutors.newCachedThreadPool(new Daemon.DaemonFactory());
+    this.blockCopyExecutor = HadoopExecutors.newCachedThreadPool(new Daemon.DaemonFactory());
   }
 
   /**
@@ -599,6 +603,7 @@ public class DataNode extends ReconfigurableBase
         new DataTransferThrottler(100, ecReconstuctReadBandwidth) : null;
     this.ecReconstuctWriteThrottler = ecReconstuctWriteBandwidth > 0 ?
         new DataTransferThrottler(100, ecReconstuctWriteBandwidth) : null;
+    this.blockCopyExecutor = HadoopExecutors.newCachedThreadPool(new Daemon.DaemonFactory());
   }
 
   @Override  // ReconfigurableBase
@@ -2465,8 +2470,11 @@ public class DataNode extends ReconfigurableBase
     // wait reconfiguration thread, if any, to exit
     shutdownReconfigurationTask();
 
-    LOG.info("Waiting up to 30 seconds for transfer threads to complete");
+    LOG.info("Waiting up to 15 seconds for transfer threads to complete");
     HadoopExecutors.shutdown(this.xferService, LOG, 15L, TimeUnit.SECONDS);
+
+    LOG.info("Waiting up to 15 seconds for copy block cross namespace threads to complete");
+    HadoopExecutors.shutdown(this.blockCopyExecutor, LOG, 15L, TimeUnit.SECONDS);
 
     // wait for all data receiver threads to exit
     if (this.threadGroup != null) {
@@ -2755,7 +2763,7 @@ public class DataNode extends ReconfigurableBase
           xferTargetsString);
 
       final DataTransfer dataTransferTask = new DataTransfer(xferTargets,
-          xferTargetStorageTypes, xferTargetStorageIDs, block,
+          xferTargetStorageTypes, xferTargetStorageIDs, block, block,
           BlockConstructionStage.PIPELINE_SETUP_CREATE, "");
 
       this.xferService.execute(dataTransferTask);
@@ -2866,6 +2874,85 @@ public class DataNode extends ReconfigurableBase
    ************************************************************************ */
 
   /**
+   * Copy the source block to the target block from one namespace to another.
+   * If the target dn is the local dn, will copy via HardLink.
+   * If the target dn is remote dn, will copy via DataTransfer.
+   *
+   * @param srcBlock Block to copy.
+   * @param destBlock Block to copy to.
+   * @param targetDatanodeInfo Target block belongs to.
+   * @return the future of the submitted task.
+   */
+  public Future<?> internalCopyBlockCrossNamespace(
+      final ExtendedBlock srcBlock, final ExtendedBlock destBlock,
+      final DatanodeInfo targetDatanodeInfo) throws IOException {
+    // Do some verification for the source block.
+    if (!data.isValidBlock(srcBlock)) {
+      // block does not exist or is under-construction
+      String msg = "CopyBlockCrossNamespace: can't copy block " + srcBlock +
+          " because is invalid, r = " + data.getReplicaString(srcBlock.getBlockPoolId(),
+          srcBlock.getBlockId());
+      LOG.error(msg);
+      throw new IOException(msg);
+    }
+    long onDiskLength = data.getLength(srcBlock);
+    if (srcBlock.getNumBytes() > onDiskLength) {
+      String msg = "CopyBlockCrossNamespace: can't copy block " + srcBlock
+          + " because on-disk length " + onDiskLength
+          + " is shorter than provided length " + srcBlock.getNumBytes();
+      LOG.error(msg);
+      throw new IOException(msg);
+    }
+
+    boolean isLocal = getDatanodeUuid().equals(targetDatanodeInfo.getDatanodeUuid());
+    if (isLocal) {
+      // Local Copy via hardlink.
+      return blockCopyExecutor.submit(new BlockCopyViaHardLink(srcBlock, destBlock));
+    } else {
+      // Remote Copy via dataTransfer.
+      DatanodeInfo[] xferTargets = new DatanodeInfo[] {targetDatanodeInfo};
+      StorageType[] storageTypes = new StorageType[] {StorageType.DEFAULT};
+      return blockCopyExecutor.submit(new DataTransfer(
+          xferTargets, storageTypes, new String[0], srcBlock, destBlock,
+          BlockConstructionStage.PIPELINE_SETUP_CREATE, ""));
+    }
+  }
+
+  /**
+   *  Copy block via hardLink.
+   */
+  class BlockCopyViaHardLink implements Callable<Boolean> {
+    private final ExtendedBlock srcBlock;
+    private final ExtendedBlock targetBlock;
+
+    BlockCopyViaHardLink(ExtendedBlock sourceBlock, ExtendedBlock targetBlock) {
+      this.srcBlock = sourceBlock;
+      this.targetBlock = targetBlock;
+    }
+
+    public Boolean call() throws IOException {
+      incrementXmitsInProgress();
+      try {
+        // HardLink the block and finalize the target block
+        data.hardLinkOneBlock(srcBlock, targetBlock);
+
+        LOG.info("{}: HardLinked source block {} to target block {}.",
+            getClass().getSimpleName(), srcBlock, targetBlock);
+
+        metrics.incrBlocksWritten();
+        metrics.incrBlocksReplicatedViaHardlink();
+      } catch (IOException ie) {
+        handleBadBlock(srcBlock, ie, false);
+        LOG.error("Failed copy block via hard link from {} to {}.", srcBlock, targetBlock, ie);
+        throw ie;
+      } finally {
+        decrementXmitsInProgress();
+      }
+      return true;
+    }
+  }
+
+  /**
    * Used for transferring a block of data.  This class
    * sends a piece of data to another DataNode.
    */
@@ -2873,7 +2960,8 @@ public class DataNode extends ReconfigurableBase
     final DatanodeInfo[] targets;
     final StorageType[] targetStorageTypes;
     final private String[] targetStorageIds;
-    final ExtendedBlock b;
+    final private ExtendedBlock sourceBlock;
+    final private ExtendedBlock targetBlock;
     final BlockConstructionStage stage;
     final private DatanodeRegistration bpReg;
     final String clientname;
@@ -2887,21 +2975,22 @@ public class DataNode extends ReconfigurableBase
      * entire target list, the block, and the data.
      */
     DataTransfer(DatanodeInfo targets[], StorageType[] targetStorageTypes,
-        String[] targetStorageIds, ExtendedBlock b,
+        String[] targetStorageIds, ExtendedBlock sourceBlock, ExtendedBlock targetBlock,
         BlockConstructionStage stage, final String clientname) {
       DataTransferProtocol.LOG.debug("{}: {} (numBytes={}), stage={}, " +
-              "clientname={}, targets={}, target storage types={}, " +
-              "target storage IDs={}", getClass().getSimpleName(), b,
-          b.getNumBytes(), stage, clientname, Arrays.asList(targets),
+              "clientname={}, targetBlock={}, targets={}, target storage types={}, " +
+              "target storage IDs={}", getClass().getSimpleName(), sourceBlock,
+          sourceBlock.getNumBytes(), stage, clientname, targetBlock, Arrays.asList(targets),
           targetStorageTypes == null ? "[]" :
               Arrays.asList(targetStorageTypes),
           targetStorageIds == null ? "[]" : Arrays.asList(targetStorageIds));
       this.targets = targets;
       this.targetStorageTypes = targetStorageTypes;
       this.targetStorageIds = targetStorageIds;
-      this.b = b;
+      this.sourceBlock = sourceBlock;
+      this.targetBlock = targetBlock;
       this.stage = stage;
-      BPOfferService bpos = blockPoolManager.get(b.getBlockPoolId());
+      BPOfferService bpos = blockPoolManager.get(sourceBlock.getBlockPoolId());
       bpReg = bpos.bpRegistration;
       this.clientname = clientname;
       this.cachingStrategy =
@@ -2937,7 +3026,7 @@ public class DataNode extends ReconfigurableBase
         //
         // Header info
         //
-        Token<BlockTokenIdentifier> accessToken = getBlockAccessToken(b,
+        Token<BlockTokenIdentifier> accessToken = getBlockAccessToken(targetBlock,
             EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE),
             targetStorageTypes, targetStorageIds);
 
@@ -2945,24 +3034,23 @@ public class DataNode extends ReconfigurableBase
                             HdfsConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
         OutputStream unbufOut = NetUtils.getOutputStream(sock, writeTimeout);
         InputStream unbufIn = NetUtils.getInputStream(sock);
-        DataEncryptionKeyFactory keyFactory =
-          getDataEncryptionKeyFactoryForBlock(b);
+        DataEncryptionKeyFactory keyFactory = getDataEncryptionKeyFactoryForBlock(targetBlock);
         IOStreamPair saslStreams = saslClient.socketSend(sock, unbufOut,
-          unbufIn, keyFactory, accessToken, bpReg);
+            unbufIn, keyFactory, accessToken, targets[0]);
         unbufOut = saslStreams.out;
         unbufIn = saslStreams.in;
         
         out = new DataOutputStream(new BufferedOutputStream(unbufOut,
             DFSUtilClient.getSmallBufferSize(getConf())));
         in = new DataInputStream(unbufIn);
-        blockSender = new BlockSender(b, 0, b.getNumBytes(), 
+        blockSender = new BlockSender(sourceBlock, 0, sourceBlock.getNumBytes(),
             false, false, true, DataNode.this, null, cachingStrategy);
         DatanodeInfo srcNode = new DatanodeInfoBuilder().setNodeID(bpReg)
             .build();
 
         String storageId = targetStorageIds.length > 0 ?
             targetStorageIds[0] : null;
-        new Sender(out).writeBlock(b, targetStorageTypes[0], accessToken,
+        new Sender(out).writeBlock(targetBlock, targetStorageTypes[0], accessToken,
             clientname, targets, targetStorageTypes, srcNode,
             stage, 0, 0, 0, 0, blockSender.getChecksum(), cachingStrategy,
             false, false, null, storageId,
@@ -2972,9 +3060,9 @@ public class DataNode extends ReconfigurableBase
         blockSender.sendBlock(out, unbufOut, throttler);
 
         // no response necessary
-        LOG.info("{}, at {}: Transmitted {} (numBytes={}) to {}",
+        LOG.info("{}, at {}: Transmitted {} (numBytes={}) to {} to {}",
             getClass().getSimpleName(), DataNode.this.getDisplayName(),
-            b, b.getNumBytes(), curTarget);
+            sourceBlock, sourceBlock.getNumBytes(), targetBlock, curTarget);
 
         // read ack
         if (isClient) {
@@ -2995,11 +3083,11 @@ public class DataNode extends ReconfigurableBase
           metrics.incrBlocksReplicated();
         }
       } catch (IOException ie) {
-        handleBadBlock(b, ie, false);
-        LOG.warn("{}:Failed to transfer {} to {} got",
-            bpReg, b, targets[0], ie);
+        handleBadBlock(sourceBlock, ie, false);
+        LOG.warn("{}: Failed to transfer {} to {} to {} got",
+            bpReg, sourceBlock, targetBlock, targets[0], ie);
       } catch (Throwable t) {
-        LOG.error("Failed to transfer block {}", b, t);
+        LOG.error("Failed to transfer block {} to {}", sourceBlock, targetBlock, t);
       } finally {
         decrementXmitsInProgress();
         IOUtils.closeStream(blockSender);
@@ -3011,7 +3099,7 @@ public class DataNode extends ReconfigurableBase
 
     @Override
     public String toString() {
-      return "DataTransfer " + b + " to " + Arrays.asList(targets);
+      return "DataTransfer " + sourceBlock + " to " + targetBlock + " to " + Arrays.asList(targets);
     }
   }
 
@@ -3506,7 +3594,7 @@ public class DataNode extends ReconfigurableBase
       }
 
       final DataTransfer dataTransferTask = new DataTransfer(targets,
-          targetStorageTypes, targetStorageIds, b, stage, client);
+          targetStorageTypes, targetStorageIds, b, b, stage, client);
 
       @SuppressWarnings("unchecked")
       Future<Void> f = (Future<Void>) this.xferService.submit(dataTransferTask);

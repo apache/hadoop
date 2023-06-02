@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -31,11 +33,23 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
+import org.apache.hadoop.io.EnumSetWritable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -646,6 +660,89 @@ public class TestDataTransferProtocol {
       int afterCnt = volume.getReferenceCount();
       assertEquals(beforeCnt, afterCnt);
 
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout = 30000)
+  public void testCopyBlockCrossNamespace() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024 * 1024);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
+        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
+        .build();
+    try {
+      cluster.waitActive();
+
+      // Create one file with one block with one replica in Namespace0.
+      Path ns0Path = new Path("/testCopyBlockCrossNamespace_0.txt");
+      DistributedFileSystem ns0FS = cluster.getFileSystem(0);
+      DFSTestUtil.createFile(ns0FS, ns0Path, 1024, (short) 1, 0);
+      DFSTestUtil.waitReplication(ns0FS, ns0Path, (short) 1);
+
+      LocatedBlocks locatedBlocks = ns0FS.getClient()
+          .getLocatedBlocks(ns0Path.toUri().getPath(), 0, Long.MAX_VALUE);
+      assertEquals(1, locatedBlocks.getLocatedBlocks().size());
+      assertTrue(locatedBlocks.isLastBlockComplete());
+      LocatedBlock locatedBlockNS0 = locatedBlocks.get(0);
+
+      // Create one similar file with two replicas in Namespace1.
+      Path ns1Path = new Path("/testCopyBlockCrossNamespace_1.txt");
+      DistributedFileSystem ns1FS = cluster.getFileSystem(1);
+      HdfsFileStatus ns1FileStatus = ns1FS.getClient().getNamenode().create(
+          ns1Path.toUri().getPath(), FsPermission.getCachePoolDefault(),
+          ns1FS.getClient().getClientName(), new EnumSetWritable<>(EnumSet.of(CreateFlag.CREATE)),
+          true, (short) 2, locatedBlocks.get(0).getBlockSize(),
+          CryptoProtocolVersion.supported(), null, null);
+
+      // Add one new block with the favored nodes for the file in Namespace1.
+      List<String> favoredNodes = new ArrayList<>();
+      for (DatanodeInfo dn : locatedBlockNS0.getLocations()) {
+        favoredNodes.add(dn.getXferAddr());
+      }
+
+      LocatedBlock locatedBlockNS1 = ns1FS.getClient().getNamenode().addBlock(
+          ns1Path.toUri().getPath(), ns1FS.getClient().getClientName(), null, null,
+          ns1FileStatus.getFileId(), favoredNodes.toArray(new String[0]),
+          EnumSet.noneOf(AddBlockFlag.class));
+      assertEquals(2, locatedBlockNS1.getLocations().length);
+
+      // Align the datanode.
+      DatanodeInfoWithStorage firstReplica = locatedBlockNS1.getLocations()[0];
+      DatanodeInfoWithStorage secondReplica = locatedBlockNS1.getLocations()[1];
+      assertTrue(favoredNodes.get(0).equals(firstReplica.getXferAddr())
+          || favoredNodes.get(0).equals(secondReplica.getXferAddr()));
+
+      DatanodeInfoWithStorage localReplica = favoredNodes.get(0).equals(firstReplica.getInfoAddr())
+          ? firstReplica : secondReplica;
+      DatanodeInfoWithStorage remoteReplica = favoredNodes.get(0).equals(firstReplica.getInfoAddr())
+          ? secondReplica : firstReplica;
+
+      // Copy local replication via FastCopy.
+      DFSTestUtil.copyBlockCrossNamespace(locatedBlockNS0.getBlock(),
+          locatedBlockNS0.getLocations()[0], locatedBlockNS1.getBlock(), localReplica);
+
+      // Copy remote replication via DataTransfer.
+      DFSTestUtil.copyBlockCrossNamespace(locatedBlockNS0.getBlock(),
+          locatedBlockNS0.getLocations()[0], locatedBlockNS1.getBlock(), remoteReplica);
+
+      // Wait two heartbeat interval.
+      long heartbeatInterval = conf.getTimeDuration(DFS_HEARTBEAT_INTERVAL_KEY,
+          DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
+      Thread.sleep(heartbeatInterval * 2);
+
+      // Complete the file of namespace1.
+      assertTrue(ns1FS.getClient().getNamenode().complete(ns1Path.toUri().getPath(),
+          ns1FS.getClient().getClientName(), locatedBlockNS1.getBlock(),
+          ns1FileStatus.getFileId()));
+
+      // Do verification that the file in namespace1 should contain one block with two replicas.
+      LocatedBlocks locatedBlocksNS1 = ns1FS.getClient().getNamenode()
+          .getBlockLocations(ns1Path.toUri().getPath(), 0, Long.MAX_VALUE);
+      assertEquals(1, locatedBlocksNS1.getLocatedBlocks().size());
+      assertEquals(2, locatedBlocksNS1.getLocatedBlocks().get(0).getLocations().length);
     } finally {
       cluster.shutdown();
     }

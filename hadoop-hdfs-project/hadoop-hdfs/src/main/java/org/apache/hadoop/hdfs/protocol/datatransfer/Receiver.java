@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientOperationH
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockGroupChecksumProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpCopyBlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpCopyBlockCrossNamespaceProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpReadBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpReplaceBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpRequestShortCircuitAccessProto;
@@ -132,6 +133,9 @@ public abstract class Receiver implements DataTransferProtocol {
       break;
     case REQUEST_SHORT_CIRCUIT_SHM:
       opRequestShortCircuitShm(in);
+      break;
+    case COPY_BLOCK_CROSS_NAMESPACE:
+      opCopyBlockCrossNamespace(in);
       break;
     default:
       throw new IOException("Unknown op " + op + " in data stream");
@@ -337,6 +341,21 @@ public abstract class Receiver implements DataTransferProtocol {
       if (traceScope != null) {
         traceScope.close();
       }
+    }
+  }
+
+  /** Receive {@link Op#COPY_BLOCK_CROSS_NAMESPACE}. */
+  private void opCopyBlockCrossNamespace(DataInputStream inputStream) throws IOException {
+    OpCopyBlockCrossNamespaceProto proto =
+        OpCopyBlockCrossNamespaceProto.parseFrom(vintPrefixed(inputStream));
+    try (TraceScope ignored = continueTraceSpan(proto.getHeader(),
+        proto.getClass().getSimpleName())) {
+      copyBlockCrossNamespace(
+          PBHelperClient.convert(proto.getHeader().getBlock()),
+          PBHelperClient.convert(proto.getHeader().getToken()),
+          PBHelperClient.convert(proto.getTargetBlock()),
+          PBHelperClient.convert(proto.getTargetBlockToken()),
+          PBHelperClient.convert(proto.getTargetDatanode()));
     }
   }
 }
