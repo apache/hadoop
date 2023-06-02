@@ -67,7 +67,7 @@ public class LinearRetryPolicy {
   private final boolean doubleStepUpEnabled;
 
   /**
-   * Initializes a new instance of the {@link org.apache.hadoop.fs.azurebfs.services.LinearRetryPolicy} class.
+   * Initializes a new instance of the {@link LinearRetryPolicy} class.
    */
   public LinearRetryPolicy(final int maxIoRetries) {
 
@@ -76,9 +76,9 @@ public class LinearRetryPolicy {
   }
 
   /**
-   * Initializes a new instance of the {@link org.apache.hadoop.fs.azurebfs.services.LinearRetryPolicy} class.
+   * Initializes a new instance of the {@link LinearRetryPolicy} class.
    *
-   * @param conf The {@link org.apache.hadoop.fs.azurebfs.AbfsConfiguration} from which to retrieve retry configuration.
+   * @param conf The {@link AbfsConfiguration} from which to retrieve retry configuration.
    */
   public LinearRetryPolicy(AbfsConfiguration conf) {
     this(conf.getMaxIoRetries(),
@@ -88,7 +88,7 @@ public class LinearRetryPolicy {
   }
 
   /**
-   * Initializes a new instance of the {@link org.apache.hadoop.fs.azurebfs.services.LinearRetryPolicy} class.
+   * Initializes a new instance of the {@link LinearRetryPolicy} class.
    *
    * @param maxRetryCount The maximum number of retry attempts.
    * @param minBackoff The minimum backoff time.

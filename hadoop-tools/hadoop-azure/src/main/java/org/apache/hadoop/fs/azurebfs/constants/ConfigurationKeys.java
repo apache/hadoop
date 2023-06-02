@@ -74,7 +74,7 @@ public final class ConfigurationKeys {
    * This stops a single stream overloading the shared thread pool.
    * {@value}
    * <p>
-   * Default is {@link org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations#BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT}
+   * Default is {@link FileSystemConfigurations#BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT}
    */
   public static final String FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS =
       "fs.azure.block.upload.active.blocks";
@@ -91,7 +91,7 @@ public final class ConfigurationKeys {
    * <br>
    * Options include: "disk"(Default), "array", and "bytebuffer".
    * <br>
-   * Default is {@link org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations#DATA_BLOCKS_BUFFER_DEFAULT}.
+   * Default is {@link FileSystemConfigurations#DATA_BLOCKS_BUFFER_DEFAULT}.
    * Value: {@value}
    */
   public static final String DATA_BLOCKS_BUFFER =
@@ -112,7 +112,7 @@ public final class ConfigurationKeys {
 
   /**
    * Read ahead range parameter which can be set by user.
-   * Default value is {@link org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations#DEFAULT_READ_AHEAD_RANGE}.
+   * Default value is {@link FileSystemConfigurations#DEFAULT_READ_AHEAD_RANGE}.
    * This might reduce number of calls to remote as next requested
    * data could already be present in buffer {@value}.
    */
@@ -268,7 +268,7 @@ public final class ConfigurationKeys {
    * Optional config to enable a lock free pread which will bypass buffer in AbfsInputStream.
    * This is not a config which can be set at cluster level. It can be used as
    * an option on FutureDataInputStreamBuilder.
-   * @see org.apache.hadoop.fs.FileSystem#openFile(org.apache.hadoop.fs.Path)
+   * @see FileSystem#openFile(org.apache.hadoop.fs.Path)
    */
   public static final String FS_AZURE_BUFFERED_PREAD_DISABLE = "fs.azure.buffered.pread.disable";
   private ConfigurationKeys() {}
