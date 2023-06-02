@@ -323,6 +323,58 @@ public class TestPendingReconstruction {
     }
   }
 
+  /* Test data replication when datanode ibr is delayed.
+     Controls the speed of sending transfer commands to datanode.
+     If not, it cloud lead to excess blocks and timeout.
+   */
+  @Test
+  public void testLimitPendingReconstructionsSize() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, "10");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY, "20");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION, "2");
+
+    MiniDFSCluster cluster = null;
+
+    try {
+      cluster =
+          new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_COUNT).build();
+      cluster.waitActive();
+      BlockManager bm = cluster.getNamesystem().getBlockManager();
+
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      Path filePath = new Path("/test.txt");
+      DFSTestUtil.createFile(dfs, filePath, 102400, (short) 2, 0L);
+
+      for (DataNode dn : cluster.getDataNodes()) {
+        DataNodeTestUtils.pauseIBR(dn);
+      }
+
+      dfs.setReplication(filePath, (short) 3);
+      PendingReconstructionBlocks pendingReconstruction = bm.pendingReconstruction;
+      LowRedundancyBlocks neededReconstruction = bm.neededReconstruction;
+
+      assertEquals("ReconstructionWork number ", 10, bm.computeDatanodeWork());
+      assertEquals("Size of pendingReconstructions ", 10, pendingReconstruction.size());
+      assertEquals("ReconstructionWork number ", 0, bm.computeDatanodeWork());
+      assertEquals("Size of pendingReconstructions ", 10, pendingReconstruction.size());
+      assertEquals("Size of neededReconstructions ", 90, neededReconstruction.size());
+
+      for (DataNode dn : cluster.getDataNodes()) {
+        DataNodeTestUtils.resumeIBR(dn);
+      }
+      DFSTestUtil.waitReplication(dfs, filePath, (short) 3);
+
+      assertEquals("Size of neededReconstructions ", 0, neededReconstruction.size());
+      assertEquals("Size of pendingReconstructions ", 0, pendingReconstruction.size());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   /**
    * Test if DatanodeProtocol#blockReceivedAndDeleted can correctly update the
    * pending reconstruction. Also make sure the blockReceivedAndDeleted call is
