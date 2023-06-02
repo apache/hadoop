@@ -578,45 +578,43 @@ public class TestHDFSConcat {
     conf2.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf2.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
     MiniDFSCluster cluster2 = new MiniDFSCluster.Builder(conf2).numDataNodes(REPL_FACTOR).build();
-    cluster2.waitClusterUp();
-    DistributedFileSystem dfs2 = cluster2.getFileSystem();
-
-    String testPathDir = "/dir2";
-    Path dir = new Path(testPathDir);
-    dfs2.mkdirs(dir);
-    Path trg = new Path(testPathDir, "trg");
-    Path src = new Path(testPathDir, "src");
-    DFSTestUtil.createFile(dfs2, trg, blockSize, REPL_FACTOR, 1);
-    DFSTestUtil.createFile(dfs2, src, blockSize, REPL_FACTOR, 1);
-
-    // Check permissions with the wrong user when dfs.permissions.enabled is true.
-    final UserGroupInformation user =
-        UserGroupInformation.createUserForTesting("theDoctor", new String[] {"tardis"});
-    DistributedFileSystem hdfs1 = (DistributedFileSystem) DFSTestUtil.getFileSystemAs(user, conf2);
     try {
+      cluster2.waitClusterUp();
+      DistributedFileSystem dfs2 = cluster2.getFileSystem();
+
+      String testPathDir = "/dir2";
+      Path dir = new Path(testPathDir);
+      dfs2.mkdirs(dir);
+      Path trg = new Path(testPathDir, "trg");
+      Path src = new Path(testPathDir, "src");
+      DFSTestUtil.createFile(dfs2, trg, blockSize, REPL_FACTOR, 1);
+      DFSTestUtil.createFile(dfs2, src, blockSize, REPL_FACTOR, 1);
+
+      // Check permissions with the wrong user when dfs.permissions.enabled is true.
+      final UserGroupInformation user =
+          UserGroupInformation.createUserForTesting("theDoctor", new String[] {"tardis"});
+      DistributedFileSystem hdfs1 =
+          (DistributedFileSystem) DFSTestUtil.getFileSystemAs(user, conf2);
       LambdaTestUtils.intercept(AccessControlException.class,
           "Permission denied: user=theDoctor, access=WRITE",
           () -> hdfs1.concat(trg, new Path[] {src}));
-    } finally {
-      cluster2.shutdown();
-    }
 
-    conf2.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
-    cluster2 = new MiniDFSCluster.Builder(conf2).numDataNodes(REPL_FACTOR).build();
-    cluster2.waitClusterUp();
-    dfs2 = cluster2.getFileSystem();
-    dfs2.mkdirs(dir);
-    DFSTestUtil.createFile(dfs2, trg, blockSize, REPL_FACTOR, 1);
-    DFSTestUtil.createFile(dfs2, src, blockSize, REPL_FACTOR, 1);
+      conf2.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
+      cluster2 = new MiniDFSCluster.Builder(conf2).numDataNodes(REPL_FACTOR).build();
+      cluster2.waitClusterUp();
+      dfs2 = cluster2.getFileSystem();
+      dfs2.mkdirs(dir);
+      DFSTestUtil.createFile(dfs2, trg, blockSize, REPL_FACTOR, 1);
+      DFSTestUtil.createFile(dfs2, src, blockSize, REPL_FACTOR, 1);
 
-    // Check permissions with the wrong user when dfs.permissions.enabled is false.
-    DistributedFileSystem hdfs2 = (DistributedFileSystem) DFSTestUtil.getFileSystemAs(user, conf2);
-    try {
+      // Check permissions with the wrong user when dfs.permissions.enabled is false.
+      DistributedFileSystem hdfs2 =
+          (DistributedFileSystem) DFSTestUtil.getFileSystemAs(user, conf2);
       hdfs2.concat(trg, new Path[] {src});
-    } catch (IOException ie) {
-      fail("Got unexpected exception for permissions:" + ie.getLocalizedMessage());
     } finally {
-      cluster2.shutdown();
+      if (cluster2 != null) {
+        cluster2.shutdown();
+      }
     }
   }
 
@@ -643,11 +641,7 @@ public class TestHDFSConcat {
     DFSTestUtil.createFile(dfs, src, blockSize, REPL_FACTOR, 1);
     dfs.setPermission(dst, new FsPermission((short) 0777));
     dfs.setPermission(src, new FsPermission((short) 0777));
-    try {
-      dfs2.concat(dst, new Path[] {src});
-    } catch (AccessControlException ace) {
-      fail("Got unexpected exception:" + ace.getLocalizedMessage());
-    }
+    dfs2.concat(dst, new Path[] {src});
 
     // Test 2: User is not the owner of the file and has only dst permission.
     DFSTestUtil.createFile(dfs, src, blockSize, REPL_FACTOR, 1);
