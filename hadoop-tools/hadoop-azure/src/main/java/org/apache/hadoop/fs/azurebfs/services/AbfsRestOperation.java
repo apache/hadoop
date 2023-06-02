@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -232,7 +233,13 @@ public class AbfsRestOperation {
         tracingContext.setRetryCount(retryCount);
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
-        Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
+        if (failureReason.equals(CONNECTION_TIMEOUT_ABBREVIATION)
+            && client.getAbfsConfiguration().getLinearRetryForConnectionTimeoutEnabled()) {
+          Thread.sleep(client.getLinearRetryPolicy().getRetryInterval(retryCount));
+        }
+        else {
+          Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
+        }
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
       }
@@ -362,7 +369,7 @@ public class AbfsRestOperation {
    * Sign an operation.
    * @param httpOperation operation to sign
    * @param bytesToSign how many bytes to sign for shared key auth.
-   * @throws IOException failure
+   * @throws java.io.IOException failure
    */
   @VisibleForTesting
   public void signRequest(final AbfsHttpOperation httpOperation, int bytesToSign) throws IOException {
@@ -390,7 +397,7 @@ public class AbfsRestOperation {
   }
 
   /**
-   * Creates new object of {@link AbfsHttpOperation} with the url, method, and
+   * Creates new object of {@link org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation} with the url, method, and
    * requestHeaders fields of the AbfsRestOperation object.
    */
   @VisibleForTesting

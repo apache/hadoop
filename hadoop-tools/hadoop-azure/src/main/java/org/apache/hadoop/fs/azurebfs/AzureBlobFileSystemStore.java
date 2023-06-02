@@ -56,6 +56,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.impl.BackReference;
+import org.apache.hadoop.fs.azurebfs.services.LinearRetryPolicy;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
@@ -194,11 +195,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private BackReference fsBackRef;
 
   /**
-   * FileSystem Store for {@link AzureBlobFileSystem} for Abfs operations.
-   * Built using the {@link AzureBlobFileSystemStoreBuilder} with parameters
+   * FileSystem Store for {@link org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem} for Abfs operations.
+   * Built using the {@link org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.AzureBlobFileSystemStoreBuilder} with parameters
    * required.
    * @param abfsStoreBuilder Builder for AzureBlobFileSystemStore.
-   * @throws IOException Throw IOE in case of failure during constructing.
+   * @throws java.io.IOException Throw IOE in case of failure during constructing.
    */
   public AzureBlobFileSystemStore(
       AzureBlobFileSystemStoreBuilder abfsStoreBuilder) throws IOException {
@@ -608,7 +609,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param umask
    * @param isAppendBlob
    * @return
-   * @throws AzureBlobFileSystemException
+   * @throws org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException
    */
   private AbfsRestOperation conditionalCreateOverwriteFile(final String relativePath,
       final FileSystem.Statistics statistics,
@@ -671,7 +672,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   /**
    * Method to populate AbfsOutputStreamContext with different parameters to
-   * be used to construct {@link AbfsOutputStream}.
+   * be used to construct {@link org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream}.
    *
    * @param isAppendBlob   is Append blob support enabled?
    * @param lease          instance of AbfsLease for this AbfsOutputStream.
@@ -882,7 +883,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    *
    * @param path file name
    * @param tracingContext TracingContext instance to track correlation IDs
-   * @throws AzureBlobFileSystemException on any exception while breaking the lease
+   * @throws org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException on any exception while breaking the lease
    */
   public void breakLease(final Path path, final TracingContext tracingContext) throws AzureBlobFileSystemException {
     LOG.debug("lease path: {}", path);
@@ -899,7 +900,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param destination destination of rename.
    * @param tracingContext trace context
    * @param sourceEtag etag of source file. may be null or empty
-   * @throws AzureBlobFileSystemException failure, excluding any recovery from overload failures.
+   * @throws org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException failure, excluding any recovery from overload failures.
    * @return true if recovery was needed and succeeded.
    */
   public boolean rename(final Path source,
@@ -1580,7 +1581,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param accountName    Name of the account being used to access Azure
    *                       data store.
    * @param isSecure       Tells if https is being used or http.
-   * @throws IOException
+   * @throws java.io.IOException
    */
   private void initializeClient(URI uri, String fileSystemName,
       String accountName, boolean isSecure)
@@ -1649,6 +1650,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return new AbfsClientContextBuilder()
         .withExponentialRetryPolicy(
             new ExponentialRetryPolicy(abfsConfiguration))
+        .withLinearRetryPolicy(
+            new LinearRetryPolicy(abfsConfiguration))
         .withAbfsCounters(abfsCounters)
         .withAbfsPerfTracker(abfsPerfTracker)
         .build();
