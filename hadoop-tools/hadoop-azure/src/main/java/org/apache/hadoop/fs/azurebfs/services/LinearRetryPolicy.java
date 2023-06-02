@@ -18,35 +18,29 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.net.HttpURLConnection;
-
-import org.checkerframework.checker.units.qual.min;
-
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.classification.VisibleForTesting;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
-
 /**
- * Retry policy used by AbfsClient.
+ * Linear Retry policy used by AbfsClient.
  * */
 public class LinearRetryPolicy extends RetryPolicy{
   
   /**
-   * Represents the default maximum amount of time used when calculating the exponential
-   * delay between retries.
+   * Represents the default maximum amount of time used when calculating the
+   * linear delay between retries.
    */
   private static final int DEFAULT_MAX_BACKOFF = 1000 * 30; // 30s
 
   /**
-   * Represents the default minimum amount of time used when calculating the exponential
-   * delay between retries.
+   * Represents the default minimum amount of time used when calculating the
+   * linear delay between retries.
    */
   private static final int DEFAULT_MIN_BACKOFF = 500 * 1; // 500ms
 
   /**
-   * Represents the default minimum amount of time used when calculating the exponential
-   * delay between retries.
+   * Represents the delta by which retry interval should be incremented
+   * for each retry count
    */
   private static final int INTERVAL_DELTA_ONE_SEND = 1000; // 1s
 
@@ -112,6 +106,7 @@ public class LinearRetryPolicy extends RetryPolicy{
    * Returns if a request should be retried based on the retry count
    *
    * @param retryCount The current retry attempt count.
+   * @param statusCode The status code of last failed request
    * @return true if the request should be retried; false otherwise.
    */
   public boolean shouldRetry(final int retryCount, final int statusCode) {

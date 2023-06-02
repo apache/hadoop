@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import javax.sound.sampled.Line;
-
 /**
  * Class to hold extra configurations for AbfsClient and further classes
  * inside AbfsClient.

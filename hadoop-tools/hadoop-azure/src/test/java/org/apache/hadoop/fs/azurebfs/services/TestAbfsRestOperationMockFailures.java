@@ -29,8 +29,6 @@ import java.util.ArrayList;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.AdditionalMatchers;
-import org.mockito.Matchers;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
 
@@ -69,7 +67,7 @@ public class TestAbfsRestOperationMockFailures {
     String[] abbreviations = new String[1];
     exceptions[0] = new SocketTimeoutException(CONNECTION_TIMEOUT_JDK_MESSAGE);
     abbreviations[0] = CONNECTION_TIMEOUT_ABBREVIATION;
-    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1,1);
+    testClientRequestIdForTimeoutRetry(exceptions, abbreviations, 1, 1);
   }
 
   @Test
@@ -275,10 +273,14 @@ public class TestAbfsRestOperationMockFailures {
     abfsRestOperation.execute(tracingContext);
     Assertions.assertThat(count[0]).isEqualTo(len + 1);
 
-    // Assert that getRetryPolicy was called with
-    // failureReason CT only for Connection Timeout Cases.
+    /**
+     * Assert that getRetryPolicy was called with
+     * failureReason CT only for Connection Timeout Cases.
+     * For every failed request getRetryPolicy will be called three times
+     * It will be called with failureReason CT for every request failing with CT
+     */
     Mockito.verify(abfsClient, Mockito.times(
-        3*numOfCTExceptions))
+        3 * numOfCTExceptions))
         .getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
   }
 
