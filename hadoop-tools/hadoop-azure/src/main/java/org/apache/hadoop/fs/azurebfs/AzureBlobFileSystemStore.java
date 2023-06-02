@@ -195,11 +195,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private BackReference fsBackRef;
 
   /**
-   * FileSystem Store for {@link org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem} for Abfs operations.
-   * Built using the {@link org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.AzureBlobFileSystemStoreBuilder} with parameters
+   * FileSystem Store for {@link AzureBlobFileSystem} for Abfs operations.
+   * Built using the {@link AzureBlobFileSystemStoreBuilder} with parameters
    * required.
    * @param abfsStoreBuilder Builder for AzureBlobFileSystemStore.
-   * @throws java.io.IOException Throw IOE in case of failure during constructing.
+   * @throws IOException Throw IOE in case of failure during constructing.
    */
   public AzureBlobFileSystemStore(
       AzureBlobFileSystemStoreBuilder abfsStoreBuilder) throws IOException {
@@ -609,7 +609,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param umask
    * @param isAppendBlob
    * @return
-   * @throws org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException
+   * @throws AzureBlobFileSystemException
    */
   private AbfsRestOperation conditionalCreateOverwriteFile(final String relativePath,
       final FileSystem.Statistics statistics,
@@ -672,7 +672,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   /**
    * Method to populate AbfsOutputStreamContext with different parameters to
-   * be used to construct {@link org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream}.
+   * be used to construct {@link AbfsOutputStream}.
    *
    * @param isAppendBlob   is Append blob support enabled?
    * @param lease          instance of AbfsLease for this AbfsOutputStream.
@@ -883,7 +883,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    *
    * @param path file name
    * @param tracingContext TracingContext instance to track correlation IDs
-   * @throws org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException on any exception while breaking the lease
+   * @throws AzureBlobFileSystemException on any exception while breaking the lease
    */
   public void breakLease(final Path path, final TracingContext tracingContext) throws AzureBlobFileSystemException {
     LOG.debug("lease path: {}", path);
@@ -1581,7 +1581,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param accountName    Name of the account being used to access Azure
    *                       data store.
    * @param isSecure       Tells if https is being used or http.
-   * @throws java.io.IOException
+   * @throws IOException
    */
   private void initializeClient(URI uri, String fileSystemName,
       String accountName, boolean isSecure)

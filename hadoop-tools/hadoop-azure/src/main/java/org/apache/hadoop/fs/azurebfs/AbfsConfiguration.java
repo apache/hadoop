@@ -456,7 +456,7 @@ public class AbfsConfiguration{
    * looks for an account-agnostic value.
    * @param key Account-agnostic configuration key
    * @return value in String form if one exists, else null
-   * @throws java.io.IOException
+   * @throws IOException
    */
   public String getPasswordString(String key) throws IOException {
     char[] passchars = rawConfig.getPassword(accountConf(key));
@@ -471,12 +471,12 @@ public class AbfsConfiguration{
 
   /**
    * Returns a value for the key if the value exists and is not null.
-   * Otherwise, throws {@link org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException} with
+   * Otherwise, throws {@link ConfigurationPropertyNotFoundException} with
    * key name.
    *
    * @param key Account-agnostic configuration key
    * @return value if exists
-   * @throws java.io.IOException if error in fetching password or
+   * @throws IOException if error in fetching password or
    *     ConfigurationPropertyNotFoundException for missing key
    */
   private String getMandatoryPasswordString(String key) throws IOException {

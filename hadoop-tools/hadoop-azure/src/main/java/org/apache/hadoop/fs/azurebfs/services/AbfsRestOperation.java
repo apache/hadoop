@@ -369,7 +369,7 @@ public class AbfsRestOperation {
    * Sign an operation.
    * @param httpOperation operation to sign
    * @param bytesToSign how many bytes to sign for shared key auth.
-   * @throws java.io.IOException failure
+   * @throws IOException failure
    */
   @VisibleForTesting
   public void signRequest(final AbfsHttpOperation httpOperation, int bytesToSign) throws IOException {
@@ -397,7 +397,7 @@ public class AbfsRestOperation {
   }
 
   /**
-   * Creates new object of {@link org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation} with the url, method, and
+   * Creates new object of {@link AbfsHttpOperation} with the url, method, and
    * requestHeaders fields of the AbfsRestOperation object.
    */
   @VisibleForTesting
