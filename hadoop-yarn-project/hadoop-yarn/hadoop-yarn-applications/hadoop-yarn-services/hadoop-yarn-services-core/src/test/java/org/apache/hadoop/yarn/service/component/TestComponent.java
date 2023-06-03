@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType;
-import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -48,8 +47,6 @@ import static org.apache.hadoop.yarn.service.conf.YarnServiceConstants
  * Tests for {@link Component}.
  */
 public class TestComponent {
-
-  static final Logger LOG = Logger.getLogger(TestComponent.class);
 
   @Rule
   public ServiceTestUtils.ServiceFSWatcher rule =

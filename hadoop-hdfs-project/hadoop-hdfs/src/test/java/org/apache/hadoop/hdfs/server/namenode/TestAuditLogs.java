@@ -24,7 +24,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
@@ -39,12 +38,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.apache.log4j.Appender;
-import org.apache.log4j.AsyncAppender;
-import org.apache.log4j.Logger;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -107,6 +103,7 @@ public class TestAuditLogs {
   UserGroupInformation userGroupInfo;
 
   @Before
+  @SuppressWarnings("unchecked")
   public void setupCluster() throws Exception {
     // must configure prior to instantiating the namesystem because it
     // will reconfigure the logger if async is enabled
@@ -122,11 +119,9 @@ public class TestAuditLogs {
     util.createFiles(fs, fileName);
 
     // make sure the appender is what it's supposed to be
-    Logger logger = org.apache.log4j.Logger.getLogger(
-        "org.apache.hadoop.hdfs.server.namenode.FSNamesystem.audit");
-    @SuppressWarnings("unchecked")
-    List<Appender> appenders = Collections.list(logger.getAllAppenders());
-    assertTrue(appenders.get(0) instanceof AsyncAppender);
+    assertTrue(Collections.list(org.apache.log4j.Logger.getLogger(
+            "org.apache.hadoop.hdfs.server.namenode.FSNamesystem.audit").getAllAppenders())
+        .get(0) instanceof org.apache.log4j.AsyncAppender);
     
     fnames = util.getFileNames(fileName);
     util.waitReplication(fs, fileName, (short)3);

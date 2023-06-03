@@ -27,11 +27,10 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.logging.HadoopLoggerUtils;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.tools.rumen.datatypes.*;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 
 /**
  * A default parser for MapReduce job configuration properties.
@@ -83,7 +82,7 @@ public class MapReduceJobPropertiesParser implements JobPropertyParser {
   
   // turn off the warning w.r.t deprecated mapreduce keys
   static {
-    Logger.getLogger(Configuration.class).setLevel(Level.OFF);
+    HadoopLoggerUtils.setLogLevel(Configuration.class.getName(), "OFF");
   }
     
   // Accepts a key if there is a corresponding key in the current mapreduce

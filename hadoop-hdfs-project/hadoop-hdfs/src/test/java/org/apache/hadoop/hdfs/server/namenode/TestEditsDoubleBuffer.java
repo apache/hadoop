@@ -26,6 +26,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.logging.LogCapturer;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -118,8 +120,8 @@ public class TestEditsDoubleBuffer {
     op3.setTransactionId(3);
     buffer.writeOp(op3, fakeLogVersion);
 
-    GenericTestUtils.LogCapturer logs =
-        GenericTestUtils.LogCapturer.captureLogs(EditsDoubleBuffer.LOG);
+    LogCapturer logs =
+        LogCapturer.captureLogs(EditsDoubleBuffer.LOG);
     try {
       buffer.close();
       fail();

@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.logging.HadoopLoggerUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
@@ -40,7 +41,6 @@ import org.apache.hadoop.yarn.logaggregation.filecontroller.tfile.LogAggregation
 import org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationTestcase;
 import org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationTestcaseBuilder;
 import org.apache.hadoop.yarn.logaggregation.testutils.LogAggregationTestcaseBuilder.AppDescriptor;
-import org.apache.log4j.Level;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT;
 import static org.apache.hadoop.yarn.logaggregation.LogAggregationTestUtils.enableFileControllers;
@@ -67,7 +67,7 @@ public class TestAggregatedLogDeletionService {
 
   @BeforeAll
   public static void beforeClass() {
-    org.apache.log4j.Logger.getRootLogger().setLevel(Level.DEBUG);
+    HadoopLoggerUtils.setLogLevel("root", "DEBUG");
   }
 
   @BeforeEach
