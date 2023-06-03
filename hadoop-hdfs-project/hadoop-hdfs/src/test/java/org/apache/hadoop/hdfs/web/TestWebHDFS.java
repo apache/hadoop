@@ -2294,9 +2294,8 @@ public class TestWebHDFS {
   @Test
   public void testGetErasureCodingPolicies() throws Exception {
     final Configuration conf = WebHdfsTestUtil.createConf();
-    MiniDFSCluster cluster = null;
+    cluster = new MiniDFSCluster.Builder(conf).build();
     try {
-      cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
 
       final WebHdfsFileSystem webHdfs =
