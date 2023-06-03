@@ -2314,9 +2314,7 @@ public class TestWebHDFS {
       assertEquals(dfsEcPolicyInfos.size(), webHdfsEcPolicyInfos.size());
       assertTrue(dfsEcPolicyInfos.containsAll(webHdfsEcPolicyInfos));
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      cluster.shutdown();
     }
   }
 
