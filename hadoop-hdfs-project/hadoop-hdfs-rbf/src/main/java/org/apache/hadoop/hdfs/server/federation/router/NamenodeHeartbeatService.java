@@ -178,7 +178,6 @@ public class NamenodeHeartbeatService extends PeriodicService {
     this.updateJmxIntervalMs = conf.getTimeDuration(DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS,
         DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS_DEFAULT, TimeUnit.MILLISECONDS);
 
-
     super.serviceInit(configuration);
   }
 
