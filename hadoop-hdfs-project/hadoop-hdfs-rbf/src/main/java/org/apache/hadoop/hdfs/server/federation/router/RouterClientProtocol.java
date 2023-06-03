@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.updateMountPointStatus;
+import java.util.HashSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
@@ -79,6 +80,7 @@ import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
@@ -1928,9 +1930,18 @@ public class RouterClientProtocol implements ClientProtocol {
   @Override
   public void msync() throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
-    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    Set<FederationNamespaceInfo> allNamespaces = namenodeResolver.getNamespaces();
     RemoteMethod method = new RemoteMethod("msync");
-    rpcClient.invokeConcurrent(nss, method);
+    Set<FederationNamespaceInfo> namespacesWithAnObserverNamenode = new HashSet<>();
+    for (FederationNamespaceInfo ns : allNamespaces) {
+      boolean hasObserver = namenodeResolver.getNamenodesForNameserviceId(ns.getNameserviceId(), true)
+          .stream()
+          .anyMatch(n -> n.getState().equals(FederationNamenodeServiceState.OBSERVER));
+      if (hasObserver) {
+        namespacesWithAnObserverNamenode.add(ns);
+      }
+    }
+    rpcClient.invokeConcurrent(namespacesWithAnObserverNamenode, method);
   }
 
   @Override

@@ -871,4 +871,28 @@ public class TestObserverWithRouter {
       Assertions.fail("Unknown config setting: " + configSetting);
     }
   }
+
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
+  public void testMsyncOnlyToNamespacesWithObserver(ConfigSetting configSetting) throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
+
+    // Switch observers in first nameservice to standbys.
+    cluster.switchToStandby(cluster.getNameservices().get(0), NAMENODES[2]);
+    cluster.switchToStandby(cluster.getNameservices().get(0), NAMENODES[3]);
+
+    // Refresh namenode registrations.
+    MockResolver mockResolver = (MockResolver) routerContext.getRouter().getNamenodeResolver();
+    mockResolver.cleanRegistrations();
+    cluster.registerNamenodes();
+    cluster.waitNamenodeRegistration();
+
+    // Send msync request
+    fileSystem.msync();
+
+    long rpcCountForActive = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    // There should only be one call to the nameservice that has an observer.
+    assertEquals("Only one call to the nameservice with an observer", 1, rpcCountForActive);
+  }
 }
