@@ -343,10 +343,12 @@ public class TestRouterNamenodeMonitoring {
         heartbeatService.getNamenodeStatusReport();
       }
     }
-    assertEquals(2, org.apache.commons.lang3.StringUtils.countMatches(logCapturer.getOutput(),
-        "JMX URL: https://"));
-    assertEquals(2, org.apache.commons.lang3.StringUtils.countMatches(logCapturer.getOutput(),
-        "JMX URL: http://"));
+    assertEquals(httpsRequests * 2,
+        org.apache.commons.lang3.StringUtils.countMatches(logCapturer.getOutput(),
+            "JMX URL: https://"));
+    assertEquals(httpRequests * 2,
+        org.apache.commons.lang3.StringUtils.countMatches(logCapturer.getOutput(),
+            "JMX URL: http://"));
     logCapturer.stopCapturing();
   }
 
