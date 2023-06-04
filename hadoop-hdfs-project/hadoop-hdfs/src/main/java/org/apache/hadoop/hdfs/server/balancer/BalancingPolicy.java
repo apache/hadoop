@@ -104,21 +104,21 @@ abstract class BalancingPolicy {
       for(StorageReport s : r.getStorageReports()) {
         final StorageType t = s.getStorage().getStorageType();
         totalCapacities.add(t, s.getCapacity());
-        totalUsedSpaces.add(t, s.getDfsUsed());
+        totalUsedSpaces.add(t, (s.getCapacity() - s.getRemaining()));
       }
     }
     
     @Override
     Double getUtilization(DatanodeStorageReport r, final StorageType t) {
       long capacity = 0L;
-      long dfsUsed = 0L;
+      long totalUsed = 0L;
       for(StorageReport s : r.getStorageReports()) {
         if (s.getStorage().getStorageType() == t) {
           capacity += s.getCapacity();
-          dfsUsed += s.getDfsUsed();
+          totalUsed += (s.getCapacity() - s.getRemaining());
         }
       }
-      return capacity == 0L? null: dfsUsed*100.0/capacity;
+      return capacity == 0L? null: totalUsed*100.0/capacity;
     }
   }
 
