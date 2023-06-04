@@ -19,8 +19,7 @@ import java.util.Random;
 import javax.servlet.ServletContext;
 
 import org.apache.curator.test.TestingServer;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
+import org.apache.hadoop.logging.HadoopLoggerUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -39,9 +38,8 @@ public class TestZKSignerSecretProvider {
   private final int timeout = 100;
   private final long rolloverFrequency = timeout / 2;
 
-  {
-    LogManager.getLogger(
-        RolloverSignerSecretProvider.LOG.getName()).setLevel(Level.DEBUG);
+  static {
+    HadoopLoggerUtils.setLogLevel(RolloverSignerSecretProvider.LOG.getName(), "DEBUG");
   }
 
   @Before

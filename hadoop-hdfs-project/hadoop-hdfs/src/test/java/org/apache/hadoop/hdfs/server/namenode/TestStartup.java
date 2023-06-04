@@ -52,7 +52,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -69,12 +68,12 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -524,10 +523,8 @@ public class TestStartup {
         // Corrupt the md5 files in all the namedirs
         corruptFSImageMD5(true);
 
-        // Attach our own log appender so we can verify output
-        final LogVerificationAppender appender = new LogVerificationAppender();
-        final Logger logger = Logger.getRootLogger();
-        logger.addAppender(appender);
+      // Attach our own log appender so we can verify output
+      LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger("root"));
 
         // Try to start a new cluster
         LOG.info("\n===========================================\n" +
@@ -541,10 +538,13 @@ public class TestStartup {
         } catch (IOException ioe) {
           GenericTestUtils.assertExceptionContains(
               "Failed to load FSImage file", ioe);
-          int md5failures = appender.countExceptionsWithMessage(
-              " is corrupt with MD5 checksum of ");
+
+          int md5failures =
+              org.apache.commons.lang3.StringUtils.countMatches(logCapturer.getOutput(),
+                  " is corrupt with MD5 checksum of ");
           // Two namedirs, so should have seen two failures
           assertEquals(2, md5failures);
+          logCapturer.stopCapturing();
         }
     } finally {
       if (cluster != null) {

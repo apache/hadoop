@@ -27,7 +27,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collections;
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
@@ -39,18 +38,14 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.PatternMatchingAppender;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Appender;
-import org.apache.log4j.AsyncAppender;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
-
-import java.util.function.Supplier;
 
 /**
  * Test periodic logging of DataNode metrics.
@@ -128,13 +123,13 @@ public class TestDataNodeMetricsLogger {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   public void testMetricsLoggerIsAsync() throws IOException {
     startDNForTest(true);
     assertNotNull(dn);
-    org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(DataNode.METRICS_LOG_NAME);
-    @SuppressWarnings("unchecked")
-    List<Appender> appenders = Collections.list(logger.getAllAppenders());
-    assertTrue(appenders.get(0) instanceof AsyncAppender);
+    assertTrue(Collections.list(
+            org.apache.log4j.Logger.getLogger(DataNode.METRICS_LOG_NAME).getAllAppenders())
+        .get(0) instanceof org.apache.log4j.AsyncAppender);
   }
 
   /**
@@ -149,25 +144,13 @@ public class TestDataNodeMetricsLogger {
         metricsProvider);
     startDNForTest(true);
     assertNotNull(dn);
-    final PatternMatchingAppender appender =
-        (PatternMatchingAppender) org.apache.log4j.Logger.getLogger(DataNode.METRICS_LOG_NAME)
-            .getAppender("PATTERNMATCHERAPPENDER");
-
+    LogCapturer logCapturer =
+        LogCapturer.captureLogs(LoggerFactory.getLogger(DataNode.METRICS_LOG_NAME));
     // Ensure that the supplied pattern was matched.
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        return appender.isMatched();
-      }
-    }, 1000, 60000);
-
+    GenericTestUtils.waitFor(() -> logCapturer.getOutput().contains("FakeMetric"),
+        1000, 60000);
+    logCapturer.stopCapturing();
     dn.shutdown();
-  }
-
-  private void addAppender(org.apache.log4j.Logger logger, Appender appender) {
-    @SuppressWarnings("unchecked")
-    List<Appender> appenders = Collections.list(logger.getAllAppenders());
-    ((AsyncAppender) appenders.get(0)).addAppender(appender);
   }
 
   public interface TestFakeMetricMXBean {

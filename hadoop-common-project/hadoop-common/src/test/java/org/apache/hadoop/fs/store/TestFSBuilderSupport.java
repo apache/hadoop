@@ -20,11 +20,12 @@ package org.apache.hadoop.fs.store;
 
 import java.io.IOException;
 
+import javax.annotation.Nonnull;
+
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSBuilder;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
 import org.apache.hadoop.fs.impl.FSBuilderSupport;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
@@ -127,18 +128,45 @@ public class TestFSBuilderSupport extends AbstractHadoopTestBase {
       extends FSBuilder<FSBuilderSupport, SimpleBuilder> {
   }
 
+  /**
+   * This is a minimal builder which relies on default implementations of the interface.
+   * If it ever stops compiling, it means a new interface has been added which
+   * is not backwards compatible with external implementations, such as that
+   * in HBoss (see HBASE-26483).
+   *
+   */
   private static final class BuilderImpl
-      extends AbstractFSBuilderImpl<FSBuilderSupport, SimpleBuilder>
       implements SimpleBuilder {
+    private final Configuration options = new Configuration(false);
 
-    private BuilderImpl() {
-      super(new Path("/"));
+    @Override
+    public SimpleBuilder opt(@Nonnull final String key, @Nonnull final String value) {
+      options.set(key, value);
+      return this;
+    }
+
+    @Override
+    public SimpleBuilder opt(@Nonnull final String key, @Nonnull final String... values) {
+      options.setStrings(key, values);
+      return this;
+    }
+
+    @Override
+    public SimpleBuilder must(@Nonnull final String key, @Nonnull final String value) {
+      return opt(key, value);
+    }
+
+    @Override
+    public SimpleBuilder must(@Nonnull final String key, @Nonnull final String... values) {
+      return opt(key, values);
     }
 
     @Override
     public FSBuilderSupport build()
-        throws IOException {
-      return new FSBuilderSupport(getOptions());
+        throws IllegalArgumentException, UnsupportedOperationException, IOException {
+      return new FSBuilderSupport(options);
     }
   }
+
+
 }

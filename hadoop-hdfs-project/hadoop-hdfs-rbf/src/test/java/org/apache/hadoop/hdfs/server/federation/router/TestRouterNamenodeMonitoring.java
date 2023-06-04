@@ -34,12 +34,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
@@ -54,6 +54,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.NamenodeStatusReport;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -293,18 +294,38 @@ public class TestRouterNamenodeMonitoring {
     verifyUrlSchemes(HttpConfig.Policy.HTTPS_ONLY.name());
   }
 
+  @Test
+  public void testJmxRequestFrequency() {
+    // Disable JMX requests
+    Configuration conf = getNamenodesConfig();
+    conf.setLong(RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS, -1);
+    verifyUrlSchemes(HttpConfig.Policy.HTTPS_ONLY.name(), conf, 0, 0, 1);
+
+    // Set JMX requests to lower frequency
+    conf = getNamenodesConfig();
+    conf.setLong(RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS,
+        TimeUnit.MINUTES.toMillis(5));
+    verifyUrlSchemes(HttpConfig.Policy.HTTPS_ONLY.name(), conf, 0, 1, 2);
+
+    // Set JMX requests to default frequency
+    conf = getNamenodesConfig();
+    verifyUrlSchemes(HttpConfig.Policy.HTTPS_ONLY.name(), conf, 0, 2, 2);
+  }
+
   private void verifyUrlSchemes(String scheme) {
+    int httpRequests = HttpConfig.Policy.HTTP_ONLY.name().equals(scheme) ? 1 : 0;
+    int httpsRequests = HttpConfig.Policy.HTTPS_ONLY.name().equals(scheme) ? 1 : 0;
+    verifyUrlSchemes(scheme, getNamenodesConfig(), httpRequests, httpsRequests, 1);
+  }
+
+  private void verifyUrlSchemes(String scheme, Configuration conf, int httpRequests,
+      int httpsRequests, int requestsPerService) {
 
     // Attach our own log appender so we can verify output
-    final LogVerificationAppender appender =
-        new LogVerificationAppender();
-    final org.apache.log4j.Logger logger =
-        org.apache.log4j.Logger.getRootLogger();
-    logger.addAppender(appender);
+    LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger("root"));
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
 
     // Setup and start the Router
-    Configuration conf = getNamenodesConfig();
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, scheme);
     Configuration routerConf = new RouterConfigBuilder(conf)
         .heartbeat(true)
@@ -318,15 +339,15 @@ public class TestRouterNamenodeMonitoring {
     Collection<NamenodeHeartbeatService> heartbeatServices =
         router.getNamenodeHeartbeatServices();
     for (NamenodeHeartbeatService heartbeatService : heartbeatServices) {
-      heartbeatService.getNamenodeStatusReport();
+      for (int request = 0; request < requestsPerService; request++) {
+        heartbeatService.getNamenodeStatusReport();
+      }
     }
-    if (HttpConfig.Policy.HTTPS_ONLY.name().equals(scheme)) {
-      assertEquals(2, appender.countLinesWithMessage("JMX URL: https://"));
-      assertEquals(0, appender.countLinesWithMessage("JMX URL: http://"));
-    } else {
-      assertEquals(2, appender.countLinesWithMessage("JMX URL: http://"));
-      assertEquals(0, appender.countLinesWithMessage("JMX URL: https://"));
-    }
+    assertEquals(2, org.apache.commons.lang3.StringUtils.countMatches(logCapturer.getOutput(),
+        "JMX URL: https://"));
+    assertEquals(2, org.apache.commons.lang3.StringUtils.countMatches(logCapturer.getOutput(),
+        "JMX URL: http://"));
+    logCapturer.stopCapturing();
   }
 
   /**

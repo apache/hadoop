@@ -82,7 +82,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
-import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
@@ -863,7 +863,7 @@ public class TestCheckpoint {
         savedSd = sd;
       }
       
-      LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
+      LogCapturer logs = LogCapturer.captureLogs(
           LoggerFactory.getLogger(Storage.class));
       try {
         // try to lock the storage that's already locked

@@ -33,7 +33,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.logging.LogCapturer;
+
 import org.junit.Test;
 
 public class TestDFSRename {
@@ -189,8 +190,8 @@ public class TestDFSRename {
       final DistributedFileSystem dfs = cluster.getFileSystem();
       Path path = new Path("/test");
       dfs.mkdirs(path);
-      GenericTestUtils.LogCapturer auditLog =
-          GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
+      LogCapturer auditLog =
+          LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
       dfs.rename(path, new Path("/dir1"),
           new Rename[] {Rename.OVERWRITE, Rename.TO_TRASH});
       String auditOut = auditLog.getOutput();

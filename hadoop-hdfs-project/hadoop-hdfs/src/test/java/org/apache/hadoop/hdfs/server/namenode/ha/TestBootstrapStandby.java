@@ -43,7 +43,7 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.logging.LogCapturer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -197,7 +197,7 @@ public class TestBootstrapStandby {
 
     // Trying to bootstrap standby should now fail since the edit
     // logs aren't available in the shared dir.
-    LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
+    LogCapturer logs = LogCapturer.captureLogs(
         LoggerFactory.getLogger(BootstrapStandby.class));
     try {
       assertEquals(BootstrapStandby.ERR_CODE_LOGS_UNAVAILABLE, forceBootstrap(1));

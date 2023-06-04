@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.io.StringWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
@@ -38,7 +37,6 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
-import java.util.Enumeration;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -53,17 +51,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.logging.HadoopLoggerUtils;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Appender;
-import org.apache.log4j.Layout;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
-import org.apache.log4j.WriterAppender;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.mockito.invocation.InvocationOnMock;
@@ -115,51 +107,17 @@ public abstract class GenericTestUtils {
   public static final String ERROR_INVALID_ARGUMENT =
       "Total wait time should be greater than check interval time";
 
-  @Deprecated
-  public static Logger toLog4j(org.slf4j.Logger logger) {
-    return LogManager.getLogger(logger.getName());
-  }
-
-  /**
-   * @deprecated use {@link #disableLog(org.slf4j.Logger)} instead
-   */
-  @Deprecated
-  public static void disableLog(Logger logger) {
-    logger.setLevel(Level.OFF);
-  }
-
   public static void disableLog(org.slf4j.Logger logger) {
-    disableLog(toLog4j(logger));
-  }
-
-  public static void setLogLevel(Logger logger, Level level) {
-    logger.setLevel(level);
-  }
-
-  /**
-   * @deprecated
-   * use {@link #setLogLevel(org.slf4j.Logger, org.slf4j.event.Level)} instead
-   */
-  @Deprecated
-  public static void setLogLevel(org.slf4j.Logger logger, Level level) {
-    setLogLevel(toLog4j(logger), level);
+    HadoopLoggerUtils.setLogLevel(logger.getName(), "OFF");
   }
 
   public static void setLogLevel(org.slf4j.Logger logger,
                                  org.slf4j.event.Level level) {
-    setLogLevel(toLog4j(logger), Level.toLevel(level.toString()));
+    HadoopLoggerUtils.setLogLevel(logger.getName(), level.toString());
   }
 
   public static void setRootLogLevel(org.slf4j.event.Level level) {
-    setLogLevel(LogManager.getRootLogger(), Level.toLevel(level.toString()));
-  }
-
-  public static void setCurrentLoggersLogLevel(org.slf4j.event.Level level) {
-    for (Enumeration<?> loggers = LogManager.getCurrentLoggers();
-        loggers.hasMoreElements();) {
-      Logger logger = (Logger) loggers.nextElement();
-      logger.setLevel(Level.toLevel(level.toString()));
-    }
+    HadoopLoggerUtils.setLogLevel("root", level.toString());
   }
 
   public static org.slf4j.event.Level toLevel(String level) {
@@ -468,47 +426,6 @@ public abstract class GenericTestUtils {
     public void close() throws Exception {
       IOUtils.closeStream(bytesPrintStream);
       System.setErr(oldErr);
-    }
-  }
-
-  public static class LogCapturer {
-    private StringWriter sw = new StringWriter();
-    private WriterAppender appender;
-    private Logger logger;
-
-    public static LogCapturer captureLogs(org.slf4j.Logger logger) {
-      if (logger.getName().equals("root")) {
-        return new LogCapturer(org.apache.log4j.Logger.getRootLogger());
-      }
-      return new LogCapturer(toLog4j(logger));
-    }
-
-    public static LogCapturer captureLogs(Logger logger) {
-      return new LogCapturer(logger);
-    }
-
-    private LogCapturer(Logger logger) {
-      this.logger = logger;
-      Appender defaultAppender = Logger.getRootLogger().getAppender("stdout");
-      if (defaultAppender == null) {
-        defaultAppender = Logger.getRootLogger().getAppender("console");
-      }
-      final Layout layout = (defaultAppender == null) ? new PatternLayout() :
-          defaultAppender.getLayout();
-      this.appender = new WriterAppender(layout, sw);
-      logger.addAppender(this.appender);
-    }
-
-    public String getOutput() {
-      return sw.toString();
-    }
-
-    public void stopCapturing() {
-      logger.removeAppender(appender);
-    }
-
-    public void clearOutput() {
-      sw.getBuffer().setLength(0);
     }
   }
 

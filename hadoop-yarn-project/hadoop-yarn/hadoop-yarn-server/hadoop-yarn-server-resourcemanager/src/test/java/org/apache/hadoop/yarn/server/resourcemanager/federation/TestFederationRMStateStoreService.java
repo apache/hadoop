@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -231,8 +232,8 @@ public class TestFederationRMStateStoreService {
     conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY, 10);
     conf.set(YarnConfiguration.RM_CLUSTER_ID, subClusterId.getId());
 
-    GenericTestUtils.LogCapturer logCapture =
-        GenericTestUtils.LogCapturer.captureLogs(FederationStateStoreService.LOG);
+    LogCapturer logCapture =
+        LogCapturer.captureLogs(FederationStateStoreService.LOG);
 
     final MockRM rm = new MockRM(conf);
 

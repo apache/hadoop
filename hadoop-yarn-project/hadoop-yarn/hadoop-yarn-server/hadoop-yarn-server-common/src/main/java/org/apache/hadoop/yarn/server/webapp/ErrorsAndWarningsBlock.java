@@ -24,7 +24,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.GenericsUtil;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.security.AdminACLsManager;
-import org.apache.hadoop.yarn.util.Log4jWarningErrorMetricsAppender;
+import org.apache.hadoop.logging.appenders.Log4jWarningErrorMetricsAppender;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;

@@ -34,7 +34,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -45,7 +44,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.conf.Configuration;
@@ -55,6 +53,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobPriority;
 import org.apache.hadoop.mapreduce.JobStatus.State;
@@ -110,13 +109,6 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.apache.log4j.Appender;
-import org.apache.log4j.AppenderSkeleton;
-import org.apache.log4j.Layout;
-import org.apache.log4j.Level;
-import org.apache.log4j.SimpleLayout;
-import org.apache.log4j.WriterAppender;
-import org.apache.log4j.spi.LoggingEvent;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -143,29 +135,6 @@ public class TestYARNRunner {
       MRJobConfig.DEFAULT_TASK_PROFILE_PARAMS.substring(0,
           MRJobConfig.DEFAULT_TASK_PROFILE_PARAMS.lastIndexOf("%"));
   private static final String CUSTOM_RESOURCE_NAME = "a-custom-resource";
-
-  private static class TestAppender extends AppenderSkeleton {
-
-    private final List<LoggingEvent> logEvents = new CopyOnWriteArrayList<>();
-
-    @Override
-    public boolean requiresLayout() {
-      return false;
-    }
-
-    @Override
-    public void close() {
-    }
-
-    @Override
-    protected void append(LoggingEvent arg0) {
-      logEvents.add(arg0);
-    }
-
-    private List<LoggingEvent> getLogEvents() {
-      return logEvents;
-    }
-  }
 
   private YARNRunner yarnRunner;
   private ResourceMgrDelegate resourceMgrDelegate;
@@ -549,38 +518,48 @@ public class TestYARNRunner {
       assertTrue("AM admin command opts is after user command opts.", adminIndex < userIndex);
     }
   }
+
   @Test(timeout=20000)
   public void testWarnCommandOpts() throws Exception {
-    org.apache.log4j.Logger logger =
-        org.apache.log4j.Logger.getLogger(YARNRunner.class);
-    
-    ByteArrayOutputStream bout = new ByteArrayOutputStream();
-    Layout layout = new SimpleLayout();
-    Appender appender = new WriterAppender(layout, bout);
-    logger.addAppender(appender);
-    
-    JobConf jobConf = new JobConf();
-    
-    jobConf.set(MRJobConfig.MR_AM_ADMIN_COMMAND_OPTS, "-Djava.net.preferIPv4Stack=true -Djava.library.path=foo");
-    jobConf.set(MRJobConfig.MR_AM_COMMAND_OPTS, "-Xmx1024m -Djava.library.path=bar");
-    
-    YARNRunner yarnRunner = new YARNRunner(jobConf);
-    
-    @SuppressWarnings("unused")
-    ApplicationSubmissionContext submissionContext =
-        buildSubmitContext(yarnRunner, jobConf);
-   
-    String logMsg = bout.toString();
-    assertTrue(logMsg.contains("WARN - Usage of -Djava.library.path in " + 
-    		"yarn.app.mapreduce.am.admin-command-opts can cause programs to no " +
-        "longer function if hadoop native libraries are used. These values " + 
-    		"should be set as part of the LD_LIBRARY_PATH in the app master JVM " +
-        "env using yarn.app.mapreduce.am.admin.user.env config settings."));
-    assertTrue(logMsg.contains("WARN - Usage of -Djava.library.path in " + 
-        "yarn.app.mapreduce.am.command-opts can cause programs to no longer " +
-        "function if hadoop native libraries are used. These values should " +
-        "be set as part of the LD_LIBRARY_PATH in the app master JVM env " +
-        "using yarn.app.mapreduce.am.env config settings."));
+    LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger(YARNRunner.class));
+    try {
+      JobConf jobConf = new JobConf();
+
+      jobConf.set(MRJobConfig.MR_AM_ADMIN_COMMAND_OPTS,
+          "-Djava.net.preferIPv4Stack=true -Djava.library.path=foo");
+      jobConf.set(MRJobConfig.MR_AM_COMMAND_OPTS, "-Xmx1024m -Djava.library.path=bar");
+
+      YARNRunner yarnRunner = new YARNRunner(jobConf);
+
+      @SuppressWarnings("unused")
+      ApplicationSubmissionContext submissionContext = buildSubmitContext(yarnRunner, jobConf);
+
+      boolean isFoundOne = false;
+      boolean isFoundTwo = false;
+      for (String logLine : logCapturer.getOutput().split("\n")) {
+        if (logLine == null) {
+          continue;
+        }
+        if (logLine.contains("WARN") && logLine.contains("Usage of -Djava.library.path in "
+            + "yarn.app.mapreduce.am.admin-command-opts can cause programs to no "
+            + "longer function if hadoop native libraries are used. These values "
+            + "should be set as part of the LD_LIBRARY_PATH in the app master JVM "
+            + "env using yarn.app.mapreduce.am.admin.user.env config settings.")) {
+          isFoundOne = true;
+        }
+        if (logLine.contains("WARN") && logLine.contains("Usage of -Djava.library.path in "
+            + "yarn.app.mapreduce.am.command-opts can cause programs to no longer "
+            + "function if hadoop native libraries are used. These values should "
+            + "be set as part of the LD_LIBRARY_PATH in the app master JVM env "
+            + "using yarn.app.mapreduce.am.env config settings.")) {
+          isFoundTwo = true;
+        }
+      }
+      assertTrue(isFoundOne);
+      assertTrue(isFoundTwo);
+    } finally {
+      logCapturer.stopCapturing();
+    }
   }
 
   @Test(timeout=20000)
@@ -996,10 +975,7 @@ public class TestYARNRunner {
     for (String memoryName : ImmutableList.of(
         MRJobConfig.RESOURCE_TYPE_NAME_MEMORY,
         MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY)) {
-      TestAppender testAppender = new TestAppender();
-      org.apache.log4j.Logger  logger =
-          org.apache.log4j.Logger.getLogger(YARNRunner.class);
-      logger.addAppender(testAppender);
+      LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger(YARNRunner.class));
       try {
         JobConf jobConf = new JobConf();
         jobConf.set(MRJobConfig.MR_AM_RESOURCE_PREFIX + memoryName, "3 Gi");
@@ -1017,13 +993,17 @@ public class TestYARNRunner {
 
         long memorySize = resourceRequest.getCapability().getMemorySize();
         Assert.assertEquals(3072, memorySize);
-        assertTrue(testAppender.getLogEvents().stream().anyMatch(
-            e -> e.getLevel() == Level.WARN && ("Configuration " +
-                "yarn.app.mapreduce.am.resource." + memoryName + "=3Gi is " +
-                "overriding the yarn.app.mapreduce.am.resource.mb=2048 " +
-                "configuration").equals(e.getMessage())));
+        boolean isLogFound = false;
+        for (String logLine : logCapturer.getOutput().split("\n")) {
+          if (logLine != null && logLine.contains("WARN") && logLine.contains(
+              "Configuration " + "yarn.app.mapreduce.am.resource." + memoryName + "=3Gi is "
+                  + "overriding the yarn.app.mapreduce.am.resource.mb=2048 " + "configuration")) {
+            isLogFound = true;
+          }
+        }
+        assertTrue("Log line could not be found", isLogFound);
       } finally {
-        logger.removeAppender(testAppender);
+        logCapturer.stopCapturing();
       }
     }
   }

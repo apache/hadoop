@@ -115,6 +115,9 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "heartbeat-state.interval";
   public static final long DFS_ROUTER_HEARTBEAT_STATE_INTERVAL_MS_DEFAULT =
       TimeUnit.SECONDS.toMillis(5);
+  public static final String DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS =
+      FEDERATION_ROUTER_PREFIX + "namenode.heartbeat.jmx.interval";
+  public static final long DFS_ROUTER_NAMENODE_HEARTBEAT_JMX_INTERVAL_MS_DEFAULT = 0;
 
   // HDFS Router NN client
   public static final String
