@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyCo
  *
  * The serialization aspects are used by admin APIs or a policy engine to store
  * a serialized configuration in the {@code FederationStateStore}, while the
- * getters methods are used to obtain a property initialized policy in the
+ * getters methods are used to obtain a properly initialized policy in the
  * {@code Router} and {@code AMRMProxy} respectively.
  *
  * This interface by design binds together {@link FederationAMRMProxyPolicy} and
