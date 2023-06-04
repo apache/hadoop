@@ -364,12 +364,10 @@ public final class RouterWebServiceUtil {
   protected static Client createJerseyClient(Configuration conf) {
     Client client = Client.create();
 
+    long checkConnectTimeOut = conf.getLong(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, 0);
     int connectTimeOut = (int) conf.getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,
         YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
-    int readTimeout = (int) conf.getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
-        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT, TimeUnit.MILLISECONDS);
-
-    if (connectTimeOut < 0) {
+    if (checkConnectTimeOut <= 0 || checkConnectTimeOut > Integer.MAX_VALUE) {
       LOG.warn("Configuration {} = {} ms error. We will use the default value({} ms).",
           YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, connectTimeOut,
           YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT);
@@ -378,12 +376,16 @@ public final class RouterWebServiceUtil {
     }
     client.setConnectTimeout(connectTimeOut);
 
-    if (readTimeout < 0) {
+    long checkReadTimeout = conf.getLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, 0);
+    int readTimeout = (int) conf.getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT, TimeUnit.MILLISECONDS);
+
+    if (checkReadTimeout < 0) {
       LOG.warn("Configuration {} = {} ms error. We will use the default value({} ms).",
-          YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, readTimeout,
-          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT);
+          YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, connectTimeOut,
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT);
       readTimeout = (int) TimeUnit.MILLISECONDS.convert(
-          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT, TimeUnit.MILLISECONDS);
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
     }
     client.setReadTimeout(readTimeout);
 
