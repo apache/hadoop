@@ -93,7 +93,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.junit.After;
@@ -1372,7 +1372,7 @@ public class TestExternalStoragePolicySatisfier {
       Path filePath = new Path("/zeroSizeFile");
       DFSTestUtil.createFile(fs, filePath, 1024, (short) 5, 0);
       fs.setReplication(filePath, (short) 3);
-      LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
+      LogCapturer logs = LogCapturer.captureLogs(
           LoggerFactory.getLogger(BlockStorageMovementAttemptedItems.class));
       fs.setStoragePolicy(filePath, "COLD");
       fs.satisfyStoragePolicy(filePath);

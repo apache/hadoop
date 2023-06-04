@@ -31,6 +31,7 @@ import static org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory.SSL_MONIT
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.util.Lists;
 import org.junit.Assert;
 import org.junit.Test;
@@ -61,8 +62,8 @@ public final class TestURLConnectionFactory {
   public void testSSLInitFailure() throws Exception {
     Configuration conf = new Configuration();
     conf.set(SSLFactory.SSL_HOSTNAME_VERIFIER_KEY, "foo");
-    GenericTestUtils.LogCapturer logs =
-        GenericTestUtils.LogCapturer.captureLogs(
+    LogCapturer logs =
+        LogCapturer.captureLogs(
             LoggerFactory.getLogger(URLConnectionFactory.class));
     URLConnectionFactory.newDefaultURLConnectionFactory(conf);
     Assert.assertTrue("Expected log for ssl init failure not found!",

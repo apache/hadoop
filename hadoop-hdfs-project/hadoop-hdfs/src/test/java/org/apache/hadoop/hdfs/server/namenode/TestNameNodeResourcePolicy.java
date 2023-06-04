@@ -28,7 +28,8 @@ import java.util.Collection;
 import org.junit.Test;
 
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+
+import org.apache.hadoop.logging.LogCapturer;
 
 public class TestNameNodeResourcePolicy {
 

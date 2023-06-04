@@ -22,7 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
@@ -41,8 +41,8 @@ public class TestShellBasedUnixGroupsMapping {
   private static final Logger TESTLOG =
       LoggerFactory.getLogger(TestShellBasedUnixGroupsMapping.class);
 
-  private final GenericTestUtils.LogCapturer shellMappingLog =
-      GenericTestUtils.LogCapturer.captureLogs(
+  private final LogCapturer shellMappingLog =
+      LogCapturer.captureLogs(
           ShellBasedUnixGroupsMapping.LOG);
 
   private class TestGroupUserNotExist

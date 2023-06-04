@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.test.Whitebox;
 
 import org.assertj.core.api.Assertions;
@@ -235,8 +236,8 @@ public class TestBlockManagerSafeMode {
   public void testCheckSafeMode9() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_KEY, 3000);
-    GenericTestUtils.LogCapturer logs =
-        GenericTestUtils.LogCapturer.captureLogs(BlockManagerSafeMode.LOG);
+    LogCapturer logs =
+        LogCapturer.captureLogs(BlockManagerSafeMode.LOG);
     BlockManagerSafeMode blockManagerSafeMode = new BlockManagerSafeMode(bm,
         fsn, true, conf);
     String content = logs.getOutput();
@@ -247,8 +248,8 @@ public class TestBlockManagerSafeMode {
   public void testCheckSafeMode10(){
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_KEY, -1);
-    GenericTestUtils.LogCapturer logs =
-            GenericTestUtils.LogCapturer.captureLogs(BlockManagerSafeMode.LOG);
+    LogCapturer logs =
+            LogCapturer.captureLogs(BlockManagerSafeMode.LOG);
     BlockManagerSafeMode blockManagerSafeMode = new BlockManagerSafeMode(bm,
             fsn, true, conf);
     String content = logs.getOutput();

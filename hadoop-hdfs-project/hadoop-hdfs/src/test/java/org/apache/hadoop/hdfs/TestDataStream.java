@@ -26,7 +26,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.logging.LogCapturer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -48,7 +48,7 @@ public class TestDataStream {
 
   @Test(timeout = 60000)
   public void testDfsClient() throws IOException, InterruptedException {
-    LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(LoggerFactory
+    LogCapturer logs = LogCapturer.captureLogs(LoggerFactory
         .getLogger(DataStreamer.class));
     byte[] toWrite = new byte[PACKET_SIZE];
     new Random(1).nextBytes(toWrite);

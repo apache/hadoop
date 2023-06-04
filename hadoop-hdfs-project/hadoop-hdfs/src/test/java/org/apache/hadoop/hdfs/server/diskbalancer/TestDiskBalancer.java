@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hdfs.server.diskbalancer;
 
+import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.util.Preconditions;
 import java.util.function.Supplier;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -321,7 +322,7 @@ public class TestDiskBalancer {
         0);
     DFSTestUtil.waitReplication(fs, filePath, (short) 1);
 
-    GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
+    LogCapturer logCapturer = LogCapturer
         .captureLogs(DiskBalancer.LOG);
 
     try {
