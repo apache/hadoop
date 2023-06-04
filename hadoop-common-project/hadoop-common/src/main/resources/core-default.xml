@@ -3924,6 +3924,35 @@ The switch to turn S3A auditing on or off.
         the ZK CLI).
     </description>
   </property>
+
+  <property>
+    <name>hadoop.zk.ssl.keystore.location</name>
+    <description>
+      Keystore location for ZooKeeper client connection over SSL.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.zk.ssl.keystore.password</name>
+    <description>
+      Keystore password for ZooKeeper client connection over SSL.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.zk.ssl.truststore.location</name>
+    <decription>
+        Truststore location for ZooKeeper client connection over SSL.
+    </decription>
+  </property>
+
+  <property>
+    <name>hadoop.zk.ssl.truststore.password</name>
+    <description>
+      Truststore password for ZooKeeper client connection over SSL.
+    </description>
+  </property>
+
   <property>
     <name>hadoop.system.tags</name>
     <value>YARN,HDFS,NAMENODE,DATANODE,REQUIRED,SECURITY,KERBEROS,PERFORMANCE,CLIENT
