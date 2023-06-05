@@ -75,12 +75,12 @@ import static org.mockito.Mockito.verify;
  */
 public class TestObserverReadProxyProvider {
   private final static int SLOW_RESPONSE_SLEEP_TIME = 5000; // 5 s
-  private final static int NAMENODE_HA_STATE_PROBE_TIMEOUT_TEST = 2000; // 2s
+  private final static int NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT = 2000; // 2s
+  private final static int NAMENODE_HA_STATE_PROBE_TIMEOUT_LONG = 25000; // 25s
 
   private static final LocatedBlock[] EMPTY_BLOCKS = new LocatedBlock[0];
   private String ns;
   private URI nnURI;
-  private Configuration conf;
 
   private ObserverReadProxyProvider<ClientProtocol> proxyProvider;
   @Mock private Logger logger;
@@ -92,15 +92,7 @@ public class TestObserverReadProxyProvider {
   public void setup() throws Exception {
     ns = "testcluster";
     nnURI = URI.create("hdfs://" + ns);
-    conf = new Configuration();
-    conf.set(HdfsClientConfigKeys.DFS_NAMESERVICES, ns);
-    // Set observer probe retry period to 0. Required by the tests that
-    // transition observer back and forth
-    conf.setTimeDuration(
-        OBSERVER_PROBE_RETRY_PERIOD_KEY, 0, TimeUnit.MILLISECONDS);
-    conf.setBoolean(HdfsClientConfigKeys.Failover.RANDOM_ORDER, false);
-    // Set namenode ha-state probe timeout to 25s
-    conf.setInt(NAMENODE_HA_STATE_PROBE_TIMEOUT, 25000);
+
     MockitoAnnotations.initMocks(this);
   }
 
@@ -119,6 +111,16 @@ public class TestObserverReadProxyProvider {
   }
 
   private void setupProxyProvider(int namenodeCount) throws Exception {
+    setupProxyProvider(namenodeCount, new Configuration());
+  }
+
+  private void setupProxyProvider(int namenodeCount, int nnHAStateProbeTimeout) throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(NAMENODE_HA_STATE_PROBE_TIMEOUT, nnHAStateProbeTimeout);
+    setupProxyProvider(namenodeCount, conf);
+  }
+
+  private void setupProxyProvider(int namenodeCount, Configuration conf) throws Exception {
     String[] namenodeIDs = new String[namenodeCount];
     namenodeAddrs = new String[namenodeCount];
     namenodeAnswers = new NameNodeAnswer[namenodeCount];
@@ -141,6 +143,12 @@ public class TestObserverReadProxyProvider {
     }
     conf.set(HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + "." + ns,
         Joiner.on(",").join(namenodeIDs));
+    conf.set(HdfsClientConfigKeys.DFS_NAMESERVICES, ns);
+    // Set observer probe retry period to 0. Required by the tests that
+    // transition observer back and forth
+    conf.setTimeDuration(
+        OBSERVER_PROBE_RETRY_PERIOD_KEY, 0, TimeUnit.MILLISECONDS);
+    conf.setBoolean(HdfsClientConfigKeys.Failover.RANDOM_ORDER, false);
     proxyProvider = new ObserverReadProxyProvider<ClientProtocol>(conf, nnURI,
         ClientProtocol.class,
         new ClientHAProxyFactory<ClientProtocol>() {
@@ -183,7 +191,7 @@ public class TestObserverReadProxyProvider {
           }
         };
     ObserverReadProxyProvider<GetUserMappingsProtocol> userProxyProvider =
-        new ObserverReadProxyProvider<>(conf, nnURI,
+        new ObserverReadProxyProvider<>(proxyProvider.conf, nnURI,
             GetUserMappingsProtocol.class, proxyFactory);
     assertArrayEquals(fakeGroups,
         userProxyProvider.getProxy().proxy.getGroupsForUser(fakeUser));
@@ -368,7 +376,7 @@ public class TestObserverReadProxyProvider {
    */
   @Test
   public void testGetHAServiceStateWithTimeout() throws Exception {
-    setupProxyProvider(1);
+    setupProxyProvider(1, NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT);
     final HAServiceState state = HAServiceState.STANDBY;
     NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
         (NNProxyInfo<ClientProtocol>) mock(NNProxyInfo.class);
@@ -387,7 +395,7 @@ public class TestObserverReadProxyProvider {
    */
   @Test
   public void testTimeoutExceptionGetHAServiceStateWithTimeout() throws Exception {
-    setupProxyProvider(1);
+    setupProxyProvider(1, NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT);
     NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
         (NNProxyInfo<ClientProtocol>) Mockito.mock(NNProxyInfo.class);
     Future<HAServiceState> task = mock(Future.class);
@@ -407,7 +415,7 @@ public class TestObserverReadProxyProvider {
    */
   @Test
   public void testInterruptedExceptionGetHAServiceStateWithTimeout() throws Exception {
-    setupProxyProvider(1);
+    setupProxyProvider(1, NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT);
     NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
         (NNProxyInfo<ClientProtocol>) Mockito.mock(NNProxyInfo.class);
     Future<HAServiceState> task = mock(Future.class);
@@ -426,7 +434,7 @@ public class TestObserverReadProxyProvider {
    */
   @Test
   public void testExecutionExceptionGetHAServiceStateWithTimeout() throws Exception {
-    setupProxyProvider(1);
+    setupProxyProvider(1, NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT);
     NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
         (NNProxyInfo<ClientProtocol>) Mockito.mock(NNProxyInfo.class);
     Future<HAServiceState> task = mock(Future.class);
@@ -445,10 +453,7 @@ public class TestObserverReadProxyProvider {
    */
   @Test
   public void testGetHAServiceStateWithoutTimeout() throws Exception {
-    int nnHAStateProbeTimeout = conf.getInt(NAMENODE_HA_STATE_PROBE_TIMEOUT, 25000);
-    // Disable ha-state probe timeout.
-    conf.setInt(NAMENODE_HA_STATE_PROBE_TIMEOUT, 0);
-    setupProxyProvider(1);
+    setupProxyProvider(1, 0);
 
     final HAServiceState state = HAServiceState.STANDBY;
     NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
@@ -461,9 +466,6 @@ public class TestObserverReadProxyProvider {
     verify(task).get();
     verifyNoMoreInteractions(task);
     verify(logger).debug(eq("HA State for {} is {}"), eq(null), eq(state));
-
-    // Restore NAMENODE_HA_STATE_PROBE_TIMEOUT
-    conf.setInt(NAMENODE_HA_STATE_PROBE_TIMEOUT, nnHAStateProbeTimeout);
   }
 
   /**
@@ -477,7 +479,7 @@ public class TestObserverReadProxyProvider {
    */
   @Test
   public void testStandbyGetHAServiceStateLongTimeout() throws Exception {
-    setupProxyProvider(4);
+    setupProxyProvider(4, NAMENODE_HA_STATE_PROBE_TIMEOUT_LONG);
     namenodeAnswers[0].setActiveState();
     namenodeAnswers[1].setSlowNode(true);
     namenodeAnswers[3].setObserverState();
@@ -496,12 +498,10 @@ public class TestObserverReadProxyProvider {
    */
   @Test(timeout = 4000)
   public void testStandbyGetHAServiceStateTimeout() throws Exception {
-    setupProxyProvider(4);
+    setupProxyProvider(4, NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT);
     namenodeAnswers[0].setActiveState();
     namenodeAnswers[1].setSlowNode(true);
     namenodeAnswers[3].setObserverState();
-    proxyProvider.namenodeHAStateProbeTimeoutMs =
-        NAMENODE_HA_STATE_PROBE_TIMEOUT_TEST;
 
     doRead();
   }
