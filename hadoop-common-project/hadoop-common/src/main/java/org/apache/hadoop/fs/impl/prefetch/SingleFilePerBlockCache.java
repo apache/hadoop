@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
@@ -66,7 +67,7 @@ public class SingleFilePerBlockCache implements BlockCache {
    */
   private int numGets = 0;
 
-  private boolean closed;
+  private final AtomicBoolean closed;
 
   private final PrefetchingStatistics prefetchingStatistics;
 
@@ -108,6 +109,7 @@ public class SingleFilePerBlockCache implements BlockCache {
    */
   public SingleFilePerBlockCache(PrefetchingStatistics prefetchingStatistics) {
     this.prefetchingStatistics = requireNonNull(prefetchingStatistics);
+    this.closed = new AtomicBoolean(false);
   }
 
   /**
@@ -141,7 +143,7 @@ public class SingleFilePerBlockCache implements BlockCache {
    */
   @Override
   public void get(int blockNumber, ByteBuffer buffer) throws IOException {
-    if (closed) {
+    if (closed.get()) {
       return;
     }
 
@@ -192,7 +194,7 @@ public class SingleFilePerBlockCache implements BlockCache {
   @Override
   public void put(int blockNumber, ByteBuffer buffer, Configuration conf,
       LocalDirAllocator localDirAllocator) throws IOException {
-    if (closed) {
+    if (closed.get()) {
       return;
     }
 
@@ -258,27 +260,23 @@ public class SingleFilePerBlockCache implements BlockCache {
 
   @Override
   public void close() throws IOException {
-    if (closed) {
-      return;
-    }
+    if (closed.compareAndSet(false, true)) {
+      LOG.info(getStats());
+      int numFilesDeleted = 0;
 
-    closed = true;
-
-    LOG.info(getStats());
-    int numFilesDeleted = 0;
-
-    for (Entry entry : blocks.values()) {
-      try {
-        Files.deleteIfExists(entry.path);
-        prefetchingStatistics.blockRemovedFromFileCache();
-        numFilesDeleted++;
-      } catch (IOException e) {
-        LOG.debug("Failed to delete cache file {}", entry.path, e);
+      for (Entry entry : blocks.values()) {
+        try {
+          Files.deleteIfExists(entry.path);
+          prefetchingStatistics.blockRemovedFromFileCache();
+          numFilesDeleted++;
+        } catch (IOException e) {
+          LOG.debug("Failed to delete cache file {}", entry.path, e);
+        }
       }
-    }
 
-    if (numFilesDeleted > 0) {
-      LOG.info("Deleted {} cache files", numFilesDeleted);
+      if (numFilesDeleted > 0) {
+        LOG.info("Deleted {} cache files", numFilesDeleted);
+      }
     }
   }
 
