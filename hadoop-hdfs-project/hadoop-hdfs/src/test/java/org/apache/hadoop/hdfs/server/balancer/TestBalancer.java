@@ -1528,7 +1528,7 @@ public class TestBalancer {
     cluster = new MiniDFSCluster
         .Builder(conf)
         .numDataNodes(1)
-        .simulatedCapacities(new long[] { BLOCK_SIZE * 10 })
+        .simulatedCapacities(new long[]{BLOCK_SIZE * 10})
         .storageTypes(new StorageType[] { DEFAULT })
         .storagesPerDatanode(1)
         .build();
