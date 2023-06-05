@@ -99,6 +99,8 @@ public class TestObserverReadProxyProvider {
     conf.setTimeDuration(
         OBSERVER_PROBE_RETRY_PERIOD_KEY, 0, TimeUnit.MILLISECONDS);
     conf.setBoolean(HdfsClientConfigKeys.Failover.RANDOM_ORDER, false);
+    // Set namenode ha-state probe timeout to 25s
+    conf.setInt(NAMENODE_HA_STATE_PROBE_TIMEOUT, 25000);
     MockitoAnnotations.initMocks(this);
   }
 
@@ -439,13 +441,42 @@ public class TestObserverReadProxyProvider {
   }
 
   /**
-   * Test the default getHAServiceState with no timeout, when we have a slow NN.
+   * Test GetHAServiceState when timeout is disabled.
+   */
+  @Test
+  public void testGetHAServiceStateWithoutTimeout() throws Exception {
+    int nnHAStateProbeTimeout = conf.getInt(NAMENODE_HA_STATE_PROBE_TIMEOUT, 25000);
+    // Disable ha-state probe timeout.
+    conf.setInt(NAMENODE_HA_STATE_PROBE_TIMEOUT, 0);
+    setupProxyProvider(1);
+
+    final HAServiceState state = HAServiceState.STANDBY;
+    NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
+        (NNProxyInfo<ClientProtocol>) mock(NNProxyInfo.class);
+    Future<HAServiceState> task = mock(Future.class);
+    when(task.get()).thenReturn(state);
+
+    HAServiceState state2 = proxyProvider.getHAServiceStateWithTimeout(dummyNNProxyInfo, task);
+    assertEquals(state, state2);
+    verify(task).get();
+    verifyNoMoreInteractions(task);
+    verify(logger).debug(eq("HA State for {} is {}"), eq(null), eq(state));
+
+    // Restore NAMENODE_HA_STATE_PROBE_TIMEOUT
+    conf.setInt(NAMENODE_HA_STATE_PROBE_TIMEOUT, nnHAStateProbeTimeout);
+  }
+
+  /**
+   * Test getHAServiceState when we have a slow NN, using a 25s timeout.
+   * This is to verify the old behavior without being able to fast-fail (we can also set
+   * namenodeHAStateProbeTimeoutMs to 0 or a negative value and the rest of the test can stay
+   * the same).
    *
    * 5-second (SLOW_RESPONSE_SLEEP_TIME) latency is introduced and we expect that latency is added
    * to the READ operation.
    */
   @Test
-  public void testStandbyGetHAServiceStateNoTimeout() throws Exception {
+  public void testStandbyGetHAServiceStateLongTimeout() throws Exception {
     setupProxyProvider(4);
     namenodeAnswers[0].setActiveState();
     namenodeAnswers[1].setSlowNode(true);
