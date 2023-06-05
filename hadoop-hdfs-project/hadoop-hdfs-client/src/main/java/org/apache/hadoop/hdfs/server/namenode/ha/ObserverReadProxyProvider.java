@@ -96,15 +96,16 @@ public class ObserverReadProxyProvider<T>
   /** Observer probe retry period default to 10 min. */
   static final long OBSERVER_PROBE_RETRY_PERIOD_DEFAULT = 60 * 10 * 1000;
 
-  /** Timeout in ms to cancel the ha-state probe rpc request for an namenode. */
+  /**
+   * Timeout in ms to cancel the ha-state probe rpc request for an namenode.
+   * To disable timeout, set it to 0 or a negative value.
+   */
   static final String NAMENODE_HA_STATE_PROBE_TIMEOUT =
       HdfsClientConfigKeys.Failover.PREFIX + "namenode.ha-state.probe.timeout";
   /**
-   * Namenode ha-state probe timeout default to 25 sec.
-   * ipc.client.connect.timeout defaults to be 20 seconds. So, in 25 seconds,
-   * we can try twice to connect to an NN.
+   * Default to disable namenode ha-state probe timeout.
    */
-  static final long NAMENODE_HA_STATE_PROBE_TIMEOUT_DEFAULT = 25000;  // 25 secs
+  static final long NAMENODE_HA_STATE_PROBE_TIMEOUT_DEFAULT = 0;
 
   /** The inner proxy provider used for active/standby failover. */
   private final AbstractNNFailoverProxyProvider<T> failoverProxy;

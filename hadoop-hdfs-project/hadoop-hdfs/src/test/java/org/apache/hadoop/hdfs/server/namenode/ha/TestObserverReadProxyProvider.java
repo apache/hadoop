@@ -439,10 +439,7 @@ public class TestObserverReadProxyProvider {
   }
 
   /**
-   * Test getHAServiceState when we have a slow NN, using the default timeout (25s).
-   * This is to verify the old behavior without being able to fast-fail (we can also set
-   * namenodeHAStateProbeTimeoutMs to 0 or a negative value and the rest of the test can stay
-   * the same).
+   * Test the default getHAServiceState with no timeout, when we have a slow NN.
    *
    * 5-second (SLOW_RESPONSE_SLEEP_TIME) latency is introduced and we expect that latency is added
    * to the READ operation.
