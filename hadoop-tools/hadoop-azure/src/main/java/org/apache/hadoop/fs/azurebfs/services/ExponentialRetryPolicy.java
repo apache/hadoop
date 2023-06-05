@@ -29,7 +29,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CON
 /**
  * Retry policy used by AbfsClient.
  * */
-public class ExponentialRetryPolicy extends RetryPolicy{
+public class ExponentialRetryPolicy extends RetryPolicy {
   /**
    * Represents the default amount of time used when calculating a random delta in the exponential
    * delay between retries.
@@ -79,11 +79,6 @@ public class ExponentialRetryPolicy extends RetryPolicy{
   private final int minBackoff;
 
   /**
-   * The maximum number of retry attempts.
-   */
-  private final int retryCount;
-
-  /**
    * Initializes a new instance of the {@link ExponentialRetryPolicy} class.
    */
   public ExponentialRetryPolicy(final int maxIoRetries) {
@@ -105,36 +100,17 @@ public class ExponentialRetryPolicy extends RetryPolicy{
   /**
    * Initializes a new instance of the {@link ExponentialRetryPolicy} class.
    *
-   * @param retryCount The maximum number of retry attempts.
+   * @param maxRetryCount The maximum number of retry attempts.
    * @param minBackoff The minimum backoff time.
    * @param maxBackoff The maximum backoff time.
    * @param deltaBackoff The value that will be used to calculate a random delta in the exponential delay
    *                     between retries.
    */
-  public ExponentialRetryPolicy(final int retryCount, final int minBackoff, final int maxBackoff, final int deltaBackoff) {
-    this.retryCount = retryCount;
+  public ExponentialRetryPolicy(final int maxRetryCount, final int minBackoff, final int maxBackoff, final int deltaBackoff) {
+    super(maxRetryCount);
     this.minBackoff = minBackoff;
     this.maxBackoff = maxBackoff;
     this.deltaBackoff = deltaBackoff;
-  }
-
-  /**
-   * Returns if a request should be retried based on the retry count, current response,
-   * and the current strategy. The valid http status code lies in the range of 1xx-5xx.
-   * But an invalid status code might be set due to network or timeout kind of issues.
-   * Such invalid status code also qualify for retry.
-   *
-   * @param retryCount The current retry attempt count.
-   * @param statusCode The status code of the response, or -1 for socket error.
-   * @return true if the request should be retried; false otherwise.
-   */
-  public boolean shouldRetry(final int retryCount, final int statusCode) {
-    return retryCount < this.retryCount
-        && (statusCode < HTTP_CONTINUE
-        || statusCode == HttpURLConnection.HTTP_CLIENT_TIMEOUT
-        || (statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR
-            && statusCode != HttpURLConnection.HTTP_NOT_IMPLEMENTED
-            && statusCode != HttpURLConnection.HTTP_VERSION));
   }
 
   /**
@@ -154,11 +130,6 @@ public class ExponentialRetryPolicy extends RetryPolicy{
     final long retryInterval = (int) Math.round(Math.min(this.minBackoff + incrementDelta, maxBackoff));
 
     return retryInterval;
-  }
-
-  @VisibleForTesting
-  int getRetryCount() {
-    return this.retryCount;
   }
 
   @VisibleForTesting

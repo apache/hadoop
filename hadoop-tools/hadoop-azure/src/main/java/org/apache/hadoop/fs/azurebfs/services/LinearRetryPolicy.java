@@ -24,7 +24,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 /**
  * Linear Retry policy used by AbfsClient.
  * */
-public class LinearRetryPolicy extends RetryPolicy{
+public class LinearRetryPolicy extends RetryPolicy {
   
   /**
    * Represents the default maximum amount of time used when calculating the
@@ -42,7 +42,7 @@ public class LinearRetryPolicy extends RetryPolicy{
    * Represents the delta by which retry interval should be incremented
    * for each retry count
    */
-  private static final int INTERVAL_DELTA_ONE_SEND = 1000; // 1s
+  private static final int INTERVAL_DELTA_ONE_SECOND = 1000; // 1s
 
   /**
    * The maximum backoff time.
@@ -53,11 +53,6 @@ public class LinearRetryPolicy extends RetryPolicy{
    * The minimum backoff time.
    */
   private final int minBackoff;
-
-  /**
-   * The maximum number of retry attempts.
-   */
-  private final int retryCount;
 
   /**
    * Whether we want to double up the retry interval
@@ -90,27 +85,16 @@ public class LinearRetryPolicy extends RetryPolicy{
   /**
    * Initializes a new instance of the {@link LinearRetryPolicy} class.
    *
-   * @param retryCount The maximum number of retry attempts.
+   * @param maxRetryCount The maximum number of retry attempts.
    * @param minBackoff The minimum backoff time.
    * @param maxBackoff The maximum backoff time.
    * @param doubleStepUpEnabled Type of linear increment, double or increment
    */
-  public LinearRetryPolicy(final int retryCount, final int minBackoff, final int maxBackoff, final boolean doubleStepUpEnabled) {
-    this.retryCount = retryCount;
+  public LinearRetryPolicy(final int maxRetryCount, final int minBackoff, final int maxBackoff, final boolean doubleStepUpEnabled) {
+    super(maxRetryCount);
     this.minBackoff = minBackoff;
     this.maxBackoff = maxBackoff;
     this.doubleStepUpEnabled = doubleStepUpEnabled;
-  }
-
-  /**
-   * Returns if a request should be retried based on the retry count
-   *
-   * @param retryCount The current retry attempt count.
-   * @param statusCode The status code of last failed request
-   * @return true if the request should be retried; false otherwise.
-   */
-  public boolean shouldRetry(final int retryCount, final int statusCode) {
-    return retryCount < this.retryCount;
   }
 
   /**
@@ -127,16 +111,11 @@ public class LinearRetryPolicy extends RetryPolicy{
 
     final double incrementDelta = doubleStepUpEnabled
         ? minBackoff * Math.pow(2, retryCount)
-        : minBackoff + retryCount * INTERVAL_DELTA_ONE_SEND;
+        : minBackoff + retryCount * INTERVAL_DELTA_ONE_SECOND;
 
     final long retryInterval = (int) Math.round(Math.min(incrementDelta, maxBackoff));
 
     return retryInterval;
-  }
-
-  @VisibleForTesting
-  int getRetryCount() {
-    return this.retryCount;
   }
 
   @VisibleForTesting
@@ -153,5 +132,4 @@ public class LinearRetryPolicy extends RetryPolicy{
   boolean getDoubleStepUpEnabled() {
     return this.doubleStepUpEnabled;
   }
-
 }

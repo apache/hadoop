@@ -229,10 +229,12 @@ public class AbfsClient implements Closeable {
   }
 
   public RetryPolicy getRetryPolicy(final String failureReason) {
-    if (failureReason == null || !failureReason.equals(CONNECTION_TIMEOUT_ABBREVIATION))
-      return getExponentialRetryPolicy();
-    else
+    if (CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason)) {
       return getLinearRetryPolicy();
+    }
+    else {
+      return getExponentialRetryPolicy();
+    }
   }
 
   SharedKeyCredentials getSharedKeyCredentials() {
