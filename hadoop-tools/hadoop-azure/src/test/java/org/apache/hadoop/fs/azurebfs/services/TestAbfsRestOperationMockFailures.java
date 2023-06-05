@@ -280,7 +280,7 @@ public class TestAbfsRestOperationMockFailures {
      * It will be called with failureReason CT for every request failing with CT
      */
     Mockito.verify(abfsClient, Mockito.times(
-        3 * numOfCTExceptions))
+        numOfCTExceptions))
         .getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
   }
 

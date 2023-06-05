@@ -81,6 +81,7 @@ public class AbfsRestOperation {
    * AbfsRestOperation object.
    */
   private String failureReason;
+  private RetryPolicy retryPolicy;
 
   /**
    * Checks if there is non-null HTTP response.
@@ -225,6 +226,7 @@ public class AbfsRestOperation {
     }
 
     retryCount = 0;
+    retryPolicy = client.getExponentialRetryPolicy();
     LOG.debug("First execution of REST operation - {}", operationType);
     while (!executeHttpOperation(retryCount, tracingContext)) {
       try {
@@ -232,7 +234,7 @@ public class AbfsRestOperation {
         tracingContext.setRetryCount(retryCount);
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
-        Thread.sleep(client.getRetryPolicy(failureReason).getRetryInterval(retryCount));
+        Thread.sleep(retryPolicy.getRetryInterval(retryCount));
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
       }
@@ -310,9 +312,10 @@ public class AbfsRestOperation {
       String hostname = null;
       hostname = httpOperation.getHost();
       failureReason = RetryReason.getAbbreviation(ex, null, null);
+      retryPolicy = client.getRetryPolicy(failureReason);
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
-      if (!client.getRetryPolicy(failureReason).shouldRetry(retryCount, -1)) {
+      if (!retryPolicy.shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
       return false;
@@ -322,8 +325,8 @@ public class AbfsRestOperation {
       }
 
       failureReason = RetryReason.getAbbreviation(ex, -1, "");
-
-      if (!client.getRetryPolicy(failureReason).shouldRetry(retryCount, -1)) {
+      retryPolicy = client.getRetryPolicy(failureReason);
+      if (!retryPolicy.shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
 
@@ -347,9 +350,11 @@ public class AbfsRestOperation {
 
     LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
 
-    if (client.getRetryPolicy(failureReason).shouldRetry(retryCount, httpOperation.getStatusCode())) {
-      int status = httpOperation.getStatusCode();
-      failureReason = RetryReason.getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
+    int status = httpOperation.getStatusCode();
+    failureReason = RetryReason.getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
+    retryPolicy = client.getRetryPolicy(failureReason);
+
+    if (retryPolicy.shouldRetry(retryCount, httpOperation.getStatusCode())) {
       return false;
     }
 
