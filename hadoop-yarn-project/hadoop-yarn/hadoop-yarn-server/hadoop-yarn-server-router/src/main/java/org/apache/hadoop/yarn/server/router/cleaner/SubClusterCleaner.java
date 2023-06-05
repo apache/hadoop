@@ -47,7 +47,7 @@ public class SubClusterCleaner implements Runnable {
     federationFacade = FederationStateStoreFacade.getInstance();
     this.heartbeatExpirationMillis =
         conf.getTimeDuration(YarnConfiguration.ROUTER_SUBCLUSTER_EXPIRATION_TIME,
-        YarnConfiguration.DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME, TimeUnit.MINUTES);
+        YarnConfiguration.DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME, TimeUnit.MILLISECONDS);
   }
 
   @Override
