@@ -1211,6 +1211,19 @@ public class YarnConfiguration extends Configuration {
       DEFAULT_RM_ENABLE_NODE_UNTRACKED_WITHOUT_INCLUDE_PATH = false;
 
   /**
+   * When non empty, untracked nodes are deleted only if their state is one of
+   * the states defined by this config. When empty, all the states are eligible
+   * for removal
+   * Eligible states are defined by enum values here:
+   * @see org.apache.hadoop.yarn.api.records.NodeState
+   * Example: LOST,DECOMMISSIONED
+   */
+  public static final String RM_NODEMANAGER_UNTRACKED_NODE_SELECTIVE_STATES_TO_REMOVE =
+      RM_PREFIX + "node-removal-untracked.node-selective-states-to-remove";
+  public static final String[]
+      DEFAULT_RM_NODEMANAGER_UNTRACKED_NODE_SELECTIVE_STATES_TO_REMOVE = {};
+
+  /**
    * RM proxy users' prefix
    */
   public static final String RM_PROXY_USER_PREFIX = RM_PREFIX + "proxyuser.";
