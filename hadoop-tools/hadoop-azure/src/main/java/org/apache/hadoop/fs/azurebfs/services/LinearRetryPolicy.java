@@ -105,6 +105,7 @@ public class LinearRetryPolicy extends RetryPolicy {
    * @param retryCount The current retry attempt count.
    * @return backoff Interval time
    */
+  @Override
   public long getRetryInterval(final int retryCount) {
     if (retryCount <= 0) {
       return minBackoff;

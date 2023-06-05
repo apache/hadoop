@@ -120,6 +120,7 @@ public class ExponentialRetryPolicy extends RetryPolicy {
    * @param retryCount The current retry attempt count.
    * @return backoff Interval time
    */
+  @Override
   public long getRetryInterval(final int retryCount) {
     final long boundedRandDelta = (int) (this.deltaBackoff * MIN_RANDOM_RATIO)
         + this.randRef.nextInt((int) (this.deltaBackoff * MAX_RANDOM_RATIO)
