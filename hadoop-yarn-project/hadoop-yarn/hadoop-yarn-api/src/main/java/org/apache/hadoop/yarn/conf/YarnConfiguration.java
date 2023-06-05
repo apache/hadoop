@@ -394,7 +394,8 @@ public class YarnConfiguration extends Configuration {
   /** The expiry interval for application master reporting.*/
   public static final String RM_AM_EXPIRY_INTERVAL_MS = 
     YARN_PREFIX  + "am.liveness-monitor.expiry-interval-ms";
-  public static final int DEFAULT_RM_AM_EXPIRY_INTERVAL_MS = 600000;
+  public static final long DEFAULT_RM_AM_EXPIRY_INTERVAL_MS =
+      TimeUnit.MINUTES.toMillis(15);
 
   /** How long to wait until a node manager is considered dead.*/
   public static final String RM_NM_EXPIRY_INTERVAL_MS = 
@@ -4958,6 +4959,17 @@ public class YarnConfiguration extends Configuration {
   // default is 30s
   public static final String APPS_CACHE_EXPIRE = YARN_PREFIX + "apps.cache.expire";
   public static final String DEFAULT_APPS_CACHE_EXPIRE = "30s";
+
+  /** Enabled trigger log-dir deletion by size for NonAggregatingLogHandler. */
+  public static final String NM_LOG_TRIGGER_DELETE_BY_SIZE_ENABLED = NM_PREFIX +
+      "log.trigger.delete.by-size.enabled";
+  public static final boolean DEFAULT_NM_LOG_TRIGGER_DELETE_BY_SIZE_ENABLED = false;
+
+  /** Trigger log-dir deletion when the total log size of an app is greater than
+   *  yarn.nodemanager.log.delete.threshold.
+   *  Depends on yarn.nodemanager.log.trigger.delete.by-size.enabled = true. */
+  public static final String NM_LOG_DELETE_THRESHOLD = NM_PREFIX + "log.delete.threshold";
+  public static final long DEFAULT_NM_LOG_DELETE_THRESHOLD = 100L * 1024 * 1024 * 1024;
 
   public YarnConfiguration() {
     super();

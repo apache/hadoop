@@ -78,7 +78,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @return generic type B.
    * @see #opt(String, String)
    */
-  B opt(@Nonnull String key, boolean value);
+  default B opt(@Nonnull String key, boolean value) {
+    return opt(key, Boolean.toString(value));
+  }
 
   /**
    * Set optional int parameter for the Builder.
@@ -88,7 +90,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @return generic type B.
    * @see #opt(String, String)
    */
-  B opt(@Nonnull String key, int value);
+  default B opt(@Nonnull String key, int value) {
+    return optLong(key, value);
+  }
 
   /**
    * This parameter is converted to a long and passed
@@ -102,7 +106,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @deprecated use {@link #optDouble(String, double)}
    */
   @Deprecated
-  B opt(@Nonnull String key, float value);
+  default B opt(@Nonnull String key, float value) {
+    return optLong(key, (long) value);
+  }
 
   /**
    * Set optional long parameter for the Builder.
@@ -112,7 +118,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @return generic type B.
    * @deprecated use  {@link #optLong(String, long)} where possible.
    */
-  B opt(@Nonnull String key, long value);
+  default B opt(@Nonnull String key, long value) {
+    return optLong(key, value);
+  }
 
   /**
    * Pass an optional double parameter for the Builder.
@@ -126,7 +134,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @deprecated use {@link #optDouble(String, double)}
    */
   @Deprecated
-  B opt(@Nonnull String key, double value);
+  default B opt(@Nonnull String key, double value) {
+    return optLong(key, (long) value);
+  }
 
   /**
    * Set an array of string values as optional parameter for the Builder.
@@ -146,7 +156,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @return generic type B.
    * @see #opt(String, String)
    */
-  B optLong(@Nonnull String key, long value);
+  default B optLong(@Nonnull String key, long value) {
+    return opt(key, Long.toString(value));
+  }
 
   /**
    * Set optional double parameter for the Builder.
@@ -156,7 +168,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @return generic type B.
    * @see #opt(String, String)
    */
-  B optDouble(@Nonnull String key, double value);
+  default B optDouble(@Nonnull String key, double value) {
+    return opt(key, Double.toString(value));
+  }
 
   /**
    * Set mandatory option to the Builder.
@@ -178,7 +192,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @return generic type B.
    * @see #must(String, String)
    */
-  B must(@Nonnull String key, boolean value);
+  default B must(@Nonnull String key, boolean value) {
+    return must(key, Boolean.toString(value));
+  }
 
   /**
    * Set mandatory int option.
@@ -188,7 +204,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @return generic type B.
    * @see #must(String, String)
    */
-  B must(@Nonnull String key, int value);
+  default B must(@Nonnull String key, int value) {
+    return mustLong(key, value);
+  }
 
   /**
    * This parameter is converted to a long and passed
@@ -201,7 +219,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @deprecated use {@link #mustDouble(String, double)} to set floating point.
    */
   @Deprecated
-  B must(@Nonnull String key, float value);
+  default B must(@Nonnull String key, float value) {
+    return mustLong(key, (long) value);
+  }
 
   /**
    * Set mandatory long option.
@@ -212,7 +232,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @see #must(String, String)
    */
   @Deprecated
-  B must(@Nonnull String key, long value);
+  default B must(@Nonnull String key, long value) {
+    return mustLong(key, (long) value);
+  }
 
   /**
    * Set mandatory long option, despite passing in a floating
@@ -224,7 +246,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @see #must(String, String)
    */
   @Deprecated
-  B must(@Nonnull String key, double value);
+  default B must(@Nonnull String key, double value) {
+    return mustLong(key, (long) value);
+  }
 
   /**
    * Set a string array as mandatory option.
@@ -244,7 +268,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @return generic type B.
    * @see #opt(String, String)
    */
-  B mustLong(@Nonnull String key, long value);
+  default B mustLong(@Nonnull String key, long value) {
+    return must(key, Long.toString(value));
+  }
 
   /**
    * Set mandatory double parameter for the Builder.
@@ -254,7 +280,9 @@ public interface FSBuilder<S, B extends FSBuilder<S, B>> {
    * @return generic type B.
    * @see #opt(String, String)
    */
-  B mustDouble(@Nonnull String key, double value);
+  default B mustDouble(@Nonnull String key, double value) {
+    return must(key, Double.toString(value));
+  }
 
   /**
    * Instantiate the object which was being built.
