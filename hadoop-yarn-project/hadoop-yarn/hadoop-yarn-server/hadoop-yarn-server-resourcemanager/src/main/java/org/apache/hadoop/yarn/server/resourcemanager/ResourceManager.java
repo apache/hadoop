@@ -592,7 +592,7 @@ public class ResourceManager extends CompositeService
   protected AMLivelinessMonitor createAMLivelinessMonitor() {
     return new AMLivelinessMonitor(this.rmDispatcher);
   }
-  
+
   protected RMNodeLabelsManager createNodeLabelManager()
       throws InstantiationException, IllegalAccessException {
     return new RMNodeLabelsManager();
@@ -613,7 +613,7 @@ public class ResourceManager extends CompositeService
     // Use the in memory Placement Constraint Manager.
     return new MemoryPlacementConstraintManager();
   }
-  
+
   protected DelegationTokenRenewer createDelegationTokenRenewer() {
     return new DelegationTokenRenewer();
   }
@@ -771,7 +771,7 @@ public class ResourceManager extends CompositeService
       AMLivelinessMonitor amFinishingMonitor = createAMLivelinessMonitor();
       addService(amFinishingMonitor);
       rmContext.setAMFinishingMonitor(amFinishingMonitor);
-      
+
       RMAppLifetimeMonitor rmAppLifetimeMonitor = createRMAppLifetimeMonitor();
       addService(rmAppLifetimeMonitor);
       rmContext.setRMAppLifetimeMonitor(rmAppLifetimeMonitor);
@@ -1478,6 +1478,8 @@ public class ResourceManager extends CompositeService
 
     try {
       webApp = builder.start(new RMWebApp(this), uiWebAppContext);
+      InetSocketAddress webAddr = webApp.httpServer().getConnectorAddress(0);
+      LOG.info("RMWebApp at " + webAddr.getHostName() + ":" + webAddr.getPort());
     } catch (WebAppException e) {
       webApp = e.getWebApp();
       throw e;
@@ -1603,7 +1605,7 @@ public class ResourceManager extends CompositeService
       transitionToActive();
     }
   }
-  
+
   protected void doSecureLogin() throws IOException {
 	InetSocketAddress socAddr = getBindAddress(conf);
     SecurityUtil.login(this.conf, YarnConfiguration.RM_KEYTAB,
@@ -1634,7 +1636,7 @@ public class ResourceManager extends CompositeService
     rmContext.setHAServiceState(HAServiceState.STOPPING);
     rmStatusInfoBean.unregister();
   }
-  
+
   protected ResourceTrackerService createResourceTrackerService() {
     return new ResourceTrackerService(this.rmContext, this.nodesListManager,
         this.nmLivelinessMonitor,
