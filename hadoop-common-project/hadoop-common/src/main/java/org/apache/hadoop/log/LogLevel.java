@@ -42,6 +42,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.logging.HadoopLoggerUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
@@ -50,8 +51,6 @@ import org.apache.hadoop.util.GenericsUtil;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 
 /**
  * Change log level in runtime.
@@ -349,7 +348,7 @@ public class LogLevel {
         }
 
         if (GenericsUtil.isLog4jLogger(logName)) {
-          process(Logger.getLogger(logName), level, out);
+          process(logName, level, out);
         } else {
           out.println("Sorry, setting log level is only supported for log4j loggers.<br />");
         }
@@ -368,19 +367,17 @@ public class LogLevel {
         + "<input type='submit' value='Set Log Level' />"
         + "</form>";
 
-    private static void process(Logger log, String level,
-        PrintWriter out) throws IOException {
+    private static void process(String log, String level, PrintWriter out) {
       if (level != null) {
-        if (!level.equalsIgnoreCase(Level.toLevel(level)
-            .toString())) {
-          out.println(MARKER + "Bad Level : <b>" + level + "</b><br />");
-        } else {
-          log.setLevel(Level.toLevel(level));
+        try {
+          HadoopLoggerUtils.setLogLevel(log, level);
           out.println(MARKER + "Setting Level to " + level + " ...<br />");
+        } catch (IllegalArgumentException e) {
+          out.println(MARKER + "Bad Level : <b>" + level + "</b><br />");
         }
       }
-      out.println(MARKER
-          + "Effective Level: <b>" + log.getEffectiveLevel() + "</b><br />");
+      out.println(MARKER + "Effective Level: <b>" + HadoopLoggerUtils.getEffectiveLevel(log)
+          + "</b><br />");
     }
 
   }

@@ -22,8 +22,8 @@ import java.io.File;
 
 import org.junit.Assert;
 
-import org.apache.log4j.Logger;
 import org.junit.Test;
+import org.slf4j.Logger;
 
 public class TestClassUtil {
   @Test(timeout=10000)
@@ -35,6 +35,6 @@ public class TestClassUtil {
     Assert.assertTrue("Containing jar does not exist on file system ",
         jarFile.exists());
     Assert.assertTrue("Incorrect jar file " + containingJar,
-        jarFile.getName().matches("log4j.*[.]jar"));
+        jarFile.getName().matches("slf4j-api.*[.]jar"));
   }
 }

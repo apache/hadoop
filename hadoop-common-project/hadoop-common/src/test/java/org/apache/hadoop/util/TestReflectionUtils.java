@@ -28,7 +28,7 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.logging.LogCapturer;
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;

@@ -32,11 +32,11 @@ import org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics;
 import org.apache.hadoop.hdfs.server.namenode.visitor.INodeCountVisitor;
 import org.apache.hadoop.hdfs.server.namenode.visitor.INodeCountVisitor.Counts;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.logging.HadoopLoggerUtils;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,13 +110,13 @@ public class FsImageValidation {
   }
 
   static void initLogLevels() {
-    Util.setLogLevel(FSImage.class, Level.TRACE);
-    Util.setLogLevel(FileJournalManager.class, Level.TRACE);
+    Util.setLogLevel(FSImage.class, "TRACE");
+    Util.setLogLevel(FileJournalManager.class, "TRACE");
 
-    Util.setLogLevel(GSet.class, Level.OFF);
-    Util.setLogLevel(BlockManager.class, Level.OFF);
-    Util.setLogLevel(DatanodeManager.class, Level.OFF);
-    Util.setLogLevel(TopMetrics.class, Level.OFF);
+    Util.setLogLevel(GSet.class, "OFF");
+    Util.setLogLevel(BlockManager.class, "OFF");
+    Util.setLogLevel(DatanodeManager.class, "OFF");
+    Util.setLogLevel(TopMetrics.class, "OFF");
   }
 
   static class Util {
@@ -127,11 +127,10 @@ public class FsImageValidation {
           + ", max=" + StringUtils.byteDesc(runtime.maxMemory());
     }
 
-    static void setLogLevel(Class<?> clazz, Level level) {
-      final org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(clazz);
-      logger.setLevel(level);
+    static void setLogLevel(Class<?> clazz, String level) {
+      HadoopLoggerUtils.setLogLevel(clazz.getName(), level);
       LOG.info("setLogLevel {} to {}, getEffectiveLevel() = {}", clazz.getName(), level,
-          logger.getEffectiveLevel());
+          HadoopLoggerUtils.getEffectiveLevel(clazz.getName()));
     }
 
     static String toCommaSeparatedNumber(long n) {

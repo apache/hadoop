@@ -52,6 +52,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.logging.HadoopLoggerUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -451,7 +452,7 @@ public class Client {
     if (cliParser.hasOption("log_properties")) {
       String log4jPath = cliParser.getOptionValue("log_properties");
       try {
-        Log4jPropertyHelper.updateLog4jConfiguration(Client.class, log4jPath);
+        HadoopLoggerUtils.updateLog4jConfiguration(Client.class, log4jPath);
       } catch (Exception e) {
         LOG.warn("Can not set up custom log4j properties. " + e);
       }

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.service;
 
-import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.logging.LogCapturer;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
 
-import static org.apache.hadoop.test.GenericTestUtils.LogCapturer.captureLogs;
+import static org.apache.hadoop.logging.LogCapturer.captureLogs;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
