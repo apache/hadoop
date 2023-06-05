@@ -407,7 +407,7 @@ public class TestObserverReadProxyProvider {
     verify(task).get(anyLong(), any(TimeUnit.class));
     verify(task).cancel(true);
     verifyNoMoreInteractions(task);
-    verify(logger).debug(eq("Cancel NN probe task due to timeout for {}: {}"), eq(null), eq(e));
+    verify(logger).warn(eq("Cancel NN probe task due to timeout for {}: {}"), eq(null), eq(e));
   }
 
   /**
@@ -426,7 +426,7 @@ public class TestObserverReadProxyProvider {
     assertNull(state);
     verify(task).get(anyLong(), any(TimeUnit.class));
     verifyNoMoreInteractions(task);
-    verify(logger).debug(eq("Exception in NN probe task for {}: {}"), eq(null), eq(e));
+    verify(logger).warn(eq("Exception in NN probe task for {}: {}"), eq(null), eq(e));
   }
 
   /**
@@ -445,7 +445,7 @@ public class TestObserverReadProxyProvider {
     assertNull(state);
     verify(task).get(anyLong(), any(TimeUnit.class));
     verifyNoMoreInteractions(task);
-    verify(logger).debug(eq("Exception in NN probe task for {}: {}"), eq(null), eq(e));
+    verify(logger).warn(eq("Exception in NN probe task for {}: {}"), eq(null), eq(e));
   }
 
   /**

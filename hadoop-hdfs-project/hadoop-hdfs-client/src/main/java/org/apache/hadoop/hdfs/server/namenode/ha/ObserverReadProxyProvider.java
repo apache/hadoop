@@ -335,7 +335,6 @@ public class ObserverReadProxyProvider<T>
    * the second function.
    */
   HAServiceState getHAServiceStateWithTimeout(final NNProxyInfo<T> proxyInfo) {
-
     Callable<HAServiceState> getHAServiceStateTask = () -> getHAServiceState(proxyInfo);
 
     try {
@@ -364,12 +363,12 @@ public class ObserverReadProxyProvider<T>
       LOG.debug("HA State for {} is {}", proxyInfo.proxyInfo, state);
     } catch (TimeoutException e) {
       // Cancel the task on timeout
-      LOG.debug("Cancel NN probe task due to timeout for {}: {}", proxyInfo.proxyInfo, e);
+      LOG.warn("Cancel NN probe task due to timeout for {}: {}", proxyInfo.proxyInfo, e);
       if (task != null) {
         task.cancel(true);
       }
     } catch (InterruptedException|ExecutionException e) {
-      LOG.debug("Exception in NN probe task for {}: {}", proxyInfo.proxyInfo, e);
+      LOG.warn("Exception in NN probe task for {}: {}", proxyInfo.proxyInfo, e);
     }
 
     return state;
