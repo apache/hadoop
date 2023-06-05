@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.client.cli;
 
+import com.blinkfox.minitable.MiniTable;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -1774,28 +1775,19 @@ public class TestYarnCLI {
     verify(client).getAllQueues();
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter writer = new PrintWriter(baos);
-    writer.print(queueInfos.size() + " queues were found : \n");
-    writer.print("Queue Name\tQueue Path\tState\tCapacity\tCurrent Capacity\t" +
-        "Maximum Capacity\tWeight\tMaximum Parallel Apps\n");
+    MiniTable miniTable = new MiniTable(queueInfos.size() + " queues were found")
+        .addHeaders("Queue Name", "Queue Path", "State", "Capacity",
+            "Current Capacity", "Maximum Capacity", "Weight", "Maximum Parallel Apps");
+    DecimalFormat df = new DecimalFormat("#.00");
     for (QueueInfo queueInfoe : queueInfos) {
-      writer.print(queueInfoe.getQueueName());
-      writer.print("\t");
-      writer.print(queueInfoe.getQueuePath());
-      writer.print("\t");
-      writer.print(queueInfoe.getQueueState());
-      DecimalFormat df = new DecimalFormat("#.00");
-      writer.print("\t");
-      writer.print(df.format(queueInfoe.getCapacity() * 100) + "%");
-      writer.print("\t");
-      writer.print(df.format(queueInfoe.getCurrentCapacity() * 100) + "%");
-      writer.print("\t");
-      writer.print(df.format(queueInfoe.getMaximumCapacity() * 100) + "%");
-      writer.print("\t");
-      writer.print(df.format(queueInfoe.getWeight()));
-      writer.print("\t");
-      writer.print(queueInfoe.getMaxParallelApps());
-      writer.print("\n");
+      miniTable.addDatas(queueInfoe.getQueueName(),queueInfoe.getQueuePath()
+          ,queueInfoe.getQueueState(),df.format(queueInfoe.getCapacity() * 100) + "%"
+          ,df.format(queueInfoe.getCurrentCapacity() * 100) + "%"
+          ,df.format(queueInfoe.getMaximumCapacity() * 100) + "%"
+          ,df.format(queueInfoe.getWeight())
+          ,queueInfoe.getMaxParallelApps());
     }
+    writer.print(miniTable.render());
     writer.close();
     String queueInfoStr = baos.toString("UTF-8");
     Assert.assertEquals(queueInfoStr, sysOutStream.toString());

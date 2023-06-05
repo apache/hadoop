@@ -175,6 +175,12 @@
       <groupId>org.jline</groupId>
       <artifactId>jline</artifactId>
     </dependency>
+
+    <dependency>
+      <groupId>com.blinkfox</groupId>
+      <artifactId>mini-table</artifactId>
+      <version>1.0.0</version>
+    </dependency>
   </dependencies>
 
   <build>
