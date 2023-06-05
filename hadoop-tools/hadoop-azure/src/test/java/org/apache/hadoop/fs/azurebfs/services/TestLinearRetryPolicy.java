@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LIST_MAX_RESULTS;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
@@ -36,6 +35,9 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNEC
  * between {@link RetryPolicy}, {@link LinearRetryPolicy}, {@link ExponentialRetryPolicy}
  */
 public class TestLinearRetryPolicy extends AbstractAbfsIntegrationTest {
+
+  private final int MIN_BACKOFF = 500;
+  private final int ONE_SECOND = 1000;
 
   public TestLinearRetryPolicy() throws Exception {
     super();
@@ -71,10 +73,14 @@ public class TestLinearRetryPolicy extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(retryPolicy).isInstanceOf(LinearRetryPolicy.class);
     Assertions.assertThat(((LinearRetryPolicy) retryPolicy).getDoubleStepUpEnabled()).isEqualTo(true);
 
-    Assertions.assertThat(retryPolicy.getRetryInterval(0)).isEqualTo(500);
-    Assertions.assertThat(retryPolicy.getRetryInterval(1)).isEqualTo(1000);
-    Assertions.assertThat(retryPolicy.getRetryInterval(2)).isEqualTo(2000);
-    Assertions.assertThat(retryPolicy.getRetryInterval(3)).isEqualTo(4000);
+    Assertions.assertThat(retryPolicy.getRetryInterval(0))
+        .isEqualTo(MIN_BACKOFF);
+    Assertions.assertThat(retryPolicy.getRetryInterval(1))
+        .isEqualTo(2 * MIN_BACKOFF);
+    Assertions.assertThat(retryPolicy.getRetryInterval(2))
+        .isEqualTo(4 * MIN_BACKOFF);
+    Assertions.assertThat(retryPolicy.getRetryInterval(3))
+        .isEqualTo(8 * MIN_BACKOFF);
   }
 
   @Test
@@ -89,9 +95,13 @@ public class TestLinearRetryPolicy extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(retryPolicy).isInstanceOf(LinearRetryPolicy.class);
     Assertions.assertThat(((LinearRetryPolicy) retryPolicy).getDoubleStepUpEnabled()).isEqualTo(false);
 
-    Assertions.assertThat(retryPolicy.getRetryInterval(0)).isEqualTo(500);
-    Assertions.assertThat(retryPolicy.getRetryInterval(1)).isEqualTo(1500);
-    Assertions.assertThat(retryPolicy.getRetryInterval(2)).isEqualTo(2500);
-    Assertions.assertThat(retryPolicy.getRetryInterval(3)).isEqualTo(3500);
+    Assertions.assertThat(retryPolicy.getRetryInterval(0))
+        .isEqualTo(MIN_BACKOFF);
+    Assertions.assertThat(retryPolicy.getRetryInterval(1))
+        .isEqualTo(ONE_SECOND + MIN_BACKOFF);
+    Assertions.assertThat(retryPolicy.getRetryInterval(2))
+        .isEqualTo(2 * ONE_SECOND + MIN_BACKOFF);
+    Assertions.assertThat(retryPolicy.getRetryInterval(3))
+        .isEqualTo(3 * ONE_SECOND + MIN_BACKOFF);
   }
 }
