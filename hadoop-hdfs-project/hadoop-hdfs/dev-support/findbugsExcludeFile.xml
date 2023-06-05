@@ -310,4 +310,14 @@
       <Method name="reconcile" />
       <Bug pattern="SWL_SLEEP_WITH_LOCK_HELD" />
     </Match>
+    <!--
+     conversionPattern is only set once and used to initiate PatternLayout object
+     only once. It is set by log4j framework if set as part of log4j properties and accessed
+     only during first append operation.
+    -->
+    <Match>
+      <Class name="org.apache.hadoop.hdfs.util.AsyncRFAAppender"/>
+      <Field name="conversionPattern"/>
+      <Bug pattern="IS2_INCONSISTENT_SYNC"/>
+    </Match>
 </FindBugsFilter>

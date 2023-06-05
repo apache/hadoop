@@ -68,7 +68,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
@@ -77,8 +76,10 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
+import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.Logger;
+import org.apache.log4j.spi.LoggingEvent;
 import org.mockito.Mockito;
-import org.slf4j.LoggerFactory;
 
 public class TestConfiguration {
 
@@ -219,7 +220,9 @@ public class TestConfiguration {
     InputStream in2 = new ByteArrayInputStream(bytes2);
 
     // Attach our own log appender so we can verify output
-    LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger("root"));
+    TestAppender appender = new TestAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
 
     try {
       // Add the 2 different resources - this should generate a warning
@@ -227,13 +230,17 @@ public class TestConfiguration {
       conf.addResource(in2);
       assertEquals("should see the first value", "A", conf.get("prop"));
 
-      String renderedMessage = logCapturer.getOutput();
-      assertTrue("did not see expected string inside message " + renderedMessage,
-          renderedMessage.contains(
-              "an attempt to override final parameter: " + "prop;  Ignoring."));
+      List<LoggingEvent> events = appender.getLog();
+      assertEquals("overriding a final parameter should cause logging", 1,
+          events.size());
+      LoggingEvent loggingEvent = events.get(0);
+      String renderedMessage = loggingEvent.getRenderedMessage();
+      assertTrue("did not see expected string inside message "+ renderedMessage,
+          renderedMessage.contains("an attempt to override final parameter: "
+              + "prop;  Ignoring."));
     } finally {
       // Make sure the appender is removed
-      logCapturer.stopCapturing();
+      logger.removeAppender(appender);
     }
   }
 
@@ -251,7 +258,9 @@ public class TestConfiguration {
     InputStream in2 = new ByteArrayInputStream(bytes);
 
     // Attach our own log appender so we can verify output
-    LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger("root"));
+    TestAppender appender = new TestAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
 
     try {
       // Add the resource twice from a stream - should not generate warnings
@@ -259,14 +268,19 @@ public class TestConfiguration {
       conf.addResource(in2);
       assertEquals("A", conf.get("prop"));
 
-      String appenderOutput = logCapturer.getOutput();
+      List<LoggingEvent> events = appender.getLog();
+      for (LoggingEvent loggingEvent : events) {
+        System.out.println("Event = " + loggingEvent.getRenderedMessage());
+      }
       assertTrue("adding same resource twice should not cause logging",
-          appenderOutput.isEmpty());
+          events.isEmpty());
     } finally {
       // Make sure the appender is removed
-      logCapturer.stopCapturing();
+      logger.removeAppender(appender);
     }
   }
+
+
 
   @Test
   public void testFinalWarningsMultiple() throws Exception {
@@ -281,19 +295,24 @@ public class TestConfiguration {
     InputStream in1 = new ByteArrayInputStream(bytes);
 
     // Attach our own log appender so we can verify output
-    LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger("root"));
+    TestAppender appender = new TestAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
 
     try {
       // Add the resource - this should not produce a warning
       conf.addResource(in1);
       assertEquals("should see the value", "A", conf.get("prop"));
 
-      String appenderOutput = logCapturer.getOutput();
+      List<LoggingEvent> events = appender.getLog();
+      for (LoggingEvent loggingEvent : events) {
+        System.out.println("Event = " + loggingEvent.getRenderedMessage());
+      }
       assertTrue("adding same resource twice should not cause logging",
-          appenderOutput.isEmpty());
+          events.isEmpty());
     } finally {
       // Make sure the appender is removed
-      logCapturer.stopCapturing();
+      logger.removeAppender(appender);
     }
   }
 
@@ -310,20 +329,48 @@ public class TestConfiguration {
     InputStream in1 = new ByteArrayInputStream(bytes);
 
     // Attach our own log appender so we can verify output
-    LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger("root"));
+    TestAppender appender = new TestAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
 
     try {
       // Add the resource - this should produce a warning
       conf.addResource(in1);
       assertEquals("should see the value", "A", conf.get("prop"));
 
-      String renderedMessage = logCapturer.getOutput();
-      assertTrue("did not see expected string inside message " + renderedMessage,
-          renderedMessage.contains(
-              "an attempt to override final parameter: " + "prop;  Ignoring."));
+      List<LoggingEvent> events = appender.getLog();
+      assertEquals("overriding a final parameter should cause logging", 1,
+          events.size());
+      LoggingEvent loggingEvent = events.get(0);
+      String renderedMessage = loggingEvent.getRenderedMessage();
+      assertTrue("did not see expected string inside message "+ renderedMessage,
+          renderedMessage.contains("an attempt to override final parameter: "
+              + "prop;  Ignoring."));
     } finally {
       // Make sure the appender is removed
-      logCapturer.stopCapturing();
+      logger.removeAppender(appender);
+    }
+  }
+
+  /**
+   * A simple appender for white box testing.
+   */
+  private static class TestAppender extends AppenderSkeleton {
+    private final List<LoggingEvent> log = new ArrayList<>();
+
+    @Override public boolean requiresLayout() {
+      return false;
+    }
+
+    @Override protected void append(final LoggingEvent loggingEvent) {
+      log.add(loggingEvent);
+    }
+
+    @Override public void close() {
+    }
+
+    public List<LoggingEvent> getLog() {
+      return new ArrayList<>(log);
     }
   }
 

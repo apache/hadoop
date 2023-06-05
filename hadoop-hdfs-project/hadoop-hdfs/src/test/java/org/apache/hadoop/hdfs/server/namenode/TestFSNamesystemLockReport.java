@@ -29,8 +29,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.logging.LogCapturer;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -60,7 +58,7 @@ public class TestFSNamesystemLockReport {
   private MiniDFSCluster cluster;
   private FileSystem fs;
   private UserGroupInformation userGroupInfo;
-  private LogCapturer logs;
+  private GenericTestUtils.LogCapturer logs;
 
   @Before
   public void setUp() throws Exception {
@@ -78,7 +76,7 @@ public class TestFSNamesystemLockReport {
     userGroupInfo = UserGroupInformation.createUserForTesting("bob",
         new String[] {"hadoop"});
 
-    logs = LogCapturer.captureLogs(FSNamesystem.LOG);
+    logs = GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.LOG);
     GenericTestUtils
         .setLogLevel(LoggerFactory.getLogger(FSNamesystem.class.getName()),
         org.slf4j.event.Level.INFO);

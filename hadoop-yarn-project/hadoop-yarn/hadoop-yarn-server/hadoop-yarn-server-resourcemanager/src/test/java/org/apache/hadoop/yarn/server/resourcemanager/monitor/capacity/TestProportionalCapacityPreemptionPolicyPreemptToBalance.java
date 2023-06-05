@@ -18,11 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import org.apache.hadoop.logging.HadoopLoggerUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.Test;
 import java.io.IOException;
 import java.util.Map;
@@ -156,7 +157,7 @@ public class TestProportionalCapacityPreemptionPolicyPreemptToBalance
 
   @Test
   public void testPreemptionToBalanceWithVcoreResource() throws IOException {
-    HadoopLoggerUtils.setLogLevel("root", "DEBUG");
+    Logger.getRootLogger().setLevel(Level.DEBUG);
     String labelsConfig = "=100:100,true"; // default partition
     String nodesConfig = "n1="; // only one node
     String queuesConfig =
@@ -194,7 +195,7 @@ public class TestProportionalCapacityPreemptionPolicyPreemptToBalance
 
   @Test
   public void testPreemptionToBalanceWithConfiguredTimeout() throws IOException {
-    HadoopLoggerUtils.setLogLevel("root", "DEBUG");
+    Logger.getRootLogger().setLevel(Level.DEBUG);
     String labelsConfig = "=100:100,true"; // default partition
     String nodesConfig = "n1="; // only one node
     String queuesConfig =

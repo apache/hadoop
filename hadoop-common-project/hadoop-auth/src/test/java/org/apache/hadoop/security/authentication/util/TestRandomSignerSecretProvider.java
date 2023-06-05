@@ -15,7 +15,8 @@ package org.apache.hadoop.security.authentication.util;
 
 import java.util.Random;
 
-import org.apache.hadoop.logging.HadoopLoggerUtils;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -29,8 +30,9 @@ public class TestRandomSignerSecretProvider {
   private final int timeout = 500;
   private final long rolloverFrequency = timeout / 2;
 
-  static {
-    HadoopLoggerUtils.setLogLevel(RolloverSignerSecretProvider.LOG.getName(), "DEBUG");
+  {
+    LogManager.getLogger(
+        RolloverSignerSecretProvider.LOG.getName()).setLevel(Level.DEBUG);
   }
 
   @Test

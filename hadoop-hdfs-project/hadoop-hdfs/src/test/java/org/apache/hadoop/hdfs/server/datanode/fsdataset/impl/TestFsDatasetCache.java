@@ -18,8 +18,6 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import net.jcip.annotations.NotThreadSafe;
-
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
@@ -53,6 +51,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -80,10 +79,10 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.CacheManipulator;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.NoMlockCacheManipulator;
-import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
+import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -394,7 +393,9 @@ public class TestFsDatasetCache {
     }
 
     // nth file should hit a capacity exception
-    LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger("root"));
+    final LogVerificationAppender appender = new LogVerificationAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
     setHeartbeatResponse(cacheBlocks(fileLocs[numFiles-1]));
 
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
@@ -402,12 +403,11 @@ public class TestFsDatasetCache {
       public Boolean get() {
         // check the log reported by FsDataSetCache
         // in the case that cache capacity is exceeded.
-        int lines = StringUtils.countMatches(logCapturer.getOutput(),
+        int lines = appender.countLinesWithMessage(
             "could not reserve more bytes in the cache: ");
         return lines > 0;
       }
     }, 500, 30000);
-    logCapturer.stopCapturing();
     // Also check the metrics for the failure
     assertTrue("Expected more than 0 failed cache attempts",
         fsd.getNumBlocksFailedToCache() > 0);

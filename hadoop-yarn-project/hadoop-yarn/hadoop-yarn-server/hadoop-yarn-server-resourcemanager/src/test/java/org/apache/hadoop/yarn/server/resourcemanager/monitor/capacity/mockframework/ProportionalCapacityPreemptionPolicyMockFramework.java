@@ -16,7 +16,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework;
 
-import org.apache.hadoop.logging.HadoopLoggerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.TestProportionalCapacityPreemptionPolicyForNodePartitions;
 import org.slf4j.Logger;
@@ -111,7 +110,8 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
   public void setup() {
     resetResourceInformationMap();
 
-    HadoopLoggerUtils.setLogLevel("root", "DEBUG");
+    org.apache.log4j.Logger.getRootLogger().setLevel(
+        org.apache.log4j.Level.DEBUG);
 
     conf = new CapacitySchedulerConfiguration(new Configuration(false));
     conf.setLong(

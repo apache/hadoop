@@ -18,24 +18,23 @@
 package org.apache.hadoop.crypto.key.kms.server;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FilterOutputStream;
+import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.server.KMS.KMSOp;
-import org.apache.hadoop.logging.HadoopLoggerUtils;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-
+import org.apache.hadoop.util.ThreadUtil;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.PropertyConfigurator;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -68,23 +67,24 @@ public class TestKMSAudit {
   public final Timeout testTimeout = new Timeout(180000L, TimeUnit.MILLISECONDS);
 
   @Before
-  public void setUp() throws IOException, URISyntaxException {
+  public void setUp() throws IOException {
     originalOut = System.err;
     memOut = new ByteArrayOutputStream();
     filterOut = new FilterOut(memOut);
     capturedOut = new PrintStream(filterOut);
     System.setErr(capturedOut);
-    URL url = getClass().getClassLoader().getResource("log4j-kmsaudit.properties");
-    File file = Paths.get(url.toURI()).toFile();
-    HadoopLoggerUtils.updateLog4jConfiguration(KMSAudit.class, file.getAbsolutePath());
+    InputStream is =
+        ThreadUtil.getResourceAsStream("log4j-kmsaudit.properties");
+    PropertyConfigurator.configure(is);
+    IOUtils.closeStream(is);
     Configuration conf = new Configuration();
     this.kmsAudit = new KMSAudit(conf);
   }
 
   @After
-  public void cleanUp() throws Exception {
+  public void cleanUp() {
     System.setErr(originalOut);
-    HadoopLoggerUtils.resetConfiguration();
+    LogManager.resetConfiguration();
     kmsAudit.shutdown();
   }
 

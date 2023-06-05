@@ -43,6 +43,7 @@ import org.apache.hadoop.security.SaslRpcServer.QualityOfProtection;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.client.util.YarnClientUtils;
+import org.apache.log4j.Logger;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -51,8 +52,6 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Test Spnego Client Login.
@@ -77,7 +76,8 @@ public class TestSecureApiServiceClient extends KerberosSecurityTestcase {
 
   private Map<String, String> props;
   private static Server server;
-  private static Logger LOG = LoggerFactory.getLogger(TestSecureApiServiceClient.class);
+  private static Logger LOG = Logger
+      .getLogger(TestSecureApiServiceClient.class);
   private ApiServiceClient asc;
 
   /**

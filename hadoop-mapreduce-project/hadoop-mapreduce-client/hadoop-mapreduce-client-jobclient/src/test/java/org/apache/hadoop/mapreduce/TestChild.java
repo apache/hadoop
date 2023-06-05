@@ -29,6 +29,8 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.log4j.Level;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
@@ -74,10 +76,12 @@ public class TestChild extends HadoopTestCase {
                      mapJavaOpts, 
                      mapJavaOpts, MAP_OPTS_VAL);
       }
-
-      String logLevel = conf.get(JobConf.MAPRED_MAP_TASK_LOG_LEVEL, "INFO");
-      assertEquals(JobConf.MAPRED_MAP_TASK_LOG_LEVEL + "has value of " + logLevel, logLevel,
-          "OFF");
+      
+      Level logLevel = 
+        Level.toLevel(conf.get(JobConf.MAPRED_MAP_TASK_LOG_LEVEL, 
+                               Level.INFO.toString()));  
+      assertEquals(JobConf.MAPRED_MAP_TASK_LOG_LEVEL + "has value of " + 
+                   logLevel, logLevel, Level.OFF);
     }
   }
   
@@ -104,10 +108,12 @@ public class TestChild extends HadoopTestCase {
                      reduceJavaOpts, 
                      reduceJavaOpts, REDUCE_OPTS_VAL);
       }
-
-      String logLevel = conf.get(JobConf.MAPRED_REDUCE_TASK_LOG_LEVEL, "INFO");
-      assertEquals(JobConf.MAPRED_REDUCE_TASK_LOG_LEVEL + "has value of " + logLevel, logLevel,
-          "OFF");
+      
+      Level logLevel = 
+        Level.toLevel(conf.get(JobConf.MAPRED_REDUCE_TASK_LOG_LEVEL, 
+                               Level.INFO.toString()));  
+      assertEquals(JobConf.MAPRED_REDUCE_TASK_LOG_LEVEL + "has value of " + 
+                   logLevel, logLevel, Level.OFF);
     }
   }
   
@@ -121,9 +127,9 @@ public class TestChild extends HadoopTestCase {
       conf.set(JobConf.MAPRED_MAP_TASK_JAVA_OPTS, MAP_OPTS_VAL);
       conf.set(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, REDUCE_OPTS_VAL);
     }
-
-    conf.set(JobConf.MAPRED_MAP_TASK_LOG_LEVEL, "OFF");
-    conf.set(JobConf.MAPRED_REDUCE_TASK_LOG_LEVEL, "OFF");
+    
+    conf.set(JobConf.MAPRED_MAP_TASK_LOG_LEVEL, Level.OFF.toString());
+    conf.set(JobConf.MAPRED_REDUCE_TASK_LOG_LEVEL, Level.OFF.toString());
     
     Job job = MapReduceTestUtil.createJob(conf, inDir, outDir, 
                 numMaps, numReds);
