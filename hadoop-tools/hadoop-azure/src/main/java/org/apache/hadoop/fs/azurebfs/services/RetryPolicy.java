@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.net.HttpURLConnection;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
+
 /**
  * Abstract Class for Retry policy to be used by {@link AbfsClient}
  * Implementation to be used is based on retry cause.
@@ -25,15 +29,32 @@ package org.apache.hadoop.fs.azurebfs.services;
 public abstract class RetryPolicy {
 
   /**
+   * The maximum number of retry attempts.
+   */
+  protected final int maxRetryCount;
+
+  public RetryPolicy(final int maxRetryCount) {
+    this.maxRetryCount = maxRetryCount;
+  }
+
+  /**
    * Returns if a request should be retried based on the retry count, current response,
-   * and the current strategy.
-   * Child class should define exact behavior
+   * and the current strategy. The valid http status code lies in the range of 1xx-5xx.
+   * But an invalid status code might be set due to network or timeout kind of issues.
+   * Such invalid status code also qualify for retry.
    *
    * @param retryCount The current retry attempt count.
    * @param statusCode The status code of the response, or -1 for socket error.
    * @return true if the request should be retried; false otherwise.
    */
-  public abstract boolean shouldRetry(final int retryCount, final int statusCode);
+  public boolean shouldRetry(final int retryCount, final int statusCode) {
+    return retryCount < this.maxRetryCount
+        && (statusCode < HTTP_CONTINUE
+        || statusCode == HttpURLConnection.HTTP_CLIENT_TIMEOUT
+        || (statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR
+        && statusCode != HttpURLConnection.HTTP_NOT_IMPLEMENTED
+        && statusCode != HttpURLConnection.HTTP_VERSION));
+  }
 
   /**
    * Returns backoff interval to be used for a particular retry count
@@ -43,4 +64,8 @@ public abstract class RetryPolicy {
    * @return backoff Interval time
    */
   public abstract long getRetryInterval(final int retryCount);
+
+  protected int getMaxRetryCount() {
+    return maxRetryCount;
+  }
 }
