@@ -342,7 +342,7 @@ public class ObserverReadProxyProvider<T>
           nnProbingThreadPool.submit(getHAServiceStateTask);
       return getHAServiceStateWithTimeout(proxyInfo, task);
     } catch (RejectedExecutionException e) {
-      LOG.debug("Run out of threads to submit the request to query HA state. "
+      LOG.warn("Run out of threads to submit the request to query HA state. "
           + "Ok to return null and we will fallback to use active NN to serve "
           + "this request.");
       return null;
