@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
  * Linear Retry policy used by AbfsClient.
  * */
 public class LinearRetryPolicy extends RetryPolicy {
-  
+
   /**
    * Represents the default maximum amount of time used when calculating the
    * linear delay between retries.
@@ -63,6 +63,7 @@ public class LinearRetryPolicy extends RetryPolicy {
 
   /**
    * Initializes a new instance of the {@link LinearRetryPolicy} class.
+   * @param maxIoRetries Maximum Retry Count Allowed
    */
   public LinearRetryPolicy(final int maxIoRetries) {
 
@@ -72,7 +73,6 @@ public class LinearRetryPolicy extends RetryPolicy {
 
   /**
    * Initializes a new instance of the {@link LinearRetryPolicy} class.
-   *
    * @param conf The {@link AbfsConfiguration} from which to retrieve retry configuration.
    */
   public LinearRetryPolicy(AbfsConfiguration conf) {
@@ -106,8 +106,9 @@ public class LinearRetryPolicy extends RetryPolicy {
    * @return backoff Interval time
    */
   public long getRetryInterval(final int retryCount) {
-    if (retryCount <= 0)
-        return minBackoff;
+    if (retryCount <= 0) {
+      return minBackoff;
+    }
 
     final double incrementDelta = doubleStepUpEnabled
         ? minBackoff * Math.pow(2, retryCount)
