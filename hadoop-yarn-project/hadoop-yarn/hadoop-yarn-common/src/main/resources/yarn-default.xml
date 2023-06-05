@@ -5293,4 +5293,27 @@
     </description>
   </property>
 
+  <property>
+    <name>yarn.nodemanager.log.trigger.delete.by-size.enabled</name>
+    <value>false</value>
+    <description>
+      Optional.
+      Enabled trigger log-dir deletion by size for NonAggregatingLogHandler
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.log.delete.threshold</name>
+    <value>100g</value>
+    <description>
+      Optional.
+      Trigger log-dir deletion when the total log size of an app is greater than
+      yarn.nodemanager.log.delete.threshold and
+      yarn.nodemanager.log.trigger.delete.by-size.enabled = true.
+      You can use the following suffix (case insensitive): k(kilo), m(mega), g(giga), t(tera), p(peta),
+      e(exa) to specify the size (such as 128k, 512m, 1g, etc.),
+      Or provide complete size in bytes (such as 134217728 for 128 MB).
+    </description>
+  </property>
+
 </configuration>
