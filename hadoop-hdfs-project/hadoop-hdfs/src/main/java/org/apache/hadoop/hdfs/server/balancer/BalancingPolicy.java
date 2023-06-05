@@ -118,7 +118,7 @@ abstract class BalancingPolicy {
           totalUsed += (s.getCapacity() - s.getRemaining());
         }
       }
-      return capacity == 0L? null: totalUsed*100.0/capacity;
+      return capacity == 0L ? null : totalUsed * 100.0 / capacity;
     }
   }
 
