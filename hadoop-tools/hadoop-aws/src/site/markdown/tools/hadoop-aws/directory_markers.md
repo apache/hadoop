@@ -14,7 +14,7 @@
 
 # Controlling the S3A Directory Marker Behavior
 
-This document discusses an performance feature of the S3A
+This document discusses a performance feature of the S3A
 connector: directory markers are not deleted unless the
 client is explicitly configured to do so.
 
@@ -24,7 +24,7 @@ This document shows how the performance of S3 I/O, especially applications
 creating many files (for example Apache Hive) or working with versioned S3 buckets can
 increase performance by changing the S3A directory marker retention policy.
 
-The default policy in this release of hadoop is "keep", 
+The default policy in this release of hadoop is "keep",
 which _is not backwards compatible_ with hadoop versions
 released before 2021.
 
@@ -252,7 +252,7 @@ of backwards compatibility.
 There is now an option `fs.s3a.directory.marker.retention` which controls how
 markers are managed when new files are created
 
-1.`delete`: a request is issued to delete any parental directory markers
+1. `delete`: a request is issued to delete any parental directory markers
 whenever a file or directory is created.
 2. `keep`: No delete request is issued.
 Any directory markers which exist are not deleted.
@@ -262,7 +262,7 @@ in "authoritative" directories_. This is backwards compatible _outside authorita
 
 The setting, `fs.s3a.directory.marker.retention = delete` is compatible with
 every shipping Hadoop release; that of `keep` compatible with
-all releases since 2021
+all releases since 2021.
 
 ##  <a name="s3guard"></a> Directory Markers and Authoritative paths
 
@@ -315,18 +315,17 @@ Example: `s3guard bucket-info -markers aware` on a compatible release.
 
 ```
 > hadoop s3guard bucket-info -markers aware s3a://landsat-pds/
- Filesystem s3a://landsat-pds
- Location: us-west-2
+Filesystem s3a://landsat-pds
+Location: us-west-2
 
 ...
 
- Security
-    Delegation token support is disabled
+Directory Markers
+        The directory marker policy is "keep"
+        Available Policies: delete, keep, authoritative
+        Authoritative paths: fs.s3a.authoritative.path=
+        The S3A connector is compatible with buckets where directory markers are not deleted
 
- The directory marker policy is "delete"
-
- The S3A connector is compatible with buckets where directory markers are not deleted
- Available Policies: delete, keep, authoritative
 ```
 
 The same command will fail on older releases, because the `-markers` option
@@ -355,20 +354,24 @@ Generic options supported are:
 A specific policy check verifies that the connector is configured as desired
 
 ```
-> hadoop s3guard bucket-info -markers delete s3a://landsat-pds/
+> hadoop s3guard bucket-info -markers keep s3a://landsat-pds/
 Filesystem s3a://landsat-pds
 Location: us-west-2
 
 ...
 
-The directory marker policy is "delete"
+Directory Markers
+        The directory marker policy is "keep"
+        Available Policies: delete, keep, authoritative
+        Authoritative paths: fs.s3a.authoritative.path=
+
 ```
 
 When probing for a specific policy, the error code "46" is returned if the active policy
 does not match that requested:
 
 ```
-> hadoop s3guard bucket-info -markers keep s3a://landsat-pds/
+> hadoop s3guard bucket-info -markers delete s3a://landsat-pds/
 Filesystem s3a://landsat-pds
 Location: us-west-2
 
@@ -401,7 +404,7 @@ Directory Markers
 ```
 
 
-##  <a name="marker-tool"></a> The marker tool:`hadoop s3guard markers`
+##  <a name="marker-tool"></a> The marker tool: `hadoop s3guard markers`
 
 The marker tool aims to help migration by scanning/auditing directory trees
 for surplus markers, and for optionally deleting them.
@@ -449,7 +452,7 @@ Audit the path and fail if any markers were found.
 ```
 > hadoop s3guard markers -limit 8000 -audit s3a://landsat-pds/
 
-The directory marker policy of s3a://landsat-pds is "Delete"
+The directory marker policy of s3a://landsat-pds is "Keep"
 2020-08-05 13:42:56,079 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: marker scan s3a://landsat-pds/
 Scanned 1,000 objects
 Scanned 2,000 objects
@@ -474,7 +477,6 @@ are found under the path `/tables`.
 ```
 > bin/hadoop s3guard markers -audit s3a://london/
 
-  2020-08-05 18:29:16,473 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(143)) - Directory markers will be kept on authoritative paths
   The directory marker policy of s3a://london is "Authoritative"
   Authoritative path list is "/tables"
   2020-08-05 18:29:19,186 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: marker scan s3a://london/
@@ -504,7 +506,6 @@ The `-nonauth` option does not treat markers under authoritative paths as errors
 ```
 bin/hadoop s3guard markers -nonauth -audit s3a://london/
 
-2020-08-05 18:31:16,255 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(143)) - Directory markers will be kept on authoritative paths
 The directory marker policy of s3a://london is "Authoritative"
 Authoritative path list is "/tables"
 2020-08-05 18:31:19,210 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: marker scan s3a://london/
@@ -536,44 +537,53 @@ The `markers clean` command will clean the directory tree of all surplus markers
 The `-verbose` option prints more detail on the operation as well as some IO statistics
 
 ```
-> hadoop s3guard markers -clean -verbose s3a://london/
+bin/hadoop s3guard markers -clean -verbose s3a://stevel-london/
+The directory marker policy of s3a://stevel-london is "Keep"
+2023-06-06 17:15:52,110 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: marker scan s3a://stevel-london/
+  Directory Marker user/stevel/target/test/data/4so7pZebRx/
+  Directory Marker user/stevel/target/test/data/OKvfC3oxlD/
+  Directory Marker user/stevel/target/test/data/VSTQ1O4dMi/
 
-2020-08-05 18:33:25,303 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(143)) - Directory markers will be kept on authoritative paths
-The directory marker policy of s3a://london is "Authoritative"
-Authoritative path list is "/tables"
-2020-08-05 18:33:28,511 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: marker scan s3a://london/
-  Directory Marker tables
-  Directory Marker tables/tables-2/
-  Directory Marker tables/tables-3/
-  Directory Marker tables/tables-4/
-  Directory Marker tables/tables-4/tables-5/
-  Directory Marker tables/tables-4/tables-5/06/
-  Directory Marker tables2/
-  Directory Marker tables3/
-2020-08-05 18:33:31,685 [main] INFO  tools.MarkerTool (DurationInfo.java:close(98)) - marker scan s3a://london/: duration 0:03.175s
-Listed 8 objects under s3a://london/
+Listing statistics:
+  counters=((object_continue_list_request=0) (object_list_request.failures=0) (object_list_request=1) (object_continue_list_request.failures=0));
+gauges=();
+minimums=((object_list_request.min=540) (object_continue_list_request.min=-1) (object_continue_list_request.failures.min=-1) (object_list_request.failures.min=-1));
+maximums=((object_continue_list_request.failures.max=-1) (object_list_request.failures.max=-1) (object_list_request.max=540) (object_continue_list_request.max=-1));
+means=((object_list_request.mean=(samples=1, sum=540, mean=540.0000)) (object_continue_list_request.failures.mean=(samples=0, sum=0, mean=0.0000)) (object_list_request.failures.mean=(samples=0, sum=0, mean=0.0000)) (object_continue_list_request.mean=(samples=0, sum=0, mean=0.0000)));
 
-Found 3 surplus directory markers under s3a://london/
-    s3a://london/tables/
-    s3a://london/tables/tables-4/
-    s3a://london/tables/tables-4/tables-5/
-Found 5 empty directory 'leaf' markers under s3a://london/
-    s3a://london/tables/tables-2/
-    s3a://london/tables/tables-3/
-    s3a://london/tables/tables-4/tables-5/06/
-    s3a://london/tables2/
-    s3a://london/tables3/
+
+2023-06-06 17:15:52,662 [main] INFO  tools.MarkerTool (DurationInfo.java:close(98)) - marker scan s3a://stevel-london/: duration 0:00.553s
+Listed 3 objects under s3a://stevel-london/
+
+No surplus directory markers were found under s3a://stevel-london/
+Found 3 empty directory 'leaf' markers under s3a://stevel-london/
+    s3a://stevel-london/user/stevel/target/test/data/4so7pZebRx/
+    s3a://stevel-london/user/stevel/target/test/data/OKvfC3oxlD/
+    s3a://stevel-london/user/stevel/target/test/data/VSTQ1O4dMi/
 These are required to indicate empty directories
 
-3 markers to delete in 1 page of 250 keys/page
-2020-08-05 18:33:31,688 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: Deleting markers
-2020-08-05 18:33:31,812 [main] INFO  tools.MarkerTool (DurationInfo.java:close(98)) - Deleting markers: duration 0:00.124s
+0 markers to delete in 0 pages of 250 keys/page
+2023-06-06 17:15:52,664 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: Deleting markers
+2023-06-06 17:15:52,664 [main] INFO  tools.MarkerTool (DurationInfo.java:close(98)) - Deleting markers: duration 0:00.000s
 
-Storage Statistics for s3a://london
+IO Statistics for s3a://stevel-london
 
-op_get_file_status	1
-object_delete_requests	1
-object_list_requests	2
+counters=((audit_request_execution=1)
+(audit_span_creation=3)
+(object_list_request=1)
+(op_get_file_status=1)
+(store_io_request=1));
+
+gauges=();
+
+minimums=((object_list_request.min=540)
+(op_get_file_status.min=2));
+
+maximums=((object_list_request.max=540)
+(op_get_file_status.max=2));
+
+means=((object_list_request.mean=(samples=1, sum=540, mean=540.0000))
+(op_get_file_status.mean=(samples=1, sum=2, mean=2.0000)));
 ```
 
 The `markers -clean` command _does not_ delete markers above empty directories -only those which have
