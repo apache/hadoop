@@ -87,6 +87,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitFdResponse.DO_NOT_USE_RECEIPT_VERIFICATION;
@@ -1076,6 +1077,44 @@ class DataXceiver extends Receiver implements Runnable {
 
     //update metrics
     datanode.metrics.addBlockChecksumOp(elapsed());
+  }
+
+  @Override
+  public void copyBlockCrossNamespace(
+      final ExtendedBlock srcBlock, final Token<BlockTokenIdentifier> srcBlockToken,
+      final ExtendedBlock targetBlock, final Token<BlockTokenIdentifier> targetBlockToken,
+      final DatanodeInfo targetDN) throws IOException {
+    updateCurrentThreadName("Copying block cross namespace " + srcBlock);
+    final DataOutputStream reply = getBufferedOutputStream();
+    try {
+      // Check access
+      checkAccess(reply, true, srcBlock, srcBlockToken,
+          Op.COPY_BLOCK_CROSS_NAMESPACE, BlockTokenIdentifier.AccessMode.COPY);
+      checkAccess(reply, true, targetBlock, targetBlockToken,
+          Op.COPY_BLOCK_CROSS_NAMESPACE, BlockTokenIdentifier.AccessMode.WRITE);
+
+      // Async copy the block
+      Future<?> result = datanode.internalCopyBlockCrossNamespace(srcBlock, targetBlock, targetDN);
+      try {
+        result.get(dnConf.getCopyBlockCrossNamespaceSocketTimeout(), TimeUnit.MILLISECONDS);
+      } catch (Exception e) {
+        LOG.error("CopyBlockCrossNamespace from {} to {} to {} failed,", srcBlock, targetBlock,
+            targetDN, e);
+        throw new IOException(e);
+      }
+
+      writeResponse(Status.SUCCESS, null, reply);
+    } catch (IOException ioe) {
+      LOG.warn("CopyBlockCrossNamespace from {} to {} to {} received exception,",
+          srcBlock, targetBlock, targetDN, ioe);
+      incrDatanodeNetworkErrors();
+      throw ioe;
+    } finally {
+      IOUtils.closeStream(reply);
+    }
+
+    //update metrics
+    datanode.metrics.addCopyBlockCrossNamespaceOp(elapsed());
   }
 
   @Override

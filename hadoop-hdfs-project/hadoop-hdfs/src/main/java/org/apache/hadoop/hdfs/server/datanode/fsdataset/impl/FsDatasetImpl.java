@@ -67,6 +67,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataSetLockManager;
 import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.LocalReplica;
+import org.apache.hadoop.hdfs.server.datanode.LocalReplicaInPipeline;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -204,6 +205,46 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         return null;
       }
       return new Block(blkid, r.getBytesOnDisk(), r.getGenerationStamp());
+    }
+  }
+
+  @Override
+  public void hardLinkOneBlock(ExtendedBlock srcBlock, ExtendedBlock targetBlock)
+      throws IOException {
+    ReplicaInfo srcReplicaInfo = getReplicaInfo(srcBlock);
+    FsVolumeImpl volume = (FsVolumeImpl) srcReplicaInfo.getVolume();
+    try (FsVolumeReference ref = volume.obtainReference()) {
+      if (volume.getAvailable() < targetBlock.getNumBytes()) {
+        throw new DiskOutOfSpaceException("Insufficient space for hardlink block " + srcBlock);
+      }
+
+      BlockPoolSlice targetBP = volume.getBlockPoolSlice(targetBlock.getBlockPoolId());
+      targetBlock.setNumBytes(srcBlock.getNumBytes());
+
+      // Create one LocalReplicaInPipeline for target block.
+      LocalReplicaInPipeline replica = new ReplicaBuilder(ReplicaState.TEMPORARY)
+          .setBlockId(targetBlock.getBlockId())
+          .setGenerationStamp(targetBlock.getGenerationStamp())
+          .setDirectoryToUse(targetBP.getTmpDir())
+          .setBytesToReserve(targetBlock.getLocalBlock().getNumBytes())
+          .setFsVolume(volume)
+          .buildLocalReplicaInPipeline();
+
+      // hard link source block path to tmp dest block path.
+      // hard link source block meta path to tmp dest block meta path.
+      hardLinkBlockFiles(srcReplicaInfo, replica.getMetaFile(), replica.getBlockFile());
+
+      try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,
+          targetBlock.getBlockPoolId(), replica.getStorageUuid())) {
+        // Finalize the target block.
+        File targetBlockFile = targetBP.addFinalizedBlock(targetBlock.getLocalBlock(), replica);
+        ReplicaInfo finalizedReplica = new FinalizedReplica(targetBlock.getLocalBlock(),
+            volume, targetBlockFile.getParentFile());
+        volumeMap.add(targetBlock.getBlockPoolId(), finalizedReplica);
+      }
+
+      datanode.notifyNamenodeReceivedBlock(targetBlock, null,
+          replica.getStorageUuid(), replica.isOnTransientStorage());
     }
   }
 
@@ -1046,7 +1087,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           + srcReplica + " metadata to "
           + dstMeta, e);
     }
-    LOG.debug("Linked {} to {} . Dest meta file: {}", srcReplicaUri, dstFile,
+    LOG.debug("Linked {} to dest block file: {}, dest meta file: {}", srcReplicaUri, dstFile,
         dstMeta);
     return new File[]{dstMeta, dstFile};
   }

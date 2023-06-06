@@ -64,6 +64,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BP_READY_TIMEOUT
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BP_READY_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CHECKSUM_EC_SOCKET_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CHECKSUM_EC_SOCKET_TIMEOUT_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_COPY_BLOCK_CROSS_NAMESPACE_SOCKET_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_COPY_BLOCK_CROSS_NAMESPACE_SOCKET_TIMEOUT_DEFAULT;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -88,6 +90,7 @@ public class DNConf {
   final int socketWriteTimeout;
   final int socketKeepaliveTimeout;
   final int ecChecksumSocketTimeout;
+  private final int copyBlockCrossNamespaceSocketTimeout;
   private final int transferSocketSendBufferSize;
   private final int transferSocketRecvBufferSize;
   private final boolean tcpNoDelay;
@@ -152,6 +155,9 @@ public class DNConf {
     ecChecksumSocketTimeout = getConf().getInt(
         DFS_CHECKSUM_EC_SOCKET_TIMEOUT_KEY,
         DFS_CHECKSUM_EC_SOCKET_TIMEOUT_DEFAULT);
+    this.copyBlockCrossNamespaceSocketTimeout = getConf().getInt(
+        DFS_COPY_BLOCK_CROSS_NAMESPACE_SOCKET_TIMEOUT_KEY,
+        DFS_COPY_BLOCK_CROSS_NAMESPACE_SOCKET_TIMEOUT_DEFAULT);
     this.transferSocketSendBufferSize = getConf().getInt(
         DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_SEND_BUFFER_SIZE_KEY,
         DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_SEND_BUFFER_SIZE_DEFAULT);
@@ -387,6 +393,15 @@ public class DNConf {
    */
   public int getEcChecksumSocketTimeout() {
     return ecChecksumSocketTimeout;
+  }
+
+  /**
+   * Returns socket timeout for cross-namespace block copying.
+   *
+   * @return int socket timeout
+   */
+  public int getCopyBlockCrossNamespaceSocketTimeout() {
+    return copyBlockCrossNamespaceSocketTimeout;
   }
 
   /**
