@@ -64,7 +64,7 @@ public class TestCapacitySchedulerDynamicBehavior {
   private MockRM rm;
 
   @Before
-  public void setUp() {
+  public void setUp() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupPlanQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -72,6 +72,7 @@ public class TestCapacitySchedulerDynamicBehavior {
     conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, false);
     rm = new MockRM(conf);
     rm.start();
+    rm.registerNode("n1:1234", 64 * GB, 64);
   }
 
   @Test

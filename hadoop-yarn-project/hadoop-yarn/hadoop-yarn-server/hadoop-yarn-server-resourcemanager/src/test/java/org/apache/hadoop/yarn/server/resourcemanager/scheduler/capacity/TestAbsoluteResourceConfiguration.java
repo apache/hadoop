@@ -571,9 +571,13 @@ public class TestAbsoluteResourceConfiguration {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     try {
       cs.reinitialize(csConf, rm.getRMContext());
-      Assert.fail();
+      if (csConf.isLegacyQueueMode()) {
+        Assert.fail();
+      }
     } catch (IOException e) {
-      Assert.assertTrue(e instanceof IOException);
+      if (!csConf.isLegacyQueueMode()) {
+        Assert.fail();
+      }
       Assert.assertTrue(e.getMessage().contains("Failed to re-init queues"));
     }
 
@@ -588,9 +592,13 @@ public class TestAbsoluteResourceConfiguration {
 
     try {
       cs.reinitialize(csConf1, rm.getRMContext());
-      Assert.fail();
+      if (csConf.isLegacyQueueMode()) {
+        Assert.fail();
+      }
     } catch (IOException e) {
-      Assert.assertTrue(e instanceof IOException);
+      if (!csConf.isLegacyQueueMode()) {
+        Assert.fail();
+      }
       Assert.assertEquals("Failed to re-init queues : Parent Queues capacity: "
           + "<memory:51200, vCores:5> is less than to its children:"
           + "<memory:102400, vCores:10> for queue:queueA", e.getMessage());

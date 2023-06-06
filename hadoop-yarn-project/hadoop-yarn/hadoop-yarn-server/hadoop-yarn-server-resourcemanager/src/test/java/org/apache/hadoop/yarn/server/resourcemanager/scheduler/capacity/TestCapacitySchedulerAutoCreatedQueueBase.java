@@ -251,8 +251,8 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     nm1.registerNode();
 
     NodeLabel gpuLabel = Records.newRecord(NodeLabel.class);
-    ssdLabel.setName(NODEL_LABEL_GPU);
-    ssdLabel.setExclusivity(true);
+    gpuLabel.setName(NODEL_LABEL_GPU);
+    gpuLabel.setExclusivity(true);
 
     //Label = GPU
     nm2 = new MockNM("h2:1234",

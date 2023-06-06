@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
@@ -53,6 +54,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.CSQueueUtils.EPSILON;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE;
 
 /**
  * Capacity Management policy for auto created leaf queues
@@ -415,7 +417,8 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
     try {
       CSQueueUtils.updateAbsoluteCapacitiesByNodeLabels(
           policy.leafQueueTemplate.getQueueCapacities(),
-          parentQueueCapacities, policy.leafQueueTemplateNodeLabels);
+          parentQueueCapacities, policy.leafQueueTemplateNodeLabels,
+          managedParentQueue.getQueueContext().getConfiguration().isLegacyQueueMode());
       policy.leafQueueTemplateCapacities =
           policy.leafQueueTemplate.getQueueCapacities();
     } finally {
@@ -560,7 +563,8 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       LeafQueueEntitlements leafQueueEntitlements) {
     for (String leafQueue : leafQueuesToBeActivated) {
       QueueCapacities capacities = leafQueueEntitlements.getCapacityOfQueueByPath(leafQueue);
-      updateCapacityFromTemplate(capacities, nodeLabel);
+      CSQueue queue = managedParentQueue.getQueueContext().getQueueManager().getQueue(leafQueue);
+      updateCapacityFromTemplate(capacities, nodeLabel, queue);
     }
   }
 
@@ -717,7 +721,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
 
         if (availableCapacity >= leafQueueTemplateCapacities
             .getAbsoluteCapacity(nodeLabel)) {
-          updateCapacityFromTemplate(capacities, nodeLabel);
+          updateCapacityFromTemplate(capacities, nodeLabel, leafQueue);
           activate(leafQueue, nodeLabel);
         } else{
           updateToZeroCapacity(capacities, nodeLabel, leafQueue);
@@ -738,10 +742,14 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
         leafQueueTemplateCapacities.getMaximumCapacity(nodeLabel));
     leafQueue.getQueueResourceQuotas().
         setConfiguredMinResource(nodeLabel, Resource.newInstance(0, 0));
+    leafQueue.setConfiguredMinCapacityVector(nodeLabel, QueueCapacityVector.of(
+            capacities.getCapacity(nodeLabel) * 100, PERCENTAGE));
+    leafQueue.setConfiguredMaxCapacityVector(nodeLabel, QueueCapacityVector.of(
+            capacities.getMaximumCapacity(nodeLabel) * 100, PERCENTAGE));
   }
 
   private void updateCapacityFromTemplate(QueueCapacities capacities,
-      String nodeLabel) {
+      String nodeLabel, CSQueue leafQueue) {
     capacities.setCapacity(nodeLabel,
         leafQueueTemplateCapacities.getCapacity(nodeLabel));
     capacities.setMaximumCapacity(nodeLabel,
@@ -750,6 +758,10 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
         leafQueueTemplateCapacities.getAbsoluteCapacity(nodeLabel));
     capacities.setAbsoluteMaximumCapacity(nodeLabel,
         leafQueueTemplateCapacities.getAbsoluteMaximumCapacity(nodeLabel));
+    leafQueue.setConfiguredMinCapacityVector(nodeLabel, QueueCapacityVector.of(
+            capacities.getCapacity(nodeLabel) * 100, PERCENTAGE));
+    leafQueue.setConfiguredMaxCapacityVector(nodeLabel, QueueCapacityVector.of(
+            capacities.getMaximumCapacity(nodeLabel) * 100, PERCENTAGE));
   }
 
   @VisibleForTesting

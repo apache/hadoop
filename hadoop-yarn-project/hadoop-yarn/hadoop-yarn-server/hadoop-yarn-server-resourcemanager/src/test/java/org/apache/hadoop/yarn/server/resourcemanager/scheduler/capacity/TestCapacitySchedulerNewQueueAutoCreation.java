@@ -56,7 +56,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
       org.apache.hadoop.yarn.server.resourcemanager
           .scheduler.capacity.TestCapacitySchedulerAutoCreatedQueueBase.class);
   public static final int GB = 1024;
-  private static final int MAX_MEMORY = 1200;
+  public static final int MAX_MEMORY = 1200;
   private MockRM mockRM = null;
   private CapacityScheduler cs;
   private CapacitySchedulerConfiguration csConf;
@@ -311,6 +311,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   public void testAutoCreateQueueWhenSiblingsNotInWeightMode()
       throws Exception {
     startScheduler();
+    csConf.setLegacyQueueModeEnabled(true);
     csConf.setCapacity("root.a", 50f);
     csConf.setCapacity("root.b", 50f);
     csConf.setCapacity("root.a.a1", 100f);

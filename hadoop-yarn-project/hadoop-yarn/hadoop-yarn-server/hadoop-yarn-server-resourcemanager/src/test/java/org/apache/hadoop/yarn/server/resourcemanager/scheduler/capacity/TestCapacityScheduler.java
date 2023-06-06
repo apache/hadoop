@@ -209,7 +209,7 @@ public class TestCapacityScheduler {
   private ResourceManager resourceManager = null;
   private RMContext mockContext;
 
-  private static final double DELTA = 0.000001;
+  private static final double DELTA = 0.0001;
 
   @Before
   public void setUp() throws Exception {

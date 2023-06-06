@@ -54,8 +54,10 @@ public class CapacitySchedulerQueueCapacityHandler {
       new RootQueueCapacityCalculator();
   private final RMNodeLabelsManager labelsManager;
   private final Collection<String> definedResources = new LinkedHashSet<>();
+  private final boolean isLegacyQueueMode;
 
-  public CapacitySchedulerQueueCapacityHandler(RMNodeLabelsManager labelsManager) {
+  public CapacitySchedulerQueueCapacityHandler(RMNodeLabelsManager labelsManager,
+                                               CapacitySchedulerConfiguration configuration) {
     this.calculators = new HashMap<>();
     this.labelsManager = labelsManager;
 
@@ -65,6 +67,7 @@ public class CapacitySchedulerQueueCapacityHandler {
         new PercentageQueueCapacityCalculator());
     this.calculators.put(ResourceUnitCapacityType.WEIGHT,
         new WeightQueueCapacityCalculator());
+    this.isLegacyQueueMode = configuration.isLegacyQueueMode();
 
     loadResourceNames();
   }
@@ -121,7 +124,7 @@ public class CapacitySchedulerQueueCapacityHandler {
 
   private void updateChildrenAfterCalculation(
       ResourceCalculationDriver resourceCalculationDriver, ResourceLimits resourceLimits) {
-    ParentQueue parentQueue = (ParentQueue) resourceCalculationDriver.getQueue();
+    AbstractParentQueue parentQueue = (AbstractParentQueue) resourceCalculationDriver.getQueue();
     for (CSQueue childQueue : parentQueue.getChildQueues()) {
       updateQueueCapacities(resourceCalculationDriver, childQueue);
 
@@ -144,8 +147,7 @@ public class CapacitySchedulerQueueCapacityHandler {
     queue.getWriteLock().lock();
     try {
       for (String label : queue.getConfiguredNodeLabels()) {
-        QueueCapacityVector capacityVector = queue.getConfiguredCapacityVector(label);
-        if (capacityVector.isMixedCapacityVector()) {
+        if (!isLegacyQueueMode) {
           // Post update capacities based on the calculated effective resource values
           setQueueCapacities(resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(
               label), queue, label);

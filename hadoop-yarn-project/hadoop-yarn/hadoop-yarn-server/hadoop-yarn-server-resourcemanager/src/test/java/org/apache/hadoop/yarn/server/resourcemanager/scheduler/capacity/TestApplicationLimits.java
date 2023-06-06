@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.setQueueHandler;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -31,6 +32,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -95,6 +97,7 @@ public class TestApplicationLimits {
   private final ResourceCalculator resourceCalculator = new DefaultResourceCalculator();
 
   RMContext rmContext = null;
+  private CapacitySchedulerContext csContext;
 
   
   @Before
@@ -107,12 +110,13 @@ public class TestApplicationLimits {
     rmContext = TestUtils.getMockRMContext();
     Resource clusterResource = Resources.createResource(10 * 16 * GB, 10 * 32);
 
-    CapacitySchedulerContext csContext = createCSContext(csConf, resourceCalculator,
+    csContext = createCSContext(csConf, resourceCalculator,
         Resources.createResource(GB, 1), Resources.createResource(16*GB, 32),
         clusterResource);
     when(csContext.getRMContext()).thenReturn(rmContext);
     CapacitySchedulerQueueContext queueContext = new CapacitySchedulerQueueContext(csContext);
-    
+    setQueueHandler(csContext);
+
     RMContainerTokenSecretManager containerTokenSecretManager =
         new RMContainerTokenSecretManager(conf);
     containerTokenSecretManager.rollMasterKey();
@@ -194,9 +198,12 @@ public class TestApplicationLimits {
     Resource clusterResource = Resource.newInstance(80 * GB, 40);
     root.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
+    queue = (LeafQueue) root.getChildQueues().stream().filter(
+        child -> child.getQueueName().equals(A))
+        .findFirst().orElseThrow(NoSuchElementException::new);
     queue.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
-    
+
     ActiveUsersManager activeUsersManager = mock(ActiveUsersManager.class);
     when(queue.getAbstractUsersManager()).thenReturn(activeUsersManager);
 
@@ -1003,6 +1010,7 @@ public class TestApplicationLimits {
 
     when(csContext.getRMContext()).thenReturn(rmContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
+    setQueueHandler(csContext);
 
     // Total cluster resources.
     when(csContext.getClusterResource()).thenReturn(clusterResource);
