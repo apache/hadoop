@@ -518,7 +518,8 @@
             url: url,
             data: file.file,
             processData: false,
-            crossDomain: true
+            crossDomain: true,
+            contentType: 'application/octet-stream'
           }).always(function(data) {
             numCompleted++;
             if(numCompleted == files.length) {
