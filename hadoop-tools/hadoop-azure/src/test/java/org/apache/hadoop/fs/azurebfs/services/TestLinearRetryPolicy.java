@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LINEAR_RETRY_DOUBLE_STEP_UP_ENABLED;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
@@ -103,5 +104,24 @@ public class TestLinearRetryPolicy extends AbstractAbfsIntegrationTest {
         .isEqualTo(2 * ONE_SECOND + MIN_BACKOFF);
     Assertions.assertThat(retryPolicy.getRetryInterval(3))
         .isEqualTo(3 * ONE_SECOND + MIN_BACKOFF);
+  }
+
+  @Test
+  public void testLinearRetryConfigurations() throws Exception {
+    Configuration config = new Configuration(this.getRawConfiguration());
+    config.set(AZURE_LINEAR_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED, "false");
+    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
+        .newInstance(getFileSystem().getUri(), config);
+    AbfsClient client = fs.getAbfsStore().getClient();
+
+    // Assert that linear retry policy is disabled even for CT
+    RetryPolicy retryPolicy = client.getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
+    Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
+    retryPolicy = client.getRetryPolicy("");
+    Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
+    retryPolicy = client.getRetryPolicy(null);
+    Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
+    retryPolicy = client.getRetryPolicy(CONNECTION_RESET_ABBREVIATION);
+    Assertions.assertThat(retryPolicy).isInstanceOf(ExponentialRetryPolicy.class);
   }
 }

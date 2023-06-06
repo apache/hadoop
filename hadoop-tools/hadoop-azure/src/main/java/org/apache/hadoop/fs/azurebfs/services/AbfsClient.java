@@ -229,7 +229,8 @@ public class AbfsClient implements Closeable {
   }
 
   public RetryPolicy getRetryPolicy(final String failureReason) {
-    if (CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason)) {
+    if (CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason)
+      && getAbfsConfiguration().getLinearRetryForConnectionTimeoutEnabled()) {
       return getLinearRetryPolicy();
     }
     else {
