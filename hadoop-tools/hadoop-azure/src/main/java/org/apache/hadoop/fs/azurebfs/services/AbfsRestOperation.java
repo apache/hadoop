@@ -272,6 +272,7 @@ public class AbfsRestOperation {
   private boolean executeHttpOperation(final int retryCount,
     TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation;
+    boolean iOExceptionThrown = false;
 
     try {
       // initialize the HTTP request and open the connection
@@ -327,6 +328,7 @@ public class AbfsRestOperation {
 
       failureReason = RetryReason.getAbbreviation(ex, -1, "");
       retryPolicy = client.getRetryPolicy(failureReason);
+      iOExceptionThrown = true;
       if (!retryPolicy.shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
@@ -334,7 +336,7 @@ public class AbfsRestOperation {
       return false;
     } finally {
       int status = httpOperation.getStatusCode();
-      /**
+      /*
        * A status less than 300 (2xx range) or greater than or equal
        * to 500 (5xx range) should contribute to throttling metrics being updated.
        * Less than 200 or greater than or equal to 500 show failed operations. 2xx
@@ -345,14 +347,14 @@ public class AbfsRestOperation {
       boolean updateMetricsResponseCode = (status < HttpURLConnection.HTTP_MULT_CHOICE
               || status >= HttpURLConnection.HTTP_INTERNAL_ERROR);
 
-      /**
+      /*
        * Connection Timeout failures should not contribute to throttling
        * In case the current request fails with Connection Timeout we will have
-       * status code as -1 and failure reason as CT
+       * ioExceptionThrown true and failure reason as CT
        * In case the current request failed with 5xx, failure reason will be
-       * updated after finally block but status code will not be -1;
+       * updated after finally block but iOExceptionThrown will be false;
        */
-      boolean isCTFailure = CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason) && status == -1;
+      boolean isCTFailure = CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason) && iOExceptionThrown;
 
       if (updateMetricsResponseCode && !isCTFailure) {
         intercept.updateMetrics(operationType, httpOperation);

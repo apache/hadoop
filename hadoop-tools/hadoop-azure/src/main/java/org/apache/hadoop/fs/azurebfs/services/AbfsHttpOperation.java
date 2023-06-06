@@ -66,7 +66,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private String maskedEncodedUrl;
 
   private HttpURLConnection connection;
-  private int statusCode = -1;
+  private int statusCode;
   private String statusDescription;
   private String storageErrorCode = "";
   private String storageErrorMessage  = "";
