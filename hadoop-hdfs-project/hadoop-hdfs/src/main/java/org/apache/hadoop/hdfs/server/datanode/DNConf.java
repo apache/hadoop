@@ -156,7 +156,7 @@ public class DNConf {
         DFS_CHECKSUM_EC_SOCKET_TIMEOUT_KEY,
         DFS_CHECKSUM_EC_SOCKET_TIMEOUT_DEFAULT);
     this.copyBlockCrossNamespaceSocketTimeout = getConf().getInt(
-        DFS_COPY_BLOCK_CROSS_NAMESPACE_SOCKET_TIMEOUT_KEY, 
+        DFS_COPY_BLOCK_CROSS_NAMESPACE_SOCKET_TIMEOUT_KEY,
         DFS_COPY_BLOCK_CROSS_NAMESPACE_SOCKET_TIMEOUT_DEFAULT);
     this.transferSocketSendBufferSize = getConf().getInt(
         DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_SEND_BUFFER_SIZE_KEY,
@@ -395,7 +395,8 @@ public class DNConf {
     return ecChecksumSocketTimeout;
   }
 
-  /** Returns socket timeout for copying block cross namespace
+  /**
+   * Returns socket timeout for cross-namespace block copying.
    *
    * @return int socket timeout
    */

@@ -66,7 +66,7 @@ public class DataNodeMetrics {
   @Metric MutableCounterLong blocksWritten;
   @Metric MutableCounterLong blocksRead;
   @Metric MutableCounterLong blocksReplicated;
-  @Metric MutableCounterLong blocksReplicatedViaHardlink;
+  @Metric private MutableCounterLong blocksReplicatedViaHardlink;
   @Metric MutableCounterLong blocksRemoved;
   @Metric MutableCounterLong blocksVerified;
   @Metric MutableCounterLong blockVerificationFailures;
@@ -122,7 +122,7 @@ public class DataNodeMetrics {
   @Metric MutableRate writeBlockOp;
   @Metric MutableRate blockChecksumOp;
   @Metric MutableRate copyBlockOp;
-  @Metric MutableRate copyBlockCrossNamespaceOp;
+  @Metric private MutableRate copyBlockCrossNamespaceOp;
   @Metric MutableRate replaceBlockOp;
   @Metric MutableRate heartbeats;
   @Metric MutableRate heartbeatsTotal;
@@ -342,6 +342,10 @@ public class DataNodeMetrics {
 
   public void incrBlocksReplicatedViaHardlink() {
     blocksReplicatedViaHardlink.incr();
+  }
+
+  public long getBlocksReplicatedViaHardlink() {
+    return blocksReplicatedViaHardlink.value();
   }
 
   public void incrBlocksWritten() {

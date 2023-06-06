@@ -4327,6 +4327,14 @@
 </property>
 
 <property>
+  <name>dfs.copy.block.cross.namespace.socket-timeout</name>
+  <value>300000</value>
+  <description>
+    Default timeout value in milliseconds for cross-namespace block copying.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.block.write.locateFollowingBlock.retries</name>
   <value>5</value>
   <description>
