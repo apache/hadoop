@@ -177,8 +177,7 @@ public class ObserverReadProxyProvider<T>
   /**
    * Timeout in ms when we try to get the HA state of a namenode.
    */
-  @VisibleForTesting
-  protected long namenodeHAStateProbeTimeoutMs;
+  private long namenodeHAStateProbeTimeoutMs;
 
   /**
    * The previous time where zero observer were found. If there was observer,
