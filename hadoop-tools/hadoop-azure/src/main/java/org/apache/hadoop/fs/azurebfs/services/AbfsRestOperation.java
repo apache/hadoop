@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -333,17 +334,27 @@ public class AbfsRestOperation {
       return false;
     } finally {
       int status = httpOperation.getStatusCode();
-      /*
-        A status less than 300 (2xx range) or greater than or equal
-        to 500 (5xx range) should contribute to throttling metrics being updated.
-        Less than 200 or greater than or equal to 500 show failed operations. 2xx
-        range contributes to successful operations. 3xx range is for redirects
-        and 4xx range is for user errors. These should not be a part of
-        throttling backoff computation.
-       */
+      /**
+       * A status less than 300 (2xx range) or greater than or equal
+       * to 500 (5xx range) should contribute to throttling metrics being updated.
+       * Less than 200 or greater than or equal to 500 show failed operations. 2xx
+       * range contributes to successful operations. 3xx range is for redirects
+       * and 4xx range is for user errors. These should not be a part of
+       * throttling backoff computation.
+       * */
       boolean updateMetricsResponseCode = (status < HttpURLConnection.HTTP_MULT_CHOICE
               || status >= HttpURLConnection.HTTP_INTERNAL_ERROR);
-      if (updateMetricsResponseCode) {
+
+      /**
+       * Connection Timeout failures should not contribute to throttling
+       * In case the current request fails with Connection Timeout we will have
+       * status code as -1 and failure reason as CT
+       * In case the current request failed with 5xx, failure reason will be
+       * updated after finally block but status code will not be -1;
+       */
+      boolean isCTFailure = CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason) && status == -1;
+
+      if (updateMetricsResponseCode && !isCTFailure) {
         intercept.updateMetrics(operationType, httpOperation);
       }
     }
