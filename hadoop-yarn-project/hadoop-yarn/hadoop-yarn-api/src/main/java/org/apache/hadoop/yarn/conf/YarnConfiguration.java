@@ -3989,6 +3989,10 @@ public class YarnConfiguration extends Configuration {
       FEDERATION_PREFIX + "failover.enabled";
   public static final boolean DEFAULT_FEDERATION_FAILOVER_ENABLED = true;
 
+  public static final String FEDERATION_NON_HA_ENABLED =
+      FEDERATION_PREFIX + "non-ha.enabled";
+  public static final boolean DEFAULT_FEDERATION_NON_HA_ENABLED = false;
+
   public static final String FEDERATION_STATESTORE_CLIENT_CLASS =
       FEDERATION_PREFIX + "state-store.class";
 

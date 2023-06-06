@@ -118,6 +118,28 @@ public class RMProxy<T> {
 
   /**
    * Currently, used by NodeManagers only.
+   *
+   * @param configuration configuration.
+   * @param protocol protocol.
+   * @param instance RMProxy instance.
+   * @return RMProxy.
+   * @param <T> Generic T.
+   * @throws IOException io error occur.
+   */
+  protected static <T> T createRMProxyFederation(final Configuration configuration,
+      final Class<T> protocol, RMProxy<T> instance) throws IOException {
+    YarnConfiguration yarnConf =
+        (configuration instanceof YarnConfiguration) ? (YarnConfiguration) configuration :
+        new YarnConfiguration(configuration);
+    if(isFederationNonHAEnabled(yarnConf)){
+      RetryPolicy retryPolicy = createRetryPolicy(yarnConf, true);
+      return newProxyInstance(yarnConf, protocol, instance, retryPolicy);
+    }
+    return createRMProxy(configuration, protocol, instance);
+  }
+
+  /**
+   * Currently, used by NodeManagers only.
    * Create a proxy for the specified protocol. For non-HA,
    * this is a direct connection to the ResourceManager address. When HA is
    * enabled, the proxy handles the failover between the ResourceManagers as
@@ -355,4 +377,22 @@ public class RMProxy<T> {
     return false;
   }
 
+  /**
+   * If RM is not configured with HA, NM will not configure yarn.resourcemanager.ha.rmIds locally.
+   *
+   * If federation mode is enabled and RMProxy#isFailoverEnabled returns true, when NM starts Container,
+   * it will try to find the yarn.resourcemanager.ha.rmIds property.
+   * However, an error will occur because this property is not configured if the user has not configured HA.
+   *
+   * To solve this issue, we can configure the yarn.federation.no-ha.enabled property in NM,
+   * which tells NM to run in a non-HA environment.
+   *
+   * @param conf YarnConfiguration
+   * @return true, federation support non-HA, false, federation not support non-HA.
+   */
+  private static boolean isFederationNonHAEnabled(YarnConfiguration conf) {
+    boolean isNonHAEnabled = conf.getBoolean(YarnConfiguration.FEDERATION_NON_HA_ENABLED,
+        YarnConfiguration.DEFAULT_FEDERATION_NON_HA_ENABLED);
+    return isNonHAEnabled;
+  }
 }

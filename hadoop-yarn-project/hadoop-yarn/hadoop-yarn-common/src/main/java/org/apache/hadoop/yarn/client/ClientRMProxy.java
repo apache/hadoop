@@ -73,6 +73,22 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
     return createRMProxy(configuration, protocol, clientRMProxy);
   }
 
+  /**
+   * Create a proxy to the ResourceManager for the specified protocol.
+   * This method is only used for NodeManager#AMRMClientUtils.
+   *
+   * @param configuration Configuration with all the required information.
+   * @param protocol Client protocol for which proxy is being requested.
+   * @param <T> Type of proxy.
+   * @return Proxy to the ResourceManager for the specified client protocol.
+   * @throws IOException io error occur.
+   */
+  public static <T> T createRMProxyFederation(final Configuration configuration,
+      final Class<T> protocol) throws IOException {
+    ClientRMProxy<T> clientRMProxy = new ClientRMProxy<>();
+    return createRMProxyFederation(configuration, protocol, clientRMProxy);
+  }
+
   private static void setAMRMTokenService(final Configuration conf)
       throws IOException {
     for (Token<? extends TokenIdentifier> token : UserGroupInformation
