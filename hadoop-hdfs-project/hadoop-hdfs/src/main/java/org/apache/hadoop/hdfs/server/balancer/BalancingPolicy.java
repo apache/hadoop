@@ -138,7 +138,7 @@ abstract class BalancingPolicy {
     void accumulateSpaces(DatanodeStorageReport r) {
       for(StorageReport s : r.getStorageReports()) {
         final StorageType t = s.getStorage().getStorageType();
-        totalCapacities.add(t, s.getCapacity());
+        totalCapacities.add(t, s.getRemaining() + s.getBlockPoolUsed());
         totalUsedSpaces.add(t, s.getBlockPoolUsed());
       }
     }
@@ -149,7 +149,7 @@ abstract class BalancingPolicy {
       long blockPoolUsed = 0L;
       for(StorageReport s : r.getStorageReports()) {
         if (s.getStorage().getStorageType() == t) {
-          capacity += s.getCapacity();
+          capacity += s.getRemaining() + s.getBlockPoolUsed();
           blockPoolUsed += s.getBlockPoolUsed();
         }
       }
