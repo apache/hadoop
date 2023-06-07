@@ -266,7 +266,7 @@ public class TestReadStripedFileWithDecoding {
           NameNodeAdapter.getDatanode(ns, cluster.getDataNodes().get(dnIndex2).getDatanodeId());
 
       for (DataNode datanode : cluster.getDataNodes()) {
-        if (!datanode.getDatanodeUuid().equals(dnd.getDatanodeUuid()) ||
+        if (!datanode.getDatanodeUuid().equals(dnd.getDatanodeUuid()) &&
             !datanode.getDatanodeUuid().equals(dnd2.getDatanodeUuid())) {
           DataNodeTestUtils.setHeartbeatsDisabledForTests(datanode, false);
         }
