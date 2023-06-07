@@ -499,7 +499,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
         return used;
       }
     }
-    return getDfUsed() - getDfsUsed();
+    return Math.max(getDfUsed() - getDfsUsed(), 0);
   }
 
   /**
@@ -511,7 +511,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   private long getRemainingReserved() throws IOException {
-    long actualNonDfsUsed = Math.max(getActualNonDfsUsed(), 0L);
+    long actualNonDfsUsed = getActualNonDfsUsed();
     long actualReserved = getReserved();
     if (actualNonDfsUsed < actualReserved) {
       return actualReserved - actualNonDfsUsed;
