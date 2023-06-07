@@ -32,7 +32,7 @@ import org.junit.Test;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.*;
 
 /**
- * Test the FileSystem (e.g., HDFS) implementation of the State Store driver.
+ * Test the MySQL implementation of the State Store driver.
  */
 public class TestStateStoreMySQL extends TestStateStoreDriverBase {
   private static final String CONNECTION_URL = "jdbc:derby:memory:StateStore";

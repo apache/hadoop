@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
@@ -315,6 +316,15 @@ public class TestStateStoreDriverBase {
     assertFalse(result2.isOperationSuccessful());
     assertEquals(1, result2.getFailedRecordsKeys().size());
     assertEquals(insertList.get(0).getPrimaryKey(), result2.getFailedRecordsKeys().get(0));
+
+    StateStoreOperationResult result3 = driver.putAll(insertList.subList(0, 2), false, true);
+    assertFalse(result3.isOperationSuccessful());
+    assertEquals(2, result3.getFailedRecordsKeys().size());
+    assertTrue(insertList.stream()
+        .anyMatch(t -> Objects.equals(result3.getFailedRecordsKeys().get(0), t.getPrimaryKey())));
+    assertTrue(insertList.stream()
+        .anyMatch(t -> Objects.equals(result3.getFailedRecordsKeys().get(1), t.getPrimaryKey())));
+
 
     records = driver.get(clazz);
     assertEquals(records.getRecords().size(), 10);
