@@ -5316,4 +5316,16 @@
     </description>
   </property>
 
+  <property>
+    <description>
+      If Yarn untracked removal is enabled, then this config can control what all
+      node states can be removed. If the untracked node is not having one of these
+      states, then node will skipped for removal. If this config value is set to
+      empty, all node states, will be eligible for removal
+      NodeState is an ENUM: org.apache.hadoop.yarn.api.records.NodeState
+    </description>
+    <name>yarn.resourcemanager.node-removal-untracked.node-selective-states-to-remove</name>
+    <value></value>
+  </property>
+
 </configuration>

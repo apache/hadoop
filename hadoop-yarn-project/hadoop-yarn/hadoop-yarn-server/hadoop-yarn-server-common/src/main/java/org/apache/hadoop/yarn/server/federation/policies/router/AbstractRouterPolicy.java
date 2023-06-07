@@ -116,7 +116,7 @@ public abstract class AbstractRouterPolicy extends
 
   /**
    * Simply picks from alphabetically-sorted active subclusters based on the
-   * hash of quey name. Jobs of the same queue will all be routed to the same
+   * hash of query name. Jobs of the same queue will all be routed to the same
    * sub-cluster, as far as the number of active sub-cluster and their names
    * remain the same.
    *
