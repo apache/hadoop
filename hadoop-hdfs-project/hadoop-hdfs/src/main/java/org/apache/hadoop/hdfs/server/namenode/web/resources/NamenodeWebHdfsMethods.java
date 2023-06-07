@@ -85,6 +85,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -1405,6 +1406,11 @@ public class NamenodeWebHdfsMethods {
           DFSClient.getStateAtIndex(states, 1),
           DFSClient.getStateAtIndex(states, 2));
       final String js = JsonUtil.toJsonString(status);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETECPOLICIES: {
+      ErasureCodingPolicyInfo[] ecPolicyInfos = cp.getErasureCodingPolicies();
+      final String js = JsonUtil.toJsonString(ecPolicyInfos);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     default:
