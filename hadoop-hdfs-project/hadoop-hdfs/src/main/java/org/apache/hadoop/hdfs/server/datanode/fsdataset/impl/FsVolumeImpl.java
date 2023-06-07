@@ -499,7 +499,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
         return used;
       }
     }
-    return Math.max(getDfUsed() - getDfsUsed(), 0);
+    return Math.max(getDfUsed() - getDfsUsed(), 0L);
   }
 
   /**
