@@ -743,11 +743,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     final Map<String, String> map = deprecations.getReverseDeprecatedKeyMap();
     for (String nk : names) {
       String k = map.get(nk);
-      if (k != null && !getProps().containsKey(nk)) {
-        String v = getProps().getProperty(k);
-        if (v != null) {
-          getProps().setProperty(nk, v);
-        }
+      if (k != null) {
+        getProps().computeIfAbsent(nk, (x) -> getProps().getProperty(k));
       }
     }
 
