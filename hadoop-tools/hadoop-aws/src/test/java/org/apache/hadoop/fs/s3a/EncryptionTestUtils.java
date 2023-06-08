@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 
-import com.amazonaws.services.s3.model.ObjectMetadata;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.net.util.Base64;
@@ -69,33 +69,33 @@ public final class EncryptionTestUtils {
                                      final S3AEncryptionMethods algorithm,
                                      final String kmsKeyArn)
           throws IOException {
-    ObjectMetadata md = fs.getObjectMetadata(path);
+    HeadObjectResponse md = fs.getObjectMetadata(path);
     String details = String.format(
             "file %s with encryption algorithm %s and key %s",
             path,
-            md.getSSEAlgorithm(),
-            md.getSSEAwsKmsKeyId());
+            md.serverSideEncryptionAsString(),
+            md.ssekmsKeyId());
     switch(algorithm) {
     case SSE_C:
       assertNull("Metadata algorithm should have been null in "
                       + details,
-              md.getSSEAlgorithm());
+              md.serverSideEncryptionAsString());
       assertEquals("Wrong SSE-C algorithm in "
                       + details,
-              SSE_C_ALGORITHM, md.getSSECustomerAlgorithm());
+              SSE_C_ALGORITHM, md.sseCustomerAlgorithm());
       String md5Key = convertKeyToMd5(fs);
       assertEquals("getSSECustomerKeyMd5() wrong in " + details,
-              md5Key, md.getSSECustomerKeyMd5());
+              md5Key, md.sseCustomerKeyMD5());
       break;
     case SSE_KMS:
       assertEquals("Wrong algorithm in " + details,
-              AWS_KMS_SSE_ALGORITHM, md.getSSEAlgorithm());
+              AWS_KMS_SSE_ALGORITHM, md.serverSideEncryptionAsString());
       assertEquals("Wrong KMS key in " + details,
               kmsKeyArn,
-              md.getSSEAwsKmsKeyId());
+              md.ssekmsKeyId());
       break;
     default:
-      assertEquals("AES256", md.getSSEAlgorithm());
+      assertEquals("AES256", md.serverSideEncryptionAsString());
     }
   }
 

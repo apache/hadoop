@@ -18,10 +18,17 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.S3ClientOptions;
-
+import software.amazon.awssdk.core.client.config.SdkClientConfiguration;
+import software.amazon.awssdk.core.client.config.SdkClientOption;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.core.signer.Signer;
+import software.amazon.awssdk.http.SdkHttpFullRequest;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.model.StsException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -29,9 +36,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
+
+import org.assertj.core.api.Assertions;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -109,7 +118,7 @@ public class ITestS3AConfiguration {
     } else {
       conf.set(Constants.ENDPOINT, endpoint);
       fs = S3ATestUtils.createTestFileSystem(conf);
-      AmazonS3 s3 = fs.getAmazonS3ClientForTesting("test endpoint");
+      S3Client s3 = fs.getAmazonS3ClientForTesting("test endpoint");
       String endPointRegion = "";
       // Differentiate handling of "s3-" and "s3." based endpoint identifiers
       String[] endpointParts = StringUtils.split(endpoint, '.');
@@ -120,8 +129,11 @@ public class ITestS3AConfiguration {
       } else {
         fail("Unexpected endpoint");
       }
+      // TODO: review way to get the bucket region.
+      String region = s3.getBucketLocation(b -> b.bucket(fs.getUri().getHost()))
+          .locationConstraintAsString();
       assertEquals("Endpoint config setting and bucket location differ: ",
-          endPointRegion, s3.getBucketLocation(fs.getUri().getHost()));
+          endPointRegion, region);
     }
   }
 
@@ -346,22 +358,25 @@ public class ITestS3AConfiguration {
     try {
       fs = S3ATestUtils.createTestFileSystem(conf);
       assertNotNull(fs);
-      AmazonS3 s3 = fs.getAmazonS3ClientForTesting("configuration");
+      S3Client s3 = fs.getAmazonS3ClientForTesting("configuration");
       assertNotNull(s3);
-      S3ClientOptions clientOptions = getField(s3, S3ClientOptions.class,
-          "clientOptions");
+
+      SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
+          "clientConfiguration");
+      S3Configuration s3Configuration =
+          (S3Configuration)clientConfiguration.option(SdkClientOption.SERVICE_CONFIGURATION);
       assertTrue("Expected to find path style access to be switched on!",
-          clientOptions.isPathStyleAccess());
+          s3Configuration.pathStyleAccessEnabled());
       byte[] file = ContractTestUtils.toAsciiByteArray("test file");
       ContractTestUtils.writeAndRead(fs,
           new Path("/path/style/access/testFile"), file, file.length,
               (int) conf.getLongBytes(Constants.FS_S3A_BLOCK_SIZE, file.length), false, true);
-    } catch (final AWSS3IOException e) {
+    } catch (final AWSRedirectException e) {
       LOG.error("Caught exception: ", e);
       // Catch/pass standard path style access behaviour when live bucket
       // isn't in the same region as the s3 client default. See
       // http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
-      assertEquals(HttpStatus.SC_MOVED_PERMANENTLY, e.getStatusCode());
+      assertEquals(HttpStatus.SC_MOVED_PERMANENTLY, e.statusCode());
     } catch (final IllegalArgumentException e) {
       // Path style addressing does not work with AP ARNs
       if (!fs.getBucket().contains("arn:")) {
@@ -378,12 +393,13 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
-    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("User Agent");
+    S3Client s3 = fs.getAmazonS3ClientForTesting("User Agent");
     assertNotNull(s3);
-    ClientConfiguration awsConf = getField(s3, ClientConfiguration.class,
+    SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
-    assertEquals("Hadoop " + VersionInfo.getVersion(),
-        awsConf.getUserAgentPrefix());
+    Assertions.assertThat(clientConfiguration.option(SdkClientOption.CLIENT_USER_AGENT))
+        .describedAs("User Agent prefix")
+        .startsWith("Hadoop " + VersionInfo.getVersion());
   }
 
   @Test
@@ -392,12 +408,13 @@ public class ITestS3AConfiguration {
     conf.set(Constants.USER_AGENT_PREFIX, "MyApp");
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
-    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("User agent");
+    S3Client s3 = fs.getAmazonS3ClientForTesting("User agent");
     assertNotNull(s3);
-    ClientConfiguration awsConf = getField(s3, ClientConfiguration.class,
+    SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
-    assertEquals("MyApp, Hadoop " + VersionInfo.getVersion(),
-        awsConf.getUserAgentPrefix());
+    Assertions.assertThat(clientConfiguration.option(SdkClientOption.CLIENT_USER_AGENT))
+        .describedAs("User Agent prefix")
+        .startsWith("MyApp, Hadoop " + VersionInfo.getVersion());
   }
 
   @Test
@@ -405,16 +422,16 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     conf.set(REQUEST_TIMEOUT, "120");
     fs = S3ATestUtils.createTestFileSystem(conf);
-    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("Request timeout (ms)");
-    ClientConfiguration awsConf = getField(s3, ClientConfiguration.class,
+    S3Client s3 = fs.getAmazonS3ClientForTesting("Request timeout (ms)");
+    SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
     assertEquals("Configured " + REQUEST_TIMEOUT +
         " is different than what AWS sdk configuration uses internally",
-        120000, awsConf.getRequestTimeout());
+        120000,
+        clientConfiguration.option(SdkClientOption.API_CALL_ATTEMPT_TIMEOUT).toMillis());
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testCloseIdempotent() throws Throwable {
     conf = new Configuration();
     fs = S3ATestUtils.createTestFileSystem(conf);
@@ -513,35 +530,74 @@ public class ITestS3AConfiguration {
 
   @Test(timeout = 10_000L)
   public void testS3SpecificSignerOverride() throws IOException {
-    ClientConfiguration clientConfiguration = null;
-    Configuration config;
+    Configuration config = new Configuration();
 
-    String signerOverride = "testSigner";
-    String s3SignerOverride = "testS3Signer";
+    config.set(CUSTOM_SIGNERS,
+        "CustomS3Signer:" + CustomS3Signer.class.getName() + ",CustomSTSSigner:"
+            + CustomSTSSigner.class.getName());
 
-    // Default SIGNING_ALGORITHM, overridden for S3 only
-    config = new Configuration();
-    config.set(SIGNING_ALGORITHM_S3, s3SignerOverride);
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_S3);
-    Assert.assertEquals(s3SignerOverride,
-        clientConfiguration.getSignerOverride());
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_STS);
-    Assert.assertNull(clientConfiguration.getSignerOverride());
+    config.set(SIGNING_ALGORITHM_S3, "CustomS3Signer");
+    config.set(SIGNING_ALGORITHM_STS, "CustomSTSSigner");
 
-    // Configured base SIGNING_ALGORITHM, overridden for S3 only
-    config = new Configuration();
-    config.set(SIGNING_ALGORITHM, signerOverride);
-    config.set(SIGNING_ALGORITHM_S3, s3SignerOverride);
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_S3);
-    Assert.assertEquals(s3SignerOverride,
-        clientConfiguration.getSignerOverride());
-    clientConfiguration = S3AUtils
-        .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_STS);
-    Assert
-        .assertEquals(signerOverride, clientConfiguration.getSignerOverride());
+    config.set(AWS_REGION, "eu-west-1");
+    fs = S3ATestUtils.createTestFileSystem(config);
+
+    S3Client s3Client = fs.getAmazonS3ClientForTesting("testS3SpecificSignerOverride");
+
+    StsClient stsClient =
+        STSClientFactory.builder(config, fs.getBucket(), new AnonymousAWSCredentialsProvider(), "",
+            "").build();
+
+    try {
+      stsClient.getSessionToken();
+    } catch (StsException exception) {
+      // Expected 403, as credentials are not provided.
+    }
+
+    try {
+      s3Client.headBucket(HeadBucketRequest.builder().bucket(fs.getBucket()).build());
+    } catch (S3Exception exception) {
+      // Expected 403, as credentials are not provided.
+    }
+
+    Assertions.assertThat(CustomS3Signer.isS3SignerCalled())
+        .describedAs("Custom S3 signer not called").isTrue();
+
+    Assertions.assertThat(CustomSTSSigner.isSTSSignerCalled())
+        .describedAs("Custom STS signer not called").isTrue();
   }
 
+  public static final class CustomS3Signer implements Signer {
+
+    private static boolean s3SignerCalled = false;
+
+    @Override
+    public SdkHttpFullRequest sign(SdkHttpFullRequest request,
+        ExecutionAttributes executionAttributes) {
+      LOG.debug("Custom S3 signer called");
+      s3SignerCalled = true;
+      return request;
+    }
+
+    public static boolean isS3SignerCalled() {
+      return s3SignerCalled;
+    }
+  }
+
+  public static final class CustomSTSSigner implements Signer {
+
+    private static boolean stsSignerCalled = false;
+
+    @Override
+    public SdkHttpFullRequest sign(SdkHttpFullRequest request,
+        ExecutionAttributes executionAttributes) {
+      LOG.debug("Custom STS signer called");
+      stsSignerCalled = true;
+      return request;
+    }
+
+    public static boolean isSTSSignerCalled() {
+      return stsSignerCalled;
+    }
+  }
 }

@@ -140,7 +140,6 @@ public final class Constants {
   public static final String ASSUMED_ROLE_POLICY =
       "fs.s3a.assumed.role.policy";
 
-  @SuppressWarnings("deprecation")
   public static final String ASSUMED_ROLE_CREDENTIALS_DEFAULT =
       SimpleAWSCredentialsProvider.NAME;
 
@@ -586,7 +585,7 @@ public final class Constants {
 
   public static final String SIGNING_ALGORITHM_STS =
       "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_STS.toLowerCase()
-          + "signing-algorithm";
+          + ".signing-algorithm";
 
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
@@ -735,7 +734,6 @@ public final class Constants {
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  @SuppressWarnings("deprecation")
   public static final Class<? extends S3ClientFactory>
       DEFAULT_S3_CLIENT_FACTORY_IMPL =
           DefaultS3ClientFactory.class;
@@ -1209,6 +1207,29 @@ public final class Constants {
   public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1253376; //1M
 
   /**
+   * Maximum number of range reads a single input stream can have
+   * active (downloading, or queued) to the central FileSystem
+   * instance's pool of queued operations.
+   * This stops a single stream overloading the shared thread pool.
+   * {@value}
+   * <p>
+   * Default is {@link #DEFAULT_AWS_S3_VECTOR_ACTIVE_RANGE_READS}
+   */
+  public static final String AWS_S3_VECTOR_ACTIVE_RANGE_READS =
+          "fs.s3a.vectored.active.ranged.reads";
+
+  /**
+   * Limit of queued range data download operations during vectored
+   * read. Value: {@value}
+   */
+  public static final int DEFAULT_AWS_S3_VECTOR_ACTIVE_RANGE_READS = 4;
+
+  /**
+   * Prefix of auth classes in AWS SDK V1.
+   */
+  public static final String AWS_AUTH_CLASS_PREFIX = "com.amazonaws.auth";
+
+  /**
    * Controls whether the prefetching input stream is enabled.
    */
   public static final String PREFETCH_ENABLED_KEY = "fs.s3a.prefetch.enabled";
@@ -1232,29 +1253,6 @@ public final class Constants {
    */
   public static final String PREFETCH_BLOCK_COUNT_KEY = "fs.s3a.prefetch.block.count";
   public static final int PREFETCH_BLOCK_DEFAULT_COUNT = 8;
-
-  /**
-   * Prefix of auth classes in AWS SDK V1.
-   */
-  public static final String AWS_AUTH_CLASS_PREFIX = "com.amazonaws.auth";
-
-  /**
-   * Maximum number of range reads a single input stream can have
-   * active (downloading, or queued) to the central FileSystem
-   * instance's pool of queued operations.
-   * This stops a single stream overloading the shared thread pool.
-   * {@value}
-   * <p>
-   * Default is {@link #DEFAULT_AWS_S3_VECTOR_ACTIVE_RANGE_READS}
-   */
-  public static final String AWS_S3_VECTOR_ACTIVE_RANGE_READS =
-          "fs.s3a.vectored.active.ranged.reads";
-
-  /**
-   * Limit of queued range data download operations during vectored
-   * read. Value: {@value}
-   */
-  public static final int DEFAULT_AWS_S3_VECTOR_ACTIVE_RANGE_READS = 4;
 
   /**
    * Option to enable or disable the multipart uploads.
@@ -1288,4 +1286,8 @@ public final class Constants {
    */
   public static final int DEFAULT_PREFETCH_MAX_BLOCKS_COUNT = 4;
 
+  /**
+   * The bucket region header.
+   */
+  public static final String BUCKET_REGION_HEADER = "x-amz-bucket-region";
 }
