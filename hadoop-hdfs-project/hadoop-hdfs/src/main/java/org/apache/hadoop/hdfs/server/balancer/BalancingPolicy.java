@@ -104,7 +104,7 @@ abstract class BalancingPolicy {
       for(StorageReport s : r.getStorageReports()) {
         final StorageType t = s.getStorage().getStorageType();
         totalCapacities.add(t, s.getCapacity());
-        totalUsedSpaces.add(t, (s.getCapacity() - s.getRemaining()));
+        totalUsedSpaces.add(t, s.getCapacity() - s.getRemaining());
       }
     }
     
@@ -115,7 +115,7 @@ abstract class BalancingPolicy {
       for(StorageReport s : r.getStorageReports()) {
         if (s.getStorage().getStorageType() == t) {
           capacity += s.getCapacity();
-          totalUsed += (s.getCapacity() - s.getRemaining());
+          totalUsed += s.getCapacity() - s.getRemaining();
         }
       }
       return capacity == 0L ? null : totalUsed * 100.0 / capacity;
@@ -138,6 +138,12 @@ abstract class BalancingPolicy {
     void accumulateSpaces(DatanodeStorageReport r) {
       for(StorageReport s : r.getStorageReports()) {
         final StorageType t = s.getStorage().getStorageType();
+        // Use s.getRemaining() + s.getBlockPoolUsed() instead of
+        // s.getCapacity() here to avoid moving blocks towards nodes with
+        // little actual available space.
+        // The util is computed as blockPoolUsed/(remaining+blockPoolUsed),
+        // which means nodes with more remaining space and less blockPoolUsed
+        // will serve as the recipient during the balancing process.
         totalCapacities.add(t, s.getRemaining() + s.getBlockPoolUsed());
         totalUsedSpaces.add(t, s.getBlockPoolUsed());
       }
@@ -153,7 +159,7 @@ abstract class BalancingPolicy {
           blockPoolUsed += s.getBlockPoolUsed();
         }
       }
-      return capacity == 0L? null: blockPoolUsed*100.0/capacity;
+      return capacity == 0L ? null : blockPoolUsed * 100.0 / capacity;
     }
   }
 }
