@@ -71,7 +71,7 @@ allowed_expr+="|^jetty-dir.css$"
 allowed_expr+="|^org/xerial/"
 # Jetty checks if class isAssignableFrom javax.servlet.Filter
 # throws exception due to relocation
-allowed_expr+="|^javax/servlet/"
+allowed_expr+="|^javax.servlet$"
 
 allowed_expr+=")"
 declare -i bad_artifacts=0
