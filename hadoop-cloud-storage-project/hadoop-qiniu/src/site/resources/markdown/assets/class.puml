@@ -1,0 +1,241 @@
+@startuml QiniuKodoFileSystemClassDiagram
+
+package QiniuKodoFileSystem.BlockCache {
+    interface IDataFetcher {
+        byte[] fetch(String key, long offset, int length)
+    }
+
+    interface IBlockReader {
+        int getBlockSize()
+        byte[] readBlock(String key, int blockId)
+        void deleteBlocks(String key)
+    }
+
+    class MemoryCacheBlockReader implements IBlockReader {
+        -IBlockReader source
+        -int maxCacheBlocks
+        +constructor(...)
+    }
+    class DiskCacheBlockReader implements IBlockReader {
+        -IBlockReader source
+        -int maxCacheBlocks
+        -Path bufferDir
+        -int expires
+        +constructor(...)
+    }
+    class DataFetcherBlockReader implements IBlockReader, IDataFetcher {
+        -IDataFetcher fetcher
+        -int blockSize
+        +constructor(...)
+    }
+}
+
+package QiniuKodoFileSystem.Config {
+    abstract class ABaseConfig {
+        +constructor(Configuration conf, String namespace)
+        +String toString()
+        +HashMap<String, Object> toHashMap()
+    }
+    class QiniuKodoFsConfig extends ABaseConfig {
+        +AuthConfig auth
+        +DownloadConfig download
+        +UploadConfig upload
+        +ClientConfig client
+        +ProxyConfig proxy
+    }
+    class AuthConfig extends ABaseConfig {
+        +String accessKey
+        +String secretKey
+    }
+    QiniuKodoFsConfig *--> AuthConfig
+
+    class DownloadConfig extends ABaseConfig {
+        +String domain
+        +CacheConfig cache
+        +int blockSize
+        +SignConfig sign
+        +boolean useNoCacheHeader
+        +boolean useHttps
+        +RandomConfig random
+    }
+    QiniuKodoFsConfig *--> DownloadConfig
+
+    class UploadConfig extends ABaseConfig {
+        +SignConfig sign
+        +int maxConcurrentTasks
+        +boolean accUpHostFirst
+        +boolean useDefaultUpHostIfNone
+        +V2Config v2
+        +int bufferSize
+    }
+    QiniuKodoFsConfig *--> UploadConfig
+
+    class ClientConfig extends ABaseConfig {
+        +int nThread
+        +CacheConfig cache
+        +ListProducerConfig list
+        +CopyConfig copy
+        +DeleteConfig delete
+        +RenameConfig rename
+    }
+    QiniuKodoFsConfig *--> ClientConfig
+
+    class ProxyConfig extends ABaseConfig {
+        +boolean enable
+        +String hostname
+        +int port
+        +String username
+        +String password
+    }
+    QiniuKodoFsConfig *--> ProxyConfig
+}
+
+package QiniuKodoFileSystem.Download {
+    class QiniuKodoGeneralBlockReader implements QiniuKodoFileSystem.BlockCache.IBlockReader {
+        -FsConfig fsConfig
+        -IQiniuKodoClient client
+        +constructor(...)
+    }
+    
+    ' The QiniuKodoGeneralBlockReader class combined with the user's configuration can enable different download cache structures in the background (facade pattern).
+    QiniuKodoGeneralBlockReader ..> QiniuKodoSourceBlockReader
+    QiniuKodoFileSystem.BlockCache.MemoryCacheBlockReader <... QiniuKodoGeneralBlockReader
+    QiniuKodoFileSystem.BlockCache.DiskCacheBlockReader <... QiniuKodoGeneralBlockReader
+
+    ' This class is used to adapt the IQiniuKodoClient interface to the IBlockReader interface.
+    class QiniuKodoSourceBlockReader extends QiniuKodoFileSystem.BlockCache.DataFetcherBlockReader {
+        -IQiniuKodoClient client
+        +constructor(...)
+        +byte[] fetch(key, offset, size)
+    }
+    QiniuKodoSourceBlockReader ..> QiniuKodoFileSystem.IQiniuKodoClient
+
+    class QiniuKodoRandomBlockReader implements QiniuKodoFileSystem.BlockCache.IBlockReader {
+        -IQiniuKodoClient kodoClient
+        -int blockSize
+        -int maxCacheBlocks
+        +constructor(...)
+    }
+    QiniuKodoRandomBlockReader ..> QiniuKodoSourceBlockReader
+
+    abstract class FSInputStream {
+        +int read()
+        +void seek(long pos)
+        +long getPos()
+        +int available()
+        +void close()
+    }
+
+    class QiniuKodoCommonInputStream extends FSInputStream {
+        -String key
+        -IBlockReader reader
+        -long contentLength
+        +constructor(...)
+    }
+
+    ' This class implements the strategy of switching the implementation of the input stream for downloading files dynamically.
+    class QiniuKodoInputStream extends FSInputStream {
+        -boolean useRandomReader
+        -IBlockReader generalReader
+        -IBlockReader randomReader
+        -long contentLength
+        +constructor(...)
+    }
+    QiniuKodoInputStream .> QiniuKodoCommonInputStream
+}
+
+package QiniuKodoFileSystem.Upload {
+    abstract class OutputStream {
+        +void write(int b)
+        +void close()
+    }
+    class QiniuKodoOutputStream extends OutputStream {
+        -String key
+        -IQiniuKodoClient client
+        -boolean overwrite
+        +constructor(...)
+    }
+    QiniuKodoOutputStream ..> IQiniuKodoClient
+}
+
+package QiniuKodoFileSystem {
+
+    class MockQiniuKodoFileSystem extends QiniuKodoFileSystem {
+        #IQiniuKodoClient buildKodoClient()
+    }
+
+    class QiniuKodoFileSystem {
+        #IQiniuKodoClient buildKodoClient()
+        +void initialize()
+        +URI getUri()
+        +FSDataInputStream open()
+        +FSDataOutputStream create()
+        +FSDataOutputStream createNonRecursive()
+        +boolean rename()
+        +void delete()
+        +FileStatus[] listStatus()
+        +RemoteIterator<FileStatus> listStatusIterator()
+        +void setWorkingDirectory()
+        +Path getWorkingDirectory()
+        +boolean mkdirs()
+        +boolean exists()
+        +FileStatus getFileStatus()
+        +void close()
+    }
+
+    QiniuKodoFileSystem .> QiniuKodoInputStream
+    QiniuKodoFileSystem .> QiniuKodoRandomBlockReader
+    QiniuKodoFileSystem .> QiniuKodoGeneralBlockReader
+    QiniuKodoFileSystem .> QiniuKodoOutputStream
+    QiniuKodoFileSystem .> QiniuKodoClient
+    QiniuKodoFileSystem ..> QiniuKodoFsConfig
+
+    interface IQiniuKodoClient {
+        +boolean exists(String key)
+        +long getLength(String key)
+        +void upload(InputStream stream, String key, boolean overwrite)
+        +InputStream fetch(String key, long offset, int size)
+        +QiniuKodoFileInfo listOneStatus(String keyPrefix)
+        +List<QiniuKodoFileInfo> listNStatus(String keyPrefix, int n)
+        +List<QiniuKodoFileInfo> listStatus(String key, boolean useDirectory)
+        +RemoteIterator<QiniuKodoFileInfo> listStatusIterator(...)
+        +void copyKey(String oldKey, String newKey)
+        +void copyKeys(String oldPrefix, String newPrefix)
+        +void renameKey(String oldKey, String newKey)
+        +void renameKeys(String oldPrefix, String newPrefix)
+        +void deleteKey(String key)
+        +void deleteKeys(String prefix)
+        +void makeEmptyObject(String key)
+        +QiniuKodoFileInfo getFileStatus(String key)
+    }
+
+    class QiniuKodoClient implements IQiniuKodoClient {
+        +constructor(FsConfig config)
+    }
+
+    class MockQiniuKodoClient implements IQiniuKodoClient {
+        +constructor()
+    }
+    MockQiniuKodoFileSystem ..> MockQiniuKodoClient
+}
+
+package QiniuSdkPackage {
+    class QiniuSdkClass
+
+    QiniuKodoFileSystem.QiniuKodoClient ..> QiniuSdkClass
+}
+
+package UserPackage {
+    class UserClass
+
+    UserClass ..> QiniuKodoFileSystem.QiniuKodoFileSystem
+}
+
+package TestPackage {
+    class TestClass
+
+    TestClass ..> QiniuKodoFileSystem.MockQiniuKodoFileSystem
+    TestClass ..> QiniuKodoFileSystem.QiniuKodoFileSystem
+}
+
+@enduml
