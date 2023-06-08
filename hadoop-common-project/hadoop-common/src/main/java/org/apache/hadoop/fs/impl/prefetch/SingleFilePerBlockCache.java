@@ -336,7 +336,7 @@ public class SingleFilePerBlockCache implements BlockCache {
   @Override
   public void close() throws IOException {
     if (closed.compareAndSet(false, true)) {
-      LOG.info(getStats());
+      LOG.debug(getStats());
       int numFilesDeleted = 0;
 
       for (Entry entry : blocks.values()) {
@@ -359,9 +359,7 @@ public class SingleFilePerBlockCache implements BlockCache {
         }
       }
 
-      if (numFilesDeleted > 0) {
-        LOG.info("Deleted {} cache files", numFilesDeleted);
-      }
+      LOG.debug("Prefetch cache close: Deleted {} cache files", numFilesDeleted);
     }
   }
 
