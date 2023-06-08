@@ -292,6 +292,7 @@ Usage:
               [-idleiterations <idleiterations>]
               [-runDuringUpgrade]
               [-asService]
+              [-includeRack <RackName>]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
