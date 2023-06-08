@@ -227,7 +227,6 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     }
 
 
-
     @Override
     public long getLength(String key) throws IOException {
         try {
@@ -351,7 +350,6 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     public List<QiniuKodoFileInfo> listStatus(String prefixKey, boolean useDirectory) throws IOException {
         return RemoteIterators.toList(listStatusIterator(prefixKey, useDirectory));
     }
-
 
 
     @Override

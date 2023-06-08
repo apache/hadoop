@@ -9,13 +9,15 @@ import java.io.IOException;
 public interface IBlockReader extends Closeable {
     /**
      * Get the block size
+     *
      * @return the block size
      */
     int getBlockSize();
 
     /**
      * Read the block data
-     * @param key the key of the block data source
+     *
+     * @param key     the key of the block data source
      * @param blockId the block id
      * @return the block data
      * @throws IOException if any error occurs
@@ -24,6 +26,7 @@ public interface IBlockReader extends Closeable {
 
     /**
      * Delete the blocks by the key
+     *
      * @param key the key of the block data source
      */
     void deleteBlocks(String key);
