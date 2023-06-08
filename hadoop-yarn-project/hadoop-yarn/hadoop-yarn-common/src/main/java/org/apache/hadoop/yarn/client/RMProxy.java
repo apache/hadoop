@@ -128,10 +128,8 @@ public class RMProxy<T> {
    */
   protected static <T> T createRMProxyFederation(final Configuration configuration,
       final Class<T> protocol, RMProxy<T> instance) throws IOException {
-    YarnConfiguration yarnConf =
-        (configuration instanceof YarnConfiguration) ? (YarnConfiguration) configuration :
-        new YarnConfiguration(configuration);
-    if(isFederationNonHAEnabled(yarnConf)){
+    YarnConfiguration yarnConf = new YarnConfiguration(configuration);
+    if (isFederationNonHAEnabled(yarnConf)) {
       RetryPolicy retryPolicy = createRetryPolicy(yarnConf, true);
       return newProxyInstance(yarnConf, protocol, instance, retryPolicy);
     }
@@ -380,9 +378,11 @@ public class RMProxy<T> {
   /**
    * If RM is not configured with HA, NM will not configure yarn.resourcemanager.ha.rmIds locally.
    *
-   * If federation mode is enabled and RMProxy#isFailoverEnabled returns true, when NM starts Container,
-   * it will try to find the yarn.resourcemanager.ha.rmIds property.
-   * However, an error will occur because this property is not configured if the user has not configured HA.
+   * If federation mode is enabled and RMProxy#isFailoverEnabled returns true,
+   * when NM starts Container, it will try to find the yarn.resourcemanager.ha.rmIds property.
+   *
+   * However, an error will occur because this property is not configured
+   * if the user has not configured HA.
    *
    * To solve this issue, we can configure the yarn.federation.no-ha.enabled property in NM,
    * which tells NM to run in a non-HA environment.
