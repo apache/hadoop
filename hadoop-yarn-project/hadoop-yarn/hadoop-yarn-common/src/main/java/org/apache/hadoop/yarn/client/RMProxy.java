@@ -130,10 +130,16 @@ public class RMProxy<T> {
       final Class<T> protocol, RMProxy<T> instance) throws IOException {
     YarnConfiguration yarnConf = new YarnConfiguration(configuration);
     if (isFederationNonHAEnabled(yarnConf)) {
-      RetryPolicy retryPolicy = createRetryPolicy(yarnConf, true);
-      return newProxyInstance(yarnConf, protocol, instance, retryPolicy);
+      RetryPolicy retryPolicy = createRetryPolicy(yarnConf, false);
+      return newProxyInstanceFederation(yarnConf, protocol, instance, retryPolicy);
     }
     return createRMProxy(configuration, protocol, instance);
+  }
+
+  private static <T> T newProxyInstanceFederation(final YarnConfiguration conf,
+      final Class<T> protocol, RMProxy<T> instance, RetryPolicy retryPolicy) {
+    RMFailoverProxyProvider<T> provider = instance.createRMFailoverProxyProvider(conf, protocol);
+    return (T) RetryProxy.create(protocol, provider, retryPolicy);
   }
 
   /**
