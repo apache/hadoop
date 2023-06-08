@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityMa
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.router.security.token.ZKDelegationTokenSecretManagerImpl;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.metrics2.MetricsException;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.Metrics2Util.NameValuePair;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -82,6 +82,7 @@ public class TestRouterSecurityManager {
     mockDelegationTokenSecretManager.startThreads();
     securityManager =
         new RouterSecurityManager(mockDelegationTokenSecretManager);
+    DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
   @Rule
@@ -89,13 +90,8 @@ public class TestRouterSecurityManager {
 
   private Router initializeAndStartRouter(Configuration configuration) {
     Router router = new Router();
-    try {
-      router.init(configuration);
-      router.start();
-    } catch (MetricsException e) {
-      //do nothing
-      LOG.info("Metrics source already exists: {}", e.getMessage());
-    }
+    router.init(configuration);
+    router.start();
     return router;
   }
 
@@ -305,6 +301,8 @@ public class TestRouterSecurityManager {
     JsonNode topTokenRealOwnersList = new ObjectMapper().readTree(topTokenRealOwners);
     assertEquals("The key:name contains incorrect value " + topTokenRealOwners, expectedOwner,
         topTokenRealOwnersList.get(0).get("name").asText());
+    // Destroy the cluster
+    RouterHDFSContract.destroyCluster();
   }
 
   @Test
