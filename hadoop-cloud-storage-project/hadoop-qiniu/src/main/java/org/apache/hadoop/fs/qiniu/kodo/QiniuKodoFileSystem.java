@@ -1,6 +1,8 @@
 package org.apache.hadoop.fs.qiniu.kodo;
 
 import com.qiniu.common.QiniuException;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -33,6 +35,8 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class QiniuKodoFileSystem extends FileSystem {
 
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoFileSystem.class);
@@ -473,7 +477,7 @@ public class QiniuKodoFileSystem extends FileSystem {
             for (Path p : successPaths) {
                 delete(p, false);
             }
-            throw e;
+            return false;
         }
 
     }
@@ -597,8 +601,8 @@ public class QiniuKodoFileSystem extends FileSystem {
                 putTime, // access time
                 FsPermission.createImmutable(
                         isDir
-                                ? (short) 0715 // rwxrwxrwx
-                                : (short) 0666 // rw-rw-rw-
+                                ? (short) 461 // 文件夹权限, 0715, rwx--x-wx
+                                : (short) 438 // 文件权限, 0666, rw-rw-rw-
                 ),   // permission
                 username,   // owner
                 username,   // group

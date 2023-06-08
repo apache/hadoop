@@ -47,7 +47,7 @@ public class UploadConfig extends AConfigBase {
     private int maxConcurrentTasks() {
         return conf.getInt(namespace + ".concurrentTasks", 1);
     }
-    
+
 
     private boolean accUpHostFirst() {
         return conf.getBoolean(namespace + ".accUpHostFirst", true);

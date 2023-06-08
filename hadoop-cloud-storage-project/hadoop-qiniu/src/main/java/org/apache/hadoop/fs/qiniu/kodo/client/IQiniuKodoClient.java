@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
+
 public interface IQiniuKodoClient {
     boolean exists(String key) throws IOException;
 
