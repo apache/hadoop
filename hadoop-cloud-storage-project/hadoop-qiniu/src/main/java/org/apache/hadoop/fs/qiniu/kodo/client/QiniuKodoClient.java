@@ -461,7 +461,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         if (Objects.equals(oldKey, newKey)) {
             return;
         }
-        Response response = bucketManager.rename(bucket, oldKey, newKey);
+        bucketManager.rename(bucket, oldKey, newKey);
         incrementOneReadOps();
     }
 
@@ -482,7 +482,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
     @Override
     public void deleteKey(String key) throws IOException {
-        Response response = bucketManager.delete(bucket, key);
+        bucketManager.delete(bucket, key);
         incrementOneReadOps();
     }
 
