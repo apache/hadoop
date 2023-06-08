@@ -38,9 +38,11 @@ public class DataFetcherBlockReader implements IBlockReader, IDataFetcher {
 
     @Override
     public void close() throws IOException {
+        // do nothing
     }
 
     @Override
     public void deleteBlocks(String key) {
+        // do nothing
     }
 }

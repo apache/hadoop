@@ -5,7 +5,6 @@ import org.apache.hadoop.fs.qiniu.kodo.config.AConfigBase;
 
 public class UploadConfig extends AConfigBase {
     public final SignConfig sign;
-    // 同一时刻最大并发上传文件数
     public final int maxConcurrentUploadFiles;
     public final int maxConcurrentTasks;
     public final boolean accUpHostFirst;

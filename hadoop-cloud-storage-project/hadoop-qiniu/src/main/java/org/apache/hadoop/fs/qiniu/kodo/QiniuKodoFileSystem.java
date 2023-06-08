@@ -63,7 +63,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         String bucket = name.getHost();
         this.uri = URI.create(name.getScheme() + "://" + name.getAuthority());
 
-        // 构造工作目录路径，工作目录路径为用户使用相对目录时所相对的路径
+        // workingDir = /user/<username>
         this.username = UserGroupInformation.getCurrentUser().getShortUserName();
         this.workingDir = new Path("/user", username).makeQualified(uri, null);
 
@@ -100,9 +100,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     private volatile boolean makeSureWorkdirCreatedFlag = false;
 
     /**
-     * 工作目录为相对路径使用的目录，其必须得存在，故需要检查是否被创建
-     * 需要在创建文件，创建文件夹前进行检查
-     * 需要在工作目录被改变的时候重新检查
+     * Working directory is used by relative paths. So it should be existed.
      */
     private synchronized void makeSureWorkdirCreated(Path path) throws IOException {
         if (makeSureWorkdirCreatedFlag) return;
@@ -120,7 +118,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     }
 
     /**
-     * 打开一个文件，返回一个可以被读取的输入流
+     * Open a file and return an input stream to read from the file.
      */
     @Override
     public FSDataInputStream open(Path path, int bufferSize) throws IOException {
@@ -139,7 +137,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         if (fileStatus.isDirectory()) throw fnfeDir;
 
         long len = fileStatus.getLen();
-        // 空文件内容
+        // empty file
         if (len == 0) {
             return new FSDataInputStream(new EmptyInputStream());
         }
@@ -175,7 +173,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
 
     /**
-     * 创建一个文件，返回一个可以被写入的输出流
+     * Create a file
      */
     @Override
     public FSDataOutputStream create(Path path, FsPermission permission, boolean overwrite, int bufferSize, short replication, long blockSize, Progressable progress) throws IOException {
@@ -187,18 +185,17 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         try {
             FileStatus fileStatus = getFileStatus(path);
-            // 文件已存在, 如果是文件夹则抛出异常
+            // if the file is existed and is a directory, throw exception
             if (fileStatus.isDirectory()) {
                 throw faee;
             } else {
-                // 文件已存在，如果不能覆盖则抛出异常
+                // if the file is existed but cannot be overwritten, throw exception
                 if (!overwrite) {
                     throw new FileAlreadyExistsException("File already exists: " + path);
                 }
             }
         } catch (FileNotFoundException e) {
-            // ignore
-            // 文件不存在，可以被创建
+            // file not found, can be created
         }
         makeSureWorkdirCreated(path);
         mkdirs(path.getParent());
@@ -220,7 +217,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     }
 
     /**
-     * 创建一个文件，返回一个可以被写入的输出流，该创建文件的方法不会递归创建父目录
+     * Create a file non recursively.
      *
      * @param path        the file name to open
      * @param permission  file permission
@@ -245,18 +242,15 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         try {
             FileStatus fileStatus = getFileStatus(path);
-            // 文件已存在, 如果是文件夹则抛出异常
             if (fileStatus.isDirectory()) {
                 throw faee;
             } else {
-                // 文件已存在，如果不能覆盖则抛出异常
                 if (!overwrite) {
                     throw new FileAlreadyExistsException("File already exists: " + path);
                 }
             }
         } catch (FileNotFoundException e) {
             // ignore
-            // 文件不存在，可以被创建
         }
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
@@ -387,7 +381,6 @@ public class QiniuKodoFileSystem extends FileSystem {
     public boolean delete(Path path, boolean recursive) throws IOException {
         LOG.debug("delete, path:" + path + " recursive:" + recursive);
 
-        // 判断是否是文件
         FileStatus file;
         try {
             file = getFileStatus(path);
@@ -417,7 +410,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         dirKey = QiniuKodoUtils.keyToDirKey(dirKey);
         LOG.debug("deleteDir, dirKey:" + dirKey + " recursive:" + recursive);
         if (kodoClient.listNStatus(dirKey, 2).size() > 1 && !recursive) {
-            // 若非递归且不止一个，那么抛异常
+            // if not recursive and not empty, throw exception
             throw new IOException("Dir is not empty");
         }
         deleteKeyBlocks(dirKey);
@@ -456,12 +449,12 @@ public class QiniuKodoFileSystem extends FileSystem {
     }
 
     /**
-     * 递归地创建文件夹
+     * Create directory, including any necessary but nonexistent parent
      */
     @Override
     public boolean mkdirs(Path path, FsPermission permission) throws IOException {
         List<Path> successPaths = new ArrayList<>();
-        // 如果该文件夹发现已存在，那么直接返回结果
+
         try {
             while (path != null) {
                 boolean success = mkdir(path);
@@ -473,7 +466,7 @@ public class QiniuKodoFileSystem extends FileSystem {
             }
             return true;
         } catch (FileAlreadyExistsException e) {
-            // 回滚删除已创建成功的中间文件
+            // remove the created paths
             for (Path p : successPaths) {
                 delete(p, false);
             }
@@ -483,7 +476,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     }
 
     /**
-     * 仅仅只创建当前路径文件夹
+     * Only create one directory
      */
     private boolean mkdir(Path path) throws IOException {
         LOG.debug("mkdir, path:" + path);
@@ -497,17 +490,17 @@ public class QiniuKodoFileSystem extends FileSystem {
         String dirKey = QiniuKodoUtils.keyToDirKey(key);
         String fileKey = QiniuKodoUtils.keyToFileKey(key);
 
-        // 找到文件夹，返回
+        // find dir
         if (kodoClient.exists(dirKey)) {
             return false;
         }
 
-        // 找到文件，抛异常
+        // find file
         if (kodoClient.exists(fileKey)) {
             throw new FileAlreadyExistsException(path.toString());
         }
 
-        // 啥都找不到，创建文件夹
+        // no file and no dir, create dir
         kodoClient.makeEmptyObject(dirKey);
         return true;
     }
@@ -520,22 +513,20 @@ public class QiniuKodoFileSystem extends FileSystem {
         // Root always exists
         if (key.length() == 0) return true;
 
-        // 1. key 可能是实际文件或文件夹, 也可能是中间路径
+        // 1. Maybe a file or a directory or a middle path
 
-        // 先尝试查找 key
+        // first find key
         if (kodoClient.exists(key)) return true;
 
-        // 2. 有可能是文件夹路径但是不存在末尾/
-        // 添加尾部/后再次获取
+        // 2. Maybe a directory but not exists / at the end
+        // add / at the end
         String dirKey = QiniuKodoUtils.keyToDirKey(key);
 
-        // 找不到表示文件夹的空对象，故只能列举是否有该前缀的对象
-        // 列举结果为null，则真的不存在
         return kodoClient.listOneStatus(dirKey) != null;
     }
 
     /**
-     * 获取一个路径的文件详情
+     * Get the file status
      */
     @Override
     public FileStatus getFileStatus(Path path) throws IOException {
@@ -550,41 +541,28 @@ public class QiniuKodoFileSystem extends FileSystem {
             return new FileStatus(0, true, 1, 0, 0, 0, null, username, username, qualifiedPath);
         }
 
-        // 1. key 可能是实际文件或文件夹, 也可能是中间路径
-
-        // 先尝试查找 key
         QiniuKodoFileInfo file = kodoClient.getFileStatus(key);
 
-        // 能查找到, 直接返回文件信息
         if (file != null) {
             return fileInfoToFileStatus(file);
         }
 
-        // 2. 有可能是文件夹路径但是不存在末尾/
-        // 添加尾部/后再次获取
         String newKey = QiniuKodoUtils.keyToDirKey(key);
 
-        // 找不到表示文件夹的空对象，故只能列举是否有该前缀的对象
         file = kodoClient.listOneStatus(newKey);
         if (file == null) {
             throw new FileNotFoundException("can't find file:" + path);
         }
 
-        // 是文件夹本身
         if (file.key.equals(newKey)) {
             return fileInfoToFileStatus(file);
         }
 
-        // 是文件夹前缀
         QiniuKodoFileInfo newDir = new QiniuKodoFileInfo(newKey, 0, 0);
         kodoClient.makeEmptyObject(newKey);
         return fileInfoToFileStatus(newDir);
     }
 
-
-    /**
-     * 七牛SDK的文件信息转换为 hadoop fs 的文件信息
-     */
     private FileStatus fileInfoToFileStatus(QiniuKodoFileInfo file) {
         if (file == null) return null;
 
@@ -593,7 +571,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         long putTime = file.putTime;
         boolean isDir = QiniuKodoUtils.isKeyDir(file.key);
         return new FileStatus(
-                file.size, // 文件大小
+                file.size,
                 isDir,
                 0,
                 fsConfig.download.blockSize,
@@ -601,13 +579,13 @@ public class QiniuKodoFileSystem extends FileSystem {
                 putTime, // access time
                 FsPermission.createImmutable(
                         isDir
-                                ? (short) 461 // 文件夹权限, 0715, rwx--x-wx
-                                : (short) 438 // 文件权限, 0666, rw-rw-rw-
+                                ? (short) 461 // 0715, rwx--x-wx
+                                : (short) 438 // 0666, rw-rw-rw-
                 ),   // permission
                 username,   // owner
                 username,   // group
                 null,   // symlink
-                QiniuKodoUtils.keyToPath(uri, workingDir, file.key) // 将 key 还原成 hadoop 绝对路径
+                QiniuKodoUtils.keyToPath(uri, workingDir, file.key) // path
         );
     }
 }

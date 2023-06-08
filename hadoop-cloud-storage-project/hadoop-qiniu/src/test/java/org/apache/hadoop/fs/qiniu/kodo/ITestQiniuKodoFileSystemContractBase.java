@@ -43,7 +43,6 @@ public class ITestQiniuKodoFileSystemContractBase extends FileSystemContractBase
         try {
             assertEquals("Rename result", renameSucceeded, fs.rename(src, dst));
         } catch (FileAlreadyExistsException faee) {
-            // 如果期望能够成功重命名，但抛出异常，那么失败
             if (renameSucceeded) {
                 fail("Expected rename succeeded but " + faee);
             }

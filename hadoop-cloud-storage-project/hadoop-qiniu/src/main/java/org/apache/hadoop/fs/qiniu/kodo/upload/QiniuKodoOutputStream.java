@@ -35,8 +35,6 @@ public class QiniuKodoOutputStream extends OutputStream {
         this.pis = new PipedInputStream(pos, bufferSize);
         this.future = executorService.submit(() -> {
             try {
-                // 这里抛出的异常基本都是 QiniuException 是属于 IOException
-                // 正常情况上传后应当返回 null
                 client.upload(pis, key, overwrite);
                 return null;
             } catch (IOException e) {
@@ -61,7 +59,6 @@ public class QiniuKodoOutputStream extends OutputStream {
         try {
             IOException uploadException = future.get();
             if (uploadException == null) {
-                // 无异常退出
                 return;
             }
             if (uploadException instanceof QiniuException &&

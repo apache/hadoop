@@ -127,17 +127,11 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
     }
 
 
-    /**
-     * 序列化缓存元数据到json
-     */
     public String serializeCacheMetaToJson() {
         Gson gson = new Gson();
         return gson.toJson(PersistentData.fromMap(lruCache, blockSize));
     }
 
-    /**
-     * 从json缓存元数据加载缓存信息
-     */
     public void loadCacheMetaFromJson(String json) throws IOException {
         Gson gson = new Gson();
         PersistentData data = gson.fromJson(json, PersistentData.class);
@@ -152,10 +146,6 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
         data.addToMap(lruCache);
     }
 
-
-    /**
-     * 读取一个文件
-     */
     private byte[] readFile(Path path) throws IOException {
         LOG.debug("read file: {}", path);
 
@@ -188,9 +178,9 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
     }
 
     /**
-     * 从磁盘缓存中尝试读取该数据块，
-     * 若过期则删除并返回null,
-     * 若缓存不存在，则返回null
+     * Read block data from disk cache.
+     * If the cache is expired, delete it and return null.
+     * If the cache does not exist, return null.
      */
     private byte[] readBlockFromCache(KeyBlockIdCacheKey kbck) throws IOException {
         if (lruCache.containsKey(kbck)) {
@@ -199,23 +189,20 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
             long lastModifiedTime = Files.getLastModifiedTime(blockFile).toInstant().getEpochSecond();
             int duration = (int) (now - lastModifiedTime);
             if (duration > expires) {
-                // 过期了，删除缓存块, 返回null
+                // is expired, delete cache block and return null
                 Files.deleteIfExists(blockFile);
                 lruCache.remove(kbck);
-                // 需要刷新缓存元数据文件
+                // need refresh meta file
                 saveBlockCacheMetaFile();
                 return null;
             } else {
-                // 没过期，可以直接返回数据块
+                // is not expired, return block data
                 return readFile(blockFile);
             }
         }
         return null;
     }
 
-    /**
-     * 直接从数据源获取数据并且缓存起来
-     */
     private byte[] readBlockFromSourceAndCache(KeyBlockIdCacheKey kbck) throws IOException {
         Path cachedBlockFile = Paths.get(bufferDir.toString(), kbck.key, String.format("%d.blk", kbck.blockId));
         byte[] blockData = source.readBlock(kbck.key, kbck.blockId);
@@ -236,10 +223,10 @@ public class DiskCacheBlockReader implements IBlockReader, OnLRUCacheRemoveListe
                     return cachedBlockData;
                 }
             }
-            // 可能没有缓存, 缓存过期, 缓存有效期为0，直接穿透至下一层数据源获取数据
+            // maybe no cache, cache expired, or cache expires, go to the next layer data source to get data directly
             return readBlockFromSourceAndCache(kbck);
         } catch (IOException e) {
-            // 缓存可能有问题，删了
+            // If the cache has a problem, delete it
             LOG.warn("IO", e);
             LOG.info("delete cache: {}", kbck);
             lruCache.remove(kbck);

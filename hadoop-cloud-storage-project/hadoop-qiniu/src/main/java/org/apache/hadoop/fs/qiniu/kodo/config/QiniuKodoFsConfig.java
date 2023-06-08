@@ -35,9 +35,6 @@ public class QiniuKodoFsConfig extends AConfigBase {
     }
 
 
-    /**
-     * 获取私有云的自定义bucket的region配置信息
-     */
     private CustomRegionConfig region() {
         return new CustomRegionConfig(conf, namespace + ".customRegion");
     }

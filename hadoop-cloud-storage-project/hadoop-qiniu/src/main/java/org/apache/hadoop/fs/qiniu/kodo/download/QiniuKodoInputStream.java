@@ -30,7 +30,6 @@ public class QiniuKodoInputStream extends FSInputStream {
         this.generalStrategy = new QiniuKodoCommonInputStream(key, generalReader, contentLength, statistics);
         this.randomStrategy = new QiniuKodoCommonInputStream(key, randomReader, contentLength, statistics);
 
-        // 默认通用策略
         this.currentStrategy = generalStrategy;
         LOG.trace("File {} read strategy is general reader", key);
     }

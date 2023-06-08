@@ -74,17 +74,16 @@ public class QiniuKodoCommonInputStream extends FSInputStream {
     }
 
     /**
-     * 根据当前的 position 刷新缓存的 block 块
+     * Refresh the cached block according to the current position
      */
     private void refreshCurrentBlock() throws IOException {
         int blockId = (int) (position / (long) blockSize);
 
-        // 单块缓存, blockId不变直接走缓存
+        // if currentBlockData is null or blockId changed, refresh currentBlockData
         if (currentBlockData == null || blockId != currentBlockId) {
-            // 未获取到 blockData 或 blockId 变了
             currentBlockId = blockId;
             currentBlockData = reader.readBlock(this.key, blockId);
-            LOG.debug("读取数据块id: {}", currentBlockId);
+            LOG.debug("Read block id: {}", currentBlockId);
         }
     }
 
@@ -104,7 +103,6 @@ public class QiniuKodoCommonInputStream extends FSInputStream {
         }
         position++;
 
-        // 统计数据上报
         if (statistics != null) {
             byteReadCount++;
             if (byteReadCount > 10) {
@@ -175,7 +173,6 @@ public class QiniuKodoCommonInputStream extends FSInputStream {
     public synchronized void close() throws IOException {
         if (closed) return;
 
-        // 统计数据上报
         if (statistics != null && byteReadCount > 0) {
             statistics.incrementBytesRead(byteReadCount);
             byteReadCount = 0;

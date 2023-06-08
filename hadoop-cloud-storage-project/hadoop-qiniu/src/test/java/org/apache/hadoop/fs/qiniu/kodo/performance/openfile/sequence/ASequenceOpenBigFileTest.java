@@ -47,7 +47,6 @@ public abstract class ASequenceOpenBigFileTest extends QiniuKodoPerformanceBaseT
 
     @Override
     protected long testImpl(String testDir, FileSystem fs, ExecutorService service) throws Exception {
-        // 总计20 * 4MB * 2 = 160MB
         Path p = OpenBigFileCommonUtil.makeSureExistsBigFile(testDir, fs, blockSize(), blocks());
 
 

@@ -21,17 +21,14 @@ public abstract class ACreateBigFileTest extends QiniuKodoPerformanceBaseTest {
 
 
     protected int files() {
-        // 创建5个文件
         return 5;
     }
 
     protected int blockSize() {
-        // 每块4MB
         return 4 * 1024 * 1024;
     }
 
     protected int blocks() {
-        // 每个文件2块，预计耗费上传流量 40MB
         return 2;
     }
 
@@ -52,13 +49,10 @@ public abstract class ACreateBigFileTest extends QiniuKodoPerformanceBaseTest {
 
     @Override
     protected long testImpl(String testDir, FileSystem fs, ExecutorService service) throws Exception {
-        // 总计20 * 4MB * 2 = 160MB
         byte[] bs = new byte[blockSize()];
 
-        // 建立父目录
         fs.mkdirs(new Path(testDir));
 
-        // 生产
         long ms = System.currentTimeMillis();
 
         for (int i = 0; i < files(); i++) {

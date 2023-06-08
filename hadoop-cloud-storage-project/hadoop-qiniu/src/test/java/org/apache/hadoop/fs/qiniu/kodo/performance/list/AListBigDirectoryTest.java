@@ -15,7 +15,6 @@ import java.util.concurrent.ExecutorService;
 public abstract class AListBigDirectoryTest extends QiniuKodoPerformanceBaseTest {
     private static final Logger LOG = LoggerFactory.getLogger(AListBigDirectoryTest.class);
 
-    // 列举次数
     protected int count() {
         return 10;
     }
@@ -24,7 +23,6 @@ public abstract class AListBigDirectoryTest extends QiniuKodoPerformanceBaseTest
         return 10000;
     }
 
-    // 列举者并发列举的读者数
     abstract protected int readers();
 
     @Override

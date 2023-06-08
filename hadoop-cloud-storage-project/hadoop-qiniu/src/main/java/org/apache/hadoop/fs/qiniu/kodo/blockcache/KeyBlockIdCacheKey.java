@@ -12,7 +12,6 @@ public class KeyBlockIdCacheKey {
     }
 
     public static KeyBlockIdCacheKey get(String key, int blockId) {
-        // 实现对象的缓存
         return new KeyBlockIdCacheKey(key, blockId);
     }
 

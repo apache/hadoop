@@ -23,11 +23,10 @@ public class QiniuKodoGeneralBlockReader implements IBlockReader {
         DiskCacheConfig diskCache = fsConfig.download.cache.disk;
         MemoryCacheConfig memoryCache = fsConfig.download.cache.memory;
 
-        // 构造原始数据获取器
+        // Build the block reader chain
         this.finalReader = new QiniuKodoSourceBlockReader(blockSize, client);
 
         if (diskCache.enable) {
-            // 添加磁盘缓存层
             this.finalReader = new DiskCacheBlockReader(
                     this.finalReader,
                     diskCache.blocks,
@@ -37,7 +36,6 @@ public class QiniuKodoGeneralBlockReader implements IBlockReader {
         }
 
         if (memoryCache.enable) {
-            // 添加内存缓存
             this.finalReader = new MemoryCacheBlockReader(
                     this.finalReader,
                     memoryCache.blocks

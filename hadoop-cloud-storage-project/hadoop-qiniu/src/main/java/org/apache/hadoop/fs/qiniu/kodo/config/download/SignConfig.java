@@ -14,16 +14,10 @@ public class SignConfig extends AConfigBase {
     }
 
 
-    /**
-     * 下载文件是否使用签名
-     */
     private boolean enable() {
         return conf.getBoolean(namespace + ".enable", true);
     }
 
-    /**
-     * 下载签名过期时间
-     */
     private int expires() {
         return conf.getInt(namespace + ".expires", 3 * 60);
     }

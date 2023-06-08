@@ -20,12 +20,12 @@ public class BatchOperationConsumer implements Callable<Exception> {
     private volatile boolean isRunning = true;
 
     /**
-     * 批处理消费者
+     * The consumer of batch operations.
      *
-     * @param queue                   从队列中读取批处理操作
-     * @param bucketManager           bucketManager
-     * @param singleBatchRequestLimit 单次批处理的limit值
-     * @param pollTimeout             每次poll的超时时间
+     * @param queue                   the queue of batch operations
+     * @param bucketManager           the bucket manager
+     * @param singleBatchRequestLimit the limit of single batch request
+     * @param pollTimeout             the timeout of poll
      */
     public BatchOperationConsumer(
             BlockingQueue<BatchOperator> queue,
@@ -51,7 +51,8 @@ public class BatchOperationConsumer implements Callable<Exception> {
     private void loop() throws InterruptedException, QiniuException {
         BatchOperator operator = queue.poll(pollTimeout, TimeUnit.MILLISECONDS);
 
-        // poll失败了，等待下一次循环轮询
+        // If poll result is null, it means that the timeout has been reached.
+        // So we should stop the loop and wait for the next loop.
         if (operator == null) {
             return;
         }
@@ -62,24 +63,22 @@ public class BatchOperationConsumer implements Callable<Exception> {
         operator.addTo(batchOperations);
         batchOperationsSize++;
 
-        // 批处理数目不够，直接等待下一次poll
+        // The number of batch operations is not enough, just wait for the next poll.
         if (batchOperationsSize < singleBatchRequestLimit) {
             return;
         }
-        // 批处理到到达一定数目时提交
+        // The number of batch operations is enough, submit the batch operations.
         submitBatchOperations();
     }
 
     @Override
     public Exception call() {
         try {
-            // is Running == true or
-            // queue非空
+            // is Running == true or queue is not empty
             while (isRunning || !queue.isEmpty()) {
                 loop();
             }
             // isRunning is false && queue is empty
-            // 提交剩余的批处理
             if (batchOperationsSize > 0) {
                 try {
                     submitBatchOperations();

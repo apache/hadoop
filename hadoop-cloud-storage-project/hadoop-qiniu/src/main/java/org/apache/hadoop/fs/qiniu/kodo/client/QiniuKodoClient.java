@@ -126,17 +126,17 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             BucketManager bucketManager,
             String bucket
     ) throws QiniuException {
-        // 优先走用户显式设置的下载域名
+        // first use user defined download domain
         if (fsConfig.download.domain != null) {
             return fsConfig.download.domain;
         }
-        // 当未配置下载域名时，走源站下载域名
+        // if not defined download domain, use bucket default origin domain
         return bucketManager.getDefaultIoSrcHost(bucket);
     }
 
     private static Region buildRegion(QiniuKodoFsConfig fsConfig) throws QiniuException {
         if (fsConfig.customRegion.id != null) {
-            // 私有云环境
+            // This is private cloud region configuration
             try {
                 return fsConfig.customRegion.getCustomRegion();
             } catch (MissingConfigFieldException e) {
@@ -144,7 +144,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             }
 
         }
-        // 公有云环境
+        // This is public cloud region configuration, auto detect region by uc server
         return Region.autoRegion();
     }
 
@@ -167,7 +167,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
     }
 
     /**
-     * 根据key和overwrite生成上传token
+     * Generate a upload token with key and overwrite flag
      */
     public String getUploadToken(String key, boolean overwrite) {
         StringMap policy = new StringMap();
@@ -206,9 +206,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         }
     }
 
-    /**
-     * 给定一个输入流将读取并上传对应文件
-     */
+
     @Override
     public void upload(InputStream stream, String key, boolean overwrite) throws IOException {
         QiniuUploader uploader = new QiniuUploader(overwrite);
@@ -216,21 +214,20 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             uploader.upload(key, stream);
             return;
         }
+        // If stream cannot read available bytes, we need to read first byte to check if stream is empty
         int b = stream.read();
         if (b == -1) {
-            // 空流
+            // If stream is empty, we need to upload a empty file
             uploader.uploadEmpty(key);
             return;
         }
-        // 有内容，还得拼回去
+        // If stream is not empty, we need to upload first byte and then upload the rest
         SequenceInputStream sis = new SequenceInputStream(new ByteArrayInputStream(new byte[]{(byte) b}), stream);
         uploader.upload(key, sis);
     }
 
 
-    /**
-     * 通过HEAD来获取指定的key大小
-     */
+
     @Override
     public long getLength(String key) throws IOException {
         try {
@@ -260,21 +257,18 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
     @Override
     public boolean exists(String key) throws IOException {
-        // 这里如果使用head判断404，会导致某些场景下命中缓存，导致文件被删除但是返回200
+        // If use http head request to check file exists, maybe has more high performance
+        // But if do this, will cause some cache problem, if file deleted but still return 200
         return getFileStatus(key) != null;
     }
 
-    /**
-     * 根据指定的key和文件大小获取一个输入流
-     */
+
     @Override
     public InputStream fetch(String key, long offset, int size) throws IOException {
         return downloadHttpClient.fetch(getFileUrlByKey(key), offset, size);
     }
 
-    /**
-     * 获取一个指定前缀的对象
-     */
+
     @Override
     public QiniuKodoFileInfo listOneStatus(String keyPrefix) throws IOException {
         List<QiniuKodoFileInfo> ret = listNStatus(keyPrefix, 1);
@@ -284,9 +278,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         return ret.get(0);
     }
 
-    /**
-     * 获取指定前缀的最多前n个对象
-     */
+
     public List<QiniuKodoFileInfo> listNStatus(String keyPrefix, int n) throws IOException {
         FileListing listing = bucketManager.listFiles(bucket, keyPrefix, null, n, "");
         if (listing.items == null) {
@@ -295,19 +287,11 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         return Arrays.stream(listing.items).map(QiniuKodoClient::qiniuFileInfoToMyFileInfo).collect(Collectors.toList());
     }
 
-    /**
-     * 列举出指定前缀的所有对象
-     *
-     * @param prefixKey    前缀
-     * @param useDirectory 是否使用路径分割
-     * @return 迭代器
-     */
+
     public RemoteIterator<QiniuKodoFileInfo> listStatusIterator(String prefixKey, boolean useDirectory) {
         ListProducerConfig listConfig = fsConfig.client.list;
-        // 消息队列
         BlockingQueue<FileInfo> fileInfoQueue = new LinkedBlockingQueue<>(listConfig.bufferSize);
 
-        // 生产者
         ListingProducer producer = new ListingProducer(
                 fileInfoQueue, bucketManager, bucket, prefixKey, false,
                 listConfig.singleRequestLimit,
@@ -315,22 +299,21 @@ public class QiniuKodoClient implements IQiniuKodoClient {
                 listConfig.offerTimeout
         );
 
-        // 生产者线程
         Future<Exception> future = service.submit(producer);
         return new RemoteIterator<QiniuKodoFileInfo>() {
             @Override
             public boolean hasNext() throws IOException {
                 while (true) {
-                    // 如果队列不为空，返回 true 表示有下一个
+                    // If queue is not empty, return true means has next element
                     if (!fileInfoQueue.isEmpty()) {
                         return true;
                     }
 
-                    // 若已完成且队列为空，表示没有下一个了
+                    // If producer thread is done and queue is empty, means no next element
                     if (future.isDone() && fileInfoQueue.isEmpty()) {
                         try {
                             Exception e = future.get();
-                            // 若生产者线程抛出异常，这里抛出IOException
+                            // If producer thread throw exception, throw IOException here
                             if (e != null) {
                                 throw new IOException(e);
                             }
@@ -339,7 +322,8 @@ public class QiniuKodoClient implements IQiniuKodoClient {
                         }
                         return false;
                     }
-                    // 若未完成，且队列为空，则等待一段时间
+
+                    // If producer thread is not done and queue is empty, wait a while
                     try {
                         Thread.sleep(100);
                     } catch (InterruptedException e) {
@@ -363,58 +347,46 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         };
     }
 
-    /**
-     * 若 useDirectory 为 true, 则列举出分级的目录效果
-     * 否则，将呈现出所有前缀为key的对象
-     */
     @Override
     public List<QiniuKodoFileInfo> listStatus(String prefixKey, boolean useDirectory) throws IOException {
         return RemoteIterators.toList(listStatusIterator(prefixKey, useDirectory));
     }
 
 
-    /**
-     * 复制对象
-     */
+
     @Override
     public void copyKey(String oldKey, String newKey) throws IOException {
         bucketManager.copy(bucket, oldKey, bucket, newKey);
     }
 
     /**
-     * 列举并批处理
-     *
-     * @param config    生产消费相关的配置
-     * @param prefixKey 生产列举的key前缀
-     * @param f         消费操作函数
+     * list files by key prefix and do batch operation
      */
     private void listAndBatch(
             ListAndBatchBaseConfig config,
             String prefixKey,
             Function<FileInfo, BatchOperator> f
     ) throws IOException {
-        // 消息队列
-        // 对象列举生产者队列
         BlockingQueue<FileInfo> fileInfoQueue = new LinkedBlockingQueue<>(config.listProducer.bufferSize);
-        // 批处理队列
+
         BlockingQueue<BatchOperator> operatorQueue = new LinkedBlockingQueue<>(config.batchConsumer.bufferSize);
 
-        // 对象列举生产者
+        // Create producer
         ListingProducer producer = new ListingProducer(
                 fileInfoQueue, bucketManager, bucket, prefixKey, true,
                 config.listProducer.singleRequestLimit, false,
                 config.listProducer.useListV2,
                 config.listProducer.offerTimeout
         );
-        // 生产者线程
+        // Producer thread
         Future<Exception> producerFuture = service.submit(producer);
 
-        // 消费者线程
+        // Create consumers
         int consumerCount = config.batchConsumer.count;
         BatchOperationConsumer[] consumers = new BatchOperationConsumer[consumerCount];
         Future<?>[] futures = new Future[consumerCount];
 
-        // 多消费者共享一个队列
+        // multiple consumers share one queue
         for (int i = 0; i < consumerCount; i++) {
             consumers[i] = new BatchOperationConsumer(
                     operatorQueue, bucketManager,
@@ -424,10 +396,10 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             futures[i] = service.submit(consumers[i]);
         }
 
-        // 从生产者队列取出产品并加工后放入消费者队列
+        // Take product from producer queue and put into consumer queue after processing
         while (!producerFuture.isDone() || !fileInfoQueue.isEmpty()) {
             FileInfo product = fileInfoQueue.poll();
-            // 缓冲区队列为空
+            // Buffer queue is empty
             if (product == null) {
                 continue;
             }
@@ -438,7 +410,6 @@ public class QiniuKodoClient implements IQiniuKodoClient {
             } while (!success);
         }
 
-        // 生产完毕
         try {
             if (producerFuture.get() != null) {
                 throw producerFuture.get();
@@ -446,27 +417,27 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         } catch (Exception e) {
             throw new IOException(e);
         }
-        LOG.debug("生产者生产完毕");
+        LOG.debug("Producer finished");
 
-        // 等待消费队列为空
+        // Wait for all operators to be consumed
         while (true) {
             if (operatorQueue.isEmpty()) {
                 break;
             }
         }
 
-        // 向所有消费者发送关闭信号
+        // Send stop signal to all consumers
         for (int i = 0; i < consumerCount; i++) {
             consumers[i].stop();
         }
 
-        // 等待所有的消费者消费完毕
+        // Wait for all consumers to finish
         for (int i = 0; i < consumerCount; i++) {
             try {
                 if (futures[i].get() != null) {
                     throw (Exception) futures[i].get();
                 }
-                LOG.debug("消费者{}号消费完毕", i);
+                LOG.debug("Consumer {} finished", i);
             } catch (Exception e) {
                 throw new IOException(e);
             }
@@ -486,9 +457,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         );
     }
 
-    /**
-     * 重命名指定 key 的对象
-     */
+
     @Override
     public void renameKey(String oldKey, String newKey) throws IOException {
         if (Objects.equals(oldKey, newKey)) {
@@ -498,9 +467,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         incrementOneReadOps();
     }
 
-    /**
-     * 批量重命名 key 为指定前缀的对象
-     */
+
     @Override
     public void renameKeys(String oldPrefix, String newPrefix) throws IOException {
         listAndBatch(
@@ -514,14 +481,13 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         );
     }
 
-    /**
-     * 仅删除一层 key
-     */
+
     @Override
     public void deleteKey(String key) throws IOException {
         Response response = bucketManager.delete(bucket, key);
         incrementOneReadOps();
     }
+
 
     @Override
     public void deleteKeys(String prefix) throws IOException {
@@ -538,19 +504,14 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         }
     }
 
-    /**
-     * 使用对象存储模拟文件系统，文件夹只是作为一个空白文件，仅用于表示文件夹的存在性与元数据的存储
-     * 该 makeEmptyObject 仅创建一层空文件
-     */
+
     @Override
     public void makeEmptyObject(String key) throws IOException {
         QiniuUploader uploader = new QiniuUploader(false);
         uploader.uploadEmpty(key);
     }
 
-    /**
-     * 不存在不抛异常，返回为空，只有在其他错误时抛异常
-     */
+
     @Override
     public QiniuKodoFileInfo getFileStatus(String key) throws IOException {
         try {
@@ -569,7 +530,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
 
 
     /**
-     * 构造某个文件的下载url
+     * Build a file download url by key
      */
     private String getFileUrlByKey(String key) throws IOException {
         DownloadUrl downloadUrl = new DownloadUrl(downloadDomain, useDownloadHttps, key);
@@ -580,7 +541,7 @@ public class QiniuKodoClient implements IQiniuKodoClient {
         return url;
     }
 
-    public static QiniuKodoFileInfo qiniuFileInfoToMyFileInfo(FileInfo fileInfo) {
+    private static QiniuKodoFileInfo qiniuFileInfoToMyFileInfo(FileInfo fileInfo) {
         if (fileInfo == null) return null;
         return new QiniuKodoFileInfo(
                 fileInfo.key,

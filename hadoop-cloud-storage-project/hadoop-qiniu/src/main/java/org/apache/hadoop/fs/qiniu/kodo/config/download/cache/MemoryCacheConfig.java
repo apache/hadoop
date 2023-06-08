@@ -18,9 +18,6 @@ public class MemoryCacheConfig extends AConfigBase {
         return conf.getBoolean(namespace + ".enable", true);
     }
 
-    /**
-     * 读取文件时内存LRU缓冲区的最大块数量
-     */
     private int blocks() {
         return conf.getInt(namespace + ".blocks", 25);
     }

@@ -23,14 +23,14 @@ public class ListingProducer implements Callable<Exception> {
     private final boolean containKeyPrefixSelf;
 
     /**
-     * 对象列举生产者
+     * The producer of listing files.
      *
-     * @param queue              列举结果放入消息队列
-     * @param bucketManager      bucketManager
-     * @param bucketName         列举的bucket名称
-     * @param keyPrefix          列举的key前缀
-     * @param singleRequestLimit 单次请求获取最大限制的列举数目
-     * @param useDirectory       是否使用文件夹目录结构，将会列举出文件夹结构
+     * @param queue              the queue of listing files
+     * @param bucketManager      the bucket manager
+     * @param bucketName         the bucket name of listing files
+     * @param keyPrefix          the key prefix of listing files
+     * @param singleRequestLimit the limit of single request
+     * @param useDirectory       whether use directory, if true, the key prefix will be treated as a directory
      */
     public ListingProducer(
             BlockingQueue<FileInfo> queue,

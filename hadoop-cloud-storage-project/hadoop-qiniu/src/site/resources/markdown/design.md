@@ -21,7 +21,7 @@ The purpose of this project is to integrate Kodo natively into Hadoop/Spark proj
 > 4. Do not track the modification time of the file, so in the file system, the modification time of the file is the creation time of the file
 > 5. The delete and rename operations are not atomic, which means that if the operation is interrupted unexpectedly, the file system may be in an inconsistent state
 > 6. Object storage does not support unix-like permission management, so in the file system, the following rules need to be provided:
->    + Directory permission is 777
+>    + Directory permission is 715
 >    + File permission is 666
 >    + File owner report the local current username
 >    + File owner group report the local current username
