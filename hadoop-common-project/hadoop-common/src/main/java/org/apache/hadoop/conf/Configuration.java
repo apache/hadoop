@@ -752,13 +752,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (!overlayProps.isEmpty()) {
       for (String nk : names) {
         String k = map.get(nk);
-        if (k != null && !overlayProps.containsKey(nk)) {
-          String v = overlayProps.getProperty(k);
-          if (v != null) {
+        if (k != null) {
+          overlayProps.computeIfAbsent(nk, (x) -> {
+            String v = overlayProps.getProperty(k);
             // Update both properties and overlays.
-            getProps().setProperty(nk, v);
-            overlayProps.setProperty(nk, v);
-          }
+            if (v != null) {
+              getProps().setProperty(nk, v);
+            }
+            return v;
+          });
         }
       }
     }
