@@ -51,6 +51,7 @@
         <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
           <xmlOutput>true</xmlOutput>
+          <excludeFilterFile>${basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
           <effort>Max</effort>
         </configuration>
       </plugin>
@@ -72,7 +73,6 @@
               <goal>list</goal>
             </goals>
             <configuration>
-              <!-- build a shellprofile -->
               <outputFile>
                 ${project.basedir}/target/hadoop-cloud-storage-deps/${project.artifactId}.cloud-storage-optional.txt
               </outputFile>
