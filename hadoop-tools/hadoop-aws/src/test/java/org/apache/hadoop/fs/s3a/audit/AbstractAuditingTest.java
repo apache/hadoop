@@ -19,9 +19,13 @@
 package org.apache.hadoop.fs.s3a.audit;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
+import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import org.junit.After;
@@ -232,6 +236,23 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
     assertThat(params.get(key))
             .describedAs(key)
             .isNull();
+  }
+
+  /**
+   * Create head request for bulk delete and pass it through beforeExecution of the manager.
+   *
+   * @param keys keys to be provided in the bulk delete request.
+   * @return a processed request.
+   */
+  protected DeleteObjectsRequest headForBulkDelete(String... keys) {
+    if (keys == null || keys.length == 0) {
+      return null;
+    }
+    List<DeleteObjectsRequest.KeyVersion> keysToDelete = Arrays
+        .stream(keys)
+        .map(DeleteObjectsRequest.KeyVersion::new)
+        .collect(Collectors.toList());
+    return manager.beforeExecution(requestFactory.newBulkDeleteRequest(keysToDelete));
   }
 
 }

@@ -385,7 +385,7 @@ public class TestLogAggregationIndexedFileController
 
   @Test
   @Timeout(15000)
-  void testFetchApplictionLogsHar() throws Exception {
+  void testFetchApplicationLogsHar() throws Exception {
     List<String> newLogTypes = new ArrayList<>();
     newLogTypes.add("syslog");
     newLogTypes.add("stdout");

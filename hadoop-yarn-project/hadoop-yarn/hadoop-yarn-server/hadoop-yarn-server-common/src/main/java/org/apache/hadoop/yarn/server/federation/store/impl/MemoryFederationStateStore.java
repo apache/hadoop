@@ -31,11 +31,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.Comparator;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -97,6 +98,7 @@ import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembership
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
 import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -116,6 +118,9 @@ public class MemoryFederationStateStore implements FederationStateStore {
   private int maxAppsInStateStore;
   private AtomicInteger sequenceNum;
   private AtomicInteger masterKeyId;
+  private static final Version CURRENT_VERSION_INFO = Version
+      .newInstance(1, 1);
+  private byte[] version;
 
   private final MonotonicClock clock = new MonotonicClock();
 
@@ -134,6 +139,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
         YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS);
     sequenceNum = new AtomicInteger();
     masterKeyId = new AtomicInteger();
+    version = ((VersionPBImpl) CURRENT_VERSION_INFO).getProto().toByteArray();
   }
 
   @Override
@@ -247,8 +253,12 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationHomeSubCluster homeSubCluster = request.getApplicationHomeSubCluster();
-
+    SubClusterId homeSubClusterId = homeSubCluster.getHomeSubCluster();
+    ApplicationSubmissionContext appSubmissionContext = homeSubCluster.getApplicationSubmissionContext();
     ApplicationId appId = homeSubCluster.getApplicationId();
+
+    LOG.info("appId = {}, homeSubClusterId = {}, appSubmissionContext = {}.",
+        appId, homeSubClusterId, appSubmissionContext);
 
     if (!applications.containsKey(appId)) {
       applications.put(appId, homeSubCluster);
@@ -287,8 +297,20 @@ public class MemoryFederationStateStore implements FederationStateStore {
           "Application %s does not exist.", appId);
     }
 
-    return GetApplicationHomeSubClusterResponse.newInstance(appId,
-        applications.get(appId).getHomeSubCluster());
+    // Whether the returned result contains context
+    ApplicationHomeSubCluster appHomeSubCluster = applications.get(appId);
+    ApplicationSubmissionContext submissionContext =
+        appHomeSubCluster.getApplicationSubmissionContext();
+    boolean containsAppSubmissionContext = request.getContainsAppSubmissionContext();
+    long creatTime = appHomeSubCluster.getCreateTime();
+    SubClusterId homeSubClusterId = appHomeSubCluster.getHomeSubCluster();
+
+    if (containsAppSubmissionContext && submissionContext != null) {
+      return GetApplicationHomeSubClusterResponse.newInstance(appId, homeSubClusterId, creatTime,
+          submissionContext);
+    }
+
+    return GetApplicationHomeSubClusterResponse.newInstance(appId, homeSubClusterId, creatTime);
   }
 
   @Override
@@ -367,22 +389,21 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
   @Override
   public Version getCurrentVersion() {
-    throw new NotImplementedException("Code is not implemented");
+    return CURRENT_VERSION_INFO;
   }
 
   @Override
   public Version loadVersion() throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+    if (version != null) {
+      VersionProto versionProto = VersionProto.parseFrom(version);
+      return new VersionPBImpl(versionProto);
+    }
+    return null;
   }
 
   @Override
   public void storeVersion() throws Exception {
-    throw new NotImplementedException("Code is not implemented");
-  }
-
-  @Override
-  public void checkVersion() throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+    version = ((VersionPBImpl) CURRENT_VERSION_INFO).getProto().toByteArray();
   }
 
   @Override

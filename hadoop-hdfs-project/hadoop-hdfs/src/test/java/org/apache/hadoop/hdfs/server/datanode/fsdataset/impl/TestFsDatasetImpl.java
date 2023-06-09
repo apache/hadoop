@@ -1075,16 +1075,14 @@ public class TestFsDatasetImpl {
   @Test(timeout = 30000)
   public void testReportBadBlocks() throws Exception {
     boolean threwException = false;
-    MiniDFSCluster cluster = null;
-    try {
-      Configuration config = new HdfsConfiguration();
-      cluster = new MiniDFSCluster.Builder(config).numDataNodes(1).build();
+    final Configuration config = new HdfsConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
+        .numDataNodes(1).build()) {
       cluster.waitActive();
 
       Assert.assertEquals(0, cluster.getNamesystem().getCorruptReplicaBlocks());
       DataNode dataNode = cluster.getDataNodes().get(0);
-      ExtendedBlock block =
-          new ExtendedBlock(cluster.getNamesystem().getBlockPoolId(), 0);
+      ExtendedBlock block = new ExtendedBlock(cluster.getNamesystem().getBlockPoolId(), 0);
       try {
         // Test the reportBadBlocks when the volume is null
         dataNode.reportBadBlocks(block);
@@ -1101,15 +1099,11 @@ public class TestFsDatasetImpl {
 
       block = DFSTestUtil.getFirstBlock(fs, filePath);
       // Test for the overloaded method reportBadBlocks
-      dataNode.reportBadBlocks(block, dataNode.getFSDataset()
-          .getFsVolumeReferences().get(0));
-      Thread.sleep(3000);
-      BlockManagerTestUtil.updateState(cluster.getNamesystem()
-          .getBlockManager());
-      // Verify the bad block has been reported to namenode
-      Assert.assertEquals(1, cluster.getNamesystem().getCorruptReplicaBlocks());
-    } finally {
-      cluster.shutdown();
+      dataNode.reportBadBlocks(block, dataNode.getFSDataset().getFsVolumeReferences().get(0));
+      DataNodeTestUtils.triggerHeartbeat(dataNode);
+      BlockManagerTestUtil.updateState(cluster.getNamesystem().getBlockManager());
+      assertEquals("Corrupt replica blocks could not be reflected with the heartbeat", 1,
+          cluster.getNamesystem().getCorruptReplicaBlocks());
     }
   }
 
@@ -1923,6 +1917,65 @@ public class TestFsDatasetImpl {
     } finally {
       cluster.shutdown();
       DataNodeFaultInjector.set(oldInjector);
+    }
+  }
+
+  /**
+   * Test the block file which is not found when disk with some exception.
+   * We expect:
+   *     1. block file wouldn't be deleted from disk.
+   *     2. block info would be removed from dn memory.
+   *     3. block would be reported to nn as missing block.
+   *     4. block would be recovered when disk back to normal.
+   */
+  @Test
+  public void tesInvalidateMissingBlock() throws Exception {
+    long blockSize = 1024;
+    int heatbeatInterval = 1;
+    HdfsConfiguration c = new HdfsConfiguration();
+    c.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, heatbeatInterval);
+    c.setLong(DFS_BLOCK_SIZE_KEY, blockSize);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(c).
+        numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      DFSTestUtil.createFile(cluster.getFileSystem(), new Path("/a"),
+          blockSize, (short)1, 0);
+
+      String bpid = cluster.getNameNode().getNamesystem().getBlockPoolId();
+      DataNode dn = cluster.getDataNodes().get(0);
+      FsDatasetImpl fsdataset = (FsDatasetImpl) dn.getFSDataset();
+      List<ReplicaInfo> replicaInfos = fsdataset.getFinalizedBlocks(bpid);
+      assertEquals(1, replicaInfos.size());
+
+      ReplicaInfo replicaInfo = replicaInfos.get(0);
+      String blockPath = replicaInfo.getBlockURI().getPath();
+      String metaPath = replicaInfo.getMetadataURI().getPath();
+      File blockFile = new File(blockPath);
+      File metaFile = new File(metaPath);
+
+      // Mock local block file not found when disk with some exception.
+      fsdataset.invalidateMissingBlock(bpid, replicaInfo);
+
+      // Assert local block file wouldn't be deleted from disk.
+      assertTrue(blockFile.exists());
+      // Assert block info would be removed from ReplicaMap.
+      assertEquals("null",
+          fsdataset.getReplicaString(bpid, replicaInfo.getBlockId()));
+      BlockManager blockManager = cluster.getNameNode().
+          getNamesystem().getBlockManager();
+      GenericTestUtils.waitFor(() ->
+          blockManager.getLowRedundancyBlocksCount() == 1, 100, 5000);
+
+      // Mock local block file found when disk back to normal.
+      FsVolumeSpi.ScanInfo info = new FsVolumeSpi.ScanInfo(
+          replicaInfo.getBlockId(), blockFile.getParentFile().getAbsoluteFile(),
+          blockFile.getName(), metaFile.getName(), replicaInfo.getVolume());
+      fsdataset.checkAndUpdate(bpid, info);
+      GenericTestUtils.waitFor(() ->
+          blockManager.getLowRedundancyBlocksCount() == 0, 100, 5000);
+    } finally {
+      cluster.shutdown();
     }
   }
 }

@@ -206,4 +206,18 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     stateStoreDriver.setEnableConcurrent(true);
     testFetchErrors(stateStoreDriver);
   }
+
+  @Test
+  public void testCacheLoadMetrics() throws IOException {
+    // inject value of CacheMountTableLoad as -1 initially, if tests get CacheMountTableLoadAvgTime
+    // value as -1 ms, that would mean no other sample with value >= 0 would have been received and
+    // hence this would be failure to assert that mount table avg load time is higher than -1
+    getStateStoreService().getMetrics().setCacheLoading("MountTable", -1);
+    long curMountTableLoadNum = getMountTableCacheLoadSamples(getStateStoreDriver());
+    getStateStoreService().refreshCaches(true);
+    getStateStoreService().refreshCaches(true);
+    getStateStoreService().refreshCaches(true);
+    testCacheLoadMetrics(getStateStoreDriver(), curMountTableLoadNum + 3, -1);
+  }
+
 }

@@ -176,6 +176,14 @@
       </exclusions>
     </dependency>
     <dependency>
+      <!--
+      adding jettison as direct dependency (as jersey-json's jettison dependency is vulnerable with verison 1.1),
+      so those who depends on hadoop-common externally will get the non-vulnerable jettison
+      -->
+      <groupId>org.codehaus.jettison</groupId>
+      <artifactId>jettison</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-server</artifactId>
       <scope>compile</scope>
@@ -331,6 +339,14 @@
           <artifactId>jmxri</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-handler</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-native-epoll</artifactId>
     </dependency>
     <dependency>
       <groupId>io.dropwizard.metrics</groupId>
@@ -644,9 +660,10 @@
                     <goal>exec</goal>
                 </goals>
                 <configuration>
-                    <executable>${basedir}/../../dev-support/bin/shelldocs</executable>
+                    <executable>${shell-executable}</executable>
                     <workingDirectory>src/site/markdown</workingDirectory>
                     <arguments>
+                        <argument>${basedir}/../../dev-support/bin/shelldocs</argument>
                         <argument>--skipprnorep</argument>
                         <argument>--output</argument>
                         <argument>${basedir}/src/site/markdown/UnixShellAPI.md</argument>

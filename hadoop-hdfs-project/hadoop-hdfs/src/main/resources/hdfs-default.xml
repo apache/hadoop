@@ -334,6 +334,14 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.namenode.redundancy.considerLoadByVolume</name>
+    <value>false</value>
+    <description>Decide if chooseTarget considers the target's volume load or
+      not.
+    </description>
+  </property>
+
 <property>
   <name>dfs.namenode.read.considerLoad</name>
   <value>false</value>
@@ -5096,35 +5104,6 @@
     If this specified amount of time has elapsed and no block has been moved
     out of a source DataNode, on more effort will be made to move blocks out of
     this DataNode in the current Mover iteration.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.audit.log.async</name>
-  <value>false</value>
-  <description>
-    If true, enables asynchronous audit log.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.audit.log.async.blocking</name>
-  <value>true</value>
-  <description>
-    Only used when enables asynchronous audit log. Sets whether audit log async
-    appender should wait if there is no space available in the event buffer or
-    immediately return. Default value is true.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.audit.log.async.buffer.size</name>
-  <value>128</value>
-  <description>
-    Only used when enables asynchronous audit log. Sets the number of audit
-    logs allowed in the event buffer before the calling thread is blocked
-    (if dfs.namenode.audit.log.async.blocking is true) or until logs are
-    summarized and discarded. Default value is 128.
   </description>
 </property>
 

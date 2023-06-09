@@ -94,14 +94,14 @@ public abstract class FileSystemReleaseFilter implements Filter {
    * Static method that sets the <code>FileSystem</code> to release back to
    * the {@link FileSystemAccess} service on servlet request completion.
    *
-   * @param fs fileystem instance.
+   * @param fs a filesystem instance.
    */
   public static void setFileSystem(FileSystem fs) {
     FILE_SYSTEM_TL.set(fs);
   }
 
   /**
-   * Abstract method to be implemetned by concrete implementations of the
+   * Abstract method to be implemented by concrete implementations of the
    * filter that return the {@link FileSystemAccess} service to which the filesystem
    * will be returned to.
    *

@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 
+import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
+
 /**
  * Throttles Azure Blob File System read and write operations to achieve maximum
  * throughput by minimizing errors.  The errors occur when the account ingress
@@ -60,7 +62,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
 
   // Hide default constructor
   private AbfsClientThrottlingIntercept(AbfsConfiguration abfsConfiguration) {
-    //Account name is kept as empty as same instance is shared across all accounts
+    // Account name is kept as empty as same instance is shared across all accounts.
     this.accountName = "";
     this.readThrottler = setAnalyzer("read", abfsConfiguration);
     this.writeThrottler = setAnalyzer("write", abfsConfiguration);
@@ -115,6 +117,18 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
   }
 
   /**
+   * Updates the metrics for the case when response code signifies throttling
+   * but there are some expected bytes to be sent.
+   * @param isThrottledOperation returns true if status code is HTTP_UNAVAILABLE
+   * @param abfsHttpOperation Used for status code and data transferred.
+   * @return true if the operation is throttled and has some bytes to transfer.
+   */
+  private boolean updateBytesTransferred(boolean isThrottledOperation,
+      AbfsHttpOperation abfsHttpOperation) {
+    return isThrottledOperation && abfsHttpOperation.getExpectedBytesToBeSent() > 0;
+  }
+
+  /**
    * Updates the metrics for successful and failed read and write operations.
    * @param operationType Only applicable for read and write operations.
    * @param abfsHttpOperation Used for status code and data transferred.
@@ -134,9 +148,22 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
     boolean isFailedOperation = (status < HttpURLConnection.HTTP_OK
         || status >= HttpURLConnection.HTTP_INTERNAL_ERROR);
 
+    // If status code is 503, it is considered as a throttled operation.
+    boolean isThrottledOperation = (status == HTTP_UNAVAILABLE);
+
     switch (operationType) {
       case Append:
         contentLength = abfsHttpOperation.getBytesSent();
+        if (contentLength == 0) {
+          /*
+            Signifies the case where we could not update the bytesSent due to
+            throttling but there were some expectedBytesToBeSent.
+           */
+          if (updateBytesTransferred(isThrottledOperation, abfsHttpOperation)) {
+            LOG.debug("Updating metrics due to throttling for path {}", abfsHttpOperation.getConnUrl().getPath());
+            contentLength = abfsHttpOperation.getExpectedBytesToBeSent();
+          }
+        }
         if (contentLength > 0) {
           writeThrottler.addBytesTransferred(contentLength,
               isFailedOperation);

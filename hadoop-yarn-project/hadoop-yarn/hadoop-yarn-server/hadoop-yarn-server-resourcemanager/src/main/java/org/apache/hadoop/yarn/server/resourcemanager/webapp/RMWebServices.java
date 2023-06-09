@@ -37,6 +37,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
@@ -211,7 +213,9 @@ import org.apache.hadoop.yarn.server.webapp.WebServices;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.AdHocLogDumper;
+import org.apache.hadoop.yarn.util.AppsCacheKey;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.LRUCache;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
@@ -257,6 +261,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   private boolean filterAppsByUser = false;
   private boolean filterInvalidXMLChars = false;
   private boolean enableRestAppSubmissions = true;
+  private LRUCache<AppsCacheKey, AppsInfo> appsLRUCache;
+  private AtomicLong getAppsSuccessTimes = new AtomicLong(0);
+  private AtomicLong hitAppsCacheTimes = new AtomicLong(0);
+  private boolean enableAppsCache = false;
 
   public final static String DELEGATION_TOKEN_HEADER =
       "Hadoop-YARN-RM-Delegation-Token";
@@ -278,6 +286,15 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     this.enableRestAppSubmissions = conf.getBoolean(
         YarnConfiguration.ENABLE_REST_APP_SUBMISSIONS,
         YarnConfiguration.DEFAULT_ENABLE_REST_APP_SUBMISSIONS);
+    this.enableAppsCache = this.conf.getBoolean(YarnConfiguration.APPS_CACHE_ENABLE,
+        YarnConfiguration.DEFAULT_APPS_CACHE_ENABLE);
+    if (enableAppsCache) {
+      int cacheSize = this.conf.getInt(YarnConfiguration.APPS_CACHE_SIZE,
+          YarnConfiguration.DEFAULT_APPS_CACHE_SIZE);
+      long appsCacheTimeMs = this.conf.getTimeDuration(YarnConfiguration.APPS_CACHE_EXPIRE,
+          YarnConfiguration.DEFAULT_APPS_CACHE_EXPIRE, TimeUnit.MILLISECONDS);
+      appsLRUCache = new LRUCache<>(cacheSize, appsCacheTimeMs);
+    }
   }
 
   RMWebServices(ResourceManager rm, Configuration conf,
@@ -625,6 +642,23 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @QueryParam(RMWSConsts.NAME) String name,
       @QueryParam(RMWSConsts.DESELECTS) Set<String> unselectedFields) {
 
+    AppsCacheKey cacheKey = AppsCacheKey.newInstance(stateQuery, new HashSet<>(statesQuery),
+        finalStatusQuery, userQuery, queueQuery, limit, startedBegin, startedEnd, finishBegin,
+        finishEnd, new HashSet<>(applicationTypes), new HashSet<>(applicationTags), name,
+        unselectedFields);
+    if (this.enableAppsCache) {
+      long successTimes = getAppsSuccessTimes.incrementAndGet();
+      if (successTimes % 1000 == 0) {
+        LOG.debug("hit cache info: getAppsSuccessTimes={}, hitAppsCacheTimes={}",
+            successTimes, hitAppsCacheTimes.get());
+      }
+      AppsInfo appsInfo = appsLRUCache.get(cacheKey);
+      if (appsInfo != null) {
+        hitAppsCacheTimes.getAndIncrement();
+        return appsInfo;
+      }
+    }
+
     initForReadableEndpoints();
 
     GetApplicationsRequest request =
@@ -695,6 +729,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       }
     }
 
+    if (enableAppsCache) {
+      appsLRUCache.put(cacheKey, allApps);
+      getAppsSuccessTimes.getAndIncrement();
+    }
     return allApps;
   }
 
@@ -2980,5 +3018,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     initForReadableEndpoints();
     ResourceScheduler rs = rm.getResourceScheduler();
     return new SchedulerOverviewInfo(rs);
+  }
+
+  @VisibleForTesting
+  public LRUCache<AppsCacheKey, AppsInfo> getAppsLRUCache(){
+    return appsLRUCache;
   }
 }
