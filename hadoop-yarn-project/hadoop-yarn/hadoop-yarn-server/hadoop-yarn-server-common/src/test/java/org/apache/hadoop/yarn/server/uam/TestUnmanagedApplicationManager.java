@@ -385,9 +385,9 @@ public class TestUnmanagedApplicationManager {
       final FinishApplicationMasterRequest request,
       ApplicationAttemptId appAttemptId)
       throws YarnException, IOException, InterruptedException {
-    return getUGIWithToken(appAttemptId)
-        .doAs((PrivilegedExceptionAction<FinishApplicationMasterResponse>)
-        () -> uam.finishApplicationMaster(request));
+    return getUGIWithToken(appAttemptId).doAs(
+        (PrivilegedExceptionAction<FinishApplicationMasterResponse>) () ->
+        uam.finishApplicationMaster(request));
   }
 
   protected class CountingCallback implements AsyncCallback<AllocateResponse> {
@@ -474,8 +474,9 @@ public class TestUnmanagedApplicationManager {
     public void run() {
       try {
         getUGIWithToken(attemptId).doAs((PrivilegedExceptionAction<Object>) () -> {
-            TestableAMRequestHandlerThread.super.run();
-            return null;});
+          TestableAMRequestHandlerThread.super.run();
+          return null;
+        });
       } catch (Exception e) {
         LOG.error("Exception running TestableAMRequestHandlerThread", e);
       }
