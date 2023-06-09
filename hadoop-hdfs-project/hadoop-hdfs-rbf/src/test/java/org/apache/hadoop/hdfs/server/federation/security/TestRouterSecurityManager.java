@@ -286,8 +286,9 @@ public class TestRouterSecurityManager {
     Router router = initializeAndStartRouter(conf);
 
     // Create credentials
-    UserGroupInformation ugi = UserGroupInformation.createUserForTesting("router", getUserGroupForTesting());
-    Credentials creds = RouterSecurityManager.createCredentials(router, ugi, "some_renewer");
+    UserGroupInformation ugi =
+            UserGroupInformation.createUserForTesting("router", getUserGroupForTesting());
+    RouterSecurityManager.createCredentials(router, ugi, "some_renewer");
 
     String host = Path.WINDOWS ? "127.0.0.1" : "localhost";
     String expectedOwner = "router/" + host + "@EXAMPLE.COM";

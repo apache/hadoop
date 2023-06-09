@@ -721,8 +721,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
         List<Metrics2Util.NameValuePair> topOwners = mgr.getSecretManager()
                 .getTopTokenRealOwners(this.topTokenRealOwners);
         topTokenRealOwnersString = JsonUtil.toJsonString(topOwners);
-      }
-      catch (Exception e) {
+      } catch (Exception e) {
         LOG.error("Unable to fetch the top token real owners as string {}", e.getMessage());
       }
     }
