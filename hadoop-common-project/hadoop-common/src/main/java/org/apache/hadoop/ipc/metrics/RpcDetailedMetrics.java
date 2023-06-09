@@ -25,9 +25,7 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import static org.apache.commons.lang3.StringUtils.capitalize;
-
 
 /**
  * This class is for maintaining RPC method related statistics
