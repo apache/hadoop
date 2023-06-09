@@ -1398,6 +1398,50 @@ public class TestRPC extends TestRpcBase {
   }
 
   /**
+   * Test the rpcCallSucesses metric in RpcMetrics.
+   */
+  @Test
+  public void testRpcCallSuccessesMetric() throws Exception {
+    final Server server;
+    TestRpcService proxy = null;
+
+    server = setupTestServer(conf, 5);
+    try {
+      proxy = getClient(addr, conf);
+
+      // 10 successful responses
+      for (int i = 0; i < 10; i++) {
+        proxy.ping(null, newEmptyRequest());
+      }
+      MetricsRecordBuilder rpcMetrics =
+          getMetrics(server.getRpcMetrics().name());
+      assertEquals("Expected correct rpcCallSuccesses count", 10,
+          getLongCounter("RpcCallSuccesses", rpcMetrics));
+      // rpcQueueTimeNumOps equals total number of RPC calls.
+      assertEquals("Expected correct rpcQueueTime count", 10,
+          getLongCounter("RpcQueueTimeNumOps", rpcMetrics));
+
+      // 2 failed responses with ERROR status and 1 more successful response.
+      for (int i = 0; i < 2; i++) {
+        try {
+          proxy.error(null, newEmptyRequest());
+        } catch (ServiceException ignored) {
+        }
+      }
+      proxy.ping(null, newEmptyRequest());
+
+      rpcMetrics = getMetrics(server.getRpcMetrics().name());
+      assertEquals("Expected correct rpcCallSuccesses count", 11,
+          getLongCounter("RpcCallSuccesses", rpcMetrics));
+      // rpcQueueTimeNumOps equals total number of RPC calls.
+      assertEquals("Expected correct rpcQueueTime count", 13,
+          getLongCounter("RpcQueueTimeNumOps", rpcMetrics));
+    } finally {
+      stop(server, proxy);
+    }
+  }
+
+  /**
    *  Test RPC backoff by queue full.
    */
   @Test (timeout=30000)

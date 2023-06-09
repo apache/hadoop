@@ -640,6 +640,9 @@ public abstract class Server {
     if (isLogSlowRPC()) {
       logSlowRpcCalls(name, call, details);
     }
+    if (details.getReturnStatus() == RpcStatusProto.SUCCESS) {
+      rpcMetrics.incrRpcCallSuccesses();
+    }
   }
 
   void updateDeferredMetrics(String name, long processingTime) {
@@ -1237,6 +1240,7 @@ public abstract class Server {
         setResponseFields(value, responseParams);
         sendResponse();
 
+        details.setReturnStatus(responseParams.returnStatus);
         deltaNanos = Time.monotonicNowNanos() - startNanos;
         details.set(Timing.RESPONSE, deltaNanos, TimeUnit.NANOSECONDS);
       } else {
