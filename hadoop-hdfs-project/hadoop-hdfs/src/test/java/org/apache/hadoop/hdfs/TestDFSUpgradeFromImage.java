@@ -45,9 +45,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.IllegalReservedPathException;
-import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.log4j.Logger;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -317,7 +317,9 @@ public class TestDFSUpgradeFromImage {
         "imageMD5Digest", "22222222222222222222222222222222");
     
     // Attach our own log appender so we can verify output
-    LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger("root"));
+    final LogVerificationAppender appender = new LogVerificationAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
 
     // Upgrade should now fail
     try {
@@ -329,10 +331,9 @@ public class TestDFSUpgradeFromImage {
       if (!msg.contains("Failed to load FSImage file")) {
         throw ioe;
       }
-      int md5failures = org.apache.commons.lang3.StringUtils.countMatches(logCapturer.getOutput(),
+      int md5failures = appender.countExceptionsWithMessage(
           " is corrupt with MD5 checksum of ");
       assertEquals("Upgrade did not fail with bad MD5", 1, md5failures);
-      logCapturer.stopCapturing();
     }
   }
 

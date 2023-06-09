@@ -135,8 +135,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.apache.hadoop.logging.LogCapturer;
-
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.AfterClass;
@@ -2069,8 +2067,8 @@ public class TestRouterRpc {
 
   @Test
   public void testMkdirsWithCallerContext() throws IOException {
-    LogCapturer auditlog =
-        LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
+    GenericTestUtils.LogCapturer auditlog =
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
     // Current callerContext is null
     assertNull(CallerContext.getCurrent());
@@ -2096,8 +2094,8 @@ public class TestRouterRpc {
   @Test
   public void testRealUserPropagationInCallerContext()
       throws IOException, InterruptedException {
-    LogCapturer auditlog =
-        LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
+    GenericTestUtils.LogCapturer auditlog =
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
     // Current callerContext is null
     assertNull(CallerContext.getCurrent());
@@ -2141,8 +2139,8 @@ public class TestRouterRpc {
 
   @Test
   public void testAddClientIpPortToCallerContext() throws IOException {
-    LogCapturer auditLog =
-        LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
+    GenericTestUtils.LogCapturer auditLog =
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
     // 1. ClientIp and ClientPort are not set on the client.
     // Set client context.
@@ -2176,8 +2174,8 @@ public class TestRouterRpc {
 
   @Test
   public void testAddClientIdAndCallIdToCallerContext() throws IOException {
-    LogCapturer auditLog =
-        LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
+    GenericTestUtils.LogCapturer auditLog =
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
     // 1. ClientId and ClientCallId are not set on the client.
     // Set client context.

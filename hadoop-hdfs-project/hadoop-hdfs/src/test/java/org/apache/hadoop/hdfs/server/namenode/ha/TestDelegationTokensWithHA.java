@@ -44,7 +44,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.test.Whitebox;
 import org.junit.After;
 import org.junit.Before;
@@ -144,7 +143,7 @@ public class TestDelegationTokensWithHA {
         () -> (DistributedFileSystem) FileSystem.get(conf));
 
     GenericTestUtils.setLogLevel(ObserverReadProxyProvider.LOG, Level.DEBUG);
-    LogCapturer logCapture = LogCapturer
+    GenericTestUtils.LogCapturer logCapture = GenericTestUtils.LogCapturer
         .captureLogs(ObserverReadProxyProvider.LOG);
     try {
       dfs.access(new Path("/"), FsAction.READ);

@@ -1211,6 +1211,19 @@ public class YarnConfiguration extends Configuration {
       DEFAULT_RM_ENABLE_NODE_UNTRACKED_WITHOUT_INCLUDE_PATH = false;
 
   /**
+   * When non empty, untracked nodes are deleted only if their state is one of
+   * the states defined by this config. When empty, all the states are eligible
+   * for removal
+   * Eligible states are defined by enum values here:
+   * @see org.apache.hadoop.yarn.api.records.NodeState
+   * Example: LOST,DECOMMISSIONED
+   */
+  public static final String RM_NODEMANAGER_UNTRACKED_NODE_SELECTIVE_STATES_TO_REMOVE =
+      RM_PREFIX + "node-removal-untracked.node-selective-states-to-remove";
+  public static final String[]
+      DEFAULT_RM_NODEMANAGER_UNTRACKED_NODE_SELECTIVE_STATES_TO_REMOVE = {};
+
+  /**
    * RM proxy users' prefix
    */
   public static final String RM_PROXY_USER_PREFIX = RM_PREFIX + "proxyuser.";
@@ -4959,6 +4972,17 @@ public class YarnConfiguration extends Configuration {
   // default is 30s
   public static final String APPS_CACHE_EXPIRE = YARN_PREFIX + "apps.cache.expire";
   public static final String DEFAULT_APPS_CACHE_EXPIRE = "30s";
+
+  /** Enabled trigger log-dir deletion by size for NonAggregatingLogHandler. */
+  public static final String NM_LOG_TRIGGER_DELETE_BY_SIZE_ENABLED = NM_PREFIX +
+      "log.trigger.delete.by-size.enabled";
+  public static final boolean DEFAULT_NM_LOG_TRIGGER_DELETE_BY_SIZE_ENABLED = false;
+
+  /** Trigger log-dir deletion when the total log size of an app is greater than
+   *  yarn.nodemanager.log.delete.threshold.
+   *  Depends on yarn.nodemanager.log.trigger.delete.by-size.enabled = true. */
+  public static final String NM_LOG_DELETE_THRESHOLD = NM_PREFIX + "log.delete.threshold";
+  public static final long DEFAULT_NM_LOG_DELETE_THRESHOLD = 100L * 1024 * 1024 * 1024;
 
   public YarnConfiguration() {
     super();
