@@ -22,23 +22,21 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.EntryFileIO;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.OutputValidationException;
 import org.apache.hadoop.util.functional.TaskPool;
 
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_VALIDATE_OUTPUT;
-import static org.apache.hadoop.thirdparty.com.google.common.collect.Iterables.concat;
 
 /**
  * This stage validates all files by scanning the manifests
@@ -50,16 +48,11 @@ import static org.apache.hadoop.thirdparty.com.google.common.collect.Iterables.c
  */
 public class ValidateRenamedFilesStage extends
     AbstractJobOrTaskStage<
-        List<TaskManifest>,
+        Path,
         List<FileEntry>> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       ValidateRenamedFilesStage.class);
-
-  /**
-   * Set this to halt all workers.
-   */
-  private final AtomicBoolean halt = new AtomicBoolean();
 
   /**
    * List of all files committed.
@@ -93,34 +86,27 @@ public class ValidateRenamedFilesStage extends
    * has a file in the destination of the same size.
    * If two tasks have both written the same file or
    * a source file was changed after the task was committed,
-   * then a mistmatch will be detected -provided the file
+   * then a mismatch will be detected -provided the file
    * length is now different.
-   * @param taskManifests list of manifests.
+   * @param entryFile path to entry file
    * @return list of files committed.
    */
   @Override
   protected List<FileEntry> executeStage(
-      final List<TaskManifest> taskManifests)
+      final Path entryFile)
       throws IOException {
 
-    // set the list of files to be as big as the number of tasks.
-    // synchronized to stop complaints.
-    synchronized (this) {
-      filesCommitted = new ArrayList<>(taskManifests.size());
+    final EntryFileIO entryFileIO = new EntryFileIO(getStageConfig().getConf());
+
+    try (SequenceFile.Reader reader = entryFileIO.createReader(entryFile)) {
+      // iterate over the entries in the file.
+      TaskPool.foreach(entryFileIO.iterateOver(reader))
+          .executeWith(getIOProcessors())
+          .stopOnFailure()
+          .run(this::validateOneFile);
+
+      return getFilesCommitted();
     }
-
-    // validate all the files.
-
-    final Iterable<FileEntry> filesToCommit = concat(taskManifests.stream()
-        .map(TaskManifest::getFilesToCommit)
-        .collect(Collectors.toList()));
-
-    TaskPool.foreach(filesToCommit)
-        .executeWith(getIOProcessors())
-        .stopOnFailure()
-        .run(this::validateOneFile);
-
-    return getFilesCommitted();
   }
 
   /**
@@ -132,10 +118,6 @@ public class ValidateRenamedFilesStage extends
   private void validateOneFile(FileEntry entry) throws IOException {
     updateAuditContext(OP_STAGE_JOB_VALIDATE_OUTPUT);
 
-    if (halt.get()) {
-      // told to stop
-      return;
-    }
     // report progress back
     progress();
     // look validate the file.
@@ -157,7 +139,8 @@ public class ValidateRenamedFilesStage extends
 
       // etags, if the source had one.
       final String sourceEtag = entry.getEtag();
-      if (isNotBlank(sourceEtag)) {
+      if (getOperations().storePreservesEtagsThroughRenames(destStatus.getPath())
+          && isNotBlank(sourceEtag)) {
         final String destEtag = ManifestCommitterSupport.getEtag(destStatus);
         if (!sourceEtag.equals(destEtag)) {
           LOG.warn("Etag of dest file {}: {} does not match that of manifest entry {}",

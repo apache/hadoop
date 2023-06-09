@@ -149,6 +149,11 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
   private final boolean deleteTargetPaths;
 
   /**
+   * Entry writer queue capacity.
+   */
+  private final int writerQueueCapacity;
+
+  /**
    * Constructor.
    * @param outputPath destination path of the job.
    * @param role role for log messages.
@@ -190,6 +195,9 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
     this.deleteTargetPaths = conf.getBoolean(
         OPT_DELETE_TARGET_FILES,
         OPT_DELETE_TARGET_FILES_DEFAULT);
+    this.writerQueueCapacity = conf.getInt(
+        OPT_WRITER_QUEUE_CAPACITY,
+        DEFAULT_WRITER_QUEUE_CAPACITY);
 
     // if constructed with a task attempt, build the task ID and path.
     if (context instanceof TaskAttemptContext) {
@@ -251,6 +259,8 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
   StageConfig createStageConfig() {
     StageConfig stageConfig = new StageConfig();
     stageConfig
+        .withConfiguration(conf)
+        .withDeleteTargetPaths(deleteTargetPaths)
         .withIOStatistics(iostatistics)
         .withJobAttemptNumber(jobAttemptNumber)
         .withJobDirectories(dirs)
@@ -262,8 +272,7 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
         .withTaskAttemptDir(taskAttemptDir)
         .withTaskAttemptId(taskAttemptId)
         .withTaskId(taskId)
-        .withDeleteTargetPaths(deleteTargetPaths);
-
+        .withWriterQueueCapacity(writerQueueCapacity);
     return stageConfig;
   }
 
@@ -321,6 +330,14 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
 
   public String getName() {
     return name;
+  }
+
+  /**
+   * Get writer queue capacity.
+   * @return the queue capacity
+   */
+  public int getWriterQueueCapacity() {
+    return writerQueueCapacity;
   }
 
   @Override
