@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.statistics.impl;
+package org.apache.hadoop.fs.statistics.impl;
 
 import javax.annotation.Nullable;
 import java.time.Duration;
@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 /**
  * This may seem odd having an IOStatisticsStore which does nothing

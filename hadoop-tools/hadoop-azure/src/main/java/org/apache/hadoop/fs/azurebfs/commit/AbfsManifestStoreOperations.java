@@ -62,6 +62,11 @@ public class AbfsManifestStoreOperations extends
    */
   private ResilientCommitByRename resilientCommitByRename;
 
+  /**
+   * Are etags preserved in renames?
+   */
+  private boolean etagsPreserved;
+
   @Override
   public AzureBlobFileSystem getFileSystem() {
     return (AzureBlobFileSystem) super.getFileSystem();
@@ -83,15 +88,22 @@ public class AbfsManifestStoreOperations extends
     super.bindToFileSystem(filesystem, path);
     try {
       resilientCommitByRename = getFileSystem().createResilientCommitSupport(path);
+      // this also means that etags are preserved.
+      etagsPreserved = true;
       LOG.debug("Bonded to filesystem with resilient commits under path {}", path);
     } catch (UnsupportedOperationException e) {
       LOG.debug("No resilient commit support under path {}", path);
     }
   }
 
+  /**
+   * Etags are preserved through Gen2 stores, but not wasb stores.
+   * @param path path to probe.
+   * @return true if this store preserves etags.
+   */
   @Override
   public boolean storePreservesEtagsThroughRenames(final Path path) {
-    return true;
+    return etagsPreserved;
   }
 
   /**
