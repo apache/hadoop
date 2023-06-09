@@ -470,7 +470,7 @@ public class QiniuKodoFileSystem extends FileSystem {
             for (Path p : successPaths) {
                 delete(p, false);
             }
-            return false;
+            throw e;
         }
 
     }

@@ -48,7 +48,7 @@
 参数指定所有需要运行的测试类，例如：
 
 ```shell
-cd hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources
+cd hadoop-cloud-storage-project/hadoop-qiniu/
 mvn test -Dtest=ITestQiniuKodoFileSystemContractBase,ITestQiniuKodoContractCreate,ITestQiniuKodoContractDelete,ITestQiniuKodoContractDistCp,ITestQiniuKodoContractGetFileStatus,ITestQiniuKodoContractMkdir,ITestQiniuKodoContractOpen,ITestQiniuKodoContractRename,ITestQiniuKodoContractRootDir,ITestQiniuKodoContractSeek
 ```
 
@@ -130,8 +130,8 @@ mvn test -Dtest=ITestQiniuKodoFileSystemContractBase,ITestQiniuKodoContractCreat
     </property>
 
     <property>
-        <name>fs.AbstractFileSystem.kodo.impl</name>
-        <value>org.apache.hadoop.fs.qiniu.kodo.QiniuKodo</value>
+        <name>fs.qiniu.download.useNoCacheHeader</name>
+        <value>true</value>
     </property>
 </configuration>
 ```
@@ -142,7 +142,7 @@ mvn test -Dtest=ITestQiniuKodoFileSystemContractBase,ITestQiniuKodoContractCreat
 参数指定所有需要运行的测试类，例如：
 
 ```shell
-cd hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources
+cd hadoop-cloud-storage-project/hadoop-qiniu/
 mvn test -Dtest=ITestQiniuKodoFileSystemContractBase,ITestQiniuKodoContractCreate,ITestQiniuKodoContractDelete,ITestQiniuKodoContractDistCp,ITestQiniuKodoContractGetFileStatus,ITestQiniuKodoContractMkdir,ITestQiniuKodoContractOpen,ITestQiniuKodoContractRename,ITestQiniuKodoContractRootDir,ITestQiniuKodoContractSeek
 ```
 

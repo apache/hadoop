@@ -51,7 +51,7 @@ To run the contract tests, you need to use the `mvn` command in the `hadoop-clou
 and specify all the test classes that need to be run using the `-Dtest` parameter, for example:
 
 ```shell
-cd hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources
+cd hadoop-cloud-storage-project/hadoop-qiniu/
 mvn test -Dtest=ITestQiniuKodoFileSystemContractBase,ITestQiniuKodoContractCreate,ITestQiniuKodoContractDelete,ITestQiniuKodoContractDistCp,ITestQiniuKodoContractGetFileStatus,ITestQiniuKodoContractMkdir,ITestQiniuKodoContractOpen,ITestQiniuKodoContractRename,ITestQiniuKodoContractRootDir,ITestQiniuKodoContractSeek
 ```
 
@@ -141,6 +141,11 @@ XInclude inclusion. Here is an example of `contract-test-options.xml`:
     <name>fs.AbstractFileSystem.kodo.impl</name>
     <value>org.apache.hadoop.fs.qiniu.kodo.QiniuKodo</value>
   </property>
+    
+  <property>
+    <name>fs.qiniu.download.useNoCacheHeader</name>
+    <value>true</value>
+  </property>
 </configuration>
 ```
 
@@ -150,7 +155,7 @@ To run the contract tests, you need to use the `mvn` command in the `hadoop-clou
 and specify all the test classes that need to be run using the `-Dtest` parameter, for example:
 
 ```shell
-cd hadoop-cloud-storage-project/hadoop-qiniu/src/test/resources
+cd hadoop-cloud-storage-project/hadoop-qiniu/
 mvn test -Dtest=ITestQiniuKodoFileSystemContractBase,ITestQiniuKodoContractCreate,ITestQiniuKodoContractDelete,ITestQiniuKodoContractDistCp,ITestQiniuKodoContractGetFileStatus,ITestQiniuKodoContractMkdir,ITestQiniuKodoContractOpen,ITestQiniuKodoContractRename,ITestQiniuKodoContractRootDir,ITestQiniuKodoContractSeek
 ```
 
