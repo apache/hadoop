@@ -75,7 +75,7 @@ public class StorageReport {
   }
 
   public long getRemaining() {
-    return remaining;
+    return Math.max(remaining, 0L);
   }
 
   public long getBlockPoolUsed() {
