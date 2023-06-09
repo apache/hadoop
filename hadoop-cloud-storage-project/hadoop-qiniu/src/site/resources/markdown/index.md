@@ -182,7 +182,7 @@ drwx--xr-x   - root root          0 1970-01-01 08:00 kodo://example-bucket/testD
 #### get command
 
 ```shell
-$ hadoop fs -get kodo:///testDir testDir1
+$ hadoop fs -get kodo://testDir testDir1
 $ ls -l -R testDir1
 total 8
 -rw-r--r--  1 root  staff  17 Jan 18 15:57 input.txt
