@@ -23,10 +23,10 @@ import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
-import com.blinkfox.minitable.MiniTable;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -37,6 +37,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.client.util.FormattingCLIUtils;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -223,18 +224,20 @@ public class QueueCLI extends YarnCLI {
   }
 
   private void printQueueInfos(PrintWriter writer, List<QueueInfo> queueInfos) {
-    MiniTable miniTable = new MiniTable(queueInfos.size() + " queues were found")
-        .addHeaders("Queue Name", "Queue Path", "State", "Capacity",
+    String titleString = queueInfos.size() + " queues were found";
+    List<String> headerStrings = Arrays.asList("Queue Name", "Queue Path", "State", "Capacity",
         "Current Capacity", "Maximum Capacity", "Weight", "Maximum Parallel Apps");
+    FormattingCLIUtils formattingCLIUtils = new FormattingCLIUtils(titleString)
+        .addHeaders(headerStrings);
     DecimalFormat df = new DecimalFormat("#.00");
     for (QueueInfo queueInfo : queueInfos) {
-      miniTable.addDatas(queueInfo.getQueueName(),queueInfo.getQueuePath()
-          ,queueInfo.getQueueState(),df.format(queueInfo.getCapacity() * 100) + "%"
-          ,df.format(queueInfo.getCurrentCapacity() * 100) + "%"
-          ,df.format(queueInfo.getMaximumCapacity() * 100) + "%"
-          ,df.format(queueInfo.getWeight())
-          ,queueInfo.getMaxParallelApps());
+      formattingCLIUtils.addLine(queueInfo.getQueueName(), queueInfo.getQueuePath(),
+          queueInfo.getQueueState(), df.format(queueInfo.getCapacity() * 100) + "%",
+          df.format(queueInfo.getCurrentCapacity() * 100) + "%",
+          df.format(queueInfo.getMaximumCapacity() * 100) + "%",
+          df.format(queueInfo.getWeight()),
+          queueInfo.getMaxParallelApps());
     }
-    writer.print(miniTable.render());
+    writer.print(formattingCLIUtils.render());
   }
 }
