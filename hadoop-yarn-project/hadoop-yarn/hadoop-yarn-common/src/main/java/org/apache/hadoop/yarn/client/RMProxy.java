@@ -117,7 +117,8 @@ public class RMProxy<T> {
   }
 
   /**
-   * Currently, used by NodeManagers only.
+   * This functionality is only used for NodeManager and only in non-HA mode.
+   * Its purpose is to ensure that when initializes UAM, it can find the correct cluster.
    *
    * @param configuration configuration.
    * @param protocol protocol.
@@ -129,17 +130,25 @@ public class RMProxy<T> {
   protected static <T> T createRMProxyFederation(final Configuration configuration,
       final Class<T> protocol, RMProxy<T> instance) throws IOException {
     YarnConfiguration yarnConf = new YarnConfiguration(configuration);
-    if (isFederationNonHAEnabled(yarnConf)) {
-      RetryPolicy retryPolicy = createRetryPolicy(yarnConf, false);
-      return newProxyInstanceFederation(yarnConf, protocol, instance, retryPolicy);
-    }
-    return createRMProxy(configuration, protocol, instance);
+    RetryPolicy retryPolicy = createRetryPolicy(yarnConf, isFailoverEnabled(yarnConf));
+    return newProxyInstanceFederation(yarnConf, protocol, instance, retryPolicy);
   }
 
-  private static <T> T newProxyInstanceFederation(final YarnConfiguration conf,
+  protected static <T> T newProxyInstanceFederation(final YarnConfiguration conf,
       final Class<T> protocol, RMProxy<T> instance, RetryPolicy retryPolicy) {
-    RMFailoverProxyProvider<T> provider = instance.createRMFailoverProxyProvider(conf, protocol);
+    RMFailoverProxyProvider<T> provider = getRMFailoverProxyProvider(conf, protocol, instance);
     return (T) RetryProxy.create(protocol, provider, retryPolicy);
+  }
+
+  protected static <T> RMFailoverProxyProvider<T> getRMFailoverProxyProvider(
+      final YarnConfiguration conf, final Class<T> protocol, RMProxy<T> instance) {
+    RMFailoverProxyProvider<T> provider;
+    if (isFederationNonHAEnabled(conf)) {
+      provider = instance.createRMFailoverProxyProvider(conf, protocol);
+    } else {
+      provider = instance.createNonHaRMFailoverProxyProvider(conf, protocol);
+    }
+    return provider;
   }
 
   /**
