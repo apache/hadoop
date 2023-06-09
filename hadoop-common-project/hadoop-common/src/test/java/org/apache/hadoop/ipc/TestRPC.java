@@ -39,6 +39,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.Rpc
 import org.apache.hadoop.ipc.protobuf.TestProtos;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
@@ -95,6 +96,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.apache.hadoop.test.MetricsAsserts.assertGaugeGt;
+import static org.apache.hadoop.test.MetricsAsserts.mockMetricsRecordBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
@@ -1441,6 +1444,41 @@ public class TestRPC extends TestRpcBase {
     }
   }
 
+  /**
+   * Test per-type overall RPC processing time metric
+   */
+  @Test
+  public void testOverallRpcProcessingTimeMetric() throws Exception {
+    final Server server;
+    TestRpcService proxy = null;
+
+    server = setupTestServer(conf, 5);
+    try {
+      proxy = getClient(addr, conf);
+
+      // Sent 1 ping request and 2 lockAndSleep requests
+      proxy.ping(null, newEmptyRequest());
+      proxy.lockAndSleep(null, newSleepRequest(10));
+      proxy.lockAndSleep(null, newSleepRequest(12));
+
+      MetricsRecordBuilder rb = mockMetricsRecordBuilder();
+      MutableRatesWithAggregation rates =
+          server.rpcDetailedMetrics.getOverallRpcProcessingRates();
+      rates.snapshot(rb, true);
+
+      // Verify the ping request. AvgTime should be non-zero.
+      assertCounter("OverallPingNumOps", 1L, rb);
+      assertGaugeGt("OverallPingAvgTime", 0, rb);
+
+      // Verify lockAndSleep requests. AvgTime should be greater than 10 ms,
+      // since we sleep for 10 and 12 ms respectively.
+      assertCounter("OverallLockAndSleepNumOps", 2L, rb);
+      assertGaugeGt("OverallLockAndSleepAvgTime", 10.0, rb);
+
+    } finally {
+      stop(server, proxy);
+    }
+  }
   /**
    *  Test RPC backoff by queue full.
    */

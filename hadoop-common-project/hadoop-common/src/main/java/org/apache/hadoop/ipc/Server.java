@@ -600,17 +600,18 @@ public abstract class Server {
     }
   }
 
-  void updateMetrics(Call call, long startTime, boolean connDropped) {
+  void updateMetrics(Call call, long processingStartTime, boolean connDropped) {
     totalRequests.increment();
     // delta = handler + processing + response
-    long deltaNanos = Time.monotonicNowNanos() - startTime;
-    long timestampNanos = call.timestampNanos;
+    long completionTime = Time.monotonicNowNanos();
+    long deltaNanos = completionTime - processingStartTime;
+    long arrivalTime = call.timestampNanos;
 
     ProcessingDetails details = call.getProcessingDetails();
     // queue time is the delta between when the call first arrived and when it
     // began being serviced, minus the time it took to be put into the queue
     details.set(Timing.QUEUE,
-        startTime - timestampNanos - details.get(Timing.ENQUEUE));
+        processingStartTime - arrivalTime - details.get(Timing.ENQUEUE));
     deltaNanos -= details.get(Timing.PROCESSING);
     deltaNanos -= details.get(Timing.RESPONSE);
     details.set(Timing.HANDLER, deltaNanos);
@@ -636,6 +637,10 @@ public abstract class Server {
     processingTime -= waitTime;
     String name = call.getDetailedMetricsName();
     rpcDetailedMetrics.addProcessingTime(name, processingTime);
+    // Overall processing time is from arrival to completion.
+    rpcDetailedMetrics.addOverallProcessingTime(name,
+        rpcMetrics.getMetricsTimeUnit().convert(completionTime - arrivalTime,
+            TimeUnit.NANOSECONDS));
     callQueue.addResponseTime(name, call, details);
     if (isLogSlowRPC()) {
       logSlowRpcCalls(name, call, details);
