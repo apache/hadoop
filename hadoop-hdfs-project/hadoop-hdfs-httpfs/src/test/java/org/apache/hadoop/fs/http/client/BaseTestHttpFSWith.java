@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -1217,7 +1218,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST,
     GET_SNAPSHOT_LIST, GET_SERVERDEFAULTS, CHECKACCESS, SETECPOLICY,
     SATISFYSTORAGEPOLICY, GET_SNAPSHOT_DIFF_LISTING, GETFILEBLOCKLOCATIONS,
-    GETFILELINKSTATUS, GETSTATUS
+    GETFILELINKSTATUS, GETSTATUS, GETECPOLICIES
   }
 
   private void operation(Operation op) throws Exception {
@@ -1365,6 +1366,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case GETSTATUS:
       testGetStatus();
+      break;
+    case GETECPOLICIES:
+      testGetAllEEPolicies();
       break;
     }
 
@@ -2106,6 +2110,39 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       assertEquals(dfsFsStatus.getCapacity(), httpFsStatus.getCapacity());
       httpFs.close();
       dfs.close();
+    } else {
+      Assert.fail(fs.getClass().getSimpleName() + " is not of type DistributedFileSystem.");
+    }
+  }
+
+  private void testGetAllEEPolicies() throws Exception {
+    if (isLocalFS()) {
+      // do not test the getAllEEPolicies for local FS.
+      return;
+    }
+    final Path path = new Path("/foo");
+    FileSystem fs = FileSystem.get(path.toUri(), this.getProxiedFSConf());
+    if (fs instanceof DistributedFileSystem) {
+      DistributedFileSystem dfs =
+              (DistributedFileSystem) FileSystem.get(path.toUri(), this.getProxiedFSConf());
+      FileSystem httpFs = this.getHttpFSFileSystem();
+
+      Collection<ErasureCodingPolicyInfo> dfsAllErasureCodingPolicies = dfs.getAllErasureCodingPolicies();
+      Collection<ErasureCodingPolicyInfo> diffErasureCodingPolicies = null;
+
+      if (httpFs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFS = (HttpFSFileSystem) httpFs;
+        diffErasureCodingPolicies = httpFS.getAllErasureCodingPolicies();
+      } else if (httpFs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) httpFs;
+        diffErasureCodingPolicies = webHdfsFileSystem.getAllErasureCodingPolicies();
+      } else {
+        Assert.fail(fs.getClass().getSimpleName() + " doesn't support getSnapshotDiff");
+      }
+
+      //Validate erasureCodingPolicyInfos are the same as DistributedFileSystem
+      assertEquals(dfsAllErasureCodingPolicies.size(), diffErasureCodingPolicies.size());
+      assertTrue(dfsAllErasureCodingPolicies.containsAll(diffErasureCodingPolicies));
     } else {
       Assert.fail(fs.getClass().getSimpleName() + " is not of type DistributedFileSystem.");
     }
