@@ -3075,6 +3075,10 @@ public class YarnConfiguration extends Configuration {
       + "amrmproxy.enabled";
   public static final boolean DEFAULT_AMRM_PROXY_ENABLED = false;
 
+  public static final String AMRM_PROXY_WAIT_UAM_REGISTER_DONE =
+      NM_PREFIX + "amrmproxy.wait.uam-register.done";
+  public static final boolean DEFAULT_AMRM_PROXY_WAIT_UAM_REGISTER_DONE = false;
+
   public static final String AMRM_PROXY_ADDRESS = NM_PREFIX
       + "amrmproxy.address";
   public static final int DEFAULT_AMRM_PROXY_PORT = 8049;

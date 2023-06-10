@@ -175,6 +175,9 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     conf.setLong(YarnConfiguration.FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT,
         500);
 
+    // Wait UAM Register Down
+    conf.setBoolean(YarnConfiguration.AMRM_PROXY_WAIT_UAM_REGISTER_DONE, true);
+
     return conf;
   }
 
@@ -590,6 +593,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         interceptor.recover(recoveredDataMap);
 
         Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+
+        // Waiting for SC-1 to time out.
+        Thread.sleep(800);
+
         // SC1 should be initialized to be timed out
         Assert.assertEquals(1, interceptor.getTimedOutSCs(true).size());
 
@@ -848,7 +855,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         List<Container> containers =
             getContainersAndAssert(numberOfContainers, numberOfContainers * 2);
         for (Container c : containers) {
-          LOG.info("Allocated container " + c.getId());
+          LOG.info("Allocated container {}", c.getId());
         }
         Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
 
@@ -882,6 +889,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         int numberOfContainers = 3;
         // Should re-attach secondaries and get the three running containers
         Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+
+        // Waiting for SC-1 to time out.
+        Thread.sleep(800);
+
         // SC1 should be initialized to be timed out
         Assert.assertEquals(1, interceptor.getTimedOutSCs(true).size());
         Assert.assertEquals(numberOfContainers,
