@@ -59,7 +59,7 @@ public class MutableRatesWithAggregation extends MutableMetric {
   private final ThreadLocal<ConcurrentMap<String, ThreadSafeSampleStat>>
       threadLocalMetricsMap = new ThreadLocal<>();
   // prefix for metric name
-  private String prefix = "";
+  private String typePrefix = "";
 
   /**
    * Initialize the registry with all the methods in a protocol
@@ -162,7 +162,7 @@ public class MutableRatesWithAggregation extends MutableMetric {
   private synchronized MutableRate addMetricIfNotExists(String name) {
     MutableRate metric = globalMetrics.get(name);
     if (metric == null) {
-      String metricName = prefix + capitalize(name);
+      String metricName = typePrefix + capitalize(name);
       metric = new MutableRate(metricName, metricName, false);
       metric.setUpdateTimeStamp(true);
       globalMetrics.put(name, metric);
@@ -187,7 +187,7 @@ public class MutableRatesWithAggregation extends MutableMetric {
   }
 
   public void init(Class<?> protocol, String prefix) {
-    this.prefix = prefix;
+    this.typePrefix = prefix;
     init(protocol);
   }
 
