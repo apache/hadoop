@@ -1445,7 +1445,7 @@ public class TestRPC extends TestRpcBase {
   }
 
   /**
-   * Test per-type overall RPC processing time metric
+   * Test per-type overall RPC processing time metric.
    */
   @Test
   public void testOverallRpcProcessingTimeMetric() throws Exception {

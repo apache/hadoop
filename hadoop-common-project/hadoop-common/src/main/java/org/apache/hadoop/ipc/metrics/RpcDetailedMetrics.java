@@ -34,6 +34,7 @@ import static org.apache.commons.lang3.StringUtils.capitalize;
 @InterfaceAudience.Private
 @Metrics(about="Per method RPC metrics", context="rpcdetailed")
 public class RpcDetailedMetrics {
+  static final String DEFERRED_PREFIX = "Deferred";
   static final String OVERALL_PROCESSING_PREFIX = "Overall";
 
   // per-method RPC processing time
@@ -74,8 +75,8 @@ public class RpcDetailedMetrics {
    */
   public void init(Class<?> protocol) {
     rates.init(protocol);
-    deferredRpcRates.init(protocol, "Deferred");
-    overallRpcProcessingRates.init(protocol);
+    deferredRpcRates.init(protocol, DEFERRED_PREFIX);
+    overallRpcProcessingRates.init(protocol, OVERALL_PROCESSING_PREFIX);
   }
 
   /**
@@ -93,13 +94,12 @@ public class RpcDetailedMetrics {
   }
 
   /**
-   * Add an overall RPC processing time sample
+   * Add an overall RPC processing time sample.
    * @param rpcCallName of the RPC call
    * @param overallProcessingTime  the overall RPC processing time
    */
   public void addOverallProcessingTime(String rpcCallName, long overallProcessingTime) {
-    String metric = OVERALL_PROCESSING_PREFIX + capitalize(rpcCallName);
-    overallRpcProcessingRates.add(metric, overallProcessingTime);
+    overallRpcProcessingRates.add(rpcCallName, overallProcessingTime);
   }
 
   /**

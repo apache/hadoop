@@ -333,7 +333,7 @@ public class RpcMetrics {
   }
 
   /**
-   * One RPC call success event
+   * One RPC call success event.
    */
   public  void incrRpcCallSuccesses() {
     rpcCallSuccesses.incr();

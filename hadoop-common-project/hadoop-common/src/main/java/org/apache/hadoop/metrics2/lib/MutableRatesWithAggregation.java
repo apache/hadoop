@@ -33,7 +33,7 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.util.SampleStat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import static org.apache.commons.lang3.StringUtils.capitalize;
 
 /**
  * Helper class to manage a group of mutable rate metrics.
@@ -59,7 +59,7 @@ public class MutableRatesWithAggregation extends MutableMetric {
   private final ThreadLocal<ConcurrentMap<String, ThreadSafeSampleStat>>
       threadLocalMetricsMap = new ThreadLocal<>();
   // prefix for metric name
-  private String typePrefix = "";
+  private String prefix = "";
 
   /**
    * Initialize the registry with all the methods in a protocol
@@ -162,7 +162,8 @@ public class MutableRatesWithAggregation extends MutableMetric {
   private synchronized MutableRate addMetricIfNotExists(String name) {
     MutableRate metric = globalMetrics.get(name);
     if (metric == null) {
-      metric = new MutableRate(name + typePrefix, name + typePrefix, false);
+      String metricName = prefix + capitalize(name);
+      metric = new MutableRate(metricName, metricName, false);
       metric.setUpdateTimeStamp(true);
       globalMetrics.put(name, metric);
     }
@@ -186,7 +187,7 @@ public class MutableRatesWithAggregation extends MutableMetric {
   }
 
   public void init(Class<?> protocol, String prefix) {
-    this.typePrefix = prefix;
+    this.prefix = prefix;
     init(protocol);
   }
 
