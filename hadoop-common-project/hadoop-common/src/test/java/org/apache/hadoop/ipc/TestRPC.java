@@ -97,6 +97,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertGaugeGt;
+import static org.apache.hadoop.test.MetricsAsserts.assertGaugeGte;
 import static org.apache.hadoop.test.MetricsAsserts.mockMetricsRecordBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
@@ -1466,9 +1467,11 @@ public class TestRPC extends TestRpcBase {
           server.rpcDetailedMetrics.getOverallRpcProcessingRates();
       rates.snapshot(rb, true);
 
-      // Verify the ping request. AvgTime should be non-zero.
+      // Verify the ping request.
+      // Overall processing time for ping is zero when this test is run together with
+      // the rest of tests. Thus, we use assertGaugeGte() for OverallPingAvgTime.
       assertCounter("OverallPingNumOps", 1L, rb);
-      assertGaugeGt("OverallPingAvgTime", 0, rb);
+      assertGaugeGte("OverallPingAvgTime", 0.0, rb);
 
       // Verify lockAndSleep requests. AvgTime should be greater than 10 ms,
       // since we sleep for 10 and 12 ms respectively.
