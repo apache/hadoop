@@ -359,7 +359,7 @@ public class MetricsAsserts {
   }
 
   /**
-   * Assert that a double gauge metric is greater than or equal to a value
+   * Assert that a double gauge metric is greater than or equal to a value.
    * @param name  of the metric
    * @param greater value of the metric should be greater than or equal to this
    * @param rb  the record builder mock used to getMetrics
