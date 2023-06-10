@@ -596,4 +596,103 @@ public class TestNonAggregatingLogHandler {
     }
   }
 
+  @Test
+  public void testLogSizeThresholdDeletion() throws IOException {
+    ApplicationId anotherAppId = BuilderUtils.newApplicationId(4567, 1);
+    ContainerId container22 = BuilderUtils.newContainerId(appAttemptId, 2);
+    String user2 = "test_user2";
+    File[] localLogDirs = getLocalLogDirFiles(this.getClass().getName(), 2);
+    String localLogDirsString = localLogDirs[0].getAbsolutePath() + ","
+                                    + localLogDirs[1].getAbsolutePath();
+
+    conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDirsString);
+    conf.setBoolean(YarnConfiguration.NM_LOG_TRIGGER_DELETE_BY_SIZE_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, false);
+    conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 60 * 1000);
+    conf.set(YarnConfiguration.NM_LOG_DELETE_THRESHOLD, "15g");
+
+    dirsHandler.init(conf);
+
+    NonAggregatingLogHandler rawLogHandler =
+        new NonAggregatingLogHandler(dispatcher, mockDelService, dirsHandler,
+            new NMNullStateStoreService());
+    NonAggregatingLogHandler logHandler = spy(rawLogHandler);
+    AbstractFileSystem spylfs =
+        spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
+    FileContext lfs = FileContext.getFileContext(spylfs, conf);
+    doReturn(lfs).when(logHandler)
+        .getLocalFileContext(isA(Configuration.class));
+    FsPermission defaultPermission =
+        FsPermission.getDirDefault().applyUMask(lfs.getUMask());
+    FileStatus fs1 =
+        new FileStatus(10 * 1024 * 1024 * 1024L, true, 1, 0,
+            System.currentTimeMillis(), 0, defaultPermission, "", "",
+            new Path(localLogDirs[0].getAbsolutePath()));
+    FileStatus fs2 =
+        new FileStatus(5 * 1024 * 1024 * 1024L, true, 1, 0,
+            System.currentTimeMillis(), 0, defaultPermission, "", "",
+            new Path(localLogDirs[0].getAbsolutePath()));
+    Path path1 = new Path(localLogDirs[0].getAbsolutePath(), appId.toString());
+    Path path2 = new Path(localLogDirs[1].getAbsolutePath(), appId.toString());
+    Path path3 = new Path(localLogDirs[0].getAbsolutePath(), anotherAppId.toString());
+    Path path4 = new Path(localLogDirs[1].getAbsolutePath(), anotherAppId.toString());
+
+    doReturn(fs1).when(spylfs).getFileStatus(eq(path1));
+    doReturn(fs1).when(spylfs).getFileStatus(eq(path2));
+    doReturn(fs2).when(spylfs).getFileStatus(eq(path3));
+    doReturn(fs2).when(spylfs).getFileStatus(eq(path4));
+
+    logHandler.init(conf);
+    logHandler.start();
+
+    logHandler.handle(new LogHandlerAppStartedEvent(appId, user, null, null));
+
+    logHandler.handle(new LogHandlerContainerFinishedEvent(container11,
+        ContainerType.APPLICATION_MASTER, 0));
+
+    logHandler.handle(new LogHandlerAppFinishedEvent(appId));
+
+    logHandler.handle(new LogHandlerAppStartedEvent(anotherAppId, user2,
+        null, null));
+
+    logHandler.handle(new LogHandlerContainerFinishedEvent(container22,
+        ContainerType.APPLICATION_MASTER, 0));
+
+    logHandler.handle(new LogHandlerAppFinishedEvent(anotherAppId));
+
+    Path[] localAppLogDirs = new Path[]{path1, path2};
+    Path[] anotherLocalAppLogDirs = new Path[]{path3, path4};
+
+    testDeletionServiceCall(mockDelService, user, 5000, localAppLogDirs);
+    testDeletionServiceNeverCall(mockDelService, user2, 5000, anotherLocalAppLogDirs);
+
+    logHandler.close();
+    for (int i = 0; i < localLogDirs.length; i++) {
+      FileUtils.deleteDirectory(localLogDirs[i]);
+    }
+  }
+
+  static void testDeletionServiceNeverCall(DeletionService delService, String user,
+      long timeout, Path... matchPaths) {
+    long verifyStartTime = System.currentTimeMillis();
+    WantedButNotInvoked notInvokedException = null;
+    boolean matched = false;
+    while (!matched && System.currentTimeMillis() < verifyStartTime + timeout) {
+      try {
+        verify(delService, never()).delete(argThat(new FileDeletionMatcher(
+            delService, user, null, Arrays.asList(matchPaths))));
+        matched = true;
+      } catch (WantedButNotInvoked e) {
+        notInvokedException = e;
+        try {
+          Thread.sleep(50l);
+        } catch (InterruptedException i) {
+        }
+      }
+    }
+    if (!matched) {
+      throw notInvokedException;
+    }
+    return;
+  }
 }

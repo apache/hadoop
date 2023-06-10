@@ -5319,4 +5319,39 @@
     </description>
   </property>
 
+  <property>
+    <name>yarn.nodemanager.log.trigger.delete.by-size.enabled</name>
+    <value>false</value>
+    <description>
+      Optional.
+      Enabled trigger log-dir deletion by size for NonAggregatingLogHandler
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.log.delete.threshold</name>
+    <value>100g</value>
+    <description>
+      Optional.
+      Trigger log-dir deletion when the total log size of an app is greater than
+      yarn.nodemanager.log.delete.threshold and
+      yarn.nodemanager.log.trigger.delete.by-size.enabled = true.
+      You can use the following suffix (case insensitive): k(kilo), m(mega), g(giga), t(tera), p(peta),
+      e(exa) to specify the size (such as 128k, 512m, 1g, etc.),
+      Or provide complete size in bytes (such as 134217728 for 128 MB).
+    </description>
+  </property>
+
+  <property>
+    <description>
+      If Yarn untracked removal is enabled, then this config can control what all
+      node states can be removed. If the untracked node is not having one of these
+      states, then node will skipped for removal. If this config value is set to
+      empty, all node states, will be eligible for removal
+      NodeState is an ENUM: org.apache.hadoop.yarn.api.records.NodeState
+    </description>
+    <name>yarn.resourcemanager.node-removal-untracked.node-selective-states-to-remove</name>
+    <value></value>
+  </property>
+
 </configuration>

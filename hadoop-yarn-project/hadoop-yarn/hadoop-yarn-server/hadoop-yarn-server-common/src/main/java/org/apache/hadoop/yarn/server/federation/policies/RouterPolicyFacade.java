@@ -165,7 +165,7 @@ public class RouterPolicyFacade {
    * This method reinitializes a policy and loads it in the policyMap.
    *
    * @param queue the queue to initialize a policy for.
-   * @param conf the configuration to use for initalization.
+   * @param conf the configuration to use for initialization.
    *
    * @throws FederationPolicyInitializationException if initialization fails.
    */

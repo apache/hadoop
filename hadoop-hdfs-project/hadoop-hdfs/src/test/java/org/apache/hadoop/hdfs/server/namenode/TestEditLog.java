@@ -83,7 +83,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
 import org.apache.hadoop.hdfs.util.XMLUtils.Stanza;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.logging.LogCapturer;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ExitUtil;
@@ -91,6 +90,9 @@ import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.spi.LoggingEvent;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -1715,13 +1717,36 @@ public class TestEditLog {
     }
   }
 
+  class TestAppender extends AppenderSkeleton {
+    private final List<LoggingEvent> log = new ArrayList<>();
+
+    @Override
+    public boolean requiresLayout() {
+      return false;
+    }
+
+    @Override
+    protected void append(final LoggingEvent loggingEvent) {
+      log.add(loggingEvent);
+    }
+
+    @Override
+    public void close() {
+    }
+
+    public List<LoggingEvent> getLog() {
+      return new ArrayList<>(log);
+    }
+  }
+
   /**
    *
    * @throws Exception
    */
   @Test
   public void testReadActivelyUpdatedLog() throws Exception {
-    final LogCapturer logCapturer = LogCapturer.captureLogs(LoggerFactory.getLogger("root"));
+    final TestAppender appender = new TestAppender();
+    LogManager.getRootLogger().addAppender(appender);
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     // Set single handler thread, so all transactions hit same thread-local ops.
@@ -1769,16 +1794,21 @@ public class TestEditLog {
       rwf.close();
 
       events.poll();
-      for (String logLine : logCapturer.getOutput().split("\n")) {
-        if (logLine != null && logLine.contains("Caught exception after reading")) {
+      String pattern = "Caught exception after reading (.*) ops";
+      Pattern r = Pattern.compile(pattern);
+      final List<LoggingEvent> log = appender.getLog();
+      for (LoggingEvent event : log) {
+        Matcher m = r.matcher(event.getRenderedMessage());
+        if (m.find()) {
           fail("Should not try to read past latest syned edit log op");
         }
       }
+
     } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
-      logCapturer.stopCapturing();
+      LogManager.getRootLogger().removeAppender(appender);
     }
   }
 

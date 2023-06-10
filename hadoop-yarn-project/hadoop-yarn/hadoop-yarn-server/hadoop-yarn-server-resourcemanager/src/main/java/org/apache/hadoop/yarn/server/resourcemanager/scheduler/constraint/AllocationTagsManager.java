@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.log4j.Logger;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -41,9 +42,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.LongBinaryOperator;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * In-memory mapping between applications/container-tags and nodes/racks.
  * Required by constrained affinity/anti-affinity and cardinality placement.
@@ -52,7 +50,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceStability.Unstable
 public class AllocationTagsManager {
 
-  private static final Logger LOG = LoggerFactory.getLogger(AllocationTagsManager.class);
+  private static final Logger LOG = Logger.getLogger(
+      AllocationTagsManager.class);
 
   private ReentrantReadWriteLock.ReadLock readLock;
   private ReentrantReadWriteLock.WriteLock writeLock;

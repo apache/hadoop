@@ -50,12 +50,11 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
+import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertEquals;
@@ -64,7 +63,8 @@ import static org.junit.Assert.assertFalse;
 
 public class TestContainersMonitorResourceChange {
 
-  static final Logger LOG = LoggerFactory.getLogger(TestContainersMonitorResourceChange.class);
+  static final Logger LOG = Logger
+      .getLogger(TestContainersMonitorResourceChange.class);
   private ContainersMonitorImpl containersMonitor;
   private MockExecutor executor;
   private Configuration conf;
