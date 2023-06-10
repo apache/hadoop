@@ -39,6 +39,7 @@ import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.registry.client.impl.FSRegistryOperationsService;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -130,6 +131,8 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
 
     testAppId = 1;
     attemptId = getApplicationAttemptId(testAppId);
+    stateStore.setApplicationContext(HOME_SC_ID, attemptId.getApplicationId(), Time.now());
+
     nmContext =
         new NMContext(null, null, null, null, nmStateStore, false, getConf());
     interceptor.init(new AMRMProxyApplicationContextImpl(nmContext, getConf(),
