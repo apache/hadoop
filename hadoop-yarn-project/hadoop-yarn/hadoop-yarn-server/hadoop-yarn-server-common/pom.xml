@@ -176,9 +176,9 @@
               <goal>run</goal>
             </goals>
             <configuration>
-              <tasks>
+              <target>
                 <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
-              </tasks>
+              </target>
             </configuration>
           </execution>
           <execution>
@@ -188,12 +188,12 @@
               <goal>run</goal>
             </goals>
             <configuration>
-              <tasks>
+              <target>
                 <copy file="${basedir}/../../bin/FederationStateStore/MySQL/FederationStateStoreTables.sql" todir="${project.build.directory}/test-classes/MySQL"/>
                 <copy file="${basedir}/../../bin/FederationStateStore/MySQL/FederationStateStoreStoredProcs.sql" todir="${project.build.directory}/test-classes/MySQL"/>
                 <copy file="${basedir}/../../bin/FederationStateStore/SQLServer/FederationStateStoreTables.sql" todir="${project.build.directory}/test-classes/SQLServer"/>
                 <copy file="${basedir}/../../bin/FederationStateStore/SQLServer/FederationStateStoreStoredProcs.sql" todir="${project.build.directory}/test-classes/SQLServer"/>
-              </tasks>
+              </target>
             </configuration>
           </execution>
         </executions>
