@@ -2124,10 +2124,11 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     FileSystem fs = FileSystem.get(path.toUri(), this.getProxiedFSConf());
     if (fs instanceof DistributedFileSystem) {
       DistributedFileSystem dfs =
-              (DistributedFileSystem) FileSystem.get(path.toUri(), this.getProxiedFSConf());
+          (DistributedFileSystem) FileSystem.get(path.toUri(), this.getProxiedFSConf());
       FileSystem httpFs = this.getHttpFSFileSystem();
 
-      Collection<ErasureCodingPolicyInfo> dfsAllErasureCodingPolicies = dfs.getAllErasureCodingPolicies();
+      Collection<ErasureCodingPolicyInfo> dfsAllErasureCodingPolicies =
+          dfs.getAllErasureCodingPolicies();
       Collection<ErasureCodingPolicyInfo> diffErasureCodingPolicies = null;
 
       if (httpFs instanceof HttpFSFileSystem) {
