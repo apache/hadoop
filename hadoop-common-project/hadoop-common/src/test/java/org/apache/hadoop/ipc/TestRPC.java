@@ -1419,11 +1419,9 @@ public class TestRPC extends TestRpcBase {
       }
       MetricsRecordBuilder rpcMetrics =
           getMetrics(server.getRpcMetrics().name());
-      assertEquals("Expected correct rpcCallSuccesses count", 10,
-          getLongCounter("RpcCallSuccesses", rpcMetrics));
+      assertCounter("RpcCallSuccesses", 10L, rpcMetrics);
       // rpcQueueTimeNumOps equals total number of RPC calls.
-      assertEquals("Expected correct rpcQueueTime count", 10,
-          getLongCounter("RpcQueueTimeNumOps", rpcMetrics));
+      assertCounter("RpcQueueTimeNumOps", 10L, rpcMetrics);
 
       // 2 failed responses with ERROR status and 1 more successful response.
       for (int i = 0; i < 2; i++) {
@@ -1435,11 +1433,8 @@ public class TestRPC extends TestRpcBase {
       proxy.ping(null, newEmptyRequest());
 
       rpcMetrics = getMetrics(server.getRpcMetrics().name());
-      assertEquals("Expected correct rpcCallSuccesses count", 11,
-          getLongCounter("RpcCallSuccesses", rpcMetrics));
-      // rpcQueueTimeNumOps equals total number of RPC calls.
-      assertEquals("Expected correct rpcQueueTime count", 13,
-          getLongCounter("RpcQueueTimeNumOps", rpcMetrics));
+      assertCounter("RpcCallSuccesses", 11L, rpcMetrics);
+      assertCounter("RpcQueueTimeNumOps", 13L, rpcMetrics);
     } finally {
       stop(server, proxy);
     }
