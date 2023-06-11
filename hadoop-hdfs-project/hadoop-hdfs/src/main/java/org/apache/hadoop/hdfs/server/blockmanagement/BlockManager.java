@@ -3295,8 +3295,11 @@ public class BlockManager implements BlockStatsMXBean {
     BlockInfo storedBlock = getStoredBlock(block);
     if(storedBlock == null) {
       // If blocksMap does not contain reported block id,
-      // the replica should be removed from the data-node.
-      toInvalidate.add(new Block(block));
+      // the replica should be removed from the data-node,
+      // and should be to set NO_ACK.
+      Block invalidateBlock = new Block(block);
+      invalidateBlock.setNumBytes(BlockCommand.NO_ACK);
+      toInvalidate.add(invalidateBlock);
       return null;
     }
     BlockUCState ucState = storedBlock.getBlockUCState();
