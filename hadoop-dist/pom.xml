@@ -169,7 +169,6 @@
                   <executable>${shell-executable}</executable>
                   <workingDirectory>${project.build.directory}
                   </workingDirectory>
-                  <requiresOnline>false</requiresOnline>
                   <arguments>
                     <argument>
                       ${basedir}/../dev-support/bin/dist-layout-stitching
@@ -188,7 +187,6 @@
                 <configuration>
                   <executable>${shell-executable}</executable>
                   <workingDirectory>${basedir}</workingDirectory>
-                  <requiresOnline>false</requiresOnline>
                   <arguments>
                     <argument>
                       ${basedir}/../dev-support/bin/dist-tools-hooks-maker
@@ -209,7 +207,6 @@
                   <executable>${shell-executable}</executable>
                   <workingDirectory>${project.build.directory}
                   </workingDirectory>
-                  <requiresOnline>false</requiresOnline>
                   <arguments>
                     <argument>${basedir}/../dev-support/bin/dist-tar-stitching
                     </argument>
