@@ -5354,4 +5354,16 @@
     <value></value>
   </property>
 
+  <property>
+    <description>
+      YARN Federation supports Non-HA mode.
+      If the cluster is not configured with HA but wants to use YARN Federation,
+      this option can be used.
+      Setting it to true enables Non-HA mode, while false disables Non-HA mode.
+      The default value is false.
+    </description>
+    <name>yarn.federation.non-ha.enabled</name>
+    <value>false</value>
+  </property>
+
 </configuration>
