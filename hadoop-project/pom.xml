@@ -134,7 +134,6 @@
     <ehcache.version>3.3.1</ehcache.version>
     <hikari.version>2.4.12</hikari.version>
     <derby.version>10.14.2.0</derby.version>
-    <mysql-connector-java.version>8.0.29</mysql-connector-java.version>
     <mssql.version>6.2.1.jre7</mssql.version>
     <okhttp3.version>4.9.3</okhttp3.version>
     <kotlin-stdlib.verion>1.4.10</kotlin-stdlib.verion>
@@ -1867,11 +1866,6 @@
           <groupId>org.apache.derby</groupId>
           <artifactId>derby</artifactId>
           <version>${derby.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>mysql</groupId>
-          <artifactId>mysql-connector-java</artifactId>
-          <version>${mysql-connector-java.version}</version>
         </dependency>
         <dependency>
           <groupId>com.microsoft.sqlserver</groupId>

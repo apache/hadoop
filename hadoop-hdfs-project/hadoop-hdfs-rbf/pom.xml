@@ -98,11 +98,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>HikariCP-java7</artifactId>
     </dependency>
     <dependency>
-      <groupId>mysql</groupId>
-      <artifactId>mysql-connector-java</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
