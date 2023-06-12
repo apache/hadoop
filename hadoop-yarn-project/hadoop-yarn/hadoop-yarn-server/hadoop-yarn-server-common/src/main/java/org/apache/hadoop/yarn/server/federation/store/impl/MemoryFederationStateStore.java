@@ -661,7 +661,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @VisibleForTesting
-  public void setApplicationContext(String subClusterId, ApplicationId applicationId, long createTime) {
+  public void setApplicationContext(String subClusterId, ApplicationId applicationId,
+      long createTime) {
     ApplicationSubmissionContext context =
         ApplicationSubmissionContext.newInstance(applicationId, "test", "default",
         Priority.newInstance(0), null, true, true,
