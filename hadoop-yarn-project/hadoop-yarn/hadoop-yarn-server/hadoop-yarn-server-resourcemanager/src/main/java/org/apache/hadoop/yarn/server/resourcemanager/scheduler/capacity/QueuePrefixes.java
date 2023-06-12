@@ -30,8 +30,7 @@ public final class QueuePrefixes {
   }
 
   public static String getQueuePrefix(QueuePath queuePath) {
-    String queueName = PREFIX + queuePath.getFullPath() + DOT;
-    return queueName;
+    return PREFIX + queuePath.getFullPath() + DOT;
   }
 
   public static String getNodeLabelPrefix(QueuePath queuePath, String label) {

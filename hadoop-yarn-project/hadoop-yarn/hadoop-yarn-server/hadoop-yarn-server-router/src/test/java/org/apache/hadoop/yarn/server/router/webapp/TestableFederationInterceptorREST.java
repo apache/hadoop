@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.DEDICATED_QUEUE_PATH;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.DEFAULT_QUEUE_PATH;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.ROOT_QUEUE_PATH;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEDICATED_FULL;
@@ -87,7 +88,7 @@ public class TestableFederationInterceptorREST
       // Define dedicated queues
       String[] queues = new String[]{QUEUE_DEFAULT, QUEUE_DEDICATED};
       conf.setQueues(ROOT_QUEUE_PATH, queues);
-      conf.setCapacity(DEFAULT_QUEUE_PATH, 80);
+      conf.setCapacity(DEDICATED_QUEUE_PATH, 80);
       conf.setReservable(QUEUE_DEDICATED_FULL, true);
 
       conf.setClass(YarnConfiguration.RM_SCHEDULER,

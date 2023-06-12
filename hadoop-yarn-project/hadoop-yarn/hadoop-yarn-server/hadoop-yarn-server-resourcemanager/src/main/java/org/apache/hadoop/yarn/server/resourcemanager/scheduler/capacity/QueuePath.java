@@ -236,8 +236,9 @@ public class QueuePath implements Iterable<String> {
     int supportedWildcardLevel = getSupportedWildcardLevel(maxAutoCreatedQueueDepth);
 
     // Collect all template entries
-    for (int wildcardLevel = supportedWildcardLevel; wildcardLevel > 0; wildcardLevel--) {
-      pathComponents[wildcardLevel] = WILDCARD_QUEUE;
+    for (int wildcardLevel = 1; wildcardLevel <= supportedWildcardLevel; wildcardLevel++) {
+      int wildcardedComponentIndex = pathComponents.length - wildcardLevel;
+      pathComponents[wildcardedComponentIndex] = WILDCARD_QUEUE;
       QueuePath wildcardedPath = createFromQueues(pathComponents);
       wildcardedPaths.add(wildcardedPath);
     }

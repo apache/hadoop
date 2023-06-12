@@ -146,9 +146,9 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       throws Exception {
     Configuration config = CSConfigGenerator
         .createWeightConfigWithAutoQueueCreationEnabled();
-    QueuePath autoPArent1 = new QueuePath("root.autoParent1");
+    QueuePath autoParent1 = new QueuePath("root.autoParent1");
     config.setInt(QueuePrefixes
-        .getQueuePrefix(autoPArent1) +
+        .getQueuePrefix(autoParent1) +
         AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX +
         "maximum-applications", 300);
 

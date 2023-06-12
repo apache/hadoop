@@ -1550,9 +1550,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   public void setReservable(String queue, boolean isReservable) {
-    setBoolean(getQueuePrefix(new QueuePath(queue)) + IS_RESERVABLE, isReservable);
+    QueuePath queuePath = new QueuePath(queue);
+    setBoolean(getQueuePrefix(queuePath) + IS_RESERVABLE, isReservable);
     LOG.debug("here setReservableQueue: queuePrefix={}, isReservableQueue={}",
-        getQueuePrefix(new QueuePath(queue)), isReservable(queue));
+        getQueuePrefix(queuePath), isReservable(queue));
   }
 
   @Override
