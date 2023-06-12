@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.files;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Objects;
@@ -28,6 +30,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Writable;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData.marshallPath;
@@ -37,12 +40,13 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.Ab
 /**
  * A directory entry in the task manifest.
  * Uses shorter field names for smaller files.
- * Hash and equals are on dir name only; there's no real expectation
- * that those operations are needed.
+ * Hash and equals are on dir name only.
+ * Can be serialized as a java object, json object
+ * or hadoop writable.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public final class DirEntry implements Serializable {
+public final class DirEntry implements Serializable, Writable {
 
   private static final long serialVersionUID = 5658520530209859765L;
 
@@ -65,7 +69,7 @@ public final class DirEntry implements Serializable {
   private int level;
 
   /**
-   * Constructor only for use by jackson.
+   * Constructor for use by jackson/writable.
    * Do Not Delete.
    */
   private DirEntry() {
@@ -175,6 +179,20 @@ public final class DirEntry implements Serializable {
   @Override
   public int hashCode() {
     return Objects.hash(dir);
+  }
+
+  @Override
+  public void write(final DataOutput out) throws IOException {
+    out.writeUTF(dir);
+    out.writeInt(type);
+    out.writeInt(level);
+  }
+
+  @Override
+  public void readFields(final DataInput in) throws IOException {
+    dir = in.readUTF();
+    type = in.readInt();
+    level = in.readInt();
   }
 
   /**
