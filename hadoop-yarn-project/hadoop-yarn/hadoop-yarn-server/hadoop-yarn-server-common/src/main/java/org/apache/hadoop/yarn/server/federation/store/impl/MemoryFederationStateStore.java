@@ -40,6 +40,8 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
@@ -667,5 +669,18 @@ public class MemoryFederationStateStore implements FederationStateStore {
     }
     SubClusterInfo subClusterInfo = membership.get(subClusterId);
     subClusterInfo.setLastHeartBeat(heartBearTime);
+  }
+
+  @VisibleForTesting
+  public void setApplicationContext(String subClusterId, ApplicationId applicationId,
+      long createTime) {
+    ApplicationSubmissionContext context =
+        ApplicationSubmissionContext.newInstance(applicationId, "test", "default",
+        Priority.newInstance(0), null, true, true,
+        2, Resource.newInstance(10, 2), "test");
+    SubClusterId homeSubClusterId = SubClusterId.newInstance(subClusterId);
+    ApplicationHomeSubCluster applicationHomeSubCluster =
+        ApplicationHomeSubCluster.newInstance(applicationId, createTime, homeSubClusterId, context);
+    this.applications.put(applicationId, applicationHomeSubCluster);
   }
 }
