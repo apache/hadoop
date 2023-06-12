@@ -163,6 +163,7 @@ public class TestRenameWithSnapshots {
     
     hdfs.delete(bar, false);
     Assert.assertEquals(1, withCount.getReferenceCount());
+    restartClusterAndCheckImage(true);
   }
   
   private static boolean existsInDiffReport(List<DiffReportEntry> entries,
