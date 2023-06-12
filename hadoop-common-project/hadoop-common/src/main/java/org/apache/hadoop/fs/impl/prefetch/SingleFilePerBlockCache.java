@@ -353,7 +353,7 @@ public class SingleFilePerBlockCache implements BlockCache {
           prefetchingStatistics.blockRemovedFromFileCache();
           numFilesDeleted++;
         } catch (IOException e) {
-          LOG.error("Failed to delete cache file {}", entry.path, e);
+          LOG.warn("Failed to delete cache file {}", entry.path, e);
         } finally {
           entry.releaseLock(Entry.LockType.WRITE);
         }
