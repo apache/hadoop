@@ -23,6 +23,29 @@ Overview of Changes
 Users are encouraged to read the full set of release notes.
 This page provides an overview of the major changes.
 
+SBOM artifacts
+----------------------------------------
+Starting from this release, Hadoop publishes Software Bill of Materials (SBOM) using
+CycloneDX Maven plugin. For more information about SBOM, please go to
+[SBOM](https://cwiki.apache.org/confluence/display/COMDEV/SBOM).
+
+HDFS RBF: RDBMS based token storage support
+----------------------------------------
+HDFS Router-Router Based Federation now supports storing delegation tokens on MySQL,
+[HADOOP-18535](https://issues.apache.org/jira/browse/HADOOP-18535)
+which improves token operation throughput over the original Zookeeper-based implementation.
+
+
+New File System APIs
+----------------------------------------
+[HADOOP-18671](https://issues.apache.org/jira/browse/HADOOP-18671) moved a number of
+HDFS-specific APIs to Hadoop Common to make it possible for certain applications that
+depend on HDFS semantics to run on other Hadoop compatible file systems.
+
+In particular, recoverLease() and isFileClosed() are exposed through LeaseRecoverable
+interface. While setSafeMode() is exposed through SafeMode interface.
+
+
 Azure ABFS: Critical Stream Prefetch Fix
 ----------------------------------------
 
