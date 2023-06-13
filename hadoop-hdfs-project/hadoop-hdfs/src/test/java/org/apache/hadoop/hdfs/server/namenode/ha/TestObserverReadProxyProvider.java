@@ -84,7 +84,6 @@ public class TestObserverReadProxyProvider {
   private URI nnURI;
 
   private ObserverReadProxyProvider<ClientProtocol> proxyProvider;
-
   private NameNodeAnswer[] namenodeAnswers;
   private String[] namenodeAddrs;
 
@@ -97,8 +96,6 @@ public class TestObserverReadProxyProvider {
   public void setup() throws Exception {
     ns = "testcluster";
     nnURI = URI.create("hdfs://" + ns);
-
-    MockitoAnnotations.initMocks(this);
   }
 
   private void setupProxyProvider(int namenodeCount) throws Exception {
