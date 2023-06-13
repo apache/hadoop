@@ -185,6 +185,17 @@ public class ObserverReadProxyProvider<T>
    */
   private long lastObserverProbeTime;
 
+  /**
+   * Threadpool to send the getHAServiceState requests.
+   *
+   * One thread running all the time, with up to 4 threads. Idle threads will be killed after
+   * 1 minute. At most 1024 requests can be submitted before they start to be rejected.
+   *
+   * Each hdfs client will have its own ObserverReadProxyProvider. Thus,
+   * having 1 thread running should be sufficient in most cases.
+   * We are not expecting to receive a lot of outstanding RPC calls
+   * from a single hdfs client, thus setting the queue size to 1024.
+   */
   private final ExecutorService nnProbingThreadPool =
       new ThreadPoolExecutor(1, 4, 1L, TimeUnit.MINUTES,
           new ArrayBlockingQueue<Runnable>(1024));

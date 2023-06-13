@@ -74,9 +74,9 @@ import static org.mockito.Mockito.verify;
  * NameNode to communicate with.
  */
 public class TestObserverReadProxyProvider {
-  private final static int SLOW_RESPONSE_SLEEP_TIME = 5000; // 5 s
-  private final static int NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT = 2000; // 2s
-  private final static int NAMENODE_HA_STATE_PROBE_TIMEOUT_LONG = 25000; // 25s
+  private final static long SLOW_RESPONSE_SLEEP_TIME = TimeUnit.SECONDS.toMillis(5); // 5 s
+  private final static long NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT = TimeUnit.SECONDS.toMillis(2);
+  private final static long NAMENODE_HA_STATE_PROBE_TIMEOUT_LONG = TimeUnit.SECONDS.toMillis(25);
 
   private static final LocatedBlock[] EMPTY_BLOCKS = new LocatedBlock[0];
   private String ns;
@@ -114,9 +114,9 @@ public class TestObserverReadProxyProvider {
     setupProxyProvider(namenodeCount, new Configuration());
   }
 
-  private void setupProxyProvider(int namenodeCount, int nnHAStateProbeTimeout) throws Exception {
+  private void setupProxyProvider(int namenodeCount, long nnHAStateProbeTimeout) throws Exception {
     Configuration conf = new Configuration();
-    conf.setInt(NAMENODE_HA_STATE_PROBE_TIMEOUT, nnHAStateProbeTimeout);
+    conf.setLong(NAMENODE_HA_STATE_PROBE_TIMEOUT, nnHAStateProbeTimeout);
     setupProxyProvider(namenodeCount, conf);
   }
 
