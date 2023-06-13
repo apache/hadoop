@@ -452,7 +452,7 @@ public class TestObserverReadProxyProvider {
   }
 
   /**
-   * Test GetHAServiceState when timeout is disabled.
+   * Test GetHAServiceState when timeout is disabled (test the else { task.get() } code path)
    */
   @Test
   public void testGetHAServiceStateWithoutTimeout() throws Exception {
