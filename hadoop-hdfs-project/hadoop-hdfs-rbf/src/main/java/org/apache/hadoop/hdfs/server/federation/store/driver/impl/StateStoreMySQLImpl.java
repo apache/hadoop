@@ -194,10 +194,8 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
           if (errorIfExists) {
             LOG.error("Attempted to insert record {} that already exists "
                 + "in table {} and updates are disallowed.", primaryKey, tableName);
-            if (metrics != null) {
-              metrics.addFailure(Time.monotonicNow() - start);
-            }
-            return new StateStoreOperationResult(getOriginalPrimaryKey(primaryKey));
+            failedRecordsKeys.add(getOriginalPrimaryKey(primaryKey));
+            success = false;
           } else {
             LOG.debug("Not updating {} as updates are not allowed", record);
           }
