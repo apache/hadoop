@@ -373,12 +373,14 @@ public class ObserverReadProxyProvider<T>
       LOG.debug("HA State for {} is {}", proxyInfo.proxyInfo, state);
     } catch (TimeoutException e) {
       // Cancel the task on timeout
-      LOG.warn("Cancel NN probe task due to timeout for {}: {}", proxyInfo.proxyInfo, e);
+      String msg = String.format("Cancel NN probe task due to timeout for %s", proxyInfo.proxyInfo);
+      LOG.warn(msg, e);
       if (task != null) {
         task.cancel(true);
       }
     } catch (InterruptedException|ExecutionException e) {
-      LOG.warn("Exception in NN probe task for {}: {}", proxyInfo.proxyInfo, e);
+      String msg = String.format("Exception in NN probe task for %s", proxyInfo.proxyInfo);
+      LOG.warn(msg, e);
     }
 
     return state;

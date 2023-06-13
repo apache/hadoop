@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -43,13 +43,13 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.util.StopWatch;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.slf4j.Logger;
+import org.slf4j.event.Level;
 
 import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 
@@ -59,7 +59,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.mock;
@@ -77,16 +76,22 @@ public class TestObserverReadProxyProvider {
   private final static long SLOW_RESPONSE_SLEEP_TIME = TimeUnit.SECONDS.toMillis(5); // 5 s
   private final static long NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT = TimeUnit.SECONDS.toMillis(2);
   private final static long NAMENODE_HA_STATE_PROBE_TIMEOUT_LONG = TimeUnit.SECONDS.toMillis(25);
+  private final GenericTestUtils.LogCapturer proxyLog =
+      GenericTestUtils.LogCapturer.captureLogs(ObserverReadProxyProvider.LOG);
 
   private static final LocatedBlock[] EMPTY_BLOCKS = new LocatedBlock[0];
   private String ns;
   private URI nnURI;
 
   private ObserverReadProxyProvider<ClientProtocol> proxyProvider;
-  @Mock private Logger logger;
 
   private NameNodeAnswer[] namenodeAnswers;
   private String[] namenodeAddrs;
+
+  @BeforeClass
+  public static void setLogLevel() {
+    GenericTestUtils.setLogLevel(ObserverReadProxyProvider.LOG, Level.DEBUG);
+  }
 
   @Before
   public void setup() throws Exception {
@@ -94,20 +99,6 @@ public class TestObserverReadProxyProvider {
     nnURI = URI.create("hdfs://" + ns);
 
     MockitoAnnotations.initMocks(this);
-  }
-
-  /**
-   * Replace LOG in ObserverReadProxy with a mocked logger.
-   */
-  private void setupMockLoggerForProxyProvider()
-      throws NoSuchFieldException, IllegalAccessException {
-    Field field = ObserverReadProxyProvider.class.getDeclaredField("LOG");
-    field.setAccessible(true);
-    // remove final modifier
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
-    modifiersField.setAccessible(true);
-    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-    field.set(proxyProvider, logger);
   }
 
   private void setupProxyProvider(int namenodeCount) throws Exception {
@@ -169,7 +160,6 @@ public class TestObserverReadProxyProvider {
       }
     };
     proxyProvider.setObserverReadEnabled(true);
-    setupMockLoggerForProxyProvider();
   }
 
   @Test
@@ -376,6 +366,8 @@ public class TestObserverReadProxyProvider {
    */
   @Test
   public void testGetHAServiceStateWithTimeout() throws Exception {
+    proxyLog.clearOutput();
+
     setupProxyProvider(1, NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT);
     final HAServiceState state = HAServiceState.STANDBY;
     NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
@@ -387,7 +379,9 @@ public class TestObserverReadProxyProvider {
     assertEquals(state, state2);
     verify(task).get(anyLong(), any(TimeUnit.class));
     verifyNoMoreInteractions(task);
-    verify(logger).debug(eq("HA State for {} is {}"), eq(null), eq(state));
+    assertEquals(1, StringUtils.countMatches(proxyLog.getOutput(),
+        "HA State for " + dummyNNProxyInfo.proxyInfo + " is " + state));
+    proxyLog.clearOutput();
   }
 
   /**
@@ -395,6 +389,8 @@ public class TestObserverReadProxyProvider {
    */
   @Test
   public void testTimeoutExceptionGetHAServiceStateWithTimeout() throws Exception {
+    proxyLog.clearOutput();
+
     setupProxyProvider(1, NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT);
     NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
         (NNProxyInfo<ClientProtocol>) Mockito.mock(NNProxyInfo.class);
@@ -407,7 +403,9 @@ public class TestObserverReadProxyProvider {
     verify(task).get(anyLong(), any(TimeUnit.class));
     verify(task).cancel(true);
     verifyNoMoreInteractions(task);
-    verify(logger).warn(eq("Cancel NN probe task due to timeout for {}: {}"), eq(null), eq(e));
+    assertEquals(1, StringUtils.countMatches(proxyLog.getOutput(),
+        "Cancel NN probe task due to timeout for " + dummyNNProxyInfo.proxyInfo));
+    proxyLog.clearOutput();
   }
 
   /**
@@ -415,6 +413,8 @@ public class TestObserverReadProxyProvider {
    */
   @Test
   public void testInterruptedExceptionGetHAServiceStateWithTimeout() throws Exception {
+    proxyLog.clearOutput();
+
     setupProxyProvider(1, NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT);
     NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
         (NNProxyInfo<ClientProtocol>) Mockito.mock(NNProxyInfo.class);
@@ -426,7 +426,9 @@ public class TestObserverReadProxyProvider {
     assertNull(state);
     verify(task).get(anyLong(), any(TimeUnit.class));
     verifyNoMoreInteractions(task);
-    verify(logger).warn(eq("Exception in NN probe task for {}: {}"), eq(null), eq(e));
+    assertEquals(1, StringUtils.countMatches(proxyLog.getOutput(),
+        "Exception in NN probe task for " + dummyNNProxyInfo.proxyInfo));
+    proxyLog.clearOutput();
   }
 
   /**
@@ -434,6 +436,8 @@ public class TestObserverReadProxyProvider {
    */
   @Test
   public void testExecutionExceptionGetHAServiceStateWithTimeout() throws Exception {
+    proxyLog.clearOutput();
+
     setupProxyProvider(1, NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT);
     NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
         (NNProxyInfo<ClientProtocol>) Mockito.mock(NNProxyInfo.class);
@@ -445,7 +449,9 @@ public class TestObserverReadProxyProvider {
     assertNull(state);
     verify(task).get(anyLong(), any(TimeUnit.class));
     verifyNoMoreInteractions(task);
-    verify(logger).warn(eq("Exception in NN probe task for {}: {}"), eq(null), eq(e));
+    assertEquals(1, StringUtils.countMatches(proxyLog.getOutput(),
+        "Exception in NN probe task for " + dummyNNProxyInfo.proxyInfo));
+    proxyLog.clearOutput();
   }
 
   /**
@@ -453,6 +459,7 @@ public class TestObserverReadProxyProvider {
    */
   @Test
   public void testGetHAServiceStateWithoutTimeout() throws Exception {
+    proxyLog.clearOutput();
     setupProxyProvider(1, 0);
 
     final HAServiceState state = HAServiceState.STANDBY;
@@ -465,7 +472,9 @@ public class TestObserverReadProxyProvider {
     assertEquals(state, state2);
     verify(task).get();
     verifyNoMoreInteractions(task);
-    verify(logger).debug(eq("HA State for {} is {}"), eq(null), eq(state));
+    assertEquals(1, StringUtils.countMatches(proxyLog.getOutput(),
+        "HA State for " + dummyNNProxyInfo.proxyInfo + " is " + state));
+    proxyLog.clearOutput();
   }
 
   /**
