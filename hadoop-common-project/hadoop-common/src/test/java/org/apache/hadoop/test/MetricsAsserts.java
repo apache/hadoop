@@ -366,8 +366,9 @@ public class MetricsAsserts {
    */
   public static void assertGaugeGte(String name, double greater,
       MetricsRecordBuilder rb) {
+    double curValue = getDoubleGauge(name, rb);
     Assert.assertTrue("Bad value for metric " + name,
-        getDoubleGauge(name, rb) >= greater);
+        curValue >= greater);
   }
 
   /**
