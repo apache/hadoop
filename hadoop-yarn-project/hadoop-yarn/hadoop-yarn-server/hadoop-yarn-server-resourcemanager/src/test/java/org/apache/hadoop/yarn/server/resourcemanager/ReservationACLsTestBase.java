@@ -505,9 +505,9 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     csConf.setCapacity(A_QUEUE_PATH, 50f);
     csConf.setCapacity(B_QUEUE_PATH, 20f);
     csConf.setCapacity(C_QUEUE_PATH, 30f);
-    csConf.setReservable(A_QUEUE_PATH.getFullPath(), true);
-    csConf.setReservable(B_QUEUE_PATH.getFullPath(), true);
-    csConf.setReservable(C_QUEUE_PATH.getFullPath(), true);
+    csConf.setReservable(A_QUEUE_PATH, true);
+    csConf.setReservable(B_QUEUE_PATH, true);
+    csConf.setReservable(C_QUEUE_PATH, true);
 
     // Set up ACLs on Queue A
     Map<ReservationACL, AccessControlList> reservationAclsOnQueueA =

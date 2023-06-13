@@ -1027,11 +1027,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   @Override
-  public Map<ReservationACL, AccessControlList> getReservationAcls(String
+  public Map<ReservationACL, AccessControlList> getReservationAcls(QueuePath
         queue) {
     Map<ReservationACL, AccessControlList> resAcls = new HashMap<>();
     for (ReservationACL acl : ReservationACL.values()) {
-      resAcls.put(acl, getReservationAcl(new QueuePath(queue), acl));
+      resAcls.put(acl, getReservationAcl(queue, acl));
     }
     return resAcls;
   }
@@ -1543,39 +1543,38 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         .getWorkflowPriorityMappingStr(workflowPriorityMappings));
   }
 
-  public boolean isReservable(String queue) {
+  public boolean isReservable(QueuePath queue) {
     boolean isReservable =
-        getBoolean(getQueuePrefix(new QueuePath(queue)) + IS_RESERVABLE, false);
+        getBoolean(getQueuePrefix(queue) + IS_RESERVABLE, false);
     return isReservable;
   }
 
-  public void setReservable(String queue, boolean isReservable) {
-    QueuePath queuePath = new QueuePath(queue);
-    setBoolean(getQueuePrefix(queuePath) + IS_RESERVABLE, isReservable);
+  public void setReservable(QueuePath queue, boolean isReservable) {;
+    setBoolean(getQueuePrefix(queue) + IS_RESERVABLE, isReservable);
     LOG.debug("here setReservableQueue: queuePrefix={}, isReservableQueue={}",
-        getQueuePrefix(queuePath), isReservable(queue));
+        getQueuePrefix(queue), isReservable(queue));
   }
 
   @Override
-  public long getReservationWindow(String queue) {
+  public long getReservationWindow(QueuePath queue) {
     long reservationWindow =
-        getLong(getQueuePrefix(new QueuePath(queue)) + RESERVATION_WINDOW,
+        getLong(getQueuePrefix(queue) + RESERVATION_WINDOW,
             DEFAULT_RESERVATION_WINDOW);
     return reservationWindow;
   }
 
   @Override
-  public float getAverageCapacity(String queue) {
+  public float getAverageCapacity(QueuePath queue) {
     float avgCapacity =
-        getFloat(getQueuePrefix(new QueuePath(queue)) + AVERAGE_CAPACITY,
+        getFloat(getQueuePrefix(queue) + AVERAGE_CAPACITY,
             MAXIMUM_CAPACITY_VALUE);
     return avgCapacity;
   }
 
   @Override
-  public float getInstantaneousMaxCapacity(String queue) {
+  public float getInstantaneousMaxCapacity(QueuePath queue) {
     float instMaxCapacity =
-        getFloat(getQueuePrefix(new QueuePath(queue)) + INSTANTANEOUS_MAX_CAPACITY,
+        getFloat(getQueuePrefix(queue) + INSTANTANEOUS_MAX_CAPACITY,
             MAXIMUM_CAPACITY_VALUE);
     return instMaxCapacity;
   }
@@ -1594,9 +1593,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   @Override
-  public String getReservationAdmissionPolicy(String queue) {
+  public String getReservationAdmissionPolicy(QueuePath queue) {
     String reservationPolicy =
-        get(getQueuePrefix(new QueuePath(queue)) + RESERVATION_ADMISSION_POLICY,
+        get(getQueuePrefix(queue) + RESERVATION_ADMISSION_POLICY,
             DEFAULT_RESERVATION_ADMISSION_POLICY);
     return reservationPolicy;
   }
@@ -1607,9 +1606,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   @Override
-  public String getReservationAgent(String queue) {
+  public String getReservationAgent(QueuePath queue) {
     String reservationAgent =
-        get(getQueuePrefix(new QueuePath(queue)) + RESERVATION_AGENT_NAME,
+        get(getQueuePrefix(queue) + RESERVATION_AGENT_NAME,
             DEFAULT_RESERVATION_AGENT_NAME);
     return reservationAgent;
   }
@@ -1619,34 +1618,34 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   @Override
-  public boolean getShowReservationAsQueues(String queuePath) {
+  public boolean getShowReservationAsQueues(QueuePath queuePath) {
     boolean showReservationAsQueues =
-        getBoolean(getQueuePrefix(new QueuePath(queuePath))
+        getBoolean(getQueuePrefix(queuePath)
             + RESERVATION_SHOW_RESERVATION_AS_QUEUE,
             DEFAULT_SHOW_RESERVATIONS_AS_QUEUES);
     return showReservationAsQueues;
   }
 
   @Override
-  public String getReplanner(String queue) {
+  public String getReplanner(QueuePath queue) {
     String replanner =
-        get(getQueuePrefix(new QueuePath(queue)) + RESERVATION_PLANNER_NAME,
+        get(getQueuePrefix(queue) + RESERVATION_PLANNER_NAME,
             DEFAULT_RESERVATION_PLANNER_NAME);
     return replanner;
   }
 
   @Override
-  public boolean getMoveOnExpiry(String queue) {
+  public boolean getMoveOnExpiry(QueuePath queue) {
     boolean killOnExpiry =
-        getBoolean(getQueuePrefix(new QueuePath(queue)) + RESERVATION_MOVE_ON_EXPIRY,
+        getBoolean(getQueuePrefix(queue) + RESERVATION_MOVE_ON_EXPIRY,
             DEFAULT_RESERVATION_MOVE_ON_EXPIRY);
     return killOnExpiry;
   }
 
   @Override
-  public long getEnforcementWindow(String queue) {
+  public long getEnforcementWindow(QueuePath queue) {
     long enforcementWindow =
-        getLong(getQueuePrefix(new QueuePath(queue)) + RESERVATION_ENFORCEMENT_WINDOW,
+        getLong(getQueuePrefix(queue) + RESERVATION_ENFORCEMENT_WINDOW,
             DEFAULT_RESERVATION_ENFORCEMENT_WINDOW);
     return enforcementWindow;
   }

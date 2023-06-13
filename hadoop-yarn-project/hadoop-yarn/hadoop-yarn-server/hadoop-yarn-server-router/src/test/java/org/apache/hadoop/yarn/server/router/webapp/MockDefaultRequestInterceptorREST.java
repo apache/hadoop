@@ -1112,7 +1112,7 @@ public class MockDefaultRequestInterceptorREST
     conf.setQueues(ROOT_QUEUE_PATH,
         new String[] {QUEUE_DEFAULT,  QUEUE_DEDICATED});
     conf.setCapacity(DEDICATED_QUEUE_PATH, 80);
-    conf.setReservable(QUEUE_DEDICATED_FULL, true);
+    conf.setReservable(DEDICATED_QUEUE_PATH, true);
 
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class, ResourceScheduler.class);
     conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);

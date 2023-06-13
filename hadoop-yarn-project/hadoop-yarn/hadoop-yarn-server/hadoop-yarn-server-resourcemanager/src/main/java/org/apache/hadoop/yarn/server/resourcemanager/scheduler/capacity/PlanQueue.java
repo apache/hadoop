@@ -55,7 +55,7 @@ public class PlanQueue extends AbstractManagedParentQueue {
     String queuePath = super.getQueuePath();
     QueuePath queuePathObject = super.getQueuePathObject();
     int maxAppsForReservation = conf.getMaximumApplicationsPerQueue(queuePathObject);
-    showReservationsAsQueues = conf.getShowReservationAsQueues(queuePath);
+    showReservationsAsQueues = conf.getShowReservationAsQueues(queuePathObject);
     if (maxAppsForReservation < 0) {
       maxAppsForReservation =
           (int) (CapacitySchedulerConfiguration.

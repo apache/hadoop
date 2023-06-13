@@ -100,10 +100,11 @@ public class ReservationSystemTestUtil {
     ReservationSchedulerConfiguration realConf =
         new CapacitySchedulerConfiguration();
     ReservationSchedulerConfiguration conf = spy(realConf);
-    when(conf.getReservationWindow(reservationQ)).thenReturn(timeWindow);
-    when(conf.getInstantaneousMaxCapacity(reservationQ))
+    QueuePath reservationQueuePath = new QueuePath(reservationQ);
+    when(conf.getReservationWindow(reservationQueuePath)).thenReturn(timeWindow);
+    when(conf.getInstantaneousMaxCapacity(reservationQueuePath))
         .thenReturn(instConstraint);
-    when(conf.getAverageCapacity(reservationQ)).thenReturn(avgConstraint);
+    when(conf.getAverageCapacity(reservationQueuePath)).thenReturn(avgConstraint);
 
     return conf;
   }
@@ -315,7 +316,7 @@ public class ReservationSystemTestUtil {
     conf.setCapacity(A, 10);
     conf.setCapacity(DEDICATED, 80);
     // Set as reservation queue
-    conf.setReservable(DEDICATED.getFullPath(), true);
+    conf.setReservable(DEDICATED, true);
 
     // Define 2nd-level queues
     conf.setQueues(A, new String[] {"a1", "a2"});
@@ -330,7 +331,7 @@ public class ReservationSystemTestUtil {
         new String[] {RESERVATION_Q_SHORT});
     conf.setCapacity(DEDICATED, 100);
     // Set as reservation queue
-    conf.setReservable(DEDICATED.getFullPath(), true);
+    conf.setReservable(DEDICATED, true);
   }
 
   public static String getFullReservationQueueName() {
@@ -359,12 +360,12 @@ public class ReservationSystemTestUtil {
     conf.setCapacity(A, 5);
     conf.setCapacity(DEDICATED, 10);
     // Set as reservation queue
-    conf.setReservable(DEDICATED.getFullPath(), true);
+    conf.setReservable(DEDICATED, true);
 
     final QueuePath newQueue = new QueuePath(prefix + newQ);
     conf.setCapacity(newQueue, 80);
     // Set as reservation queue
-    conf.setReservable(prefix + newQ, true);
+    conf.setReservable(newQueue, true);
 
     // Define 2nd-level queues
     conf.setQueues(A, new String[] { "a1", "a2" });

@@ -304,7 +304,7 @@ public class TestCapacitySchedulerDynamicBehavior {
     conf.setCapacity(B3, B3_CAPACITY);
     conf.setUserLimitFactor(B3, 100.0f);
 
-    conf.setReservable(A.getFullPath(), true);
+    conf.setReservable(A, true);
     conf.setReservationWindow(A, 86400 * 1000);
     conf.setAverageCapacity(A, 1.0f);
 

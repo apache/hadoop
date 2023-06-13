@@ -241,7 +241,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     List<String> childQueueNames = conf.getQueues(fullQueuePath);
     CSQueue oldQueue = oldQueues.get(fullQueuePath.getFullPath());
 
-    boolean isReservableQueue = conf.isReservable(fullQueuePath.getFullPath());
+    boolean isReservableQueue = conf.isReservable(fullQueuePath);
     boolean isAutoCreateEnabled = conf.isAutoCreateChildQueueEnabled(fullQueuePath);
     // if a queue is eligible for auto queue creation v2 it must be a ParentQueue
     // (even if it is empty)

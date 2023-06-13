@@ -89,7 +89,7 @@ public class TestableFederationInterceptorREST
       String[] queues = new String[]{QUEUE_DEFAULT, QUEUE_DEDICATED};
       conf.setQueues(ROOT_QUEUE_PATH, queues);
       conf.setCapacity(DEDICATED_QUEUE_PATH, 80);
-      conf.setReservable(QUEUE_DEDICATED_FULL, true);
+      conf.setReservable(DEDICATED_QUEUE_PATH, true);
 
       conf.setClass(YarnConfiguration.RM_SCHEDULER,
           CapacityScheduler.class, ResourceScheduler.class);

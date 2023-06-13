@@ -174,10 +174,11 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       CapacitySchedulerConfiguration csconf =
           new CapacitySchedulerConfiguration(conf);
       String[] queues = { "default", "dedicated" };
+      QueuePath dedicatedQueuePath = new QueuePath("root.dedicated");
       csconf.setQueues(new QueuePath("root"), queues);
       csconf.setCapacity(new QueuePath("root.default"), 50.0f);
-      csconf.setCapacity(new QueuePath("root.dedicated"), 50.0f);
-      csconf.setReservable("root.dedicated", true);
+      csconf.setCapacity(dedicatedQueuePath, 50.0f);
+      csconf.setReservable(dedicatedQueuePath, true);
       conf = csconf;
     }
   }
