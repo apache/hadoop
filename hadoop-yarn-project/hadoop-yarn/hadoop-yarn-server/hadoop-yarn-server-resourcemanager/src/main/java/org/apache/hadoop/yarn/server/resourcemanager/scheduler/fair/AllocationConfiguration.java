@@ -197,7 +197,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
    */
   public Map<ReservationACL, AccessControlList> getReservationAcls(QueuePath
         queue) {
-    return this.resAcls.get(queue);
+    return this.resAcls.get(queue.getFullPath());
   }
 
   /**

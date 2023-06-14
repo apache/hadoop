@@ -1364,8 +1364,11 @@ public class FairScheduler extends
     readLock.lock();
     try {
       FSQueue queue = queueMgr.getQueue(queueName);
+      if (queue == null) {
+        return queueName;
+      }
       QueuePath queuePath = new QueuePath(queue.getQueueName());
-      if ((queue == null) || !allocConf.isReservable(queuePath)) {
+      if (!allocConf.isReservable(queuePath)) {
         return queueName;
       }
       // Use fully specified name from now on (including root. prefix)

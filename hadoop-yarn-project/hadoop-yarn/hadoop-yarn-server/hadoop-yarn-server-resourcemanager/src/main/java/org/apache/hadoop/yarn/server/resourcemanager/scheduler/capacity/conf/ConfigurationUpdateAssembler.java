@@ -75,7 +75,7 @@ public final class ConfigurationUpdateAssembler {
       throw new IOException("Queue " + queuePath.getFullPath() + " not found");
     }
     siblingQueues.remove(queueName);
-    
+
     QueuePath parentPath = queuePath.getParentObject();
     proposedConf.setQueues(parentPath, siblingQueues.toArray(
             new String[0]));
@@ -112,7 +112,7 @@ public final class ConfigurationUpdateAssembler {
             queueName)) {
       throw new IOException("Can't add existing queue " + queuePath);
     }
-    
+
     QueuePath parentPath = queuePath.getParentObject();
     List<String> siblingQueues = proposedConf.getQueues(parentPath);
     siblingQueues.add(queueName);
@@ -164,7 +164,7 @@ public final class ConfigurationUpdateAssembler {
     String childQueuesKey = getQueuesConfig(queuePath.getParentObject());
     return new ArrayList<>(conf.getTrimmedStringCollection(childQueuesKey));
   }
-  
+
   private static String getQueuesConfig(QueuePath queuePath) {
     return QueuePrefixes.getQueuePrefix(queuePath) + CapacitySchedulerConfiguration.QUEUES;
   }

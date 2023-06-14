@@ -143,9 +143,9 @@ public class TestQueuePath {
   @Test
   public void testGetPathComponents() {
     Assert.assertArrayEquals(TEST_QUEUE_PATH.getPathComponents(),
-        new String[] { "root", "level_1", "level_2", "level_3" });
-    Assert.assertArrayEquals(ROOT_PATH.getPathComponents(), new String[] { "root" });
-    Assert.assertArrayEquals(EMPTY_PATH.getPathComponents(), new String[] { "" });
+        new String[] {"root", "level_1", "level_2", "level_3"});
+    Assert.assertArrayEquals(ROOT_PATH.getPathComponents(), new String[] {"root"});
+    Assert.assertArrayEquals(EMPTY_PATH.getPathComponents(), new String[] {""});
   }
 
   @Test
@@ -176,7 +176,7 @@ public class TestQueuePath {
 
     Assert.assertEquals(expectedPaths, wildcardedPaths);
   }
-  
+
   @Test
   public void testWildcardedQueuePathsWithThreeLevelWildCard() {
     int maxAutoCreatedQueueDepth = 3;
