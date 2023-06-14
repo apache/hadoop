@@ -45,6 +45,10 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServ
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.createMockRM;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.createWebAppDescriptor;
 
+/**
+ * @deprecated Please use the {@link TestRMWebServicesCapacitySchedDynamicConfigV2} for new tests.
+ */
+@Deprecated
 public class TestRMWebServicesCapacitySchedDynamicConfig extends
     JerseyTestBase {
   private MockRM rm;
@@ -107,6 +111,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     Configuration config = createAbsoluteConfig();
 
     initResourceManager(config);
+    rm.registerNode("h1:1234", 102400, 100);
 
     /*
      * mode: absolute

@@ -16,11 +16,11 @@
           {
             "type": "capacitySchedulerLeafQueueInfo",
             "queuePath": "root.test2",
-            "capacity": 0,
+            "capacity": 1,
             "usedCapacity": 0,
             "maxCapacity": 100,
-            "absoluteCapacity": 0,
-            "absoluteMaxCapacity": 0,
+            "absoluteCapacity": 1,
+            "absoluteMaxCapacity": 100,
             "absoluteUsedCapacity": 0,
             "weight": -1,
             "normalizedWeight": 0,
@@ -63,12 +63,12 @@
             "capacities": {
               "queueCapacitiesByPartition": [{
                 "partitionName": "",
-                "capacity": 0,
+                "capacity": 1,
                 "usedCapacity": 0,
                 "maxCapacity": 100,
-                "absoluteCapacity": 0,
+                "absoluteCapacity": 1,
                 "absoluteUsedCapacity": 0,
-                "absoluteMaxCapacity": 0,
+                "absoluteMaxCapacity": 100,
                 "maxAMLimitPercentage": 10,
                 "weight": -1,
                 "normalizedWeight": 0,
@@ -151,8 +151,8 @@
                   }
                 },
                 "effectiveMaxResource": {
-                  "memory": 0,
-                  "vCores": 0,
+                  "memory": 102400,
+                  "vCores": 100,
                   "resourceInformations": {
                     "resourceInformation": [
                       {
@@ -162,7 +162,7 @@
                         "name": "memory-mb",
                         "resourceType": "COUNTABLE",
                         "units": "Mi",
-                        "value": 0
+                        "value": 102400
                       },
                       {
                         "attributes": {},
@@ -171,7 +171,7 @@
                         "name": "vcores",
                         "resourceType": "COUNTABLE",
                         "units": "",
-                        "value": 0
+                        "value": 100
                       }
                     ]
                   }
@@ -286,7 +286,7 @@
                   }
                 },
                 "amLimit": {
-                  "memory": 1024,
+                  "memory": 10240,
                   "vCores": 1,
                   "resourceInformations": {
                     "resourceInformation": [
@@ -297,7 +297,7 @@
                         "name": "memory-mb",
                         "resourceType": "COUNTABLE",
                         "units": "Mi",
-                        "value": 1024
+                        "value": 10240
                       },
                       {
                         "attributes": {},
@@ -366,8 +366,8 @@
               }
             },
             "maxEffectiveCapacity": {
-              "memory": 0,
-              "vCores": 0,
+              "memory": 102400,
+              "vCores": 100,
               "resourceInformations": {
                 "resourceInformation": [
                   {
@@ -377,7 +377,7 @@
                     "name": "memory-mb",
                     "resourceType": "COUNTABLE",
                     "units": "Mi",
-                    "value": 0
+                    "value": 102400
                   },
                   {
                     "attributes": {},
@@ -386,7 +386,7 @@
                     "name": "vcores",
                     "resourceType": "COUNTABLE",
                     "units": "",
-                    "value": 0
+                    "value": 100
                   }
                 ]
               }
@@ -447,14 +447,14 @@
             "numActiveApplications": 0,
             "numPendingApplications": 0,
             "numContainers": 0,
-            "maxApplications": 0,
-            "maxApplicationsPerUser": 0,
+            "maxApplications": 100,
+            "maxApplicationsPerUser": 100,
             "userLimit": 100,
             "users": {},
             "userLimitFactor": 1,
             "configuredMaxAMResourceLimit": 0.1,
             "AMResourceLimit": {
-              "memory": 1024,
+              "memory": 10240,
               "vCores": 1,
               "resourceInformations": {
                 "resourceInformation": [
@@ -465,7 +465,7 @@
                     "name": "memory-mb",
                     "resourceType": "COUNTABLE",
                     "units": "Mi",
-                    "value": 1024
+                    "value": 10240
                   },
                   {
                     "attributes": {},
@@ -506,7 +506,7 @@
               }
             },
             "userAMResourceLimit": {
-              "memory": 1024,
+              "memory": 10240,
               "vCores": 1,
               "resourceInformations": {
                 "resourceInformation": [
@@ -517,7 +517,7 @@
                     "name": "memory-mb",
                     "resourceType": "COUNTABLE",
                     "units": "Mi",
-                    "value": 1024
+                    "value": 10240
                   },
                   {
                     "attributes": {},
@@ -541,11 +541,11 @@
           {
             "type": "capacitySchedulerLeafQueueInfo",
             "queuePath": "root.test1",
-            "capacity": 0,
+            "capacity": 2,
             "usedCapacity": 0,
             "maxCapacity": 100,
-            "absoluteCapacity": 0,
-            "absoluteMaxCapacity": 0,
+            "absoluteCapacity": 2,
+            "absoluteMaxCapacity": 100,
             "absoluteUsedCapacity": 0,
             "weight": -1,
             "normalizedWeight": 0,
@@ -588,12 +588,12 @@
             "capacities": {
               "queueCapacitiesByPartition": [{
                 "partitionName": "",
-                "capacity": 0,
+                "capacity": 2,
                 "usedCapacity": 0,
                 "maxCapacity": 100,
-                "absoluteCapacity": 0,
+                "absoluteCapacity": 2,
                 "absoluteUsedCapacity": 0,
-                "absoluteMaxCapacity": 0,
+                "absoluteMaxCapacity": 100,
                 "maxAMLimitPercentage": 10,
                 "weight": -1,
                 "normalizedWeight": 0,
@@ -676,8 +676,8 @@
                   }
                 },
                 "effectiveMaxResource": {
-                  "memory": 0,
-                  "vCores": 0,
+                  "memory": 102400,
+                  "vCores": 100,
                   "resourceInformations": {
                     "resourceInformation": [
                       {
@@ -687,7 +687,7 @@
                         "name": "memory-mb",
                         "resourceType": "COUNTABLE",
                         "units": "Mi",
-                        "value": 0
+                        "value": 102400
                       },
                       {
                         "attributes": {},
@@ -696,7 +696,7 @@
                         "name": "vcores",
                         "resourceType": "COUNTABLE",
                         "units": "",
-                        "value": 0
+                        "value": 100
                       }
                     ]
                   }
@@ -811,7 +811,7 @@
                   }
                 },
                 "amLimit": {
-                  "memory": 1024,
+                  "memory": 10240,
                   "vCores": 1,
                   "resourceInformations": {
                     "resourceInformation": [
@@ -822,7 +822,7 @@
                         "name": "memory-mb",
                         "resourceType": "COUNTABLE",
                         "units": "Mi",
-                        "value": 1024
+                        "value": 10240
                       },
                       {
                         "attributes": {},
@@ -891,8 +891,8 @@
               }
             },
             "maxEffectiveCapacity": {
-              "memory": 0,
-              "vCores": 0,
+              "memory": 102400,
+              "vCores": 100,
               "resourceInformations": {
                 "resourceInformation": [
                   {
@@ -902,7 +902,7 @@
                     "name": "memory-mb",
                     "resourceType": "COUNTABLE",
                     "units": "Mi",
-                    "value": 0
+                    "value": 102400
                   },
                   {
                     "attributes": {},
@@ -911,7 +911,7 @@
                     "name": "vcores",
                     "resourceType": "COUNTABLE",
                     "units": "",
-                    "value": 0
+                    "value": 100
                   }
                 ]
               }
@@ -972,14 +972,14 @@
             "numActiveApplications": 0,
             "numPendingApplications": 0,
             "numContainers": 0,
-            "maxApplications": 0,
-            "maxApplicationsPerUser": 0,
+            "maxApplications": 200,
+            "maxApplicationsPerUser": 200,
             "userLimit": 100,
             "users": {},
             "userLimitFactor": 1,
             "configuredMaxAMResourceLimit": 0.1,
             "AMResourceLimit": {
-              "memory": 1024,
+              "memory": 10240,
               "vCores": 1,
               "resourceInformations": {
                 "resourceInformation": [
@@ -990,7 +990,7 @@
                     "name": "memory-mb",
                     "resourceType": "COUNTABLE",
                     "units": "Mi",
-                    "value": 1024
+                    "value": 10240
                   },
                   {
                     "attributes": {},
@@ -1031,7 +1031,7 @@
               }
             },
             "userAMResourceLimit": {
-              "memory": 1024,
+              "memory": 10240,
               "vCores": 1,
               "resourceInformations": {
                 "resourceInformation": [
@@ -1042,7 +1042,7 @@
                     "name": "memory-mb",
                     "resourceType": "COUNTABLE",
                     "units": "Mi",
-                    "value": 1024
+                    "value": 10240
                   },
                   {
                     "attributes": {},
@@ -1066,11 +1066,11 @@
           {
             "type": "capacitySchedulerLeafQueueInfo",
             "queuePath": "root.default",
-            "capacity": 0,
+            "capacity": 2.9921875,
             "usedCapacity": 0,
             "maxCapacity": 100,
-            "absoluteCapacity": 0,
-            "absoluteMaxCapacity": 0,
+            "absoluteCapacity": 2.9921875,
+            "absoluteMaxCapacity": 100,
             "absoluteUsedCapacity": 0,
             "weight": -1,
             "normalizedWeight": 0,
@@ -1113,12 +1113,12 @@
             "capacities": {
               "queueCapacitiesByPartition": [{
                 "partitionName": "",
-                "capacity": 0,
+                "capacity": 2.9921875,
                 "usedCapacity": 0,
                 "maxCapacity": 100,
-                "absoluteCapacity": 0,
+                "absoluteCapacity": 2.9921875,
                 "absoluteUsedCapacity": 0,
-                "absoluteMaxCapacity": 0,
+                "absoluteMaxCapacity": 100,
                 "maxAMLimitPercentage": 10,
                 "weight": -1,
                 "normalizedWeight": 0,
@@ -1201,8 +1201,8 @@
                   }
                 },
                 "effectiveMaxResource": {
-                  "memory": 0,
-                  "vCores": 0,
+                  "memory": 102400,
+                  "vCores": 100,
                   "resourceInformations": {
                     "resourceInformation": [
                       {
@@ -1212,7 +1212,7 @@
                         "name": "memory-mb",
                         "resourceType": "COUNTABLE",
                         "units": "Mi",
-                        "value": 0
+                        "value": 102400
                       },
                       {
                         "attributes": {},
@@ -1221,7 +1221,7 @@
                         "name": "vcores",
                         "resourceType": "COUNTABLE",
                         "units": "",
-                        "value": 0
+                        "value": 100
                       }
                     ]
                   }
@@ -1336,7 +1336,7 @@
                   }
                 },
                 "amLimit": {
-                  "memory": 1024,
+                  "memory": 10240,
                   "vCores": 1,
                   "resourceInformations": {
                     "resourceInformation": [
@@ -1347,7 +1347,7 @@
                         "name": "memory-mb",
                         "resourceType": "COUNTABLE",
                         "units": "Mi",
-                        "value": 1024
+                        "value": 10240
                       },
                       {
                         "attributes": {},
@@ -1416,8 +1416,8 @@
               }
             },
             "maxEffectiveCapacity": {
-              "memory": 0,
-              "vCores": 0,
+              "memory": 102400,
+              "vCores": 100,
               "resourceInformations": {
                 "resourceInformation": [
                   {
@@ -1427,7 +1427,7 @@
                     "name": "memory-mb",
                     "resourceType": "COUNTABLE",
                     "units": "Mi",
-                    "value": 0
+                    "value": 102400
                   },
                   {
                     "attributes": {},
@@ -1436,7 +1436,7 @@
                     "name": "vcores",
                     "resourceType": "COUNTABLE",
                     "units": "",
-                    "value": 0
+                    "value": 100
                   }
                 ]
               }
@@ -1497,14 +1497,14 @@
             "numActiveApplications": 0,
             "numPendingApplications": 0,
             "numContainers": 0,
-            "maxApplications": 0,
-            "maxApplicationsPerUser": 0,
+            "maxApplications": 299,
+            "maxApplicationsPerUser": 299,
             "userLimit": 100,
             "users": {},
             "userLimitFactor": 1,
             "configuredMaxAMResourceLimit": 0.1,
             "AMResourceLimit": {
-              "memory": 1024,
+              "memory": 10240,
               "vCores": 1,
               "resourceInformations": {
                 "resourceInformation": [
@@ -1515,7 +1515,7 @@
                     "name": "memory-mb",
                     "resourceType": "COUNTABLE",
                     "units": "Mi",
-                    "value": 1024
+                    "value": 10240
                   },
                   {
                     "attributes": {},
@@ -1556,7 +1556,7 @@
               }
             },
             "userAMResourceLimit": {
-              "memory": 1024,
+              "memory": 10240,
               "vCores": 1,
               "resourceInformations": {
                 "resourceInformation": [
@@ -1567,7 +1567,7 @@
                     "name": "memory-mb",
                     "resourceType": "COUNTABLE",
                     "units": "Mi",
-                    "value": 1024
+                    "value": 10240
                   },
                   {
                     "attributes": {},
@@ -1655,8 +1655,8 @@
             }
           },
           "effectiveMinResource": {
-            "memory": 0,
-            "vCores": 0,
+            "memory": 102400,
+            "vCores": 100,
             "resourceInformations": {
               "resourceInformation": [
                 {
@@ -1666,7 +1666,7 @@
                   "name": "memory-mb",
                   "resourceType": "COUNTABLE",
                   "units": "Mi",
-                  "value": 0
+                  "value": 102400
                 },
                 {
                   "attributes": {},
@@ -1675,14 +1675,14 @@
                   "name": "vcores",
                   "resourceType": "COUNTABLE",
                   "units": "",
-                  "value": 0
+                  "value": 100
                 }
               ]
             }
           },
           "effectiveMaxResource": {
-            "memory": 0,
-            "vCores": 0,
+            "memory": 102400,
+            "vCores": 100,
             "resourceInformations": {
               "resourceInformation": [
                 {
@@ -1692,7 +1692,7 @@
                   "name": "memory-mb",
                   "resourceType": "COUNTABLE",
                   "units": "Mi",
-                  "value": 0
+                  "value": 102400
                 },
                 {
                   "attributes": {},
@@ -1701,7 +1701,7 @@
                   "name": "vcores",
                   "resourceType": "COUNTABLE",
                   "units": "",
-                  "value": 0
+                  "value": 100
                 }
               ]
             }
