@@ -108,13 +108,13 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    rm = createMockRM(new CapacitySchedulerConfiguration(
-        new Configuration(false)));
+    rm = createMockRM(setupQueueConfiguration(new CapacitySchedulerConfiguration(
+        new Configuration(false))));
     GuiceServletConfig.setInjector(
         Guice.createInjector(new WebServletModule(rm)));
   }
 
-  public static void setupQueueConfiguration(
+  public CapacitySchedulerConfiguration setupQueueConfiguration(
       CapacitySchedulerConfiguration config) {
 
     // Define top-level queues
@@ -167,6 +167,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     config.setAutoCreateChildQueueEnabled(a1C, true);
     config.setInt(PREFIX + a1C + DOT + AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX
         + DOT + CAPACITY, 50);
+
+    return config;
   }
 
   @Test
@@ -407,7 +409,6 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   }
 
   public static MockRM createMockRM(CapacitySchedulerConfiguration csConf) {
-    setupQueueConfiguration(csConf);
     YarnConfiguration conf = new YarnConfiguration(csConf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
