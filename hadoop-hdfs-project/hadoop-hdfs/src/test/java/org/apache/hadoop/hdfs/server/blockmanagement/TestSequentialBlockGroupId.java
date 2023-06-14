@@ -203,10 +203,9 @@ public class TestSequentialBlockGroupId {
     Set<Long> allBlockIds = new HashSet<>();
     for (List<Long> set : blockIds) {
       for (long id : set) {
-        if (allBlockIds.contains(id)) {
+        if (!allBlockIds.add(id)) {
           fail("Same block group id is generated!");
         }
-        allBlockIds.add(id);
       }
     }
   }

@@ -51,7 +51,7 @@ public class SequentialBlockGroupIdGenerator extends SequentialNumber {
   }
 
   @Override // NumberGenerator
-  synchronized public long nextValue() {
+  public synchronized long nextValue() {
     skipTo((getCurrentValue() & ~BLOCK_GROUP_INDEX_MASK) + MAX_BLOCKS_IN_GROUP);
     // Make sure there's no conflict with existing random block IDs
     final Block b = new Block(getCurrentValue());
