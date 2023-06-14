@@ -197,6 +197,7 @@ public class TestRenameWithSnapshots {
     assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
     assertTrue(existsInDiffReport(entries, DiffType.CREATE, file2.getName(),
         null));
+    restartClusterAndCheckImage(true);
   }
 
   /**
@@ -219,6 +220,7 @@ public class TestRenameWithSnapshots {
     assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
     assertTrue(existsInDiffReport(entries, DiffType.RENAME, file1.getName(),
         file2.getName()));
+    restartClusterAndCheckImage(true);
   }
 
   @Test (timeout=60000)
