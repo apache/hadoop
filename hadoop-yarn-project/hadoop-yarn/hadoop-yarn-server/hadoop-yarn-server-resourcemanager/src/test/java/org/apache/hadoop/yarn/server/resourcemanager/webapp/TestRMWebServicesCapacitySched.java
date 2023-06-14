@@ -116,58 +116,33 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
   public CapacitySchedulerConfiguration setupQueueConfiguration(
       CapacitySchedulerConfiguration config) {
-
-    // Define top-level queues
-    config.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] {"a", "b", "c"});
-
-    final String a = CapacitySchedulerConfiguration.ROOT + ".a";
-    config.setCapacity(a, 10.5f);
-    config.setMaximumCapacity(a, 50);
-    config.setInt(CapacitySchedulerConfiguration.getQueuePrefix(a) + MAX_PARALLEL_APPLICATIONS, 42);
-
-    final String b = CapacitySchedulerConfiguration.ROOT + ".b";
-    config.setCapacity(b, 89.5f);
-
-    final String c = CapacitySchedulerConfiguration.ROOT + ".c";
-    config.setCapacity(c, "[memory=1024]");
-
-    // Define 2nd-level queues
-    final String a1 = a + ".a1";
-    final String a2 = a + ".a2";
-    config.setQueues(a, new String[] {"a1", "a2"});
-    config.setCapacity(a1, 30);
-    config.setMaximumCapacity(a1, 50);
-    config.setMaximumLifetimePerQueue(a2, 100);
-    config.setDefaultLifetimePerQueue(a2, 50);
-
-    config.setUserLimitFactor(a1, 100.0f);
-    config.setCapacity(a2, 70);
-    config.setUserLimitFactor(a2, 100.0f);
-
-    final String b1 = b + ".b1";
-    final String b2 = b + ".b2";
-    final String b3 = b + ".b3";
-    config.setQueues(b, new String[] {"b1", "b2", "b3"});
-    config.setCapacity(b1, 60);
-    config.setUserLimitFactor(b1, 100.0f);
-    config.setCapacity(b2, 39.5f);
-    config.setUserLimitFactor(b2, 100.0f);
-    config.setCapacity(b3, 0.5f);
-    config.setUserLimitFactor(b3, 100.0f);
-
-    config.setQueues(a1, new String[] {"a1a", "a1b", "a1c"});
-    final String a1A = a1 + ".a1a";
-    config.setCapacity(a1A, 65);
-    final String a1B = a1 + ".a1b";
-    config.setCapacity(a1B, 15);
-    final String a1C = a1 + ".a1c";
-    config.setCapacity(a1C, 20);
-
-    config.setAutoCreateChildQueueEnabled(a1C, true);
-    config.setInt(PREFIX + a1C + DOT + AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX
-        + DOT + CAPACITY, 50);
-
+    config.set("yarn.scheduler.capacity.root.queues", "a, b, c");
+    config.set("yarn.scheduler.capacity.root.a.queues", "a1, a2");
+    config.set("yarn.scheduler.capacity.root.b.queues", "b1, b2, b3");
+    config.set("yarn.scheduler.capacity.root.a.a1.queues", "a1a, a1b, a1c");
+    config.set("yarn.scheduler.capacity.root.a.capacity", "10.5");
+    config.set("yarn.scheduler.capacity.root.a.maximum-capacity", "50");
+    config.set("yarn.scheduler.capacity.root.a.max-parallel-app", "42");
+    config.set("yarn.scheduler.capacity.root.b.capacity", "79.5");
+    config.set("yarn.scheduler.capacity.root.c.capacity", "10");
+    config.set("yarn.scheduler.capacity.root.a.a1.capacity", "30");
+    config.set("yarn.scheduler.capacity.root.a.a1.maximum-capacity", "50");
+    config.set("yarn.scheduler.capacity.root.a.a1.user-limit-factor", "100");
+    config.set("yarn.scheduler.capacity.root.a.a2.capacity", "70");
+    config.set("yarn.scheduler.capacity.root.a.a2.maximum-application-lifetime", "100");
+    config.set("yarn.scheduler.capacity.root.a.a2.default-application-lifetime", "50");
+    config.set("yarn.scheduler.capacity.root.a.a2.user-limit-factor", "100");
+    config.set("yarn.scheduler.capacity.root.b.b1.capacity", "60");
+    config.set("yarn.scheduler.capacity.root.b.b2.capacity", "39.5");
+    config.set("yarn.scheduler.capacity.root.b.b3.capacity", "0.5");
+    config.set("yarn.scheduler.capacity.root.b.b1.user-limit-factor", "100");
+    config.set("yarn.scheduler.capacity.root.b.b2.user-limit-factor", "100");
+    config.set("yarn.scheduler.capacity.root.b.b3.user-limit-factor", "100");
+    config.set("yarn.scheduler.capacity.root.a.a1.a1a.capacity", "65");
+    config.set("yarn.scheduler.capacity.root.a.a1.a1b.capacity", "15");
+    config.set("yarn.scheduler.capacity.root.a.a1.a1c.capacity", "20");
+    config.set("yarn.scheduler.capacity.root.a.a1.a1c.auto-create-child-queue.enabled", "true");
+    config.set("yarn.scheduler.capacity.root.a.a1.a1c.leaf-queue-template.capacity", "50");
     return config;
   }
 

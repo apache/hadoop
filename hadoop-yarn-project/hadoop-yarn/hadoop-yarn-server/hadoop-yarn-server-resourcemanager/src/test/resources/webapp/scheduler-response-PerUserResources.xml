@@ -12,18 +12,18 @@
     <queues>
       <queue xsi:type="capacitySchedulerLeafQueueInfo">
         <queuePath>root.c</queuePath>
-        <capacity>0.0</capacity>
+        <capacity>10.0</capacity>
         <usedCapacity>0.0</usedCapacity>
         <maxCapacity>100.0</maxCapacity>
-        <absoluteCapacity>0.0</absoluteCapacity>
-        <absoluteMaxCapacity>0.0</absoluteMaxCapacity>
+        <absoluteCapacity>10.0</absoluteCapacity>
+        <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <weight>-1.0</weight>
         <normalizedWeight>0.0</normalizedWeight>
         <numApplications>0</numApplications>
         <maxParallelApps>2147483647</maxParallelApps>
         <queueName>c</queueName>
-        <isAbsoluteResource>true</isAbsoluteResource>
+        <isAbsoluteResource>false</isAbsoluteResource>
         <state>RUNNING</state>
         <resourcesUsed>
           <memory>0</memory>
@@ -57,32 +57,32 @@
         <capacities>
           <queueCapacitiesByPartition>
             <partitionName/>
-            <capacity>0.0</capacity>
+            <capacity>10.0</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>0.0</absoluteCapacity>
+            <absoluteCapacity>10.0</absoluteCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
-            <absoluteMaxCapacity>0.0</absoluteMaxCapacity>
+            <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <maxAMLimitPercentage>10.0</maxAMLimitPercentage>
             <weight>-1.0</weight>
             <normalizedWeight>0.0</normalizedWeight>
             <configuredMinResource>
-              <memory>1024</memory>
+              <memory>0</memory>
               <vCores>0</vCores>
               <resourceInformations>
                 <resourceInformation>
                   <attributes/>
-                  <maximumAllocation>9223372036854775807</maximumAllocation>
-                  <minimumAllocation>0</minimumAllocation>
+                  <maximumAllocation>8192</maximumAllocation>
+                  <minimumAllocation>1024</minimumAllocation>
                   <name>memory-mb</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units>Mi</units>
-                  <value>1024</value>
+                  <value>0</value>
                 </resourceInformation>
                 <resourceInformation>
                   <attributes/>
-                  <maximumAllocation>9223372036854775807</maximumAllocation>
-                  <minimumAllocation>0</minimumAllocation>
+                  <maximumAllocation>4</maximumAllocation>
+                  <minimumAllocation>1</minimumAllocation>
                   <name>vcores</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units/>
@@ -115,7 +115,7 @@
               </resourceInformations>
             </configuredMaxResource>
             <effectiveMinResource>
-              <memory>1024</memory>
+              <memory>0</memory>
               <vCores>0</vCores>
               <resourceInformations>
                 <resourceInformation>
@@ -125,7 +125,7 @@
                   <name>memory-mb</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units>Mi</units>
-                  <value>1024</value>
+                  <value>0</value>
                 </resourceInformation>
                 <resourceInformation>
                   <attributes/>
@@ -264,8 +264,8 @@
               </resourceInformations>
             </amUsed>
             <amLimit>
-              <memory>1024</memory>
-              <vCores>1</vCores>
+              <memory>0</memory>
+              <vCores>0</vCores>
               <resourceInformations>
                 <resourceInformation>
                   <attributes/>
@@ -274,7 +274,7 @@
                   <name>memory-mb</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units>Mi</units>
-                  <value>1024</value>
+                  <value>0</value>
                 </resourceInformation>
                 <resourceInformation>
                   <attributes/>
@@ -283,7 +283,7 @@
                   <name>vcores</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units/>
-                  <value>1</value>
+                  <value>0</value>
                 </resourceInformation>
               </resourceInformations>
             </amLimit>
@@ -314,7 +314,7 @@
           </resourceUsagesByPartition>
         </resources>
         <minEffectiveCapacity>
-          <memory>1024</memory>
+          <memory>0</memory>
           <vCores>0</vCores>
           <resourceInformations>
             <resourceInformation>
@@ -324,7 +324,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>1024</value>
+              <value>0</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -403,7 +403,7 @@
         <orderingPolicyInfo>fifo</orderingPolicyInfo>
         <autoCreateChildQueueEnabled>false</autoCreateChildQueueEnabled>
         <leafQueueTemplate/>
-        <mode>absolute</mode>
+        <mode>percentage</mode>
         <queueType>leaf</queueType>
         <creationMethod>static</creationMethod>
         <autoCreationEligibility>off</autoCreationEligibility>
@@ -413,15 +413,15 @@
         <numActiveApplications>0</numActiveApplications>
         <numPendingApplications>0</numPendingApplications>
         <numContainers>0</numContainers>
-        <maxApplications>0</maxApplications>
-        <maxApplicationsPerUser>0</maxApplicationsPerUser>
+        <maxApplications>1000</maxApplications>
+        <maxApplicationsPerUser>1000</maxApplicationsPerUser>
         <userLimit>100.0</userLimit>
         <users/>
         <userLimitFactor>1.0</userLimitFactor>
         <configuredMaxAMResourceLimit>0.1</configuredMaxAMResourceLimit>
         <AMResourceLimit>
-          <memory>1024</memory>
-          <vCores>1</vCores>
+          <memory>0</memory>
+          <vCores>0</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -430,7 +430,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>1024</value>
+              <value>0</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -439,7 +439,7 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>1</value>
+              <value>0</value>
             </resourceInformation>
           </resourceInformations>
         </AMResourceLimit>
@@ -468,8 +468,8 @@
           </resourceInformations>
         </usedAMResource>
         <userAMResourceLimit>
-          <memory>1024</memory>
-          <vCores>1</vCores>
+          <memory>0</memory>
+          <vCores>0</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -478,7 +478,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>1024</value>
+              <value>0</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -487,7 +487,7 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>1</value>
+              <value>0</value>
             </resourceInformation>
           </resourceInformations>
         </userAMResourceLimit>
@@ -509,7 +509,7 @@
         <weight>-1.0</weight>
         <normalizedWeight>0.0</normalizedWeight>
         <numApplications>0</numApplications>
-        <maxParallelApps>42</maxParallelApps>
+        <maxParallelApps>2147483647</maxParallelApps>
         <queueName>a</queueName>
         <isAbsoluteResource>false</isAbsoluteResource>
         <state>RUNNING</state>
@@ -2961,10 +2961,10 @@
       </queue>
       <queue>
         <queuePath>root.b</queuePath>
-        <capacity>89.5</capacity>
+        <capacity>79.5</capacity>
         <usedCapacity>0.0</usedCapacity>
         <maxCapacity>100.0</maxCapacity>
-        <absoluteCapacity>89.5</absoluteCapacity>
+        <absoluteCapacity>79.5</absoluteCapacity>
         <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <weight>-1.0</weight>
@@ -2980,7 +2980,7 @@
             <capacity>60.000004</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>53.7</absoluteCapacity>
+            <absoluteCapacity>47.700005</absoluteCapacity>
             <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <weight>-1.0</weight>
@@ -3025,7 +3025,7 @@
                 <capacity>60.000004</capacity>
                 <usedCapacity>0.0</usedCapacity>
                 <maxCapacity>100.0</maxCapacity>
-                <absoluteCapacity>53.7</absoluteCapacity>
+                <absoluteCapacity>47.700005</absoluteCapacity>
                 <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
                 <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
                 <maxAMLimitPercentage>10.0</maxAMLimitPercentage>
@@ -3378,8 +3378,8 @@
             <numActiveApplications>0</numActiveApplications>
             <numPendingApplications>2</numPendingApplications>
             <numContainers>0</numContainers>
-            <maxApplications>5370</maxApplications>
-            <maxApplicationsPerUser>5370</maxApplicationsPerUser>
+            <maxApplications>4770</maxApplications>
+            <maxApplicationsPerUser>4770</maxApplicationsPerUser>
             <userLimit>100.0</userLimit>
             <users>
               <user>
@@ -3925,7 +3925,7 @@
             <capacity>39.5</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>35.3525</absoluteCapacity>
+            <absoluteCapacity>31.402502</absoluteCapacity>
             <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <weight>-1.0</weight>
@@ -3970,7 +3970,7 @@
                 <capacity>39.5</capacity>
                 <usedCapacity>0.0</usedCapacity>
                 <maxCapacity>100.0</maxCapacity>
-                <absoluteCapacity>35.3525</absoluteCapacity>
+                <absoluteCapacity>31.402502</absoluteCapacity>
                 <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
                 <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
                 <maxAMLimitPercentage>10.0</maxAMLimitPercentage>
@@ -4323,8 +4323,8 @@
             <numActiveApplications>0</numActiveApplications>
             <numPendingApplications>0</numPendingApplications>
             <numContainers>0</numContainers>
-            <maxApplications>3535</maxApplications>
-            <maxApplicationsPerUser>3535</maxApplicationsPerUser>
+            <maxApplications>3140</maxApplications>
+            <maxApplicationsPerUser>3140</maxApplicationsPerUser>
             <userLimit>100.0</userLimit>
             <users/>
             <userLimitFactor>100.0</userLimitFactor>
@@ -4413,7 +4413,7 @@
             <capacity>0.5</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>0.4475</absoluteCapacity>
+            <absoluteCapacity>0.39749998</absoluteCapacity>
             <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <weight>-1.0</weight>
@@ -4458,7 +4458,7 @@
                 <capacity>0.5</capacity>
                 <usedCapacity>0.0</usedCapacity>
                 <maxCapacity>100.0</maxCapacity>
-                <absoluteCapacity>0.4475</absoluteCapacity>
+                <absoluteCapacity>0.39749998</absoluteCapacity>
                 <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
                 <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
                 <maxAMLimitPercentage>10.0</maxAMLimitPercentage>
@@ -4811,8 +4811,8 @@
             <numActiveApplications>0</numActiveApplications>
             <numPendingApplications>0</numPendingApplications>
             <numContainers>0</numContainers>
-            <maxApplications>44</maxApplications>
-            <maxApplicationsPerUser>44</maxApplicationsPerUser>
+            <maxApplications>39</maxApplications>
+            <maxApplicationsPerUser>39</maxApplicationsPerUser>
             <userLimit>100.0</userLimit>
             <users/>
             <userLimitFactor>100.0</userLimitFactor>
@@ -4929,10 +4929,10 @@
         <capacities>
           <queueCapacitiesByPartition>
             <partitionName/>
-            <capacity>89.5</capacity>
+            <capacity>79.5</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>89.5</absoluteCapacity>
+            <absoluteCapacity>79.5</absoluteCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <maxAMLimitPercentage>0.0</maxAMLimitPercentage>
