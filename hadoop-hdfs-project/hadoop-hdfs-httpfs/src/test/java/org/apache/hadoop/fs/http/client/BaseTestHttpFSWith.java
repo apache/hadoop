@@ -1371,7 +1371,6 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       testGetAllEEPolicies();
       break;
     }
-
   }
 
   @Parameterized.Parameters

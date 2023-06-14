@@ -1778,9 +1778,9 @@ public class HttpFSFileSystem extends FileSystem
   public Collection<ErasureCodingPolicyInfo> getAllErasureCodingPolicies() throws IOException {
     Map<String, String> params = new HashMap<>();
     params.put(OP_PARAM, Operation.GETECPOLICIES.toString());
+    Path path = new Path(getUri().toString(), "/");
     HttpURLConnection conn =
-        getConnection(Operation.GETECPOLICIES.getMethod(), params, new Path(getUri()
-            .toString(), "/"), true);
+        getConnection(Operation.GETECPOLICIES.getMethod(), params, path, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return JsonUtilClient.getAllErasureCodingPolicies(json);
