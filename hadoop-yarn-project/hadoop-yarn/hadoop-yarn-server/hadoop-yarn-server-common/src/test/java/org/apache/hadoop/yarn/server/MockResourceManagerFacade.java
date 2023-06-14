@@ -971,6 +971,6 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
 
   @Override
   public void close() throws IOException {
-    isRunning = false;
+    LOG.info("MockResourceManagerFacade Close.");
   }
 }

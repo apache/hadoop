@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.registry.client.impl.FSRegistryOperationsService;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -595,7 +596,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
 
         // Waiting for SC-1 to time out.
-        Thread.sleep(800);
+        GenericTestUtils.waitFor(() -> interceptor.getTimedOutSCs(true).size() == 1, 100, 1000);
 
         // SC1 should be initialized to be timed out
         Assert.assertEquals(1, interceptor.getTimedOutSCs(true).size());
@@ -891,7 +892,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
 
         // Waiting for SC-1 to time out.
-        Thread.sleep(800);
+        GenericTestUtils.waitFor(() -> interceptor.getTimedOutSCs(true).size() == 1, 100, 1000);
 
         // SC1 should be initialized to be timed out
         Assert.assertEquals(1, interceptor.getTimedOutSCs(true).size());
