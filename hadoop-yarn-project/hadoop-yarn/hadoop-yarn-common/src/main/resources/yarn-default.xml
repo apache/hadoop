@@ -5363,7 +5363,7 @@
     <name>yarn.nodemanager.amrmproxy.wait.uam-register.done</name>
     <value>false</value>
   </property>
-  
+
   <property>
     <description>
       YARN Federation supports Non-HA mode.
