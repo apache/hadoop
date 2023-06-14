@@ -150,7 +150,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
         "maximum-applications", 300);
 
     initResourceManager(config);
-    initAutoQueueHandler(1200 * GB);
+    initAutoQueueHandler(1200);
 
     // same as webapp/scheduler-response-WeightMode.json, but with effective resources filled in
     assertJsonResponse(sendRequest(),
