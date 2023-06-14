@@ -183,8 +183,10 @@ public class TestSequentialBlockGroupId {
    */
   @Test
   public void testBlockGroupIdThreadSafety() throws Exception {
+    // Each thread use a list to store its own block group IDs.
     List<List<Long>> blockIds = new ArrayList<>();
     List<Thread> threads = new ArrayList<>();
+
     for (int i = 0; i < 20; i++) {
       blockIds.add(new ArrayList<>());
       threads.add(new Thread(() -> {
@@ -200,6 +202,7 @@ public class TestSequentialBlockGroupId {
     for (Thread t : threads) {
       t.join();
     }
+    // Check if there are duplicate IDs.
     Set<Long> allBlockIds = new HashSet<>();
     for (List<Long> set : blockIds) {
       for (long id : set) {
