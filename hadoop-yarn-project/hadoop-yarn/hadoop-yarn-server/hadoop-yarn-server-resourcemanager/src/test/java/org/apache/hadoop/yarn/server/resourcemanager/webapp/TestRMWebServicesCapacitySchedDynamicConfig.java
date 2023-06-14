@@ -58,8 +58,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   @Test
   public void testSchedulerResponsePercentageMode()
       throws Exception {
-    Configuration config = CSConfigGenerator
-        .createPercentageConfig();
+    Configuration config = createPercentageConfig();
 
     initResourceManager(config);
 
@@ -75,8 +74,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   @Test
   public void testSchedulerResponsePercentageModeLegacyAutoCreation()
       throws Exception {
-    Configuration config = CSConfigGenerator
-        .createPercentageConfigLegacyAutoCreation();
+    Configuration config = createPercentageConfigLegacyAutoCreation();
 
     initResourceManager(config);
 
@@ -93,8 +91,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   @Test
   public void testSchedulerResponseAbsoluteModeLegacyAutoCreation()
       throws Exception {
-    Configuration config = CSConfigGenerator
-        .createAbsoluteConfigLegacyAutoCreation();
+    Configuration config = createAbsoluteConfigLegacyAutoCreation();
 
     initResourceManager(config);
     initAutoQueueHandler(8192);
@@ -107,8 +104,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   @Test
   public void testSchedulerResponseAbsoluteMode()
       throws Exception {
-    Configuration config = CSConfigGenerator
-        .createAbsoluteConfig();
+    Configuration config = createAbsoluteConfig();
 
     initResourceManager(config);
 
@@ -124,8 +120,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   @Test
   public void testSchedulerResponseWeightMode()
       throws Exception {
-    Configuration config = CSConfigGenerator
-        .createWeightConfig();
+    Configuration config = createWeightConfig();
 
     initResourceManager(config);
 
@@ -143,8 +138,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   @Test
   public void testSchedulerResponseWeightModeWithAutoCreatedQueues()
       throws Exception {
-    Configuration config = CSConfigGenerator
-        .createWeightConfigWithAutoQueueCreationEnabled();
+    Configuration config = createWeightConfigWithAutoQueueCreationEnabled();
     config.setInt(CapacitySchedulerConfiguration
         .getQueuePrefix("root.autoParent1") +
         AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX +
@@ -186,132 +180,130 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
         .get(ClientResponse.class);
   }
 
-  private static class CSConfigGenerator {
-    public static Configuration createPercentageConfig() {
-      Map<String, String> conf = new HashMap<>();
-      conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
-      conf.put("yarn.scheduler.capacity.root.test1.capacity", "50");
-      conf.put("yarn.scheduler.capacity.root.test2.capacity", "50");
-      conf.put("yarn.scheduler.capacity.root.test1.maximum-capacity", "100");
-      conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
-      conf.put("yarn.scheduler.capacity.root.test2.state", "RUNNING");
-      return createConfiguration(conf);
+  private Configuration createPercentageConfig() {
+    Map<String, String> conf = new HashMap<>();
+    conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
+    conf.put("yarn.scheduler.capacity.root.test1.capacity", "50");
+    conf.put("yarn.scheduler.capacity.root.test2.capacity", "50");
+    conf.put("yarn.scheduler.capacity.root.test1.maximum-capacity", "100");
+    conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
+    conf.put("yarn.scheduler.capacity.root.test2.state", "RUNNING");
+    return createConfiguration(conf);
+  }
+
+  private Configuration createPercentageConfigLegacyAutoCreation() {
+    Map<String, String> conf = new HashMap<>();
+    conf.put("yarn.scheduler.capacity.root.queues", "default, test1, " +
+        "managedtest2");
+    conf.put("yarn.scheduler.capacity.root.test1.capacity", "50");
+    conf.put("yarn.scheduler.capacity.root.managedtest2.capacity", "50");
+    conf.put("yarn.scheduler.capacity.root.test1.maximum-capacity", "100");
+    conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
+    conf.put("yarn.scheduler.capacity.root.managedtest2.state", "RUNNING");
+    conf.put("yarn.scheduler.capacity.root.managedtest2." +
+        "auto-create-child-queue.enabled", "true");
+    return createConfiguration(conf);
+  }
+
+  private Configuration createAbsoluteConfigLegacyAutoCreation() {
+    Map<String, String> conf = new HashMap<>();
+    conf.put("yarn.scheduler.capacity.root.queues", "default, managed");
+    conf.put("yarn.scheduler.capacity.root.default.state", "STOPPED");
+    conf.put("yarn.scheduler.capacity.root.default.capacity", "[memory=0,vcores=0]");
+    conf.put("yarn.scheduler.capacity.root.managed.capacity", "[memory=4096,vcores=4]");
+    conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.capacity",
+        "[memory=2048,vcores=2]");
+    conf.put("yarn.scheduler.capacity.root.managed.state", "RUNNING");
+    conf.put("yarn.scheduler.capacity.root.managed." +
+        "auto-create-child-queue.enabled", "true");
+    conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.acl_submit_applications",
+        "user");
+    conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.acl_administer_queue",
+        "admin");
+    return createConfiguration(conf);
+  }
+
+  private Configuration createAbsoluteConfig() {
+    Map<String, String> conf = new HashMap<>();
+    conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
+    conf.put("yarn.scheduler.capacity.root.capacity",
+        "[memory=6136,vcores=30]");
+    conf.put("yarn.scheduler.capacity.root.default.capacity",
+        "[memory=3064,vcores=15]");
+    conf.put("yarn.scheduler.capacity.root.test1.capacity",
+        "[memory=2048,vcores=10]");
+    conf.put("yarn.scheduler.capacity.root.test2.capacity",
+        "[memory=1024,vcores=5]");
+    conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
+    conf.put("yarn.scheduler.capacity.root.test2.state", "RUNNING");
+    return createConfiguration(conf);
+  }
+
+  private Configuration createWeightConfig() {
+    return createWeightConfigInternal(false);
+  }
+
+  private Configuration createWeightConfigWithAutoQueueCreationEnabled() {
+    return createWeightConfigInternal(true);
+  }
+
+  private Configuration createWeightConfigInternal(boolean enableAqc) {
+    Map<String, String> conf = new HashMap<>();
+    conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2, parent");
+    conf.put("yarn.scheduler.capacity.root.capacity", "1w");
+    conf.put("yarn.scheduler.capacity.root.default.capacity", "10w");
+    conf.put("yarn.scheduler.capacity.root.test1.capacity", "5w");
+    conf.put("yarn.scheduler.capacity.root.test2.capacity", "10w");
+    conf.put("yarn.scheduler.capacity.root.parent.capacity", "20w");
+    conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
+    conf.put("yarn.scheduler.capacity.root.test2.state", "RUNNING");
+
+    if (enableAqc) {
+      final String root = "yarn.scheduler.capacity.root.";
+      conf.put(root +  "auto-queue-creation-v2.enabled", "true");
+
+      conf.put(root + "auto-queue-creation-v2.parent-template.acl_submit_applications",
+          "parentUser1");
+      conf.put(root + "auto-queue-creation-v2.parent-template.acl_administer_queue",
+          "parentAdmin1");
+
+      conf.put(root + "autoParent1.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+          "user1");
+      conf.put(root + "autoParent1.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+          "admin1");
+
+      conf.put(root + "*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+          "wildUser1");
+      conf.put(root + "*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+          "wildAdmin1");
+
+
+      conf.put(root + "parent.auto-queue-creation-v2.enabled", "true");
+      conf.put(root + "parent.auto-queue-creation-v2.parent-template.acl_submit_applications",
+          "parentUser2");
+      conf.put(root + "parent.auto-queue-creation-v2.parent-template.acl_administer_queue",
+          "parentAdmin2");
+
+      conf.put(root + "parent.*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+          "wildUser2");
+      conf.put(root + "parent.*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+          "wildAdmin2");
+    }
+    return createConfiguration(conf);
+  }
+
+  private Configuration createConfiguration(
+      Map<String, String> configs) {
+    Configuration config = new Configuration();
+
+    for (Map.Entry<String, String> entry : configs.entrySet()) {
+      config.set(entry.getKey(), entry.getValue());
     }
 
-    public static Configuration createPercentageConfigLegacyAutoCreation() {
-      Map<String, String> conf = new HashMap<>();
-      conf.put("yarn.scheduler.capacity.root.queues", "default, test1, " +
-          "managedtest2");
-      conf.put("yarn.scheduler.capacity.root.test1.capacity", "50");
-      conf.put("yarn.scheduler.capacity.root.managedtest2.capacity", "50");
-      conf.put("yarn.scheduler.capacity.root.test1.maximum-capacity", "100");
-      conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
-      conf.put("yarn.scheduler.capacity.root.managedtest2.state", "RUNNING");
-      conf.put("yarn.scheduler.capacity.root.managedtest2." +
-          "auto-create-child-queue.enabled", "true");
-      return createConfiguration(conf);
-    }
+    config.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
 
-    public static Configuration createAbsoluteConfigLegacyAutoCreation() {
-      Map<String, String> conf = new HashMap<>();
-      conf.put("yarn.scheduler.capacity.root.queues", "default, managed");
-      conf.put("yarn.scheduler.capacity.root.default.state", "STOPPED");
-      conf.put("yarn.scheduler.capacity.root.default.capacity", "[memory=0,vcores=0]");
-      conf.put("yarn.scheduler.capacity.root.managed.capacity", "[memory=4096,vcores=4]");
-      conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.capacity",
-          "[memory=2048,vcores=2]");
-      conf.put("yarn.scheduler.capacity.root.managed.state", "RUNNING");
-      conf.put("yarn.scheduler.capacity.root.managed." +
-          "auto-create-child-queue.enabled", "true");
-      conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.acl_submit_applications",
-          "user");
-      conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.acl_administer_queue",
-          "admin");
-      return createConfiguration(conf);
-    }
-
-    public static Configuration createAbsoluteConfig() {
-      Map<String, String> conf = new HashMap<>();
-      conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
-      conf.put("yarn.scheduler.capacity.root.capacity",
-          "[memory=6136,vcores=30]");
-      conf.put("yarn.scheduler.capacity.root.default.capacity",
-          "[memory=3064,vcores=15]");
-      conf.put("yarn.scheduler.capacity.root.test1.capacity",
-          "[memory=2048,vcores=10]");
-      conf.put("yarn.scheduler.capacity.root.test2.capacity",
-          "[memory=1024,vcores=5]");
-      conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
-      conf.put("yarn.scheduler.capacity.root.test2.state", "RUNNING");
-      return createConfiguration(conf);
-    }
-
-    public static Configuration createWeightConfig() {
-      return createWeightConfigInternal(false);
-    }
-
-    public static Configuration createWeightConfigWithAutoQueueCreationEnabled() {
-      return createWeightConfigInternal(true);
-    }
-
-    private static Configuration createWeightConfigInternal(boolean enableAqc) {
-      Map<String, String> conf = new HashMap<>();
-      conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2, parent");
-      conf.put("yarn.scheduler.capacity.root.capacity", "1w");
-      conf.put("yarn.scheduler.capacity.root.default.capacity", "10w");
-      conf.put("yarn.scheduler.capacity.root.test1.capacity", "5w");
-      conf.put("yarn.scheduler.capacity.root.test2.capacity", "10w");
-      conf.put("yarn.scheduler.capacity.root.parent.capacity", "20w");
-      conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
-      conf.put("yarn.scheduler.capacity.root.test2.state", "RUNNING");
-
-      if (enableAqc) {
-        final String root = "yarn.scheduler.capacity.root.";
-        conf.put(root +  "auto-queue-creation-v2.enabled", "true");
-
-        conf.put(root + "auto-queue-creation-v2.parent-template.acl_submit_applications",
-            "parentUser1");
-        conf.put(root + "auto-queue-creation-v2.parent-template.acl_administer_queue",
-            "parentAdmin1");
-
-        conf.put(root + "autoParent1.auto-queue-creation-v2.leaf-template.acl_submit_applications",
-            "user1");
-        conf.put(root + "autoParent1.auto-queue-creation-v2.leaf-template.acl_administer_queue",
-            "admin1");
-
-        conf.put(root + "*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
-            "wildUser1");
-        conf.put(root + "*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
-            "wildAdmin1");
-
-
-        conf.put(root + "parent.auto-queue-creation-v2.enabled", "true");
-        conf.put(root + "parent.auto-queue-creation-v2.parent-template.acl_submit_applications",
-            "parentUser2");
-        conf.put(root + "parent.auto-queue-creation-v2.parent-template.acl_administer_queue",
-            "parentAdmin2");
-
-        conf.put(root + "parent.*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
-            "wildUser2");
-        conf.put(root + "parent.*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
-            "wildAdmin2");
-      }
-      return createConfiguration(conf);
-    }
-
-    public static Configuration createConfiguration(
-        Map<String, String> configs) {
-      Configuration config = new Configuration();
-
-      for (Map.Entry<String, String> entry : configs.entrySet()) {
-        config.set(entry.getKey(), entry.getValue());
-      }
-
-      config.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
-          YarnConfiguration.MEMORY_CONFIGURATION_STORE);
-
-      return config;
-    }
+    return config;
   }
 
   private void initResourceManager(Configuration conf) throws IOException {
