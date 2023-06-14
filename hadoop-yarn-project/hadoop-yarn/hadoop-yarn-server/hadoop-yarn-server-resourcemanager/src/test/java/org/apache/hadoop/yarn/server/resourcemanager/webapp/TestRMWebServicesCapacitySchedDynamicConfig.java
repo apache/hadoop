@@ -97,7 +97,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
         .createAbsoluteConfigLegacyAutoCreation();
 
     initResourceManager(config);
-    initAutoQueueHandler(8192 * GB);
+    initAutoQueueHandler(8192);
     createQueue("root.managed.queue1");
 
     assertJsonResponse(sendRequest(),
@@ -172,7 +172,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   private void initAutoQueueHandler(int nodeMemory) throws Exception {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     autoQueueHandler = cs.getCapacitySchedulerQueueManager();
-    rm.registerNode("h1:1234", nodeMemory); // label = x
+    rm.registerNode("h1:1234", nodeMemory, 32); // label = x
   }
 
   private void createQueue(String queuePath) throws YarnException,
