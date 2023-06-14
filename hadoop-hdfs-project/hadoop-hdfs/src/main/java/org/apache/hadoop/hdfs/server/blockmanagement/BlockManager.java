@@ -3645,8 +3645,8 @@ public class BlockManager implements BlockStatsMXBean {
     } else if (result == AddBlockResult.REPLACED) {
       curReplicaDelta = 0;
       blockLog.warn("BLOCK* addStoredBlock: block {} moved to storageType " +
-          "{} on node {} storageId {}", reportedBlock, storageInfo.getStorageType(),
-          node, storageInfo.getStorageID());
+          "{} on node {} storageId {}, reportedBlock is {}", reportedBlock,
+          storageInfo.getStorageType(), node, storageInfo.getStorageID(), reportedBlock);
     } else {
       // if the same block is added again and the replica was corrupt
       // previously because of a wrong gen stamp, remove it from the
