@@ -216,6 +216,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       Map<String, String> conf = new HashMap<>();
       conf.put("yarn.scheduler.capacity.root.queues", "default, managed");
       conf.put("yarn.scheduler.capacity.root.default.state", "STOPPED");
+      conf.put("yarn.scheduler.capacity.root.default.capacity", "[memory=0,vcores=0]");
       conf.put("yarn.scheduler.capacity.root.managed.capacity", "[memory=4096,vcores=4]");
       conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.capacity",
           "[memory=2048,vcores=2]");
