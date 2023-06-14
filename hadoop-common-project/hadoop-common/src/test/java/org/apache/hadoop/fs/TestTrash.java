@@ -786,6 +786,68 @@ public class TestTrash {
     emptierThread.join();
   }
 
+  /**
+   * Test trash emptier can whether delete non-checkpoint dir or not.
+   * @throws Exception
+   */
+  @Test
+  public void testTrashEmptierWithNonCheckpointDir() throws Exception {
+    Configuration conf = new Configuration();
+    // Trash with 12 second deletes and 6 seconds checkpoints
+    conf.set(FS_TRASH_INTERVAL_KEY, "0.2"); // 12 seconds
+    conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
+    conf.set(FS_TRASH_CHECKPOINT_INTERVAL_KEY, "0.1"); // 6 seconds
+    FileSystem fs = FileSystem.getLocal(conf);
+    conf.set("fs.default.name", fs.getUri().toString());
+
+    Trash trash = new Trash(conf);
+
+    // Start Emptier in background
+    Runnable emptier = trash.getEmptier();
+    Thread emptierThread = new Thread(emptier);
+    emptierThread.start();
+
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+    shell.init();
+
+    // First create a new directory with mkdirs
+    Path myPath = new Path(TEST_DIR, "test/mkdirs");
+    mkdir(fs, myPath);
+    // Make sure the .Trash dir existed.
+    mkdir(fs, shell.getCurrentTrashDir());
+    assertTrue(fs.exists(shell.getCurrentTrashDir()));
+
+    int fileIndex = 0;
+    int loopCount = 10;
+    while (fileIndex < loopCount) {
+      // Create a file with a new name
+      Path myFile = new Path(TEST_DIR, "test/mkdirs/myFile" + fileIndex++);
+      writeFile(fs, myFile, 10);
+
+      // Move the file to trash root.
+      String[] args = new String[3];
+      args[0] = "-mv";
+      args[1] = myFile.toString();
+      args[2] = shell.getCurrentTrashDir().getParent().toString();
+      int val = -1;
+      try {
+        val = shell.run(args);
+      } catch (Exception e) {
+        System.err.println("Exception raised from Trash.run " +
+            e.getLocalizedMessage());
+      }
+      assertTrue(val == 0);
+    }
+    Thread.sleep(18000);
+
+    Path trashDir = shell.getCurrentTrashDir();
+    FileStatus files[] = fs.listStatus(trashDir.getParent());
+    assertTrue(files.length <= 1);
+    emptierThread.interrupt();
+    emptierThread.join();
+  }
+
   @After
   public void tearDown() throws IOException {
     File trashDir = new File(TEST_DIR.toUri().getPath());
@@ -1059,8 +1121,8 @@ public class TestTrash {
       return false;
     }
 
-    @Override 
-    public boolean moveToTrash(Path path) throws IOException {
+    @Override
+    public boolean moveToTrash(Path path, boolean force) throws IOException {
       return false;
     }
 
@@ -1121,7 +1183,7 @@ public class TestTrash {
     }
 
     @Override
-    public boolean moveToTrash(Path path) throws IOException {
+    public boolean moveToTrash(Path path, boolean force) throws IOException {
       return false;
     }
 
