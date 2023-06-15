@@ -328,7 +328,20 @@ public class TestMutableMetrics {
     verify(rb, times(1))
         .addCounter(info("GetLongNumOps", "Number of ops for getLong"), 0L);
     verify(rb, times(1)).addCounter(
-        info("GetLongDeferredNumOps", "Number of ops for getLongDeferred"), 0L);
+        info("DeferredGetLongNumOps", "Number of ops for deferredGetLong"), 0L);
+
+    // Add some samples and verify
+    rb = mockMetricsRecordBuilder();
+    rates.add("testRpcMethod", 10);
+    deferredRpcRates.add("testRpcMethod", 100);
+    deferredRpcRates.add("testRpcMethod", 500);
+    rates.snapshot(rb, true);
+    deferredRpcRates.snapshot(rb, true);
+
+    assertCounter("TestRpcMethodNumOps", 1L, rb);
+    assertGauge("TestRpcMethodAvgTime", 10.0, rb);
+    assertCounter("DeferredTestRpcMethodNumOps", 2L, rb);
+    assertGauge("DeferredTestRpcMethodAvgTime", 300.0, rb);
   }
 
   /**
