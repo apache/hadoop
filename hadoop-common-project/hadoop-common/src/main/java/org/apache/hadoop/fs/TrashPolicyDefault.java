@@ -19,6 +19,8 @@ package org.apache.hadoop.fs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CHECKPOINT_INTERVAL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CLEAN_TRASHROOT_ENABLE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 
@@ -70,6 +72,8 @@ public class TrashPolicyDefault extends TrashPolicy {
 
   private long emptierInterval;
 
+  private boolean cleanNonCheckpointUnderTrashRoot;
+
   public TrashPolicyDefault() { }
 
   private TrashPolicyDefault(FileSystem fs, Configuration conf)
@@ -90,6 +94,8 @@ public class TrashPolicyDefault extends TrashPolicy {
     this.emptierInterval = (long)(conf.getFloat(
         FS_TRASH_CHECKPOINT_INTERVAL_KEY, FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT)
         * MSECS_PER_MINUTE);
+    this.cleanNonCheckpointUnderTrashRoot = conf.getBoolean(
+        FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, FS_TRASH_CLEAN_TRASHROOT_ENABLE_DEFAULT);
    }
 
   @Override
@@ -101,6 +107,8 @@ public class TrashPolicyDefault extends TrashPolicy {
     this.emptierInterval = (long)(conf.getFloat(
         FS_TRASH_CHECKPOINT_INTERVAL_KEY, FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT)
         * MSECS_PER_MINUTE);
+    this.cleanNonCheckpointUnderTrashRoot = conf.getBoolean(
+        FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, FS_TRASH_CLEAN_TRASHROOT_ENABLE_DEFAULT);
     if (deletionInterval < 0) {
       LOG.warn("Invalid value {} for deletion interval,"
           + " deletion interaval can not be negative."
@@ -242,17 +250,20 @@ public class TrashPolicyDefault extends TrashPolicy {
 
   @Override
   public Runnable getEmptier() throws IOException {
-    return new Emptier(getConf(), emptierInterval);
+    return new Emptier(getConf(), emptierInterval, cleanNonCheckpointUnderTrashRoot);
   }
 
   protected class Emptier implements Runnable {
 
     private Configuration conf;
     private long emptierInterval;
+    private boolean cleanNonCheckpointUnderTrashRoot;
 
-    Emptier(Configuration conf, long emptierInterval) throws IOException {
+    Emptier(Configuration conf, long emptierInterval,
+        boolean cleanNonCheckpointUnderTrashRoot) throws IOException {
       this.conf = conf;
       this.emptierInterval = emptierInterval;
+      this.cleanNonCheckpointUnderTrashRoot = cleanNonCheckpointUnderTrashRoot;
       if (emptierInterval > deletionInterval || emptierInterval <= 0) {
         LOG.info("The configured checkpoint interval is " +
                  (emptierInterval / MSECS_PER_MINUTE) + " minutes." +
@@ -374,9 +385,14 @@ public class TrashPolicyDefault extends TrashPolicy {
       try {
         time = getTimeFromCheckpoint(name);
       } catch (ParseException e) {
-        this.moveToTrash(path, true);
-        LOG.warn("Unexpected item in trash: " + dir + ". Force moving to trash.");
-        continue;
+        if (cleanNonCheckpointUnderTrashRoot) {
+          this.moveToTrash(path, true);
+          LOG.warn("Unexpected item in trash: " + dir + ". Force moving to trash.");
+          continue;
+        } else {
+          LOG.warn("Unexpected item in trash: " + dir + ". Ignoring.");
+          continue;
+        }
       }
 
       if (((now - deletionInterval) > time) || deleteImmediately) {

@@ -797,6 +797,7 @@ public class TestTrash {
     conf.set(FS_TRASH_INTERVAL_KEY, "0.2"); // 12 seconds
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
     conf.set(FS_TRASH_CHECKPOINT_INTERVAL_KEY, "0.1"); // 6 seconds
+    conf.setBoolean(FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, true);
     FileSystem fs = FileSystem.getLocal(conf);
     conf.set("fs.default.name", fs.getUri().toString());
 
