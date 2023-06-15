@@ -19,7 +19,9 @@
 package org.apache.hadoop.yarn.conf;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -246,5 +248,22 @@ public class TestYarnConfiguration {
     assertTrue(localizerAddress.toString().startsWith("yo.yo.yo"));
     assertNull(conf.get(
         HAUtil.addSuffix(YarnConfiguration.NM_LOCALIZER_ADDRESS, "rm1")));
+  }
+
+  @Test
+  void checkRmAmExpiryIntervalSetting() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+
+    // 30m, 1800000ms
+    conf.set(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, "30m");
+    long rmAmExpiryIntervalMS = conf.getTimeDuration(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS, TimeUnit.MILLISECONDS);
+    assertEquals(1800000, rmAmExpiryIntervalMS);
+
+    // 10m, 600000ms
+    conf.set(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, "600000");
+    String rmAmExpiryIntervalMS1 = conf.get(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS);
+    assertTrue(NumberUtils.isDigits(rmAmExpiryIntervalMS1));
+    assertEquals(600000, Long.parseLong(rmAmExpiryIntervalMS1));
   }
 }

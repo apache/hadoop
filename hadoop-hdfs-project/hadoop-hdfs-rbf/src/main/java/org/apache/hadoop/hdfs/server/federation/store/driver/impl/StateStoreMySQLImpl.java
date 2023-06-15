@@ -187,17 +187,15 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
           record.setDateModified(this.getTime());
           if (!updateRecord(tableName, primaryKey, data)) {
             LOG.error("Cannot write {} into table {}", primaryKey, tableName);
-            failedRecordsKeys.add(primaryKey);
+            failedRecordsKeys.add(getOriginalPrimaryKey(primaryKey));
             success = false;
           }
         } else {
           if (errorIfExists) {
             LOG.error("Attempted to insert record {} that already exists "
                 + "in table {} and updates are disallowed.", primaryKey, tableName);
-            if (metrics != null) {
-              metrics.addFailure(Time.monotonicNow() - start);
-            }
-            return new StateStoreOperationResult(primaryKey);
+            failedRecordsKeys.add(getOriginalPrimaryKey(primaryKey));
+            success = false;
           } else {
             LOG.debug("Not updating {} as updates are not allowed", record);
           }
@@ -205,7 +203,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
       } else {
         if (!insertRecord(tableName, primaryKey, data)) {
           LOG.error("Cannot write {} in table {}", primaryKey, tableName);
-          failedRecordsKeys.add(primaryKey);
+          failedRecordsKeys.add(getOriginalPrimaryKey(primaryKey));
           success = false;
         }
       }

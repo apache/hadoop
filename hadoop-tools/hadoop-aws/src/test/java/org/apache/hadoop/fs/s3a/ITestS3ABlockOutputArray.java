@@ -29,12 +29,9 @@ import org.apache.hadoop.io.IOUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.Arrays;
-import java.util.Objects;
 
 import static org.apache.hadoop.fs.StreamCapabilities.ABORTABLE_STREAM;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -80,46 +77,6 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
   @Test
   public void testRegularUpload() throws IOException {
     verifyUpload("regular", 1024);
-  }
-
-  /**
-   * Test that the DiskBlock's local file doesn't result in error when the S3 key exceeds the max
-   * char limit of the local file system. Currently
-   * {@link java.io.File#createTempFile(String, String, File)} is being relied on to handle the
-   * truncation.
-   * @throws IOException
-   */
-  @Test
-  public void testDiskBlockCreate() throws IOException {
-    String s3Key = // 1024 char
-        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
-        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
-        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
-        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
-        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
-        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
-        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
-        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
-        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
-        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
-        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
-        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
-        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
-        "very_long_s3_key__very_long_s3_key__very_long_s3_key__very_long_s3_key__" +
-        "very_long_s3_key";
-    long blockSize = getFileSystem().getDefaultBlockSize();
-    try (S3ADataBlocks.BlockFactory diskBlockFactory =
-           new S3ADataBlocks.DiskBlockFactory(getFileSystem());
-         S3ADataBlocks.DataBlock dataBlock =
-             diskBlockFactory.create("spanId", s3Key, 1, blockSize, null);
-    ) {
-      String tmpDir = getConfiguration().get("hadoop.tmp.dir");
-      boolean created = Arrays.stream(
-          Objects.requireNonNull(new File(tmpDir).listFiles()))
-          .anyMatch(f -> f.getName().contains("very_long_s3_key"));
-      assertTrue(String.format("tmp file should have been created locally in %s", tmpDir), created);
-      LOG.info(dataBlock.toString()); // block file name/location can be viewed in failsafe-report
-    }
   }
 
   @Test(expected = IOException.class)
@@ -179,7 +136,7 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
         new S3AInstrumentation(new URI("s3a://example"));
     BlockOutputStreamStatistics outstats
         = instrumentation.newOutputStreamStatistics(null);
-    S3ADataBlocks.DataBlock block = factory.create("spanId", "object/key", 1, BLOCK_SIZE, outstats);
+    S3ADataBlocks.DataBlock block = factory.create(1, BLOCK_SIZE, outstats);
     block.write(dataset, 0, dataset.length);
     S3ADataBlocks.BlockUploadData uploadData = block.startUpload();
     InputStream stream = uploadData.getUploadStream();

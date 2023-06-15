@@ -363,14 +363,32 @@ public final class RouterWebServiceUtil {
    */
   protected static Client createJerseyClient(Configuration conf) {
     Client client = Client.create();
-    client.setConnectTimeout((int) conf
-        .getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,
-            YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT,
-            TimeUnit.MILLISECONDS));
-    client.setReadTimeout((int) conf
-        .getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
-            YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT,
-            TimeUnit.MILLISECONDS));
+
+    long checkConnectTimeOut = conf.getLong(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, 0);
+    int connectTimeOut = (int) conf.getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
+    if (checkConnectTimeOut <= 0 || checkConnectTimeOut > Integer.MAX_VALUE) {
+      LOG.warn("Configuration {} = {} ms error. We will use the default value({} ms).",
+          YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, connectTimeOut,
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT);
+      connectTimeOut = (int) TimeUnit.MILLISECONDS.convert(
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
+    }
+    client.setConnectTimeout(connectTimeOut);
+
+    long checkReadTimeout = conf.getLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, 0);
+    int readTimeout = (int) conf.getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT, TimeUnit.MILLISECONDS);
+
+    if (checkReadTimeout < 0) {
+      LOG.warn("Configuration {} = {} ms error. We will use the default value({} ms).",
+          YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, connectTimeOut,
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT);
+      readTimeout = (int) TimeUnit.MILLISECONDS.convert(
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
+    }
+    client.setReadTimeout(readTimeout);
+
     return client;
   }
 

@@ -175,7 +175,7 @@ public class TimelineCollectorWebService {
               NodeTimelineCollectorManager.COLLECTOR_MANAGER_ATTR_KEY);
       TimelineCollector collector = collectorManager.get(appID);
       if (collector == null) {
-        LOG.error("Application: "+ appId + " is not found");
+        LOG.error("Application: {} is not found", appId);
         throw new NotFoundException("Application: "+ appId + " is not found");
       }
 
@@ -244,7 +244,7 @@ public class TimelineCollectorWebService {
               NodeTimelineCollectorManager.COLLECTOR_MANAGER_ATTR_KEY);
       TimelineCollector collector = collectorManager.get(appID);
       if (collector == null) {
-        LOG.error("Application: " + appId + " is not found");
+        LOG.error("Application: {} is not found", appId);
         throw new NotFoundException("Application: " + appId + " is not found");
       }
 
@@ -270,7 +270,7 @@ public class TimelineCollectorWebService {
         return null;
       }
     } catch (IllegalFormatException e) {
-      LOG.error("Invalid application ID: " + appId);
+      LOG.error("Invalid application ID: {}", appId);
       return null;
     }
   }
