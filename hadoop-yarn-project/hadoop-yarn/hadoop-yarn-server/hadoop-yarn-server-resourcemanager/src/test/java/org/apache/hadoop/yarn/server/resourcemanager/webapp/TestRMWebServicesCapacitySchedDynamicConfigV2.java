@@ -42,8 +42,9 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServ
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.createWebAppDescriptor;
 import static org.assertj.core.api.Assertions.fail;
 
-public class TestRMWebServicesCapacitySchedDynamicConfigV2 extends
-    JerseyTestBase {
+public class TestRMWebServicesCapacitySchedDynamicConfigV2 extends JerseyTestBase {
+
+  private static final String EXPECTED_FILE_TMPL = "webapp/dynamic-%s-%s.json";
   private MockRM rm;
 
   public TestRMWebServicesCapacitySchedDynamicConfigV2() {
@@ -67,7 +68,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfigV2 extends
 
   @Test
   public void testPercentageMode() throws Exception {
-    runTest("webapp/V2/percentage",
+    runTest("testPercentageMode",
         "yarn.scheduler.capacity.root.default.capacity = 12.5",
         "yarn.scheduler.capacity.root.test1.capacity =                 50",
         "yarn.scheduler.capacity.root.test2.capacity =                 37.5",
@@ -79,7 +80,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfigV2 extends
 
   @Test
   public void testAbsoluteMode() throws Exception {
-    runTest("webapp/V2/absolute",
+    runTest("testAbsoluteMode",
         "yarn.scheduler.capacity.root.default.capacity = [memory=4096,vcores=4]",
         "yarn.scheduler.capacity.root.test1.capacity = [memory=16384,vcores=16]",
         "yarn.scheduler.capacity.root.test2.capacity = [memory=12288,vcores=12]",
@@ -99,12 +100,12 @@ public class TestRMWebServicesCapacitySchedDynamicConfigV2 extends
         "yarn.scheduler.capacity.root.test1.test1_2.capacity = 2w",
         "yarn.scheduler.capacity.root.test1.test1_3.capacity = 12w"
     };
-    runTest("webapp/V2/weight", capacity);
-    runAQCTest("webapp/V2/weight", capacity);
+    runTest("testWeightMode", capacity);
+    runAQCTest("testWeightMode", capacity);
   }
 
   private void runTest(
-      String expectedResourceFilename,
+      String name,
       String... capacitySetup
   ) throws Exception {
     Configuration config = new Configuration();
@@ -114,19 +115,19 @@ public class TestRMWebServicesCapacitySchedDynamicConfigV2 extends
     MockNM nm1 = rm.registerNode("h1:1234", 8192, 8);
     MockNM nm2 = rm.registerNode("h2:1234", 8192, 8);
     reinitialize(config);
-    assertJsonResponse(sendRequest(), expectedResourceFilename + "/2node.json");
+    assertJsonResponse(sendRequest(), String.format(EXPECTED_FILE_TMPL, name, 16));
     MockNM nm3 = rm.registerNode("h3:1234", 8192, 8);
     MockNM nm4 = rm.registerNode("h4:1234", 8192, 8);
     reinitialize(config);
-    assertJsonResponse(sendRequest(), expectedResourceFilename+ "/4node.json");
+    assertJsonResponse(sendRequest(), String.format(EXPECTED_FILE_TMPL, name, 32));
     rm.unRegisterNode(nm1);
     rm.unRegisterNode(nm4);
     reinitialize(config);
-    assertJsonResponse(sendRequest(), expectedResourceFilename + "/2node.json");
+    assertJsonResponse(sendRequest(), String.format(EXPECTED_FILE_TMPL, name, 16));
   }
 
   private void runAQCTest(
-      String expectedResourceFilename,
+      String name,
       String... capacitySetup
   ) throws Exception {
     Configuration config = new Configuration();
@@ -139,7 +140,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfigV2 extends
     createAQC("test1.test1_1");
     rm.registerNode("h1:1234", 32768, 32);
     reinitialize(config);
-    assertJsonResponse(sendRequest(), expectedResourceFilename+ "/aqc.json");
+    assertJsonResponse(sendRequest(), String.format(EXPECTED_FILE_TMPL, name, "aqc"));
   }
 
   private void setupAQC(Configuration config, String queue) {

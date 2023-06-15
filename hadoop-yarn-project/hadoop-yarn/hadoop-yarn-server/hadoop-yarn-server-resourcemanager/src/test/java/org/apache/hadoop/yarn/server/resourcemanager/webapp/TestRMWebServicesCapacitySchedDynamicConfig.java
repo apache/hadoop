@@ -59,7 +59,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     super(createWebAppDescriptor());
   }
 
-  @Test
+  @Test // mar van ilyen
   public void testSchedulerResponsePercentageMode()
       throws Exception {
     Configuration config = createPercentageConfig();
@@ -75,7 +75,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     assertJsonResponse(sendRequest(), "webapp/scheduler-response-PercentageMode.json");
   }
 
-  @Test
+  @Test // uj test kell
   public void testSchedulerResponsePercentageModeLegacyAutoCreation()
       throws Exception {
     Configuration config = createPercentageConfigLegacyAutoCreation();
@@ -92,7 +92,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
         "webapp/scheduler-response-PercentageModeLegacyAutoCreation.json");
   }
 
-  @Test
+  @Test //uj test kell
   public void testSchedulerResponseAbsoluteModeLegacyAutoCreation()
       throws Exception {
     Configuration config = createAbsoluteConfigLegacyAutoCreation();
@@ -105,7 +105,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
         "webapp/scheduler-response-AbsoluteModeLegacyAutoCreation.json");
   }
 
-  @Test
+  @Test // van ilyen
   public void testSchedulerResponseAbsoluteMode()
       throws Exception {
     Configuration config = createAbsoluteConfig();
@@ -122,7 +122,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     assertJsonResponse(sendRequest(), "webapp/scheduler-response-AbsoluteMode.json");
   }
 
-  @Test
+  @Test // ilyen is van
   public void testSchedulerResponseWeightMode()
       throws Exception {
     Configuration config = createWeightConfig();
@@ -140,7 +140,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     assertJsonResponse(sendRequest(), "webapp/scheduler-response-WeightMode.json");
   }
 
-  @Test
+  @Test // ilyen is van
   public void testSchedulerResponseWeightModeWithAutoCreatedQueues()
       throws Exception {
     Configuration config = createWeightConfigWithAutoQueueCreationEnabled();
