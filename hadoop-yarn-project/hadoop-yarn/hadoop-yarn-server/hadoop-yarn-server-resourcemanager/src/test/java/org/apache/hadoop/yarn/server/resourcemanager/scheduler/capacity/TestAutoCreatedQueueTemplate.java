@@ -183,6 +183,48 @@ public class TestAutoCreatedQueueTemplate {
 
   }
 
+  @Test
+  public void testWildcardTemplateWithLimitedAutoCreatedQueueDepth() {
+    conf.set(getTemplateKey(TEST_QUEUE_ROOT_WILDCARD, "capacity"), "6w");
+    conf.set(getTemplateKey(TEST_QUEUE_A_WILDCARD, "capacity"), "5w");
+    conf.setMaximumAutoCreatedQueueDepth(TEST_QUEUE_A, 1);
+    conf.setMaximumAutoCreatedQueueDepth(TEST_QUEUE_AB, 1);
+
+    new AutoCreatedQueueTemplate(conf, TEST_QUEUE_A)
+        .setTemplateEntriesForChild(conf, TEST_QUEUE_AB);
+    new AutoCreatedQueueTemplate(conf, TEST_QUEUE_AB)
+        .setTemplateEntriesForChild(conf, TEST_QUEUE_ABC);
+
+    Assert.assertEquals("weight is not set", 6f,
+        conf.getNonLabeledQueueWeight(TEST_QUEUE_AB), 10e-6);
+    Assert.assertEquals("weight is not set", 5f,
+        conf.getNonLabeledQueueWeight(TEST_QUEUE_ABC), 10e-6);
+  }
+
+  @Test
+  public void testIgnoredTemplateWithLimitedAutoCreatedQueueDepth() {
+    conf.set(getTemplateKey(TEST_QUEUE_TWO_LEVEL_WILDCARDS, "capacity"), "5w");
+    conf.setMaximumAutoCreatedQueueDepth(TEST_QUEUE_AB, 1);
+
+    new AutoCreatedQueueTemplate(conf, TEST_QUEUE_AB)
+        .setTemplateEntriesForChild(conf, TEST_QUEUE_ABC);
+
+    Assert.assertEquals("weight is set incorrectly", -1f,
+        conf.getNonLabeledQueueWeight(TEST_QUEUE_ABC), 10e-6);
+  }
+
+  @Test
+  public void testIgnoredTemplateWhenQueuePathIsInvalid() {
+    QueuePath invalidPath = new QueuePath("a");
+    conf.set(getTemplateKey(invalidPath, "capacity"), "6w");
+    AutoCreatedQueueTemplate template =
+        new AutoCreatedQueueTemplate(conf, invalidPath);
+    template.setTemplateEntriesForChild(conf, TEST_QUEUE_AB);
+
+    Assert.assertEquals("weight is set using invalid queue path", -1f,
+        conf.getNonLabeledQueueWeight(TEST_QUEUE_AB), 10e-6);
+  }
+
   private String getTemplateKey(QueuePath queuePath, String entryKey) {
     return QueuePrefixes.getQueuePrefix(queuePath)
         + AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX + entryKey;
