@@ -22,7 +22,9 @@ import javax.xml.transform.stream.StreamResult;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -30,15 +32,35 @@ import org.junit.Assert;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.util.XMLUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 
 import static org.junit.Assert.assertEquals;
 
 public class TestWebServiceUtil {
   private TestWebServiceUtil(){
+  }
 
+  public static class WebServletModule extends ServletModule {
+    private final MockRM rm;
+
+    WebServletModule(MockRM rm) {
+      this.rm = rm;
+    }
+
+    @Override
+    protected void configureServlets() {
+      bind(JAXBContextResolver.class);
+      bind(RMWebServices.class);
+      bind(GenericExceptionHandler.class);
+      bind(ResourceManager.class).toInstance(rm);
+      serve("/*").with(GuiceContainer.class);
+    }
   }
   public static void assertXmlType(ClientResponse response) {
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
@@ -140,12 +162,21 @@ public class TestWebServiceUtil {
       Assert.fail("overwrite should not fail " + e.getMessage());
     }
   }
-
   public static WebAppDescriptor createWebAppDescriptor() {
     return new WebAppDescriptor.Builder(
         TestRMWebServicesCapacitySched.class.getPackage().getName())
         .contextListenerClass(GuiceServletConfig.class)
         .filterClass(com.google.inject.servlet.GuiceFilter.class)
         .contextPath("jersey-guice-filter").servletPath("/").build();
+  }
+
+  public static void enrichConfig(Configuration config, String[] newValues) {
+    for (String newValue : newValues) {
+      int index = newValue.indexOf("=");
+      config.set(
+          newValue.substring(0, index).trim(),
+          newValue.substring(index + 1).trim()
+      );
+    }
   }
 }

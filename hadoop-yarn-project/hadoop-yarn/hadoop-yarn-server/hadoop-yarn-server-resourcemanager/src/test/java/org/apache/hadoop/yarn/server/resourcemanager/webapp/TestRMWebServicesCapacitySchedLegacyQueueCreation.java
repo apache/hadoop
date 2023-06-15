@@ -148,7 +148,7 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
   private void initResourceManager(Configuration conf) throws IOException {
     rm = createMockRM(new CapacitySchedulerConfiguration(conf));
     GuiceServletConfig.setInjector(
-        Guice.createInjector(new TestRMWebServicesCapacitySched.WebServletModule(rm)));
+        Guice.createInjector(new WebServletModule(rm)));
     rm.start();
     //Need to call reinitialize as
     //MutableCSConfigurationProvider with InMemoryConfigurationStore

@@ -52,23 +52,6 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
   private MockRM rm;
 
-  public static class WebServletModule extends ServletModule {
-    private final MockRM rm;
-
-    WebServletModule(MockRM rm) {
-      this.rm = rm;
-    }
-
-    @Override
-    protected void configureServlets() {
-      bind(JAXBContextResolver.class);
-      bind(RMWebServices.class);
-      bind(GenericExceptionHandler.class);
-      bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
-    }
-  }
-
   public TestRMWebServicesCapacitySched() {
     super(createWebAppDescriptor());
   }

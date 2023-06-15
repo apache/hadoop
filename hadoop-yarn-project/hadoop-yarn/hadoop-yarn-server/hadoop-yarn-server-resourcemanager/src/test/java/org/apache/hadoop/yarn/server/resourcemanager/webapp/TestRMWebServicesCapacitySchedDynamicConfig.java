@@ -186,18 +186,8 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     config.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
         YarnConfiguration.MEMORY_CONFIGURATION_STORE);
     rm = new MockRM(config);
-    GuiceServletConfig.setInjector(Guice.createInjector(new TestRMWebServicesCapacitySched.WebServletModule(rm)));
+    GuiceServletConfig.setInjector(Guice.createInjector(new WebServletModule(rm)));
     rm.start();
     reinitialize(config);
-  }
-
-  private void enrichConfig(Configuration config, String[] newValues) {
-    for (String newValue : newValues) {
-      int index = newValue.indexOf("=");
-      config.set(
-          newValue.substring(0, index).trim(),
-          newValue.substring(index + 1).trim()
-      );
-    }
   }
 }

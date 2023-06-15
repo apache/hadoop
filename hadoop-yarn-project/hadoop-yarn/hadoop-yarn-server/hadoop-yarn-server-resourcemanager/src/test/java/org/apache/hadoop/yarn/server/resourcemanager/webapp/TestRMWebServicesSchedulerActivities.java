@@ -113,7 +113,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     rm = createMockRM(new CapacitySchedulerConfiguration(
         new Configuration(false)));
     GuiceServletConfig.setInjector(
-        Guice.createInjector(new TestRMWebServicesCapacitySched.WebServletModule(rm)));
+        Guice.createInjector(new WebServletModule(rm)));
   }
 
   @Test
