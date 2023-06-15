@@ -36,8 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePat
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.assertJsonResponse;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.createWebAppDescriptor;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.*;
 import static org.assertj.core.api.Assertions.fail;
 
 public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase {
