@@ -1780,7 +1780,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.GETECPOLICIES.toString());
     Path path = new Path(getUri().toString(), "/");
     HttpURLConnection conn =
-        getConnection(Operation.GETECPOLICIES.getMethod(), params, path, true);
+        getConnection(Operation.GETECPOLICIES.getMethod(), params, path, false);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return JsonUtilClient.getAllErasureCodingPolicies(json);

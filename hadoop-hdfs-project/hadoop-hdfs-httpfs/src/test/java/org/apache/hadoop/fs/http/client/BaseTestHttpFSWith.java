@@ -2137,7 +2137,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
         WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) httpFs;
         diffErasureCodingPolicies = webHdfsFileSystem.getAllErasureCodingPolicies();
       } else {
-        Assert.fail(fs.getClass().getSimpleName() + " doesn't support getSnapshotDiff");
+        Assert.fail(fs.getClass().getSimpleName() +
+            " is not of type HttpFSFileSystem or WebHdfsFileSystem");
       }
 
       //Validate erasureCodingPolicyInfos are the same as DistributedFileSystem
