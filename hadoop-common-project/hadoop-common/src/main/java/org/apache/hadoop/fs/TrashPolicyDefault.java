@@ -250,20 +250,17 @@ public class TrashPolicyDefault extends TrashPolicy {
 
   @Override
   public Runnable getEmptier() throws IOException {
-    return new Emptier(getConf(), emptierInterval, cleanNonCheckpointUnderTrashRoot);
+    return new Emptier(getConf(), emptierInterval);
   }
 
   protected class Emptier implements Runnable {
 
     private Configuration conf;
     private long emptierInterval;
-    private boolean cleanNonCheckpointUnderTrashRoot;
 
-    Emptier(Configuration conf, long emptierInterval,
-        boolean cleanNonCheckpointUnderTrashRoot) throws IOException {
+    Emptier(Configuration conf, long emptierInterval) throws IOException {
       this.conf = conf;
       this.emptierInterval = emptierInterval;
-      this.cleanNonCheckpointUnderTrashRoot = cleanNonCheckpointUnderTrashRoot;
       if (emptierInterval > deletionInterval || emptierInterval <= 0) {
         LOG.info("The configured checkpoint interval is " +
                  (emptierInterval / MSECS_PER_MINUTE) + " minutes." +

@@ -579,6 +579,7 @@ public class TestTrash {
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
     FileSystem fs = FileSystem.getLocal(conf);
     conf.set("fs.defaultFS", fs.getUri().toString());
+    conf.setBoolean(FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, true);
     conf.setLong(FS_TRASH_INTERVAL_KEY, 0); // disabled
     assertFalse(new Trash(conf).isEnabled());
 
@@ -635,6 +636,7 @@ public class TestTrash {
     Configuration conf = new Configuration();
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
     conf.set("fs.defaultFS", "invalid://host/bar/foo");
+    conf.setBoolean(FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, true);
     trashNonDefaultFS(conf);
   }
 
@@ -644,6 +646,7 @@ public class TestTrash {
 
     // Test plugged TrashPolicy
     conf.setClass("fs.trash.classname", TestTrashPolicy.class, TrashPolicy.class);
+    conf.setBoolean(FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, true);
     Trash trash = new Trash(conf);
     assertTrue(trash.getTrashPolicy().getClass().equals(TestTrashPolicy.class));
   }
@@ -675,6 +678,7 @@ public class TestTrash {
         RawLocalFileSystem.class,
         FileSystem.class);
     conf.setLong(FS_TRASH_INTERVAL_KEY, 1); // 1 min
+    conf.setBoolean(FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, true);
     FileSystem fs = FileSystem.get(conf);
     verifyMoveEmptyDirToTrash(fs, conf);
   }
@@ -692,6 +696,7 @@ public class TestTrash {
         TrashPolicy.class);
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
     conf.set(FS_TRASH_INTERVAL_KEY, "50"); // in milliseconds for test
+    conf.setBoolean(FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, true);
     Trash trash = new Trash(conf);
     // create 5 checkpoints
     for(int i=0; i<5; i++) {
@@ -720,6 +725,7 @@ public class TestTrash {
         TrashPolicy.class);
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
     conf.set(FS_TRASH_INTERVAL_KEY, "0.2");
+    conf.setBoolean(FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, true);
     verifyTrashPermission(FileSystem.getLocal(conf), conf);
   }
 
@@ -732,6 +738,7 @@ public class TestTrash {
     conf.set(FS_TRASH_CHECKPOINT_INTERVAL_KEY, "0.1"); // 6 seconds
     FileSystem fs = FileSystem.getLocal(conf);
     conf.set("fs.default.name", fs.getUri().toString());
+    conf.setBoolean(FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, true);
     
     Trash trash = new Trash(conf);
 
