@@ -32,6 +32,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.encryption.s3.materials.KmsKeyring;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -81,6 +82,38 @@ public interface S3ClientFactory {
    */
   S3AsyncClient createS3AsyncClient(URI uri,
       S3ClientCreationParameters parameters) throws IOException;
+
+  /**
+   * Creates a new {@link software.amazon.encryption.s3.S3EncryptionClient}.
+   * Used when client side encryption is enabled.
+   *
+   * @param s3AsyncClient The asynchronous S3  client, will be used for cryptographic operations.
+   * @param s3Client The synchronous S3 client, will be used for non cryptographic operations.
+   * @param kmsKeyring kms wrapping key to be used
+   * @return S3EncryptionClient
+   */
+  S3Client createS3EncryptionClient(S3AsyncClient s3AsyncClient, S3Client s3Client,
+      KmsKeyring kmsKeyring);
+
+
+  /**
+   * Creates a new {@link software.amazon.encryption.s3.S3AsyncEncryptionClient}.
+   * Used when client side encryption is enabled.
+   *
+   * @param s3AsyncClient The asynchronous S3  client, will be used for cryptographic operations.
+   * @param kmsKeyring kms wrapping key to be used
+   * @return S3AsyncEncryptionClient
+   */
+  S3AsyncClient createS3AsyncEncryptionClient(S3AsyncClient s3AsyncClient, KmsKeyring kmsKeyring);
+
+  /**
+   * Creates KmsKeyring to be used by the encryption clients.
+   *
+   * @param parameters parameter object
+   * @param kmsKeyId kms wrapping key to be used
+   * @return KmsKeyring
+   */
+  KmsKeyring createKmsKeyring(S3ClientCreationParameters parameters, String kmsKeyId);
 
   /**
    * Creates a new {@link S3TransferManager}.

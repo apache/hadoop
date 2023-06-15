@@ -185,7 +185,8 @@
     <surefire.fork.timeout>900</surefire.fork.timeout>
     <aws-java-sdk.version>1.12.316</aws-java-sdk.version>
     <hsqldb.version>2.7.1</hsqldb.version>
-    <aws-java-sdk-v2.version>2.19.12</aws-java-sdk-v2.version>
+    <aws-java-sdk-v2.version>2.20.85</aws-java-sdk-v2.version>
+    <amazon-s3-encryption-client-java.version>3.0.1</amazon-s3-encryption-client-java.version>
     <awscrt.version>0.21.0</awscrt.version>
     <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
     <jasmine-maven-plugin.version>2.1</jasmine-maven-plugin.version>
@@ -1138,6 +1139,17 @@
         <groupId>software.amazon.awssdk</groupId>
         <artifactId>bundle</artifactId>
         <version>${aws-java-sdk-v2.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>software.amazon.encryption.s3</groupId>
+        <artifactId>amazon-s3-encryption-client-java</artifactId>
+        <version>${amazon-s3-encryption-client-java.version}</version>
         <exclusions>
           <exclusion>
             <groupId>io.netty</groupId>

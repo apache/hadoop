@@ -102,6 +102,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.encryption.s3.materials.KmsKeyring;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -133,6 +134,7 @@ import org.apache.hadoop.fs.s3a.impl.DeleteOperation;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
 import org.apache.hadoop.fs.s3a.impl.GetContentSummaryOperation;
+import org.apache.hadoop.fs.s3a.impl.GetS3RegionOperation;
 import org.apache.hadoop.fs.s3a.impl.HeaderProcessing;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
@@ -967,7 +969,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         ? conf.getTrimmed(AWS_REGION)
         : accessPoint.getRegion();
 
-    Region region = getS3Region(configuredRegion);
+    Region region = new GetS3RegionOperation(
+        createStoreContext(),
+        configuredRegion,
+        bucket,
+        credentials).execute();
 
     S3ClientFactory.S3ClientCreationParameters parameters =
         new S3ClientFactory.S3ClientCreationParameters()
@@ -986,6 +992,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     S3ClientFactory clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
     s3Client = clientFactory.createS3Client(getUri(), parameters);
     createS3AsyncClient(clientFactory, parameters);
+    
+    if (isCSEEnabled) {
+      String kmsKeyId = getS3EncryptionKey(bucket, conf, true);
+      KmsKeyring kmsKeyring = clientFactory.createKmsKeyring(parameters, kmsKeyId);
+      s3Client = clientFactory.createS3EncryptionClient(s3AsyncClient, s3Client, kmsKeyring);
+      s3AsyncClient = clientFactory.createS3AsyncEncryptionClient(s3AsyncClient, kmsKeyring);
+    }
+
     transferManager =  clientFactory.createS3TransferManager(s3AsyncClient);
   }
 
@@ -2730,6 +2744,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       ChangeTracker changeTracker,
       Invoker changeInvoker,
       String operation) throws IOException {
+
+    // skip remote probe for the root.
+    if (key.isEmpty()) {
+      return HeadObjectResponse.builder().build();
+    }
+
     HeadObjectResponse response = changeInvoker.retryUntranslated("GET " + key, true,
         () -> {
           HeadObjectRequest.Builder requestBuilder =

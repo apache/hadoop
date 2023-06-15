@@ -330,9 +330,7 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
         + " if role restricted, permissions are tightened.");
     S3AFileSystem fs = getFileSystem();
     // force a probe of the remote FS to make sure its endpoint is valid
-    // TODO: Check what should happen here. Calling headObject() on the root path fails in V2,
-    // with the error that key cannot be empty.
-   // fs.getObjectMetadata(new Path("/"));
+    fs.getObjectMetadata(new Path("/"));
     readLandsatMetadata(fs);
 
     URI uri = fs.getUri();

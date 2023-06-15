@@ -31,6 +31,7 @@ import software.amazon.awssdk.services.s3.model.GetBucketLocationResponse;
 import software.amazon.awssdk.services.s3.model.ListMultipartUploadsRequest;
 import software.amazon.awssdk.services.s3.model.ListMultipartUploadsResponse;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.encryption.s3.materials.KmsKeyring;
 
 /**
  * An {@link S3ClientFactory} that returns Mockito mocks of the {@link S3Client}
@@ -60,6 +61,29 @@ public class MockS3ClientFactory implements S3ClientFactory {
     S3AsyncClient s3 = mock(S3AsyncClient.class);
     return s3;
   }
+
+
+  @Override
+  public S3Client createS3EncryptionClient(final S3AsyncClient s3AsyncClient,
+      final S3Client s3Client, final KmsKeyring keyring) {
+    S3Client s3 = mock(S3Client.class);
+    return s3;
+  }
+
+
+  @Override
+  public S3AsyncClient createS3AsyncEncryptionClient(final S3AsyncClient s3AsyncClient,
+      final KmsKeyring kmsKeyring) {
+    S3AsyncClient s3 = mock(S3AsyncClient.class);
+    return s3;
+  }
+
+  @Override
+  public KmsKeyring createKmsKeyring(final S3ClientCreationParameters parameters,
+      final String kmsKeyId) {
+    KmsKeyring kmsKeyring = mock(KmsKeyring.class);
+    return kmsKeyring;
+  };
 
   @Override
   public S3TransferManager createS3TransferManager(S3AsyncClient s3AsyncClient) {

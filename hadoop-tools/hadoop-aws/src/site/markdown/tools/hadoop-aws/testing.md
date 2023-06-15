@@ -999,57 +999,6 @@ using an absolute XInclude reference to it.
 </configuration>
 ```
 
-## <a name="failure-injection"></a>Failure Injection
-
-**Warning do not enable any type of failure injection in production.  The
-following settings are for testing only.**
-
-S3A provides an "Inconsistent S3 Client Factory" that can be used to
-simulate throttling by injecting random failures on S3 client requests.
-
-
-**Note**
-
-In previous releases, this factory could also be used to simulate
-inconsistencies during testing of S3Guard. Now that S3 is consistent,
-injecting inconsistency is no longer needed during testing.
-
-
-### Enabling the InconsistentS3CClientFactory
-
-
-To enable the fault-injecting client via configuration, switch the
-S3A client to use the "Inconsistent S3 Client Factory" when connecting to
-S3:
-
-```xml
-<property>
-  <name>fs.s3a.s3.client.factory.impl</name>
-  <value>org.apache.hadoop.fs.s3a.InconsistentS3ClientFactory</value>
-</property>
-```
-
-The inconsistent client will, on every AWS SDK request,
-generate a random number, and if less than the probability,
-raise a 503 exception.
-
-```xml
-
-<property>
-  <name>fs.s3a.failinject.throttle.probability</name>
-  <value>0.05</value>
-</property>
-```
-
-These exceptions are returned to S3; they do not test the
-AWS SDK retry logic.
-
-
-### Using the `InconsistentS3CClientFactory` in downstream integration tests
-
-The inconsistent client is shipped in the `hadoop-aws` JAR, so it can
-be used in integration tests.
-
 ## <a name="s3guard"></a> Testing S3Guard
 
 As part of the removal of S3Guard from the production code, the tests have been updated

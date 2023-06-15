@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.test.GenericTestUtils;
 
@@ -358,7 +359,7 @@ public class ITestS3AConfiguration {
     try {
       fs = S3ATestUtils.createTestFileSystem(conf);
       assertNotNull(fs);
-      S3Client s3 = fs.getAmazonS3ClientForTesting("configuration");
+      S3Client s3 = getS3Client("configuration");
       assertNotNull(s3);
 
       SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
@@ -393,7 +394,7 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
-    S3Client s3 = fs.getAmazonS3ClientForTesting("User Agent");
+    S3Client s3 = getS3Client("User Agent");
     assertNotNull(s3);
     SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
@@ -408,7 +409,7 @@ public class ITestS3AConfiguration {
     conf.set(Constants.USER_AGENT_PREFIX, "MyApp");
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
-    S3Client s3 = fs.getAmazonS3ClientForTesting("User agent");
+    S3Client s3 = getS3Client("User agent");
     assertNotNull(s3);
     SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
@@ -422,7 +423,7 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     conf.set(REQUEST_TIMEOUT, "120");
     fs = S3ATestUtils.createTestFileSystem(conf);
-    S3Client s3 = fs.getAmazonS3ClientForTesting("Request timeout (ms)");
+    S3Client s3 = getS3Client("Request timeout (ms)");
     SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
     assertEquals("Configured " + REQUEST_TIMEOUT +
@@ -600,4 +601,17 @@ public class ITestS3AConfiguration {
       return stsSignerCalled;
     }
   }
+
+  private S3Client getS3Client(String reason) throws IllegalAccessException {
+    S3Client s3 = fs.getAmazonS3ClientForTesting(reason);
+
+    StoreContext storeContext = fs.createStoreContext();
+
+    if (storeContext.isCSEEnabled()) {
+      s3 = getField(s3, S3Client.class, "_wrappedClient");
+    }
+
+    return s3;
+  }
+
 }

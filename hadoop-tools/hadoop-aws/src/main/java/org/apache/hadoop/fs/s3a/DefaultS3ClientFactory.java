@@ -33,11 +33,15 @@ import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.kms.KmsClient;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.encryption.s3.S3AsyncEncryptionClient;
+import software.amazon.encryption.s3.S3EncryptionClient;
+import software.amazon.encryption.s3.materials.KmsKeyring;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -90,6 +94,43 @@ public class DefaultS3ClientFactory extends Configured
         .httpClientBuilder(httpClientBuilder)
         .build();
   }
+
+  @Override
+  public S3Client createS3EncryptionClient(final S3AsyncClient s3AsyncClient,
+      final S3Client s3Client, final KmsKeyring keyring) {
+
+    return S3EncryptionClient.builder()
+        .wrappedAsyncClient(s3AsyncClient)
+        .wrappedClient(s3Client)
+        .enableLegacyUnauthenticatedModes(true)
+        .keyring(keyring)
+        .build();
+  }
+
+
+  @Override
+  public S3AsyncClient createS3AsyncEncryptionClient(final S3AsyncClient s3AsyncClient,
+      final KmsKeyring kmsKeyring) {
+
+    return S3AsyncEncryptionClient.builder()
+        .wrappedClient(s3AsyncClient)
+        .enableLegacyUnauthenticatedModes(true)
+        .keyring(kmsKeyring)
+        .build();
+  }
+
+  public KmsKeyring createKmsKeyring(final S3ClientCreationParameters parameters,
+      final String kmsKeyId) {
+    KmsClient kmsClient = KmsClient.builder()
+        .credentialsProvider(parameters.getCredentialSet())
+        .build();
+
+    return KmsKeyring.builder()
+        .kmsClient(kmsClient)
+        .wrappingKeyId(kmsKeyId)
+        .build();
+  }
+
 
   @Override
   public S3AsyncClient createS3AsyncClient(
