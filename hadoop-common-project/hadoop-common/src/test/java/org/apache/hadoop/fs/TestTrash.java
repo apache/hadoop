@@ -842,7 +842,7 @@ public class TestTrash {
     Thread.sleep(18000);
 
     Path trashDir = shell.getCurrentTrashDir();
-    FileStatus files[] = fs.listStatus(trashDir.getParent());
+    FileStatus[] files = fs.listStatus(trashDir.getParent());
     assertTrue(files.length <= 1);
     emptierThread.interrupt();
     emptierThread.join();
