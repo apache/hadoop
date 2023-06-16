@@ -359,6 +359,19 @@ public class MetricsAsserts {
   }
 
   /**
+   * Assert that a double gauge metric is greater than or equal to a value.
+   * @param name  of the metric
+   * @param greater value of the metric should be greater than or equal to this
+   * @param rb  the record builder mock used to getMetrics
+   */
+  public static void assertGaugeGte(String name, double greater,
+      MetricsRecordBuilder rb) {
+    double curValue = getDoubleGauge(name, rb);
+    Assert.assertTrue("Bad value for metric " + name,
+        curValue >= greater);
+  }
+
+  /**
    * Assert that a double gauge metric is greater than a value
    * @param name  of the metric
    * @param greater value of the metric should be greater than this

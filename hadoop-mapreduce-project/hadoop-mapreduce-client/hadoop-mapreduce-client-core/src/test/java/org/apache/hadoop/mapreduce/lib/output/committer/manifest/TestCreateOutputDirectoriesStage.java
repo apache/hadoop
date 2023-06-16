@@ -32,11 +32,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.EntryStatus;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CreateOutputDirectoriesStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
-import org.apache.hadoop.util.Lists;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
@@ -103,14 +101,14 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
 
     final long initialFileStatusCount = lookupCounterStatistic(iostats, OP_GET_FILE_STATUS);
     final int dirCount = 8;
+
+    // add duplicate entries to the list even though in the current iteration
+    // that couldn't happen.
     final List<Path> dirs = subpaths(destDir, dirCount);
     final List<DirEntry> dirEntries = dirEntries(dirs, 1, EntryStatus.not_found);
+    dirEntries.addAll(dirEntries(dirs, 1, EntryStatus.not_found));
 
-    // two manifests with duplicate entries
-    final List<TaskManifest> manifests = Lists.newArrayList(
-        manifestWithDirsToCreate(dirEntries),
-        manifestWithDirsToCreate(dirEntries));
-    final CreateOutputDirectoriesStage.Result result = mkdirStage.apply(manifests);
+    final CreateOutputDirectoriesStage.Result result = mkdirStage.apply(dirEntries);
     Assertions.assertThat(result.getCreatedDirectories())
         .describedAs("output of %s", mkdirStage)
         .containsExactlyInAnyOrderElementsOf(dirs);
@@ -125,8 +123,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     final CreateOutputDirectoriesStage s2 =
         new CreateOutputDirectoriesStage(stageConfig);
     final CreateOutputDirectoriesStage.Result r2 = s2.apply(
-        Lists.newArrayList(
-            manifestWithDirsToCreate(dirEntries(dirs, 1, EntryStatus.dir))));
+        dirEntries(dirs, 1, EntryStatus.dir));
 
     // no directories are now created.
     Assertions.assertThat(r2.getCreatedDirectories())
@@ -155,19 +152,6 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     return paths.stream()
         .map(p -> DirEntry.dirEntry(p, entryStatus, level))
         .collect(Collectors.toList());
-  }
-
-  /**
-   * Create a manifest with the list of directory entries added.
-   * Job commit requires the entries to have been probed for, and
-   * for the entire tree under the dest path to be included.
-   * @param dirEntries list of directory entries.
-   * @return the manifest.
-   */
-  protected TaskManifest manifestWithDirsToCreate(List<DirEntry> dirEntries) {
-    final TaskManifest taskManifest = new TaskManifest();
-    taskManifest.getDestDirectories().addAll(dirEntries);
-    return taskManifest;
   }
 
   /**
@@ -241,12 +225,9 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     parentIsDir.setStatus(EntryStatus.dir);
     leafIsFile.setStatus(EntryStatus.file);
 
-    final List<TaskManifest> manifests = Lists.newArrayList(
-        manifestWithDirsToCreate(directories));
-
     // first attempt will succeed.
     final CreateOutputDirectoriesStage.Result result =
-        mkdirStage.apply(manifests);
+        mkdirStage.apply(directories);
 
     LOG.info("Job Statistics\n{}", ioStatisticsToPrettyString(iostats));
 
@@ -270,7 +251,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     // attempt will fail because one of the entries marked as
     // a file to delete is now a non-empty directory
     LOG.info("Executing failing attempt to create the directories");
-    intercept(IOException.class, () -> attempt2.apply(manifests));
+    intercept(IOException.class, () -> attempt2.apply(directories));
     verifyStatisticCounterValue(iostats, OP_PREPARE_DIR_ANCESTORS + SUFFIX_FAILURES, 1);
     verifyStatisticCounterValue(iostats, OP_DELETE + SUFFIX_FAILURES, 1);
 
@@ -281,14 +262,12 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     directories3.addAll(dirEntries(level2, 2, EntryStatus.dir));
     directories3.addAll(dirEntries(level3, 3, EntryStatus.dir));
 
-    final List<TaskManifest> manifests3 = Lists.newArrayList(
-        manifestWithDirsToCreate(directories3));
     CreateOutputDirectoriesStage attempt3 =
         new CreateOutputDirectoriesStage(
             createStageConfigForJob(JOB1, destDir)
                 .withDeleteTargetPaths(true));
     final CreateOutputDirectoriesStage.Result r3 =
-        attempt3.apply(manifests3);
+        attempt3.apply(directories3);
     assertDirMapStatus(r3, leafIsFile.getDestPath(),
         CreateOutputDirectoriesStage.DirMapState.dirFoundInStore);
     Assertions.assertThat(r3.getCreatedDirectories())

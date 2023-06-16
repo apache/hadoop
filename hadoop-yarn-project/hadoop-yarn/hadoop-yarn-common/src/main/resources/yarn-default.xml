@@ -5265,6 +5265,32 @@
   </property>
 
   <property>
+    <description>
+      The number of threads to use for the GPG scheduled executor service.
+      default is 10.
+    </description>
+    <name>yarn.federation.gpg.scheduled.executor.threads</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>
+      The interval at which the subcluster cleaner runs, -1 means disabled.
+      default is -1.
+    </description>
+    <name>yarn.federation.gpg.subcluster.cleaner.interval-ms</name>
+    <value>-1ms</value>
+  </property>
+
+  <property>
+    <description>
+      The expiration time for a subcluster heartbeat, default is 30 minutes.
+    </description>
+    <name>yarn.federation.gpg.subcluster.heartbeat.expiration-ms</name>
+    <value>30m</value>
+  </property>
+
+  <property>
     <name>yarn.apps.cache.enable</name>
     <value>false</value>
     <description>
@@ -5326,6 +5352,18 @@
     </description>
     <name>yarn.resourcemanager.node-removal-untracked.node-selective-states-to-remove</name>
     <value></value>
+  </property>
+
+  <property>
+    <description>
+      YARN Federation supports Non-HA mode.
+      If the cluster is not configured with HA but wants to use YARN Federation,
+      this option can be used.
+      Setting it to true enables Non-HA mode, while false disables Non-HA mode.
+      The default value is false.
+    </description>
+    <name>yarn.federation.non-ha.enabled</name>
+    <value>false</value>
   </property>
 
 </configuration>
