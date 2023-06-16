@@ -548,11 +548,6 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
    * false otherwise
    */
   public boolean isEligibleForAutoQueueCreation() {
-    CapacitySchedulerConfiguration configuration = queueContext.getConfiguration();
-    System.err.println(configuration);
-    boolean autoQueueCreationV2Enabled =
-        queueContext.getConfiguration().isAutoQueueCreationV2Enabled(getQueuePath());
-    System.err.println(autoQueueCreationV2Enabled);
     return isDynamicQueue() || queueContext.getConfiguration().
         isAutoQueueCreationV2Enabled(getQueuePath());
   }
