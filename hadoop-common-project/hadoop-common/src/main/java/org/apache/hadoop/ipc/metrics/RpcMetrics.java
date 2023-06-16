@@ -138,6 +138,8 @@ public class RpcMetrics {
   MutableCounterLong rpcSlowCalls;
   @Metric("Number of requeue calls")
   MutableCounterLong rpcRequeueCalls;
+  @Metric("Number of successful RPC calls")
+  MutableCounterLong rpcCallSuccesses;
 
   @Metric("Number of open connections") public int numOpenConnections() {
     return server.getNumOpenConnections();
@@ -328,6 +330,13 @@ public class RpcMetrics {
    */
   public void incrRequeueCalls() {
     rpcRequeueCalls.incr();
+  }
+
+  /**
+   * One RPC call success event.
+   */
+  public void incrRpcCallSuccesses() {
+    rpcCallSuccesses.incr();
   }
 
   /**
