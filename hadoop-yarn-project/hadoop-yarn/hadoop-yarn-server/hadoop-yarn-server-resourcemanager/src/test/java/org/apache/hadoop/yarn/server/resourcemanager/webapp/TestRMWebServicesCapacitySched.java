@@ -66,18 +66,18 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     rm = new MockRM(createConfig());
     GuiceServletConfig.setInjector(Guice.createInjector(new WebServletModule(rm)));
     rm.start();
-    ClientResponse response = resource().path("ws/v1/cluster/scheduler")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertJsonResponse(response, "webapp/scheduler-response.json");
-    response = resource().path("ws/v1/cluster/scheduler")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertJsonResponse(response, "webapp/scheduler-response.json");
-    response = resource().path("ws/v1/cluster/scheduler")
-        .get(ClientResponse.class);
-    assertJsonResponse(response, "webapp/scheduler-response.json");
-    response = resource().path("ws/v1/cluster/scheduler/")
-        .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
-    assertXmlResponse(response, "webapp/scheduler-response.xml");
+    assertJsonResponse(resource().path("ws/v1/cluster/scheduler")
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class),
+        "webapp/scheduler-response.json");
+    assertJsonResponse( resource().path("ws/v1/cluster/scheduler")
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class),
+        "webapp/scheduler-response.json");
+    assertJsonResponse(resource().path("ws/v1/cluster/scheduler")
+        .get(ClientResponse.class)
+        , "webapp/scheduler-response.json");
+    assertXmlResponse(resource().path("ws/v1/cluster/scheduler/")
+        .accept(MediaType.APPLICATION_XML).get(ClientResponse.class),
+        "webapp/scheduler-response.xml");
   }
 
   @Test
