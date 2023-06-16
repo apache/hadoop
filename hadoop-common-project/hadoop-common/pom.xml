@@ -410,7 +410,7 @@
     <dependency>
       <groupId>org.lz4</groupId>
       <artifactId>lz4-java</artifactId>
-      <scope>provided</scope>
+      <scope>compile</scope>
     </dependency>
     <!-- Needed only at runtime when the redacting log4j appender
          is configured.  Should show up in the common lib/ directory
