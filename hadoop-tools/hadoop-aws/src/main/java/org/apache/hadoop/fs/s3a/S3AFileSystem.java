@@ -1372,9 +1372,53 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     Path path = directoryAllocator.getLocalPathForWrite(pathStr,
         size, conf);
     File dir = new File(path.getParent().toUri().getPath());
-    String prefix = path.getName();
+//    String prefix = path.getName();
+    String prefix = validateTmpFilePrefix(pathStr.toString(), null);
     // create a temp file on this directory
     return File.createTempFile(prefix, null, dir);
+  }
+
+  /**
+   * Ensure that the temp file prefix doesn't exceed the maximum number of characters allowed by
+   * the underlying file system. This validation isn't required in Java 9+ since
+   * {@link java.io.File#createTempFile(String, String, File)} automatically truncates file names.
+   * @param prefix
+   * @param suffix
+   * @return validated prefix
+   * @throws IOException
+   */
+  static String validateTmpFilePrefix(String prefix, String suffix) throws IOException
+  {
+    if(suffix == null) {
+      suffix = ".tmp";
+    }
+    // Use only the file name from the supplied prefix
+    prefix = (new File(prefix)).getName();
+
+    int prefixLength = prefix.length();
+    int maxRandomSuffixLen = 19; // Long.toUnsignedString(Long.MAX_VALUE).length()
+    int suffixLength = suffix.length();;
+
+    String name;
+    int nameMax = 255; // unable to access the underlying FS directly, so assume 255
+    int excess = prefixLength + maxRandomSuffixLen + suffixLength - nameMax;
+    if (excess > 0) {
+      // Name exceeds the maximum path component length: shorten it
+
+      // Attempt to shorten the prefix length to no less than 3
+      prefixLength = shortenSubName(prefixLength, excess, 3);
+      prefix = prefix.substring(0, prefixLength);
+    }
+    return prefix;
+  }
+
+  private static int shortenSubName(int subNameLength, int excess,
+                                    int nameMin) {
+    int newLength = Math.max(nameMin, subNameLength - excess);
+    if (newLength < subNameLength) {
+      return newLength;
+    }
+    return subNameLength;
   }
 
   /**
