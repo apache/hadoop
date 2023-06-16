@@ -392,26 +392,26 @@ How to build a Test Federation Cluster
 The purpose of this document is to help users quickly set up a testing environment for YARN Federation. With this testing environment, users can utilize the core functionality of YARN Federation. This is the simplest test cluster setup (based on Linux) with only essential configurations (YARN non-HA mode). We require 3 machines, and each machine should have at least <4C, 8GB> of resources. We only cover YARN configuration in this document. For information on configuring HDFS and ZooKeeper, please refer to other documentation sources.
 
 Test Environment Description:
-- We need to build a HDFS test environment, this part can refer to HDFS documentation.
+- We need to build a HDFS test environment, this part can refer to HDFS documentation. [HDFS SingleCluster](../../hadoop-project-dist/hadoop-common/SingleCluster.html)
 - We need two YARN clusters, each YARN cluster has one RM and one NM, The RM and NM on the same node.
-- We need one ZK cluster(We only need one ZooKeeper node.), this part can refer to Zookeeper documentation.
+- We need one ZK cluster(We only need one ZooKeeper node.), this part can refer to Zookeeper documentation. [ZookeeperStarted](https://zookeeper.apache.org/doc/current/zookeeperStarted.html)
 - We need one Router and one Client.
 
 Example of Machine-Role Mapping(Exclude HDFS):
 
-| Machine   | Role          | 
+| Machine   | Role          |
 |:----------|:--------------|
-| Machine A | RM1\NM1\ZK1   |                                                  |
+| Machine A | RM1\NM1\ZK1   |
 | Machine B | RM2\NM2       |
 | Machine C | Router\Client |
 
 ### YARN-1(ClusterTest-Yarn1)
 
-####  RM-1 
+####  RM-1
 
-> For the ResourceManager, we need to configure the following option:
+- For the ResourceManager, we need to configure the following option:
 
-```
+```xml
 
 <!-- YARN cluster-id -->
 <property>
@@ -429,8 +429,8 @@ Example of Machine-Role Mapping(Exclude HDFS):
   <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler</value>
 </property>
 
-<!-- 
- This configuration option is used to specify the configuration file for FairScheduler. 
+<!--
+ This configuration option is used to specify the configuration file for FairScheduler.
  If we are using CapacityScheduler, we don't need to configure this option.
 -->
 <property>
@@ -458,7 +458,7 @@ Example of Machine-Role Mapping(Exclude HDFS):
 
 ```
 
-> Start RM
+- Start RM
 
 ```
 $HADOOP_HOME/bin/yarn --daemon start resourcemanager
@@ -466,9 +466,9 @@ $HADOOP_HOME/bin/yarn --daemon start resourcemanager
 
 #### NM-1
 
-> For the NodeManager, we need to configure the following option:
+- For the NodeManager, we need to configure the following option:
 
-```
+```xml
 <!-- YARN cluster-id -->
 <property>
   <name>yarn.resourcemanager.cluster-id</name>
@@ -530,7 +530,7 @@ $HADOOP_HOME/bin/yarn --daemon start resourcemanager
 </property>
 ```
 
-> Start NM
+- Start NM
 
 ```
 $HADOOP_HOME/bin/yarn --daemon start nodemanager
@@ -542,7 +542,7 @@ $HADOOP_HOME/bin/yarn --daemon start nodemanager
 
 The RM of the `YARN-2` cluster is configured the same as the RM of `YARN-1` except for the `cluster-id`
 
-```
+```xml
 <property>
   <name>yarn.resourcemanager.cluster-id</name>
   <value>ClusterTest-Yarn2</value>
@@ -553,7 +553,7 @@ The RM of the `YARN-2` cluster is configured the same as the RM of `YARN-1` exce
 
 The NM of the `YARN-2` cluster is configured the same as the RM of `YARN-1` except for the `cluster-id`
 
-```
+```xml
 <property>
   <name>yarn.resourcemanager.cluster-id</name>
   <value>ClusterTest-Yarn2</value>
@@ -562,11 +562,11 @@ The NM of the `YARN-2` cluster is configured the same as the RM of `YARN-1` exce
 
 After we have finished configuring the `YARN-2` cluster, we can proceed with starting the `YARN-2` cluster.
 
-### ROUTER
+### Router
 
-> For the Router, we need to configure the following option:
+- For the Router, we need to configure the following option:
 
-```
+```xml
 <!-- Enable YARN Federation mode -->
 <property>
   <name>yarn.federation.enabled</name>
@@ -604,17 +604,17 @@ After we have finished configuring the `YARN-2` cluster, we can proceed with sta
 </property>
 ```
 
-> Start Router
+- Start Router
 
 ```
 $HADOOP_HOME/bin/yarn --daemon start router
 ```
 
-### YARN-CLIENT
+### Yarn-Client
 
-> For the Yarn-Client, we need to configure the following option:
+- For the Yarn-Client, we need to configure the following option:
 
-```
+```xml
 
 <!-- Enable YARN Federation mode -->
 <property>
@@ -628,26 +628,24 @@ $HADOOP_HOME/bin/yarn --daemon start router
   <value>false</value>
 </property>
 
-<!-- Configure yarn.resourcemanager.address, 
+<!-- Configure yarn.resourcemanager.address,
    We need to set it to the router address -->
 <property>
   <name>yarn.resourcemanager.address</name>
   <value>router-1-Host:8050</value>
 </property>
 
-<!-- Configure yarn.resourcemanager.admin.address, 
+<!-- Configure yarn.resourcemanager.admin.address,
    We need to set it to the router address -->
 <property>
   <name>yarn.resourcemanager.admin.address</name>
   <value>router-1-Host:8052</value>
 </property>
 
-<!-- Configure yarn.resourcemanager.scheduler.address, 
+<!-- Configure yarn.resourcemanager.scheduler.address,
    We need to set it to the AMRMProxy address -->
 <property>
   <name>yarn.resourcemanager.scheduler.address</name>
   <value>localhost:8049</value>
 </property>
 ```
-
-After we build the test cluster, we can try to submit MR Jobs or Spark Jobs.
