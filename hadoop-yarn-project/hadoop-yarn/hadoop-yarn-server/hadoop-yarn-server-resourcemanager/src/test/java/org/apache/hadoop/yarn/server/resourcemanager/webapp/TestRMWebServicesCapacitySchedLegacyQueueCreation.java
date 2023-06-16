@@ -68,7 +68,7 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
         "webapp/scheduler-response-PercentageModeLegacyAutoCreation.json");
   }
 
-  @Test //uj test kellzx
+  @Test
   public void testSchedulerResponseAbsoluteModeLegacyAutoCreation()
       throws Exception {
     Configuration config = createAbsoluteConfigLegacyAutoCreation();
