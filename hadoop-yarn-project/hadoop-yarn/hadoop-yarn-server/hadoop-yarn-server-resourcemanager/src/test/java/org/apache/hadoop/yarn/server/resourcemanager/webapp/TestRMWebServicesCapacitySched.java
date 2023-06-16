@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import java.io.IOException;
 import javax.ws.rs.core.MediaType;
 
 import com.google.inject.Guice;
@@ -64,32 +63,29 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
   @Test
   public void testClusterScheduler() throws Exception {
-    Configuration conf = createConfig();
-    rm =  new MockRM(conf);
+    rm = new MockRM(createConfig());
     GuiceServletConfig.setInjector(Guice.createInjector(new WebServletModule(rm)));
     rm.start();
-    ClientResponse response = resource().path("ws").path("v1").path("cluster")
-        .path("scheduler").accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    ClientResponse response = resource().path("ws/v1/cluster/scheduler")
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertJsonResponse(response, "webapp/scheduler-response.json");
-    response = resource().path("ws").path("v1").path("cluster")
-        .path("scheduler/").accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = resource().path("ws/v1/cluster/scheduler")
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertJsonResponse(response, "webapp/scheduler-response.json");
-    response = resource().path("ws").path("v1").path("cluster")
-        .path("scheduler").get(ClientResponse.class);
+    response = resource().path("ws/v1/cluster/scheduler")
+        .get(ClientResponse.class);
     assertJsonResponse(response, "webapp/scheduler-response.json");
-    response = resource().path("ws").path("v1").path("cluster")
-        .path("scheduler/").accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+    response = resource().path("ws/v1/cluster/scheduler/")
+        .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
     assertXmlResponse(response, "webapp/scheduler-response.xml");
   }
 
   @Test
   public void testPerUserResources() throws Exception {
-    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration(createConfig());
-    rm =  new MockRM(conf);
+    rm =  new MockRM(createConfig());
     rm.start();
     rm.registerNode("h1:1234", 10240, 10);
     GuiceServletConfig.setInjector(Guice.createInjector(new WebServletModule(rm)));
-    reinitialize(conf);
     MockRMAppSubmissionData data1 =
         MockRMAppSubmissionData.Builder.createWithMemory(10, rm)
             .withAppName("app1")
@@ -124,13 +120,9 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     rm =  new MockRM(conf);
     GuiceServletConfig.setInjector(Guice.createInjector(new WebServletModule(rm)));
     rm.start();
-    try {
-      ClientResponse response = resource().path("ws/v1/cluster/scheduler")
-          .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
-      assertXmlResponse(response, "webapp/scheduler-response-NodeLabelDefaultAPI.xml");
-    } finally {
-      rm.stop();
-    }
+    ClientResponse response = resource().path("ws/v1/cluster/scheduler")
+        .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+    assertXmlResponse(response, "webapp/scheduler-response-NodeLabelDefaultAPI.xml");
   }
   @Test
   public void testClusterSchedulerOverviewCapacity() throws Exception {
@@ -165,10 +157,5 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     conf.set("yarn.scheduler.capacity.root.b.capacity", "79.5");
     conf.set("yarn.scheduler.capacity.root.c.capacity", "0.5");
     return conf;
-  }
-
-  private void reinitialize(Configuration conf) throws IOException {
-    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
-    cs.reinitialize(conf, rm.getRMContext());
   }
 }
