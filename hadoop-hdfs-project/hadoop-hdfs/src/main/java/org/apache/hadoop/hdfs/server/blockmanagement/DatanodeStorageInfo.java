@@ -262,9 +262,11 @@ public class DatanodeStorageInfo {
 
     if (otherStorage != null) {
       if (otherStorage != this) {
-        // The block belongs to a different storage. Remove it first.
-        otherStorage.removeBlock(b);
-        result = AddBlockResult.REPLACED;
+        if (!b.isStriped()) {
+          // The block belongs to a different storage. Remove it first.
+          otherStorage.removeBlock(b);
+          result = AddBlockResult.REPLACED;
+        }
       } else {
         // The block is already associated with this storage.
         return AddBlockResult.ALREADY_EXIST;
