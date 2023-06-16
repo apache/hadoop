@@ -105,7 +105,7 @@ public class TestWebServiceUtil {
       IOException {
     assertJsonType(response);
     JSONObject json = response.getEntity(JSONObject.class);
-    String actual = json.toString(2);
+    String actual = prettyPrintJson(json.toString(2));
     updateTestDataAutomatically(expectedResourceFilename, actual);
     assertEquals(
         prettyPrintJson(getResourceAsString(expectedResourceFilename)),
