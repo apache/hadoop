@@ -40,7 +40,6 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.junit.Test;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.*;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.createMockRM;
 
 public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
     JerseyTestBase {
