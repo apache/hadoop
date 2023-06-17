@@ -136,19 +136,19 @@ public final class FormattingCLIUtils {
   private void buildTable() {
     this.buildTitle();
     for (int i = 0, len = this.tableRows.size(); i < len; i++) {
-      List<String> datas = this.tableRows.get(i).datas;
+      List<String> data = this.tableRows.get(i).data;
       switch (this.tableRows.get(i).tableRowType) {
       case HEADER:
         if (this.lastTableRowType != TableRowType.HEADER) {
-          this.buildRowBorder(datas);
+          this.buildRowBorder(data);
         }
-        this.buildRowLine(datas);
-        this.buildRowBorder(datas);
+        this.buildRowLine(data);
+        this.buildRowBorder(data);
         break;
       case LINE:
-        this.buildRowLine(datas);
+        this.buildRowLine(data);
         if (i == len - 1) {
-          this.buildRowBorder(datas);
+          this.buildRowBorder(data);
         }
         break;
       default:
@@ -159,11 +159,11 @@ public final class FormattingCLIUtils {
 
   /**
    * Method to build a border row.
-   * @param datas dataLine
+   * @param data dataLine
    */
-  private void buildRowBorder(List<String> datas) {
+  private void buildRowBorder(List<String> data) {
     this.join.append("+");
-    for (int i = 0, len = datas.size(); i < len; i++) {
+    for (int i = 0, len = data.size(); i < len; i++) {
       for (int j = 0; j < this.maxColMap.get(i) + 2; j++) {
         this.join.append("-");
       }
@@ -174,12 +174,12 @@ public final class FormattingCLIUtils {
 
   /**
    * A way to build rows of data.
-   * @param datas dataLine
+   * @param data dataLine
    */
-  private void buildRowLine(List<String> datas) {
+  private void buildRowLine(List<String> data) {
     this.join.append("|");
-    for (int i = 0, len = datas.size(); i < len; i++) {
-      this.join.append(StrUtils.center(datas.get(i), this.maxColMap.get(i) + 2, ' '))
+    for (int i = 0, len = data.size(); i < len; i++) {
+      this.join.append(StrUtils.center(data.get(i), this.maxColMap.get(i) + 2, ' '))
           .append("|");
     }
     this.join.append("\n");
@@ -199,10 +199,10 @@ public final class FormattingCLIUtils {
    */
   private static class TableRow {
     private TableRowType tableRowType;
-    private List<String> datas;
-    TableRow(TableRowType tableRowType, List<String> datas) {
+    private List<String> data;
+    TableRow(TableRowType tableRowType, List<String> data) {
       this.tableRowType = tableRowType;
-      this.datas = datas;
+      this.data = data;
     }
   }
 
