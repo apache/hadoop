@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.impl.prefetch.SingleFilePerBlockCache.FS_PREFETCH_MAX_BLOCKS_COUNT;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_DEFAULT_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
@@ -77,13 +78,14 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
 
   private static final int TIMEOUT_MILLIS = 5000;
   private static final int INTERVAL_MILLIS = 500;
-
+  private static final int PREFETCH_MAX_NUM_BLOCKS = 3;
 
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
     conf.setBoolean(PREFETCH_ENABLED_KEY, true);
+    conf.setInt(FS_PREFETCH_MAX_BLOCKS_COUNT, PREFETCH_MAX_NUM_BLOCKS);
     return conf;
   }
 
@@ -299,6 +301,58 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
 
     assertFalse("seekToNewSource() not supported with prefetch", in.seekToNewSource(10));
 
+  }
+
+  @Test
+  public void testSeeksWithLruEviction() throws Throwable {
+    IOStatistics ioStats;
+    openFS();
+
+    try (FSDataInputStream in = largeFileFS.open(largeFile)) {
+      ioStats = in.getIOStatistics();
+
+      byte[] buffer = new byte[blockSize];
+
+      // Don't read block 0 completely
+      in.read(buffer, 0, blockSize - S_1K * 10);
+
+      // Seek to block 1 and don't read completely
+      in.seek(blockSize);
+      in.read(buffer, 0, 2 * S_1K);
+
+      // Seek to block 2 and don't read completely
+      in.seek(blockSize * 2L);
+      in.read(buffer, 0, 2 * S_1K);
+
+      // Seek to block 3 and don't read completely
+      in.seek(blockSize * 3L);
+      in.read(buffer, 0, 2 * S_1K);
+
+      // Seek to block 4 and don't read completely
+      in.seek(blockSize * 4L);
+      in.read(buffer, 0, 2 * S_1K);
+
+      // Seek to block 5 and don't read completely
+      in.seek(blockSize * 5L);
+      in.read(buffer, 0, 2 * S_1K);
+
+      // backward seek, can't use block 0 as it is evicted
+      in.seek(S_1K * 5);
+      in.read();
+
+      // expect 3 blocks as rest are to be evicted by LRU
+      LambdaTestUtils.eventually(TIMEOUT_MILLIS, INTERVAL_MILLIS, () -> {
+        LOG.info("IO stats: {}", ioStats);
+        verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE,
+            PREFETCH_MAX_NUM_BLOCKS);
+      });
+      // let LRU evictions settle down, if any
+      Thread.sleep(TIMEOUT_MILLIS);
+    }
+    LambdaTestUtils.eventually(TIMEOUT_MILLIS, INTERVAL_MILLIS, () -> {
+      LOG.info("IO stats: {}", ioStats);
+      verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 0);
+    });
   }
 
 }

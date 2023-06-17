@@ -129,6 +129,7 @@ public abstract class CachingBlockManager extends BlockManager {
     this.numReadErrors = new AtomicInteger();
     this.cachingDisabled = new AtomicBoolean();
     this.prefetchingStatistics = requireNonNull(prefetchingStatistics);
+    this.conf = requireNonNull(conf);
 
     if (this.getBlockData().getFileSize() > 0) {
       this.bufferPool = new BufferPool(bufferPoolSize, this.getBlockData().getBlockSize(),
@@ -138,7 +139,6 @@ public abstract class CachingBlockManager extends BlockManager {
 
     this.ops = new BlockOperations();
     this.ops.setDebug(false);
-    this.conf = requireNonNull(conf);
     this.localDirAllocator = localDirAllocator;
   }
 
@@ -558,7 +558,7 @@ public abstract class CachingBlockManager extends BlockManager {
   }
 
   protected BlockCache createCache() {
-    return new SingleFilePerBlockCache(prefetchingStatistics);
+    return new SingleFilePerBlockCache(prefetchingStatistics, conf);
   }
 
   protected void cachePut(int blockNumber, ByteBuffer buffer) throws IOException {

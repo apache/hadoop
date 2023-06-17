@@ -314,7 +314,7 @@ public final class S3APrefetchFakes {
     private final int writeDelay;
 
     public FakeS3FilePerBlockCache(int readDelay, int writeDelay) {
-      super(new EmptyS3AStatisticsContext().newInputStreamStatistics());
+      super(new EmptyS3AStatisticsContext().newInputStreamStatistics(), CONF);
       this.files = new ConcurrentHashMap<>();
       this.readDelay = readDelay;
       this.writeDelay = writeDelay;
