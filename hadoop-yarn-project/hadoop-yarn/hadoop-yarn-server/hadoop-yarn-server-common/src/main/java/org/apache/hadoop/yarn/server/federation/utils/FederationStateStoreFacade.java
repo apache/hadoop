@@ -806,7 +806,7 @@ public final class FederationStateStoreFacade {
         return true;
       }
     } catch (YarnException e) {
-      LOG.warn("get homeSubCluster by applicationId = {} error.", applicationId, e);
+      LOG.debug("get homeSubCluster by applicationId = {} error.", applicationId, e);
     }
     return false;
   }
@@ -893,7 +893,7 @@ public final class FederationStateStoreFacade {
         return true;
       }
     } catch (YarnException e) {
-      LOG.warn("get homeSubCluster by reservationId = {} error.", reservationId, e);
+      LOG.debug("get homeSubCluster by reservationId = {} error.", reservationId, e);
     }
     return false;
   }
