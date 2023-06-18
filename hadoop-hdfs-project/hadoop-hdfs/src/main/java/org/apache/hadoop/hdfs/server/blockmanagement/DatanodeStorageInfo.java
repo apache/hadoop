@@ -257,15 +257,26 @@ public class DatanodeStorageInfo {
     // First check whether the block belongs to a different storage
     // on the same DN.
     AddBlockResult result = AddBlockResult.ADDED;
+
+    // 返回的是index为2的DSI
     DatanodeStorageInfo otherStorage =
         b.findStorageInfo(getDatanodeDescriptor());
 
     if (otherStorage != null) {
+      // this是index为1的DSI，（-793这个blockId）
       if (otherStorage != this) {
         if (!b.isStriped()) {
           // The block belongs to a different storage. Remove it first.
           otherStorage.removeBlock(b);
           result = AddBlockResult.REPLACED;
+        } else {
+          long reportBlockId = reportedBlock.getBlockId();
+          Block blockOnStorage = ((BlockInfoStriped) b).getBlockOnStorage(otherStorage);
+          if (reportBlockId == blockOnStorage.getBlockId()) {
+            // The block belongs to a different storage. Remove it first.
+            otherStorage.removeBlock(b);
+            result = AddBlockResult.REPLACED;
+          }
         }
       } else {
         // The block is already associated with this storage.
@@ -273,6 +284,7 @@ public class DatanodeStorageInfo {
       }
     }
 
+    // 这里没有把blk_-9223372036578646783给添加到triplets数组的3*i位置上
     // add to the head of the data-node list
     b.addStorage(this, reportedBlock);
     insertToList(b);
