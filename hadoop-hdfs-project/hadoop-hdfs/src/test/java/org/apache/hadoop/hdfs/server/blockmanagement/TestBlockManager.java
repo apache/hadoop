@@ -2132,13 +2132,13 @@ public class TestBlockManager {
   public void testBlockReportSetNoAckBlockToInvalidate() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 3);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 10);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    FSNamesystem fsn = cluster.getNamesystem();
-    BlockManager bm = fsn.getBlockManager();
-    DistributedFileSystem fs = cluster.getFileSystem();
-    try {
+    try (MiniDFSCluster cluster =
+             new MiniDFSCluster.Builder(conf).numDataNodes(1).build()) {
+      cluster.waitActive();
+      BlockManager blockManager = cluster.getNamesystem().getBlockManager();
+      DistributedFileSystem fs = cluster.getFileSystem();
       // Write file.
       Path file = new Path("/test");
       DFSTestUtil.createFile(fs, file, 10240L, (short)1, 0L);
@@ -2159,13 +2159,13 @@ public class TestBlockManager {
       fs.delete(file, false);
 
       // Wait for the processing of the marked deleted block to complete.
-      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(bm);
-      assertNull(bm.getStoredBlock(lb.getBlock().getLocalBlock()));
+      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(blockManager);
+      assertNull(blockManager.getStoredBlock(lb.getBlock().getLocalBlock()));
 
       // Expire heartbeat on the NameNode,and datanode to be marked dead.
       datanode.setHeartbeatsDisabledForTests(true);
       cluster.setDataNodeDead(datanode.getDatanodeId());
-      assertFalse(bm.containsInvalidateBlock(loc[0], lb.getBlock().getLocalBlock()));
+      assertFalse(blockManager.containsInvalidateBlock(loc[0], lb.getBlock().getLocalBlock()));
 
       // Wait for re-registration and heartbeat.
       datanode.setHeartbeatsDisabledForTests(false);
@@ -2179,12 +2179,14 @@ public class TestBlockManager {
       // Trigger BlockReports and block is not exists,
       // it will add invalidateBlocks and set block numBytes be NO_ACK.
       cluster.triggerBlockReports();
-      assertTrue(bm.containsInvalidateBlock(loc[0], lb.getBlock().getLocalBlock()));
+      GenericTestUtils.waitFor(
+          () -> blockManager.containsInvalidateBlock(loc[0], lb.getBlock().getLocalBlock()),
+          100, 1000);
 
       // Trigger schedule blocks for deletion at datanode.
-      int workCount = bm.computeInvalidateWork(1);
+      int workCount = blockManager.computeInvalidateWork(1);
       assertEquals(1, workCount);
-      assertFalse(bm.containsInvalidateBlock(loc[0], lb.getBlock().getLocalBlock()));
+      assertFalse(blockManager.containsInvalidateBlock(loc[0], lb.getBlock().getLocalBlock()));
 
       // Wait for the blocksRemoved value in DataNode to be 1.
       GenericTestUtils.waitFor(
@@ -2197,10 +2199,6 @@ public class TestBlockManager {
       // Delete block numBytes be NO_ACK and will not deletion block report,
       // so check the IncrementalBlockReportsNumOps of DataNode still 1.
       assertEquals(1, getLongCounter("IncrementalBlockReportsNumOps", rb));
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
     }
   }
 }
