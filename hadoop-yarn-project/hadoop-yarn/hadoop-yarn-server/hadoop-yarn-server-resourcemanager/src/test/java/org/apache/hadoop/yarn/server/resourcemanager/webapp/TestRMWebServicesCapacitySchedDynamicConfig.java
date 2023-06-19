@@ -54,26 +54,10 @@ import static org.assertj.core.api.Assertions.fail;
 public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase {
 
   private static final String EXPECTED_FILE_TMPL = "webapp/dynamic-%s-%s.json";
-  private MockRM rm;
 
   public TestRMWebServicesCapacitySchedDynamicConfig() {
     super(createWebAppDescriptor());
   }
-
-  private static final String[] SETUP = new String[] {
-      "yarn.scheduler.capacity.root.queues = default, test1, test2",
-      "yarn.scheduler.capacity.root.test1.queues = test1_1, test1_2, test1_3"
-  };
-
-  /*
-   *                                         EffectiveMin (32GB 32VCores)     AbsoluteCapacity
-   *     root.default              4/32      [memory=4096,  vcores=4]       12.5%
-   *     root.test_1              16/32      [memory=16384, vcores=16]
-   *     root.test_2              12/32      [memory=12288, vcores=12]      37.5%
-   *     root.test_1.test_1_1      2/16      [memory=2048,  vcores=2]       6.25%
-   *     root.test_1.test_1_2      2/16      [memory=2048,  vcores=2]       6.25%
-   *     root.test_1.test_1_3     12/16      [memory=12288, vcores=12]      37.5%
-   */
 
   @Test
   public void testPercentageMode() throws Exception {
@@ -86,8 +70,9 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "12.5");
     conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "12.5");
     conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "75");
-    MockRM rm = createMutableRM(createConfiguration(conf));
-    runTest(EXPECTED_FILE_TMPL, "testPercentageMode", rm, resource());
+    try (MockRM rm = createMutableRM(createConfiguration(conf))) {
+      runTest(EXPECTED_FILE_TMPL, "testPercentageMode", rm, resource());
+    }
   }
   @Test
   public void testAbsoluteMode() throws Exception {
@@ -100,8 +85,9 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "[memory=2048,vcores=2]");
     conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "[memory=2048,vcores=2]");
     conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "[memory=12288,vcores=12]");
-    MockRM rm = createMutableRM(createConfiguration(conf));
-    runTest(EXPECTED_FILE_TMPL, "testAbsoluteMode", rm, resource());
+    try (MockRM rm = createMutableRM(createConfiguration(conf))) {
+      runTest(EXPECTED_FILE_TMPL, "testAbsoluteMode", rm, resource());
+    }
   }
 
   @Test
@@ -115,8 +101,9 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "2w");
     conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "2w");
     conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "12w");
-    MockRM rm = createMutableRM(createConfiguration(conf));
-    runTest(EXPECTED_FILE_TMPL, "testWeightMode", rm, resource());
+    try (MockRM rm = createMutableRM(createConfiguration(conf))) {
+      runTest(EXPECTED_FILE_TMPL, "testWeightMode", rm, resource());
+    }
   }
 
   @Test
