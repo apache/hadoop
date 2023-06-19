@@ -2124,11 +2124,12 @@ public class TestBlockManager {
   }
 
   /**
-   * Test when the numBytes of the block in the block report is set to NO_ACK,
+   * Test processing toInvalidate in block reported, if the block not exists need
+   * to set the numBytes of the block to NO_ACK,
    * the DataNode processing will not report incremental blocks.
    */
   @Test(timeout = 360000)
-  public void testSetNoAckBlockInBlockReport() throws Exception {
+  public void testBlockReportSetNoAckBlockToInvalidate() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 3);
