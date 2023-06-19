@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import javax.ws.rs.core.MediaType;
@@ -26,7 +25,6 @@ import javax.ws.rs.core.MediaType;
 import com.sun.jersey.api.client.ClientResponse;
 import org.junit.Test;
 
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
@@ -41,7 +39,6 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServic
 
 public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
     JerseyTestBase {
-  private CapacitySchedulerQueueManager autoQueueHandler;
 
   public TestRMWebServicesCapacitySchedLegacyQueueCreation() {
     super(createWebAppDescriptor());
@@ -52,10 +49,11 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
       throws Exception {
     Map<String, String> conf = new HashMap<>();
     conf.put("yarn.scheduler.capacity.root.queues", "default, managed");
-    conf.put("yarn.scheduler.capacity.root.managed.capacity", "100");
+    conf.put("yarn.scheduler.capacity.root.default.capacity", "20");
+    conf.put("yarn.scheduler.capacity.root.managed.capacity", "80");
     conf.put("yarn.scheduler.capacity.root.managed." +
         "auto-create-child-queue.enabled", "true");
-    try(MockRM rm = createMutableRM(createConfiguration(conf))) {
+    try (MockRM rm = createMutableRM(createConfiguration(conf))) {
       assertJsonResponse(sendRequest(),
           "webapp/scheduler-response-PercentageModeLegacyAutoCreation.json");
     }
@@ -66,6 +64,7 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
       throws Exception {
     Map<String, String> conf = new HashMap<>();
     conf.put("yarn.scheduler.capacity.root.queues", "default, managed");
+    conf.put("yarn.scheduler.capacity.root.default.capacity", "[memory=28672,vcores=28]");
     conf.put("yarn.scheduler.capacity.root.managed.capacity", "[memory=4096,vcores=4]");
     conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.capacity",
         "[memory=2048,vcores=2]");
@@ -76,22 +75,13 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
     conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.acl_administer_queue",
         "admin");
     try (MockRM rm = createMutableRM(createConfiguration(conf))) {
-      initAutoQueueHandler(rm);
-      createQueue("root.managed.queue1");
+      rm.registerNode("h1:1234", 32 * GB, 32);
+      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+      CapacitySchedulerQueueManager autoQueueHandler = cs.getCapacitySchedulerQueueManager();
+      autoQueueHandler.createQueue(new QueuePath("root.managed.queue1"));
       assertJsonResponse(sendRequest(),
           "webapp/scheduler-response-AbsoluteModeLegacyAutoCreation.json");
     }
-  }
-
-  private void initAutoQueueHandler(MockRM rm) throws Exception {
-    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
-    autoQueueHandler = cs.getCapacitySchedulerQueueManager();
-    rm.registerNode("h1:1234", 32 * GB, 32); // label = x
-  }
-
-  private void createQueue(String queuePath) throws YarnException,
-      IOException {
-    autoQueueHandler.createQueue(new QueuePath(queuePath));
   }
 
   private ClientResponse sendRequest() {

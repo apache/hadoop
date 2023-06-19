@@ -15,10 +15,10 @@
         "queue" : [ {
           "type" : "capacitySchedulerLeafQueueInfo",
           "queuePath" : "root.default",
-          "capacity" : 0,
+          "capacity" : 20,
           "usedCapacity" : 0,
           "maxCapacity" : 100,
-          "absoluteCapacity" : 0,
+          "absoluteCapacity" : 20,
           "absoluteMaxCapacity" : 100,
           "absoluteUsedCapacity" : 0,
           "weight" : -1,
@@ -59,10 +59,10 @@
           "capacities" : {
             "queueCapacitiesByPartition" : [ {
               "partitionName" : "",
-              "capacity" : 0,
+              "capacity" : 20,
               "usedCapacity" : 0,
               "maxCapacity" : 100,
-              "absoluteCapacity" : 0,
+              "absoluteCapacity" : 20,
               "absoluteUsedCapacity" : 0,
               "absoluteMaxCapacity" : 100,
               "maxAMLimitPercentage" : 10,
@@ -400,8 +400,8 @@
           "numActiveApplications" : 0,
           "numPendingApplications" : 0,
           "numContainers" : 0,
-          "maxApplications" : 0,
-          "maxApplicationsPerUser" : 0,
+          "maxApplications" : 2000,
+          "maxApplicationsPerUser" : 2000,
           "userLimit" : 100,
           "users" : { },
           "userLimitFactor" : 1,
@@ -483,10 +483,10 @@
           "defaultApplicationLifetime" : -1
         }, {
           "queuePath" : "root.managed",
-          "capacity" : 100,
+          "capacity" : 80,
           "usedCapacity" : 0,
           "maxCapacity" : 100,
-          "absoluteCapacity" : 100,
+          "absoluteCapacity" : 80,
           "absoluteMaxCapacity" : 100,
           "absoluteUsedCapacity" : 0,
           "weight" : -1,
@@ -528,10 +528,10 @@
           "capacities" : {
             "queueCapacitiesByPartition" : [ {
               "partitionName" : "",
-              "capacity" : 100,
+              "capacity" : 80,
               "usedCapacity" : 0,
               "maxCapacity" : 100,
-              "absoluteCapacity" : 100,
+              "absoluteCapacity" : 80,
               "absoluteUsedCapacity" : 0,
               "absoluteMaxCapacity" : 100,
               "maxAMLimitPercentage" : 0,
