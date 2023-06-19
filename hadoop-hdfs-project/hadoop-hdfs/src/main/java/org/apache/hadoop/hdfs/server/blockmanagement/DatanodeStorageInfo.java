@@ -268,8 +268,8 @@ public class DatanodeStorageInfo {
           result = AddBlockResult.REPLACED;
         } else {
           long reportBlockId = reportedBlock.getBlockId();
-          Block blockOnStorage = ((BlockInfoStriped) b).getBlockOnStorage(otherStorage);
-          if (reportBlockId == blockOnStorage.getBlockId()) {
+          Block blockOnOtherStorage = ((BlockInfoStriped) b).getBlockOnStorage(otherStorage);
+          if (reportBlockId == blockOnOtherStorage.getBlockId()) {
             // The block belongs to a different storage. Remove it first.
             otherStorage.removeBlock(b);
             result = AddBlockResult.REPLACED;

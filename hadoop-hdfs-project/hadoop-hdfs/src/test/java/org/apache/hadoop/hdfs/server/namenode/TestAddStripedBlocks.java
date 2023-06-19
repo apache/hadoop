@@ -35,7 +35,6 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
-import org.apache.hadoop.hdfs.protocol.StripedBlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -382,9 +381,6 @@ public class TestAddStripedBlocks {
     BlockInfo stored = fileNode.getBlocks()[0];
     BlockManagerTestUtil.updateState(ns.getBlockManager());
     assertEquals(0, ns.getCorruptReplicaBlocks());
-//    for (BlockInfo b : fileNode.getBlocks()) {
-//      System.out.println("zhb###" + ((BlockInfoStriped) b).getRealDataBlockNum() );
-//    }
 
     // Now send a block report with correct size
     DatanodeStorage storage = new DatanodeStorage(UUID.randomUUID().toString());

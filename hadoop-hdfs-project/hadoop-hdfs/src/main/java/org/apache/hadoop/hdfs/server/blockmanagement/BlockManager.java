@@ -2550,16 +2550,18 @@ public class BlockManager implements BlockStatsMXBean {
 
     BitSet liveBitSet = null;
     BitSet decommissioningBitSet = null;
+    HashSet<DatanodeDescriptor> alreadyCorruptedSet = null;
     if (isStriped) {
       int blockNum = ((BlockInfoStriped) block).getTotalBlockNum();
       liveBitSet = new BitSet(blockNum);
       decommissioningBitSet = new BitSet(blockNum);
+      alreadyCorruptedSet = new HashSet<>();
     }
 
     for (DatanodeStorageInfo storage : blocksMap.getStorages(block)) {
       final DatanodeDescriptor node = getDatanodeDescriptorFromStorage(storage);
       final StoredReplicaState state = checkReplicaOnStorage(numReplicas, block,
-          storage, corruptReplicas.getNodes(block), false);
+          storage, corruptReplicas.getNodes(block), false, alreadyCorruptedSet);
       if (state == StoredReplicaState.LIVE) {
         if (storage.getStorageType() == StorageType.PROVIDED) {
           storage = new DatanodeStorageInfo(node, storage.getStorageID(),
@@ -4543,13 +4545,15 @@ public class BlockManager implements BlockStatsMXBean {
   NumberReplicas countNodes(BlockInfo b, boolean inStartupSafeMode) {
     NumberReplicas numberReplicas = new NumberReplicas();
     Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(b);
+    HashSet<DatanodeDescriptor> alreadyCorruptSet = null;
     if (b.isStriped()) {
+      alreadyCorruptSet = new HashSet<>();
       countReplicasForStripedBlock(numberReplicas, (BlockInfoStriped) b,
-          nodesCorrupt, inStartupSafeMode);
+          nodesCorrupt, inStartupSafeMode, alreadyCorruptSet);
     } else {
       for (DatanodeStorageInfo storage : blocksMap.getStorages(b)) {
         checkReplicaOnStorage(numberReplicas, b, storage, nodesCorrupt,
-            inStartupSafeMode);
+            inStartupSafeMode, alreadyCorruptSet);
       }
     }
     return numberReplicas;
@@ -4557,11 +4561,16 @@ public class BlockManager implements BlockStatsMXBean {
 
   private StoredReplicaState checkReplicaOnStorage(NumberReplicas counters,
       BlockInfo b, DatanodeStorageInfo storage,
-      Collection<DatanodeDescriptor> nodesCorrupt, boolean inStartupSafeMode) {
+      Collection<DatanodeDescriptor> nodesCorrupt, boolean inStartupSafeMode,
+      HashSet<DatanodeDescriptor> alreadyCorrupt) {
     final StoredReplicaState s;
     if (storage.getState() == State.NORMAL) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
-      if (nodesCorrupt != null && nodesCorrupt.contains(node)) {
+      if (nodesCorrupt != null && nodesCorrupt.contains(node) &&
+          (alreadyCorrupt == null || !alreadyCorrupt.contains(node))) {
+        if (alreadyCorrupt != null) {
+          alreadyCorrupt.add(node);
+        }
         s = StoredReplicaState.CORRUPT;
       } else if (inStartupSafeMode) {
         s = StoredReplicaState.LIVE;
@@ -4607,12 +4616,12 @@ public class BlockManager implements BlockStatsMXBean {
    */
   private void countReplicasForStripedBlock(NumberReplicas counters,
       BlockInfoStriped block, Collection<DatanodeDescriptor> nodesCorrupt,
-      boolean inStartupSafeMode) {
+      boolean inStartupSafeMode, HashSet<DatanodeDescriptor> alreadyCorrupt) {
     BitSet liveBitSet = new BitSet(block.getTotalBlockNum());
     BitSet decommissioningBitSet = new BitSet(block.getTotalBlockNum());
     for (StorageAndBlockIndex si : block.getStorageAndIndexInfos()) {
       StoredReplicaState state = checkReplicaOnStorage(counters, block,
-          si.getStorage(), nodesCorrupt, inStartupSafeMode);
+          si.getStorage(), nodesCorrupt, inStartupSafeMode, alreadyCorrupt);
       countLiveAndDecommissioningReplicas(counters, state, liveBitSet,
           decommissioningBitSet, si.getBlockIndex());
     }

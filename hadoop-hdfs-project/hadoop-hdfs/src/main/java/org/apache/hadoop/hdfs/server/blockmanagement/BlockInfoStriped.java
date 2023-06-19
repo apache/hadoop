@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.hdfs.protocol.StripedBlockInfo;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -137,14 +138,14 @@ public class BlockInfoStriped extends BlockInfo {
           continue;
         } else {
           if (BlockIdManager.convertToStripedID(blockInfo.getBlockId()) == blockGroupId) {
-            if (blockInfo.getBlockId() != reportedBlock.getBlockId()) {
+            Block blockOnOldStorage = ((BlockInfoStriped) blockInfo).getBlockOnStorage(old);
+            if (blockOnOldStorage.getBlockId() != reportedBlock.getBlockId()) {
               blockIdNotEquals = true;
               break;
             }
           }
         }
       }
-      // 这里再加上判断条件： old Storage上的blockid与report id相同才行。否则让i=-1.
       int i = findStorageInfo(storage);
       if (i == -1 || blockIdNotEquals) {
         index = findSlot();
