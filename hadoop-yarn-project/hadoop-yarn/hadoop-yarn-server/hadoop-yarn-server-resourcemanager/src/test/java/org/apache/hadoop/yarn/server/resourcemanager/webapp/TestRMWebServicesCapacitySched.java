@@ -55,9 +55,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   }
 
   @After
-  public void shoutDown(){
+  public void shutdown(){
     if (rm != null) {
       rm.stop();
+      rm = null;
     }
   }
 
