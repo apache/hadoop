@@ -105,7 +105,8 @@ public class BlockInfoStriped extends BlockInfo {
 
   private int findSlot() {
     int i = getTotalBlockNum();
-    for (; i < getCapacity(); i++) {
+    int capacity = getCapacity();
+    for (; i < capacity; i++) {
       if (getStorageInfo(i) == null) {
         return i;
       }
