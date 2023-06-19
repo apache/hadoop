@@ -729,10 +729,10 @@
       </queue>
       <queue xsi:type="capacitySchedulerLeafQueueInfo">
         <queuePath>root.b</queuePath>
-        <capacity>79.5</capacity>
+        <capacity>70.0</capacity>
         <usedCapacity>0.0</usedCapacity>
         <maxCapacity>100.0</maxCapacity>
-        <absoluteCapacity>79.5</absoluteCapacity>
+        <absoluteCapacity>70.0</absoluteCapacity>
         <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <weight>-1.0</weight>
@@ -774,10 +774,10 @@
         <capacities>
           <queueCapacitiesByPartition>
             <partitionName/>
-            <capacity>79.5</capacity>
+            <capacity>70.0</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>79.5</absoluteCapacity>
+            <absoluteCapacity>70.0</absoluteCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <maxAMLimitPercentage>10.0</maxAMLimitPercentage>
@@ -832,8 +832,8 @@
               </resourceInformations>
             </configuredMaxResource>
             <effectiveMinResource>
-              <memory>8140</memory>
-              <vCores>7</vCores>
+              <memory>7167</memory>
+              <vCores>6</vCores>
               <resourceInformations>
                 <resourceInformation>
                   <attributes/>
@@ -842,7 +842,7 @@
                   <name>memory-mb</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units>Mi</units>
-                  <value>8140</value>
+                  <value>7167</value>
                 </resourceInformation>
                 <resourceInformation>
                   <attributes/>
@@ -851,7 +851,7 @@
                   <name>vcores</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units/>
-                  <value>7</value>
+                  <value>6</value>
                 </resourceInformation>
               </resourceInformations>
             </effectiveMinResource>
@@ -1031,8 +1031,8 @@
           </resourceUsagesByPartition>
         </resources>
         <minEffectiveCapacity>
-          <memory>8140</memory>
-          <vCores>7</vCores>
+          <memory>7167</memory>
+          <vCores>6</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -1041,7 +1041,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>8140</value>
+              <value>7167</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -1050,7 +1050,7 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>7</value>
+              <value>6</value>
             </resourceInformation>
           </resourceInformations>
         </minEffectiveCapacity>
@@ -1130,8 +1130,8 @@
         <numActiveApplications>1</numActiveApplications>
         <numPendingApplications>0</numPendingApplications>
         <numContainers>0</numContainers>
-        <maxApplications>7950</maxApplications>
-        <maxApplicationsPerUser>7950</maxApplicationsPerUser>
+        <maxApplications>7000</maxApplications>
+        <maxApplicationsPerUser>7000</maxApplicationsPerUser>
         <userLimit>100.0</userLimit>
         <users>
           <user>
@@ -1446,10 +1446,10 @@
       </queue>
       <queue xsi:type="capacitySchedulerLeafQueueInfo">
         <queuePath>root.c</queuePath>
-        <capacity>0.5</capacity>
+        <capacity>10.0</capacity>
         <usedCapacity>0.0</usedCapacity>
         <maxCapacity>100.0</maxCapacity>
-        <absoluteCapacity>0.5</absoluteCapacity>
+        <absoluteCapacity>10.0</absoluteCapacity>
         <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <weight>-1.0</weight>
@@ -1491,10 +1491,10 @@
         <capacities>
           <queueCapacitiesByPartition>
             <partitionName/>
-            <capacity>0.5</capacity>
+            <capacity>10.0</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>0.5</absoluteCapacity>
+            <absoluteCapacity>10.0</absoluteCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <maxAMLimitPercentage>10.0</maxAMLimitPercentage>
@@ -1549,8 +1549,8 @@
               </resourceInformations>
             </configuredMaxResource>
             <effectiveMinResource>
-              <memory>51</memory>
-              <vCores>0</vCores>
+              <memory>1024</memory>
+              <vCores>1</vCores>
               <resourceInformations>
                 <resourceInformation>
                   <attributes/>
@@ -1559,7 +1559,7 @@
                   <name>memory-mb</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units>Mi</units>
-                  <value>51</value>
+                  <value>1024</value>
                 </resourceInformation>
                 <resourceInformation>
                   <attributes/>
@@ -1568,7 +1568,7 @@
                   <name>vcores</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units/>
-                  <value>0</value>
+                  <value>1</value>
                 </resourceInformation>
               </resourceInformations>
             </effectiveMinResource>
@@ -1748,8 +1748,8 @@
           </resourceUsagesByPartition>
         </resources>
         <minEffectiveCapacity>
-          <memory>51</memory>
-          <vCores>0</vCores>
+          <memory>1024</memory>
+          <vCores>1</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -1758,7 +1758,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>51</value>
+              <value>1024</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -1767,7 +1767,7 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>0</value>
+              <value>1</value>
             </resourceInformation>
           </resourceInformations>
         </minEffectiveCapacity>
@@ -1847,8 +1847,8 @@
         <numActiveApplications>0</numActiveApplications>
         <numPendingApplications>0</numPendingApplications>
         <numContainers>0</numContainers>
-        <maxApplications>50</maxApplications>
-        <maxApplicationsPerUser>50</maxApplicationsPerUser>
+        <maxApplications>1000</maxApplications>
+        <maxApplicationsPerUser>1000</maxApplicationsPerUser>
         <userLimit>100.0</userLimit>
         <users/>
         <userLimitFactor>1.0</userLimitFactor>

@@ -122,12 +122,14 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     setupAQC(config, "yarn.scheduler.capacity.root.test1.");
     setupAQC(config, "yarn.scheduler.capacity.root.test1.test1_1.");
     try (MockRM rm = createMutableRM(config)) {
+      rm.registerNode("h1:1234", 32768, 32);
+      assertJsonResponse(sendRequest(resource()),
+          String.format(EXPECTED_FILE_TMPL, "testWeightMode", "before-aqc"));
       createAQC(rm, "test1");
       createAQC(rm, "test1.test1_1");
-      rm.registerNode("h1:1234", 32768, 32);
       reinitialize(rm, config);
       assertJsonResponse(sendRequest(resource()),
-          String.format(EXPECTED_FILE_TMPL, "testWeightMode", "aqc"));
+          String.format(EXPECTED_FILE_TMPL, "testWeightMode", "after-aqc"));
     }
   }
 

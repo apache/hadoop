@@ -501,10 +501,10 @@
       </queue>
       <queue xsi:type="capacitySchedulerLeafQueueInfo">
         <queuePath>root.b</queuePath>
-        <capacity>79.5</capacity>
+        <capacity>70.0</capacity>
         <usedCapacity>0.0</usedCapacity>
         <maxCapacity>100.0</maxCapacity>
-        <absoluteCapacity>79.5</absoluteCapacity>
+        <absoluteCapacity>70.0</absoluteCapacity>
         <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <weight>-1.0</weight>
@@ -546,10 +546,10 @@
         <capacities>
           <queueCapacitiesByPartition>
             <partitionName/>
-            <capacity>79.5</capacity>
+            <capacity>70.0</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>79.5</absoluteCapacity>
+            <absoluteCapacity>70.0</absoluteCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <maxAMLimitPercentage>10.0</maxAMLimitPercentage>
@@ -903,8 +903,8 @@
         <numActiveApplications>0</numActiveApplications>
         <numPendingApplications>0</numPendingApplications>
         <numContainers>0</numContainers>
-        <maxApplications>7950</maxApplications>
-        <maxApplicationsPerUser>7950</maxApplicationsPerUser>
+        <maxApplications>7000</maxApplications>
+        <maxApplicationsPerUser>7000</maxApplicationsPerUser>
         <userLimit>100.0</userLimit>
         <users/>
         <userLimitFactor>1.0</userLimitFactor>
@@ -990,10 +990,10 @@
       </queue>
       <queue xsi:type="capacitySchedulerLeafQueueInfo">
         <queuePath>root.c</queuePath>
-        <capacity>0.5</capacity>
+        <capacity>10.0</capacity>
         <usedCapacity>0.0</usedCapacity>
         <maxCapacity>100.0</maxCapacity>
-        <absoluteCapacity>0.5</absoluteCapacity>
+        <absoluteCapacity>10.0</absoluteCapacity>
         <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <weight>-1.0</weight>
@@ -1035,10 +1035,10 @@
         <capacities>
           <queueCapacitiesByPartition>
             <partitionName/>
-            <capacity>0.5</capacity>
+            <capacity>10.0</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>0.5</absoluteCapacity>
+            <absoluteCapacity>10.0</absoluteCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <maxAMLimitPercentage>10.0</maxAMLimitPercentage>
@@ -1392,8 +1392,8 @@
         <numActiveApplications>0</numActiveApplications>
         <numPendingApplications>0</numPendingApplications>
         <numContainers>0</numContainers>
-        <maxApplications>50</maxApplications>
-        <maxApplicationsPerUser>50</maxApplicationsPerUser>
+        <maxApplications>1000</maxApplications>
+        <maxApplicationsPerUser>1000</maxApplicationsPerUser>
         <userLimit>100.0</userLimit>
         <users/>
         <userLimitFactor>1.0</userLimitFactor>

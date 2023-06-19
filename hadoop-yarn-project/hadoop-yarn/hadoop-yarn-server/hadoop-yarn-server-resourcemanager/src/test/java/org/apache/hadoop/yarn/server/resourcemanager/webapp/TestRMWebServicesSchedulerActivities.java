@@ -1748,4 +1748,35 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       return restClient.isDone();
     }, 10, 20000);
   }
+
+  private CapacitySchedulerConfiguration createConfig(CapacitySchedulerConfiguration config) {
+    config.set("yarn.scheduler.capacity.root.queues", "a, b, c");
+    config.set("yarn.scheduler.capacity.root.a.queues", "a1, a2");
+    config.set("yarn.scheduler.capacity.root.b.queues", "b1, b2, b3");
+    config.set("yarn.scheduler.capacity.root.a.a1.queues", "a1a, a1b, a1c");
+    config.set("yarn.scheduler.capacity.root.a.capacity", "10.5");
+    config.set("yarn.scheduler.capacity.root.a.maximum-capacity", "50");
+    config.set("yarn.scheduler.capacity.root.a.max-parallel-app", "42");
+    config.set("yarn.scheduler.capacity.root.b.capacity", "79.5");
+    config.set("yarn.scheduler.capacity.root.c.capacity", "10");
+    config.set("yarn.scheduler.capacity.root.a.a1.capacity", "30");
+    config.set("yarn.scheduler.capacity.root.a.a1.maximum-capacity", "50");
+    config.set("yarn.scheduler.capacity.root.a.a1.user-limit-factor", "100");
+    config.set("yarn.scheduler.capacity.root.a.a2.capacity", "70");
+    config.set("yarn.scheduler.capacity.root.a.a2.maximum-application-lifetime", "100");
+    config.set("yarn.scheduler.capacity.root.a.a2.default-application-lifetime", "50");
+    config.set("yarn.scheduler.capacity.root.a.a2.user-limit-factor", "100");
+    config.set("yarn.scheduler.capacity.root.b.b1.capacity", "60");
+    config.set("yarn.scheduler.capacity.root.b.b2.capacity", "39.5");
+    config.set("yarn.scheduler.capacity.root.b.b3.capacity", "0.5");
+    config.set("yarn.scheduler.capacity.root.b.b1.user-limit-factor", "100");
+    config.set("yarn.scheduler.capacity.root.b.b2.user-limit-factor", "100");
+    config.set("yarn.scheduler.capacity.root.b.b3.user-limit-factor", "100");
+    config.set("yarn.scheduler.capacity.root.a.a1.a1a.capacity", "65");
+    config.set("yarn.scheduler.capacity.root.a.a1.a1b.capacity", "15");
+    config.set("yarn.scheduler.capacity.root.a.a1.a1c.capacity", "20");
+    config.set("yarn.scheduler.capacity.root.a.a1.a1c.auto-create-child-queue.enabled", "true");
+    config.set("yarn.scheduler.capacity.root.a.a1.a1c.leaf-queue-template.capacity", "50");
+    return config;
+  }
 }
