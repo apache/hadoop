@@ -159,9 +159,13 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
       CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
       CapacitySchedulerQueueManager autoQueueHandler = cs.getCapacitySchedulerQueueManager();
       autoQueueHandler.createQueue(new QueuePath("root." + queue + ".auto1"));
-      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".autoParent1.auto2"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".auto2"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".autoParent1.auto3"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".autoParent1.auto4"));
       autoQueueHandler.createQueue(new QueuePath("root." + queue + ".autoParent2.auto3"));
-      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".parent.auto4"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".parent.autoParent2.auto3"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".parent2.auto7"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".parent3.auto8"));
     } catch (YarnException | IOException e) {
       fail("Can not auto create queues under " + queue, e);
     }
