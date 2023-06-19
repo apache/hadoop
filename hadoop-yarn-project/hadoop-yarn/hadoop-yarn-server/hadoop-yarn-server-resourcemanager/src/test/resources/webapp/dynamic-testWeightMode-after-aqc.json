@@ -3329,7 +3329,7 @@
               "queues" : {
                 "queue" : [ {
                   "type" : "capacitySchedulerLeafQueueInfo",
-                  "queuePath" : "root.test1.autoParent2.auto3",
+                  "queuePath" : "root.test1.autoParent2.auto5",
                   "capacity" : 0,
                   "usedCapacity" : 0,
                   "maxCapacity" : 100,
@@ -3340,7 +3340,7 @@
                   "normalizedWeight" : 1,
                   "numApplications" : 0,
                   "maxParallelApps" : 2147483647,
-                  "queueName" : "auto3",
+                  "queueName" : "auto5",
                   "isAbsoluteResource" : false,
                   "state" : "RUNNING",
                   "resourcesUsed" : {
@@ -4487,13 +4487,13 @@
                   "queueAcls" : {
                     "queueAcl" : [ {
                       "accessType" : "ADMINISTER_QUEUE",
-                      "accessControlList" : "ap1Admin "
+                      "accessControlList" : "leafAdmin "
                     }, {
                       "accessType" : "APPLICATION_MAX_PRIORITY",
                       "accessControlList" : "*"
                     }, {
                       "accessType" : "SUBMIT_APP",
-                      "accessControlList" : "ap1User "
+                      "accessControlList" : "leafUser "
                     } ]
                   },
                   "queuePriority" : 0,
@@ -4956,13 +4956,13 @@
                   "queueAcls" : {
                     "queueAcl" : [ {
                       "accessType" : "ADMINISTER_QUEUE",
-                      "accessControlList" : "ap1Admin "
+                      "accessControlList" : "leafAdmin "
                     }, {
                       "accessType" : "APPLICATION_MAX_PRIORITY",
                       "accessControlList" : "*"
                     }, {
                       "accessType" : "SUBMIT_APP",
-                      "accessControlList" : "ap1User "
+                      "accessControlList" : "leafUser "
                     } ]
                   },
                   "queuePriority" : 0,
@@ -5369,10 +5369,10 @@
               "autoQueueLeafTemplateProperties" : {
                 "property" : [ {
                   "name" : "acl_administer_queue",
-                  "value" : "ap1Admin"
+                  "value" : "leafAdmin"
                 }, {
                   "name" : "acl_submit_applications",
-                  "value" : "ap1User"
+                  "value" : "leafUser"
                 } ]
               }
             }, {
@@ -5409,7 +5409,7 @@
                   "queues" : {
                     "queue" : [ {
                       "type" : "capacitySchedulerLeafQueueInfo",
-                      "queuePath" : "root.test1.parent.autoParent2.auto3",
+                      "queuePath" : "root.test1.parent.autoParent2.auto6",
                       "capacity" : 0,
                       "usedCapacity" : 0,
                       "maxCapacity" : 100,
@@ -5420,7 +5420,7 @@
                       "normalizedWeight" : 1,
                       "numApplications" : 0,
                       "maxParallelApps" : 2147483647,
-                      "queueName" : "auto3",
+                      "queueName" : "auto6",
                       "isAbsoluteResource" : false,
                       "state" : "RUNNING",
                       "resourcesUsed" : {

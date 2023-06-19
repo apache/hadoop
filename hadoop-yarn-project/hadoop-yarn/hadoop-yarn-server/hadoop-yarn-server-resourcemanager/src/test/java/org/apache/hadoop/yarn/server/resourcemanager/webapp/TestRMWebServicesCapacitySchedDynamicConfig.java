@@ -140,9 +140,9 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
         "parentUser");
     config.set(queue + "auto-queue-creation-v2.parent-template.acl_administer_queue",
         "parentAdmin");
-    config.set(queue + "autoParent1.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+    config.set(queue + "autoParent1.*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
         "ap1User");
-    config.set(queue + "autoParent1.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+    config.set(queue + "autoParent1.*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
         "ap1Admin");
     config.set(queue + "*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
         "leafUser");
@@ -162,8 +162,8 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
       autoQueueHandler.createQueue(new QueuePath("root." + queue + ".auto2"));
       autoQueueHandler.createQueue(new QueuePath("root." + queue + ".autoParent1.auto3"));
       autoQueueHandler.createQueue(new QueuePath("root." + queue + ".autoParent1.auto4"));
-      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".autoParent2.auto3"));
-      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".parent.autoParent2.auto3"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".autoParent2.auto5"));
+      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".parent.autoParent2.auto6"));
       autoQueueHandler.createQueue(new QueuePath("root." + queue + ".parent2.auto7"));
       autoQueueHandler.createQueue(new QueuePath("root." + queue + ".parent3.auto8"));
     } catch (YarnException | IOException e) {
