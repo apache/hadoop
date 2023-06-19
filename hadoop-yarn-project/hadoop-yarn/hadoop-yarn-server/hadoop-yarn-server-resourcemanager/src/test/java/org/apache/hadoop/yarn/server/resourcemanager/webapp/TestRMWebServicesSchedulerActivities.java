@@ -109,8 +109,9 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    rm = createMockRM(new CapacitySchedulerConfiguration(
-        new Configuration(false)));
+    CapacitySchedulerConfiguration config =
+        createConfig(new CapacitySchedulerConfiguration(new Configuration(false)));
+    rm = createMockRM(config);
     GuiceServletConfig.setInjector(
         Guice.createInjector(new WebServletModule(rm)));
   }

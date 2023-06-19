@@ -201,7 +201,8 @@ public class TestWebServiceUtil {
       );
     }
   }
-  public static MockRM createMockRM(CapacitySchedulerConfiguration config) {
+
+  public static CapacitySchedulerConfiguration createConfig(CapacitySchedulerConfiguration config) {
     config.set("yarn.scheduler.capacity.root.queues", "a, b, c");
     config.set("yarn.scheduler.capacity.root.a.queues", "a1, a2");
     config.set("yarn.scheduler.capacity.root.b.queues", "b1, b2, b3");
@@ -229,6 +230,9 @@ public class TestWebServiceUtil {
     config.set("yarn.scheduler.capacity.root.a.a1.a1c.capacity", "20");
     config.set("yarn.scheduler.capacity.root.a.a1.a1c.auto-create-child-queue.enabled", "true");
     config.set("yarn.scheduler.capacity.root.a.a1.a1c.leaf-queue-template.capacity", "50");
+    return config;
+  }
+  public static MockRM createMockRM(CapacitySchedulerConfiguration config) {
     YarnConfiguration conf = new YarnConfiguration(config);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
