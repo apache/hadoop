@@ -24,7 +24,6 @@ import java.util.Map;
 import javax.ws.rs.core.MediaType;
 
 import com.sun.jersey.api.client.ClientResponse;
-import org.junit.After;
 import org.junit.Test;
 
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -52,14 +51,9 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
   public void testSchedulerResponsePercentageModeLegacyAutoCreation()
       throws Exception {
     Map<String, String> conf = new HashMap<>();
-    conf.put("yarn.scheduler.capacity.root.queues", "default, test1, " +
-        "managedtest2");
-    conf.put("yarn.scheduler.capacity.root.test1.capacity", "50");
-    conf.put("yarn.scheduler.capacity.root.managedtest2.capacity", "50");
-    conf.put("yarn.scheduler.capacity.root.test1.maximum-capacity", "100");
-    conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
-    conf.put("yarn.scheduler.capacity.root.managedtest2.state", "RUNNING");
-    conf.put("yarn.scheduler.capacity.root.managedtest2." +
+    conf.put("yarn.scheduler.capacity.root.queues", "default, managed");
+    conf.put("yarn.scheduler.capacity.root.managed.capacity", "100");
+    conf.put("yarn.scheduler.capacity.root.managed." +
         "auto-create-child-queue.enabled", "true");
     try(MockRM rm = createMutableRM(createConfiguration(conf))) {
       assertJsonResponse(sendRequest(),
@@ -72,12 +66,9 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
       throws Exception {
     Map<String, String> conf = new HashMap<>();
     conf.put("yarn.scheduler.capacity.root.queues", "default, managed");
-    conf.put("yarn.scheduler.capacity.root.default.state", "STOPPED");
-    conf.put("yarn.scheduler.capacity.root.default.capacity", "[memory=0,vcores=0]");
     conf.put("yarn.scheduler.capacity.root.managed.capacity", "[memory=4096,vcores=4]");
     conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.capacity",
         "[memory=2048,vcores=2]");
-    conf.put("yarn.scheduler.capacity.root.managed.state", "RUNNING");
     conf.put("yarn.scheduler.capacity.root.managed." +
         "auto-create-child-queue.enabled", "true");
     conf.put("yarn.scheduler.capacity.root.managed.leaf-queue-template.acl_submit_applications",

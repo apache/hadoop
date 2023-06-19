@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonType;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertXmlResponse;
@@ -67,7 +68,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   @Test
   public void testPerUserResources() throws Exception {
     try (MockRM rm = createRM(createConfig())){
-      rm.registerNode("h1:1234", 10240, 10);
+      rm.registerNode("h1:1234", 10 * GB, 10);
       MockRMAppSubmitter.submit(rm, MockRMAppSubmissionData.Builder
           .createWithMemory(10, rm)
           .withAppName("app1")

@@ -90,7 +90,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTes
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfNodes;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyQueueOrder;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyStateOfAllocations;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.*;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -115,7 +115,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
         createConfig(new CapacitySchedulerConfiguration(new Configuration(false)));
     rm = createMockRM(config);
     GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule(rm)));
+        Guice.createInjector(new TestWebServiceUtil.WebServletModule(rm)));
   }
 
   public static MockRM createMockRM(CapacitySchedulerConfiguration csConf) {

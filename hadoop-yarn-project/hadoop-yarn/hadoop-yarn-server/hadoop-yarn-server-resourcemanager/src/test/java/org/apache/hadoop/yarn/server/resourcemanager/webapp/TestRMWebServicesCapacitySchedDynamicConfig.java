@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePat
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.createConfiguration;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createMutableRM;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
@@ -120,13 +121,11 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
 
     Configuration config = createConfiguration(conf);
     setupAQC(config, "yarn.scheduler.capacity.root.test1.");
-    setupAQC(config, "yarn.scheduler.capacity.root.test1.test1_1.");
     try (MockRM rm = createMutableRM(config)) {
-      rm.registerNode("h1:1234", 32768, 32);
+      rm.registerNode("h1:1234", 32 * GB, 32);
       assertJsonResponse(sendRequest(resource()),
           String.format(EXPECTED_FILE_TMPL, "testWeightMode", "before-aqc"));
       createAQC(rm, "test1");
-      createAQC(rm, "test1.test1_1");
       reinitialize(rm, config);
       assertJsonResponse(sendRequest(resource()),
           String.format(EXPECTED_FILE_TMPL, "testWeightMode", "after-aqc"));
@@ -137,17 +136,22 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
   private void setupAQC(Configuration config, String queue) {
     config.set(queue + "auto-queue-creation-v2.enabled", "true");
     config.set(queue + "auto-queue-creation-v2.maximum-queue-depth", "10");
-    config.set(queue + "auto-queue-creation-v2.parent-template.acl_submit_applications", "u1");
-    config.set(queue + "auto-queue-creation-v2.parent-template.acl_administer_queue", "u2");
+    config.set(queue + "auto-queue-creation-v2.parent-template.acl_submit_applications",
+        "parentUser");
+    config.set(queue + "auto-queue-creation-v2.parent-template.acl_administer_queue",
+        "parentAdmin");
     config.set(queue + "autoParent1.auto-queue-creation-v2.leaf-template.acl_submit_applications",
-        "u3");
+        "ap1User");
     config.set(queue + "autoParent1.auto-queue-creation-v2.leaf-template.acl_administer_queue",
-        "u4");
-    config.set(queue + "*.auto-queue-creation-v2.leaf-template.acl_submit_applications", "u5");
-    config.set(queue + "*.auto-queue-creation-v2.leaf-template.acl_administer_queue", "u6");
+        "ap1Admin");
+    config.set(queue + "*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+        "leafUser");
+    config.set(queue + "*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+        "leafAdmin");
     config.set(queue + "parent.*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
-        "u7");
-    config.set(queue + "parent.*.auto-queue-creation-v2.leaf-template.acl_administer_queue", "u8");
+        "pLeafUser");
+    config.set(queue + "parent.*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+        "pLeafAdmin");
     config.set(queue + "autoParent1.auto-queue-creation-v2.template.maximum-applications", "300");
   }
   private void createAQC(MockRM rm, String queue) {
