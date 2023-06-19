@@ -120,12 +120,12 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "12w");
 
     Configuration config = createConfiguration(conf);
-    setupAQC(config, "yarn.scheduler.capacity.root.test1.");
+    setupAQC(config, "yarn.scheduler.capacity.root.test2.");
     try (MockRM rm = createMutableRM(config)) {
       rm.registerNode("h1:1234", 32 * GB, 32);
       assertJsonResponse(sendRequest(resource()),
           String.format(EXPECTED_FILE_TMPL, "testWeightMode", "before-aqc"));
-      createAQC(rm, "test1");
+      createAQC(rm, "test2");
       reinitialize(rm, config);
       assertJsonResponse(sendRequest(resource()),
           String.format(EXPECTED_FILE_TMPL, "testWeightMode", "after-aqc"));
@@ -140,9 +140,9 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
         "parentUser");
     config.set(queue + "auto-queue-creation-v2.parent-template.acl_administer_queue",
         "parentAdmin");
-    config.set(queue + "autoParent1.*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
+    config.set(queue + "autoParent1.auto-queue-creation-v2.leaf-template.acl_submit_applications",
         "ap1User");
-    config.set(queue + "autoParent1.*.auto-queue-creation-v2.leaf-template.acl_administer_queue",
+    config.set(queue + "autoParent1.auto-queue-creation-v2.leaf-template.acl_administer_queue",
         "ap1Admin");
     config.set(queue + "*.auto-queue-creation-v2.leaf-template.acl_submit_applications",
         "leafUser");
@@ -165,7 +165,6 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
       autoQueueHandler.createQueue(new QueuePath("root." + queue + ".autoParent2.auto5"));
       autoQueueHandler.createQueue(new QueuePath("root." + queue + ".parent.autoParent2.auto6"));
       autoQueueHandler.createQueue(new QueuePath("root." + queue + ".parent2.auto7"));
-      autoQueueHandler.createQueue(new QueuePath("root." + queue + ".parent3.auto8"));
     } catch (YarnException | IOException e) {
       fail("Can not auto create queues under " + queue, e);
     }
